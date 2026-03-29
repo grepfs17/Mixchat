@@ -7,5 +7,3 @@ dist/
 *.log
 .DS_Store
 .vscode/settings.json
-.idea/
-*_FEATURE.md
