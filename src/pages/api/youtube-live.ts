@@ -213,8 +213,7 @@ async function resolveChannelId(
         });
       return id;
     }
-
-    // /c/CustomName or /user/Username – try forUsername first, then search
+ 
     if (pathname.startsWith("/c/") || pathname.startsWith("/user/")) {
       const name = pathname.split("/")[2];
       const id = await resolveByUsernameOrSearch(name, apiKey);
@@ -256,7 +255,6 @@ async function resolveHandleViaApi(
   handle: string,
   apiKey: string,
 ): Promise<string | null> {
-  // YouTube Data API v3 – channels.list with forHandle
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`,
   );

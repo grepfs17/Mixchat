@@ -751,7 +751,6 @@ export default function ChatApp({
         <>
           {/* NORMAL SPLIT MODE */}
 
-          {/* YouTube live chat – top 50% when a linked channel has a video ID */}
           {linkedYoutubeUrl && showYoutubeSection && (
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderBottom: '2px solid #333' }}>
               {youtubeVideoId ? (
@@ -981,7 +980,6 @@ export default function ChatApp({
             </div>
           )}
 
-          {/* Twitch chat – bottom 50% (or full height if no YouTube link) */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <ChatDisplay
               messages={messages}

@@ -6,9 +6,9 @@ import type { APIRoute } from "astro";
  * Sends a message to a YouTube live chat.
  *
  * Body (JSON):
- *   videoId      – YouTube video ID of the live stream
- *   message      – Text message to send
- *   accessToken  – YouTube OAuth2 access token (user must have granted live-chat scope)
+ *   videoId      - YouTube video ID of the live stream
+ *   message      - Text message to send
+ *   accessToken  - YouTube OAuth2 access token (user must have granted live-chat scope)
  */
 export const POST: APIRoute = async ({ request }) => {
   const headers = { "Content-Type": "application/json" };
