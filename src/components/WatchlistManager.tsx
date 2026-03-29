@@ -1,0 +1,154 @@
+import React, { useState, useEffect } from 'react';
+import { FaPlus, FaTrash, FaEye } from 'react-icons/fa';
+import {
+  getWatchedStreamers,
+  addWatchedStreamer,
+  removeWatchedStreamer,
+} from '../lib/streamMonitor';
+import type { TwitchChannel } from '../components/AppContainer';
+import '../styles/WatchlistManager.css';
+
+interface WatchlistManagerProps {
+  availableChannels: TwitchChannel[];
+  onClose: () => void;
+}
+
+export default function WatchlistManager({ availableChannels, onClose }: WatchlistManagerProps) {
+  const [watchedStreamers, setWatchedStreamers] = useState(getWatchedStreamers());
+  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const handleAddStreamer = () => {
+    if (!selectedChannelId) return;
+
+    const channel = availableChannels.find((c) => c.id === selectedChannelId);
+    if (channel) {
+      addWatchedStreamer({
+        id: channel.id,
+        name: channel.name,
+        displayName: channel.displayName,
+        profileImageUrl: channel.profileImageUrl,
+      });
+      setWatchedStreamers(getWatchedStreamers());
+      setSelectedChannelId('');
+      setSearchQuery('');
+    }
+  };
+
+  const handleRemoveStreamer = (streamerId: string) => {
+    removeWatchedStreamer(streamerId);
+    setWatchedStreamers(getWatchedStreamers());
+  };
+
+  const isAlreadyWatched = (channelId: string) =>
+    watchedStreamers.some((s) => s.id === channelId);
+
+  const unwatchedChannels = availableChannels.filter(
+    (c) => !isAlreadyWatched(c.id)
+  );
+
+  const filteredChannels = searchQuery.trim() === ''
+    ? unwatchedChannels
+    : unwatchedChannels.filter((c) =>
+      c.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+  return (
+    <div className="watchlist-manager-overlay" onClick={onClose}>
+      <div className="watchlist-manager" onClick={(e) => e.stopPropagation()}>
+        <h2>Manage Notification Streams</h2>
+        <p className="subtitle">Get notifications when these streamers go live</p>
+
+        <div className="watchlist-add-section">
+          <input
+            type="text"
+            placeholder="Search channels..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="channel-search"
+          />
+          <div className="channel-list-dropdown">
+            {filteredChannels.length === 0 ? (
+              <div className="no-channels-message">
+                {searchQuery ? 'No channels match your search' : 'All followed channels are already being watched'}
+              </div>
+            ) : (
+              filteredChannels.map((channel) => (
+                <button
+                  key={channel.id}
+                  className="channel-list-item"
+                  onClick={() => {
+                    setSelectedChannelId(channel.id);
+                    setSearchQuery('');
+                  }}
+                >
+                  {channel.profileImageUrl && (
+                    <img src={channel.profileImageUrl} alt="" className="channel-thumb" />
+                  )}
+                  <div className="channel-info">
+                    <div className="channel-display-name">{channel.displayName}</div>
+                    <div className="channel-username">@{channel.name}</div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          {selectedChannelId && (
+            <div className="selected-channel-display">
+              {unwatchedChannels.find((c) => c.id === selectedChannelId)?.displayName}
+            </div>
+          )}
+          <button
+            className="add-button"
+            onClick={handleAddStreamer}
+            disabled={!selectedChannelId}
+          >
+            <FaPlus /> Add
+          </button>
+        </div>
+
+        <div className="watchlist-items">
+          {watchedStreamers.length === 0 ? (
+            <p className="empty-message">No streamers being watched yet</p>
+          ) : (
+            watchedStreamers.map((streamer) => (
+              <div key={streamer.id} className="watchlist-item">
+                <div className="item-info">
+                  {streamer.profileImageUrl && (
+                    <img
+                      src={streamer.profileImageUrl}
+                      alt={streamer.displayName}
+                      className="item-avatar"
+                    />
+                  )}
+                  <div className="item-details">
+                    <div className="item-name">{streamer.displayName}</div>
+                    <div className="item-username">@{streamer.name}</div>
+                  </div>
+                </div>
+                <button
+                  className="remove-button"
+                  onClick={() => handleRemoveStreamer(streamer.id)}
+                  title="Remove from watchlist"
+                >
+                  <FaTrash />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="watchlist-footer">
+          <p className="info-text">
+            <FaEye style={{ marginRight: '6px' }} />
+            You'll be notified once per session when each streamer goes live
+          </p>
+          <button className="close-button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

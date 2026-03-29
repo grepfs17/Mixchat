@@ -1,0 +1,156 @@
+---
+import AppContainer from "../components/AppContainer";
+import { DISPLAY_VERSION } from "../lib/version";
+import "../styles/global.css";
+import "../styles/AppContainer.css";
+import "../styles/ChatDisplay.css";
+import "../styles/LoginPanel.css";
+import "../styles/MessageInput.css";
+import "../styles/Notification.css";
+import "../styles/LoadingOverlay.css";
+import "../styles/EmoteMenu.css";
+
+const title = "Mixchat - Advanced Twitch Chat Client";
+const description =
+  "Enhanced Twitch chat client with support for emotes from 7TV, BTTV, and FFZ. Stream replies, badges, and third-party integrations.";
+
+const mainUrl = "https://mixchat.grepfs.xyz/";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="mobile-web-app-capable" content="true" />
+    <title>{title}</title>
+
+    <link rel="icon" type="image/x-icon" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={mainUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="Mixchat" />
+    <meta property="og:image" content={mainUrl + "favicon.png"} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={mainUrl + "favicon.png"} />
+
+    <meta
+      name="keywords"
+      content="twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, youtube chat, youtube emotes, youtube chat client, mixchat"
+    />
+    <meta name="author" content="Mixchat" />
+    <link rel="canonical" href={mainUrl} />
+
+    <link rel="preconnect" href="https://www.twitch.tv" />
+    <link rel="preconnect" href="https://www.youtube.com" />
+
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        name: "Mixchat",
+        description: description,
+        applicationCategory: "Utility",
+      })}
+    />
+  </head>
+  <style>
+    #app {
+      height: 100vh;
+      padding: 0;
+      padding-bottom: 50px;
+      background: var(--color-bg-primary);
+      overflow: hidden;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      border-top: 1px solid var(--color-border-medium);
+      padding: 12px 20px;
+      background: var(--color-bg-primary);
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      text-align: center;
+      z-index: 100;
+      height: 50px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    footer img {
+      position: absolute;
+      left: 20px;
+      opacity: 0.7;
+    }
+
+    footer a {
+      color: var(--color-accent);
+      text-decoration: none;
+      margin: 0 12px;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      #app {
+        padding: 0;
+        padding-bottom: 60px;
+      }
+
+      footer {
+        height: 60px;
+        padding: 8px 12px;
+        font-size: 11px;
+      }
+
+      footer img {
+        display: none;
+      }
+
+      footer a {
+        margin: 0 6px;
+      }
+    }
+  </style>
+</html>
+<body>
+  <div id="app">
+    <AppContainer client:load />
+  </div>
+  <footer>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+
+    <span
+      >© 2026 Mixchat by <a
+        href="https://github.com/grepfs17/Mixchat"
+        target="_blank">grepfs17</a
+      > — Licensed under <a
+        href="https://opensource.org/licenses/MIT"
+        target="_blank">MIT</a
+      > — {DISPLAY_VERSION}</span
+    >
+    <img
+      src="/logo.png"
+      alt="Mixchat Logo"
+      style="width: auto; height: 30px;"
+    />
+  </footer>
+</body>

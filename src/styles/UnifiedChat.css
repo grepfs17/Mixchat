@@ -1,0 +1,99 @@
+@import './vars.css';
+
+.unified-chat-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.unified-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0 4px 0;
+}
+
+.platform-tag {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 3px;
+    flex-shrink: 0;
+}
+
+.platform-tag.twitch {
+    color: #9147ff;
+}
+
+.platform-tag.youtube {
+    color: #FF0000;
+}
+
+/* Reusing some classes from ChatDisplay via global scope or if added here */
+.twitch-event-icon {
+    margin-right: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.author.twitch-author:hover {
+    text-decoration: underline;
+}
+
+
+/* Ensure UnifiedChat specific overrides if needed */
+
+/* Super Chat Styles - Reused from YouTubeChat.css */
+.yt-superchat {
+  margin: 4px 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.yt-superchat-header {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.yt-superchat-header .avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50%;
+}
+
+.yt-superchat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.yt-superchat-author {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+.yt-superchat-amount {
+  color: #fff;
+  font-size: 14px;
+}
+
+.yt-superchat-body {
+  padding: 8px 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #fff;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.yt-superchat-sticker {
+  width: 72px;
+  height: 72px;
+  margin-top: 4px;
+  object-fit: contain;
+}

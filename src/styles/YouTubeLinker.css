@@ -1,0 +1,363 @@
+/* YouTubeLinker modal – mirrors WatchlistManager styles */
+
+.ytlinker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.ytlinker-manager {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-accent);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 540px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-accent-lg);
+  color: var(--color-text-primary);
+}
+
+.ytlinker-manager h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-white);
+  display: flex;
+  align-items: center;
+}
+
+.ytlinker-subtitle {
+  margin: 0 0 20px 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* Add section */
+.ytlinker-add-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ytlinker-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ytlinker-channel-select,
+.ytlinker-url-input {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ytlinker-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ytlinker-search {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  cursor: text;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.ytlinker-search:hover,
+.ytlinker-search:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* Dropdown for channel list */
+.ytlinker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  display: none;
+}
+
+.ytlinker-search:focus ~ .ytlinker-dropdown {
+  display: block;
+}
+
+.ytlinker-dropdown:hover {
+  display: block;
+}
+
+.ytlinker-search:focus ~ .ytlinker-dropdown:hover {
+  display: block;
+}
+
+.ytlinker-no-channels {
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.ytlinker-channel-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border-dark);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+  font-size: 13px;
+}
+
+.ytlinker-channel-item:last-child {
+  border-bottom: none;
+}
+
+.ytlinker-channel-item:hover {
+  background: var(--color-bg-tertiary);
+}
+
+
+.ytlinker-channel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ytlinker-channel-display-name {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytlinker-channel-username {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytlinker-selected-display {
+  padding: 6px 10px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ytlinker-error {
+  color: #ef4444;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.ytlinker-add-button {
+  padding: 10px 16px;
+  background: #FF0000;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ytlinker-add-button:hover:not(:disabled) {
+  background: #cc0000;
+  transform: translateY(-1px);
+}
+
+.ytlinker-add-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Linked items list */
+.ytlinker-items {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding-right: 8px;
+}
+
+.ytlinker-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ytlinker-items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ytlinker-items::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 3px;
+}
+
+.ytlinker-items::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+.ytlinker-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  padding: 20px;
+  margin: 0;
+}
+
+.ytlinker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.ytlinker-item:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-accent);
+}
+
+.ytlinker-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ytlinker-item-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.ytlinker-item-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ytlinker-item-url {
+  font-size: 12px;
+  color: #FFFFFF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+  display: block;
+}
+
+.ytlinker-item-url:hover {
+  text-decoration: underline;
+}
+
+.ytlinker-remove-button {
+  background: none;
+  border: none;
+  color: #FF0000;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.ytlinker-remove-button:hover {
+  color: #cc0000;
+  transform: scale(1.1);
+}
+
+/* Footer */
+.ytlinker-footer {
+  border-top: 1px solid var(--color-border-medium);
+  padding-top: 16px;
+}
+
+.ytlinker-info-text {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0 0 12px 0;
+}
+
+.ytlinker-close-button {
+  width: 100%;
+  padding: 10px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ytlinker-close-button:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-accent);
+}
+
+@media (max-width: 480px) {
+  .ytlinker-manager {
+    padding: 20px;
+    max-width: 100%;
+    max-height: 90vh;
+  }
+
+  .ytlinker-manager h2 {
+    font-size: 18px;
+  }
+}

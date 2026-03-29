@@ -1,0 +1,35 @@
+import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
+import node from '@astrojs/node';
+
+export default defineConfig({
+  integrations: [react()],
+  adapter: process.env.NODE_ENV === 'production' ? node({ mode: 'production' }) : node({ mode: 'development' }),
+  output: 'server',
+  server: {
+    host: true,
+    port: 3000,
+    allowedHosts: ['mixchat.local'],
+  },
+  vite: {
+    server: {
+      resolve: {
+        noExternal: ['fs', 'path', 'url', 'util']
+      },
+      host: '0.0.0.0',
+      allowedHosts: true,
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id) return;
+            if (id.includes('/node_modules/react-icons/') || id.includes('\\node_modules\\react-icons\\')) return 'icons';
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    }
+
+  }
+});

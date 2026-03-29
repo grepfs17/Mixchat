@@ -1,0 +1,50 @@
+{
+  "name": "mixchat",
+  "version": "0.5.0-beta",
+  "description": "Advanced Twitch chat client with support for 7TV, BTTV, and FFZ emotes. Stream replies, badges and basic YouTube chat support.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "test": "vitest",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@twurple/api": "^8.0.3",
+    "@twurple/auth": "^8.0.3",
+    "@twurple/chat": "^8.0.3",
+    "astro": "^6.1.1",
+    "dompurify": "^3.3.1",
+    "dotenv": "^16.3.1",
+    "hls.js": "^1.6.15",
+    "react-icons": "^5.5.0",
+    "twitch-m3u8": "^1.1.5",
+    "youtube-chat": "^2.2.0"
+  },
+  "devDependencies": {
+    "@astrojs/node": "^10.0.3",
+    "@astrojs/react": "^5.0.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22.12.0",
+    "@types/react": "^18.0.21",
+    "@types/react-dom": "^18.0.6",
+    "jsdom": "^28.1.0",
+    "pm2": "^6.0.14",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.7.3",
+    "vitest": "^1.6.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "tar": "7.5.9",
+      "esbuild": "0.25.0",
+      "ajv": "8.18.0"
+    }
+  }
+}
