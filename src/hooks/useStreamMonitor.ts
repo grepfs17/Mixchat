@@ -27,7 +27,7 @@ export function useStreamMonitor({
   const [isChecking, setIsChecking] = useState(false);
 
   const checkStreamers = useCallback(async () => {
-    if (!session || !enabled) return;
+    if (!session?.accessToken || !enabled) return;
 
     setIsChecking(true);
     try {
