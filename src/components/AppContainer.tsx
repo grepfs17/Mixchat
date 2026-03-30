@@ -9,7 +9,7 @@ import YouTubeLinker from './YouTubeLinker';
 import '../styles/AppContainer.css';
 import type { PlatformSession } from '../lib/types';
 import { getYoutubeLinkForChannel } from '../lib/youtubeLinks';
-import { getFollowedChannels, getStreamStatus, getAllFollowedChannels } from '../lib/twitch';
+import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';
 import { useStreamMonitor } from '../hooks/useStreamMonitor';
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { markStreamerNotified } from '../lib/streamMonitor';
@@ -239,25 +239,20 @@ export default function AppContainer() {
           const accessToken = sessions.twitch.accessToken;
 
           const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-          const channels = await getFollowedChannels(
+
+          // Single API call – returns ALL followed channels (online first).
+          // Derive the online-only list by filtering, avoiding duplicate requests.
+          const allChannels = await getAllFollowedChannels(
             accessToken,
             clientId,
             sessions.twitch.userId
           );
-          setTwitchChannels(channels);
 
-          // Also fetch all channels for the watchlist manager
-          try {
-            const allChannels = await getAllFollowedChannels(
-              accessToken,
-              clientId,
-              sessions.twitch.userId
-            );
-            setAllTwitchChannels(allChannels);
-          } catch (error) {
-            console.warn('Failed to fetch all channels, using online channels:', error);
-            setAllTwitchChannels(channels);
-          }
+          setAllTwitchChannels(allChannels);
+
+          // Online channels = those with a viewer count > 0
+          const onlineChannels = allChannels.filter((ch) => ch.viewerCount > 0);
+          setTwitchChannels(onlineChannels);
 
           setHasLoadedChannel(false);
         } catch (error) {
