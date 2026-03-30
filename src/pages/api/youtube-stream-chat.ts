@@ -225,14 +225,19 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
       if (run.emoji) {
         const emoji = run.emoji;
         const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-        const url = emoji.image?.thumbnails?.[0]?.url;
-        
-        // Skip emoji if we can't get the URL
+        // Try multiple possible thumbnail paths (YouTube.js may vary)
+        const url = emoji.image?.thumbnails?.[0]?.url
+          || (Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined);
+
+        const isCustom = !!emoji.is_custom_emoji;
+
         if (!url) {
+          // For standard unicode emojis, emoji_id IS the unicode character use it as text
+          if (!isCustom && emoji.emoji_id) {
+            parts.push({ type: 'text', text: emoji.emoji_id });
+          }
           continue;
         }
-        
-        const isCustom = !!emoji.is_custom_emoji;
 
         if (!emoteMap.has(name)) {
           emoteMap.set(name, { name, url, isCustomEmoji: isCustom });
