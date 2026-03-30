@@ -32,13 +32,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const yt = await getInnertube();
 
-    // Update session credentials for this request
+    // Set the OAuth token on the session's oauth property
     try {
-      await (yt.session as any).signIn({
+      (yt.session as any).oauth = {
         access_token: accessToken,
+        token_type: 'Bearer',
         expiry_date: Date.now() + 3600 * 1000
-      });
+      };
     } catch (tokenError) {
+      console.error('[YouTube Chat] Failed to set OAuth token:', tokenError);
       return new Response(
         JSON.stringify({ error: `Invalid YouTube token: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}` }),
         { status: 401, headers }

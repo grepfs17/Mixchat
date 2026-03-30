@@ -30,16 +30,17 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 
     const yt = await getInnertube();
     
-    // If YouTube token is available in cookies, use it to authenticate the session
+    // If YouTube token is available in cookies, set it on the session
     const accessToken = cookies.get("youtube_token")?.value;
     if (accessToken) {
       try {
-        await (yt.session as any).signIn({
+        (yt.session as any).oauth = {
           access_token: accessToken,
+          token_type: 'Bearer',
           expiry_date: Date.now() + 3600 * 1000
-        });
+        };
       } catch (tokenError) {
-        console.error('Failed to authenticate with provided token:', tokenError);
+        console.error('[YouTube Live] Failed to set OAuth token:', tokenError);
         // Continue without authentication - some channels may be public
       }
     }
