@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
 
+// we get this key from the environmemnt but it is a public key
 const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID;
 if (!GQL_CLIENT_ID) {
   throw new Error(
