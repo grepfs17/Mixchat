@@ -104,6 +104,57 @@ export const GET: APIRoute = async ({ url }) => {
 
       console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
       await chat.start();
+      console.log(`[YouTube Chat] Live chat started successfully`);
+
+      // Try to retrieve previous messages from the chat buffer
+      try {
+        const chatData = (chat as any);
+        
+        // Method 1: Check if there are any buffered messages in the chat object
+        if (chatData.message_queue && Array.isArray(chatData.message_queue)) {
+          console.log(`[YouTube Chat] Found ${chatData.message_queue.length} buffered messages`);
+          for (const msg of chatData.message_queue) {
+            if (msg.type === 'AddChatItemAction' && msg.item) {
+              let chatMsg: ChatMessage | null = null;
+              const item = msg.item;
+              
+              if (item.type === 'LiveChatMessage' || item.type === 'LiveChatTextMessage') {
+                chatMsg = parseLiveChatMessage(item, emoteMap);
+              } else if (item.type === 'LiveChatPaidMessageItem') {
+                chatMsg = parsePaidMessage(item, emoteMap);
+              } else if (item.type === 'LiveChatPaidStickerItem') {
+                chatMsg = parsePaidSticker(item, emoteMap);
+              }
+              
+              if (chatMsg && !messages.some(m => m.id === chatMsg!.id)) {
+                messages.push(chatMsg);
+              }
+            }
+          }
+        }
+        
+        // Method 2: Check for previous messages action
+        if (chatData.previous_messages && Array.isArray(chatData.previous_messages)) {
+          console.log(`[YouTube Chat] Found ${chatData.previous_messages.length} previous messages`);
+          for (const msg of chatData.previous_messages) {
+            let chatMsg: ChatMessage | null = null;
+            
+            if (msg.type === 'LiveChatMessage' || msg.type === 'LiveChatTextMessage') {
+              chatMsg = parseLiveChatMessage(msg, emoteMap);
+            } else if (msg.type === 'LiveChatPaidMessageItem') {
+              chatMsg = parsePaidMessage(msg, emoteMap);
+            } else if (msg.type === 'LiveChatPaidStickerItem') {
+              chatMsg = parsePaidSticker(msg, emoteMap);
+            }
+            
+            if (chatMsg && !messages.some(m => m.id === chatMsg!.id)) {
+              messages.push(chatMsg);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[YouTube Chat] Could not retrieve previous messages:', err);
+      }
 
       // Populate emote map with initial channel emojis
       const initialEmojis = (chat as any).initial_stats?.emojis;
