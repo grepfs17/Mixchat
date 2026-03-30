@@ -23,6 +23,10 @@ const STATIC_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Disable browser features this app does not use
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  // Enforce HTTPS for 2 years (production only — dev runs over plain HTTP)
+  ...(import.meta.env.MODE !== "development"
+    ? { "Strict-Transport-Security": "max-age=63072000; includeSubDomains" }
+    : {}),
 };
 
 /**

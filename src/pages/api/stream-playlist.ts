@@ -1,9 +1,13 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-// Prefer an explicit env var; fall back to the well-known Twitch web client ID.
-const GQL_CLIENT_ID =
-  import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID;
+if (!GQL_CLIENT_ID) {
+  throw new Error(
+    "TWITCH_GQL_CLIENT_ID environment variable is required. " +
+    "Set it in your .env file.",
+  );
+}
 
 export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   // Require an active session — prevents open-proxy abuse of this endpoint.

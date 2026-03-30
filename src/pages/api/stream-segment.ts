@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 /**
  * Hostnames that this proxy is permitted to fetch on behalf of the client.
@@ -22,7 +23,24 @@ function isAllowedHost(hostname: string): boolean {
 }
 
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+  // Require an active session — prevents open-proxy abuse of this endpoint.
+  const twitchToken = cookies.get("twitch_token")?.value;
+  const youtubeToken = cookies.get("youtube_token")?.value;
+  if (!twitchToken && !youtubeToken) {
+    return new Response(
+      JSON.stringify({ error: "Authentication required" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  if (!checkRateLimit(`${clientAddress}:stream-segment`, 300, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+    );
+  }
+
   try {
     const remote = url.searchParams.get("url");
     if (!remote) {
@@ -88,7 +106,6 @@ export const GET: APIRoute = async ({ url }) => {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        "Access-Control-Allow-Origin": "*",
         // Allow range requests if remote supports it
         "Accept-Ranges": res.headers.get("accept-ranges") || "bytes",
       },

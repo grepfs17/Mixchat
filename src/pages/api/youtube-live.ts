@@ -1,15 +1,23 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 // Simple in-memory cache to save on InnerTube calls
 const liveVideoCache = new Map<string, { videoId: string | null; expires: number }>();
 const LIVE_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",
   };
+
+  if (!checkRateLimit(`${clientAddress}:youtube-live`, 30, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+    );
+  }
 
   try {
     const channelUrl = url.searchParams.get("channelUrl");
