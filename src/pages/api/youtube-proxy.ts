@@ -38,18 +38,6 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 
     const yt = await getInnertube();
 
-    // Set OAuth token on the session
-    try {
-      (yt.session as any).oauth = {
-        access_token: accessToken,
-        token_type: 'Bearer',
-        expiry_date: Date.now() + 3600 * 1000,
-      };
-    } catch (tokenError) {
-      console.error('[YouTube Proxy] Failed to set OAuth token:', tokenError);
-      // Some operations may work without authentication
-    }
-
     // Route to appropriate handler
     if (action === "getLiveVideo") {
       return await handleGetLiveVideo(url, yt);

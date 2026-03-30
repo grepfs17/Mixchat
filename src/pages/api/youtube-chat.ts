@@ -1,7 +1,12 @@
 import type { APIRoute } from "astro";
-import { getInnertube } from "../../lib/youtube";
 
-//Sends a message to a YouTube live chat using YouTube.js (Innertube)
+/**
+ * Sends a message to a YouTube live chat using the YouTube Data API v3.
+
+ * We deliberately avoid YouTube.js for sending messages because its
+ * `session.signIn()` expects its own internal OAuth flow and it wouldn't let us use
+ * the httpOnly cookie.
+ */
 export const POST: APIRoute = async ({ request, cookies }) => {
   const headers = { "Content-Type": "application/json" };
 
@@ -14,9 +19,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (!videoId || !message) {
       return new Response(
-        JSON.stringify({
-          error: "videoId and message are required",
-        }),
+        JSON.stringify({ error: "videoId and message are required" }),
         { status: 400, headers },
       );
     }
@@ -30,33 +33,65 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    const yt = await getInnertube();
+    // Step 1: Get the liveChatId for this video via the Data API
+    const videoRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}&key=${import.meta.env.YOUTUBE_API_KEY || ''}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
 
-    // Set the OAuth token on the session's oauth property
-    try {
-      (yt.session as any).oauth = {
-        access_token: accessToken,
-        token_type: 'Bearer',
-        expiry_date: Date.now() + 3600 * 1000
-      };
-    } catch (tokenError) {
-      console.error('[YouTube Chat] Failed to set OAuth token:', tokenError);
+    if (!videoRes.ok) {
+      const err = await videoRes.text();
+      console.error("[YouTube Chat] Failed to fetch video details:", videoRes.status, err);
       return new Response(
-        JSON.stringify({ error: `Invalid YouTube token: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}` }),
-        { status: 401, headers }
+        JSON.stringify({ error: "Failed to fetch video details" }),
+        { status: videoRes.status, headers },
       );
     }
 
-    const info = await yt.getInfo(videoId);
-    const liveChat = info.getLiveChat();
+    const videoData = await videoRes.json();
+    const liveChatId =
+      videoData.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
 
-    const response = await liveChat.sendMessage(message);
+    if (!liveChatId) {
+      return new Response(
+        JSON.stringify({ error: "This video does not have an active live chat" }),
+        { status: 400, headers },
+      );
+    }
 
-    if (!response) {
-      return new Response(JSON.stringify({ error: "Failed to send message" }), {
-        status: 500,
-        headers,
-      });
+    // Step 2: Send the message via liveChatMessages.insert
+    const sendRes = await fetch(
+      "https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          snippet: {
+            liveChatId,
+            type: "textMessageEvent",
+            textMessageDetails: {
+              messageText: message,
+            },
+          },
+        }),
+      },
+    );
+
+    if (!sendRes.ok) {
+      const err = await sendRes.text();
+      console.error("[YouTube Chat] Failed to send message:", sendRes.status, err);
+      return new Response(
+        JSON.stringify({
+          error: `Failed to send message: ${sendRes.status}`,
+          details: err,
+        }),
+        { status: sendRes.status, headers },
+      );
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -64,7 +99,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error("youtube-chat API error:", {
       message: errorMessage,
@@ -73,7 +109,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(
       JSON.stringify({
         error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+        details:
+          process.env.NODE_ENV === "development" ? errorStack : undefined,
       }),
       { status: 500, headers },
     );

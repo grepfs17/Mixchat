@@ -225,7 +225,13 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
       if (run.emoji) {
         const emoji = run.emoji;
         const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-        const url = emoji.image.thumbnails[0].url;
+        const url = emoji.image?.thumbnails?.[0]?.url;
+        
+        // Skip emoji if we can't get the URL
+        if (!url) {
+          continue;
+        }
+        
         const isCustom = !!emoji.is_custom_emoji;
 
         if (!emoteMap.has(name)) {
@@ -290,6 +296,8 @@ function parsePaidMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): ChatMe
 }
 
 function parsePaidSticker(msg: any, _emoteMap: Map<string, YTEmoteEntry>): ChatMessage {
+  const stickerUrl = msg.sticker?.thumbnails?.[0]?.url;
+  
   return {
     id: msg.id,
     author: msg.author.name.toString(),
@@ -299,10 +307,12 @@ function parsePaidSticker(msg: any, _emoteMap: Map<string, YTEmoteEntry>): ChatM
     superchat: {
       amount: msg.purchase_amount,
       color: ARGBtoHex(msg.background_color),
-      sticker: {
-        url: msg.sticker.thumbnails[0].url,
-        alt: msg.author.name.toString() + ' sticker'
-      }
+      ...(stickerUrl && {
+        sticker: {
+          url: stickerUrl,
+          alt: msg.author.name.toString() + ' sticker'
+        }
+      })
     }
   };
 }
