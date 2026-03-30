@@ -24,6 +24,10 @@ export const getTwitchAccessToken = async (
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Twitch token exchange failed: ${response.status}`);
+    }
+
     const data = await response.json();
     return {
       accessToken: data.access_token,
@@ -186,7 +190,7 @@ export const getAllFollowedChannels = async (
         thumbnail: channel.thumbnail_url,
       }));
 
-      followedChannels = followedChannels.concat(pageChannels);
+      followedChannels.push(...pageChannels);
 
       if (data.pagination?.cursor) {
         cursor = data.pagination.cursor;
@@ -195,57 +199,39 @@ export const getAllFollowedChannels = async (
       }
     }
 
-    // Enrich with profile images (batched)
-    const batchSize = BATCH_SIZE;
-    for (let i = 0; i < followedChannels.length; i += batchSize) {
-      const batch = followedChannels.slice(i, i + batchSize);
-      const userIds = batch.map((ch: any) => `id=${ch.id}`).join("&");
-
-      const usersResponse = await fetch(`${TWITCH_API_BASE}/users?${userIds}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Client-ID": clientId,
-        },
-      });
-
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        const userProfiles = new Map(
-          (usersData.data || []).map((user: any) => [
-            user.id,
-            user.profile_image_url,
-          ]),
-        );
-        batch.forEach((ch: any) => {
-          ch.profileImageUrl = userProfiles.get(ch.id);
-        });
-      }
-    }
-
-    // Fetch stream data to mark which channels are online (batched)
+    // Enrich with profile images and fetch stream data (batched, parallelized)
     const streamDataMap = new Map<string, any>();
 
-    for (let i = 0; i < followedChannels.length; i += batchSize) {
-      const batch = followedChannels.slice(i, i + batchSize);
-      const userIdParams = batch.map((ch: any) => `user_id=${ch.id}`).join("&");
+    await Promise.all(
+      Array.from({ length: Math.ceil(followedChannels.length / BATCH_SIZE) }, (_, idx) => {
+        const batch = followedChannels.slice(idx * BATCH_SIZE, (idx + 1) * BATCH_SIZE);
 
-      const streamsResponse = await fetch(
-        `${TWITCH_API_BASE}/streams?${userIdParams}&first=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Client-ID": clientId,
-          },
-        },
-      );
-
-      if (streamsResponse.ok) {
-        const streamsData = await streamsResponse.json();
-        (streamsData.data || []).forEach((s: any) => {
-          streamDataMap.set(s.user_id, s);
+        const profilePromise = fetch(
+          `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
+          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
+        ).then(async (res) => {
+          if (res.ok) {
+            const usersData = await res.json();
+            const userProfiles = new Map(
+              (usersData.data || []).map((user: any) => [user.id, user.profile_image_url]),
+            );
+            batch.forEach((ch: any) => { ch.profileImageUrl = userProfiles.get(ch.id); });
+          }
         });
-      }
-    }
+
+        const streamPromise = fetch(
+          `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
+          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
+        ).then(async (res) => {
+          if (res.ok) {
+            const streamsData = await res.json();
+            (streamsData.data || []).forEach((s: any) => { streamDataMap.set(s.user_id, s); });
+          }
+        });
+
+        return Promise.all([profilePromise, streamPromise]);
+      }),
+    );
 
     followedChannels.forEach((ch: any) => {
       if (streamDataMap.has(ch.id)) {
@@ -368,39 +354,36 @@ export const getStreamStatuses = async (
       result[id] = { isLive: false };
     });
 
-    // Batch into groups of BATCH_SIZE (100) to respect Twitch API limits
-    for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
-      const batch = userIds.slice(i, i + BATCH_SIZE);
-      const params = batch.map((id) => `user_id=${id}`).join("&");
-      const response = await fetch(
-        `${TWITCH_API_BASE}/streams?${params}&first=100`,
-        {
+    // Batch into groups of BATCH_SIZE (100) to respect Twitch API limits, run in parallel
+    await Promise.all(
+      Array.from({ length: Math.ceil(userIds.length / BATCH_SIZE) }, (_, i) => {
+        const batch = userIds.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+        const params = batch.map((id) => `user_id=${id}`).join("&");
+        return fetch(`${TWITCH_API_BASE}/streams?${params}&first=100`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Client-ID": clientId,
           },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`Twitch API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Update with actual live streams
-      data.data?.forEach((stream: any) => {
-        result[stream.user_id] = {
-          isLive: true,
-          title: stream.title,
-          viewerCount: stream.viewer_count,
-          startedAt: new Date(stream.started_at),
-        };
-      });
-    }
+        }).then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Twitch API error: ${response.status}`);
+          }
+          const data = await response.json();
+          // Update with actual live streams
+          data.data?.forEach((stream: any) => {
+            result[stream.user_id] = {
+              isLive: true,
+              title: stream.title,
+              viewerCount: stream.viewer_count,
+              startedAt: new Date(stream.started_at),
+            };
+          });
+        });
+      }),
+    );
 
     const batchCount = Math.ceil(userIds.length / BATCH_SIZE);
-    console.log(
+    console.debug(
       `Batch stream check: ${userIds.length} streamers checked in ${batchCount} request(s)`,
     );
     return result;
@@ -449,8 +432,8 @@ export const getRecentMessages = async (
             const tagPairs = tagsMatch[1].split(";");
             tags = Object.fromEntries(
               tagPairs.map((pair) => {
-                const [key, value] = pair.split("=");
-                return [key, value || ""];
+                const eqIdx = pair.indexOf("=");
+                return [pair.slice(0, eqIdx), pair.slice(eqIdx + 1) || ""];
               }),
             );
           }
