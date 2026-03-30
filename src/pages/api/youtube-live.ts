@@ -13,6 +13,7 @@ export const GET: APIRoute = async ({ url }) => {
 
   try {
     const channelUrl = url.searchParams.get("channelUrl");
+    const accessToken = url.searchParams.get("accessToken");
 
     if (!channelUrl) {
       return new Response(
@@ -29,29 +30,98 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const yt = await getInnertube();
+    
+    // If accessToken is provided, use it to authenticate the session
+    if (accessToken) {
+      try {
+        await (yt.session as any).signIn({
+          access_token: accessToken,
+          expiry_date: Date.now() + 3600 * 1000
+        });
+      } catch (tokenError) {
+        console.error('Failed to authenticate with provided token:', tokenError);
+        // Continue without authentication - some channels may be public
+      }
+    }
 
-    // Use getChannel which handles handles, URLs, and IDs
-    const channel = await yt.getChannel(channelUrl);
+    // Resolve the URL to get the channel ID/endpoint
+    let channelId = channelUrl;
+    console.log(`[YouTube Live] Looking up channel: ${channelUrl}`);
+    if (channelUrl.includes('youtube.com') || channelUrl.includes('youtu.be')) {
+      try {
+        const endpoint = await (yt as any).resolveURL(channelUrl);
+        console.log(`[YouTube Live] Resolved URL to endpoint:`, endpoint?.payload);
+        if (endpoint?.payload?.browseId) {
+          channelId = endpoint.payload.browseId;
+          console.log(`[YouTube Live] Using channel ID: ${channelId}`);
+        }
+      } catch (urlError) {
+        console.warn('Failed to resolve URL, will try direct lookup:', urlError);
+      }
+    }
+
+    // Use getChannel with the resolved ID
+    const channel = await yt.getChannel(channelId);
+    console.log(`[YouTube Live] Retrieved channel info`);
 
     // Check if the channel is currently live
     const liveStreams = await (channel as any).getLiveStreams();
-    const videoId = liveStreams.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+    console.log(`[YouTube Live] getLiveStreams returned:`, {
+      hasVideos: !!liveStreams.videos,
+      videoCount: liveStreams.videos?.length || 0,
+    });
+    let videoId = liveStreams.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+    
+    // If getLiveStreams didn't find anything, try checking the home tab
+    if (!videoId) {
+      console.log(`[YouTube Live] No live streams found via getLiveStreams, trying home feed...`);
+      try {
+        const home = await (channel as any).getHome();
+        if (home?.contents) {
+          // Look for a live stream section in the home feed
+          const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
+          for (const section of sections) {
+            const items = section.itemSectionRenderer?.contents || [];
+            for (const item of items) {
+              if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
+                videoId = item.videoRenderer?.videoId;
+                if (videoId) {
+                  console.log(`[YouTube Live] Found live video in home feed: ${videoId}`);
+                  break;
+                }
+              }
+            }
+            if (videoId) break;
+          }
+        }
+      } catch (homeError) {
+        console.warn('[YouTube Live] Failed to check home feed:', homeError);
+      }
+    }
+    console.log(`[YouTube Live] Final videoId: ${videoId}`);
 
     liveVideoCache.set(channelUrl, { videoId, expires: now + LIVE_CACHE_TTL });
 
     // Try to get channel ID from metadata or basic_info
-    const channelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
+    const returnChannelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
 
-    return new Response(JSON.stringify({ videoId, channelId }), {
+    return new Response(JSON.stringify({ videoId, channelId: returnChannelId }), {
       status: 200,
       headers,
     });
 
   } catch (error) {
-    console.error("youtube-live API error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("youtube-live API error:", {
+      message: errorMessage,
+      stack: errorStack,
+      channelUrl: url.searchParams.get("channelUrl"),
+    });
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
       }),
       { status: 500, headers },
     );

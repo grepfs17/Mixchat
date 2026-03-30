@@ -46,6 +46,7 @@ const activeLiveChats = new Map<
 
 export const GET: APIRoute = async ({ url }) => {
   const videoId = url.searchParams.get('videoId');
+  const accessToken = url.searchParams.get('accessToken');
 
   if (!videoId) {
     return new Response(
@@ -66,6 +67,7 @@ export const GET: APIRoute = async ({ url }) => {
       const emoteMap = new Map<string, YTEmoteEntry>();
 
       chat.on('chat-update', (action: any) => {
+        console.log(`[YouTube Chat] Received chat-update action:`, action.type);
         if (action.type === 'AddChatItemAction') {
           const item = action.item;
 
@@ -73,7 +75,7 @@ export const GET: APIRoute = async ({ url }) => {
 
           let chatMsg: ChatMessage | null = null;
 
-          if (item.type === 'LiveChatMessage') {
+          if (item.type === 'LiveChatMessage' || item.type === 'LiveChatTextMessage') {
             chatMsg = parseLiveChatMessage(item, emoteMap);
           } else if (item.type === 'LiveChatPaidMessageItem') {
             chatMsg = parsePaidMessage(item, emoteMap);
@@ -100,6 +102,7 @@ export const GET: APIRoute = async ({ url }) => {
         }, 30000);
       });
 
+      console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
       await chat.start();
 
       // Populate emote map with initial channel emojis
@@ -130,6 +133,10 @@ export const GET: APIRoute = async ({ url }) => {
 
     chatSession.lastUpdate = Date.now();
 
+    if (chatSession.messages.length > 0) {
+      console.log(`[YouTube Chat] Returning ${chatSession.messages.length} messages for video ${videoId}`);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -147,10 +154,13 @@ export const GET: APIRoute = async ({ url }) => {
       }
     );
   } catch (error) {
-    console.error('YouTube stream chat API error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    activeLiveChats.delete(videoId);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Internal server error',
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
@@ -197,13 +207,25 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
     }
   }
 
+  // YouTube timestamps might already be in milliseconds
+  // Test both formats to see which one matches server time
+  const rawTimestamp = parseInt(msg.timestamp);
+  const asMillisecondsDirectly = new Date(rawTimestamp);
+  const asUsToMs = new Date(rawTimestamp / 1000);
+  
+  // Use the one that seems more reasonable (closer to now)
+  const now = new Date();
+  const msTimeDiff = Math.abs(now.getTime() - asMillisecondsDirectly.getTime());
+  const usTimeDiff = Math.abs(now.getTime() - asUsToMs.getTime());
+  const timestamp = msTimeDiff < usTimeDiff ? asMillisecondsDirectly : asUsToMs;
+
   return {
     id: msg.id,
     author: msg.author.name.toString(),
     authorAvatar: msg.author.thumbnails?.[0]?.url,
     badges,
     parts,
-    timestamp: new Date(parseInt(msg.timestamp) / 1000)
+    timestamp
   };
 }
 

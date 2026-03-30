@@ -130,9 +130,13 @@ export default function ChatApp({
       // the YouTube iframe to unmount and remount every poll. Only update
       // `autoVideoId` after we receive a result, and only if it changed.
       try {
-        const res = await fetch(`/api/youtube-live?channelUrl=${encodeURIComponent(linkedYoutubeUrl)}`, {
-          headers: youtubeAccessToken ? { 'Authorization': `Bearer ${youtubeAccessToken}` } : undefined
-        });
+        const params = new URLSearchParams();
+        params.append('channelUrl', linkedYoutubeUrl);
+        if (youtubeAccessToken) {
+          params.append('accessToken', youtubeAccessToken);
+        }
+        
+        const res = await fetch(`/api/youtube-live?${params.toString()}`);
         const data = await res.json();
         if (cancelled) return;
 

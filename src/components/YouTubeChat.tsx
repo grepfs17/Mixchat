@@ -82,7 +82,13 @@ export default function YouTubeChat({ videoId, accessToken, session, onEmotesDis
       try {
         setError(null);
 
-        const res = await fetch(`/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`);
+        const params = new URLSearchParams();
+        params.append('videoId', videoId);
+        if (accessToken) {
+          params.append('accessToken', accessToken);
+        }
+
+        const res = await fetch(`/api/youtube-stream-chat?${params.toString()}`);
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
@@ -93,6 +99,8 @@ export default function YouTubeChat({ videoId, accessToken, session, onEmotesDis
         const data = await res.json();
 
         if (!isMounted) return;
+
+        console.log(`[YouTubeChat] Received response: ${data.messageCount} messages, ${(data.emotes || []).length} emotes`);
 
         if (data.success && data.messages) {
           const fetchedMessages = (data.messages as any[]).map((msg: any) => ({
@@ -163,7 +171,7 @@ export default function YouTubeChat({ videoId, accessToken, session, onEmotesDis
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [videoId, isConnected]);
+  }, [videoId, accessToken, isConnected]);
 
   // Keep the view pinned to the newest message
   useEffect(() => {

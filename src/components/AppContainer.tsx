@@ -380,9 +380,13 @@ export default function AppContainer() {
     let cancelled = false;
     const fetchId = async () => {
       try {
-        const res = await fetch(`/api/youtube-live?channelUrl=${encodeURIComponent(linkedYoutubeUrl)}`, {
-          headers: sessions.youtube?.accessToken ? { 'Authorization': `Bearer ${sessions.youtube.accessToken}` } : undefined
-        });
+        const params = new URLSearchParams();
+        params.append('channelUrl', linkedYoutubeUrl);
+        if (sessions.youtube?.accessToken) {
+          params.append('accessToken', sessions.youtube.accessToken);
+        }
+        
+        const res = await fetch(`/api/youtube-live?${params.toString()}`);
         const data = await res.json();
         if (!cancelled && res.ok && data.videoId) {
           setYoutubeStreamVideoId(data.videoId);

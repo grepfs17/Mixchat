@@ -26,11 +26,17 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Update session credentials for this request
     // This allows us to use an existing accessToken from the client
-    (yt.session as any).signIn({
-      access_token: accessToken,
-      refresh_token: '', // Not needed for a one-off send
-      expiry_date: new Date(Date.now() + 3600 * 1000).toISOString()
-    });
+    try {
+      await (yt.session as any).signIn({
+        access_token: accessToken,
+        expiry_date: Date.now() + 3600 * 1000
+      });
+    } catch (tokenError) {
+      return new Response(
+        JSON.stringify({ error: `Invalid YouTube token: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}` }),
+        { status: 401, headers }
+      );
+    }
 
     const info = await yt.getInfo(videoId);
     const liveChat = info.getLiveChat();
@@ -49,10 +55,16 @@ export const POST: APIRoute = async ({ request }) => {
       headers,
     });
   } catch (error) {
-    console.error("youtube-chat API error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("youtube-chat API error:", {
+      message: errorMessage,
+      stack: errorStack,
+    });
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
       }),
       { status: 500, headers },
     );
