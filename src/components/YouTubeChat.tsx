@@ -62,6 +62,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const isConnectedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -69,13 +70,16 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
   // Remembers how many emotes we've already reported so we don't spam the parent
   const lastEmoteCountRef = useRef(0);
 
-  // Keep messages fresh by polling our backend every couple of seconds
+  // Keep messages fresh by polling our backend
   useEffect(() => {
     if (!videoId) return;
 
     let isMounted = true;
 
     const fetchChatMessages = async () => {
+      // Skip fetches while the tab is in the background to reduce server load
+      if (document.hidden) return;
+
       try {
         setError(null);
 
@@ -134,14 +138,11 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
           if (newMessages.length !== messages.length || lastNewId !== lastCurrentId) {
             setMessages(newMessages);
             lastMessageCountRef.current = newMessages.length;
+          }
 
-            // Set as connected once we get the first successful response
-            if (!isConnected) {
-              setIsConnected(true);
-              setIsLoading(false);
-            }
-          } else if (!isConnected) {
-            // Even an empty response counts as a successful connection
+          // Mark as connected using a ref to avoid restarting the interval
+          if (!isConnectedRef.current) {
+            isConnectedRef.current = true;
             setIsConnected(true);
             setIsLoading(false);
           }
@@ -155,17 +156,18 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
       }
     };
 
-    // Kick off the first fetch right away, then repeat every 2 s
+    // Kick off the first fetch right away, then repeat every 4 s
     fetchChatMessages();
-    pollingIntervalRef.current = setInterval(fetchChatMessages, 2000);
+    pollingIntervalRef.current = setInterval(fetchChatMessages, 4000);
 
     return () => {
       isMounted = false;
+      isConnectedRef.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [videoId, isConnected]);
+  }, [videoId]); // isConnected intentionally excluded — we use isConnectedRef to avoid restarting the interval on first connect
 
   // Keep the view pinned to the newest message
   useEffect(() => {
