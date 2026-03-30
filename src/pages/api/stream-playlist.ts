@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 
-const GQL_CLIENT_ID = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+// Prefer an explicit env var; fall back to the well-known Twitch web client ID.
+const GQL_CLIENT_ID =
+  import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
 export const GET: APIRoute = async ({ url }) => {
   try {

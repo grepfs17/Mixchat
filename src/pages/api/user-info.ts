@@ -1,20 +1,19 @@
 import type { APIRoute } from "astro";
 import { getTwitchUserById } from "../../lib/twitch";
 
-export const GET: APIRoute = async ({ request }) => {
-  const url = new URL(request.url);
+export const GET: APIRoute = async ({ url, cookies }) => {
   const userId = url.searchParams.get("userId");
-  const authHeader = request.headers.get("Authorization");
 
   if (!userId) {
     return new Response("User ID is required", { status: 400 });
   }
 
-  if (!authHeader) {
-    return new Response("Authorization header is required", { status: 401 });
+  // Read the access token from the httpOnly cookie — never from client input.
+  const accessToken = cookies.get("twitch_token")?.value;
+  if (!accessToken) {
+    return new Response("Not authenticated", { status: 401 });
   }
 
-  const accessToken = authHeader.replace("Bearer ", "");
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
 
   try {

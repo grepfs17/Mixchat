@@ -215,13 +215,21 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
             Waiting for messages...
           </div>
         )}
-        {messages.map((msg) => {
+        {(() => {
+          // Only render the avatar on the last (most recent) message per author
+          // to avoid firing dozens of simultaneous image requests to yt*.ggpht.com,
+          // which triggers 429 rate-limits from Google's CDN.
+          const lastIndexByAuthor = new Map<string, number>();
+          messages.forEach((msg, i) => lastIndexByAuthor.set(msg.author, i));
+
+          return messages.map((msg, index) => {
+          const showAvatar = lastIndexByAuthor.get(msg.author) === index;
           if (msg.superchat) {
             return (
               <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
                 <div className="yt-superchat-header">
-                  {msg.authorAvatar && (
-                    <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                  {msg.authorAvatar && showAvatar && (
+                    <img src={msg.authorAvatar} alt={msg.author} className="avatar" loading="lazy" />
                   )}
                   <div className="yt-superchat-info">
                     <div className="yt-superchat-author">{msg.author}</div>
@@ -238,6 +246,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                           alt={part.alt || part.emojiText || '🙂'}
                           title={part.emojiText || part.alt}
                           className={`yt-emoji ${part.isCustomEmoji ? 'custom' : 'standard'}`}
+                          loading="lazy"
                         />
                       ) : (
                         <React.Fragment key={i}>{part.text}</React.Fragment>
@@ -248,6 +257,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                         src={msg.superchat.sticker.url}
                         alt={msg.superchat.sticker.alt}
                         className="yt-superchat-sticker"
+                        loading="lazy"
                       />
                     )}
                   </div>
@@ -262,8 +272,8 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                 <span className="timestamp">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
-                {msg.authorAvatar && (
-                  <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                {msg.authorAvatar && showAvatar && (
+                  <img src={msg.authorAvatar} alt={msg.author} className="avatar" loading="lazy" />
                 )}
                 {msg.badges && Object.keys(msg.badges).length > 0 && (
                   <div className="yt-message-badges">
@@ -274,6 +284,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                         alt={name}
                         className="badge yt-badge"
                         title={name}
+                        loading="lazy"
                       />
                     ))}
                   </div>
@@ -291,6 +302,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                         alt={part.alt || part.emojiText || '🙂'}
                         title={part.emojiText || part.alt}
                         className={`yt-emoji ${part.isCustomEmoji ? 'custom' : 'standard'}`}
+                        loading="lazy"
                       />
                     ) : (
                       <React.Fragment key={i}>{part.text}</React.Fragment>
@@ -300,7 +312,8 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
               </div>
             </div>
           );
-        })}
+        });
+        })()}
       </div>
     </div>
   );

@@ -146,7 +146,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(
       JSON.stringify({
         accessToken,
-        refreshToken: refreshTokenOut,
+        // refreshToken is intentionally omitted — it lives only in the
+        // httpOnly cookie and must not be exposed to JavaScript.
         expiresIn,
       }),
       {

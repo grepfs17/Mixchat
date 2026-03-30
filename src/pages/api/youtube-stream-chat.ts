@@ -33,6 +33,10 @@ interface YTEmoteEntry {
   isCustomEmoji: boolean;
 }
 
+/** Maximum number of concurrent YouTube live chat sessions held in memory.
+ * Prevents unbounded memory growth from malicious or accidental videoId flooding. */
+const MAX_ACTIVE_SESSIONS = 50;
+
 // Global map to store active LiveChat sessions
 const activeLiveChats = new Map<
   string,
@@ -54,10 +58,33 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     );
   }
 
+  // Require authentication — prevents unauthenticated callers from creating
+  // server-side chat sessions and consuming server memory.
+  const accessToken = cookies.get('youtube_token')?.value;
+  if (!accessToken) {
+    return new Response(
+      JSON.stringify({ error: 'Not authenticated' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
     let chatSession = activeLiveChats.get(videoId);
 
     if (!chatSession) {
+      // Evict the least-recently-used session when the cap is reached.
+      if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
+        let oldestKey = '';
+        let oldestTime = Infinity;
+        for (const [key, s] of activeLiveChats) {
+          if (s.lastUpdate < oldestTime) {
+            oldestTime = s.lastUpdate;
+            oldestKey = key;
+          }
+        }
+        if (oldestKey) activeLiveChats.delete(oldestKey);
+      }
+
       const yt = await getInnertube();
       const info = await yt.getInfo(videoId);
 

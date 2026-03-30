@@ -21,6 +21,16 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       );
     }
 
+    // Require authentication — prevents unauthenticated callers from triggering
+    // Innertube requests on the server.
+    const accessToken = cookies.get("youtube_token")?.value;
+    if (!accessToken) {
+      return new Response(
+        JSON.stringify({ error: "Not authenticated" }),
+        { status: 401, headers },
+      );
+    }
+
     // Check cache
     const now = Date.now();
     const cached = liveVideoCache.get(channelUrl);

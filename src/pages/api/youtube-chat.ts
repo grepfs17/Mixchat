@@ -85,10 +85,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!sendRes.ok) {
       const err = await sendRes.text();
       console.error("[YouTube Chat] Failed to send message:", sendRes.status, err);
+      console.error("[YouTube Chat] Google API error details:", err);
       return new Response(
         JSON.stringify({
           error: `Failed to send message: ${sendRes.status}`,
-          details: err,
         }),
         { status: sendRes.status, headers },
       );
