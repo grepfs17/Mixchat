@@ -258,8 +258,7 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
     }
   }
 
-  // YouTube timestamps might already be in milliseconds
-  // Test both formats to see which one matches server time
+  // YouTube timestamps might already be in millisecond
   const rawTimestamp = parseInt(msg.timestamp);
   const asMillisecondsDirectly = new Date(rawTimestamp);
   const asUsToMs = new Date(rawTimestamp / 1000);
