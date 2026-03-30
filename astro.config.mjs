@@ -3,8 +3,9 @@ import react from '@astrojs/react';
 import node from '@astrojs/node';
 
 export default defineConfig({
+  site: 'https://mixchat.grepfs.xyz/',
   integrations: [react()],
-  adapter: process.env.NODE_ENV === 'production' ? node({ mode: 'production' }) : node({ mode: 'development' }),
+  adapter: node({ mode: 'standalone' }),
   output: 'server',
   server: {
     host: true,
@@ -12,10 +13,10 @@ export default defineConfig({
     allowedHosts: ['mixchat.local'],
   },
   vite: {
+    ssr: {
+      noExternal: ['fs', 'path', 'url', 'util'],
+    },
     server: {
-      resolve: {
-        noExternal: ['fs', 'path', 'url', 'util']
-      },
       host: '0.0.0.0',
       allowedHosts: ['localhost', '127.0.0.1', 'mixchat.local'],
     },

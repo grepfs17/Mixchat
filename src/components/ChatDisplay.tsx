@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MdStars, MdAutorenew, MdCardGiftcard, MdRefresh, MdReply, MdContentCopy, MdRedeem } from 'react-icons/md';
 import { GiHeartBeats } from 'react-icons/gi';
 import { FaUsers } from 'react-icons/fa';
@@ -51,10 +52,10 @@ function ChatDisplay({
   fontSize = 14,
   unifiedChatSlot,
 }: ChatDisplayProps) {
-  const [filteredMessages, setFilteredMessages] = useState<ChatMessage[]>([]);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
+  const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
   const authorColorById = useMemo(() => {
     const map = new Map<string, string>();
@@ -66,7 +67,8 @@ function ChatDisplay({
     return map;
   }, [messages]);
 
-  useEffect(() => {
+  // Derive filtered messages synchronously — avoids a wasted re-render from setState
+  const filteredMessages = useMemo(() => {
     let filtered = messages;
 
     // Remove optimistic placeholders when a matching real server message exists.
@@ -87,21 +89,22 @@ function ChatDisplay({
       return !hasReal;
     });
 
-    if (selectedPlatforms.length === 0) {
-      setFilteredMessages(filtered);
-    } else {
+    if (selectedPlatforms.length > 0) {
       filtered = filtered.filter((msg) => selectedPlatforms.includes(msg.platform));
-      setFilteredMessages(filtered);
     }
 
-    // Update new messages count when not at bottom
+    return filtered;
+  }, [messages, selectedPlatforms]);
+
+  // Update new-messages badge when user is scrolled away from bottom
+  useEffect(() => {
     if (!isAtBottom) {
-      const newCount = filtered.length - previousMessageCount;
+      const newCount = filteredMessages.length - previousMessageCount;
       if (newCount > 0) {
         setNewMessagesCount(newCount);
       }
     }
-  }, [messages, selectedPlatforms, isAtBottom, previousMessageCount]);
+  }, [filteredMessages.length, isAtBottom, previousMessageCount]);
 
   // Auto-scroll to bottom when messages change (only if user is at bottom)
   useEffect(() => {
@@ -134,60 +137,36 @@ function ChatDisplay({
     }
   }, [filteredMessages.length]);
 
-  // Handle emote tooltip on hover
-  useEffect(() => {
-    const handleEmoteHover = (e: Event) => {
-      const target = e.target as HTMLImageElement;
+  // Handle emote tooltip on hover via React state (no direct DOM manipulation)
+  const handleEmoteHover = useCallback((e: Event) => {
+    const target = e.target as HTMLImageElement;
+    if (!target.classList.contains('chat-emote')) return;
 
-      if (!target.classList.contains('chat-emote')) return;
-
-      if (e.type === 'mouseenter') {
-        const tooltipUrl = target.getAttribute('data-tooltip-url');
-        const emoteName = target.getAttribute('data-emote-name') || 'Emote';
-
-        if (tooltipUrl) {
-          const tooltip = document.createElement('div');
-          tooltip.className = 'chat-emote-tooltip';
-          tooltip.id = 'emote-tooltip';
-
-          const img = document.createElement('img');
-          img.src = tooltipUrl;
-          img.alt = emoteName;
-          tooltip.appendChild(img);
-
-          const nameDiv = document.createElement('div');
-          nameDiv.className = 'chat-emote-tooltip-name';
-          nameDiv.textContent = emoteName;
-          tooltip.appendChild(nameDiv);
-
-          document.body.appendChild(tooltip);
-
-          // Position tooltip near the mouse
-          const rect = target.getBoundingClientRect();
-          tooltip.style.left = (rect.left + window.scrollX) + 'px';
-          tooltip.style.top = (rect.top + window.scrollY - tooltip.offsetHeight - 10) + 'px';
-        }
-      } else if (e.type === 'mouseleave') {
-        const tooltip = document.getElementById('emote-tooltip');
-        if (tooltip) {
-          tooltip.remove();
-        }
+    if (e.type === 'mouseenter') {
+      const tooltipUrl = target.getAttribute('data-tooltip-url');
+      const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+      if (tooltipUrl) {
+        const rect = target.getBoundingClientRect();
+        setEmoteTooltip({ url: tooltipUrl, name: emoteName, x: rect.left, y: rect.top });
       }
-    };
+    } else if (e.type === 'mouseleave') {
+      setEmoteTooltip(null);
+    }
+  }, []);
 
+  useEffect(() => {
     const messagesContainer = messagesContainerRef.current;
     if (messagesContainer) {
       messagesContainer.addEventListener('mouseenter', handleEmoteHover, true);
       messagesContainer.addEventListener('mouseleave', handleEmoteHover, true);
     }
-
     return () => {
       if (messagesContainer) {
         messagesContainer.removeEventListener('mouseenter', handleEmoteHover, true);
         messagesContainer.removeEventListener('mouseleave', handleEmoteHover, true);
       }
     };
-  }, []);
+  }, [handleEmoteHover]);
 
 
   // Helper to render message icon for special events
@@ -512,6 +491,23 @@ function ChatDisplay({
           {newMessagesCount > 0 ? `New Messages (${newMessagesCount})` : 'New Messages'}
         </button>
       )}
+      {emoteTooltip ? createPortal(
+        <div
+          className="chat-emote-tooltip"
+          style={{
+            position: 'fixed',
+            left: emoteTooltip.x,
+            top: emoteTooltip.y,
+            transform: 'translateY(-100%) translateY(-10px)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+          }}
+        >
+          <img src={emoteTooltip.url} alt={emoteTooltip.name} />
+          <div className="chat-emote-tooltip-name">{emoteTooltip.name}</div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }

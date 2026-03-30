@@ -14,7 +14,7 @@ const title = "Mixchat - Advanced Twitch Chat Client";
 const description =
   "Enhanced Twitch chat client with support for emotes from 7TV, BTTV, and FFZ. Stream replies, badges, and third-party integrations.";
 
-const mainUrl = "https://mixchat.grepfs.xyz/";
+const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 ---
 
 <!doctype html>

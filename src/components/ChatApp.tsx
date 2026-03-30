@@ -16,6 +16,21 @@ const MAX_DISPLAYED_MESSAGES = 150;
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
 
+/** Formats a stream start time into a human-readable uptime string. */
+function calculateUptime(startedAt: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - startedAt.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffDay > 0) return `${diffDay}d ${diffHour % 24}h ${diffMin % 60}m`;
+  if (diffHour > 0) return `${diffHour}h ${diffMin % 60}m ${diffSec % 60}s`;
+  if (diffMin > 0) return `${diffMin}m ${diffSec % 60}s`;
+  return `${diffSec}s`;
+}
+
 interface ChatAppProps {
   twitchConnected: boolean;
   selectedTwitchChannel?: string;
@@ -451,20 +466,6 @@ export default function ChatApp({
 
   // Fetch stream status on channel change or when component mounts
   useEffect(() => {
-    const calculateUptime = (startedAt: Date): string => {
-      const now = new Date();
-      const diffMs = now.getTime() - startedAt.getTime();
-      const diffSec = Math.floor(diffMs / 1000);
-      const diffMin = Math.floor(diffSec / 60);
-      const diffHour = Math.floor(diffMin / 60);
-      const diffDay = Math.floor(diffHour / 24);
-
-      if (diffDay > 0) return `${diffDay}d ${diffHour % 24}h ${diffMin % 60}m`;
-      if (diffHour > 0) return `${diffHour}h ${diffMin % 60}m ${diffSec % 60}s`;
-      if (diffMin > 0) return `${diffMin}m ${diffSec % 60}s`;
-      return `${diffSec}s`;
-    };
-
     const fetchStreamStatus = async () => {
       if (selectedTwitchChannel && twitchSession) {
         try {

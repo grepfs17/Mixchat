@@ -1,9 +1,12 @@
 node_modules/
 dist/
-.astro/
-.vercel/
+*astro*
+*vercel*
 .env.local
 .env.*.local
 *.log
 .DS_Store
 .vscode/settings.json
+
+*lock.*
+*frontend*
