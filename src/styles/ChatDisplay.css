@@ -83,26 +83,8 @@
 
 .loading-indicator {
   font-size: 1.5rem;
-  color: #4ade80;
+  color: var(--color-green);
   animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .messages-container {
@@ -117,6 +99,11 @@
 }
 
 /* Custom scrollbar styling */
+.messages-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+
 .messages-container::-webkit-scrollbar {
   width: 8px;
 }
@@ -152,19 +139,8 @@
 }
 
 .message:hover {
-  background: #252525;
-  border-left-color: #444444;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  background: var(--color-bg-message-hover);
+  border-left-color: var(--color-border-light);
 }
 
 .message-single-line {
@@ -192,12 +168,12 @@
 }
 
 .message-separator {
-  color: #94a3b8;
+  color: var(--color-text-timestamp);
   flex-shrink: 0;
 }
 
 .message-text {
-  color: #cbd5e1;
+  color: var(--color-text-chat);
   word-wrap: break-word;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -215,8 +191,8 @@
 
 .action-button {
   background: transparent;
-  border: 1px solid #444444;
-  color: #cbd5e1;
+  border: 1px solid var(--color-border-light);
+  color: var(--color-text-chat);
   cursor: pointer;
   padding: 4px 8px;
   font-size: 11px;
@@ -229,15 +205,15 @@
 
 .action-button:hover {
   opacity: 1;
-  background: #2a2a2a;
-  border-color: #555555;
-  color: #e2e8f0;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-lighter);
+  color: var(--color-text-primary);
 }
 
 
 .timestamp {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--color-text-timestamp);
   flex-shrink: 0;
 }
 
@@ -276,7 +252,7 @@
 .chat-emote-tooltip {
   position: fixed;
   background: rgba(0, 0, 0, 0.95);
-  border: 1px solid #444;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-xl);
   padding: 8px;
   z-index: 10000;
@@ -298,38 +274,18 @@
 }
 
 .chat-emote-tooltip-name {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   font-size: 0.85rem;
   text-align: center;
   word-break: break-word;
 }
 
-@keyframes tooltipFade {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
 .sidebar-toggle-button {
   padding: 4px 8px;
-  background-color: #1a1a1a;
-  color: #e2e8f0;
-  border: 1px solid #333;
-  border-radius: 3px;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -337,15 +293,15 @@
 }
 
 .sidebar-toggle-button:hover {
-  background-color: #2a2a2a;
+  background-color: var(--color-bg-tertiary);
 }
 
 .show-stream-button {
   padding: 4px 8px;
-  background-color: #6366f1;
+  background-color: var(--color-indigo);
   color: #fff;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
@@ -353,17 +309,17 @@
 }
 
 .show-stream-button:hover {
-  background-color: #4f46e5;
+  background-color: var(--color-indigo-hover);
 }
 
 .status-badge-live {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #dc2626;
+  background-color: var(--color-live);
   color: #ffffff;
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-size: 0.75em;
   font-weight: 600;
   margin-right: 8px;
@@ -373,10 +329,10 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: #6b7280;
+  background-color: var(--color-offline);
   color: #ffffff;
   padding: 2px 8px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   font-size: 0.75em;
   font-weight: 600;
   margin-right: 8px;
@@ -395,19 +351,19 @@
 }
 
 .channel-link {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .channel-link:hover {
-  color: #9146ff;
+  color: var(--color-twitch);
 }
 
 .viewer-count-display {
   margin-left: 12px;
   font-size: 0.85em;
-  color: #94a3b8;
+  color: var(--color-text-timestamp);
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -417,43 +373,43 @@
 .uptime-display {
   margin-left: 12px;
   font-size: 0.85em;
-  color: #94a3b8;
+  color: var(--color-text-timestamp);
   font-weight: 500;
 }
 
 .message.preloaded {
   opacity: 0.55;
-  background-color: #0a0a0a;
+  background-color: var(--color-bg-primary);
 }
 
 .message.bot {
   opacity: 0.6;
-  background-color: #0f0f0f;
+  background-color: var(--color-bg-bot);
 }
 
 .message.redemption,
 .message.subscription,
 .message.resub,
 .message.subgift {
-  background-color: rgba(145, 71, 255, 0.4);
-  border-left: 3px solid #9147ff;
+  background-color: var(--color-bg-twitch-event);
+  border-left: 3px solid var(--color-border-twitch-event);
 }
 
 .message.cheer {
-  background-color: rgba(255, 183, 0, 0.4);
-  border-left: 3px solid #ffb700;
+  background-color: var(--color-bg-cheer-event);
+  border-left: 3px solid var(--color-border-cheer-event);
 }
 
 .message.mention {
-  background-color: rgba(99, 102, 241, 0.2);
-  border-left: 3px solid #6366f1;
+  background-color: var(--color-bg-mention);
+  border-left: 3px solid var(--color-border-mention);
   padding-left: 8px;
   margin-left: -8px;
 }
 
 .reply-info {
   font-size: 0.75em;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-bottom: 2px;
   font-style: italic;
   opacity: 0.8;
@@ -463,7 +419,7 @@
 }
 
 .reply-target-content {
-  color: #94a3b8;
+  color: var(--color-text-timestamp);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -478,9 +434,9 @@
 }
 
 .author.self {
-  background-color: #3b82f6;
+  background-color: var(--color-self);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .author-link {

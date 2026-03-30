@@ -32,8 +32,8 @@
 
 .icon-button {
   background: none;
-  border: 1px solid #333333;
-  color: #6366f1;
+  border: 1px solid var(--color-border-medium);
+  color: var(--color-indigo);
   cursor: pointer;
   padding: 6px 10px;
   display: flex;
@@ -41,22 +41,22 @@
   justify-content: center;
   font-size: 16px;
   transition: all 0.2s;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
 .icon-button:hover {
-  color: #4f46e5;
-  border-color: #6366f1;
+  color: var(--color-indigo-hover);
+  border-color: var(--color-indigo);
 }
 
 .icon-button.youtube-icon-btn {
-  color: #FF0000;
+  color: var(--color-youtube);
 }
 
 .icon-button.youtube-icon-btn:hover {
-  color: #cc0000;
-  border-color: #FF0000;
+  color: var(--color-youtube-hover);
+  border-color: var(--color-youtube);
 }
 
 .icon-button.small {
@@ -155,7 +155,7 @@
 .user-name {
   margin: 0;
   font-size: 0.8rem;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -170,7 +170,7 @@
 .channels-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-border-medium);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -192,11 +192,11 @@
   width: 100%;
   padding: 8px;
   margin-bottom: 8px;
-  border: 1px solid #333333;
-  border-radius: 4px;
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  background-color: #0a0a0a;
-  color: #e2e8f0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -205,7 +205,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: calc(100vh - 475px);
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 4px;
@@ -230,15 +230,15 @@
 .channel-item-image {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   object-fit: cover;
-  border: 1px solid #333333;
+  border: 1px solid var(--color-border-medium);
   flex-shrink: 0;
 }
 
 .channel-item-name {
   font-size: 0.9rem;
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -261,7 +261,7 @@
   cursor: pointer;
   padding: 0 4px;
   flex-shrink: 0;
-  color: #666666;
+  color: var(--color-icon-inactive);
   transition: color 0.2s ease;
   line-height: 1;
   display: flex;
@@ -269,13 +269,13 @@
 }
 
 .favorite-button.active {
-  color: #fbbf24;
+  color: var(--color-favorite);
 }
 
 .manual-join-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-border-medium);
   flex-shrink: 0;
 }
 
@@ -287,10 +287,11 @@
 .join-input {
   flex: 1;
   padding: 8px;
-  border: 1px solid #333333;
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  background-color: #0a0a0a;
-  color: #e2e8f0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   min-width: 0;
 }
 
@@ -304,6 +305,7 @@
   transition: transform 0.2s, opacity 0.2s;
   white-space: nowrap;
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
 }
 
 .login-btn:hover {
@@ -316,23 +318,24 @@
 }
 
 .login-btn.twitch-btn {
-  background-color: #9146ff;
+  background-color: var(--color-twitch);
   color: white;
 }
 
 .login-btn.youtube-btn {
-  background-color: #ff0000;
+  background-color: var(--color-youtube);
   color: white;
 }
 
 .logout-btn {
-  background-color: #333333;
-  color: #e2e8f0;
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
   flex-shrink: 0;
+  border-radius: var(--radius-sm);
 }
 
 .logout-btn:hover {
-  background-color: #555555;
+  background-color: var(--color-border-lighter);
 }
 
 .logout-btn.small {
@@ -343,7 +346,7 @@
 .youtube-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--color-border-medium);
 }
 
 .youtube-info-row {
@@ -369,19 +372,24 @@
 }
 
 /* Channel list scrollbar styling */
+.channel-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+
 .channel-list::-webkit-scrollbar {
   width: 8px;
 }
 
 .channel-list::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: var(--color-bg-primary);
 }
 
 .channel-list::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: var(--color-border-medium);
   border-radius: var(--radius-md);
 }
 
 .channel-list::-webkit-scrollbar-thumb:hover {
-  background: #555555;
+  background: var(--color-border-lighter);
 }

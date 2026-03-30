@@ -45,9 +45,9 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
   --shadow-sm-dark: 2px 0 10px rgba(0, 0, 0, 0.5);
-  --shadow-accent-sm: 0 0 0 3px rgba(99, 102, 241, 0.1);
-  --shadow-accent-md: 0 4px 12px rgba(99, 102, 241, 0.2);
-  --shadow-accent-lg: 0 10px 40px rgba(99, 102, 241, 0.15);
+  --shadow-accent-sm: 0 0 0 3px rgba(158, 64, 115, 0.1);
+  --shadow-accent-md: 0 4px 12px rgba(158, 64, 115, 0.2);
+  --shadow-accent-lg: 0 10px 40px rgba(158, 64, 115, 0.15);
 
   /* Border Radius */
   --radius-sm: 3px;
@@ -56,4 +56,40 @@
   --radius-xl: 8px;
   --radius-2xl: 12px;
   --radius-full: 50%;
+
+  /* Live / Stream UI */
+  --color-indigo: #6366f1;
+  --color-indigo-hover: #4f46e5;
+  --color-live: #dc2626;
+  --color-offline: #6b7280;
+  --color-cheer: #ffb700;
+  --color-favorite: #fbbf24;
+  --color-green: #4ade80;
+  --color-youtube-hover: #cc0000;
+  --color-self: #3b82f6;
+  --color-icon-inactive: #666666;
+  --color-bg-message-hover: #252525;
+  --color-bg-bot: #0f0f0f;
+
+  /* Chat Message Colors */
+  --color-text-chat: #cbd5e1;
+  --color-text-timestamp: #94a3b8;
+
+  /* Platform Event Backgrounds */
+  --color-bg-twitch-event: rgba(145, 71, 255, 0.4);
+  --color-bg-cheer-event: rgba(255, 183, 0, 0.4);
+  --color-bg-mention: rgba(99, 102, 241, 0.2);
+  --color-border-mention: #6366f1;
+  --color-border-twitch-event: #9147ff;
+  --color-border-cheer-event: #ffb700;
+
+  /* Warning Colors */
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #f59e0b;
+  --color-warning-text: #fde047;
+
+  /* Autocomplete / Dropdown */
+  --color-autocomplete-bg: #1e293b;
+  --color-autocomplete-border: #475569;
+  --color-autocomplete-selected: #334155;
 }

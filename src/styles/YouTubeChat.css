@@ -1,3 +1,5 @@
+@import './vars.css';
+
 .yt-chat-outer {
   height: 100%;
   display: flex;
@@ -16,6 +18,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
 }
 
 /* Custom scrollbar styling - matching Twitch chat */
@@ -41,8 +45,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0a0a0a;
-  color: #999;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-muted);
 }
 
 .yt-chat-error {
@@ -54,11 +58,11 @@
 
 .yt-chat-error-sub {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-muted);
 }
 
 .yt-chat-placeholder {
-  color: #666;
+  color: var(--color-text-muted);
   text-align: center;
   padding: 20px;
 }
@@ -110,9 +114,9 @@
   right: 0;
   max-height: 260px;
   overflow-y: auto;
-  background: #1e293b;
-  border: 1px solid #475569;
-  border-radius: 8px;
+  background: var(--color-autocomplete-bg);
+  border: 1px solid var(--color-autocomplete-border);
+  border-radius: var(--radius-xl);
   margin-bottom: 6px;
   z-index: 1000;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
@@ -128,7 +132,7 @@
 }
 
 .emote-autocomplete-item.selected {
-  background: #334155;
+  background: var(--color-autocomplete-selected);
 }
 
 .emote-autocomplete-item img {
@@ -144,7 +148,7 @@
 }
 
 .emote-autocomplete-name {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
   font-weight: 500;
   font-size: 13px;
   overflow: hidden;
@@ -153,26 +157,25 @@
 }
 
 .emote-autocomplete-type {
-  color: #94a3b8;
+  color: var(--color-text-secondary);
   font-size: 11px;
 }
 
 .yt-status-refreshing {
   padding: 6px 12px;
-  background-color: #0f0f0f;
-  border-top: 1px solid #333;
+  background-color: var(--color-bg-bot);
+  border-top: 1px solid var(--color-border-medium);
   font-size: 11px;
-  color: #888;
+  color: var(--color-text-muted);
   text-align: center;
 }
 
-
 .yt-status-login-required {
   padding: 6px 12px;
-  background-color: #0f0f0f;
-  border-top: 1px solid #333;
+  background-color: var(--color-bg-bot);
+  border-top: 1px solid var(--color-border-medium);
   font-size: 11px;
-  color: #666;
+  color: var(--color-text-muted);
   text-align: center;
 }
 

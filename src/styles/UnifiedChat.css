@@ -22,11 +22,11 @@
 }
 
 .platform-tag.twitch {
-    color: #9147ff;
+    color: var(--color-twitch);
 }
 
 .platform-tag.youtube {
-    color: #FF0000;
+    color: var(--color-youtube);
 }
 
 /* Reusing some classes from ChatDisplay via global scope or if added here */
@@ -43,57 +43,3 @@
 
 /* Ensure UnifiedChat specific overrides if needed */
 
-/* Super Chat Styles - Reused from YouTubeChat.css */
-.yt-superchat {
-  margin: 4px 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.yt-superchat-header {
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-}
-
-.yt-superchat-header .avatar {
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 50%;
-}
-
-.yt-superchat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.yt-superchat-author {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-}
-
-.yt-superchat-amount {
-  color: #fff;
-  font-size: 14px;
-}
-
-.yt-superchat-body {
-  padding: 8px 12px;
-  background-color: rgba(0, 0, 0, 0.1);
-  color: #fff;
-  word-break: break-word;
-  line-height: 1.4;
-}
-
-.yt-superchat-sticker {
-  width: 72px;
-  height: 72px;
-  margin-top: 4px;
-  object-fit: contain;
-}

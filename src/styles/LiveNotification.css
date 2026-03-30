@@ -1,26 +1,17 @@
+@import './vars.css';
+
 .live-notification {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background: #0a0a0a;
-  border: 2px solid #6366f1;
-  border-radius: 12px;
+  background: var(--color-bg-primary);
+  border: 2px solid var(--color-indigo);
+  border-radius: var(--radius-2xl);
   padding: 20px;
   max-width: 320px;
   box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
   z-index: 1000;
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(400px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  animation: slideInFromRight 0.3s ease-out;
 }
 
 .live-notification-header {
@@ -40,27 +31,18 @@
 }
 
 .live-badge {
-  background: #6366f1;
+  background: var(--color-indigo);
   color: white;
   font-weight: bold;
   font-size: 12px;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
   animation: pulse 1s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
 .streamer-name {
-  color: #e0e0e0;
+  color: var(--color-text-primary);
   font-weight: 600;
   font-size: 16px;
   overflow: hidden;
@@ -71,7 +53,7 @@
 .live-notification-close {
   background: none;
   border: none;
-  color: #999;
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 18px;
   padding: 4px;
@@ -83,7 +65,7 @@
 }
 
 .live-notification-close:hover {
-  color: #e0e0e0;
+  color: var(--color-text-primary);
 }
 
 .streamer-avatar {
@@ -96,7 +78,7 @@
 }
 
 .stream-title {
-  color: #b0b0b0;
+  color: var(--color-text-secondary);
   font-size: 14px;
   margin-bottom: 8px;
   line-height: 1.4;
@@ -108,18 +90,18 @@
 }
 
 .viewer-count {
-  color: #a0a0a0;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin-bottom: 12px;
 }
 
 .view-now-button {
   width: 100%;
-  background: #6366f1;
+  background: var(--color-indigo);
   color: white;
   border: none;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -127,7 +109,7 @@
 }
 
 .view-now-button:hover {
-  background: #4f46e5;
+  background: var(--color-indigo-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
