@@ -35,7 +35,8 @@ const SECURITY_HEADERS: Record<string, string> = {
       " https://*.ggpht.com" + // YouTube avatars (yt1–ytN subdomains)
       " https://yt3.googleusercontent.com" + // YouTube avatars (alt)
       " https://i.ytimg.com" + // YouTube thumbnails
-      " https://lh3.googleusercontent.com", // Google profile images
+      " https://lh3.googleusercontent.com" + // Google profile images
+      " https://fonts.gstatic.com", // Google Noto Emoji images (YouTube chat standard emoji)
     // API / XHR calls the client makes directly
     "connect-src 'self'" +
       " https://api.twitch.tv" + // Twitch Helix API (Twurple)
