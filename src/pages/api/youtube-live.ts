@@ -5,7 +5,7 @@ import { getInnertube } from "../../lib/youtube";
 const liveVideoCache = new Map<string, { videoId: string | null; expires: number }>();
 const LIVE_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies }) => {
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",
@@ -13,7 +13,6 @@ export const GET: APIRoute = async ({ url }) => {
 
   try {
     const channelUrl = url.searchParams.get("channelUrl");
-    const accessToken = url.searchParams.get("accessToken");
 
     if (!channelUrl) {
       return new Response(
@@ -31,7 +30,8 @@ export const GET: APIRoute = async ({ url }) => {
 
     const yt = await getInnertube();
     
-    // If accessToken is provided, use it to authenticate the session
+    // If YouTube token is available in cookies, use it to authenticate the session
+    const accessToken = cookies.get("youtube_token")?.value;
     if (accessToken) {
       try {
         await (yt.session as any).signIn({

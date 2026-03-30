@@ -4,7 +4,13 @@ let yt: Innertube | null = null;
 
 export async function getInnertube() {
   if (!yt) {
-    yt = await Innertube.create();
+    try {
+      yt = await Innertube.create();
+    } catch (error) {
+      // Reset to null on error so next call retries instead of returning failed instance
+      yt = null;
+      throw error;
+    }
   }
   return yt;
 }

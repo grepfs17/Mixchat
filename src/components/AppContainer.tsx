@@ -381,12 +381,10 @@ export default function AppContainer() {
     const fetchId = async () => {
       try {
         const params = new URLSearchParams();
+        params.append('action', 'getLiveVideo');
         params.append('channelUrl', linkedYoutubeUrl);
-        if (sessions.youtube?.accessToken) {
-          params.append('accessToken', sessions.youtube.accessToken);
-        }
         
-        const res = await fetch(`/api/youtube-live?${params.toString()}`);
+        const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
         const data = await res.json();
         if (!cancelled && res.ok && data.videoId) {
           setYoutubeStreamVideoId(data.videoId);
@@ -401,7 +399,7 @@ export default function AppContainer() {
     fetchId();
     const interval = setInterval(fetchId, 600000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [linkedYoutubeUrl, sessions.youtube?.accessToken]);
+  }, [linkedYoutubeUrl]);
 
   useEffect(() => {
     if (!selectedTwitchChannel || !sessions.twitch || !sessions.twitch.accessToken) {
@@ -969,7 +967,6 @@ export default function AppContainer() {
             viewerCount={viewerCount}
             linkedYoutubeUrl={linkedYoutubeUrl || undefined}
             youtubeSession={sessions.youtube}
-            youtubeAccessToken={sessions.youtube?.accessToken}
             unifyChatEnabled={unifyChatEnabled}
             fontSize={fontSize}
             mentionSoundEnabled={mentionSoundEnabled}

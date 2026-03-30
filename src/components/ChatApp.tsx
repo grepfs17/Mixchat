@@ -30,7 +30,6 @@ interface ChatAppProps {
   linkedYoutubeUrl?: string;
   /** Full YouTube session (may exist while accessToken is still being refreshed) */
   youtubeSession?: PlatformSession;
-  youtubeAccessToken?: string;
   unifyChatEnabled?: boolean;
   fontSize?: number;
   mentionSoundEnabled?: boolean;
@@ -49,7 +48,6 @@ export default function ChatApp({
   viewerCount,
   linkedYoutubeUrl,
   youtubeSession,
-  youtubeAccessToken,
   unifyChatEnabled = false,
   fontSize = 14,
   mentionSoundEnabled = true,
@@ -132,11 +130,9 @@ export default function ChatApp({
       try {
         const params = new URLSearchParams();
         params.append('channelUrl', linkedYoutubeUrl);
-        if (youtubeAccessToken) {
-          params.append('accessToken', youtubeAccessToken);
-        }
         
         const res = await fetch(`/api/youtube-live?${params.toString()}`);
+
         const data = await res.json();
         if (cancelled) return;
 
@@ -173,7 +169,7 @@ export default function ChatApp({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [linkedYoutubeUrl, youtubeAccessToken]);
+  }, [linkedYoutubeUrl]);
 
   // Reset manual video ID when channel changes
   useEffect(() => {
@@ -185,7 +181,7 @@ export default function ChatApp({
   }, [selectedTwitchChannel]);
 
   const handleSendYoutubeMessage = useCallback(async () => {
-    if (!ytMessage.trim() || !youtubeVideoId || !youtubeAccessToken) return;
+    if (!ytMessage.trim() || !youtubeVideoId) return;
     setYtSending(true);
     try {
       const res = await fetch('/api/youtube-chat', {
@@ -194,7 +190,6 @@ export default function ChatApp({
         body: JSON.stringify({
           videoId: youtubeVideoId,
           message: ytMessage.trim(),
-          accessToken: youtubeAccessToken,
         }),
       });
       const data = await res.json();
@@ -211,7 +206,7 @@ export default function ChatApp({
     } finally {
       setYtSending(false);
     }
-  }, [ytMessage, youtubeVideoId, youtubeAccessToken]);
+  }, [ytMessage, youtubeVideoId]);
 
   // Merge newly discovered emotes into the registry
   const handleYtEmotesDiscovered = useCallback((emotes: YouTubeEmote[]) => {
@@ -590,12 +585,10 @@ export default function ChatApp({
       {unifyChatEnabled ? (
         <>
           {/* Hidden YouTubeChat to keep polling YouTube messages */}
-          {linkedYoutubeUrl && youtubeVideoId && youtubeAccessToken && youtubeSession && (
+          {linkedYoutubeUrl && youtubeVideoId && (
             <div style={{ display: 'none' }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}
-                accessToken={youtubeAccessToken}
-                session={youtubeSession}
                 onEmotesDiscovered={handleYtEmotesDiscovered}
                 onMessages={handleYtMessages}
                 fontSize={fontSize}
@@ -656,11 +649,10 @@ export default function ChatApp({
             currentUsername={twitchSession?.username || ''}
           />
 
-          {/* YouTube message input (when we have a live video and access) */}
+          {/* YouTube message input (when we have a live video) */}
           {linkedYoutubeUrl && youtubeVideoId && (
             <div style={{ borderTop: '1px solid #333' }}>
-              {youtubeAccessToken ? (
-                <div className="yt-message-input-wrapper message-input">
+              <div className="yt-message-input-wrapper message-input">
                   <div className="yt-input-group input-group">
                     {/* Emote autocomplete dropdown */}
                     {ytShowEmoteMenu && ytEmoteResults.length > 0 && (
@@ -739,15 +731,6 @@ export default function ChatApp({
                     </button>
                   </div>
                 </div>
-              ) : youtubeSession ? (
-                <div className="yt-status-refreshing">
-                  ⏳ Refreshing YouTube authentication…
-                </div>
-              ) : (
-                <div className="yt-status-login-required">
-                  Log in with YouTube to send messages
-                </div>
-              )}
             </div>
           )}
         </>
@@ -760,19 +743,11 @@ export default function ChatApp({
               {youtubeVideoId ? (
                 <>
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                    {youtubeAccessToken && youtubeSession ? (
-                      <YouTubeChat
-                        videoId={youtubeVideoId}
-                        accessToken={youtubeAccessToken}
-                        session={youtubeSession}
-                        onEmotesDiscovered={handleYtEmotesDiscovered}
-                        fontSize={fontSize}
-                      />
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '13px' }}>
-                        Loading YouTube chat...
-                      </div>
-                    )}
+                    <YouTubeChat
+                      videoId={youtubeVideoId}
+                      onEmotesDiscovered={handleYtEmotesDiscovered}
+                      fontSize={fontSize}
+                    />
                     <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
                       <button
                         onClick={() => { setManualVideoId(''); setAutoVideoId(null); }}
@@ -790,8 +765,7 @@ export default function ChatApp({
                     </div>
                   </div>
                   {/* YouTube message input */}
-                  {youtubeAccessToken ? (
-                    <div className="yt-message-input-wrapper message-input">
+                  <div className="yt-message-input-wrapper message-input">
                       <div className="yt-input-group input-group">
                         {/* Emote autocomplete dropdown */}
                         {ytShowEmoteMenu && ytEmoteResults.length > 0 && (
@@ -913,15 +887,6 @@ export default function ChatApp({
                         </button>
                       </div>
                     </div>
-                  ) : youtubeSession ? (
-                    <div className="yt-status-refreshing">
-                      Refreshing YouTube authentication…
-                    </div>
-                  ) : (
-                    <div className="yt-status-login-required">
-                      Log in with YouTube to send messages
-                    </div>
-                  )}
                 </>
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0f0f', padding: '20px', gap: '10px' }}>

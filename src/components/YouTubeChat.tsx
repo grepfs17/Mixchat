@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { PlatformSession } from '../lib/types';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 interface YouTubeEmote {
@@ -11,8 +10,6 @@ interface YouTubeEmote {
 
 interface YouTubeChatProps {
   videoId: string;
-  accessToken: string;
-  session: PlatformSession;
   /** Called whenever new emotes are discovered in the chat stream */
   onEmotesDiscovered?: (emotes: YouTubeEmote[]) => void;
   /** Called whenever the message list updates (for unified chat mode) */
@@ -60,7 +57,7 @@ function getColorFromName(name: string): string {
   return `hsl(${hue}, 70%, 55%)`;
 }
 
-export default function YouTubeChat({ videoId, accessToken, session, onEmotesDiscovered, onMessages, fontSize = 14 }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14 }: YouTubeChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -84,9 +81,6 @@ export default function YouTubeChat({ videoId, accessToken, session, onEmotesDis
 
         const params = new URLSearchParams();
         params.append('videoId', videoId);
-        if (accessToken) {
-          params.append('accessToken', accessToken);
-        }
 
         const res = await fetch(`/api/youtube-stream-chat?${params.toString()}`);
 
@@ -171,7 +165,7 @@ export default function YouTubeChat({ videoId, accessToken, session, onEmotesDis
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [videoId, accessToken, isConnected]);
+  }, [videoId, isConnected]);
 
   // Keep the view pinned to the newest message
   useEffect(() => {

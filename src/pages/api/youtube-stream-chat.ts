@@ -44,9 +44,8 @@ const activeLiveChats = new Map<
   }
 >();
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies }) => {
   const videoId = url.searchParams.get('videoId');
-  const accessToken = url.searchParams.get('accessToken');
 
   if (!videoId) {
     return new Response(

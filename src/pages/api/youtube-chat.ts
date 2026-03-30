@@ -2,30 +2,37 @@ import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
 
 //Sends a message to a YouTube live chat using YouTube.js (Innertube)
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const headers = { "Content-Type": "application/json" };
 
   try {
     const body = await request.json();
-    const { videoId, message, accessToken } = body as {
+    const { videoId, message } = body as {
       videoId?: string;
       message?: string;
-      accessToken?: string;
     };
 
-    if (!videoId || !message || !accessToken) {
+    if (!videoId || !message) {
       return new Response(
         JSON.stringify({
-          error: "videoId, message, and accessToken are required",
+          error: "videoId and message are required",
         }),
         { status: 400, headers },
+      );
+    }
+
+    // Read the access token from the httpOnly cookie
+    const accessToken = cookies.get("youtube_token")?.value;
+    if (!accessToken) {
+      return new Response(
+        JSON.stringify({ error: "Not authenticated" }),
+        { status: 401, headers },
       );
     }
 
     const yt = await getInnertube();
 
     // Update session credentials for this request
-    // This allows us to use an existing accessToken from the client
     try {
       await (yt.session as any).signIn({
         access_token: accessToken,
