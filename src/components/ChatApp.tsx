@@ -279,66 +279,10 @@ export default function ChatApp({
       if (prev.some((m) => m.id === message.id)) {
         return prev;
       }
-
-      // Only attempt to reconcile optimistic placeholders for messages
-      // that likely belong to the current session user.
-      const sessionName = (twitchSession?.displayName || twitchSession?.username || '').toLowerCase();
-      const isFromSession = Boolean(
-        message.isCurrentUser ||
-        (message.userId && message.userId === twitchSession?.userId) ||
-        (message.author && sessionName && message.author.toLowerCase() === sessionName)
-      );
-
-      const normalize = (s?: string) => (s || '').normalize('NFKC').trim().toLowerCase();
-      const serverNorm = normalize(message.content);
-
-      if (isFromSession) {
-        // Try matching optimistic placeholder by several heuristics.
-        let matchIndex = -1;
-
-        // 1) Exact userId + content + same reply target
-        if (message.userId) {
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            m.userId === message.userId &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        // 2) Author name match + content + reply target
-        if (matchIndex === -1 && message.author) {
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            m.author &&
-            m.author.toLowerCase() === message.author.toLowerCase() &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        // 3) Timestamp proximity (within 10s) + content
-        if (matchIndex === -1) {
-          const serverTs = message.timestamp ? new Date(message.timestamp).getTime() : Date.now();
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            Math.abs((m.timestamp?.getTime() || 0) - serverTs) < 10000 &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        if (matchIndex !== -1) {
-          const copy = [...prev];
-          copy[matchIndex] = message;
-          return copy.length > MAX_DISPLAYED_MESSAGES ? copy.slice(-MAX_DISPLAYED_MESSAGES) : copy;
-        }
-      }
-
       const updated = [...prev, message];
       return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
     });
-  }, [twitchSession]);
+  }, []);
 
   // Use Twitch chat hook - pass the channel NAME not ID
   const [badgesReady, setBadgesReady] = useState(false);
@@ -497,39 +441,10 @@ export default function ChatApp({
       try {
         // Send to Twitch if selected
         if (platforms.includes('twitch') && selectedTwitchChannel && twitchSession) {
-          // Add an optimistic message so replies show immediately. When the
-          // server echoes the message back the display will replace it.
-          const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
-          const optimisticMessage: ChatMessage = {
-            id: optimisticId,
-            platform: 'twitch',
-            author: twitchSession.displayName || twitchSession.username || 'You',
-            content: message,
-            timestamp: new Date(),
-            userId: twitchSession.userId,
-            authorColor: '#FFFFFF',
-            authorAvatar: twitchSession.profileImageUrl,
-            replyTo: replyingTo ? {
-              id: replyingTo.id,
-              author: replyingTo.author,
-              content: replyingTo.content,
-            } : undefined,
-            mentionsUser: false,
-            emotes: {},
-            isBot: false,
-            badges: twitchSession?.badges || {},
-            isCurrentUser: true,
-            optimistic: true,
-          };
-
-          setMessages((prev) => [...prev, optimisticMessage]);
-
           try {
             await sendTwitchMessage(message, replyingTo?.id);
           } catch (error) {
             console.error('Failed to send Twitch message:', error);
-            // Remove optimistic message on failure
-            setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
             notificationIdRef.current += 1;
             setNotification({ message: 'Failed to send message', type: 'error', id: notificationIdRef.current });
           }
