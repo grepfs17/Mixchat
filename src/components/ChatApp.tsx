@@ -65,6 +65,7 @@ export default function ChatApp({
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
   // Cache the current user's own badge data so optimistic messages can show badges
   const currentUserBadgesRef = useRef<{ badges: Record<string, string>; badgeDetails: Record<string, { url: string; title: string }> }>({ badges: {}, badgeDetails: {} });
+  const streamStartedAtRef = useRef<Date | null>(null);
   const [manualVideoId, setManualVideoId] = useState<string>('');
   const [autoVideoId, setAutoVideoId] = useState<string | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
@@ -379,7 +380,7 @@ export default function ChatApp({
       preloadedMessagesRef.current.clear();
 
       // Load recent messages from RecentMessages API
-      const loadRecentMessages = async () => {
+      const loadRecentMessages = async (): Promise<ChatMessage[]> => {
         try {
           const recentMessages = await getRecentMessages(selectedTwitchChannelName);
 
@@ -394,8 +395,10 @@ export default function ChatApp({
             );
             setMessages(uniqueRecent);
           }
+          return recentMessages;
         } catch (error) {
           console.error('Failed to load recent messages:', error);
+          return [];
         }
       };
 
@@ -416,7 +419,27 @@ export default function ChatApp({
             ),
           ]);
           setBadgesReady(true);
-          await loadRecentMessages();
+          const recentMessages = await loadRecentMessages();
+
+          // Seed the current user's badge cache from historical messages so that
+          // optimistic placeholders show the correct badges immediately, even
+          // before the first real server echo has been received this session.
+          if (twitchSession?.userId && recentMessages.length > 0) {
+            const ownMessage = [...recentMessages].reverse().find(
+              (msg) => msg.userId === twitchSession!.userId
+            );
+            if (ownMessage) {
+              const hasBadges =
+                (ownMessage.badgeDetails && Object.keys(ownMessage.badgeDetails).length > 0) ||
+                (ownMessage.badges && Object.keys(ownMessage.badges).length > 0);
+              if (hasBadges) {
+                currentUserBadgesRef.current = {
+                  badges: ownMessage.badges || {},
+                  badgeDetails: ownMessage.badgeDetails || {},
+                };
+              }
+            }
+          }
         } catch (err) {
           console.error('Failed to initialize chat assets:', err);
         }
@@ -453,8 +476,10 @@ export default function ChatApp({
           if (status) {
             setStreamIsLive(status.isLive);
             if (status.isLive && status.startedAt) {
+              streamStartedAtRef.current = status.startedAt;
               setStreamUptime(calculateUptime(status.startedAt));
             } else {
+              streamStartedAtRef.current = null;
               setStreamUptime('');
             }
           }
@@ -467,35 +492,12 @@ export default function ChatApp({
     fetchStreamStatus();
 
     const statusInterval = setInterval(fetchStreamStatus, STREAM_STATUS_POLL_INTERVAL);
+    // Update the uptime display every second using the locally-cached startedAt.
+    // This avoids making an API call every second — the status poll above already
+    // refreshes startedAt at STREAM_STATUS_POLL_INTERVAL.
     const uptimeInterval = setInterval(() => {
-      if (streamIsLive) {
-        setStreamUptime((prev) => {
-          if (selectedTwitchChannel && twitchSession) {
-            getStreamStatus(
-              twitchSession.accessToken,
-              import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-              selectedTwitchChannel
-            ).then((status) => {
-              if (status?.isLive && status.startedAt) {
-                const now = new Date();
-                const diffMs = now.getTime() - status.startedAt.getTime();
-                const diffSec = Math.floor(diffMs / 1000);
-                const diffMin = Math.floor(diffSec / 60);
-                const diffHour = Math.floor(diffMin / 60);
-                const diffDay = Math.floor(diffHour / 24);
-
-                let uptime = '';
-                if (diffDay > 0) uptime = `${diffDay}d ${diffHour % 24}h ${diffMin % 60}m`;
-                else if (diffHour > 0) uptime = `${diffHour}h ${diffMin % 60}m ${diffSec % 60}s`;
-                else if (diffMin > 0) uptime = `${diffMin}m ${diffSec % 60}s`;
-                else uptime = `${diffSec}s`;
-
-                setStreamUptime(uptime);
-              }
-            }).catch(() => { });
-          }
-          return prev;
-        });
+      if (streamStartedAtRef.current) {
+        setStreamUptime(calculateUptime(streamStartedAtRef.current));
       }
     }, UPTIME_UPDATE_INTERVAL);
 
@@ -503,7 +505,7 @@ export default function ChatApp({
       clearInterval(statusInterval);
       clearInterval(uptimeInterval);
     };
-  }, [selectedTwitchChannel, twitchSession, streamIsLive]);
+  }, [selectedTwitchChannel, twitchSession]);
 
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], replyToId?: string) => {
