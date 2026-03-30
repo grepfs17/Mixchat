@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 /**
  * Server-side proxy for YouTube Innertube operations.
@@ -11,11 +12,18 @@ import { getInnertube } from "../../lib/youtube";
  * Usage: GET /api/youtube-proxy?action=getLiveVideo&channelUrl=https://youtube.com/@channel
  *        GET /api/youtube-proxy?action=getChatMessages&videoId=dQw4w9WgXcQ
  */
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",
   };
+
+  if (!checkRateLimit(`${clientAddress}:youtube-proxy`, 60, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+    );
+  }
 
   try {
     const action = url.searchParams.get("action");

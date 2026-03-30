@@ -1,8 +1,16 @@
 import type { APIRoute } from "astro";
 import { refreshTwitchAccessToken } from "../../lib/twitch";
 import { refreshYoutubeToken } from "../../lib/youtube";
+import { checkRateLimit } from "../../lib/rateLimit";
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
+  if (!checkRateLimit(`${clientAddress}:refresh-token`, 10, 60_000)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    });
+  }
+
   if (request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -72,7 +80,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         cookies.set("twitch_refresh_token", refreshTokenOut, {
           httpOnly: true,
           secure: isSecure,
-          sameSite: "lax",
+          sameSite: "strict",
           maxAge: 365 * 24 * 60 * 60,
           path: "/",
         });
@@ -125,7 +133,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         cookies.set("youtube_refresh_token", refreshTokenOut, {
           httpOnly: true,
           secure: isSecure,
-          sameSite: "lax",
+          sameSite: "strict",
           maxAge: 365 * 24 * 60 * 60,
           path: "/",
         });

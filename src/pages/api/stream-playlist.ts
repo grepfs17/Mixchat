@@ -1,10 +1,28 @@
 import type { APIRoute } from "astro";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 // Prefer an explicit env var; fall back to the well-known Twitch web client ID.
 const GQL_CLIENT_ID =
   import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+  // Require an active session — prevents open-proxy abuse of this endpoint.
+  const twitchToken = cookies.get("twitch_token")?.value;
+  const youtubeToken = cookies.get("youtube_token")?.value;
+  if (!twitchToken && !youtubeToken) {
+    return new Response(
+      JSON.stringify({ error: "Authentication required" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  if (!checkRateLimit(`${clientAddress}:stream-playlist`, 30, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+    );
+  }
+
   try {
     const channel = url.searchParams.get("channel");
     if (!channel) {

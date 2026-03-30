@@ -17,7 +17,7 @@ export default defineConfig({
         noExternal: ['fs', 'path', 'url', 'util']
       },
       host: '0.0.0.0',
-      allowedHosts: true,
+      allowedHosts: ['localhost', '127.0.0.1', 'mixchat.local'],
     },
     build: {
       rollupOptions: {

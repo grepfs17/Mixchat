@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 /**
  * Allowlist of Twitch Helix API path prefixes this proxy is permitted to call.
@@ -27,7 +28,14 @@ const TWITCH_API_BASE = "https://api.twitch.tv";
  *        GET /api/twitch-proxy?path=/helix/chat/emotes&broadcaster_id=12345
  *        GET /api/twitch-proxy?path=/helix/chat/badges/global
  */
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+    if (!checkRateLimit(`${clientAddress}:twitch-proxy`, 120, 60_000)) {
+        return new Response(
+            JSON.stringify({ error: "Too many requests" }),
+            { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+        );
+    }
+
     try {
         const path = url.searchParams.get("path");
         if (!path) {

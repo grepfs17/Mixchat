@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getTwitchAccessToken, getTwitchUser } from "../../../lib/twitch";
 
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, locals }) => {
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
 
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       cookies.set("twitch_refresh_token", tokenData.refreshToken, {
         httpOnly: true,
         secure: isSecure,
-        sameSite: "lax",
+        sameSite: "strict",
         maxAge: 60 * 60 * 24 * 30, // 30 days
         path: "/",
       });
@@ -75,7 +75,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 <html>
 <head><title>Twitch Auth</title></head>
 <body>
-<script>
+<script nonce="${locals.nonce}">
   (function () {
     // --- CSRF state validation ---
     var expectedState = sessionStorage.getItem('twitch_oauth_state');

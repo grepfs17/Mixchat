@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getYoutubeAccessToken, getYoutubeUser } from "../../../lib/youtube";
 
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, locals }) => {
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
 
@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       cookies.set("youtube_refresh_token", tokenData.refresh_token, {
         httpOnly: true,
         secure: isSecure,
-        sameSite: "lax",
+        sameSite: "strict",
         maxAge: 365 * 24 * 60 * 60, // 365 days
         path: "/",
       });
@@ -78,7 +78,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
 <html>
 <head><title>YouTube Auth</title></head>
 <body>
-<script>
+<script nonce="${locals.nonce}">
   (function () {
     var returnedState = ${returnedStateJson};
 

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getInnertube } from '../../lib/youtube';
+import { checkRateLimit } from '../../lib/rateLimit';
 
 interface MessagePart {
   type: 'text' | 'emoji';
@@ -48,7 +49,14 @@ const activeLiveChats = new Map<
   }
 >();
 
-export const GET: APIRoute = async ({ url, cookies }) => {
+export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+  if (!checkRateLimit(`${clientAddress}:youtube-stream-chat`, 60, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: 'Too many requests' }),
+      { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+    );
+  }
+
   const videoId = url.searchParams.get('videoId');
 
   if (!videoId) {

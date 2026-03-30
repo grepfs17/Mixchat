@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 /**
  * Sends a message to a YouTube live chat using the YouTube Data API v3.
@@ -7,7 +8,14 @@ import type { APIRoute } from "astro";
  * `session.signIn()` expects its own internal OAuth flow and it wouldn't let us use
  * the httpOnly cookie.
  */
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
+  if (!checkRateLimit(`${clientAddress}:youtube-chat`, 20, 60_000)) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests" }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
+    );
+  }
+
   const headers = { "Content-Type": "application/json" };
 
   try {

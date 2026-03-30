@@ -1,17 +1,20 @@
 import { defineMiddleware } from "astro:middleware";
+import { randomBytes } from "node:crypto";
+
+/** Generate a cryptographically random base64 nonce for CSP. */
+function generateNonce(): string {
+  return randomBytes(16).toString("base64");
+}
 
 /**
- * Security response headers applied to every server response.
+ * Static security headers applied to every server response.
  *
  * Notes:
- * - Content-Security-Policy is intentionally permissive on script-src because
- *   the OAuth callback pages use inline <script> blocks. Harden further with
- *   nonces if those pages are refactored.
  * - X-Frame-Options is set to SAMEORIGIN to allow the app's own iframe embeds
  *   (Twitch / YouTube players are loaded inside the app, not the app itself
  *   being framed by a third party). Change to DENY if embeds are removed.
  */
-const SECURITY_HEADERS: Record<string, string> = {
+const STATIC_HEADERS: Record<string, string> = {
   // Prevent browsers from MIME-sniffing the content-type
   "X-Content-Type-Options": "nosniff",
   // Allow the page to be framed only by the same origin
@@ -20,11 +23,25 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Disable browser features this app does not use
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-  // Basic CSP — restricts where scripts, styles, and connections can go
-  "Content-Security-Policy": [
+};
+
+/**
+ * Build the Content-Security-Policy header value.
+ *
+ * @param nonce - When provided (auth callback pages), only scripts carrying
+ *   this nonce value may execute — no 'unsafe-inline'.  When omitted (all
+ *   other pages), 'unsafe-inline' is included so that Astro's own framework
+ *   hydration bootstrapping scripts (injected by client:load islands) are not
+ *   blocked. Those scripts are static framework code, not user-controlled, so
+ *   'unsafe-inline' is an acceptable trade-off on those routes.
+ */
+function buildCSP(nonce?: string): string {
+  const scriptSrc = nonce
+    ? `script-src 'self' 'nonce-${nonce}'`
+    : "script-src 'self' 'unsafe-inline'";
+  return [
     "default-src 'self'",
-    // 'unsafe-inline' required for inline <script> in OAuth callback pages
-    "script-src 'self' 'unsafe-inline'",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     // Images: self, Twitch CDN, YouTube/Google CDNs, and third-party emote CDNs
     "img-src 'self' data: blob:" +
@@ -55,12 +72,30 @@ const SECURITY_HEADERS: Record<string, string> = {
     // Media (video/audio blobs from HLS.js)
     "media-src 'self' blob:",
     "font-src 'self'",
-  ].join("; "),
-};
+  ].join("; ");
+}
 
-export const onRequest = defineMiddleware(async (_context, next) => {
+export const onRequest = defineMiddleware(async (context, next) => {
+  const { pathname } = context.url;
+
+  // Generate a nonce only for auth callback pages — those are plain API route
+  // handlers where we write the entire HTML output and can stamp every <script>
+  // with the nonce ourselves.  All other pages are rendered by Astro and include
+  // framework-injected hydration scripts that we cannot add nonces to; they fall
+  // back to 'unsafe-inline' which is acceptable because those scripts are static
+  // framework code (not user-controlled data).
+  const isAuthRoute = pathname.startsWith("/auth/");
+  const nonce = isAuthRoute ? generateNonce() : undefined;
+  context.locals.nonce = nonce ?? "";
+
   const response = await next();
-  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+
+  const allHeaders: Record<string, string> = {
+    ...STATIC_HEADERS,
+    "Content-Security-Policy": buildCSP(nonce),
+  };
+
+  for (const [key, value] of Object.entries(allHeaders)) {
     // Don't overwrite headers already set by a specific route handler
     if (!response.headers.has(key)) {
       response.headers.set(key, value);
