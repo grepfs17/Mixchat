@@ -50,35 +50,102 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     const channel = await yt.getChannel(channelId);
     console.log(`[YouTube Live] Retrieved channel info`);
 
-    // Check if the channel is currently live
-    const liveStreams = await (channel as any).getLiveStreams();
-    console.log(`[YouTube Live] getLiveStreams returned:`, {
-      hasVideos: !!liveStreams.videos,
-      videoCount: liveStreams.videos?.length || 0,
-    });
-    let videoId = liveStreams.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
-    
-    // If getLiveStreams didn't find anything, try checking the home tab
+    /** Returns true if a video object from youtubei.js is currently live */
+    function isActuallyLive(video: any): boolean {
+      if (video.is_live === true) return true;
+      // Some builds expose it under thumbnailOverlays or badges
+      const badges: any[] = video.badges ?? [];
+      if (badges.some((b: any) =>
+        b?.metadataBadgeRenderer?.label === 'LIVE' ||
+        b?.liveBadge != null
+      )) return true;
+      // thumbnailOverlays array (compact video renderers)
+      const overlays: any[] = video.thumbnailOverlays ?? [];
+      if (overlays.some((o: any) =>
+        o?.thumbnailOverlayTimeStatusRenderer?.style === 'LIVE'
+      )) return true;
+      return false;
+    }
+
+    let videoId: string | null = null;
+
+    // 1. Try getLiveStreams() — filter to only currently-live videos
+    try {
+      const liveStreams = await (channel as any).getLiveStreams();
+      const videos: any[] = liveStreams?.videos ?? [];
+      console.log(`[YouTube Live] getLiveStreams returned ${videos.length} video(s)`);
+      const liveVideo = videos.find((v: any) => isActuallyLive(v));
+      if (liveVideo) {
+        videoId = liveVideo.id ?? liveVideo.videoId ?? null;
+        console.log(`[YouTube Live] Found live video via getLiveStreams: ${videoId}`);
+      } else if (videos.length > 0) {
+        // Fallback: take the first result even if we can't confirm live status
+        // (some youtubei.js builds don't expose is_live)
+        videoId = videos[0].id ?? videos[0].videoId ?? null;
+        console.log(`[YouTube Live] getLiveStreams: taking first result (live status unknown): ${videoId}`);
+      }
+    } catch (liveStreamsError) {
+      console.warn('[YouTube Live] getLiveStreams failed:', liveStreamsError);
+    }
+
+    // 2. If no result, try the Videos tab and look for a live indicator
     if (!videoId) {
-      console.log(`[YouTube Live] No live streams found via getLiveStreams, trying home feed...`);
+      console.log('[YouTube Live] No result from getLiveStreams, trying getVideos...');
+      try {
+        const videosTab = await (channel as any).getVideos();
+        const videos: any[] = videosTab?.videos ?? [];
+        const liveVideo = videos.find((v: any) => isActuallyLive(v));
+        if (liveVideo) {
+          videoId = liveVideo.id ?? liveVideo.videoId ?? null;
+          console.log(`[YouTube Live] Found live video in Videos tab: ${videoId}`);
+        }
+      } catch (videosError) {
+        console.warn('[YouTube Live] getVideos failed:', videosError);
+      }
+    }
+
+    // 3. Last resort — check the channel home tab, walk all renderers recursively
+    if (!videoId) {
+      console.log('[YouTube Live] Trying home feed as last resort...');
       try {
         const home = await (channel as any).getHome();
-        if (home?.contents) {
-          // Look for a live stream section in the home feed
-          const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
-          for (const section of sections) {
-            const items = section.itemSectionRenderer?.contents || [];
-            for (const item of items) {
-              if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
-                videoId = item.videoRenderer?.videoId;
-                if (videoId) {
-                  console.log(`[YouTube Live] Found live video in home feed: ${videoId}`);
-                  break;
-                }
-              }
+
+        /** Recursively walk any object/array looking for a live videoRenderer */
+        function findLiveInTree(node: any, depth = 0): string | null {
+          if (!node || typeof node !== 'object' || depth > 8) return null;
+          if (Array.isArray(node)) {
+            for (const item of node) {
+              const found = findLiveInTree(item, depth + 1);
+              if (found) return found;
             }
-            if (videoId) break;
+            return null;
           }
+          // videoRenderer with live badge
+          const vr = node.videoRenderer;
+          if (vr) {
+            const vid = vr.videoId as string | undefined;
+            if (vid && (
+              vr.isLiveContent === true ||
+              (vr.badges ?? []).some((b: any) => b?.metadataBadgeRenderer?.label === 'LIVE') ||
+              (vr.thumbnailOverlays ?? []).some((o: any) =>
+                o?.thumbnailOverlayTimeStatusRenderer?.style === 'LIVE'
+              )
+            )) {
+              return vid;
+            }
+          }
+          // Walk all values
+          for (const val of Object.values(node)) {
+            const found = findLiveInTree(val, depth + 1);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        const found = findLiveInTree(home?.contents);
+        if (found) {
+          videoId = found;
+          console.log(`[YouTube Live] Found live video in home feed: ${videoId}`);
         }
       } catch (homeError) {
         console.warn('[YouTube Live] Failed to check home feed:', homeError);
