@@ -1,114 +1,86 @@
-/**
- * YouTube OAuth and API Client
- */
+import { Innertube } from 'youtubei.js';
 
-export interface YouTubeTokenResponse {
-  access_token: string;
-  refresh_token?: string;
-  expires_in: number;
-  token_type: string;
+let yt: Innertube | null = null;
+
+export async function getInnertube() {
+  if (!yt) {
+    yt = await Innertube.create();
+  }
+  return yt;
 }
 
-export interface YouTubeUser {
-  userId: string;
-  displayName: string;
-  profileImageUrl: string;
-}
-
-/**
- * Exchange authorization code for access token
- */
 export async function getYoutubeAccessToken(
   code: string,
   clientId: string,
   clientSecret: string,
-  redirectUri: string,
-): Promise<YouTubeTokenResponse> {
-  const params = new URLSearchParams({
-    code,
-    client_id: clientId,
-    client_secret: clientSecret,
-    redirect_uri: redirectUri,
-    grant_type: "authorization_code",
+  redirectUri: string
+) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
   });
 
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    body: params,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to get YouTube access token: ${response.statusText}`,
-    );
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to get YouTube access token: ${err}`);
   }
 
-  return response.json();
+  return res.json();
 }
 
-/**
- * Get YouTube user information
- */
-export async function getYoutubeUser(
-  accessToken: string,
-): Promise<YouTubeUser> {
-  const response = await fetch(
-    "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+export async function getYoutubeUser(accessToken: string) {
+  const res = await fetch(
+    'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to get YouTube user: ${response.statusText}`);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to get YouTube user: ${err}`);
   }
 
-  const data = await response.json();
-
+  const data = await res.json();
   if (!data.items || data.items.length === 0) {
-    throw new Error("No YouTube channel found");
+    throw new Error('No YouTube channel found for this user');
   }
 
   const channel = data.items[0];
-
   return {
     userId: channel.id,
     displayName: channel.snippet.title,
-    profileImageUrl: channel.snippet.thumbnails?.default?.url || "",
+    profileImageUrl: channel.snippet.thumbnails.default.url,
   };
 }
 
-/**
- * Refresh YouTube access token
- */
 export async function refreshYoutubeToken(
   refreshToken: string,
   clientId: string,
-  clientSecret: string,
-): Promise<YouTubeTokenResponse> {
-  const params = new URLSearchParams({
-    refresh_token: refreshToken,
-    client_id: clientId,
-    client_secret: clientSecret,
-    grant_type: "refresh_token",
+  clientSecret: string
+) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
   });
 
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    body: params,
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to refresh YouTube token: ${response.statusText}`);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Failed to refresh YouTube token: ${err}`);
   }
 
-  return response.json();
+  return res.json();
 }

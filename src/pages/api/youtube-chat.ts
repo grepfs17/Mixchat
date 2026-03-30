@@ -1,15 +1,7 @@
 import type { APIRoute } from "astro";
+import { getInnertube } from "../../lib/youtube";
 
-/**
- * POST /api/youtube-chat
- *
- * Sends a message to a YouTube live chat.
- *
- * Body (JSON):
- *   videoId      - YouTube video ID of the live stream
- *   message      - Text message to send
- *   accessToken  - YouTube OAuth2 access token (user must have granted live-chat scope)
- */
+//Sends a message to a YouTube live chat using YouTube.js (Innertube)
 export const POST: APIRoute = async ({ request }) => {
   const headers = { "Content-Type": "application/json" };
 
@@ -30,58 +22,29 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const apiKey = import.meta.env.PUBLIC_YOUTUBE_API_KEY;
+    const yt = await getInnertube();
 
-    // 1. Get the liveChatId from the video
-    const liveChatResult = await getLiveChatId(videoId, accessToken, apiKey);
-    if (!liveChatResult.liveChatId) {
-      console.error("getLiveChatId failed:", liveChatResult.debugInfo);
-      return new Response(
-        JSON.stringify({
-          error:
-            liveChatResult.debugInfo ||
-            "Could not find live chat for this video. The stream may not be live.",
-        }),
-        { status: 422, headers },
-      );
-    }
+    // Update session credentials for this request
+    // This allows us to use an existing accessToken from the client
+    (yt.session as any).signIn({
+      access_token: accessToken,
+      refresh_token: '', // Not needed for a one-off send
+      expiry_date: new Date(Date.now() + 3600 * 1000).toISOString()
+    });
 
-    const liveChatId = liveChatResult.liveChatId;
+    const info = await yt.getInfo(videoId);
+    const liveChat = info.getLiveChat();
 
-    // 2. Send the message
-    const sendRes = await fetch(
-      "https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          snippet: {
-            liveChatId,
-            type: "textMessageEvent",
-            textMessageDetails: {
-              messageText: message,
-            },
-          },
-        }),
-      },
-    );
+    const response = await liveChat.sendMessage(message);
 
-    if (!sendRes.ok) {
-      const errData = await sendRes.json().catch(() => ({}));
-      const errMsg =
-        errData?.error?.message || `YouTube API error: ${sendRes.status}`;
-      console.error("YouTube send message error:", errData);
-      return new Response(JSON.stringify({ error: errMsg }), {
-        status: sendRes.status,
+    if (!response) {
+      return new Response(JSON.stringify({ error: "Failed to send message" }), {
+        status: 500,
         headers,
       });
     }
 
-    const result = await sendRes.json();
-    return new Response(JSON.stringify({ success: true, id: result.id }), {
+    return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers,
     });
@@ -95,60 +58,3 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 };
-
-/**
- * Resolve the liveChatId for a given YouTube video.
- * Uses the API key for video lookup (public data), falls back to access token.
- */
-async function getLiveChatId(
-  videoId: string,
-  accessToken: string,
-  apiKey?: string,
-): Promise<{ liveChatId: string | null; debugInfo: string }> {
-  // Try with API key first (more reliable for public video data), then fall back to OAuth token
-  const urlBase = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
-
-  let res: Response;
-  if (apiKey) {
-    res = await fetch(`${urlBase}&key=${apiKey}`);
-  } else {
-    res = await fetch(urlBase, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-  }
-
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => "");
-    return {
-      liveChatId: null,
-      debugInfo: `YouTube videos.list returned ${res.status}: ${errBody.slice(0, 200)}`,
-    };
-  }
-
-  const data = await res.json();
-
-  if (!data.items || data.items.length === 0) {
-    return {
-      liveChatId: null,
-      debugInfo: `No video found for ID "${videoId}". The video may not exist or may be private.`,
-    };
-  }
-
-  const liveDetails = data.items[0]?.liveStreamingDetails;
-  if (!liveDetails) {
-    return {
-      liveChatId: null,
-      debugInfo: `Video "${videoId}" has no liveStreamingDetails. It may not be a live stream.`,
-    };
-  }
-
-  const chatId = liveDetails.activeLiveChatId;
-  if (!chatId) {
-    return {
-      liveChatId: null,
-      debugInfo: `Video "${videoId}" has liveStreamingDetails but no activeLiveChatId. The stream may have ended.`,
-    };
-  }
-
-  return { liveChatId: chatId, debugInfo: "" };
-}
