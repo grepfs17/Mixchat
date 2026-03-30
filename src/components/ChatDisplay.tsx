@@ -69,24 +69,6 @@ function ChatDisplay({
   useEffect(() => {
     let filtered = messages;
 
-    // Remove optimistic placeholders when a matching real server message exists.
-    filtered = filtered.filter((msg, _, arr) => {
-      if (!msg.optimistic) return true;
-
-      // If there's a non-optimistic message with same content, reply target,
-      // and userId, prefer the real one and drop this optimistic placeholder.
-      const hasReal = arr.some((other) =>
-        other !== msg &&
-        !other.optimistic &&
-        other.isCurrentUser &&
-        other.userId === msg.userId &&
-        other.content === msg.content &&
-        ((other.replyTo?.id || '') === (msg.replyTo?.id || ''))
-      );
-
-      return !hasReal;
-    });
-
     if (selectedPlatforms.length === 0) {
       setFilteredMessages(filtered);
     } else {
