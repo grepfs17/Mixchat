@@ -48,7 +48,7 @@ const SECURITY_HEADERS: Record<string, string> = {
       " https://api.frankerfacez.com" + // FFZ emote API
       " wss://irc-ws.chat.twitch.tv", // Twitch chat WebSocket
     // Twitch and YouTube embedded players
-    "frame-src https://player.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
+    "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)
     "worker-src 'self' blob:",
     // Media (video/audio blobs from HLS.js)
