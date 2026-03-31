@@ -110,11 +110,11 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
-      /* 100dvh sits exactly in the visible area (above browser chrome).
-         interactive-widget=resizes-content in the <meta viewport> makes the
-         keyboard also shrink dvh, so no content is hidden behind either. */
+      /* --app-height is set by the JS below via visualViewport.height,
+         which is the only reliable way to exclude ALL browser chrome
+         (address bar, tab strip, etc.) on Android browsers like Brave. */
       #app {
-        height: 100dvh;
+        height: var(--app-height, 100dvh);
         padding: 0;
       }
 
@@ -147,4 +147,25 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       style="width: auto; height: 30px;"
     />
   </footer>
+  <script>
+    // visualViewport.height is the only API that accurately reflects the
+    // visible area after subtracting ALL browser chrome (address bar, tab
+    // strip, keyboard, etc.). We drive the --app-height CSS variable from it
+    // so the layout never overflows behind any browser UI element.
+    (function () {
+      var vv = window.visualViewport;
+      if (!vv) return; // desktop fallback: 100dvh from CSS is fine
+
+      function update() {
+        document.documentElement.style.setProperty(
+          '--app-height',
+          vv.height + 'px'
+        );
+      }
+
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
+      update();
+    })();
+  </script>
 </body>
