@@ -25,7 +25,7 @@ function MessageInput({
   currentUsername = '',
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [placeholder, setPlaceholder] = useState('Type your message... (Shift+Enter for new line)');
+  const [placeholder, setPlaceholder] = useState('Type your message');
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
     'twitch',
   ]);
