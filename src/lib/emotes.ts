@@ -39,6 +39,21 @@ let emotesBttv: EmoteMap = {};
 let emotesFfz: EmoteMap = {};
 let emotesTwitch: EmoteMap = {};
 
+interface ChannelEmoteGroup {
+  channelId: string;
+  channelName: string;
+  profileImageUrl?: string;
+  emotes: EmoteMap;
+}
+
+interface ChannelGroupCache {
+  groups: ChannelEmoteGroup[];
+  timestamp: number;
+}
+
+let emotesTwitchGlobal: EmoteMap = {};
+let emotesTwitchByChannel: ChannelEmoteGroup[] = [];
+
 /**
  * Get cached emotes if valid
  */
@@ -93,6 +108,8 @@ export function clearEmoteCache(): void {
   emotesBttv = {};
   emotesFfz = {};
   emotesTwitch = {};
+  emotesTwitchGlobal = {};
+  emotesTwitchByChannel = [];
 }
 
 /**
@@ -340,65 +357,149 @@ async function fetchTwitchChannelEmotes(channelId: string): Promise<EmoteMap> {
   }
 }
 
+interface BroadcasterInfo {
+  name: string;
+  profileImageUrl?: string;
+}
+
 /**
- * Fetch user's available emote sets (includes subscriptions)
+ * Resolve Twitch user IDs to display names + profile images.
+ * Uses the existing /api/user-info endpoint, 10 requests in parallel at a time.
  */
-async function fetchUserEmoteSets(userId: string): Promise<EmoteMap> {
-  const cacheKey = `emotes_twitch_user_${userId}`;
-  const cached = getCachedEmotes(cacheKey);
-  if (cached) {
-    return cached;
+async function fetchBroadcasterInfo(
+  ownerIds: string[],
+): Promise<Record<string, BroadcasterInfo>> {
+  if (ownerIds.length === 0) return {};
+  const map: Record<string, BroadcasterInfo> = {};
+
+  const CONCURRENCY = 10;
+  for (let i = 0; i < ownerIds.length; i += CONCURRENCY) {
+    const batch = ownerIds.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      batch.map(async (id) => {
+        try {
+          const response = await fetch(`/api/user-info?userId=${encodeURIComponent(id)}`);
+          if (!response.ok) return;
+          const user = await response.json();
+          const name = user?.displayName || user?.display_name || user?.login;
+          if (name) {
+            map[String(id)] = {
+              name,
+              profileImageUrl: user?.profileImageUrl || user?.profile_image_url,
+            };
+          }
+        } catch {
+          // skip unresolvable IDs
+        }
+      }),
+    );
+  }
+
+  return map;
+}
+
+/**
+ * Fetch user's available emote sets grouped by channel (includes subscriptions)
+ */
+async function fetchUserEmotesByChannel(
+  userId: string,
+): Promise<ChannelEmoteGroup[]> {
+  const cacheKey = `emotes_twitch_user_channels_v6_${userId}`;
+
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const cacheData: ChannelGroupCache = JSON.parse(cached);
+      if (Date.now() - cacheData.timestamp <= CACHE_DURATION) {
+        console.log(
+          "Using cached user channel emotes, groups:",
+          cacheData.groups.length,
+        );
+        return cacheData.groups;
+      }
+      localStorage.removeItem(cacheKey);
+    }
+  } catch {
+    // ignore cache errors
   }
 
   try {
-    const emotes: EmoteMap = {};
+    // Collect raw emote data with owner_id
+    const rawEmotes: Array<{ name: string; url: string; ownerId: string }> = [];
     let cursor: string | null = null;
-    let pageCount = 0;
 
-    // Fetch all pages
     do {
-      // Route through server-side proxy — token comes from httpOnly cookie, not localStorage.
       const proxyPath = cursor
         ? `/api/twitch-proxy?path=/helix/chat/emotes/user&user_id=${encodeURIComponent(userId)}&after=${encodeURIComponent(cursor)}`
         : `/api/twitch-proxy?path=/helix/chat/emotes/user&user_id=${encodeURIComponent(userId)}`;
 
       const apiResponse: Response = await fetch(proxyPath);
-
       if (!apiResponse.ok) {
-        const errorText = await apiResponse.text();
         console.error(
           "Failed to fetch user emotes:",
           apiResponse.status,
           apiResponse.statusText,
-          errorText,
         );
         break;
       }
 
       const pageData: any = await apiResponse.json();
-      pageCount++;
-
       if (pageData.data) {
         pageData.data.forEach((emote: any) => {
-          const emoteId = emote.id;
-          // Prefer animated if available, otherwise static
-          const format = emote.format?.includes("animated")
-            ? "animated"
-            : "static";
-          const url = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteId}/${format}/dark/2.0`;
-          emotes[emote.name] = url;
+          if (!emote.owner_id) return;
+          const format = emote.format?.includes("animated") ? "animated" : "static";
+          const url = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/${format}/dark/2.0`;
+          rawEmotes.push({ name: emote.name, url, ownerId: emote.owner_id });
         });
       }
 
-      // Get next cursor for pagination
       cursor = pageData.pagination?.cursor || null;
     } while (cursor);
 
-    setCachedEmotes(cacheKey, emotes);
-    return emotes;
+    // Group by owner_id
+    const groupMap = new Map<string, EmoteMap>();
+    for (const emote of rawEmotes) {
+      if (!groupMap.has(emote.ownerId)) {
+        groupMap.set(emote.ownerId, {});
+      }
+      groupMap.get(emote.ownerId)![emote.name] = emote.url;
+    }
+
+    // Resolve owner IDs → display names + profile images
+    const ownerIds = Array.from(groupMap.keys());
+    const infoMap = await fetchBroadcasterInfo(ownerIds);
+
+    // Build sorted channel groups
+    const groups: ChannelEmoteGroup[] = [];
+    for (const [channelId, emotes] of groupMap.entries()) {
+      const info = infoMap[channelId];
+      groups.push({
+        channelId,
+        channelName: info?.name || channelId,
+        profileImageUrl: info?.profileImageUrl,
+        emotes,
+      });
+    }
+    groups.sort((a, b) => a.channelName.localeCompare(b.channelName));
+
+    try {
+      const cacheData: ChannelGroupCache = { groups, timestamp: Date.now() };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    } catch {
+      // ignore storage errors
+    }
+
+    console.log(
+      "Fetched user channel emote groups:",
+      groups.length,
+      "groups,",
+      rawEmotes.length,
+      "emotes",
+    );
+    return groups;
   } catch (error) {
-    console.error("Failed to fetch user emote sets:", error);
-    return {};
+    console.error("Failed to fetch user emotes by channel:", error);
+    return [];
   }
 }
 
@@ -410,51 +511,36 @@ export async function initializeEmotes(
   channelName: string,
   userId?: string,
 ): Promise<void> {
-  const promises = [
-    fetch7TVGlobalEmotes(),
-    fetch7TVEmotes(channelId),
-    fetchBTTVGlobalEmotes(),
-    fetchBTTVEmotes(channelId),
-    fetchFFZGlobalEmotes(),
-    fetchFFZEmotes(channelName),
-    fetchTwitchGlobalEmotes(),
-    fetchTwitchChannelEmotes(channelId),
-  ];
+  const [stv7Global, stv7Channel, bttvGlobal, bttvChannel, ffzGlobal, ffzChannel, twitchGlobal, twitchChannel] =
+    await Promise.all([
+      fetch7TVGlobalEmotes(),
+      fetch7TVEmotes(channelId),
+      fetchBTTVGlobalEmotes(),
+      fetchBTTVEmotes(channelId),
+      fetchFFZGlobalEmotes(),
+      fetchFFZEmotes(channelName),
+      fetchTwitchGlobalEmotes(),
+      fetchTwitchChannelEmotes(channelId),
+    ]);
+
+  emotes7tv = { ...stv7Global, ...stv7Channel };
+  emotesBttv = { ...bttvGlobal, ...bttvChannel };
+  emotesFfz = { ...ffzGlobal, ...ffzChannel };
+
+  emotesTwitchGlobal = twitchGlobal;
+
+  // Merge global + current channel into the flat map used for message parsing
+  emotesTwitch = { ...twitchGlobal, ...twitchChannel };
 
   if (userId) {
-    promises.push(fetchUserEmoteSets(userId));
-  }
-
-  const results = await Promise.all(promises);
-
-  emotes7tv = {
-    ...results[0],
-    ...results[1],
-  };
-
-  emotesBttv = {
-    ...results[2],
-    ...results[3],
-  };
-
-  emotesFfz = {
-    ...results[4],
-    ...results[5],
-  };
-
-  const globalEmotes = results[6];
-  const channelEmotes = results[7];
-  const userEmotes = userId ? results[8] : {};
-
-  emotesTwitch = {
-    ...globalEmotes,
-    ...channelEmotes,
-    ...userEmotes,
-  };
-
-  // User emotes have been merged into emotesTwitch map
-  if (userId && Object.keys(userEmotes).length > 0) {
-    // Emotes successfully loaded and merged
+    const channelGroups = await fetchUserEmotesByChannel(userId);
+    emotesTwitchByChannel = channelGroups;
+    // Merge all subscription channel emotes into the parsing map
+    for (const group of channelGroups) {
+      Object.assign(emotesTwitch, group.emotes);
+    }
+  } else {
+    emotesTwitchByChannel = [];
   }
 
   // Dispatch a custom event to notify listeners that emotes have been reloaded
@@ -742,18 +828,34 @@ export function toggleDisableEmote(name: string): void {
 /**
  * Get all emotes organized by source
  */
+export interface TwitchChannelEmotes {
+  channelId: string;
+  channelName: string;
+  profileImageUrl?: string;
+  emotes: Array<{ name: string; url: string }>;
+}
+
 export interface EmotesBySource {
-  twitch: Array<{ name: string; url: string }>;
+  twitchGlobal: Array<{ name: string; url: string }>;
+  twitchChannels: TwitchChannelEmotes[];
   "7tv": Array<{ name: string; url: string }>;
   bttv: Array<{ name: string; url: string }>;
   ffz: Array<{ name: string; url: string }>;
 }
 
 export function getAllEmotesOrganized(): EmotesBySource {
-  const organized = {
-    twitch: Object.entries(emotesTwitch)
+  const organized: EmotesBySource = {
+    twitchGlobal: Object.entries(emotesTwitchGlobal)
       .map(([name, url]) => ({ name, url }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    twitchChannels: emotesTwitchByChannel.map((group) => ({
+      channelId: group.channelId,
+      channelName: group.channelName,
+      profileImageUrl: group.profileImageUrl,
+      emotes: Object.entries(group.emotes)
+        .map(([name, url]) => ({ name, url }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    })),
     "7tv": Object.entries(emotes7tv)
       .map(([name, url]) => ({ name, url }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -765,9 +867,9 @@ export function getAllEmotesOrganized(): EmotesBySource {
       .sort((a, b) => a.name.localeCompare(b.name)),
   };
 
-  // Debug log to verify emotes are loaded
   console.log("Emotes organized:", {
-    twitch: organized.twitch.length,
+    twitchGlobal: organized.twitchGlobal.length,
+    twitchChannels: organized.twitchChannels.length,
     "7tv": organized["7tv"].length,
     bttv: organized.bttv.length,
     ffz: organized.ffz.length,

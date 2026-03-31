@@ -36,7 +36,8 @@ function MessageInput({
   const [showEmoteMenu, setShowEmoteMenu] = useState(false);
   const [showEmotePickerMenu, setShowEmotePickerMenu] = useState(false);
   const [emotesOrganized, setEmotesOrganized] = useState<EmotesBySource>({
-    twitch: [],
+    twitchGlobal: [],
+    twitchChannels: [],
     '7tv': [],
     bttv: [],
     ffz: [],

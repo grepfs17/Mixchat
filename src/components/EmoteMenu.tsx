@@ -11,108 +11,242 @@ interface EmoteMenuProps {
   onClose: () => void;
 }
 
+const TWITCH_GLOBAL_KEY = '__global';
+
 function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEmotes, setFilteredEmotes] = useState<EmotesBySource>(emotes);
-  const [activeSection, setActiveSection] = useState<'twitch' | '7tv' | 'bttv' | 'ffz'>('twitch');
+  const [activeTab, setActiveTab] = useState<'twitch' | '7tv' | 'bttv' | 'ffz'>('twitch');
+  // selected channel within the Twitch tab (TWITCH_GLOBAL_KEY or channelId)
+  const [activeTwitchChannel, setActiveTwitchChannel] = useState<string>(TWITCH_GLOBAL_KEY);
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({
-    twitch: null,
-    '7tv': null,
-    bttv: null,
-    ffz: null,
-  });
-  const scrollToSection = (section: string) => {
-    setActiveSection(section as any);
-    const sectionElement = sectionRefs.current[section];
-    if (sectionElement && contentRef.current) {
-      const scrollTop = sectionElement.offsetTop - contentRef.current.offsetTop;
-      contentRef.current.scrollTo({ top: scrollTop, behavior: 'smooth' });
-    }
-  };
 
-  // Filter emotes based on search query
+  // Filter emotes based on search query — cross-source when searching
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredEmotes(emotes);
       return;
     }
-
     const lowerQuery = searchQuery.toLowerCase();
     setFilteredEmotes({
-      twitch: emotes.twitch.filter(e => e.name.toLowerCase().includes(lowerQuery)),
+      twitchGlobal: emotes.twitchGlobal.filter(e => e.name.toLowerCase().includes(lowerQuery)),
+      twitchChannels: emotes.twitchChannels.map(ch => ({
+        ...ch,
+        emotes: ch.emotes.filter(e => e.name.toLowerCase().includes(lowerQuery)),
+      })),
       '7tv': emotes['7tv'].filter(e => e.name.toLowerCase().includes(lowerQuery)),
       bttv: emotes.bttv.filter(e => e.name.toLowerCase().includes(lowerQuery)),
       ffz: emotes.ffz.filter(e => e.name.toLowerCase().includes(lowerQuery)),
     });
   }, [searchQuery, emotes]);
 
-  // Reset search and display all emotes when menu opens
+  // Reset state when menu opens
   useEffect(() => {
     if (isOpen) {
       setSearchQuery('');
-      setActiveSection('twitch');
+      setActiveTab('twitch');
+      setActiveTwitchChannel(TWITCH_GLOBAL_KEY);
       setFilteredEmotes(emotes);
       setDisabledSet(getDisabledEmotes());
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
+      if (searchInputRef.current) searchInputRef.current.focus();
     }
   }, [isOpen, emotes]);
 
-  // Update disabled emotes when global emote state changes
   useEffect(() => {
     const handler = () => setDisabledSet(getDisabledEmotes());
     window.addEventListener('emotes-reloaded', handler);
     return () => window.removeEventListener('emotes-reloaded', handler);
   }, []);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) onClose();
     };
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen, onClose]);
 
-  // Handle keyboard escape
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isOpen) onClose(); };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const sources = [
-    { key: 'twitch', label: 'Twitch', color: '#9146ff' },
+  const thirdPartySources = [
     { key: '7tv' as const, label: '7TV', color: '#00d4ff' },
-    { key: 'bttv', label: 'BTTV', color: '#34ae7b' },
-    { key: 'ffz', label: 'FFZ', color: '#faa61a' },
+    { key: 'bttv' as const, label: 'BTTV', color: '#34ae7b' },
+    { key: 'ffz' as const, label: 'FFZ', color: '#faa61a' },
   ] as const;
+
+  const twitchColor = '#9146ff';
+  const isSearching = searchQuery.trim().length > 0;
+
+  const renderEmoteItem = (emote: { name: string; url: string }) => {
+    const isDisabled = disabledSet.has(emote.name);
+    return (
+      <div
+        key={emote.name}
+        className={`emote-item ${isDisabled ? 'emote-disabled' : ''}`}
+        onClick={() => {
+          if (!isDisabled) { onSelectEmote(emote.name); setSearchQuery(''); }
+        }}
+        title={emote.name}
+      >
+        <button
+          className="emote-disable-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleDisableEmote(emote.name);
+            setDisabledSet(getDisabledEmotes());
+          }}
+          title={isDisabled ? 'Enable emote' : 'Disable emote'}
+        >
+          {isDisabled ? 'Enable' : 'Disable'}
+        </button>
+        <img src={emote.url} alt={emote.name} className="emote-image" />
+        <span className="emote-name">{emote.name}</span>
+      </div>
+    );
+  };
+
+  // ── Twitch panel content ──────────────────────────────────────────────────
+
+  const twitchSidebar = (
+    <div className="emote-channel-sidebar">
+      {/* Global */}
+      <button
+        className={`emote-channel-avatar-btn ${activeTwitchChannel === TWITCH_GLOBAL_KEY ? 'active' : ''}`}
+        onClick={() => setActiveTwitchChannel(TWITCH_GLOBAL_KEY)}
+        title="Global"
+      >
+        <div className="emote-channel-avatar emote-channel-avatar--global">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 1a5.5 5.5 0 00-4.47 8.72l.28-.72h1.44l-.5 2H8.5l.5-2h2l.5 2h1.75l-.5-2h1.44l.28.72A5.5 5.5 0 0010 4.5z"/>
+          </svg>
+        </div>
+        <span className="emote-channel-label">Global</span>
+      </button>
+
+      {/* Per-channel */}
+      {emotes.twitchChannels.map(ch => (
+        <button
+          key={ch.channelId}
+          className={`emote-channel-avatar-btn ${activeTwitchChannel === ch.channelId ? 'active' : ''}`}
+          onClick={() => setActiveTwitchChannel(ch.channelId)}
+          title={ch.channelName}
+        >
+          {ch.profileImageUrl ? (
+            <img
+              src={ch.profileImageUrl}
+              alt={ch.channelName}
+              className="emote-channel-avatar emote-channel-avatar--img"
+            />
+          ) : (
+            <div className="emote-channel-avatar emote-channel-avatar--fallback">
+              {ch.channelName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="emote-channel-label">{ch.channelName}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const currentTwitchEmotes =
+    activeTwitchChannel === TWITCH_GLOBAL_KEY
+      ? filteredEmotes.twitchGlobal
+      : (filteredEmotes.twitchChannels.find(ch => ch.channelId === activeTwitchChannel)?.emotes ?? []);
+
+  const currentTwitchChannelName =
+    activeTwitchChannel === TWITCH_GLOBAL_KEY
+      ? 'Global'
+      : (emotes.twitchChannels.find(ch => ch.channelId === activeTwitchChannel)?.channelName ?? '');
+
+  const twitchPanel = (
+    <div className="emote-tab-panel emote-tab-panel--twitch">
+      {twitchSidebar}
+      <div className="emote-channel-content">
+        {isSearching ? (
+          // Search: show all channels that have results
+          <>
+            {filteredEmotes.twitchGlobal.length > 0 && (
+              <div className="emote-search-group">
+                <div className="emote-search-group-label">Global ({filteredEmotes.twitchGlobal.length})</div>
+                <div className="emote-grid">{filteredEmotes.twitchGlobal.map(renderEmoteItem)}</div>
+              </div>
+            )}
+            {filteredEmotes.twitchChannels.filter(ch => ch.emotes.length > 0).map(ch => (
+              <div key={ch.channelId} className="emote-search-group">
+                <div className="emote-search-group-label">{ch.channelName} ({ch.emotes.length})</div>
+                <div className="emote-grid">{ch.emotes.map(renderEmoteItem)}</div>
+              </div>
+            ))}
+            {filteredEmotes.twitchGlobal.length === 0 &&
+              filteredEmotes.twitchChannels.every(ch => ch.emotes.length === 0) && (
+                <div className="emote-no-results">No Twitch emotes match "{searchQuery}"</div>
+              )}
+          </>
+        ) : (
+          // Normal: show only selected channel
+          <>
+            <div className="emote-channel-panel-header">
+              <span className="emote-channel-panel-name">{currentTwitchChannelName}</span>
+              <span className="emote-source-count">({currentTwitchEmotes.length})</span>
+            </div>
+            {currentTwitchEmotes.length > 0 ? (
+              <div className="emote-grid">{currentTwitchEmotes.map(renderEmoteItem)}</div>
+            ) : (
+              <div className="emote-no-results">
+                {activeTwitchChannel === TWITCH_GLOBAL_KEY
+                  ? 'No global Twitch emotes loaded'
+                  : 'No emotes for this channel'}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Third-party panel ────────────────────────────────────────────────────
+
+  const renderThirdPartyPanel = (
+    key: '7tv' | 'bttv' | 'ffz',
+    label: string,
+    color: string,
+  ) => {
+    const sourceEmotes = filteredEmotes[key];
+    return (
+      <div className="emote-tab-panel">
+        <div className="emote-channel-content">
+          <div className="emote-channel-panel-header">
+            <span className="emote-channel-panel-name" style={{ color }}>{label}</span>
+            <span className="emote-source-count">({sourceEmotes.length})</span>
+          </div>
+          {sourceEmotes.length > 0 ? (
+            <div className="emote-grid">{sourceEmotes.map(renderEmoteItem)}</div>
+          ) : (
+            <div className="emote-no-results">
+              {isSearching ? `No ${label} emotes match "${searchQuery}"` : `No ${label} emotes available`}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="emote-menu-overlay">
       <div ref={menuRef} className="emote-menu-modal">
         <div className="emote-menu-header">
           <h2>Emotes</h2>
-          <button className="emote-menu-close" onClick={onClose}>
-            ✕
-          </button>
+          <button className="emote-menu-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="emote-menu-search">
@@ -120,7 +254,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search emotes..."
+            placeholder="Search all emotes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="emote-search-input"
@@ -128,14 +262,24 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         </div>
 
         <div className="emote-menu-tabs">
-          {sources.map(({ key, label, color }) => (
+          <button
+            className={`emote-tab ${activeTab === 'twitch' ? 'active' : ''}`}
+            onClick={() => setActiveTab('twitch')}
+            style={{
+              color: activeTab === 'twitch' ? twitchColor : '#cbd5e1',
+              borderBottomColor: activeTab === 'twitch' ? twitchColor : 'transparent',
+            }}
+          >
+            Twitch
+          </button>
+          {thirdPartySources.map(({ key, label, color }) => (
             <button
               key={key}
-              className={`emote-tab ${activeSection === key ? 'active' : ''}`}
-              onClick={() => scrollToSection(key)}
+              className={`emote-tab ${activeTab === key ? 'active' : ''}`}
+              onClick={() => setActiveTab(key)}
               style={{
-                color: activeSection === key ? color : '#cbd5e1',
-                borderBottomColor: activeSection === key ? color : 'transparent',
+                color: activeTab === key ? color : '#cbd5e1',
+                borderBottomColor: activeTab === key ? color : 'transparent',
               }}
             >
               {label}
@@ -143,77 +287,11 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           ))}
         </div>
 
-        <div className="emote-menu-content" ref={contentRef}>
-          {sources.map(({ key, label, color }) => {
-            const sourceEmotes = filteredEmotes[key];
-
-            return (
-              <div
-                key={key}
-                className="emote-source-section"
-                ref={(el) => {
-                  if (el) sectionRefs.current[key] = el;
-                }}
-              >
-                <div className="emote-source-header">
-                  <div
-                    className="emote-source-dot"
-                    style={{ backgroundColor: color }}
-                  />
-                  <h3 style={{ color }}>{label}</h3>
-                  <span className="emote-source-count">({sourceEmotes.length})</span>
-                </div>
-                {sourceEmotes.length > 0 ? (
-                  <div className="emote-grid">
-                    {sourceEmotes.map((emote) => {
-                      const isDisabled = disabledSet.has(emote.name);
-                      return (
-                        <div
-                          key={emote.name}
-                          className={`emote-item ${isDisabled ? 'emote-disabled' : ''}`}
-                          onClick={() => {
-                            if (!isDisabled) {
-                              onSelectEmote(emote.name);
-                              setSearchQuery('');
-                            }
-                          }}
-                          title={emote.name}
-                        >
-                          <button
-                            className="emote-disable-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleDisableEmote(emote.name);
-                              setDisabledSet(getDisabledEmotes());
-                            }}
-                            title={isDisabled ? 'Enable emote' : 'Disable emote'}
-                          >
-                            {isDisabled ? 'Enable' : 'Disable'}
-                          </button>
-                          <img
-                            src={emote.url}
-                            alt={emote.name}
-                            className="emote-image"
-                          />
-                          <span className="emote-name">{emote.name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="emote-no-results-section">
-                    No {label} emotes available
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {Object.values(filteredEmotes).every(arr => arr.length === 0) && (
-            <div className="emote-no-results">
-              No emotes found matching "{searchQuery}"
-            </div>
-          )}
+        <div className="emote-menu-content">
+          {activeTab === 'twitch' && twitchPanel}
+          {activeTab === '7tv' && renderThirdPartyPanel('7tv', '7TV', '#00d4ff')}
+          {activeTab === 'bttv' && renderThirdPartyPanel('bttv', 'BTTV', '#34ae7b')}
+          {activeTab === 'ffz' && renderThirdPartyPanel('ffz', 'FFZ', '#faa61a')}
         </div>
       </div>
     </div>
