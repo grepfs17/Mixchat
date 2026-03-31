@@ -225,7 +225,8 @@
   
   .message-textarea {
     padding: 8px;
-    font-size: 0.9rem;
+    /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
+    font-size: 16px;
   }
   
   .send-button {
@@ -261,21 +262,22 @@
   }
   
   .input-group {
-    height: 36px;
+    height: 44px;
     gap: 4px;
     flex-direction: row;
   }
   
   .message-textarea {
     padding: 6px;
-    font-size: 0.85rem;
+    /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
+    font-size: 16px;
     height: 100%;
     min-height: auto;
   }
   
   .emote-picker-button {
-    width: 36px;
-    min-width: 36px;
+    width: 44px;
+    min-width: 44px;
     height: 100%;
   }
   

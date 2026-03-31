@@ -142,60 +142,6 @@ export default function AppContainer() {
   }, []);
 
   // Keep the stream embed visible when the mobile keyboard opens
-  useEffect(() => {
-    const isMobile = () => typeof window !== 'undefined' && window.innerWidth <= 640;
-
-    const handler = () => {
-      if (!isMobile()) return;
-      const vv = (window as any).visualViewport;
-      const active = document.activeElement as HTMLElement | null;
-      if (!active) return;
-      if (!active.closest || !active.closest('.message-input')) return;
-      if (!embedRef.current) return;
-
-      try {
-        const rect = embedRef.current.getBoundingClientRect();
-        const viewportHeight = vv ? vv.height : window.innerHeight;
-
-        // If embed bottom is below the visible viewport (keyboard covering it), scroll up
-        if (rect.bottom > viewportHeight) {
-          const delta = rect.bottom - viewportHeight + 8;
-          window.scrollBy({ top: delta, behavior: 'smooth' });
-        }
-
-        // If embed top is above viewport, bring it down a bit
-        if (rect.top < 0) {
-          const delta = rect.top - 8;
-          window.scrollBy({ top: delta, behavior: 'smooth' });
-        }
-      } catch (e) {
-        // Fallback: ensure embed is visible
-        embedRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }
-    };
-
-    const vv = (window as any).visualViewport;
-    if (vv) {
-      vv.addEventListener('resize', handler);
-      vv.addEventListener('scroll', handler);
-    } else {
-      window.addEventListener('resize', handler);
-    }
-
-    // Also run once when focus changes to an input
-    const onFocus = (e: FocusEvent) => handler();
-    document.addEventListener('focusin', onFocus);
-
-    return () => {
-      if (vv) {
-        vv.removeEventListener('resize', handler);
-        vv.removeEventListener('scroll', handler);
-      } else {
-        window.removeEventListener('resize', handler);
-      }
-      document.removeEventListener('focusin', onFocus);
-    };
-  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('mixchat_sessions');

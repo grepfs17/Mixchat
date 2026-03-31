@@ -65,7 +65,8 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
   </head>
   <style>
     #app {
-      height: 100vh;
+      height: 100vh; /* fallback */
+      height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
       padding: 0;
       padding-bottom: 50px;
       background: var(--color-bg-primary);
@@ -112,6 +113,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       #app {
         padding: 0;
         padding-bottom: 60px;
+        height: 100dvh;
       }
 
       footer {
