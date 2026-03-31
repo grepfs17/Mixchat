@@ -110,9 +110,17 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
+      /* position:fixed makes #app track the visual viewport perfectly.
+         When the keyboard opens, bottom:0 stays just above the keyboard,
+         so the embed at the top stays visible and the layout shrinks cleanly. */
       #app {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: auto;
         padding: 0;
-        height: 100dvh;
       }
 
       footer {

@@ -19,6 +19,15 @@ body {
   color: var(--color-text-primary);
 }
 
+/* On mobile, lock html/body against scroll so the browser can't scroll the
+   embed off-screen when the virtual keyboard opens */
+@media (max-width: 768px) {
+  html, body {
+    overflow: hidden;
+    height: 100%;
+  }
+}
+
 #app {
   min-height: 100vh;
 }
