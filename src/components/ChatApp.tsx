@@ -258,6 +258,16 @@ export default function ChatApp({
     }
   }, [ytSelectedEmoteIndex, ytShowEmoteMenu]);
 
+  // On mobile, position the autocomplete menu via a CSS variable so it floats
+  // above the input using position:fixed (escaping any stacking context).
+  useEffect(() => {
+    if (!ytShowEmoteMenu || !ytInputRef.current) return;
+    if (window.innerWidth > 768) return;
+    const rect = ytInputRef.current.getBoundingClientRect();
+    const fromBottom = window.innerHeight - rect.top + 6;
+    document.documentElement.style.setProperty('--emote-menu-bottom', fromBottom + 'px');
+  }, [ytShowEmoteMenu]);
+
   /** Insert emote name at current cursor, replacing the current partial word */
   const ytInsertEmote = useCallback((emoteName: string) => {
     const input = ytInputRef.current;

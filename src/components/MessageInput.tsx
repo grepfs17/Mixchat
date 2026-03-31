@@ -333,6 +333,17 @@ function MessageInput({
     }
   }, [selectedEmoteIndex, showEmoteMenu]);
 
+  // On mobile, position autocomplete menus via a CSS variable so they float
+  // above the input using position:fixed (escaping any stacking context/overlay).
+  useEffect(() => {
+    const menuOpen = showEmoteMenu || showUsernameMenu;
+    if (!menuOpen || !textareaRef.current) return;
+    if (window.innerWidth > 768) return;
+    const rect = textareaRef.current.getBoundingClientRect();
+    const fromBottom = window.innerHeight - rect.top + 6;
+    document.documentElement.style.setProperty('--emote-menu-bottom', fromBottom + 'px');
+  }, [showEmoteMenu, showUsernameMenu]);
+
   // Focus textarea when replying to a message
   useEffect(() => {
     if (replyingTo && textareaRef.current) {
@@ -412,6 +423,7 @@ function MessageInput({
         {showEmoteMenu && emoteResults.length > 0 && (
           <div
             ref={emoteMenuRef}
+            className="emote-autocomplete-menu"
             style={{
               position: 'absolute',
               bottom: '100%',
@@ -461,6 +473,7 @@ function MessageInput({
 
         {showUsernameMenu && usernameResults.length > 0 && (
           <div
+            className="emote-autocomplete-menu"
             style={{
               position: 'absolute',
               bottom: '100%',
