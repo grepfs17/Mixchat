@@ -25,6 +25,21 @@ const CACHE_DURATION = CACHE_DURATION_DAYS * MS_PER_DAY;
 const EMOTE_BATCH_SIZE = 100;
 const MAX_REPLACEMENTS = 1000;
 
+/** URL prefix that marks a 7TV emote as zero-width (overlay). */
+const ZW_EMOTE_PREFIX = 'ZW:';
+/** 7TV emote flag bit for zero-width/overlay emotes (1 << 8 = 256). */
+const ZERO_WIDTH_FLAG = 1 << 8;
+
+/** Returns true if the stored emote URL carries the zero-width marker. */
+function isZeroWidthUrl(url: string): boolean {
+  return url.startsWith(ZW_EMOTE_PREFIX);
+}
+
+/** Strips the zero-width prefix from a stored URL, returning the real CDN URL. */
+function getEmoteUrl(url: string): string {
+  return url.startsWith(ZW_EMOTE_PREFIX) ? url.slice(ZW_EMOTE_PREFIX.length) : url;
+}
+
 interface EmoteMap {
   [key: string]: string;
 }
@@ -116,7 +131,7 @@ export function clearEmoteCache(): void {
  * Fetch 7TV global emotes
  */
 async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
-  const cacheKey = "emotes_7tv_global";
+  const cacheKey = "emotes_7tv_global_v2";
   const cached = getCachedEmotes(cacheKey);
   if (cached) {
     console.log('Using cached 7TV global emotes, count:', Object.keys(cached).length);
@@ -131,8 +146,9 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
     const emotes: EmoteMap = {};
     if (data.emotes) {
       data.emotes.forEach((emote: any) => {
-        emotes[emote.name] =
-          `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
+        const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
+        const flags: number = emote.data?.flags ?? 0;
+        emotes[emote.name] = (flags & ZERO_WIDTH_FLAG) ? ZW_EMOTE_PREFIX + url : url;
       });
     }
     setCachedEmotes(cacheKey, emotes);
@@ -148,7 +164,7 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
  * Fetch 7TV emotes for a given channel
  */
 async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
-  const cacheKey = `emotes_7tv_${channelId}`;
+  const cacheKey = `emotes_7tv_v2_${channelId}`;
   const cached = getCachedEmotes(cacheKey);
   if (cached) return cached;
 
@@ -159,8 +175,9 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
     const emotes: EmoteMap = {};
     if (data.emote_set?.emotes) {
       data.emote_set.emotes.forEach((emote: any) => {
-        emotes[emote.name] =
-          `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
+        const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
+        const flags: number = emote.data?.flags ?? 0;
+        emotes[emote.name] = (flags & ZERO_WIDTH_FLAG) ? ZW_EMOTE_PREFIX + url : url;
       });
     }
     setCachedEmotes(cacheKey, emotes);
@@ -578,6 +595,22 @@ function createEmoteImg(emoteUrl: string, emoteName: string): string {
 }
 
 /**
+ * Create an overlay (zero-width) emote wrapped in a positioning span.
+ * The span is absolutely centred over the base emote by CSS.
+ */
+function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
+  let highQualityUrl = emoteUrl;
+  const splitedUrlSize = emoteUrl.split("/").pop();
+  if (
+    splitedUrlSize &&
+    (splitedUrlSize.includes("2") || splitedUrlSize.includes("1"))
+  ) {
+    highQualityUrl = replaceSize(emoteUrl);
+  }
+  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" class="chat-emote" style="height: 2em; cursor: pointer;" loading="lazy" /></span>`;
+}
+
+/**
  * Parse message text and replace emote codes with HTML image tags
  * @param text - The message text
  * @param twitchEmotes - Twitch emote data from message tags (emoteId -> positions array)
@@ -680,48 +713,90 @@ function parseThirdPartyEmotes(text: string): string {
       return part;
     }
 
-    // Split into words and parse
-    // Note: This approach loses exact whitespace formatting (collapses multiple spaces)
-    // A more robust approach would be to find matches and replace them, escaping the rest.
-    // For now, we'll stick to splitting by space but ensure we escape non-matches.
+    // Process words with a while-loop so we can do lookahead for 7TV zero-width
+    // (overlay) emotes that must be grouped with the preceding base emote.
     const words = part.split(" ");
-    const parsedWords = words.map((word) => {
+    const output: string[] = [];
+    let i = 0;
+    while (i < words.length) {
+      const word = words[i];
+
       // Check for URLs first
       const linkified = linkifyUrl(word);
       if (linkified) {
-        return linkified;
+        output.push(linkified);
+        i++;
+        continue;
       }
 
       // Check for @mention
       if (word.startsWith("@")) {
-        return `<strong>${escapeHtml(word)}</strong>`;
+        output.push(`<strong>${escapeHtml(word)}</strong>`);
+        i++;
+        continue;
       }
 
       // Check Twitch native emotes (from cache map, manually typed)
       if (emotesTwitch[word]) {
-        return createEmoteImg(emotesTwitch[word], word);
+        output.push(createEmoteImg(emotesTwitch[word], word));
+        i++;
+        continue;
       }
 
-      // Check 7TV
+      // Check 7TV — with zero-width overlay support
       if (emotes7tv[word]) {
-        return createEmoteImg(emotes7tv[word], word);
+        const url = emotes7tv[word];
+        if (isZeroWidthUrl(url)) {
+          // Orphan zero-width emote (no preceding base) — render normally
+          output.push(createEmoteImg(getEmoteUrl(url), word));
+        } else {
+          // Regular 7TV emote: look ahead for consecutive zero-width emotes
+          const baseHtml = createEmoteImg(url, word);
+          const overlays: string[] = [];
+          let j = i + 1;
+          while (j < words.length) {
+            const nextWord = words[j];
+            const nextUrl = emotes7tv[nextWord];
+            if (nextUrl && isZeroWidthUrl(nextUrl)) {
+              overlays.push(createZeroWidthEmoteImg(getEmoteUrl(nextUrl), nextWord));
+              j++;
+            } else {
+              break;
+            }
+          }
+          if (overlays.length > 0) {
+            output.push(
+              `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`
+            );
+            i = j; // skip consumed zero-width words
+          } else {
+            output.push(baseHtml);
+            i++;
+          }
+        }
+        continue;
       }
 
       // Check BTTV
       if (emotesBttv[word]) {
-        return createEmoteImg(emotesBttv[word], word);
+        output.push(createEmoteImg(emotesBttv[word], word));
+        i++;
+        continue;
       }
 
       // Check FFZ
       if (emotesFfz[word]) {
-        return createEmoteImg(emotesFfz[word], word);
+        output.push(createEmoteImg(emotesFfz[word], word));
+        i++;
+        continue;
       }
 
-      // Return escaped word
-      return escapeHtml(word);
-    });
+      // Plain text
+      output.push(escapeHtml(word));
+      i++;
+    }
 
-    return parsedWords.join(" ");
+    return output.join(" ");
   });
 
   return parsedParts.join("");
@@ -751,7 +826,7 @@ export function searchEmotes(
   // Search 7TV emotes
   Object.entries(emotes7tv).forEach(([name, url]) => {
     if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
-      results.push({ name, url, source: "7TV" });
+      results.push({ name, url: getEmoteUrl(url), source: "7TV" });
     }
   });
 
@@ -857,7 +932,7 @@ export function getAllEmotesOrganized(): EmotesBySource {
         .sort((a, b) => a.name.localeCompare(b.name)),
     })),
     "7tv": Object.entries(emotes7tv)
-      .map(([name, url]) => ({ name, url }))
+      .map(([name, url]) => ({ name, url: getEmoteUrl(url) }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     bttv: Object.entries(emotesBttv)
       .map(([name, url]) => ({ name, url }))

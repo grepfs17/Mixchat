@@ -548,3 +548,46 @@
     font-size: 10px;
   }
 }
+
+/* 7TV zero-width / overlay emote support */
+
+/**
+ * Wraps a base emote together with one or more zero-width overlay emotes.
+ * Must be inline-flex so it sizes to the base emote image and sits on
+ * the text baseline correctly.
+ */
+.emote-overlay-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  /* Inherit the margin from the inner .chat-emote */
+  margin: 0 2px;
+}
+
+/* Remove the outer margin from the base emote when it's inside a container
+   because the container itself provides the margin. */
+.emote-overlay-container > .chat-emote {
+  margin: 0;
+}
+
+/**
+ * Each zero-width overlay emote is absolutely centred on top of the base.
+ * pointer-events: none ensures hover/click reach the base emote below.
+ */
+.emote-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.emote-overlay > .chat-emote {
+  margin: 0;
+  pointer-events: none;
+}
