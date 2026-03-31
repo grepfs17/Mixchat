@@ -504,6 +504,7 @@
   .message {
     padding: 3px 4px;
     gap: 2px;
+    position:relative;
   }
   
   .avatar {
@@ -531,11 +532,15 @@
   }
   
   .message-actions {
-    gap: 2px;
+    gap: 4px;
     margin-top: 3px;
     flex-basis: 100%;
     margin-left: auto;
     justify-content: flex-end;
+    position: absolute;
+    width: 100%;
+    top: 0;
+    right: 4px;
   }
   
   .action-button {
