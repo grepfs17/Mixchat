@@ -110,11 +110,19 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
-      /* --app-height is set by the JS below via visualViewport.height,
-         which is the only reliable way to exclude ALL browser chrome
-         (address bar, tab strip, etc.) on Android browsers like Brave. */
+      /* position:fixed keeps #app anchored to the layout viewport.
+         --vv-bottom (set by the is:inline script below) equals the height of
+         all persistent browser chrome at the bottom (URL bar, tab strip, etc.)
+         so the layout always ends exactly above it — not behind it.
+         When the keyboard opens, vv.height shrinks so --vv-bottom grows,
+         keeping everything above the keyboard automatically. */
       #app {
-        height: var(--app-height, 100dvh);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: var(--vv-bottom, 0px);
+        height: auto;
         padding: 0;
       }
 
@@ -147,22 +155,19 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       style="width: auto; height: 30px;"
     />
   </footer>
-  <script>
-    // visualViewport.height is the only API that accurately reflects the
-    // visible area after subtracting ALL browser chrome (address bar, tab
-    // strip, keyboard, etc.). We drive the --app-height CSS variable from it
-    // so the layout never overflows behind any browser UI element.
+  <script is:inline>
+    // --vv-bottom = height of ALL persistent browser chrome below the web content
+    // (URL bar, tab strip, home indicator, etc.).
+    // Formula: innerHeight (layout viewport) minus the visual viewport's bottom edge.
+    // When the keyboard opens vv.height shrinks so --vv-bottom grows automatically,
+    // keeping #app above both the keyboard and the browser chrome.
     (function () {
       var vv = window.visualViewport;
-      if (!vv) return; // desktop fallback: 100dvh from CSS is fine
-
+      if (!vv) return;
       function update() {
-        document.documentElement.style.setProperty(
-          '--app-height',
-          vv.height + 'px'
-        );
+        var bottom = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+        document.documentElement.style.setProperty('--vv-bottom', bottom + 'px');
       }
-
       vv.addEventListener('resize', update);
       vv.addEventListener('scroll', update);
       update();
