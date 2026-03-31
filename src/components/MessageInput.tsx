@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { FaTimes, FaSmile, FaTwitch } from 'react-icons/fa';
 import type { Platform, ChatMessage } from '../lib/types';
 import { searchEmotes, getAllEmotesOrganized, type EmotesBySource } from '../lib/emotes';
@@ -48,6 +49,8 @@ function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
   const shouldRefocusRef = useRef(false);
+  // Position of the textarea, used to anchor the portal-rendered autocomplete menu
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
 
 
   // Load organized emotes on component mount
@@ -337,11 +340,14 @@ function MessageInput({
   // above the input using position:fixed (escaping any stacking context/overlay).
   useEffect(() => {
     const menuOpen = showEmoteMenu || showUsernameMenu;
-    if (!menuOpen || !textareaRef.current) return;
-    if (window.innerWidth > 768) return;
-    const rect = textareaRef.current.getBoundingClientRect();
-    const fromBottom = window.innerHeight - rect.top + 6;
-    document.documentElement.style.setProperty('--emote-menu-bottom', fromBottom + 'px');
+    if (!menuOpen || !textareaRef.current) {
+      setMenuRect(null);
+      return;
+    }
+    // Capture the textarea's bounding rect so the portal-rendered menu can
+    // position itself relative to it. Portals render into document.body,
+    // completely outside the iframe's GPU compositing layer.
+    setMenuRect(textareaRef.current.getBoundingClientRect());
   }, [showEmoteMenu, showUsernameMenu]);
 
   // Focus textarea when replying to a message
@@ -420,22 +426,21 @@ function MessageInput({
           {isLoading ? '...' : <FaTwitch size={16} />}
         </button>
 
-        {showEmoteMenu && emoteResults.length > 0 && (
+        {showEmoteMenu && emoteResults.length > 0 && menuRect && createPortal(
           <div
             ref={emoteMenuRef}
-            className="emote-autocomplete-menu"
             style={{
-              position: 'absolute',
-              bottom: '100%',
-              left: 0,
-              right: 0,
-              maxHeight: '300px',
+              position: 'fixed',
+              bottom: window.innerHeight - menuRect.top + 6,
+              left: menuRect.left,
+              width: menuRect.width,
+              maxHeight: '40vh',
               overflowY: 'auto',
               background: '#1e293b',
               border: '1px solid #475569',
               borderRadius: '8px',
-              marginBottom: '8px',
-              zIndex: 1000,
+              zIndex: 99999,
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
             }}
           >
             {emoteResults.map((emote, index) => (
@@ -456,11 +461,7 @@ function MessageInput({
                 <img
                   src={emote.url}
                   alt={emote.name}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    objectFit: 'contain',
-                  }}
+                  style={{ width: '32px', height: '32px', objectFit: 'contain' }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ color: '#e2e8f0', fontWeight: '500' }}>{emote.name}</span>
@@ -468,24 +469,24 @@ function MessageInput({
                 </div>
               </div>
             ))}
-          </div>
+          </div>,
+          document.body
         )}
 
-        {showUsernameMenu && usernameResults.length > 0 && (
+        {showUsernameMenu && usernameResults.length > 0 && menuRect && createPortal(
           <div
-            className="emote-autocomplete-menu"
             style={{
-              position: 'absolute',
-              bottom: '100%',
-              left: 0,
-              right: 0,
-              maxHeight: '250px',
+              position: 'fixed',
+              bottom: window.innerHeight - menuRect.top + 6,
+              left: menuRect.left,
+              width: menuRect.width,
+              maxHeight: '40vh',
               overflowY: 'auto',
               background: '#1e293b',
               border: '1px solid #475569',
               borderRadius: '8px',
-              marginBottom: '8px',
-              zIndex: 1000,
+              zIndex: 99999,
+              boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
             }}
           >
             {usernameResults.map((username, index) => (
@@ -500,15 +501,13 @@ function MessageInput({
                   color: '#e2e8f0',
                   fontSize: '0.95rem',
                 }}
-                onMouseEnter={() => {
-                  setSelectedUsernameIndex(index);
-                  setHasUsernameSelection(true);
-                }}
+                onMouseEnter={() => { setSelectedUsernameIndex(index); setHasUsernameSelection(true); }}
               >
                 @{username}
               </div>
             ))}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
 

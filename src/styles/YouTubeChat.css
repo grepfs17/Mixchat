@@ -121,19 +121,8 @@
   z-index: 9999;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
 }
-
-@media (max-width: 768px) {
-  .emote-autocomplete-menu {
-    /* On mobile the menu must float above the fixed embed at the top.*/
-    position: fixed;
-    bottom: var(--emote-menu-bottom, 80px);
-    left: 8px;
-    right: 8px;
-    max-height: 40vh;
-    margin-bottom: 0;
-    z-index: 9999;
-  }
-}
+/* Mobile menus are now portal-rendered with position:fixed via inline styles —
+   no CSS overrides needed here. */
 
 .emote-autocomplete-item {
   display: flex;

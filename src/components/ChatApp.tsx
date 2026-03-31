@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import ChatDisplay from './ChatDisplay';
 import MessageInput from './MessageInput';
 import Notification from './Notification';
@@ -102,6 +103,8 @@ export default function ChatApp({
   const [ytHasEmoteSelection, setYtHasEmoteSelection] = useState(false);
   const ytInputRef = useRef<HTMLInputElement>(null);
   const ytEmoteMenuRef = useRef<HTMLDivElement>(null);
+  // Bounding rect of the YT input, used to anchor the portal-rendered autocomplete menu
+  const [ytMenuRect, setYtMenuRect] = useState<DOMRect | null>(null);
 
   // Effective video ID: manual override > auto-detected > static URL parse
   const youtubeVideoId = useMemo(() => {
@@ -258,14 +261,15 @@ export default function ChatApp({
     }
   }, [ytSelectedEmoteIndex, ytShowEmoteMenu]);
 
-  // On mobile, position the autocomplete menu via a CSS variable so it floats
-  // above the input using position:fixed (escaping any stacking context).
+  // Capture the YT input's bounding rect when the menu opens so the
+  // portal-rendered menu can position itself above the input, completely
+  // outside the iframe's GPU compositing layer.
   useEffect(() => {
-    if (!ytShowEmoteMenu || !ytInputRef.current) return;
-    if (window.innerWidth > 768) return;
-    const rect = ytInputRef.current.getBoundingClientRect();
-    const fromBottom = window.innerHeight - rect.top + 6;
-    document.documentElement.style.setProperty('--emote-menu-bottom', fromBottom + 'px');
+    if (!ytShowEmoteMenu || !ytInputRef.current) {
+      setYtMenuRect(null);
+      return;
+    }
+    setYtMenuRect(ytInputRef.current.getBoundingClientRect());
   }, [ytShowEmoteMenu]);
 
   /** Insert emote name at current cursor, replacing the current partial word */
@@ -684,9 +688,22 @@ export default function ChatApp({
             <div style={{ borderTop: '1px solid #333' }}>
               <div className="yt-message-input-wrapper message-input">
                   <div className="yt-input-group input-group">
-                    {/* Emote autocomplete dropdown */}
-                    {ytShowEmoteMenu && ytEmoteResults.length > 0 && (
-                      <div ref={ytEmoteMenuRef} className="emote-autocomplete-menu">
+                    {/* Emote autocomplete dropdown — rendered in a portal so it
+                        appears above the Twitch/YouTube iframe GPU layer */}
+                    {ytShowEmoteMenu && ytEmoteResults.length > 0 && ytMenuRect && createPortal(
+                      <div ref={ytEmoteMenuRef} style={{
+                        position: 'fixed',
+                        bottom: window.innerHeight - ytMenuRect.top + 6,
+                        left: ytMenuRect.left,
+                        width: ytMenuRect.width,
+                        maxHeight: '40vh',
+                        overflowY: 'auto',
+                        background: 'var(--color-autocomplete-bg, #1e293b)',
+                        border: '1px solid var(--color-autocomplete-border, #475569)',
+                        borderRadius: '8px',
+                        zIndex: 99999,
+                        boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
+                      }}>
                         {ytEmoteResults.map((emote, idx) => (
                           <div
                             key={emote.name}
@@ -694,18 +711,15 @@ export default function ChatApp({
                             onMouseEnter={() => { setYtSelectedEmoteIndex(idx); setYtHasEmoteSelection(true); }}
                             className={`emote-autocomplete-item ${idx === ytSelectedEmoteIndex ? 'selected' : ''}`}
                           >
-                            <img
-                              src={emote.url}
-                              alt={emote.name}
-                              style={{ width: emote.isCustom ? '28px' : '20px', height: emote.isCustom ? '28px' : '20px' }}
-                            />
+                            <img src={emote.url} alt={emote.name} style={{ width: emote.isCustom ? '28px' : '20px', height: emote.isCustom ? '28px' : '20px' }} />
                             <div className="emote-autocomplete-info">
                               <span className="emote-autocomplete-name">{emote.name}</span>
                               <span className="emote-autocomplete-type">{emote.isCustom ? 'Custom emote' : 'YouTube emoji'}</span>
                             </div>
                           </div>
                         ))}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                     <input
                       ref={ytInputRef}
@@ -797,9 +811,22 @@ export default function ChatApp({
                   {/* YouTube message input */}
                   <div className="yt-message-input-wrapper message-input">
                       <div className="yt-input-group input-group">
-                        {/* Emote autocomplete dropdown */}
-                        {ytShowEmoteMenu && ytEmoteResults.length > 0 && (
-                          <div ref={ytEmoteMenuRef} className="emote-autocomplete-menu">
+                        {/* Emote autocomplete dropdown — rendered in a portal so it
+                            appears above the Twitch/YouTube iframe GPU layer */}
+                        {ytShowEmoteMenu && ytEmoteResults.length > 0 && ytMenuRect && createPortal(
+                          <div ref={ytEmoteMenuRef} style={{
+                            position: 'fixed',
+                            bottom: window.innerHeight - ytMenuRect.top + 6,
+                            left: ytMenuRect.left,
+                            width: ytMenuRect.width,
+                            maxHeight: '40vh',
+                            overflowY: 'auto',
+                            background: 'var(--color-autocomplete-bg, #1e293b)',
+                            border: '1px solid var(--color-autocomplete-border, #475569)',
+                            borderRadius: '8px',
+                            zIndex: 99999,
+                            boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
+                          }}>
                             {ytEmoteResults.map((emote, idx) => (
                               <div
                                 key={emote.name}
@@ -807,18 +834,15 @@ export default function ChatApp({
                                 onMouseEnter={() => { setYtSelectedEmoteIndex(idx); setYtHasEmoteSelection(true); }}
                                 className={`emote-autocomplete-item ${idx === ytSelectedEmoteIndex ? 'selected' : ''}`}
                               >
-                                <img
-                                  src={emote.url}
-                                  alt={emote.name}
-                                  style={{ width: emote.isCustom ? '28px' : '20px', height: emote.isCustom ? '28px' : '20px' }}
-                                />
+                                <img src={emote.url} alt={emote.name} style={{ width: emote.isCustom ? '28px' : '20px', height: emote.isCustom ? '28px' : '20px' }} />
                                 <div className="emote-autocomplete-info">
                                   <span className="emote-autocomplete-name">{emote.name}</span>
                                   <span className="emote-autocomplete-type">{emote.isCustom ? 'Custom emote' : 'YouTube emoji'}</span>
                                 </div>
                               </div>
                             ))}
-                          </div>
+                          </div>,
+                          document.body
                         )}
 
                         <input
