@@ -225,13 +225,25 @@ export default function AppContainer() {
   }, [sessions.twitch]);
 
   const setChannelData = useCallback((channelId: string) => {
-    setSelectedTwitchChannel(channelId);
-    const channel = twitchChannels.find((ch) => ch.id === channelId);
+    // Search by numeric ID first, then by login name, across online and all channels
+    const channel =
+      twitchChannels.find((ch) => ch.id === channelId) ||
+      allTwitchChannels.find((ch) => ch.id === channelId) ||
+      twitchChannels.find((ch) => ch.name === channelId) ||
+      allTwitchChannels.find((ch) => ch.name === channelId);
 
-    // If channel not found in list, treat the input as a channel name (for manual joins)
-    const channelName = channel?.name || channelId;
-    const channelDisplayName = channel?.displayName || channel?.name || channelId;
+    // Use the resolved numeric ID so 7TV/BTTV/Twitch APIs receive the correct value
+    const resolvedId = channel?.id || channelId;
 
+    // If not found in any channel list but channelId is the user's own numeric userId,
+    // fall back to session data so Twitch IRC still gets the login name (not the numeric ID)
+    const ownSession = sessions.twitch;
+    const isOwnUserId = !channel && ownSession?.userId === channelId;
+
+    const channelName = channel?.name || (isOwnUserId ? (ownSession!.username ?? channelId) : channelId);
+    const channelDisplayName = channel?.displayName || (isOwnUserId ? (ownSession!.displayName ?? channelId) : channel?.name || channelId);
+
+    setSelectedTwitchChannel(resolvedId);
     setSelectedTwitchChannelName(channelName);
     setSelectedTwitchChannelDisplayName(channelDisplayName);
 
@@ -239,7 +251,7 @@ export default function AppContainer() {
     const url = new URL(window.location.href);
     url.searchParams.set('twitchChannel', channelName);
     window.history.pushState({}, '', url);
-  }, [twitchChannels]);
+  }, [twitchChannels, allTwitchChannels, sessions.twitch]);
 
   // Restore channel from URL parameters
   useEffect(() => {
@@ -741,6 +753,7 @@ export default function AppContainer() {
             twitchUser={sessions.twitch?.displayName}
             twitchProfileImage={sessions.twitch?.profileImageUrl}
             twitchUserName={sessions.twitch?.username}
+            twitchUserId={sessions.twitch?.userId}
             twitchChannels={sortedChannels}
             selectedTwitchChannel={selectedTwitchChannel}
             favoriteChannels={favoriteChannels}

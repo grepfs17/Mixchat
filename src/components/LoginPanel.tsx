@@ -16,6 +16,7 @@ interface LoginPanelProps {
   twitchUser?: string;
   twitchProfileImage?: string;
   twitchUserName?: string;
+  twitchUserId?: string;
   twitchChannels?: TwitchChannel[];
   selectedTwitchChannel?: string;
   favoriteChannels?: string[];
@@ -44,6 +45,7 @@ function LoginPanel({
   twitchUser,
   twitchProfileImage,
   twitchUserName,
+  twitchUserId,
   twitchChannels = [],
   selectedTwitchChannel = '',
   favoriteChannels = [],
@@ -110,7 +112,7 @@ function LoginPanel({
             <div className="user-profile-container">
               <div
                 className="user-profile-link"
-                onClick={() => twitchUserName && onChannelChange?.(twitchUserName)}
+                onClick={() => (twitchUserId || twitchUserName) && onChannelChange?.(twitchUserId || twitchUserName!)}
                 title={`Switch to ${twitchUser}'s channel`}
               >
                 {twitchProfileImage && (
