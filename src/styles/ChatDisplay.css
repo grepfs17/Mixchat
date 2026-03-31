@@ -89,6 +89,7 @@
 
 .messages-container {
   flex: 1;
+  min-height: 0; /* required for flex child to shrink and give input room */
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px;
