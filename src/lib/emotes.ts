@@ -749,6 +749,7 @@ function parseThirdPartyEmotes(text: string): string {
         if (isZeroWidthUrl(url)) {
           // Orphan zero-width emote (no preceding base) — render normally
           output.push(createEmoteImg(getEmoteUrl(url), word));
+          i++;
         } else {
           // Regular 7TV emote: look ahead for consecutive zero-width emotes
           const baseHtml = createEmoteImg(url, word);
