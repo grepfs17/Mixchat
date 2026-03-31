@@ -1,5 +1,5 @@
-import type { PlatformSession, ChatMessage } from "./types.js";
-import { getBadge, getBadgeDetail } from "./badges.js";
+import type { ChatMessage } from "./types.js";
+import { getBadgeDetail } from "./badges.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";

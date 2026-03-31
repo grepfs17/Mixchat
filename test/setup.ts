@@ -1,4 +1,4 @@
-import { expect, type Assertion, type AsymmetricMatchersContaining } from 'vitest';
+import { expect } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { type TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 import '@testing-library/jest-dom';

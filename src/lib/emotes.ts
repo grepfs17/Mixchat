@@ -22,8 +22,6 @@ const EMOTE_SIZE = "2";
 const CACHE_DURATION_DAYS = 7;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const CACHE_DURATION = CACHE_DURATION_DAYS * MS_PER_DAY;
-const EMOTE_BATCH_SIZE = 100;
-const MAX_REPLACEMENTS = 1000;
 
 /** URL prefix that marks a 7TV emote as zero-width (overlay). */
 const ZW_EMOTE_PREFIX = 'ZW:';
@@ -110,8 +108,6 @@ function setCachedEmotes(cacheKey: string, emotes: EmoteMap): void {
  * Clear all emote caches
  */
 export function clearEmoteCache(): void {
-  const cacheKeys = ["emotes_twitch_global"];
-
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith("emotes_")) {

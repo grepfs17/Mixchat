@@ -1,5 +1,4 @@
 import { getStreamStatuses } from "./twitch";
-import type { PlatformSession } from "./types";
 
 export interface StreamerToWatch {
   id: string;

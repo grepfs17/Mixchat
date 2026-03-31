@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import HLS from 'hls.js';
 
 interface StreamEmbedProps {
@@ -67,7 +67,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
             });
           });
 
-          hls.on(HLS.Events.ERROR, (event, data) => {
+          hls.on(HLS.Events.ERROR, (_event, data) => {
             if (data.fatal) {
               setError(`Stream error: ${data.type}`);
               setLoading(false);

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StaticAuthProvider } from '@twurple/auth';
 import { ChatClient } from '@twurple/chat';
-import { getBadge, getBadgeDetail } from '../lib/badges';
+import { getBadgeDetail } from '../lib/badges';
 import type { ChatMessage } from '../lib/types';
 
 // Cache for user info - limit to 500 entries for memory efficiency
@@ -91,7 +91,7 @@ export function useTwitchChat(
       setIsConnected(false);
     });
 
-    newClient.onMessage((channel, user, message, msg) => {
+    newClient.onMessage((_channel, _user, message, msg) => {
       if (!active) return;
 
       const replyInfo = msg.parentMessageId ? {
@@ -171,7 +171,7 @@ export function useTwitchChat(
       }
     });
 
-    newClient.onAction((channel, user, message, msg) => {
+    newClient.onAction((_channel, _user, message, msg) => {
       if (!active) return;
 
       const badgeImages: Record<string, string> = {};
@@ -207,7 +207,7 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
-    newClient.onSub((channel, user, subInfo, msg) => {
+    newClient.onSub((_channel, _user, subInfo, msg) => {
       if (!active) return;
       const tier = subInfo.plan === 'Prime' ? 'Prime' : subInfo.plan === '3000' ? '3' : subInfo.plan === '2000' ? '2' : '1';
       const subMessage = `subscribed with ${subInfo.plan === 'Prime' ? 'Prime Gaming' : `a Tier ${tier} subscription`}${subInfo.message ? ` - ${subInfo.message}` : ''}`;
@@ -241,7 +241,7 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
-    newClient.onResub((channel, user, subInfo, msg) => {
+    newClient.onResub((_channel, _user, subInfo, msg) => {
       if (!active) return;
       const monthsCount = subInfo.months;
       const monthLabel = monthsCount === 1 ? 'month' : 'months';
@@ -276,7 +276,7 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
-    newClient.onSubGift((channel, recipient, subInfo, msg) => {
+    newClient.onSubGift((_channel, recipient, subInfo, msg) => {
       if (!active) return;
       const tier = subInfo.plan === '3000' ? '3' : subInfo.plan === '2000' ? '2' : '1';
       const giftMessage = `gifted a Tier ${tier} subscription to ${recipient}`;
@@ -311,7 +311,7 @@ export function useTwitchChat(
     });
 
     // Handle community gifted subs (mass gifts)
-    newClient.onCommunitySub((channel, user, giftInfo, msg) => {
+    newClient.onCommunitySub((_channel, _user, giftInfo, msg) => {
       if (!active) return;
       const tier = giftInfo.plan === '3000' ? '3' : giftInfo.plan === '2000' ? '2' : '1';
       const giftMessage = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;

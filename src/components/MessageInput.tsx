@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { FaTimes, FaSmile, FaTwitch } from 'react-icons/fa';
 import type { Platform, ChatMessage } from '../lib/types';
@@ -18,18 +18,18 @@ interface MessageInputProps {
 function MessageInput({
   onSendMessage,
   isLoading,
-  isConnected,
+  isConnected: _isConnected,
   replyingTo,
   onCancelReply,
   chatMessages = [],
   currentUsername = '',
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [placeholder, setPlaceholder] = useState('Type your message');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([
+  const [placeholder, _setPlaceholder] = useState('Type your message');
+  const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([
     'twitch',
   ]);
-  const [emoteQuery, setEmoteQuery] = useState('');
+  const [_emoteQuery, setEmoteQuery] = useState('');
   const [emoteResults, setEmoteResults] = useState<Array<{ name: string; url: string; source: string }>>([]);
   const [selectedEmoteIndex, setSelectedEmoteIndex] = useState(-1);
   const [hasEmoteSelection, setHasEmoteSelection] = useState(false);
@@ -42,7 +42,7 @@ function MessageInput({
     bttv: [],
     ffz: [],
   });
-  const [usernameQuery, setUsernameQuery] = useState('');
+  const [_usernameQuery, setUsernameQuery] = useState('');
   const [usernameResults, setUsernameResults] = useState<string[]>([]);
   const [selectedUsernameIndex, setSelectedUsernameIndex] = useState(-1);
   const [showUsernameMenu, setShowUsernameMenu] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import LoginPanel from './LoginPanel';
 import ChatApp from './ChatApp';

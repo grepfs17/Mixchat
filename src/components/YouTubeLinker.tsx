@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FaPlus, FaTrash, FaYoutube } from 'react-icons/fa';
 import {
   getYoutubeLinks,

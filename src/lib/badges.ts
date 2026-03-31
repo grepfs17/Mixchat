@@ -1,6 +1,6 @@
 import { ApiClient } from '@twurple/api';
 import { StaticAuthProvider } from '@twurple/auth';
-import type { HelixChatBadgeSet, HelixChatBadgeVersion } from '@twurple/api';
+import type { HelixChatBadgeSet } from '@twurple/api';
 
 // Shorthand for badge data we actually care about in the UI
 export interface BadgeDetail {

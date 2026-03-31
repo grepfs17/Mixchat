@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, memo } from 'react';
+import React, { useEffect, useRef, useState, memo } from 'react';
 import { MdStars, MdAutorenew, MdCardGiftcard, MdReply, MdContentCopy } from 'react-icons/md';
 import { GiHeartBeats } from 'react-icons/gi';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';

@@ -63,7 +63,7 @@ export default function ChatApp({
   onToggleStreamEmbed,
   viewerCount,
   linkedYoutubeUrl,
-  youtubeSession,
+  youtubeSession: _youtubeSession,
   unifyChatEnabled = false,
   fontSize = 14,
   mentionSoundEnabled = true,
@@ -71,11 +71,11 @@ export default function ChatApp({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshingEmotes, setIsRefreshingEmotes] = useState(false);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>([]);
+  const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
   const [streamIsLive, setStreamIsLive] = useState(false);
   const [streamUptime, setStreamUptime] = useState<string>('');
-  const [showPreloadedMessages, setShowPreloadedMessages] = useState(true);
+  const [showPreloadedMessages, _setShowPreloadedMessages] = useState(true);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info'; id?: number } | null>(null);
   const notificationIdRef = React.useRef(0);
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
@@ -388,7 +388,7 @@ export default function ChatApp({
 
   // Use Twitch chat hook - pass the channel NAME not ID
   const [badgesReady, setBadgesReady] = useState(false);
-  const { isConnected: twitchChatConnected, sendMessage: sendTwitchMessage } =
+  const { sendMessage: sendTwitchMessage } =
     useTwitchChat(
       selectedTwitchChannelName, // Use the channel name (login), not the ID
       twitchSession?.accessToken || '',
@@ -523,7 +523,7 @@ export default function ChatApp({
   }, [selectedTwitchChannel, twitchSession]);
 
   const handleSendMessage = useCallback(
-    async (message: string, platforms: Platform[], replyToId?: string) => {
+    async (message: string, platforms: Platform[], _replyToId?: string) => {
       if (!message.trim() || platforms.length === 0) return;
 
       setIsLoading(true);
