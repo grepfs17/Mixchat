@@ -110,20 +110,19 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
-      /* position:fixed keeps #app anchored to the layout viewport.
-         --vv-bottom (set by the is:inline script below) equals the height of
-         all persistent browser chrome at the bottom (URL bar, tab strip, etc.)
-         so the layout always ends exactly above it — not behind it.
-         When the keyboard opens, vv.height shrinks so --vv-bottom grows,
-         keeping everything above the keyboard automatically. */
       #app {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
-        bottom: var(--vv-bottom, 0px);
-        height: auto;
+        /* svh = small viewport height: CSS-spec guaranteed to exclude persistent
+           browser chrome (Brave/Firefox bottom tab strip, address bar, etc.).
+           --vv-height shrinks when the keyboard opens (JS-driven).
+           min() picks whichever is smaller so both cases are covered. */
+        height: 100dvh;                              /* baseline fallback */
+        height: min(100svh, var(--vv-height, 100svh)); /* preferred */
         padding: 0;
+        overflow: hidden;
       }
 
       footer {
@@ -156,17 +155,15 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     />
   </footer>
   <script is:inline>
-    // --vv-bottom = height of ALL persistent browser chrome below the web content
-    // (URL bar, tab strip, home indicator, etc.).
-    // Formula: innerHeight (layout viewport) minus the visual viewport's bottom edge.
-    // When the keyboard opens vv.height shrinks so --vv-bottom grows automatically,
-    // keeping #app above both the keyboard and the browser chrome.
+    // --vv-height tracks window.visualViewport.height which shrinks when the
+    // keyboard opens. Combined with 100svh in CSS (which handles persistent
+    // browser chrome like Brave/Firefox bottom tab strips), min() ensures
+    // #app is never taller than the truly visible area.
     (function () {
       var vv = window.visualViewport;
       if (!vv) return;
       function update() {
-        var bottom = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
-        document.documentElement.style.setProperty('--vv-bottom', bottom + 'px');
+        document.documentElement.style.setProperty('--vv-height', vv.height + 'px');
       }
       vv.addEventListener('resize', update);
       vv.addEventListener('scroll', update);
