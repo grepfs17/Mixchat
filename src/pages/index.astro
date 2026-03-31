@@ -21,7 +21,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="true" />
@@ -110,16 +110,11 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
-      /* position:fixed makes #app track the visual viewport perfectly.
-         When the keyboard opens, bottom:0 stays just above the keyboard,
-         so the embed at the top stays visible and the layout shrinks cleanly. */
+      /* 100dvh sits exactly in the visible area (above browser chrome).
+         interactive-widget=resizes-content in the <meta viewport> makes the
+         keyboard also shrink dvh, so no content is hidden behind either. */
       #app {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: auto;
+        height: 100dvh;
         padding: 0;
       }
 
