@@ -110,18 +110,20 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
+      /* position:fixed + inset:0 spans the full screen including behind the
+         browser chrome. padding-bottom carves out that area so the flex
+         layout (and the message input at the bottom) never extends into it.
+         max() picks the larger of:
+           - env(safe-area-inset-bottom): home indicator on iOS (~34px)
+           - 60px: safe minimum for Android browser bars (Brave, Firefox ~56px)
+         With box-sizing:border-box (set globally on *), children with
+         height:100% fill only the content area, i.e. screen - padding-bottom. */
       #app {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        /* svh = small viewport height: CSS-spec guaranteed to exclude persistent
-           browser chrome (Brave/Firefox bottom tab strip, address bar, etc.).
-           --vv-height shrinks when the keyboard opens (JS-driven).
-           min() picks whichever is smaller so both cases are covered. */
-        height: 100dvh;                              /* baseline fallback */
-        height: min(100svh, var(--vv-height, 100svh)); /* preferred */
+        inset: 0;
+        height: auto;
         padding: 0;
+        padding-bottom: max(env(safe-area-inset-bottom, 0px), 60px);
         overflow: hidden;
       }
 
@@ -155,18 +157,29 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     />
   </footer>
   <script is:inline>
-    // --vv-height tracks window.visualViewport.height which shrinks when the
-    // keyboard opens. Combined with 100svh in CSS (which handles persistent
-    // browser chrome like Brave/Firefox bottom tab strips), min() ensures
-    // #app is never taller than the truly visible area.
+    // When the virtual keyboard opens, visualViewport.height shrinks.
+    // We update --vv-height so the keyboard-open case is handled,
+    // but NOTE: this does NOT help with persistent browser chrome bars
+    // (Brave/Firefox bottom tab strip) — those are handled by the
+    // padding-bottom: max(env(safe-area-inset-bottom), 60px) on #app in CSS.
     (function () {
       var vv = window.visualViewport;
       if (!vv) return;
       function update() {
-        document.documentElement.style.setProperty('--vv-height', vv.height + 'px');
+        // Only use vv.height when keyboard is open (i.e., it's smaller than
+        // the CSS-computed height). The padding-bottom on #app handles chrome.
+        var appEl = document.getElementById('app');
+        if (!appEl) return;
+        var cssHeight = appEl.getBoundingClientRect().height;
+        if (vv.height < cssHeight - 10) {
+          // Keyboard is open — shrink app to match visual viewport
+          appEl.style.paddingBottom = (window.innerHeight - vv.height) + 'px';
+        } else {
+          // Keyboard closed — reset to CSS-defined padding
+          appEl.style.paddingBottom = '';
+        }
       }
       vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
       update();
     })();
   </script>
