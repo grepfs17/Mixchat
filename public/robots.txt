@@ -3,4 +3,4 @@ Allow: /
 Disallow: /api/
 Disallow: /auth/
 
-Sitemap: https://mixchat.app/sitemap.xml
+Sitemap: https://mixchat.grepfs.xyz/sitemap.xml
