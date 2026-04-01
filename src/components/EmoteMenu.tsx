@@ -22,6 +22,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const prevIsOpenRef = useRef(false);
 
   // Filter emotes based on search query — cross-source when searching
   useEffect(() => {
@@ -42,9 +43,9 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
     });
   }, [searchQuery, emotes]);
 
-  // Reset state when menu opens
+  // Reset navigation state only when the menu transitions from closed to open.
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !prevIsOpenRef.current) {
       setSearchQuery('');
       setActiveTab('twitch');
       setActiveTwitchChannel(TWITCH_GLOBAL_KEY);
@@ -52,6 +53,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       setDisabledSet(getDisabledEmotes());
       if (searchInputRef.current) searchInputRef.current.focus();
     }
+    prevIsOpenRef.current = isOpen;
   }, [isOpen, emotes]);
 
   useEffect(() => {
