@@ -46,7 +46,7 @@ function buildCSP(nonce?: string): string {
   return [
     "default-src 'self'",
     scriptSrc,
-    "style-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Images: self, Twitch CDN, YouTube/Google CDNs, and third-party emote CDNs
     "img-src 'self' data: blob:" +
       " https://static-cdn.jtvnw.net" + // Twitch emotes & badges
@@ -75,7 +75,7 @@ function buildCSP(nonce?: string): string {
     "worker-src 'self' blob:",
     // Media (video/audio blobs from HLS.js)
     "media-src 'self' blob:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
   ].join("; ");
 }
 
