@@ -29,6 +29,18 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       );
     }
 
+    // Validate that channelUrl is actually a YouTube URL.
+    const isYouTubeUrl =
+      /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrl) ||
+      /^UC[\w-]{22}$/.test(channelUrl) || // raw channel ID
+      /^@[\w.]{1,100}$/.test(channelUrl);  // handle e.g. @username
+    if (!isYouTubeUrl) {
+      return new Response(
+        JSON.stringify({ error: "Invalid channelUrl" }),
+        { status: 400, headers },
+      );
+    }
+
     // Require authentication — prevents unauthenticated callers from triggering
     // Innertube requests on the server.
     const accessToken = cookies.get("youtube_token")?.value;

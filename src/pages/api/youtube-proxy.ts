@@ -35,6 +35,15 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       );
     }
 
+    // Validate the action against an allowlist.
+    const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
+    if (!ALLOWED_ACTIONS.has(action)) {
+      return new Response(
+        JSON.stringify({ error: `Unknown action: ${action}` }),
+        { status: 400, headers },
+      );
+    }
+
     // Read the access token from the httpOnly cookie — never from client input.
     const accessToken = cookies.get("youtube_token")?.value;
     if (!accessToken) {
@@ -85,7 +94,19 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
-  
+
+  // Validate that channelUrl is actually a YouTube URL/handle/channel ID.
+  const isYouTubeUrl =
+    /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrlParam) ||
+    /^UC[\w-]{22}$/.test(channelUrlParam) ||
+    /^@[\w.]{1,100}$/.test(channelUrlParam);
+  if (!isYouTubeUrl) {
+    return new Response(
+      JSON.stringify({ error: "Invalid channelUrl" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   let channelId = channelUrlParam;
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
   
@@ -150,6 +171,18 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
   if (!channelUrlParam) {
     return new Response(
       JSON.stringify({ error: "channelUrl parameter is required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Validate that channelUrl is actually a YouTube URL/handle/channel ID.
+  const isYouTubeUrl =
+    /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrlParam) ||
+    /^UC[\w-]{22}$/.test(channelUrlParam) ||
+    /^@[\w.]{1,100}$/.test(channelUrlParam);
+  if (!isYouTubeUrl) {
+    return new Response(
+      JSON.stringify({ error: "Invalid channelUrl" }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }

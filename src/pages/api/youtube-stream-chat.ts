@@ -66,6 +66,14 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     );
   }
 
+  // Validate videoId: YouTube video IDs are exactly 11 URL-safe characters.
+  if (!/^[\w-]{11}$/.test(videoId)) {
+    return new Response(
+      JSON.stringify({ error: 'Invalid videoId' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Require authentication — prevents unauthenticated callers from creating
   // server-side chat sessions and consuming server memory.
   const accessToken = cookies.get('youtube_token')?.value;
