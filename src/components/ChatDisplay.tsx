@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MdRefresh, MdReply, MdContentCopy } from 'react-icons/md';
 import { FaUsers } from 'react-icons/fa';
-import type { ChatMessage, Platform } from '../lib/types';
+import type { ChatMessage, Platform, ChatFont } from '../lib/types';
+import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
@@ -27,6 +28,7 @@ interface ChatDisplayProps {
   onToggleStreamEmbed?: () => void;
   currentUserDisplayName?: string;
   fontSize?: number;
+  chatFont?: ChatFont;
   /** When provided (unified chat mode), renders this instead of the normal messages area */
   unifiedChatSlot?: React.ReactNode;
 }
@@ -62,6 +64,7 @@ function ChatDisplay({
   onToggleStreamEmbed,
   currentUserDisplayName,
   fontSize = 14,
+  chatFont = 'rubik' as ChatFont,
   unifiedChatSlot,
 }: ChatDisplayProps) {
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -263,7 +266,7 @@ function ChatDisplay({
         <div
           className="messages-container"
           ref={messagesContainerRef}
-          style={{ '--chat-font-size': `${fontSize}px` } as React.CSSProperties}
+          style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
         >
           {filteredMessages.length === 0 ? (
             <div className="no-messages">

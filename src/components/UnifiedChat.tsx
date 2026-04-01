@@ -2,7 +2,8 @@
 import { createPortal } from 'react-dom';
 import { MdReply, MdContentCopy } from 'react-icons/md';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';
-import type { ChatMessage } from '../lib/types';
+import type { ChatMessage, ChatFont } from '../lib/types';
+import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import { getColorFromName } from '../lib/chatColors';
 import MessageBadges from './MessageBadges';
@@ -60,6 +61,7 @@ interface UnifiedChatProps {
     onCopyMessage?: () => void;
     currentUserDisplayName?: string;
     fontSize?: number;
+    chatFont?: ChatFont;
 }
 
 const MAX_MESSAGES = 300;
@@ -83,6 +85,7 @@ function UnifiedChat({
     onCopyMessage,
     currentUserDisplayName,
     fontSize = 14,
+    chatFont = 'rubik' as ChatFont,
 }: UnifiedChatProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
@@ -169,7 +172,7 @@ function UnifiedChat({
             <div
                 ref={containerRef}
                 className="messages-container unified-messages-container"
-                style={{ '--chat-font-size': `${fontSize}px` } as React.CSSProperties}
+                style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
             >
                 {entries.length === 0 && (
                     <div className="no-messages">

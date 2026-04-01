@@ -9,7 +9,7 @@ import { useTwitchChat } from '../hooks/useTwitchChat';
 import { initializeEmotes, clearEmoteCache } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages } from '../lib/twitch';
-import type { ChatMessage, Platform, PlatformSession } from '../lib/types';
+import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
 const MAX_DISPLAYED_MESSAGES = 150;
 const STREAM_STATUS_POLL_INTERVAL = 60000;
@@ -46,6 +46,7 @@ interface ChatAppProps {
   youtubeSession?: PlatformSession;
   unifyChatEnabled?: boolean;
   fontSize?: number;
+  chatFont?: ChatFont;
   mentionSoundEnabled?: boolean;
 }
 
@@ -64,6 +65,7 @@ export default function ChatApp({
   youtubeSession: _youtubeSession,
   unifyChatEnabled = false,
   fontSize = 14,
+  chatFont = 'rubik' as ChatFont,
   mentionSoundEnabled = true,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -526,6 +528,7 @@ export default function ChatApp({
                 onEmotesDiscovered={handleYtEmotesDiscovered}
                 onMessages={handleYtMessages}
                 fontSize={fontSize}
+                chatFont={chatFont}
               />
             </div>
           )}
@@ -555,6 +558,7 @@ export default function ChatApp({
               onToggleStreamEmbed={onToggleStreamEmbed}
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
+              chatFont={chatFont}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
@@ -567,6 +571,7 @@ export default function ChatApp({
                   }}
                   currentUserDisplayName={twitchSession?.displayName}
                   fontSize={fontSize}
+                  chatFont={chatFont}
                 />
               }
             />
@@ -610,6 +615,7 @@ export default function ChatApp({
                       videoId={youtubeVideoId}
                       onEmotesDiscovered={handleYtEmotesDiscovered}
                       fontSize={fontSize}
+                      chatFont={chatFont}
                     />
                     <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
                       <button
@@ -721,6 +727,8 @@ export default function ChatApp({
               showStreamEmbed={showStreamEmbed}
               onToggleStreamEmbed={onToggleStreamEmbed}
               currentUserDisplayName={twitchSession?.displayName}
+              fontSize={fontSize}
+              chatFont={chatFont}
             />
           </div>
 

@@ -97,6 +97,7 @@
   flex-direction: column;
   gap: 2px;
   font-size: var(--chat-font-size, 0.9rem);
+  font-family: var(--chat-font-family, inherit);
 }
 
 /* Custom scrollbar styling */

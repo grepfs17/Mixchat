@@ -55,3 +55,25 @@ export interface PlatformSession {
   badges?: Record<string, string>; // badgeName -> imageUrl
   badgeDetails?: Record<string, { url: string; title: string }>; // detailed badge info
 }
+
+export type ChatFont = 'inter' | 'open-sans' | 'roboto' | 'rubik' | 'josefin-sans' | 'nunito' | 'montserrat';
+
+export const FONT_FAMILY_MAP: Record<ChatFont, string> = {
+  'inter': 'Inter, sans-serif',
+  'open-sans': '"Open Sans", sans-serif',
+  'roboto': 'Roboto, sans-serif',
+  'rubik': 'Rubik, sans-serif',
+  'josefin-sans': '"Josefin Sans", sans-serif',
+  'nunito': 'Nunito, sans-serif',
+  'montserrat': 'Montserrat, sans-serif',
+};
+
+export const CHAT_FONT_OPTIONS: { value: ChatFont; label: string }[] = [
+  { value: 'rubik', label: 'Rubik' },
+  { value: 'inter', label: 'Inter' },
+  { value: 'open-sans', label: 'Open Sans' },
+  { value: 'roboto', label: 'Roboto' },
+  { value: 'josefin-sans', label: 'Josefin Sans' },
+  { value: 'nunito', label: 'Nunito' },
+  { value: 'montserrat', label: 'Montserrat' },
+];

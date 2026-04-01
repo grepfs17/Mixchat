@@ -10,6 +10,7 @@
 
 .yt-chat-container {
   font-size: var(--chat-font-size, 13px);
+  font-family: var(--chat-font-family, inherit);
   color: var(--color-text-white);
   background: var(--color-bg-primary);
   height: 100%;

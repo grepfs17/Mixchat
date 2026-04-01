@@ -7,7 +7,7 @@ import LiveNotification from './LiveNotification';
 import WatchlistManager from './WatchlistManager';
 import YouTubeLinker from './YouTubeLinker';
 import '../styles/AppContainer.css';
-import type { PlatformSession } from '../lib/types';
+import type { PlatformSession, ChatFont } from '../lib/types';
 import { getYoutubeLinkForChannel } from '../lib/youtubeLinks';
 import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';
 import { useStreamMonitor } from '../hooks/useStreamMonitor';
@@ -68,6 +68,7 @@ export default function AppContainer() {
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<string | null>(null);
   const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
+  const [chatFont, setChatFont] = useState<ChatFont>('rubik'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
@@ -483,6 +484,21 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_mention_sound', JSON.stringify(mentionSoundEnabled));
   }, [mentionSoundEnabled]);
 
+  // Load chat font setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_chat_font');
+    if (saved !== null) {
+      try {
+        setChatFont(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save chat font setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_chat_font', JSON.stringify(chatFont));
+  }, [chatFont]);
+
   // Handle URL parameter to open channel directly
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -773,6 +789,8 @@ export default function AppContainer() {
             onUnifyChatEnabledChange={setUnifyChatEnabled}
             fontSize={fontSize}
             onFontSizeChange={setFontSize}
+            chatFont={chatFont}
+            onChatFontChange={setChatFont}
             mentionSoundEnabled={mentionSoundEnabled}
             onMentionSoundEnabledChange={setMentionSoundEnabled}
           />
@@ -923,6 +941,7 @@ export default function AppContainer() {
             youtubeSession={sessions.youtube}
             unifyChatEnabled={unifyChatEnabled}
             fontSize={fontSize}
+            chatFont={chatFont}
             mentionSoundEnabled={mentionSoundEnabled}
           />
         </div>

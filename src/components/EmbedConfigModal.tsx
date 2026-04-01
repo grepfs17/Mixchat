@@ -1,4 +1,6 @@
 import { FaTimes } from 'react-icons/fa';
+import type { ChatFont } from '../lib/types';
+import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
 
 interface EmbedConfigModalProps {
   embedDefaultOpen: boolean;
@@ -7,6 +9,8 @@ interface EmbedConfigModalProps {
   onUnifyChatEnabledChange: (value: boolean) => void;
   fontSize: number;
   onFontSizeChange: (value: number) => void;
+  chatFont: ChatFont;
+  onChatFontChange: (value: ChatFont) => void;
   mentionSoundEnabled: boolean;
   onMentionSoundEnabledChange: (value: boolean) => void;
   onClose: () => void;
@@ -19,6 +23,8 @@ export default function EmbedConfigModal({
   onUnifyChatEnabledChange,
   fontSize,
   onFontSizeChange,
+  chatFont,
+  onChatFontChange,
   mentionSoundEnabled,
   onMentionSoundEnabledChange,
   onClose,
@@ -122,6 +128,50 @@ export default function EmbedConfigModal({
             }}
           >
             Adjust the size of the text in the chat window.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '12px',
+              color: '#e2e8f0',
+              fontSize: '14px',
+              fontWeight: '500',
+            }}
+          >
+            Chat Font
+          </label>
+          <select
+            value={chatFont}
+            onChange={(e) => onChatFontChange(e.target.value as ChatFont)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              backgroundColor: '#0a0a0a',
+              border: '1px solid #333333',
+              borderRadius: '6px',
+              color: '#e2e8f0',
+              fontSize: '14px',
+              fontFamily: FONT_FAMILY_MAP[chatFont],
+              cursor: 'pointer',
+            }}
+          >
+            {CHAT_FONT_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value} style={{ fontFamily: FONT_FAMILY_MAP[value] }}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <p
+            style={{
+              marginTop: '8px',
+              color: '#94a3b8',
+              fontSize: '12px',
+            }}
+          >
+            Choose the font used in the chat window.
           </p>
         </div>
 

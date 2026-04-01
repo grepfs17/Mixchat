@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { FaStar, FaRegStar, FaUsers, FaEye, FaYoutube, FaCog } from 'react-icons/fa';
 import EmbedConfigModal from './EmbedConfigModal';
+import type { ChatFont } from '../lib/types';
 
 interface TwitchChannel {
   id: string;
@@ -36,6 +37,8 @@ interface LoginPanelProps {
   onUnifyChatEnabledChange?: (value: boolean) => void;
   fontSize?: number;
   onFontSizeChange?: (value: number) => void;
+  chatFont?: ChatFont;
+  onChatFontChange?: (value: ChatFont) => void;
   mentionSoundEnabled?: boolean;
   onMentionSoundEnabledChange?: (value: boolean) => void;
 }
@@ -65,6 +68,8 @@ function LoginPanel({
   onUnifyChatEnabledChange,
   fontSize = 14,
   onFontSizeChange,
+  chatFont = 'rubik' as ChatFont,
+  onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
 }: LoginPanelProps) {
@@ -269,6 +274,12 @@ function LoginPanel({
           onFontSizeChange={(value) => {
             if (onFontSizeChange) {
               onFontSizeChange(value);
+            }
+          }}
+          chatFont={chatFont}
+          onChatFontChange={(value) => {
+            if (onChatFontChange) {
+              onChatFontChange(value);
             }
           }}
           mentionSoundEnabled={mentionSoundEnabled}

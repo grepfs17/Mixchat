@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { getColorFromName } from '../lib/chatColors';
+import type { ChatFont } from '../lib/types';
+import { FONT_FAMILY_MAP } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
 import '../styles/YouTubeChat.css';
 
@@ -18,6 +20,7 @@ interface YouTubeChatProps {
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
   fontSize?: number;
+  chatFont?: ChatFont;
 }
 
 export type { YouTubeEmote };
@@ -49,7 +52,7 @@ interface ChatMessage {
   };
 }
 
-export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14 }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14, chatFont = 'rubik' as ChatFont }: YouTubeChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -197,7 +200,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
       <div
         ref={messagesContainerRef}
         className="yt-chat-container"
-        style={{ '--chat-font-size': `${fontSize}px` } as React.CSSProperties}
+        style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
       >
         {!isConnected && (
           <div className="yt-chat-placeholder">
