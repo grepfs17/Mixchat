@@ -41,8 +41,8 @@ const STATIC_HEADERS: Record<string, string> = {
  */
 function buildCSP(nonce?: string): string {
   const scriptSrc = nonce
-    ? `script-src 'self' 'nonce-${nonce}'`
-    : "script-src 'self' 'unsafe-inline'";
+    ? `script-src 'self' 'nonce-${nonce}' https://embed.twitch.tv`
+    : "script-src 'self' 'unsafe-inline' https://embed.twitch.tv";
   return [
     "default-src 'self'",
     scriptSrc,

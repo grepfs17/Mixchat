@@ -1,11 +1,112 @@
 import { useState, useEffect, useRef } from 'react';
 import HLS from 'hls.js';
 
+// Types for the Twitch Player JS API
+declare global {
+  interface Window {
+    Twitch?: {
+      Player: new (
+        elementId: string,
+        options: {
+          width: string | number;
+          height: string | number;
+          channel: string;
+          parent: string[];
+          autoplay?: boolean;
+          layout?: string;
+          muted?: boolean;
+        }
+      ) => TwitchPlayer;
+    };
+  }
+}
+
+interface TwitchPlayer {
+  setChannel(channel: string): void;
+  destroy(): void;
+}
+
 interface StreamEmbedProps {
   channelName: string;
   playerType?: 'embed' | 'm3u8';
   twitchConnected?: boolean;
   onTwitchLogin?: () => void;
+}
+
+
+ // Renders a Twitch stream using the Twitch Player JS API
+
+function TwitchJSEmbed({ channelName, parentDomain }: { channelName: string; parentDomain: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<TwitchPlayer | null>(null);
+  // Keep a ref so the script-load callback always sees the latest channel
+  const channelRef = useRef(channelName);
+  channelRef.current = channelName;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const initPlayer = () => {
+      if (cancelled || !containerRef.current || !window.Twitch?.Player) return;
+
+      // Give the container a stable, unique ID required by the Twitch Player API
+      const playerId = 'twitch-js-player';
+      containerRef.current.id = playerId;
+
+      playerRef.current = new window.Twitch.Player(playerId, {
+        width: '100%',
+        height: '100%',
+        channel: channelRef.current,
+        parent: [parentDomain],
+        autoplay: true,
+        layout: 'video',
+      });
+    };
+
+    const scriptId = 'twitch-embed-script';
+
+    if (window.Twitch?.Player) {
+      // Script already loaded from a previous mount
+      initPlayer();
+    } else if (!document.getElementById(scriptId)) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://embed.twitch.tv/embed/v1.js';
+      script.onload = () => initPlayer();
+      document.head.appendChild(script);
+    } else {
+      const poll = setInterval(() => {
+        if (window.Twitch?.Player) {
+          clearInterval(poll);
+          initPlayer();
+        }
+      }, 50);
+      return () => clearInterval(poll);
+    }
+
+    return () => {
+      cancelled = true;
+      if (playerRef.current) {
+        try { playerRef.current.destroy(); } catch { /* ignore */ }
+        playerRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parentDomain]); // Re-init only if domain changes
+
+  // Channel switch: call setChannel() instead of remounting → session preserved
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.setChannel(channelName);
+    }
+  }, [channelName]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+    />
+  );
 }
 
 export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin }: StreamEmbedProps) {
@@ -154,29 +255,10 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       </div>
     );
   }
-
-  // Embed mode
   if (playerType === 'embed') {
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <iframe
-          src={`https://embed.twitch.tv/?channel=${channelName}&parent=${parentDomain}&layout=video&autoplay=true`}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            display: 'block',
-            visibility: 'visible',
-          }}
-          frameBorder="0"
-          scrolling="no"
-          allowFullScreen={true}
-          title={`${channelName} Twitch Stream`}
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-        />
+        <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} />
       </div>
     );
   }
