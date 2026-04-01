@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { YTNodes } from 'youtubei.js';
 import { getInnertube } from '../../lib/youtube';
 import { checkRateLimit } from '../../lib/rateLimit';
 
@@ -108,31 +109,59 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       const messages: ChatMessage[] = [];
       const emoteMap = new Map<string, YTEmoteEntry>();
 
-      chat.on('chat-update', (action: any) => {
-        console.log(`[YouTube Chat] Received chat-update action:`, action.type);
-        if (action.type === 'AddChatItemAction') {
-          const item = action.item;
+      // Helper: map an AddChatItemAction item to a ChatMessage
+      const parseChatItem = (item: any): ChatMessage | null => {
+        switch (item.type) {
+          case 'LiveChatTextMessage':
+            return parseLiveChatMessage(item, emoteMap);
+          case 'LiveChatPaidMessage':
+            return parsePaidMessage(item, emoteMap);
+          case 'LiveChatPaidSticker':
+            return parsePaidSticker(item, emoteMap);
+          default:
+            return null;
+        }
+      };
 
-          if (!item) return;
-
-          let chatMsg: ChatMessage | null = null;
-
-          if (item.type === 'LiveChatMessage' || item.type === 'LiveChatTextMessage') {
-            chatMsg = parseLiveChatMessage(item, emoteMap);
-          } else if (item.type === 'LiveChatPaidMessageItem') {
-            chatMsg = parsePaidMessage(item, emoteMap);
-          } else if (item.type === 'LiveChatPaidStickerItem') {
-            chatMsg = parsePaidSticker(item, emoteMap);
-          }
-
-          if (chatMsg) {
-            // Deduplicate
-            if (!messages.some(m => m.id === chatMsg!.id)) {
-              messages.push(chatMsg);
-              if (messages.length > 200) messages.shift();
+      chat.on('start', (initialData: any) => {
+        console.log(`[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || 'Guest'}`);
+        // Parse initial chat actions provided in the start payload
+        if (initialData?.actions) {
+          for (const action of initialData.actions) {
+            if (action.is(YTNodes.AddChatItemAction)) {
+              const item = action.as(YTNodes.AddChatItemAction).item;
+              if (!item) continue;
+              const chatMsg = parseChatItem(item);
+              if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+                messages.push(chatMsg);
+                if (messages.length > 200) messages.shift();
+              }
             }
           }
         }
+      });
+
+      chat.on('chat-update', (action: any) => {
+        if (action.is(YTNodes.AddChatItemAction)) {
+          const item = action.as(YTNodes.AddChatItemAction).item;
+          if (!item) return;
+          const chatMsg = parseChatItem(item);
+          if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+            messages.push(chatMsg);
+            if (messages.length > 200) messages.shift();
+          }
+        }
+
+        if (action.is(YTNodes.RemoveChatItemAction)) {
+          const targetId = action.target_item_id;
+          const idx = messages.findIndex(m => m.id === targetId);
+          if (idx !== -1) messages.splice(idx, 1);
+        }
+      });
+
+      chat.on('end', () => {
+        console.log(`[YouTube Chat] Live stream ended for video ${videoId}`);
+        activeLiveChats.delete(videoId);
       });
 
       chat.on('error', (err: any) => {
@@ -145,74 +174,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       });
 
       console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
-      await chat.start();
-      console.log(`[YouTube Chat] Live chat started successfully`);
-
-      // Try to retrieve previous messages from the chat buffer
-      try {
-        const chatData = (chat as any);
-        
-        // Method 1: Check if there are any buffered messages in the chat object
-        if (chatData.message_queue && Array.isArray(chatData.message_queue)) {
-          console.log(`[YouTube Chat] Found ${chatData.message_queue.length} buffered messages`);
-          for (const msg of chatData.message_queue) {
-            if (msg.type === 'AddChatItemAction' && msg.item) {
-              let chatMsg: ChatMessage | null = null;
-              const item = msg.item;
-              
-              if (item.type === 'LiveChatMessage' || item.type === 'LiveChatTextMessage') {
-                chatMsg = parseLiveChatMessage(item, emoteMap);
-              } else if (item.type === 'LiveChatPaidMessageItem') {
-                chatMsg = parsePaidMessage(item, emoteMap);
-              } else if (item.type === 'LiveChatPaidStickerItem') {
-                chatMsg = parsePaidSticker(item, emoteMap);
-              }
-              
-              if (chatMsg && !messages.some(m => m.id === chatMsg!.id)) {
-                messages.push(chatMsg);
-              }
-            }
-          }
-        }
-        
-        // Method 2: Check for previous messages action
-        if (chatData.previous_messages && Array.isArray(chatData.previous_messages)) {
-          console.log(`[YouTube Chat] Found ${chatData.previous_messages.length} previous messages`);
-          for (const msg of chatData.previous_messages) {
-            let chatMsg: ChatMessage | null = null;
-            
-            if (msg.type === 'LiveChatMessage' || msg.type === 'LiveChatTextMessage') {
-              chatMsg = parseLiveChatMessage(msg, emoteMap);
-            } else if (msg.type === 'LiveChatPaidMessageItem') {
-              chatMsg = parsePaidMessage(msg, emoteMap);
-            } else if (msg.type === 'LiveChatPaidStickerItem') {
-              chatMsg = parsePaidSticker(msg, emoteMap);
-            }
-            
-            if (chatMsg && !messages.some(m => m.id === chatMsg!.id)) {
-              messages.push(chatMsg);
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('[YouTube Chat] Could not retrieve previous messages:', err);
-      }
-
-      // Populate emote map with initial channel emojis
-      const initialEmojis = (chat as any).initial_stats?.emojis;
-      if (Array.isArray(initialEmojis)) {
-        for (const emoji of initialEmojis) {
-          const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-          const url = emoji.image?.thumbnails?.[0]?.url;
-          if (name && url && !emoteMap.has(name)) {
-            emoteMap.set(name, {
-              name,
-              url,
-              isCustomEmoji: !!emoji.is_custom_emoji
-            });
-          }
-        }
-      }
+      chat.start();
 
       chatSession = {
         chat,
@@ -337,7 +299,7 @@ function parsePaidMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): ChatMe
   return {
     ...base,
     superchat: {
-      amount: msg.purchase_amount,
+      amount: String(msg.purchase_amount),
       color: ARGBtoHex(msg.body_background_color),
     }
   };
@@ -353,7 +315,7 @@ function parsePaidSticker(msg: any, _emoteMap: Map<string, YTEmoteEntry>): ChatM
     parts: [],
     timestamp: new Date(parseInt(msg.timestamp) / 1000),
     superchat: {
-      amount: msg.purchase_amount,
+      amount: String(msg.purchase_amount),
       color: ARGBtoHex(msg.background_color),
       ...(stickerUrl && {
         sticker: {
