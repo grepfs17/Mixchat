@@ -69,11 +69,11 @@ export const FONT_FAMILY_MAP: Record<ChatFont, string> = {
 };
 
 export const CHAT_FONT_OPTIONS: { value: ChatFont; label: string }[] = [
+  { value: 'josefin-sans', label: 'Josefin Sans' },
   { value: 'rubik', label: 'Rubik' },
   { value: 'inter', label: 'Inter' },
   { value: 'open-sans', label: 'Open Sans' },
   { value: 'roboto', label: 'Roboto' },
-  { value: 'josefin-sans', label: 'Josefin Sans' },
   { value: 'nunito', label: 'Nunito' },
   { value: 'montserrat', label: 'Montserrat' },
 ];

@@ -52,7 +52,7 @@ interface ChatMessage {
   };
 }
 
-export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14, chatFont = 'rubik' as ChatFont }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14, chatFont = 'josefin-sans' as ChatFont }: YouTubeChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

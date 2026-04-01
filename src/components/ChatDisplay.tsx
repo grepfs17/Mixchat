@@ -64,7 +64,7 @@ function ChatDisplay({
   onToggleStreamEmbed,
   currentUserDisplayName,
   fontSize = 14,
-  chatFont = 'rubik' as ChatFont,
+  chatFont = 'josefin-sans' as ChatFont,
   unifiedChatSlot,
 }: ChatDisplayProps) {
   const [isAtBottom, setIsAtBottom] = useState(true);

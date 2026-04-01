@@ -65,7 +65,7 @@ export default function ChatApp({
   youtubeSession: _youtubeSession,
   unifyChatEnabled = false,
   fontSize = 14,
-  chatFont = 'rubik' as ChatFont,
+  chatFont = 'josefin-sans' as ChatFont,
   mentionSoundEnabled = true,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

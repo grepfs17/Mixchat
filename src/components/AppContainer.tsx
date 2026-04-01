@@ -68,7 +68,7 @@ export default function AppContainer() {
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<string | null>(null);
   const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
-  const [chatFont, setChatFont] = useState<ChatFont>('rubik'); // Global chat font family
+  const [chatFont, setChatFont] = useState<ChatFont>('josefin-sans'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
