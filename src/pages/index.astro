@@ -72,7 +72,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       height: 100vh; /* fallback */
       height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
       padding: 0;
-      padding-bottom: 50px;
+      padding-bottom: 34px;
       background: var(--color-bg-primary);
       overflow: hidden;
     }
@@ -114,14 +114,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     }
 
     @media (max-width: 768px) {
-      /* position:fixed + inset:0 spans the full screen including behind the
-         browser chrome. padding-bottom carves out that area so the flex
-         layout (and the message input at the bottom) never extends into it.
-         max() picks the larger of:
-           - env(safe-area-inset-bottom): home indicator on iOS (~34px)
-           - 60px: safe minimum for Android browser bars (Brave, Firefox ~56px)
-         With box-sizing:border-box (set globally on *), children with
-         height:100% fill only the content area, i.e. screen - padding-bottom. */
+      
       #app {
         position: fixed;
         inset: 0;
