@@ -85,7 +85,7 @@ function UnifiedChat({
     onCopyMessage,
     currentUserDisplayName,
     fontSize = 14,
-    chatFont = 'josefin-sans' as ChatFont,
+    chatFont = 'inter' as ChatFont,
 }: UnifiedChatProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);

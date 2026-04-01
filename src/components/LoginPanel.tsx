@@ -68,7 +68,7 @@ function LoginPanel({
   onUnifyChatEnabledChange,
   fontSize = 14,
   onFontSizeChange,
-  chatFont = 'josefin-sans' as ChatFont,
+  chatFont = 'inter' as ChatFont,
   onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
