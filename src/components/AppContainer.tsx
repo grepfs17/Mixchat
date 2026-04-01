@@ -904,6 +904,7 @@ export default function AppContainer() {
                   playerType={playerType as 'embed' | 'm3u8'}
                   twitchConnected={!!sessions.twitch}
                   onTwitchLogin={handleTwitchLogin}
+                  twitchAccessToken={sessions.twitch?.accessToken}
                 />
               )}
             </div>

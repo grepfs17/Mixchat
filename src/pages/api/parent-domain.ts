@@ -1,18 +1,24 @@
 import type { APIRoute } from "astro";
 
 export const GET: APIRoute = async ({ request }) => {
-  // Prefer an explicitly configured public origin to avoid Host-header injection.
-  // Set PUBLIC_SITE_URL=https://yourdomain.com in your environment.
-  const configuredOrigin = import.meta.env.PUBLIC_SITE_URL;
-  if (configuredOrigin) {
+  // 1. Explicit env var — highest priority.
+  // 2. Astro's built-in `site` config (astro.config.mjs → site: '…') — always
+  //    present in production builds, requires no extra configuration.
+  // 3. Host header — last resort for local/dev use only.
+  const rawOrigin =
+    import.meta.env.PUBLIC_SITE_URL ||
+    import.meta.env.SITE ||
+    null;
+
+  if (rawOrigin) {
     try {
-      const parentDomain = new URL(configuredOrigin).hostname;
+      const parentDomain = new URL(rawOrigin).hostname;
       return new Response(JSON.stringify({ parentDomain }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     } catch {
-      // Malformed PUBLIC_SITE_URL — fall through to Host header
+      // Malformed URL — fall through to Host header
     }
   }
 

@@ -15,6 +15,7 @@ declare global {
           autoplay?: boolean;
           layout?: string;
           muted?: boolean;
+          oauth_token?: string;
         }
       ) => TwitchPlayer;
     };
@@ -31,17 +32,22 @@ interface StreamEmbedProps {
   playerType?: 'embed' | 'm3u8';
   twitchConnected?: boolean;
   onTwitchLogin?: () => void;
+  /** User's Twitch OAuth access token — passed to the embed player so it can
+   *  authenticate without relying on cookies/localStorage (Brave Shields). */
+  twitchAccessToken?: string;
 }
 
 
  // Renders a Twitch stream using the Twitch Player JS API
 
-function TwitchJSEmbed({ channelName, parentDomain }: { channelName: string; parentDomain: string }) {
+function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName: string; parentDomain: string; oauthToken?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<TwitchPlayer | null>(null);
   // Keep a ref so the script-load callback always sees the latest channel
   const channelRef = useRef(channelName);
   channelRef.current = channelName;
+  const oauthTokenRef = useRef(oauthToken);
+  oauthTokenRef.current = oauthToken;
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +66,7 @@ function TwitchJSEmbed({ channelName, parentDomain }: { channelName: string; par
         parent: [parentDomain],
         autoplay: true,
         layout: 'video',
+        ...(oauthTokenRef.current ? { oauth_token: oauthTokenRef.current } : {}),
       });
     };
 
@@ -109,17 +116,19 @@ function TwitchJSEmbed({ channelName, parentDomain }: { channelName: string; par
   );
 }
 
-export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin }: StreamEmbedProps) {
+export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken }: StreamEmbedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [parentDomain, setParentDomain] = useState<string>('localhost');
+  // null = not yet resolved; player must not mount until we have the real value
+  // so it is never initialized twice (which triggers Kasada 429 on passport.twitch.tv).
+  const [parentDomain, setParentDomain] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/parent-domain')
       .then(res => res.json())
-      .then(data => setParentDomain(data.parentDomain))
+      .then(data => setParentDomain(data.parentDomain ?? 'localhost'))
       .catch(() => setParentDomain('localhost'));
   }, []);
 
@@ -256,9 +265,15 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     );
   }
   if (playerType === 'embed') {
+    // Wait for the parent domain to resolve before mounting the player.
+    // Mounting with 'localhost' then immediately remounting with the real domain
+    // fires two Kasada fingerprint requests in quick succession → 429.
+    if (!parentDomain) {
+      return <div style={{ width: '100%', height: '100%', backgroundColor: '#0a0a0a' }} />;
+    }
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} />
+        <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} oauthToken={twitchAccessToken} />
       </div>
     );
   }
