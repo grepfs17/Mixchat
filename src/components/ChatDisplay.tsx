@@ -30,6 +30,17 @@ interface ChatDisplayProps {
   unifiedChatSlot?: React.ReactNode;
 }
 
+/** Derives a stable, visually-distinct HSL color from a channel ID string. */
+function hashChannelColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue = ((hash >>> 0) % 360);
+  return `hsl(${hue}, 80%, 60%)`;
+}
+
 function ChatDisplay({
   messages,
   isLoading,
@@ -226,7 +237,7 @@ function ChatDisplay({
     // Prefer detailed badge info if available (contains titles/descriptions)
     if (msg.badgeDetails && Object.keys(msg.badgeDetails).length > 0) {
       return (
-        <div className="message-badges" style={{ display: 'flex', alignItems: 'center', marginRight: '4px', gap: '2px' }}>
+        <div className="message-badges" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
           {Object.entries(msg.badgeDetails).map(([name, detail]) => (
             <img
               key={name}
@@ -250,7 +261,7 @@ function ChatDisplay({
     if (!msg.badges || Object.keys(msg.badges).length === 0) return null;
 
     return (
-      <div className="message-badges" style={{ display: 'flex', alignItems: 'center', marginRight: '4px', gap: '2px' }}>
+      <div className="message-badges" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
         {Object.entries(msg.badges).map(([name, badgeUrl]) => {
           if (!badgeUrl) return null;
 
@@ -400,13 +411,58 @@ function ChatDisplay({
                     <span className="timestamp">
                       {msg.timestamp.toLocaleTimeString()}
                     </span>
-                    {msg.authorAvatar && (
+                    {msg.sourceChannelId && (
+                      <span
+                        className="shared-chat-source"
+                        title={`From ${msg.sourceChannelLogin ?? msg.sourceChannelLogin}'s chat (Shared Chat)`}
+                        style={{ display: 'inline-flex', alignItems: 'center', marginRight: '2px', position: 'relative', flexShrink: 0 }}
+                      >
+                        {(() => {
+                          const channelColor = hashChannelColor(msg.sourceChannelId!);
+                          return msg.sourceChannelAvatar ? (
+                            <img
+                              src={msg.sourceChannelAvatar}
+                              alt={msg.sourceChannelLogin ?? msg.sourceChannelId}
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                border: `1.5px solid ${channelColor}`,
+                                verticalAlign: 'middle',
+                                display: 'block',
+                              }}
+                            />
+                          ) : (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                border: `2px solid ${channelColor}`,
+                                background: '#18181b',
+                                fontSize: '9px',
+                                color: channelColor,
+                                fontWeight: 'bold',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {(msg.sourceChannelLogin ?? msg.sourceChannelId!).charAt(0).toUpperCase()}
+                            </span>
+                          );
+                        })()}
+                      </span>
+                    )}
+                    
+                    {/*msg.authorAvatar && (
                       <img
                         src={msg.authorAvatar}
                         alt={msg.author}
                         className="avatar"
                       />
-                    )}
+                    )*/}
                     {renderMessageIcon(msg)}
                     {renderBadges(msg)}
                     <a

@@ -239,7 +239,7 @@ function UnifiedChat({
         // Prefer detailed badge info if available (contains titles/descriptions)
         if (msg.badgeDetails && Object.keys(msg.badgeDetails).length > 0) {
             return (
-                <div className="message-badges" style={{ display: 'flex', alignItems: 'center', marginRight: '4px', gap: '2px' }}>
+                <div className="message-badges" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                     {Object.entries(msg.badgeDetails).map(([name, detail]) => (
                         <img
                             key={name}
@@ -263,7 +263,7 @@ function UnifiedChat({
         if (!msg.badges || Object.keys(msg.badges).length === 0) return null;
 
         return (
-            <div className="message-badges" style={{ display: 'flex', alignItems: 'center', marginRight: '4px', gap: '2px' }}>
+            <div className="message-badges" style={{ display: 'flex', alignItems: 'center',  gap: '2px' }}>
                 {Object.entries(msg.badges).map(([name, url]) => {
                     if (!url) return null;
                     return (
@@ -338,7 +338,7 @@ function UnifiedChat({
                                 <div className="message-single-line">
                                     <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
                                     <PlatformTag source="twitch" />
-                                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
+                                    {/*msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />*/}
 
                                     {renderTwitchIcon(msg)}
                                     {renderTwitchBadges(msg)}

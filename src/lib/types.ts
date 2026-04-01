@@ -35,6 +35,12 @@ export interface ChatMessage {
   isPreloaded?: boolean; // True if message is from historical data (not live chat)
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
+  /** Twitch Shared Chat: the originating channel's ID (differs from current channel when message is shared) */
+  sourceChannelId?: string;
+  /** Twitch Shared Chat: the originating channel's login name */
+  sourceChannelLogin?: string;
+  /** Twitch Shared Chat: the originating channel's profile image URL */
+  sourceChannelAvatar?: string;
 }
 
 export interface PlatformSession {

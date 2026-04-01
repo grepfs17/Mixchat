@@ -9,6 +9,10 @@ const userInfoCache = new Map<string, { displayName: string; profileImageUrl: st
 const MAX_CACHE_SIZE = 500;
 const NOTIFICATION_AUDIO_VOLUME = 0.3;
 
+// Cache for source channel (shared chat) info keyed by channel ID
+// Twitch IRC does NOT send source-room-login — we fetch it from the API
+const sourceChannelInfoCache = new Map<string, { login: string | null; avatar: string | null }>();
+
 function setUserInfoCache(userId: string, info: { displayName: string; profileImageUrl: string | null }) {
   // Limit cache size to prevent memory leaks
   if (userInfoCache.size >= MAX_CACHE_SIZE) {
@@ -42,6 +46,39 @@ async function getUserInfo(userId: string, accessToken: string) {
   }
 
   return null;
+}
+
+// Async function to get a source channel's login + avatar (for shared chat)
+// NOTE: Twitch IRC only sends source-room-id, never source-room-login, so we
+// must look up the login name via the API.
+async function getSourceChannelInfo(
+  channelId: string,
+  accessToken: string
+): Promise<{ login: string | null; avatar: string | null }> {
+  if (sourceChannelInfoCache.has(channelId)) {
+    return sourceChannelInfoCache.get(channelId)!;
+  }
+
+  try {
+    const response = await fetch(`/api/user-info?userId=${channelId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const info = {
+        login: (data.login as string | null) ?? null,
+        avatar: (data.profileImageUrl as string | null) ?? null,
+      };
+      sourceChannelInfoCache.set(channelId, info);
+      return info;
+    }
+  } catch (error) {
+    console.error('Failed to fetch source channel info:', error);
+  }
+
+  const fallback = { login: null, avatar: null };
+  sourceChannelInfoCache.set(channelId, fallback);
+  return fallback;
 }
 
 export function useTwitchChat(
@@ -125,6 +162,23 @@ export function useTwitchChat(
 
       const cachedUserInfo = msg.userInfo.userId ? userInfoCache.get(msg.userInfo.userId) : undefined;
 
+      // Twitch Shared Chat: the IRC tags include source-room-id to identify the
+      // originating channel. NOTE: Twitch does NOT send a source-room-login tag;
+      // the login name must be fetched from the API.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawTags = (msg as any).tags as Map<string, string> | undefined;
+      const sourceRoomId: string | undefined = rawTags?.get('source-room-id') || undefined;
+      // Only treat as shared-chat if the source room differs from the current channel
+      const isSharedChat = Boolean(
+        sourceRoomId &&
+        msg.channelId &&
+        sourceRoomId !== msg.channelId
+      );
+
+      const cachedSourceInfo = isSharedChat && sourceRoomId
+        ? sourceChannelInfoCache.get(sourceRoomId)
+        : undefined;
+
       const chatMessage: ChatMessage = {
         id: msg.id,
         platform: 'twitch',
@@ -143,24 +197,50 @@ export function useTwitchChat(
         isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
         messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : 'chat'),
         rewardId: msg.isRedemption ? (msg.rewardId || undefined) : undefined,
+        sourceChannelId: isSharedChat ? sourceRoomId : undefined,
+        sourceChannelLogin: cachedSourceInfo?.login || undefined,
+        sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
       };
 
-      if (!cachedUserInfo && msg.userInfo.userId) {
-        getUserInfo(msg.userInfo.userId, accessToken).then((userInfo) => {
-          if (userInfo?.profileImageUrl) {
-            onMessage({
-              ...chatMessage,
-              authorAvatar: userInfo.profileImageUrl,
-            });
-            return;
-          }
-          onMessage(chatMessage);
+      // Resolve author avatar + source channel info asynchronously.
+      // Always create both promises (resolving to null when not needed) so that
+      // the destructured indices are always [userInfo, sourceInfo] regardless
+      // of which combination is required — avoids an off-by-one index bug.
+      const needsUserInfo = !cachedUserInfo && !!msg.userInfo.userId;
+      const needsSourceAvatar = isSharedChat && !!sourceRoomId && !sourceChannelInfoCache.has(sourceRoomId);
+
+      if (needsUserInfo || needsSourceAvatar) {
+        const userInfoPromise = needsUserInfo && msg.userInfo.userId
+          ? getUserInfo(msg.userInfo.userId, accessToken)
+          : Promise.resolve(null);
+        const sourceInfoPromise = needsSourceAvatar && sourceRoomId
+          ? getSourceChannelInfo(sourceRoomId, accessToken)
+          : Promise.resolve(null);
+
+        Promise.all([userInfoPromise, sourceInfoPromise]).then(([userInfoResult, sourceInfoResult]) => {
+          const resolvedAvatar = (userInfoResult as { profileImageUrl?: string | null } | null)?.profileImageUrl;
+          const resolvedSource = sourceInfoResult as { login: string | null; avatar: string | null } | null;
+          onMessage({
+            ...chatMessage,
+            authorAvatar: resolvedAvatar || chatMessage.authorAvatar,
+            sourceChannelLogin: resolvedSource?.login || chatMessage.sourceChannelLogin || undefined,
+            sourceChannelAvatar: resolvedSource?.avatar || chatMessage.sourceChannelAvatar || undefined,
+          });
         }).catch(() => {
           onMessage(chatMessage);
         });
-      } else {
-        onMessage(chatMessage);
+
+        if (mentionsUser && mentionSoundEnabled) {
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGG2S36+OZSgwOUKXh8bllHgU2jtXywH0pBSl+zPLaizsIGGS56+idTgwNU6rm8bllHAU5kdXx');
+            audio.volume = NOTIFICATION_AUDIO_VOLUME;
+            audio.play().catch(() => { });
+          } catch (e) { }
+        }
+        return;
       }
+
+      onMessage(chatMessage);
 
       if (mentionsUser && mentionSoundEnabled) {
         try {
