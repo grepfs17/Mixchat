@@ -17,7 +17,7 @@
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
 }

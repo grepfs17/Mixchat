@@ -178,7 +178,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
   if (isLoading) {
     return (
       <div className="yt-chat-status">
-        <AiOutlineLoading3Quarters className="animate-spin" /> Connecting to YouTube chat...
+        <AiOutlineLoading3Quarters className="animate-spin" />  Connecting to YouTube chat...
       </div>
     );
   }
