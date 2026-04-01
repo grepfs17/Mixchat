@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { getColorFromName } from '../lib/chatColors';
+import YTMessageParts from './YTMessageParts';
+import '../styles/YouTubeChat.css';
 
 interface YouTubeEmote {
   /** The emojiText code e.g. ":slightly_smiling_face:" or the alt text */
@@ -44,17 +47,6 @@ interface ChatMessage {
       alt: string;
     };
   };
-}
-
-// Turns a username into a stable color so each author always looks the same
-function getColorFromName(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = ((hash << 5) - hash) + name.charCodeAt(i);
-    hash = hash & hash;
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 55%)`;
 }
 
 export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14 }: YouTubeChatProps) {
@@ -240,20 +232,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                 </div>
                 {(msg.parts.length > 0 || msg.superchat.sticker) && (
                   <div className="yt-superchat-body">
-                    {msg.parts.map((part, i) =>
-                      part.type === 'emoji' ? (
-                        <img
-                          key={i}
-                          src={part.url}
-                          alt={part.alt || part.emojiText || '🙂'}
-                          title={part.emojiText || part.alt}
-                          className={`yt-emoji ${part.isCustomEmoji ? 'custom' : 'standard'}`}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <React.Fragment key={i}>{part.text}</React.Fragment>
-                      )
-                    )}
+                    <YTMessageParts parts={msg.parts} />
                     {msg.superchat.sticker && (
                       <img
                         src={msg.superchat.sticker.url}
@@ -296,20 +275,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
                 </span>
                 <span className="message-separator">:</span>
                 <span className="message-text">
-                  {msg.parts.map((part, i) =>
-                    part.type === 'emoji' ? (
-                      <img
-                        key={i}
-                        src={part.url}
-                        alt={part.alt || part.emojiText || '🙂'}
-                        title={part.emojiText || part.alt}
-                        className={`yt-emoji ${part.isCustomEmoji ? 'custom' : 'standard'}`}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <React.Fragment key={i}>{part.text}</React.Fragment>
-                    )
-                  )}
+                  <YTMessageParts parts={msg.parts} />
                 </span>
               </div>
             </div>

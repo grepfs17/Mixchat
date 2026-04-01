@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MdStars, MdAutorenew, MdCardGiftcard, MdRefresh, MdReply, MdContentCopy, MdRedeem } from 'react-icons/md';
-import { GiHeartBeats } from 'react-icons/gi';
+import { MdRefresh, MdReply, MdContentCopy } from 'react-icons/md';
 import { FaUsers } from 'react-icons/fa';
 import type { ChatMessage, Platform } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
+import MessageBadges from './MessageBadges';
+import TwitchEventIcon from './TwitchEventIcon';
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
@@ -180,110 +181,9 @@ function ChatDisplay({
   }, [handleEmoteHover]);
 
 
-  // Helper to render message icon for special events
-  const renderMessageIcon = (msg: ChatMessage) => {
-    if (!msg.messageType) return null;
 
-    const iconConfig: Record<string, { title: string; color: string }> = {
-      cheer: { title: 'Cheer', color: '#FFB700' },
-      subscription: { title: 'Subscription', color: '#9147FF' },
-      resub: { title: 'Resub', color: '#9147FF' },
-      subgift: { title: 'Subgift', color: '#9147FF' },
-      redemption: { title: 'Channel Points Redemption', color: '#9147FF' },
-    };
 
-    const config = iconConfig[msg.messageType];
-    if (!config) return null;
 
-    let iconElement;
-    switch (msg.messageType) {
-      case 'cheer':
-        iconElement = <GiHeartBeats size={16} />;
-        break;
-      case 'subscription':
-        iconElement = <MdStars size={16} />;
-        break;
-      case 'resub':
-        iconElement = <MdAutorenew size={16} />;
-        break;
-      case 'subgift':
-        iconElement = <MdCardGiftcard size={16} />;
-        break;
-      case 'redemption':
-        iconElement = <MdRedeem size={16} />;
-        break;
-      default:
-        return null;
-    }
-
-    return (
-      <span
-        title={config.title}
-        style={{
-          marginRight: '6px',
-          display: 'inline-flex',
-          alignItems: 'center',
-          color: config.color,
-          filter: `drop-shadow(0 0 2px ${config.color})`,
-        }}
-      >
-        {iconElement}
-      </span>
-    );
-  };
-
-  // Helper to render badges
-  const renderBadges = (msg: ChatMessage) => {
-    // Prefer detailed badge info if available (contains titles/descriptions)
-    if (msg.badgeDetails && Object.keys(msg.badgeDetails).length > 0) {
-      return (
-        <div className="message-badges" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          {Object.entries(msg.badgeDetails).map(([name, detail]) => (
-            <img
-              key={name}
-              src={detail.url}
-              alt={detail.title}
-              className="badge"
-              title={detail.title}
-              loading="eager"
-              style={{
-                width: '18px',
-                height: '18px',
-                verticalAlign: 'middle'
-              }}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // Fallback for platform-agnostic or historical badges
-    if (!msg.badges || Object.keys(msg.badges).length === 0) return null;
-
-    return (
-      <div className="message-badges" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-        {Object.entries(msg.badges).map(([name, badgeUrl]) => {
-          if (!badgeUrl) return null;
-
-          return (
-            <img
-              key={`${name}`}
-              src={badgeUrl}
-              alt={name}
-              className="badge"
-              title={name}
-              loading="eager"
-              style={{
-                width: '18px',
-                height: '18px',
-                verticalAlign: 'middle'
-              }}
-            />
-          );
-        })}
-      </div>
-    );
-  };
 
   return (
     <div className="chat-display">
@@ -463,8 +363,8 @@ function ChatDisplay({
                         className="avatar"
                       />
                     )*/}
-                    {renderMessageIcon(msg)}
-                    {renderBadges(msg)}
+                    <TwitchEventIcon messageType={msg.messageType} size={16} />
+                    <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
                     <a
                       href={`https://twitch.tv/${msg.author}`}
                       target="_blank"
