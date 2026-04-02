@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import ChatDisplay from './ChatDisplay';
 import MessageInput from './MessageInput';
 import Notification from './Notification';
-import YouTubeChat, { type YouTubeEmote } from './YouTubeChat';
+import YouTubeChat from './YouTubeChat';
 import YouTubeMessageInput from './YouTubeMessageInput';
 import UnifiedChat, { type YTMessage } from './UnifiedChat';
 import { useTwitchChat } from '../hooks/useTwitchChat';
@@ -92,9 +92,6 @@ export default function ChatApp({
   const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
   // Optimistic YouTube messages: added instantly on send, removed when the polled feed confirms them
   const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>([]);
-
-  // Emote registry shared between YouTubeChat (discovery) and YouTubeMessageInput (autocomplete)
-  const ytEmoteRegistryRef = useRef<Map<string, YouTubeEmote>>(new Map());
 
   // Effective video ID: manual override > auto-detected > static URL parse
   const youtubeVideoId = useMemo(() => {
@@ -190,14 +187,6 @@ export default function ChatApp({
     setShowYoutubeSection(true);
     setYtMessages([]);
   }, [selectedTwitchChannel]);
-
-  // Merge newly discovered emotes into the registry
-  const handleYtEmotesDiscovered = useCallback((emotes: YouTubeEmote[]) => {
-    for (const e of emotes) {
-      ytEmoteRegistryRef.current.set(e.name, e);
-    }
-    // No re-render needed — registry is a ref, autocomplete reads it on keystroke
-  }, []);
 
   // Update document title with channel name
   useEffect(() => {
@@ -521,37 +510,11 @@ export default function ChatApp({
   }, []);
 
   const handleYtOptimisticMessage = useCallback((id: string, text: string) => {
-    // Parse the raw text into typed parts so emote names render as images
-    type Part = import('./UnifiedChat').YTMessage['parts'][number];
-    const parts: Part[] = [];
-    const registry = ytEmoteRegistryRef.current;
-
-    if (registry.size > 0) {
-      // Build a regex that matches any known emote name (escaped)
-      const pattern = Array.from(registry.keys())
-        .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-        .join('|');
-      const regex = new RegExp(`(${pattern})`, 'g');
-      let last = 0;
-      let match: RegExpExecArray | null;
-      while ((match = regex.exec(text)) !== null) {
-        if (match.index > last) {
-          parts.push({ type: 'text', text: text.slice(last, match.index) });
-        }
-        const emote = registry.get(match[0])!;
-        parts.push({ type: 'emoji', url: emote.url, alt: emote.name, emojiText: emote.name, isCustomEmoji: emote.isCustom });
-        last = match.index + match[0].length;
-      }
-      if (last < text.length) parts.push({ type: 'text', text: text.slice(last) });
-    }
-
-    if (parts.length === 0) parts.push({ type: 'text', text });
-
     const optimistic: import('./UnifiedChat').YTMessage = {
       id,
       author: youtubeSession?.displayName || 'You',
       authorAvatar: youtubeSession?.profileImageUrl,
-      parts,
+      parts: [{ type: 'text', text }],
       timestamp: new Date(),
       optimistic: true,
     };
@@ -580,7 +543,6 @@ export default function ChatApp({
             <div style={{ display: 'none' }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}
-                onEmotesDiscovered={handleYtEmotesDiscovered}
                 onMessages={handleYtMessages}
                 fontSize={fontSize}
                 chatFont={chatFont}
@@ -653,7 +615,6 @@ export default function ChatApp({
             <div style={{ borderTop: '1px solid #333' }}>
               <YouTubeMessageInput
                 youtubeVideoId={youtubeVideoId}
-                emoteRegistry={ytEmoteRegistryRef}
                 onOptimisticMessage={handleYtOptimisticMessage}
                 onOptimisticFailed={handleYtOptimisticFailed}
                 onError={(msg) => {
@@ -675,7 +636,6 @@ export default function ChatApp({
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <YouTubeChat
                       videoId={youtubeVideoId}
-                      onEmotesDiscovered={handleYtEmotesDiscovered}
                       optimisticMessages={ytOptimisticMessages}
                       fontSize={fontSize}
                       chatFont={chatFont}
@@ -699,7 +659,6 @@ export default function ChatApp({
                   {/* YouTube message input */}
                   <YouTubeMessageInput
                     youtubeVideoId={youtubeVideoId}
-                    emoteRegistry={ytEmoteRegistryRef}
                     onOptimisticMessage={handleYtOptimisticMessage}
                     onOptimisticFailed={handleYtOptimisticFailed}
                     onError={(msg) => {

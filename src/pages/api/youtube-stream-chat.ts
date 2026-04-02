@@ -29,12 +29,6 @@ interface ChatMessage {
   };
 }
 
-interface YTEmoteEntry {
-  name: string;
-  url: string;
-  isCustomEmoji: boolean;
-}
-
 /** Maximum number of concurrent YouTube live chat sessions held in memory.
  * Prevents unbounded memory growth from malicious or accidental videoId flooding. */
 const MAX_ACTIVE_SESSIONS = 50;
@@ -45,7 +39,6 @@ const activeLiveChats = new Map<
   {
     chat: any;
     messages: ChatMessage[];
-    emoteMap: Map<string, YTEmoteEntry>;
     lastUpdate: number;
   }
 >();
@@ -107,17 +100,16 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
       const chat = info.getLiveChat();
       const messages: ChatMessage[] = [];
-      const emoteMap = new Map<string, YTEmoteEntry>();
 
       // Helper: map an AddChatItemAction item to a ChatMessage
       const parseChatItem = (item: any): ChatMessage | null => {
         switch (item.type) {
           case 'LiveChatTextMessage':
-            return parseLiveChatMessage(item, emoteMap);
+            return parseLiveChatMessage(item);
           case 'LiveChatPaidMessage':
-            return parsePaidMessage(item, emoteMap);
+            return parsePaidMessage(item);
           case 'LiveChatPaidSticker':
-            return parsePaidSticker(item, emoteMap);
+            return parsePaidSticker(item);
           default:
             return null;
         }
@@ -179,7 +171,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       chatSession = {
         chat,
         messages,
-        emoteMap,
         lastUpdate: Date.now(),
       };
 
@@ -198,7 +189,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
         videoId,
         messages: chatSession.messages,
         messageCount: chatSession.messages.length,
-        emotes: Array.from(chatSession.emoteMap.values()),
       }),
       {
         status: 200,
@@ -222,7 +212,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   }
 };
 
-function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): ChatMessage {
+function parseLiveChatMessage(msg: any): ChatMessage {
   const parts: MessagePart[] = [];
 
   if (msg.message && msg.message.runs) {
@@ -242,10 +232,6 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
             parts.push({ type: 'text', text: emoji.emoji_id });
           }
           continue;
-        }
-
-        if (!emoteMap.has(name)) {
-          emoteMap.set(name, { name, url, isCustomEmoji: isCustom });
         }
 
         parts.push({
@@ -294,8 +280,8 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
   };
 }
 
-function parsePaidMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): ChatMessage {
-  const base = parseLiveChatMessage(msg, emoteMap);
+function parsePaidMessage(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
   return {
     ...base,
     superchat: {
@@ -305,7 +291,7 @@ function parsePaidMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): ChatMe
   };
 }
 
-function parsePaidSticker(msg: any, _emoteMap: Map<string, YTEmoteEntry>): ChatMessage {
+function parsePaidSticker(msg: any): ChatMessage {
   const stickerUrl = msg.sticker?.thumbnails?.[0]?.url;
   
   return {

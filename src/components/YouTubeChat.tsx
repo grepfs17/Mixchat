@@ -6,17 +6,8 @@ import { FONT_FAMILY_MAP } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
 import '../styles/YouTubeChat.css';
 
-interface YouTubeEmote {
-  /** The emojiText code e.g. ":slightly_smiling_face:" or the alt text */
-  name: string;
-  url: string;
-  isCustom: boolean;
-}
-
 interface YouTubeChatProps {
   videoId: string;
-  /** Called whenever new emotes are discovered in the chat stream */
-  onEmotesDiscovered?: (emotes: YouTubeEmote[]) => void;
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
   /** Optimistic messages injected by the parent (shown immediately after send) */
@@ -24,8 +15,6 @@ interface YouTubeChatProps {
   fontSize?: number;
   chatFont?: ChatFont;
 }
-
-export type { YouTubeEmote };
 
 interface MessagePart {
   type: 'text' | 'emoji';
@@ -55,7 +44,7 @@ interface ChatMessage {
   };
 }
 
-export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
   /** Merge polled messages with any optimistic ones not yet confirmed by the server */
   const getTextContent = (m: ChatMessage) =>
     m.parts.filter(p => p.type === 'text').map(p => p.text || '').join('');
@@ -68,9 +57,6 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, o
   const [error, setError] = useState<string | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastMessageCountRef = useRef(0);
-  // Remembers how many emotes we've already reported so we don't spam the parent
-  const lastEmoteCountRef = useRef(0);
-
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
     const realTexts = new Set(messages.map(getTextContent));
@@ -124,19 +110,6 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, o
           const uniqueMessagesMap = new Map();
           fetchedMessages.forEach(m => uniqueMessagesMap.set(m.id, m));
           const newMessages = Array.from(uniqueMessagesMap.values());
-
-          // Let the parent know about any newly spotted emotes (for autocomplete)
-          const currentEmoteCount = Array.isArray(data.emotes) ? data.emotes.length : 0;
-          if (onEmotesDiscovered && currentEmoteCount !== lastEmoteCountRef.current) {
-            lastEmoteCountRef.current = currentEmoteCount;
-            onEmotesDiscovered(
-              (data.emotes as any[]).map((e) => ({
-                name: e.name,
-                url: e.url,
-                isCustom: !!e.isCustomEmoji,
-              }))
-            );
-          }
 
           // Compare the last message ID (not just count) to catch the edge case where
           // one message rolls off while another comes in, keeping the count identical.
