@@ -1,7 +1,7 @@
 {
   "name": "mixchat",
-  "version": "0.5.0-beta",
-  "description": "Advanced Twitch chat client with support for 7TV, BTTV, and FFZ emotes. Stream replies, badges and basic YouTube chat support.",
+  "version": "0.7.0-beta",
+  "description": "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
