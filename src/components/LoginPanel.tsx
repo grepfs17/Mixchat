@@ -41,6 +41,7 @@ interface LoginPanelProps {
   onChatFontChange?: (value: ChatFont) => void;
   mentionSoundEnabled?: boolean;
   onMentionSoundEnabledChange?: (value: boolean) => void;
+  onGoHome?: () => void;
 }
 
 function LoginPanel({
@@ -72,6 +73,7 @@ function LoginPanel({
   onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
+  onGoHome,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -97,7 +99,14 @@ function LoginPanel({
   return (
     <div className="login-panel">
       <div className="login-panel-header">
-        <h3>Connected Accounts</h3>
+        <a
+          href="/"
+          title="Go to home page"
+          onClick={(e) => { if (onGoHome) { e.preventDefault(); onGoHome(); } }}
+          style={{ lineHeight: 0 }}
+        >
+          <img src="/logo.png" alt="Mixchat" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
+        </a>
         <button
           onClick={() => setShowEmbedConfig(true)}
           className="icon-button small"

@@ -5,7 +5,7 @@
   flex-direction: column;
   gap: 0;
   padding: 0;
-  background: var(--color-bg-secondary);
+  background: transparent;
   box-shadow: none;
   height: 100%;
   overflow: hidden;
@@ -16,17 +16,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 12px;
-  border-bottom: 1px solid var(--color-border-medium);
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .login-panel h3 {
   margin: 0;
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  color: rgba(148, 163, 184, 0.75);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
+  letter-spacing: 1.2px;
+  font-weight: 700;
   flex-shrink: 0;
 }
 
@@ -40,14 +40,16 @@
   align-items: center;
   justify-content: center;
   font-size: 16px;
-  transition: all 0.2s;
-  border-radius: var(--radius-md);
+  transition: all 0.18s ease;
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
 }
 
 .icon-button:hover {
   color: var(--color-indigo-hover);
   border-color: var(--color-indigo);
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .icon-button.youtube-icon-btn {
@@ -67,10 +69,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
   border: none;
-  border-bottom: 1px solid var(--color-border-medium);
-  background: var(--color-bg-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.18);
   margin: 0;
   flex: 1;
   min-height: 0;
@@ -135,12 +137,13 @@
   border-radius: var(--radius-full);
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid var(--color-border-medium);
-  transition: transform 0.2s;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .profile-image:hover {
   transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 .user-details {
@@ -170,7 +173,7 @@
 .channels-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border-medium);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -178,13 +181,13 @@
 }
 
 .section-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.75);
   margin-bottom: 8px;
   display: block;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.2px;
   flex-shrink: 0;
 }
 
@@ -193,12 +196,19 @@
   padding: 8px;
   margin-bottom: 8px;
   border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   box-sizing: border-box;
   flex-shrink: 0;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.channel-search-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(158, 64, 115, 0.15);
 }
 
 .channel-list {
@@ -219,12 +229,18 @@
   padding: 8px 10px;
   border-radius: 6px;
   border: 2px solid transparent;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
+}
+
+.channel-item:not(.selected):hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.07);
 }
 
 .channel-item.selected {
-  border-color: var(--color-accent);
-  background-color: rgba(158, 64, 115, 0.1);
+  background: linear-gradient(90deg, rgba(158, 64, 115, 0.18) 0%, rgba(158, 64, 115, 0.05) 100%);
+  border-color: rgba(158, 64, 115, 0.35);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .channel-item-image {
@@ -232,7 +248,7 @@
   height: 32px;
   border-radius: var(--radius-full);
   object-fit: cover;
-  border: 1px solid var(--color-border-medium);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
@@ -275,7 +291,7 @@
 .manual-join-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border-medium);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   flex-shrink: 0;
 }
 
@@ -288,11 +304,18 @@
   flex: 1;
   padding: 8px;
   border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
   min-width: 0;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.join-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(158, 64, 115, 0.15);
 }
 
 .login-btn,
@@ -302,10 +325,10 @@
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
   white-space: nowrap;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .login-btn:hover {
@@ -318,24 +341,42 @@
 }
 
 .login-btn.twitch-btn {
-  background-color: var(--color-twitch);
+  background: linear-gradient(135deg, #9146ff 0%, #6a24c9 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(145, 70, 255, 0.25);
+}
+
+.login-btn.twitch-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(145, 70, 255, 0.4);
+  opacity: 1;
 }
 
 .login-btn.youtube-btn {
-  background-color: var(--color-youtube);
+  background: linear-gradient(135deg, #ff2222 0%, #c80000 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.22);
+}
+
+.login-btn.youtube-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 0, 0, 0.34);
+  opacity: 1;
 }
 
 .logout-btn {
-  background-color: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.18s ease;
 }
 
 .logout-btn:hover {
-  background-color: var(--color-border-lighter);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .logout-btn.small {
@@ -346,7 +387,7 @@
 .youtube-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-border-medium);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .youtube-info-row {

@@ -240,7 +240,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
             <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
               <div className="message-single-line">
                 <span className="timestamp">
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
                 {msg.authorAvatar && showAvatar && (
                   <img src={msg.authorAvatar} alt={msg.author} className="avatar" loading="lazy" />
