@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { getColorFromName } from '../lib/chatColors';
 import type { ChatFont } from '../lib/types';
@@ -19,6 +19,8 @@ interface YouTubeChatProps {
   onEmotesDiscovered?: (emotes: YouTubeEmote[]) => void;
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
+  /** Optimistic messages injected by the parent (shown immediately after send) */
+  optimisticMessages?: ChatMessage[];
   fontSize?: number;
   chatFont?: ChatFont;
 }
@@ -42,6 +44,7 @@ interface ChatMessage {
   parts: MessagePart[];
   timestamp: Date;
   authorChannelId?: string;
+  optimistic?: boolean;
   superchat?: {
     amount: string;
     color: string;
@@ -52,7 +55,10 @@ interface ChatMessage {
   };
 }
 
-export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
+  /** Merge polled messages with any optimistic ones not yet confirmed by the server */
+  const getTextContent = (m: ChatMessage) =>
+    m.parts.filter(p => p.type === 'text').map(p => p.text || '').join('');
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -64,6 +70,13 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
   const lastMessageCountRef = useRef(0);
   // Remembers how many emotes we've already reported so we don't spam the parent
   const lastEmoteCountRef = useRef(0);
+
+  const mergedMessages = useMemo(() => {
+    if (!optimisticMessages?.length) return messages;
+    const realTexts = new Set(messages.map(getTextContent));
+    const unmatched = optimisticMessages.filter(opt => !realTexts.has(getTextContent(opt)));
+    return unmatched.length ? [...messages, ...unmatched] : messages;
+  }, [messages, optimisticMessages]);
 
   // Keep messages fresh by polling our backend
   useEffect(() => {
@@ -153,7 +166,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
 
     // Kick off the first fetch right away, then repeat every 4 s
     fetchChatMessages();
-    pollingIntervalRef.current = setInterval(fetchChatMessages, 4000);
+    pollingIntervalRef.current = setInterval(fetchChatMessages, 5000);
 
     return () => {
       isMounted = false;
@@ -169,14 +182,14 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [mergedMessages]);
 
   // Pass the current message list up so the parent can use it in unified chat
   useEffect(() => {
     if (onMessages) {
-      onMessages(messages);
+      onMessages(mergedMessages);
     }
-  }, [messages, onMessages]);
+  }, [mergedMessages, onMessages]);
 
   if (isLoading) {
     return (
@@ -207,7 +220,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
             Connecting to YouTube chat...
           </div>
         )}
-        {isConnected && messages.length === 0 && (
+        {isConnected && mergedMessages.length === 0 && (
           <div className="yt-chat-placeholder">
             Waiting for messages...
           </div>
@@ -217,9 +230,9 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
           // to avoid firing dozens of simultaneous image requests to yt*.ggpht.com,
           // which triggers 429 rate-limits from Google's CDN.
           const lastIndexByAuthor = new Map<string, number>();
-          messages.forEach((msg, i) => lastIndexByAuthor.set(msg.author, i));
+          mergedMessages.forEach((msg, i) => lastIndexByAuthor.set(msg.author, i));
 
-          return messages.map((msg, index) => {
+          return mergedMessages.map((msg, index) => {
           const showAvatar = lastIndexByAuthor.get(msg.author) === index;
           if (msg.superchat) {
             return (
@@ -251,7 +264,7 @@ export default function YouTubeChat({ videoId, onEmotesDiscovered, onMessages, f
           }
 
           return (
-            <div key={msg.id} className="message">
+            <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
               <div className="message-single-line">
                 <span className="timestamp">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

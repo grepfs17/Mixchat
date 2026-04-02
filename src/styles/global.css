@@ -87,3 +87,11 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Optimistic YouTube message placeholder — dimmed until the server confirms
+we put it here cuz of the scope we need it on Unified and YouTubeChat */
+.yt-optimistic {
+  opacity: 0.55;
+  font-style: italic;
+  transition: opacity 0.3s;
+}

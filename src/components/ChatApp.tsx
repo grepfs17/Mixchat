@@ -62,7 +62,7 @@ export default function ChatApp({
   onToggleStreamEmbed,
   viewerCount,
   linkedYoutubeUrl,
-  youtubeSession: _youtubeSession,
+  youtubeSession,
   unifyChatEnabled = false,
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
@@ -90,6 +90,8 @@ export default function ChatApp({
 
   // Collected YouTube messages for unified mode
   const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
+  // Optimistic YouTube messages: added instantly on send, removed when the polled feed confirms them
+  const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>([]);
 
   // Emote registry shared between YouTubeChat (discovery) and YouTubeMessageInput (autocomplete)
   const ytEmoteRegistryRef = useRef<Map<string, YouTubeEmote>>(new Map());
@@ -502,9 +504,36 @@ export default function ChatApp({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
+  // Extracts plain text from a YTMessage for reconciliation matching
+  const getYtMessageText = (m: import('./UnifiedChat').YTMessage) =>
+    m.parts.filter((p) => p.type === 'text').map((p) => (p as any).text || '').join('');
+
   // Callback to receive YouTube messages in unified mode
   const handleYtMessages = useCallback((msgs: import('./UnifiedChat').YTMessage[]) => {
+    // Remove any optimistic entries whose text now appears in the polled feed
+    setYtOptimisticMessages((prev) => {
+      if (!prev.length) return prev;
+      const realTexts = new Set(msgs.map(getYtMessageText));
+      const remaining = prev.filter((opt) => !realTexts.has(getYtMessageText(opt)));
+      return remaining.length === prev.length ? prev : remaining;
+    });
     setYtMessages(msgs);
+  }, []);
+
+  const handleYtOptimisticMessage = useCallback((id: string, text: string) => {
+    const optimistic: import('./UnifiedChat').YTMessage = {
+      id,
+      author: youtubeSession?.displayName || 'You',
+      authorAvatar: youtubeSession?.profileImageUrl,
+      parts: [{ type: 'text', text }],
+      timestamp: new Date(),
+      optimistic: true,
+    };
+    setYtOptimisticMessages((prev) => [...prev, optimistic]);
+  }, [youtubeSession]);
+
+  const handleYtOptimisticFailed = useCallback((id: string) => {
+    setYtOptimisticMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
   return (
@@ -563,7 +592,12 @@ export default function ChatApp({
               unifiedChatSlot={
                 <UnifiedChat
                   twitchMessages={messages}
-                  ytMessages={ytMessages}
+                  ytMessages={[
+                    ...ytMessages,
+                    ...ytOptimisticMessages.filter(
+                      (opt) => !ytMessages.some((m) => getYtMessageText(m) === getYtMessageText(opt))
+                    ),
+                  ]}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
                     notificationIdRef.current += 1;
@@ -594,6 +628,8 @@ export default function ChatApp({
               <YouTubeMessageInput
                 youtubeVideoId={youtubeVideoId}
                 emoteRegistry={ytEmoteRegistryRef}
+                onOptimisticMessage={handleYtOptimisticMessage}
+                onOptimisticFailed={handleYtOptimisticFailed}
                 onError={(msg) => {
                   notificationIdRef.current += 1;
                   setNotification({ message: msg, type: 'error', id: notificationIdRef.current });
@@ -614,6 +650,7 @@ export default function ChatApp({
                     <YouTubeChat
                       videoId={youtubeVideoId}
                       onEmotesDiscovered={handleYtEmotesDiscovered}
+                      optimisticMessages={ytOptimisticMessages}
                       fontSize={fontSize}
                       chatFont={chatFont}
                     />
@@ -637,6 +674,8 @@ export default function ChatApp({
                   <YouTubeMessageInput
                     youtubeVideoId={youtubeVideoId}
                     emoteRegistry={ytEmoteRegistryRef}
+                    onOptimisticMessage={handleYtOptimisticMessage}
+                    onOptimisticFailed={handleYtOptimisticFailed}
                     onError={(msg) => {
                       notificationIdRef.current += 1;
                       setNotification({ message: msg, type: 'error', id: notificationIdRef.current });

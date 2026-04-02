@@ -29,6 +29,7 @@ export interface YTMessage {
     parts: MessagePart[];
     timestamp: Date;
     authorChannelId?: string;
+    optimistic?: boolean;
     superchat?: {
         amount: string;
         color: string;
@@ -295,7 +296,7 @@ function UnifiedChat({
                     }
 
                     return (
-                        <div key={getKey(entry)} className="message">
+                        <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
                             <div className="message-single-line">
                                 <span className="timestamp">
                                     {(msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp))

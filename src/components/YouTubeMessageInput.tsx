@@ -9,6 +9,10 @@ interface YouTubeMessageInputProps {
     emoteRegistry: React.MutableRefObject<Map<string, YouTubeEmote>>;
     /** Called when the API returns an error so the parent can show a notification */
     onError?: (message: string) => void;
+    /** Called immediately when send is triggered (before the API call) so the parent can show an optimistic placeholder */
+    onOptimisticMessage?: (id: string, text: string) => void;
+    /** Called if the API call fails so the parent can remove the optimistic placeholder */
+    onOptimisticFailed?: (id: string) => void;
 }
 
 /**
@@ -20,6 +24,8 @@ export default function YouTubeMessageInput({
     youtubeVideoId,
     emoteRegistry,
     onError,
+    onOptimisticMessage,
+    onOptimisticFailed,
 }: YouTubeMessageInputProps) {
     const [ytMessage, setYtMessage] = useState('');
     const [ytSending, setYtSending] = useState(false);
@@ -32,27 +38,33 @@ export default function YouTubeMessageInput({
     const ytEmoteMenuRef = useRef<HTMLDivElement>(null);
 
     const handleSendYoutubeMessage = useCallback(async () => {
-        if (!ytMessage.trim() || !youtubeVideoId) return;
+        const text = ytMessage.trim();
+        if (!text || !youtubeVideoId) return;
+        const optimisticId = `optimistic_yt_${Date.now()}_${Math.random()}`;
+        onOptimisticMessage?.(optimisticId, text);
+        setYtMessage('');
         setYtSending(true);
         try {
             const res = await fetch('/api/youtube-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ videoId: youtubeVideoId, message: ytMessage.trim() }),
+                body: JSON.stringify({ videoId: youtubeVideoId, message: text }),
             });
             const data = await res.json();
-            if (res.ok) {
-                setYtMessage('');
-            } else {
+            if (!res.ok) {
+                onOptimisticFailed?.(optimisticId);
+                setYtMessage(text); // restore input on failure
                 onError?.(`YouTube: ${data.error || 'Failed to send message'}`);
             }
         } catch (err) {
             console.error('Failed to send YouTube message:', err);
+            onOptimisticFailed?.(optimisticId);
+            setYtMessage(text); // restore input on failure
             onError?.('Failed to send YouTube message');
         } finally {
             setYtSending(false);
         }
-    }, [ytMessage, youtubeVideoId, onError]);
+    }, [ytMessage, youtubeVideoId, onError, onOptimisticMessage, onOptimisticFailed]);
 
     const ytInsertEmote = useCallback((emoteName: string) => {
         const input = ytInputRef.current;
