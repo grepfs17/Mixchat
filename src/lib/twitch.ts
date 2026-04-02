@@ -235,9 +235,14 @@ export const getAllFollowedChannels = async (
 
     followedChannels.forEach((ch: any) => {
       if (streamDataMap.has(ch.id)) {
-        ch.viewerCount = streamDataMap.get(ch.id).viewer_count;
+        const s = streamDataMap.get(ch.id);
+        ch.viewerCount = s.viewer_count;
+        ch.gameName = s.game_name || '';
+        ch.thumbnailUrl = s.thumbnail_url || '';
       } else {
         ch.viewerCount = 0;
+        ch.gameName = '';
+        ch.thumbnailUrl = '';
       }
     });
 

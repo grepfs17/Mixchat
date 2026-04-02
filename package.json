@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.8",
     "@twurple/api": "^8.0.3",
     "@twurple/auth": "^8.0.3",
     "@twurple/chat": "^8.0.3",
