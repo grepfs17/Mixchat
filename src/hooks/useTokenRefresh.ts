@@ -30,6 +30,7 @@ export const useTokenRefresh = (
   const intervalRef = useRef<NodeJS.Timeout>();
   const retryCountRef = useRef(0);
   const isRefreshingRef = useRef(false);
+  const retryAfterRef = useRef(0); // epoch ms after which we may retry (429 backoff)
 
   const refreshToken = useCallback(async () => {
     // We need at least a session to refresh. The actual refresh token is read
@@ -55,6 +56,11 @@ export const useTokenRefresh = (
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfterSec = parseInt(response.headers.get('Retry-After') || '60', 10);
+          retryAfterRef.current = Date.now() + retryAfterSec * 1000;
+          throw new Error(`Rate limited – retry after ${retryAfterSec}s`);
+        }
         throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
       }
 
@@ -96,6 +102,11 @@ export const useTokenRefresh = (
     // We do NOT require session.refreshToken here because the server reads it
     // from the httpOnly cookie — the client-side refreshToken is optional.
     if (!session?.expiresAt) {
+      return;
+    }
+
+    // Respect 429 Retry-After backoff — don't attempt until the window has passed.
+    if (Date.now() < retryAfterRef.current) {
       return;
     }
 

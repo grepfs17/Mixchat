@@ -92,4 +92,16 @@
   --color-autocomplete-bg: #1e293b;
   --color-autocomplete-border: #475569;
   --color-autocomplete-selected: #334155;
+
+  /* Typography */
+  --font-ui: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+  /* Pill / capsule border radius */
+  --radius-pill: 999px;
+
+  /* Platform glow shadows */
+  --shadow-glow-accent: 0 0 12px rgba(158, 64, 115, 0.4);
+  --shadow-glow-twitch: 0 0 10px rgba(145, 71, 255, 0.32);
+  --shadow-glow-youtube: 0 0 10px rgba(255, 0, 0, 0.28);
+  --shadow-glow-indigo: 0 0 10px rgba(99, 102, 241, 0.32);
 }

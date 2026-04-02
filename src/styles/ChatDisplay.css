@@ -17,26 +17,26 @@
   padding: 8px 12px;
   background: var(--color-bg-primary);
   color: var(--color-text-white);
-  border-bottom: 1px solid var(--color-border-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   gap: 8px;
 }
 
 .header-button {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-primary);
-  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  padding: 5px 10px;
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   margin-right: 8px;
 }
 
 .header-button:hover:not(:disabled) {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-lighter);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--color-text-white);
 }
 
@@ -70,15 +70,16 @@
 }
 
 .stream-title {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .loading-indicator {
@@ -133,16 +134,17 @@
 }
 
 .message {
-  background: var(--color-bg-secondary);
-  padding: 6px 8px;
-  border-left: 3px solid var(--color-border-medium);
-  transition: background-color 0.2s ease, border-left-color 0.2s ease;
+  background: transparent;
+  padding: 4px 8px 4px 10px;
+  border-left: 2px solid transparent;
+  transition: background-color 0.12s ease, border-left-color 0.12s ease;
   cursor: pointer;
+  border-radius: 2px;
 }
 
 .message:hover {
-  background: var(--color-bg-message-hover);
-  border-left-color: var(--color-border-light);
+  background: rgba(255, 255, 255, 0.03);
+  border-left-color: rgba(255, 255, 255, 0.1);
 }
 
 .message-single-line {
@@ -225,21 +227,21 @@
   bottom: 8px;
   right: 16px;
   background: var(--color-accent);
-  border: 1px solid var(--color-accent-hover);
+  border: none;
   color: #ffffff;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill, 999px);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
   z-index: 100;
-  box-shadow: var(--shadow-accent-sm);
+  box-shadow: 0 2px 12px rgba(158, 64, 115, 0.45);
 }
 
 .go-to-bottom-button:hover {
-  background: var(--color-accent-hover);
-  box-shadow: var(--shadow-accent-md);
+  background: #ad4584;
+  box-shadow: 0 4px 16px rgba(158, 64, 115, 0.58);
   transform: translateY(-2px);
 }
 
@@ -284,34 +286,38 @@
 
 .sidebar-toggle-button {
   padding: 4px 8px;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.15s ease;
 }
 
 .sidebar-toggle-button:hover {
-  background-color: var(--color-bg-tertiary);
+  background-color: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--color-text-primary);
 }
 
 .show-stream-button {
-  padding: 4px 8px;
-  background-color: var(--color-indigo);
+  padding: 4px 10px;
+  background: linear-gradient(135deg, var(--color-indigo) 0%, var(--color-indigo-hover) 100%);
   color: #fff;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
-  transition: background-color 0.2s;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 6px rgba(99, 102, 241, 0.28);
 }
 
 .show-stream-button:hover {
-  background-color: var(--color-indigo-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.42);
 }
 
 .status-badge-live {
@@ -394,17 +400,17 @@
 .message.resub,
 .message.subgift {
   background-color: var(--color-bg-twitch-event);
-  border-left: 3px solid var(--color-border-twitch-event);
+  border-left: 2px solid var(--color-border-twitch-event);
 }
 
 .message.cheer {
   background-color: var(--color-bg-cheer-event);
-  border-left: 3px solid var(--color-border-cheer-event);
+  border-left: 2px solid var(--color-border-cheer-event);
 }
 
 .message.mention {
   background-color: var(--color-bg-mention);
-  border-left: 3px solid var(--color-border-mention);
+  border-left: 2px solid var(--color-border-mention);
   padding-left: 8px;
   margin-left: -8px;
 }

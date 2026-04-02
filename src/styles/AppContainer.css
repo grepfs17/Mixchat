@@ -59,3 +59,92 @@
   }
 }
 
+/* Stream Embed Header */
+.stream-embed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #0e0e0e 0%, #111111 100%);
+  border-bottom: 1px solid #1c1c1c;
+  font-size: 11px;
+  color: #777;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.stream-embed-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.player-type-buttons {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  background: #0d0d0d;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid #1e1e1e;
+}
+
+.player-type-btn {
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  transition: all 0.18s ease;
+  letter-spacing: 0.3px;
+  font-family: var(--font-ui, 'Figtree', system-ui, sans-serif);
+}
+
+.player-type-btn:hover {
+  color: #999;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.player-type-btn.active-twitch {
+  background: linear-gradient(135deg, #9146ff 0%, #6a24c9 100%);
+  color: #fff;
+  box-shadow: 0 1px 8px rgba(145, 70, 255, 0.38);
+}
+
+.player-type-btn.active-m3u8 {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: #fff;
+  box-shadow: 0 1px 8px rgba(99, 102, 241, 0.38);
+}
+
+.player-type-btn.active-youtube {
+  background: linear-gradient(135deg, #ff2222 0%, #c80000 100%);
+  color: #fff;
+  box-shadow: 0 1px 8px rgba(255, 0, 0, 0.32);
+}
+
+.stream-embed-close {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.stream-embed-close:hover {
+  color: #aaa;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+

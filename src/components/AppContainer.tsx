@@ -86,19 +86,42 @@ export default function AppContainer() {
   });
 
   // Token refresh management
+  const handleTwitchSessionUpdate = useCallback((updatedSession: PlatformSession) => {
+    setSessions((prev) => {
+      const updatedSessions = { ...prev, twitch: updatedSession };
+      localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updatedSessions)));
+      return updatedSessions;
+    });
+  }, []);
+
+  const handleTwitchRefreshError = useCallback((error: Error) => {
+    console.error('Token refresh permanently failed:', error);
+    setSessions({});
+    localStorage.removeItem('mixchat_sessions');
+  }, []);
+
+  const handleYoutubeSessionUpdate = useCallback((updatedSession: PlatformSession) => {
+    setSessions((prev) => {
+      const updatedSessions = { ...prev, youtube: updatedSession };
+      localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updatedSessions)));
+      return updatedSessions;
+    });
+  }, []);
+
+  const handleYoutubeRefreshError = useCallback((error: Error) => {
+    console.error('YouTube token refresh permanently failed:', error);
+    setSessions((prev) => {
+      const updated = { ...prev };
+      delete updated.youtube;
+      localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updated)));
+      return updated;
+    });
+  }, []);
+
   useTokenRefresh(
     sessions.twitch || null,
-    (updatedSession) => {
-      const updatedSessions = { ...sessions, twitch: updatedSession };
-      setSessions(updatedSessions);
-      localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updatedSessions)));
-    },
-    (error) => {
-      console.error('Token refresh permanently failed:', error);
-      // Log out user on unrecoverable token refresh error
-      setSessions({});
-      localStorage.removeItem('mixchat_sessions');
-    },
+    handleTwitchSessionUpdate,
+    handleTwitchRefreshError,
     {
       warningThreshold: 10 * 60 * 1000, // Start refresh 10 min before expiry
       checkInterval: 120 * 1000, // Check every 2 minutes
@@ -108,23 +131,8 @@ export default function AppContainer() {
   // Also refresh YouTube tokens when necessary
   useTokenRefresh(
     sessions.youtube || null,
-    (updatedSession) => {
-      setSessions((prev) => {
-        const updatedSessions = { ...prev, youtube: updatedSession };
-        localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updatedSessions)));
-        return updatedSessions;
-      });
-    },
-    (error) => {
-      console.error('YouTube token refresh permanently failed:', error);
-      // Remove only the YouTube session on unrecoverable error
-      setSessions((prev) => {
-        const updated = { ...prev };
-        delete updated.youtube;
-        localStorage.setItem('mixchat_sessions', JSON.stringify(stripTokens(updated)));
-        return updated;
-      });
-    },
+    handleYoutubeSessionUpdate,
+    handleYoutubeRefreshError,
     {
       warningThreshold: 10 * 60 * 1000,
       checkInterval: 120 * 1000,
@@ -248,16 +256,14 @@ export default function AppContainer() {
     setSelectedTwitchChannelName(channelName);
     setSelectedTwitchChannelDisplayName(channelDisplayName);
 
-    // Update URL with channel parameter using the channel name
-    const url = new URL(window.location.href);
-    url.searchParams.set('twitchChannel', channelName);
-    window.history.pushState({}, '', url);
+    // Update URL to /channel/<name>
+    window.history.pushState({}, '', `/channel/${channelName}`);
   }, [twitchChannels, allTwitchChannels, sessions.twitch]);
 
-  // Restore channel from URL parameters
+  // Restore channel from URL path /channel/<name>
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const channelParam = params.get('twitchChannel');
+    const match = window.location.pathname.match(/^\/channel\/([^\/]+)$/);
+    const channelParam = match ? decodeURIComponent(match[1]) : null;
 
     if (channelParam && !hasLoadedChannel) {
       const foundChannel = twitchChannels.find((ch) => ch.name === channelParam);
@@ -265,13 +271,9 @@ export default function AppContainer() {
         setChannelData(foundChannel.id);
         setHasLoadedChannel(true);
       } else if (twitchChannels.length > 0) {
-        // If channel not found, use first channel and clear the invalid parameter
-        window.history.replaceState({}, '', window.location.pathname);
+        // Channel from URL not found — go back to root without auto-selecting
+        window.history.replaceState({}, '', '/');
       }
-    } else if (twitchChannels.length > 0 && !hasLoadedChannel) {
-      // Load first channel if no URL parameter
-      setChannelData(twitchChannels[0].id);
-      setHasLoadedChannel(true);
     }
   }, [twitchChannels, hasLoadedChannel, setChannelData]);
 
@@ -499,26 +501,6 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_chat_font', JSON.stringify(chatFont));
   }, [chatFont]);
 
-  // Handle URL parameter to open channel directly
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const channelParam = params.get('channel');
-
-    if (channelParam && twitchChannels.length > 0 && !hasLoadedChannel) {
-      // Try to find channel by name (case-insensitive)
-      const channel = twitchChannels.find(
-        (ch) => ch.name.toLowerCase() === channelParam.toLowerCase()
-      );
-
-      if (channel) {
-        setChannelData(channel.id);
-        setHasLoadedChannel(true);
-        // Remove the parameter from URL to avoid confusion
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, [twitchChannels, hasLoadedChannel, setChannelData]);
-
   // Handle mouse events for resizing
   useEffect(() => {
     if (!isDragging) return;
@@ -735,9 +717,9 @@ export default function AppContainer() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: leftColumnVisible ? '280px 1fr' : '1fr', gap: '0', height: '100%' }}>
       {leftColumnVisible && (
-        <div data-sidebar-section style={{ display: 'flex', flexDirection: 'column', gap: '0', overflowY: 'auto', padding: '0', borderRight: '1px solid #1a1a1a' }}>
+        <div data-sidebar-section style={{ display: 'flex', flexDirection: 'column', gap: '0', overflowY: 'auto', padding: '0', borderRight: '1px solid #1c1c1c', background: 'linear-gradient(160deg, #131313 0%, #0d0d0d 100%)' }}>
           {/* Close button for mobile */}
-          <div style={{ display: 'none', justifyContent: 'flex-end', padding: '8px', backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }} className="sidebar-close-btn-container">
+          <div style={{ display: 'none', justifyContent: 'flex-end', padding: '8px', backgroundColor: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.06)' }} className="sidebar-close-btn-container">
             <button
               onClick={() => setLeftColumnVisible(false)}
               style={{
@@ -756,14 +738,6 @@ export default function AppContainer() {
               <FaTimes size={18} />
             </button>
           </div>
-          {(isLoggingIn || isLoading) && (
-            <div className="loading-overlay">
-              <div className="loading-spinner"></div>
-              <div className="loading-text">
-                {isLoggingIn ? 'Connecting to Twitch...' : 'Loading...'}
-              </div>
-            </div>
-          )}
           <LoginPanel
             twitchConnected={!!sessions.twitch}
             twitchUser={sessions.twitch?.displayName}
@@ -799,47 +773,19 @@ export default function AppContainer() {
       <div style={{ display: 'grid', gridTemplateColumns: showStreamEmbed ? `${videoRatio}fr 2px ${100 - videoRatio}fr` : '1fr', gap: '0', overflow: 'hidden', backgroundColor: '#1a1a1a' }} data-app-grid className="app-grid">
         {showStreamEmbed && (
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }} data-stream-embed>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 12px',
-              backgroundColor: '#0a0a0a',
-              borderRight: '1px solid #1a1a1a',
-              fontSize: '12px',
-              color: '#999',
-              gap: '8px'
-            }}>
-              <span>{playerType === 'youtube' ? 'YouTube Stream' : 'Twitch Stream'}</span>
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <div className="stream-embed-header">
+              <span className="stream-embed-title">{playerType === 'youtube' ? 'YouTube' : 'Twitch'}</span>
+              <div className="player-type-buttons">
                 <button
                   onClick={() => setPlayerType('embed')}
-                  style={{
-                    background: playerType === 'embed' ? '#6366f1' : '#2d2d2d',
-                    border: 'none',
-                    color: playerType === 'embed' ? '#fff' : '#999',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    transition: 'all 0.2s',
-                  }}
+                  className={`player-type-btn${playerType === 'embed' ? ' active-twitch' : ''}`}
                   title="Twitch embed player"
                 >
                   Twitch
                 </button>
                 <button
                   onClick={() => setPlayerType('m3u8')}
-                  style={{
-                    background: playerType === 'm3u8' ? '#6366f1' : '#2d2d2d',
-                    border: 'none',
-                    color: playerType === 'm3u8' ? '#fff' : '#999',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    transition: 'all 0.2s',
-                  }}
+                  className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
                   title="M3U8 HLS player"
                 >
                   M3U8
@@ -847,16 +793,7 @@ export default function AppContainer() {
                 {linkedYoutubeUrl && (
                   <button
                     onClick={() => setPlayerType('youtube')}
-                    style={{
-                      background: playerType === 'youtube' ? '#FF0000' : '#2d2d2d',
-                      border: 'none',
-                      color: playerType === 'youtube' ? '#fff' : '#999',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      transition: 'all 0.2s',
-                    }}
+                    className={`player-type-btn${playerType === 'youtube' ? ' active-youtube' : ''}`}
                     title="YouTube live stream"
                   >
                     YouTube
@@ -865,19 +802,10 @@ export default function AppContainer() {
               </div>
               <button
                 onClick={() => setShowStreamEmbed(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#999',
-                  cursor: 'pointer',
-                  padding: '0 4px',
-                  lineHeight: '1',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
+                className="stream-embed-close"
                 title="Hide stream embed"
               >
-                <FaTimes size={16} />
+                <FaTimes size={15} />
               </button>
             </div>
             <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a' }}>
@@ -997,6 +925,16 @@ export default function AppContainer() {
             userSelect: 'none',
           }}
         />
+      )}
+
+      {/* Loading / Login Overlay */}
+      {(isLoggingIn || isLoading) && (
+        <div className="loading-overlay">
+          <div className="loading-spinner"></div>
+          <div className="loading-text">
+            {isLoggingIn ? 'Connecting...' : 'Loading...'}
+          </div>
+        </div>
       )}
     </div>
   );
