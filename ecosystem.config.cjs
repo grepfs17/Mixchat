@@ -4,7 +4,7 @@ module.exports = {
       name: 'mixchat',
       script: './dist/server/entry.mjs',
       interpreter: 'node',
-      cwd: './',
+      cwd: '/home/felipe/devel-gitea/Mixchat',
       env: {
         NODE_ENV: 'production',
         HOST: '127.0.0.1',
