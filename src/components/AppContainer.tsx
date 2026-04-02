@@ -955,12 +955,8 @@ export default function AppContainer() {
           onViewNow={() => {
             // Persist that user has seen this notification so it won't reappear
             markStreamerNotified(newLiveStreamer.id);
-            // Open channel in new tab with shareable URL
-            const channelName = newLiveStreamer.name || newLiveStreamer.id;
-            const url = new URL(window.location.href);
-            url.searchParams.set('twitchChannel', channelName);
+            setChannelData(newLiveStreamer.id);
             clearNewNotification();
-            window.location.href = url.toString();
           }}
           onClose={() => {
             markStreamerNotified(newLiveStreamer.id);
