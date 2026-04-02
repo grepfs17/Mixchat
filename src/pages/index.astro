@@ -72,7 +72,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       height: 100vh; /* fallback */
       height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
       padding: 0;
-      padding-bottom: 34px;
+      padding-bottom: 30px;
       background: var(--color-bg-primary);
       overflow: hidden;
     }
@@ -83,24 +83,18 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       left: 0;
       right: 0;
       border-top: 1px solid var(--color-border-medium);
-      padding: 12px 20px;
+      padding: 6px 20px;
       background: var(--color-bg-primary);
       font-size: 12px;
       color: var(--color-text-secondary);
       text-align: center;
       z-index: 100;
-      height: 34px;
+      height: 30px;
       box-sizing: border-box;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-    }
-
-    footer img {
-      position: absolute;
-      left: 20px;
-      opacity: 0.7;
     }
 
     footer a {
@@ -147,11 +141,6 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
         target="_blank">MIT</a
       > — {DISPLAY_VERSION}</span
     >
-    <img
-      src="/logo.png"
-      alt="Mixchat Logo"
-      style="width: auto; height: 24px;"
-    />
   </footer>
   <script is:inline>
     // When the virtual keyboard opens, visualViewport.height shrinks.

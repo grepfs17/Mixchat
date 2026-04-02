@@ -3,7 +3,7 @@ import { getTwitchUserById } from "../../lib/twitch";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
-  if (!checkRateLimit(`${clientAddress}:user-info`, 60, 60_000)) {
+  if (!checkRateLimit(`${clientAddress}:user-info`, 300, 60_000)) {
     return new Response(
       JSON.stringify({ error: "Too many requests" }),
       { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },

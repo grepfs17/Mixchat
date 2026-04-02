@@ -375,6 +375,9 @@ interface BroadcasterInfo {
   profileImageUrl?: string;
 }
 
+/** Module-level cache so repeated emote refreshes don't re-fetch the same IDs */
+const broadcasterInfoCache = new Map<string, BroadcasterInfo>();
+
 /**
  * Resolve Twitch user IDs to display names + profile images.
  * Uses the existing /api/user-info endpoint, 10 requests in parallel at a time.
@@ -385,9 +388,21 @@ async function fetchBroadcasterInfo(
   if (ownerIds.length === 0) return {};
   const map: Record<string, BroadcasterInfo> = {};
 
+  const uncachedIds: string[] = [];
+  for (const id of ownerIds) {
+    const cached = broadcasterInfoCache.get(id);
+    if (cached) {
+      map[id] = cached;
+    } else {
+      uncachedIds.push(id);
+    }
+  }
+
+  if (uncachedIds.length === 0) return map;
+
   const CONCURRENCY = 10;
-  for (let i = 0; i < ownerIds.length; i += CONCURRENCY) {
-    const batch = ownerIds.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < uncachedIds.length; i += CONCURRENCY) {
+    const batch = uncachedIds.slice(i, i + CONCURRENCY);
     await Promise.all(
       batch.map(async (id) => {
         try {
@@ -396,10 +411,12 @@ async function fetchBroadcasterInfo(
           const user = await response.json();
           const name = user?.displayName || user?.display_name || user?.login;
           if (name) {
-            map[String(id)] = {
+            const info: BroadcasterInfo = {
               name,
               profileImageUrl: user?.profileImageUrl || user?.profile_image_url,
             };
+            broadcasterInfoCache.set(id, info);
+            map[String(id)] = info;
           }
         } catch {
           // skip unresolvable IDs

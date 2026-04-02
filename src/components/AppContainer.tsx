@@ -806,6 +806,12 @@ export default function AppContainer() {
             onChatFontChange={setChatFont}
             mentionSoundEnabled={mentionSoundEnabled}
             onMentionSoundEnabledChange={setMentionSoundEnabled}
+            onGoHome={() => {
+              setSelectedTwitchChannel('');
+              setSelectedTwitchChannelName('');
+              setSelectedTwitchChannelDisplayName('');
+              window.history.pushState({}, '', '/');
+            }}
           />
         </div>
       )}
