@@ -173,6 +173,89 @@
   border-radius: var(--radius-sm);
 }
 
+/* ── YouTube emoji picker popup ── */
+.yt-emoji-picker {
+  width: 300px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 10px;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.7);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInUp 0.15s ease-out;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.yt-emoji-picker-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border-medium);
+  background: var(--color-bg-primary);
+}
+
+.yt-emoji-picker-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.yt-emoji-picker-search-input:focus {
+  border-color: var(--color-youtube);
+  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
+}
+
+.yt-emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.yt-emoji-picker-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.yt-emoji-picker-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.yt-emoji-picker-grid::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: 2px;
+}
+
+.yt-emoji-picker-item {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 2px;
+  cursor: pointer;
+  transition: background 0.1s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+}
+
+.yt-emoji-picker-item:hover {
+  background: var(--color-bg-hover);
+  transform: scale(1.2);
+}
+
 .emote-picker-button:hover:not(:disabled) {
   background: var(--color-bg-tertiary);
   border-color: var(--color-border-lighter);

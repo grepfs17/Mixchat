@@ -226,20 +226,23 @@ function parseLiveChatMessage(msg: any): ChatMessage {
         const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
         const isCustom = !!emoji.is_custom;
 
-        if (!url) {
-          // Standard unicode emoji: emoji_id IS the character, render as text
-          if (!isCustom && emoji.emoji_id) {
+        // Standard (non-custom) emojis: always render as the raw Unicode character
+        if (!isCustom) {
+          if (emoji.emoji_id) {
             parts.push({ type: 'text', text: emoji.emoji_id });
           }
           continue;
         }
+
+        // Custom channel emote, needs the image URL
+        if (!url) continue;
 
         parts.push({
           type: 'emoji',
           url,
           alt: name,
           emojiText: name,
-          isCustomEmoji: isCustom,
+          isCustomEmoji: true,
         });
       } else {
         parts.push({
