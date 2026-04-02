@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StaticAuthProvider } from '@twurple/auth';
-import { ChatClient } from '@twurple/chat';
+import { ChatClient, UserState } from '@twurple/chat';
 import { getBadgeDetail } from '../lib/badges';
 import type { ChatMessage } from '../lib/types';
 
@@ -87,7 +87,8 @@ export function useTwitchChat(
   username: string,
   onMessage: (message: ChatMessage) => void,
   enabled: boolean = true,
-  mentionSoundEnabled: boolean = true
+  mentionSoundEnabled: boolean = true,
+  onOwnBadgesLoaded?: (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => void
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
@@ -126,6 +127,26 @@ export function useTwitchChat(
       if (!active) return;
       console.log('Disconnected from Twitch chat');
       setIsConnected(false);
+    });
+
+
+    newClient.irc.onTypedMessage(UserState, (msg) => {
+      if (!active || !onOwnBadgesLoaded) return;
+      const badgesStr = msg.tags.get('badges') || '';
+      const badgeImages: Record<string, string> = {};
+      const badgeDetailsMap: Record<string, { url: string; title: string }> = {};
+      if (badgesStr) {
+        badgesStr.split(',').forEach((badge) => {
+          const [name, version] = badge.split('/');
+          if (!name || !version) return;
+          const detail = getBadgeDetail(name, version);
+          if (detail) {
+            badgeImages[name] = detail.url;
+            badgeDetailsMap[name] = { url: detail.url, title: detail.title };
+          }
+        });
+      }
+      onOwnBadgesLoaded(badgeImages, badgeDetailsMap);
     });
 
     newClient.onMessage((_channel, _user, message, msg) => {
@@ -435,7 +456,7 @@ export function useTwitchChat(
         newClient.quit();
       }
     };
-  }, [channelName, accessToken, username, onMessage, enabled, clientId]);
+  }, [channelName, accessToken, username, onMessage, enabled, clientId, onOwnBadgesLoaded]);
 
   const sendMessage = useCallback(
     async (message: string, replyToMessageId?: string) => {

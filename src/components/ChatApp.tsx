@@ -281,6 +281,17 @@ export default function ChatApp({
 
   // Use Twitch chat hook - pass the channel NAME not ID
   const [badgesReady, setBadgesReady] = useState(false);
+
+  // Populate badges for optimistic message
+  const handleOwnBadgesLoaded = useCallback(
+    (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
+      if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
+        currentUserBadgesRef.current = { badges, badgeDetails };
+      }
+    },
+    []
+  );
+
   const { sendMessage: sendTwitchMessage } =
     useTwitchChat(
       selectedTwitchChannelName, // Use the channel name (login), not the ID
@@ -288,7 +299,8 @@ export default function ChatApp({
       twitchSession?.username || twitchSession?.displayName || '', // Use login (username) for chat
       handleTwitchMessage,
       badgesReady,
-      mentionSoundEnabled
+      mentionSoundEnabled,
+      handleOwnBadgesLoaded
     );
 
   // Simulate loading chat messages from selected channel
