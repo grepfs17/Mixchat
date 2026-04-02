@@ -1,10 +1,12 @@
+
+/** Example file for PM2 ecosystem configuration */
 module.exports = {
   apps: [
     {
       name: 'mixchat',
       script: './dist/server/entry.mjs',
       interpreter: 'node',
-      cwd: '/home/felipe/devel-gitea/Mixchat',
+      cwd: '/home/user/devel/Mixchat',
       env: {
         NODE_ENV: 'production',
         HOST: '127.0.0.1',
