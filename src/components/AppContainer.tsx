@@ -895,7 +895,7 @@ export default function AppContainer() {
           <div
             data-resizer
             style={{
-              width: '2px',
+              width: '4px',
               backgroundColor: '#1a1a1a',
               cursor: 'col-resize',
               userSelect: 'none',
