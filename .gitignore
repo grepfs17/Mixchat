@@ -11,3 +11,4 @@ dist/
 
 *lock.*
 *frontend*
+ecosystem.config.cjs
