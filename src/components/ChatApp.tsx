@@ -521,11 +521,37 @@ export default function ChatApp({
   }, []);
 
   const handleYtOptimisticMessage = useCallback((id: string, text: string) => {
+    // Parse the raw text into typed parts so emote names render as images
+    type Part = import('./UnifiedChat').YTMessage['parts'][number];
+    const parts: Part[] = [];
+    const registry = ytEmoteRegistryRef.current;
+
+    if (registry.size > 0) {
+      // Build a regex that matches any known emote name (escaped)
+      const pattern = Array.from(registry.keys())
+        .map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+      const regex = new RegExp(`(${pattern})`, 'g');
+      let last = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(text)) !== null) {
+        if (match.index > last) {
+          parts.push({ type: 'text', text: text.slice(last, match.index) });
+        }
+        const emote = registry.get(match[0])!;
+        parts.push({ type: 'emoji', url: emote.url, alt: emote.name, emojiText: emote.name, isCustomEmoji: emote.isCustom });
+        last = match.index + match[0].length;
+      }
+      if (last < text.length) parts.push({ type: 'text', text: text.slice(last) });
+    }
+
+    if (parts.length === 0) parts.push({ type: 'text', text });
+
     const optimistic: import('./UnifiedChat').YTMessage = {
       id,
       author: youtubeSession?.displayName || 'You',
       authorAvatar: youtubeSession?.profileImageUrl,
-      parts: [{ type: 'text', text }],
+      parts,
       timestamp: new Date(),
       optimistic: true,
     };

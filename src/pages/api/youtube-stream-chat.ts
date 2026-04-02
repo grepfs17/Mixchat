@@ -229,15 +229,15 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
     for (const run of msg.message.runs) {
       if (run.emoji) {
         const emoji = run.emoji;
+        // shortcuts[0] is the shortcode e.g. ":cat-orange-whistling:"
+        // emoji_id is the unicode character for standard emojis
         const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-        // Try multiple possible thumbnail paths (YouTube.js may vary)
-        const url = emoji.image?.thumbnails?.[0]?.url
-          || (Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined);
-
-        const isCustom = !!emoji.is_custom_emoji;
+        // image is Thumbnail[] directly in YouTube.js — no nested .thumbnails
+        const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
+        const isCustom = !!emoji.is_custom;
 
         if (!url) {
-          // For standard unicode emojis, emoji_id IS the unicode character use it as text
+          // Standard unicode emoji: emoji_id IS the character, render as text
           if (!isCustom && emoji.emoji_id) {
             parts.push({ type: 'text', text: emoji.emoji_id });
           }
@@ -253,7 +253,7 @@ function parseLiveChatMessage(msg: any, emoteMap: Map<string, YTEmoteEntry>): Ch
           url,
           alt: name,
           emojiText: name,
-          isCustomEmoji: isCustom
+          isCustomEmoji: isCustom,
         });
       } else {
         parts.push({
