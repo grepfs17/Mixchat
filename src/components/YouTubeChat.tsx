@@ -28,7 +28,6 @@ interface MessagePart {
 interface ChatMessage {
   id: string;
   author: string;
-  authorAvatar?: string;
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
@@ -98,7 +97,6 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           const fetchedMessages = (data.messages as any[]).map((msg: any) => ({
             id: msg.id,
             author: msg.author,
-            authorAvatar: msg.authorAvatar,
             badges: msg.badges,
             parts: (msg.parts || []) as MessagePart[],
             timestamp: new Date(msg.timestamp),
@@ -199,21 +197,11 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           </div>
         )}
         {(() => {
-          // Only render the avatar on the last (most recent) message per author
-          // to avoid firing dozens of simultaneous image requests to yt*.ggpht.com,
-          // which triggers 429 rate-limits from Google's CDN.
-          const lastIndexByAuthor = new Map<string, number>();
-          mergedMessages.forEach((msg, i) => lastIndexByAuthor.set(msg.author, i));
-
           return mergedMessages.map((msg, index) => {
-          const showAvatar = lastIndexByAuthor.get(msg.author) === index;
           if (msg.superchat) {
             return (
               <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
                 <div className="yt-superchat-header">
-                  {msg.authorAvatar && showAvatar && (
-                    <img src={msg.authorAvatar} alt={msg.author} className="avatar" loading="lazy" />
-                  )}
                   <div className="yt-superchat-info">
                     <div className="yt-superchat-author">{msg.author}</div>
                     <div className="yt-superchat-amount">{msg.superchat.amount}</div>
@@ -242,9 +230,6 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                 <span className="timestamp">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
-                {msg.authorAvatar && showAvatar && (
-                  <img src={msg.authorAvatar} alt={msg.author} className="avatar" loading="lazy" />
-                )}
                 {msg.badges && Object.keys(msg.badges).length > 0 && (
                   <div className="yt-message-badges">
                     {Object.entries(msg.badges).map(([name, url]) => (
