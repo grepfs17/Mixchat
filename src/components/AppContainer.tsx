@@ -13,6 +13,7 @@ import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';
 import { useStreamMonitor } from '../hooks/useStreamMonitor';
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { markStreamerNotified } from '../lib/streamMonitor';
+import { primeAudioContext } from '../hooks/useTwitchChat';
 import StreamGrid from './StreamGrid';
 
 // Don't save access tokens to localStorage for security. 
@@ -769,7 +770,11 @@ export default function AppContainer() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: leftColumnVisible ? '280px 1fr' : '1fr', gap: '0', height: '100%' }}>
+    <div
+      style={{ display: 'grid', gridTemplateColumns: leftColumnVisible ? '280px 1fr' : '1fr', gap: '0', height: '100%' }}
+      onClick={primeAudioContext}
+      onKeyDown={primeAudioContext}
+    >
       {leftColumnVisible && (
         <div data-sidebar-section style={{ display: 'flex', flexDirection: 'column', gap: '0', overflowY: 'auto', padding: '0', borderRight: '1px solid #1c1c1c', background: 'linear-gradient(160deg, #131313 0%, #0d0d0d 100%)' }}>
           {/* Close button for mobile */}

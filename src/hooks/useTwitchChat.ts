@@ -81,22 +81,56 @@ async function getSourceChannelInfo(
   return fallback;
 }
 
+// Single shared AudioContext — reusing it avoids the browser suspending a
+// freshly-created context that has no prior user-gesture association.
+let sharedAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  try {
+    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+      sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+/** Primes the shared AudioContext on the first user interaction so it is
+ *  already in a running state when a mention arrives. Call this once on any
+ *  click/keydown in the app. */
+export function primeAudioContext() {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+}
+
 /** Plays a short notification beep using the Web Audio API. */
 function playMentionSound(volume: number) {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gain = ctx.createGain();
-    oscillator.connect(gain);
-    gain.connect(ctx.destination);
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.25);
-    oscillator.onended = () => ctx.close();
-  } catch (e) { /* audio not supported */ }
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const play = () => {
+    try {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.25);
+    } catch { /* audio not supported */ }
+  };
+
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(play).catch(() => {});
+  } else {
+    play();
+  }
 }
 
 export function useTwitchChat(
