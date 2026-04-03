@@ -431,8 +431,8 @@ export const getRecentMessages = async (
             return null;
           }
 
-          const author = userMatch[1];
-          const content = contentMatch[1];
+          const loginName = userMatch[1];
+          const rawContent = contentMatch[1];
 
           // Parse tags
           let tags: Record<string, string> = {};
@@ -445,6 +445,9 @@ export const getRecentMessages = async (
               }),
             );
           }
+
+          // Use display-name tag when available so names render with proper casing
+          const author = tags["display-name"] || loginName;
 
           let badges: Record<string, string> = {};
           let badgeDetails: Record<string, { url: string; title: string }> = {};
@@ -469,6 +472,32 @@ export const getRecentMessages = async (
             );
           }
 
+          // Parse reply-parent tags (present when this message is itself a reply)
+          let replyTo: { id: string; author: string; content: string } | undefined = undefined;
+          if (tags["reply-parent-msg-id"]) {
+            // IRC tag values escape spaces as \s – unescape for display
+            const parentBody = (tags["reply-parent-msg-body"] || "")
+              .replace(/\\s/g, " ")
+              .replace(/\\:/g, ";")
+              .replace(/\\\\/g, "\\");
+            replyTo = {
+              id: tags["reply-parent-msg-id"],
+              author: tags["reply-parent-display-name"] || tags["reply-parent-user-login"] || "",
+              content: parentBody,
+            };
+          }
+
+          // When a message is a reply, Twitch prepends "@login " to the content
+          // in the IRC line. Strip it so the content matches what Twurple returns
+          // for live messages.
+          let content = rawContent;
+          if (replyTo && content.startsWith("@")) {
+            const spaceIdx = content.indexOf(" ");
+            if (spaceIdx !== -1) {
+              content = content.substring(spaceIdx + 1);
+            }
+          }
+
           // Use the actual Twitch message ID if available, otherwise fall back to a composite ID
           const messageId = tags["id"] || `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
 
@@ -477,6 +506,7 @@ export const getRecentMessages = async (
             platform: "twitch",
             author,
             content,
+            replyTo,
             timestamp: new Date(parseInt(tags["tmi-sent-ts"]) || Date.now()),
             userId: tags["user-id"] || "",
             authorColor: tags["color"] || "#FFFFFF",
