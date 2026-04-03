@@ -39,6 +39,9 @@ const activeLiveChats = new Map<
   {
     chat: any;
     messages: ChatMessage[];
+    /** Per-author avatar URL cache YouTube InnerTube omits thumbnails
+     *  intermittently, so we remember the last seen URL and reuse it. */
+    authorAvatars: Map<string, string>;
     lastUpdate: number;
   }
 >();
@@ -100,6 +103,30 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
       const chat = info.getLiveChat();
       const messages: ChatMessage[] = [];
+      /** Persists the last-seen avatar URL per author name so it can be
+       *  reapplied when InnerTube omits thumbnails on subsequent messages. */
+      const authorAvatars = new Map<string, string>();
+
+      /**
+       * Fills in a missing authorAvatar from the cache, or stores a newly
+       * seen URL and back-fills any already-buffered messages from that author.
+       */
+      const enrichAvatar = (msg: ChatMessage): ChatMessage => {
+        if (msg.authorAvatar) {
+          // New avatar seen — cache it and back-fill older buffered messages
+          if (!authorAvatars.has(msg.author) || authorAvatars.get(msg.author) !== msg.authorAvatar) {
+            authorAvatars.set(msg.author, msg.authorAvatar);
+            for (const m of messages) {
+              if (m.author === msg.author && !m.authorAvatar) {
+                m.authorAvatar = msg.authorAvatar;
+              }
+            }
+          }
+          return msg;
+        }
+        const cached = authorAvatars.get(msg.author);
+        return cached ? { ...msg, authorAvatar: cached } : msg;
+      };
 
       // Helper: map an AddChatItemAction item to a ChatMessage
       const parseChatItem = (item: any): ChatMessage | null => {
@@ -125,7 +152,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
               if (!item) continue;
               const chatMsg = parseChatItem(item);
               if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-                messages.push(chatMsg);
+                messages.push(enrichAvatar(chatMsg));
                 if (messages.length > 200) messages.shift();
               }
             }
@@ -139,7 +166,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
           if (!item) return;
           const chatMsg = parseChatItem(item);
           if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-            messages.push(chatMsg);
+            messages.push(enrichAvatar(chatMsg));
             if (messages.length > 200) messages.shift();
           }
         }
@@ -171,6 +198,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       chatSession = {
         chat,
         messages,
+        authorAvatars,
         lastUpdate: Date.now(),
       };
 
