@@ -174,7 +174,6 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
-        <div className="yt-chat-error-sub">You can still send messages below</div>
       </div>
     );
   }

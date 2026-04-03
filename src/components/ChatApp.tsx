@@ -657,15 +657,24 @@ export default function ChatApp({
           {/* YouTube message input (when we have a live video) */}
           {linkedYoutubeUrl && youtubeVideoId && (
             <div style={{ borderTop: '1px solid #333' }}>
-              <YouTubeMessageInput
-                youtubeVideoId={youtubeVideoId}
-                onOptimisticMessage={handleYtOptimisticMessage}
-                onOptimisticFailed={handleYtOptimisticFailed}
-                onError={(msg) => {
-                  notificationIdRef.current += 1;
-                  setNotification({ message: msg, type: 'error', id: notificationIdRef.current });
-                }}
-              />
+              {youtubeSession ? (
+                <YouTubeMessageInput
+                  youtubeVideoId={youtubeVideoId}
+                  onOptimisticMessage={handleYtOptimisticMessage}
+                  onOptimisticFailed={handleYtOptimisticFailed}
+                  onError={(msg) => {
+                    notificationIdRef.current += 1;
+                    setNotification({ message: msg, type: 'error', id: notificationIdRef.current });
+                  }}
+                />
+              ) : (
+                <div style={{ padding: '8px 12px', fontSize: '12px', color: '#aaa', textAlign: 'center', backgroundColor: '#0f0f0f' }}>
+                  <button
+                    onClick={() => (document.querySelector<HTMLElement>('.login-btn.youtube-btn') as HTMLElement | null)?.click()}
+                    style={{ color: '#ff6b6b', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 'inherit' }}
+                  >Login with YouTube</button> to send messages
+                </div>
+              )}
             </div>
           )}
         </>
@@ -701,15 +710,24 @@ export default function ChatApp({
                     </div>
                   </div>
                   {/* YouTube message input */}
-                  <YouTubeMessageInput
-                    youtubeVideoId={youtubeVideoId}
-                    onOptimisticMessage={handleYtOptimisticMessage}
-                    onOptimisticFailed={handleYtOptimisticFailed}
-                    onError={(msg) => {
-                      notificationIdRef.current += 1;
-                      setNotification({ message: msg, type: 'error', id: notificationIdRef.current });
-                    }}
-                  />
+                  {youtubeSession ? (
+                    <YouTubeMessageInput
+                      youtubeVideoId={youtubeVideoId}
+                      onOptimisticMessage={handleYtOptimisticMessage}
+                      onOptimisticFailed={handleYtOptimisticFailed}
+                      onError={(msg) => {
+                        notificationIdRef.current += 1;
+                        setNotification({ message: msg, type: 'error', id: notificationIdRef.current });
+                      }}
+                    />
+                  ) : (
+                    <div style={{ padding: '8px 12px', fontSize: '12px', color: '#aaa', textAlign: 'center', backgroundColor: '#0f0f0f' }}>
+                      <button
+                        onClick={() => (document.querySelector<HTMLElement>('.login-btn.youtube-btn') as HTMLElement | null)?.click()}
+                        style={{ color: '#ff6b6b', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 'inherit' }}
+                      >Login with YouTube</button> to send messages
+                    </div>
+                  )}
                 </>
               ) : (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f0f0f', padding: '20px', gap: '10px' }}>

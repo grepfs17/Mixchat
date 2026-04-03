@@ -6,7 +6,7 @@ import { checkRateLimit } from "../../lib/rateLimit";
 const liveVideoCache = new Map<string, { videoId: string | null; expires: number }>();
 const LIVE_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ url, clientAddress }) => {
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",
@@ -38,16 +38,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       return new Response(
         JSON.stringify({ error: "Invalid channelUrl" }),
         { status: 400, headers },
-      );
-    }
-
-    // Require authentication — prevents unauthenticated callers from triggering
-    // Innertube requests on the server.
-    const accessToken = cookies.get("youtube_token")?.value;
-    if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers },
       );
     }
 

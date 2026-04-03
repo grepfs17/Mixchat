@@ -42,7 +42,7 @@ const activeLiveChats = new Map<
   }
 >();
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ url, clientAddress }) => {
   if (!checkRateLimit(`${clientAddress}:youtube-stream-chat`, 60, 60_000)) {
     return new Response(
       JSON.stringify({ error: 'Too many requests' }),
@@ -64,16 +64,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     return new Response(
       JSON.stringify({ error: 'Invalid videoId' }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  // Require authentication — prevents unauthenticated callers from creating
-  // server-side chat sessions and consuming server memory.
-  const accessToken = cookies.get('youtube_token')?.value;
-  if (!accessToken) {
-    return new Response(
-      JSON.stringify({ error: 'Not authenticated' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
 

@@ -77,43 +77,98 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 <body>
 <script nonce="${locals.nonce}">
   (function () {
-    // --- CSRF state validation ---
-    var expectedState = sessionStorage.getItem('twitch_oauth_state');
     var returnedState = ${returnedStateJson};
+    console.log('[twitch-callback] script running, returnedState:', returnedState);
+
+    // --- Read CSRF state ---
+    // Primary: sessionStorage (per-tab, survives same-tab navigations).
+    var expectedState = sessionStorage.getItem('twitch_oauth_state');
+    var returnUrl = sessionStorage.getItem('twitch_oauth_return_url') || '/';
     sessionStorage.removeItem('twitch_oauth_state');
+    sessionStorage.removeItem('twitch_oauth_return_url');
+    console.log('[twitch-callback] sessionStorage state:', expectedState, 'returnUrl:', returnUrl);
+
+    // Fallback: localStorage (handles Firefox privacy modes that clear sessionStorage).
+    if (!expectedState) {
+      try {
+        var raw = localStorage.getItem('twitch_oauth_state_fb');
+        console.log('[twitch-callback] localStorage fallback raw:', raw);
+        if (raw) {
+          var fb = JSON.parse(raw);
+          if (fb && fb.exp > Date.now()) {
+            expectedState = fb.state;
+            returnUrl = fb.returnUrl || '/';
+            console.log('[twitch-callback] using localStorage fallback state:', expectedState);
+          } else {
+            console.log('[twitch-callback] localStorage fallback expired');
+          }
+        }
+      } catch (e) {
+        console.error('[twitch-callback] localStorage fallback error:', e);
+      }
+    }
+    try { localStorage.removeItem('twitch_oauth_state_fb'); } catch (_) {}
+
+    console.log('[twitch-callback] expectedState:', expectedState, 'match:', expectedState === returnedState);
 
     if (!expectedState || expectedState !== returnedState) {
-      document.body.innerText = 'Authentication failed: invalid state. Possible CSRF attack.';
+      document.body.innerHTML =
+        '<pre style="font-family:sans-serif;padding:2rem">' +
+        'Authentication failed: invalid state.\n\n' +
+        'expectedState: ' + (expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING') + '\n' +
+        'returnedState: ' + (returnedState ? 'present (len=' + returnedState.length + ')' : 'MISSING') + '\n' +
+        'match: ' + (expectedState === returnedState) + '\n\n' +
+        'Check the browser console for details.\n\n' +
+        '<a href="/">Go back and try again</a>' +
+        '</pre>';
       return;
     }
-    // --- End CSRF check ---
 
     var session = ${sessionPayload};
+    console.log('[twitch-callback] session ok, user:', session.username, 'redirecting to:', returnUrl);
 
     try {
       var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
-      // Strip accessToken: it lives only in memory (React state) and is
-      // repopulated on reload via useTokenRefresh + the httpOnly cookie.
       var persisted = Object.assign({}, session);
       delete persisted.accessToken;
       sessions.twitch = persisted;
       localStorage.setItem('mixchat_sessions', JSON.stringify(sessions));
-    } catch (e) { /* storage unavailable */ }
+      console.log('[twitch-callback] session written to localStorage');
+    } catch (e) {
+      console.error('[twitch-callback] localStorage write error:', e);
+    }
+
+    window.location.href = returnUrl;
+log('[twitch-callback] expectedState:', expectedState, 'match:', expectedState === returnedState);
+
+    if (!expectedState || expectedState !== returnedState) {
+      document.body.innerHTML =
+        '<pre style="font-family:sans-serif;padding:2rem">' +
+        'Authentication failed: invalid state.\n\n' +
+        'expectedState: ' + (expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING') + '\n' +
+        'returnedState: ' + (returnedState ? 'present (len=' + returnedState.length + ')' : 'MISSING') + '\n' +
+        'match: ' + (expectedState === returnedState) + '\n\n' +
+        'Check the browser console for details.\n\n' +
+        '<a href="/">Go back and try again</a>' +
+        '</pre>';
+      return;
+    }
+
+    var session = ${sessionPayload};
+    console.log('[twitch-callback] session ok, user:', session.username, 'redirecting to:', returnUrl);
 
     try {
-      if (window.opener && window.opener.postMessage) {
-        window.opener.postMessage({ type: 'mixchat_session', session: session }, window.location.origin);
-      }
-    } catch (e) { /* cross-origin opener */ }
-
-    // If opened as a popup, close after notifying opener; otherwise redirect
-    if (window.opener) {
-      try { window.close(); } catch (e) {}
-      // fallback redirect in case close() is blocked
-      window.location.href = '/';
-    } else {
-      window.location.href = '/';
+      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
+      var persisted = Object.assign({}, session);
+      delete persisted.accessToken;
+      sessions.twitch = persisted;
+      localStorage.setItem('mixchat_sessions', JSON.stringify(sessions));
+      console.log('[twitch-callback] session written to localStorage');
+    } catch (e) {
+      console.error('[twitch-callback] localStorage write error:', e);
     }
+
+    window.location.href = returnUrl;
   })();
 <\/script>
 </body>
