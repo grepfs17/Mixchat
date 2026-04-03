@@ -214,8 +214,8 @@ export default function YouTubeMessageInput({
     };
 
     return (
-        <div className="yt-message-input-wrapper message-input">
-            <div className="yt-input-group input-group">
+        <div className="message-input">
+            <div className="input-group">
                 {/* Emoji autocomplete dropdown */}
                 {showEmojiMenu && emojiResults.length > 0 && menuRect && createPortal(
                     <div

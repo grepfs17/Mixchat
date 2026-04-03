@@ -97,31 +97,6 @@
   height: 18px;
 }
 
-.yt-message-input-wrapper {
-  padding: 8px 10px;
-  gap: 8px;
-  display: flex;
-}
-
-.yt-input-group {
-  position: relative;
-  flex: 1;
-}
-
-.emote-autocomplete-menu {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  max-height: 260px;
-  overflow-y: auto;
-  background: var(--color-autocomplete-bg);
-  border: 1px solid var(--color-autocomplete-border);
-  border-radius: var(--radius-xl);
-  margin-bottom: 6px;
-  z-index: 9999;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
-}
 /* Mobile menus are now portal-rendered with position:fixed via inline styles —
    no CSS overrides needed here. */
 
