@@ -385,9 +385,24 @@
   font-weight: 500;
 }
 
-.message.preloaded {
-  opacity: 0.55;
-  background-color: var(--color-bg-primary);
+.live-start-marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  font-size: 0.68rem;
+  color: #475569;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.live-start-marker::before,
+.live-start-marker::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #1e293b;
 }
 
 .message.deleted {

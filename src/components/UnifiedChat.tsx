@@ -181,10 +181,13 @@ function UnifiedChat({
                     </div>
                 )}
 
-                {entries.map((entry) => {
+                {entries.map((entry, index) => {
                     if (entry.source === 'twitch') {
                         const msg = entry.msg as ChatMessage;
                         const isMentioned = currentUserDisplayName && msg.content.includes(currentUserDisplayName);
+                        const prevEntry = index > 0 ? entries[index - 1] : null;
+                        const prevWasPreloaded = prevEntry?.source === 'twitch' && (prevEntry.msg as ChatMessage).isPreloaded;
+                        const isFirstLive = !msg.isPreloaded && prevWasPreloaded;
                         const messageClasses = [
                             'message',
                             msg.messageType,
@@ -195,7 +198,9 @@ function UnifiedChat({
                         ].filter(Boolean).join(' ');
 
                         return (
-                            <div key={getKey(entry)} className={messageClasses}>
+                            <React.Fragment key={getKey(entry)}>
+                            {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
+                            <div className={messageClasses}>
                                 {msg.replyTo && (
                                     <div className="reply-info">
                                         <span>
@@ -267,6 +272,7 @@ function UnifiedChat({
                                     )}
                                 </div>
                             </div>
+                            </React.Fragment>
                         );
                     }
 

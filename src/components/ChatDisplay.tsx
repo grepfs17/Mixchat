@@ -273,8 +273,9 @@ function ChatDisplay({
               <p>No messages yet. Start chatting!</p>
             </div>
           ) : (
-            filteredMessages.map((msg) => {
+            filteredMessages.map((msg, index) => {
               const isMentioned = currentUserDisplayName && msg.content.includes(currentUserDisplayName);
+              const isFirstLive = !msg.isPreloaded && index > 0 && filteredMessages[index - 1].isPreloaded;
               const messageClasses = [
                 'message',
                 msg.messageType || 'chat',
@@ -285,7 +286,9 @@ function ChatDisplay({
               ].filter(Boolean).join(' ');
 
               return (
-                <div key={msg.id} className={messageClasses}>
+                <React.Fragment key={msg.id}>
+                {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
+                <div className={messageClasses}>
                   {msg.replyTo && (
                     <div className="reply-info">
                       <span>response to{' '}
@@ -435,6 +438,7 @@ function ChatDisplay({
                     )}
                   </div>
                 </div>
+                </React.Fragment>
               );
             })
           )}
