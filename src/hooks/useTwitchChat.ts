@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { StaticAuthProvider } from '@twurple/auth';
 import { ChatClient, UserState } from '@twurple/chat';
 import { getBadgeDetail } from '../lib/badges';
@@ -92,6 +92,13 @@ export function useTwitchChat(
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
+
+  // Use a ref so the stale closure inside the IRC handler always reads the
+  // latest value without having to tear down and rebuild the WebSocket.
+  const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
+  useEffect(() => {
+    mentionSoundEnabledRef.current = mentionSoundEnabled;
+  }, [mentionSoundEnabled]);
 
   // Retrieve Client ID from env; it's required for twurple's AuthProvider
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -251,7 +258,7 @@ export function useTwitchChat(
           onMessage(chatMessage);
         });
 
-        if (mentionsUser && mentionSoundEnabled) {
+        if (mentionsUser && mentionSoundEnabledRef.current) {
           try {
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGG2S36+OZSgwOUKXh8bllHgU2jtXywH0pBSl+zPLaizsIGGS56+idTgwNU6rm8bllHAU5kdXx');
             audio.volume = NOTIFICATION_AUDIO_VOLUME;
@@ -263,7 +270,7 @@ export function useTwitchChat(
 
       onMessage(chatMessage);
 
-      if (mentionsUser && mentionSoundEnabled) {
+      if (mentionsUser && mentionSoundEnabledRef.current) {
         try {
           const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGG2S36+OZSgwOUKXh8bllHgU2jtXywH0pBSl+zPLaizsIGGS56+idTgwNU6rm8bllHAU5kdXx');
           audio.volume = NOTIFICATION_AUDIO_VOLUME;
