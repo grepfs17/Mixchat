@@ -18,6 +18,8 @@ interface EmbedConfigModalProps {
   onMentionVolumeChange: (value: number) => void;
   mentionSoundType: MentionSoundType;
   onMentionSoundTypeChange: (value: MentionSoundType) => void;
+  showDeletedMessages: boolean;
+  onShowDeletedMessagesChange: (value: boolean) => void;
   onClose: () => void;
 }
 
@@ -36,6 +38,8 @@ export default function EmbedConfigModal({
   onMentionVolumeChange,
   mentionSoundType,
   onMentionSoundTypeChange,
+  showDeletedMessages,
+  onShowDeletedMessagesChange,
   onClose,
 }: EmbedConfigModalProps) {
   return (
@@ -353,6 +357,44 @@ export default function EmbedConfigModal({
               </div>
             </div>
           )}
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              color: '#e2e8f0',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={showDeletedMessages}
+              onChange={(e) => onShowDeletedMessagesChange(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#6366f1',
+              }}
+            />
+            <span style={{ fontSize: '14px' }}>
+              Show deleted messages
+            </span>
+          </label>
+          <p
+            style={{
+              marginTop: '8px',
+              color: '#94a3b8',
+              fontSize: '12px',
+              margin: '8px 0 0 30px',
+            }}
+          >
+            When enabled, messages deleted by a moderator remain visible but are dimmed and marked as deleted. When disabled, they are removed from chat.
+          </p>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

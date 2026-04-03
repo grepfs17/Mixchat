@@ -77,6 +77,7 @@ export default function AppContainer() {
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
   const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0–1
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
+  const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
   const hasLoadedSessionsRef = useRef(false);
@@ -524,6 +525,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_mention_sound_type', JSON.stringify(mentionSoundType));
   }, [mentionSoundType]);
 
+  // Load show deleted messages setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_show_deleted_messages');
+    if (saved !== null) {
+      try { setShowDeletedMessages(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save show deleted messages setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_show_deleted_messages', JSON.stringify(showDeletedMessages));
+  }, [showDeletedMessages]);
+
   // Load chat font setting from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('mixchat_chat_font');
@@ -859,6 +873,8 @@ export default function AppContainer() {
             onMentionVolumeChange={setMentionVolume}
             mentionSoundType={mentionSoundType}
             onMentionSoundTypeChange={setMentionSoundType}
+            showDeletedMessages={showDeletedMessages}
+            onShowDeletedMessagesChange={setShowDeletedMessages}
             onGoHome={() => {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
@@ -980,6 +996,7 @@ export default function AppContainer() {
             mentionSoundEnabled={mentionSoundEnabled}
             mentionVolume={mentionVolume}
             mentionSoundType={mentionSoundType}
+            showDeletedMessages={showDeletedMessages}
           />
         </div>
         </>)}

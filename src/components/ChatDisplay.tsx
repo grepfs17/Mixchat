@@ -279,6 +279,7 @@ function ChatDisplay({
                 'message',
                 msg.messageType || 'chat',
                 msg.isPreloaded ? 'preloaded' : '',
+                msg.isDeleted ? 'deleted' : '',
                 msg.isBot ? 'bot' : '',
                 ((msg.mentionsUser || isMentioned) && !msg.isBot) ? 'mention' : ''
               ].filter(Boolean).join(' ');
@@ -427,6 +428,11 @@ function ChatDisplay({
                         <MdContentCopy size={12} />
                       </button>
                     </div>
+                    {msg.isDeleted && (
+                      <div className="deleted-notice">
+                        Deleted by a moderator
+                      </div>
+                    )}
                   </div>
                 </div>
               );

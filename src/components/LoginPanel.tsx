@@ -46,6 +46,8 @@ interface LoginPanelProps {
   onMentionVolumeChange?: (value: number) => void;
   mentionSoundType?: MentionSoundType;
   onMentionSoundTypeChange?: (value: MentionSoundType) => void;
+  showDeletedMessages?: boolean;
+  onShowDeletedMessagesChange?: (value: boolean) => void;
   onGoHome?: () => void;
 }
 
@@ -82,6 +84,8 @@ function LoginPanel({
   onMentionVolumeChange,
   mentionSoundType = 'ding' as MentionSoundType,
   onMentionSoundTypeChange,
+  showDeletedMessages = true,
+  onShowDeletedMessagesChange,
   onGoHome,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState('');
@@ -316,6 +320,12 @@ function LoginPanel({
           onMentionSoundTypeChange={(value) => {
             if (onMentionSoundTypeChange) {
               onMentionSoundTypeChange(value);
+            }
+          }}
+          showDeletedMessages={showDeletedMessages}
+          onShowDeletedMessagesChange={(value) => {
+            if (onShowDeletedMessagesChange) {
+              onShowDeletedMessagesChange(value);
             }
           }}
           onClose={() => setShowEmbedConfig(false)}

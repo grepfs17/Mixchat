@@ -33,6 +33,7 @@ export interface ChatMessage {
   isCurrentUser?: boolean; // True if message is from the logged-in user
   optimistic?: boolean; // True if this message is a local optimistic placeholder
   isPreloaded?: boolean; // True if message is from historical data (not live chat)
+  isDeleted?: boolean; // True if this message was deleted by a moderator
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
   /** Twitch Shared Chat: the originating channel's ID (differs from current channel when message is shared) */

@@ -51,6 +51,7 @@ interface ChatAppProps {
   mentionSoundEnabled?: boolean;
   mentionVolume?: number;
   mentionSoundType?: MentionSoundType;
+  showDeletedMessages?: boolean;
 }
 
 export default function ChatApp({
@@ -72,6 +73,7 @@ export default function ChatApp({
   mentionSoundEnabled = true,
   mentionVolume = 0.5,
   mentionSoundType = 'ding' as MentionSoundType,
+  showDeletedMessages = true,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -287,6 +289,10 @@ export default function ChatApp({
   // Use Twitch chat hook - pass the channel NAME not ID
   const [badgesReady, setBadgesReady] = useState(false);
 
+  // Ref so handleMessageDeleted closure always reads the latest prop value
+  const showDeletedMessagesRef = useRef(showDeletedMessages);
+  useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
+
   // Populate badges for optimistic message
   const handleOwnBadgesLoaded = useCallback(
     (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
@@ -296,6 +302,17 @@ export default function ChatApp({
     },
     []
   );
+
+  // Mark a message as deleted or remove it depending on user preference
+  const handleMessageDeleted = useCallback((messageId: string) => {
+    setMessages((prev) => {
+      if (showDeletedMessagesRef.current) {
+        return prev.map((m) => m.id === messageId ? { ...m, isDeleted: true } : m);
+      } else {
+        return prev.filter((m) => m.id !== messageId);
+      }
+    });
+  }, []);
 
   const { sendMessage: sendTwitchMessage } =
     useTwitchChat(
@@ -307,7 +324,8 @@ export default function ChatApp({
       mentionSoundEnabled,
       mentionVolume,
       mentionSoundType,
-      handleOwnBadgesLoaded
+      handleOwnBadgesLoaded,
+      handleMessageDeleted
     );
 
   // Simulate loading chat messages from selected channel

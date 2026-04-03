@@ -390,6 +390,21 @@
   background-color: var(--color-bg-primary);
 }
 
+.message.deleted {
+  opacity: 0.45;
+  background-color: var(--color-bg-primary);
+}
+
+.deleted-notice {
+  flex-basis: 100%;
+  font-size: 0.68rem;
+  color: #e57373;
+  font-style: italic;
+  margin-top: 2px;
+  padding-left: 2px;
+  letter-spacing: 0.01em;
+}
+
 .message.bot {
   opacity: 0.6;
   background-color: var(--color-bg-bot);

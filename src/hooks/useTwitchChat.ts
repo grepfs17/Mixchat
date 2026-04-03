@@ -165,7 +165,8 @@ export function useTwitchChat(
   mentionSoundEnabled: boolean = true,
   mentionVolume: number = 0.5,
   mentionSoundType: MentionSoundType = 'ding',
-  onOwnBadgesLoaded?: (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => void
+  onOwnBadgesLoaded?: (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => void,
+  onMessageDeleted?: (messageId: string) => void,
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
@@ -175,9 +176,11 @@ export function useTwitchChat(
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
   const mentionVolumeRef = useRef(mentionVolume);
   const mentionSoundTypeRef = useRef(mentionSoundType);
+  const onMessageDeletedRef = useRef(onMessageDeleted);
   useEffect(() => { mentionSoundEnabledRef.current = mentionSoundEnabled; }, [mentionSoundEnabled]);
   useEffect(() => { mentionVolumeRef.current = mentionVolume; }, [mentionVolume]);
   useEffect(() => { mentionSoundTypeRef.current = mentionSoundType; }, [mentionSoundType]);
+  useEffect(() => { onMessageDeletedRef.current = onMessageDeleted; }, [onMessageDeleted]);
 
   // Retrieve Client ID from env; it's required for twurple's AuthProvider
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -522,6 +525,21 @@ export function useTwitchChat(
       };
 
       onMessage(chatMessage);
+    });
+
+    // DEV ONLY: expose a manual test helper so you can call
+    // window.__testDeleteMessage('some-msg-id') from the browser console
+    if (typeof window !== 'undefined') {
+      (window as any).__testDeleteMessage = (id: string) => {
+        console.log('[useTwitchChat] Manual delete test for id:', id);
+        onMessageDeletedRef.current?.(id);
+      };
+    }
+
+    newClient.onMessageRemove((_channel, messageId) => {
+      if (!active) return;
+      console.log('[useTwitchChat] CLEARMSG received, messageId:', messageId);
+      onMessageDeletedRef.current?.(messageId);
     });
 
     newClient.connect();
