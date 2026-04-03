@@ -69,8 +69,9 @@
 }
 
 .yt-message-badges {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  vertical-align: middle;
   margin-right: 4px;
   gap: 2px;
 }

@@ -221,6 +221,7 @@ function UnifiedChat({
                                     </div>
                                 )}
                                 <div className="message-single-line">
+                                    <div className="message-content">
                                     <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
                                     <PlatformTag source="twitch" />
                                     <TwitchEventIcon messageType={msg.messageType} size={14} />
@@ -244,6 +245,12 @@ function UnifiedChat({
                                         className="message-text"
                                         dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
                                     />
+                                    {msg.isDeleted && (
+                                        <div className="deleted-notice">
+                                            Deleted by a moderator
+                                        </div>
+                                    )}
+                                    </div>
                                     <div className="message-actions">
                                         {onReply && (
                                             <button
@@ -268,11 +275,6 @@ function UnifiedChat({
                                             <MdContentCopy size={12} />
                                         </button>
                                     </div>
-                                    {msg.isDeleted && (
-                                        <div className="deleted-notice">
-                                            Deleted by a moderator
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             </React.Fragment>
@@ -313,6 +315,7 @@ function UnifiedChat({
                     return (
                         <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
                             <div className="message-single-line">
+                                <div className="message-content">
                                 <span className="timestamp">
                                     {(msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp))
                                         .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -333,6 +336,7 @@ function UnifiedChat({
                                 <span className="message-text">
                                     <YTMessageParts parts={msg.parts} variant="unified" />
                                 </span>
+                                </div>
                             </div>
                         </div>
                     );

@@ -22,7 +22,7 @@ export default function MessageBadges({
     style,
     lazy = false,
 }: MessageBadgesProps) {
-    const baseStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '2px', ...style };
+    const baseStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', gap: '2px', ...style };
     const imgStyle: React.CSSProperties = { width: '18px', height: '18px', verticalAlign: 'middle' };
     const loading = lazy ? 'lazy' : 'eager';
 

@@ -84,6 +84,9 @@ export async function refreshYoutubeToken(
   });
 
   if (!res.ok) {
+    if (res.status === 400 || res.status === 401) {
+      throw new Error(`Invalid refresh token (Google returned ${res.status})`);
+    }
     const err = await res.text();
     throw new Error(`Failed to refresh YouTube token: ${err}`);
   }

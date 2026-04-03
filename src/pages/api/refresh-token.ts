@@ -172,8 +172,6 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       errorMessage.includes("Invalid refresh token")
     ) {
       statusCode = 401;
-    } else if (errorMessage.includes("400")) {
-      statusCode = 400;
     }
 
     // Log full details server-side; return only a generic message to the client.

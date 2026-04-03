@@ -58,6 +58,9 @@ export const refreshTwitchAccessToken = async (
     });
 
     if (!response.ok) {
+      if (response.status === 400 || response.status === 401) {
+        throw new Error(`Invalid refresh token (Twitch returned ${response.status})`);
+      }
       throw new Error(`Failed to refresh token: ${response.status}`);
     }
 
