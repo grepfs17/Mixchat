@@ -722,8 +722,18 @@ export default function AppContainer() {
     [twitchChannels, favoriteChannels]
   );
 
+  // While sessions are being restored from localStorage, render nothing to avoid flash
+  if (isLoading) {
+    return (
+      <div className="loading-overlay">
+        <div className="loading-spinner"></div>
+        <div className="loading-text">Loading...</div>
+      </div>
+    );
+  }
+
   // Not logged in and not loading, clean splash screen
-  if (!isLoading && !isLoggingIn && !sessions.twitch) {
+  if (!isLoggingIn && !sessions.twitch) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--color-bg-primary)', gap: '28px' }}>
         <img src="/logo.png" alt="Mixchat" style={{ width: 'clamp(180px, 30vw, 280px)', height: 'auto', opacity: 0.95 }} />
@@ -987,12 +997,10 @@ export default function AppContainer() {
       )}
 
       {/* Loading / Login Overlay */}
-      {(isLoggingIn || isLoading) && (
+      {isLoggingIn && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
-          <div className="loading-text">
-            {isLoggingIn ? 'Connecting...' : 'Loading...'}
-          </div>
+          <div className="loading-text">Connecting...</div>
         </div>
       )}
     </div>
