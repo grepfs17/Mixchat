@@ -93,8 +93,16 @@ function MessageInput({
     // Check for @ mentions
     if (currentWord.startsWith('@') && currentWord.length > 1) {
       const query = currentWord.substring(1).toLowerCase();
-      const uniqueUsernames = new Set(chatMessages.map((msg) => msg.author));
-      const matching = Array.from(uniqueUsernames)
+      // Case-insensitive deduplication: prefer mixed-case display names over all-lowercase login names
+      const authorMap = new Map<string, string>(); 
+      chatMessages.forEach((msg) => {
+        const lower = msg.author.toLowerCase();
+        const existing = authorMap.get(lower);
+        if (!existing || (existing === existing.toLowerCase() && msg.author !== msg.author.toLowerCase())) {
+          authorMap.set(lower, msg.author);
+        }
+      });
+      const matching = Array.from(authorMap.values())
         .filter((name) => name.toLowerCase().includes(query) && name.toLowerCase() !== currentUsername.toLowerCase())
         .sort();
 
