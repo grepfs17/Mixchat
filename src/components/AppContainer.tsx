@@ -910,7 +910,7 @@ export default function AppContainer() {
                   className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
                   title="M3U8 HLS player"
                 >
-                  M3U8
+                  M3U8 (experimental)
                 </button>
                 {linkedYoutubeUrl && (
                   <button
