@@ -315,7 +315,6 @@ function ChatDisplay({
                     </div>
                   )}
                   <div className="message-single-line">
-                    <div className="message-content">
                     <span className="timestamp">
                       {msg.timestamp.toLocaleTimeString()}
                     </span>
@@ -394,12 +393,6 @@ function ChatDisplay({
                         __html: parseMessageWithEmotes(msg.content, msg.emotes),
                       }}
                     />
-                    {msg.isDeleted && (
-                      <div className="deleted-notice">
-                        Deleted by a moderator
-                      </div>
-                    )}
-                    </div>
                     <div className="message-actions">
                       {onReply && (
                         <button
@@ -441,6 +434,11 @@ function ChatDisplay({
                         <MdContentCopy size={12} />
                       </button>
                     </div>
+                    {msg.isDeleted && (
+                      <div className="deleted-notice">
+                        Deleted by a moderator
+                      </div>
+                    )}
                   </div>
                 </div>
                 </React.Fragment>
