@@ -291,8 +291,11 @@ export const getStreamStatus = async (
   startedAt?: Date;
 } | null> => {
   try {
+    // Support both numeric user IDs and login names (e.g. manually joined channels)
+    const isNumericId = /^\d+$/.test(userId);
+    const queryParam = isNumericId ? `user_id=${userId}` : `user_login=${encodeURIComponent(userId)}`;
     const response = await fetch(
-      `${TWITCH_API_BASE}/streams?user_id=${userId}`,
+      `${TWITCH_API_BASE}/streams?${queryParam}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

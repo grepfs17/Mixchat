@@ -269,16 +269,21 @@ export default function AppContainer() {
     const channelParam = match ? decodeURIComponent(match[1]) : null;
 
     if (channelParam && !hasLoadedChannel) {
-      const foundChannel = twitchChannels.find((ch) => ch.name === channelParam);
+      // Search online followed channels first, then all followed channels
+      const foundChannel =
+        twitchChannels.find((ch) => ch.name === channelParam) ||
+        allTwitchChannels.find((ch) => ch.name === channelParam);
+
       if (foundChannel) {
         setChannelData(foundChannel.id);
         setHasLoadedChannel(true);
-      } else if (twitchChannels.length > 0) {
-        // Channel from URL not found — go back to root without auto-selecting
-        window.history.replaceState({}, '', '/');
+      } else if (!isLoading) {
+        // Channels have finished loading and this channel isn't in the followed list
+        setChannelData(channelParam);
+        setHasLoadedChannel(true);
       }
     }
-  }, [twitchChannels, hasLoadedChannel, setChannelData]);
+  }, [twitchChannels, allTwitchChannels, hasLoadedChannel, isLoading, setChannelData]);
 
   useEffect(() => {
     // Skip the very first execution: sessions is still the initial `{}` from
