@@ -59,14 +59,23 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       const playerId = 'twitch-js-player';
       containerRef.current.id = playerId;
 
-      playerRef.current = new window.Twitch.Player(playerId, {
-        width: '100%',
-        height: '100%',
-        channel: channelRef.current,
-        parent: [parentDomain],
-        autoplay: true,
-        layout: 'video',
-        ...(oauthTokenRef.current ? { oauth_token: oauthTokenRef.current } : {}),
+      /* 
+      Defer to the next animation frame so the browser has finished layout
+      before the Twitch SDK reads element dimensions for its visibility check.
+      Without this deferral the SDK can see a zero-sized container and disable
+      autoplay with "style visibility" even though the element is truly visible.
+      */
+      requestAnimationFrame(() => {
+        if (cancelled || !window.Twitch?.Player) return;
+        playerRef.current = new window.Twitch.Player(playerId, {
+          width: '100%',
+          height: '100%',
+          channel: channelRef.current,
+          parent: [parentDomain],
+          autoplay: true,
+          layout: 'video',
+          ...(oauthTokenRef.current ? { oauth_token: oauthTokenRef.current } : {}),
+        });
       });
     };
 
@@ -111,7 +120,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
   return (
     <div
       ref={containerRef}
-      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      style={{ position: 'absolute', inset: 0, visibility: 'visible' }}
     />
   );
 }
@@ -272,7 +281,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       return <div style={{ width: '100%', height: '100%', backgroundColor: '#0a0a0a' }} />;
     }
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div style={{ position: 'absolute', inset: 0 }}>
         <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} oauthToken={twitchAccessToken} />
       </div>
     );

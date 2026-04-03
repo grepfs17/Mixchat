@@ -930,7 +930,7 @@ export default function AppContainer() {
                 <FaTimes size={15} />
               </button>
             </div>
-            <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a' }}>
+            <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a', position: 'relative' }}>
               {playerType === 'youtube' ? (
                 youtubeStreamVideoId ? (
                   <iframe
