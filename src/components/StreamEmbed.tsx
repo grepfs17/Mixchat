@@ -49,6 +49,10 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
   const oauthTokenRef = useRef(oauthToken);
   oauthTokenRef.current = oauthToken;
 
+  // Coerce to boolean so we only recreate when token *presence* changes
+  // (absent → present), not on every token value change (e.g. periodic refresh).
+  const hasOauthToken = !!oauthToken;
+
   useEffect(() => {
     let cancelled = false;
 
@@ -58,6 +62,10 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       // Give the container a stable, unique ID required by the Twitch Player API
       const playerId = 'twitch-js-player';
       containerRef.current.id = playerId;
+
+      // Clear any leftover DOM from a previous player instance so the SDK
+      // doesn't conflict with stale iframes when recreating.
+      containerRef.current.innerHTML = '';
 
       /* 
       Defer to the next animation frame so the browser has finished layout
@@ -108,7 +116,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentDomain]); // Re-init only if domain changes
+  }, [parentDomain, hasOauthToken]); // Re-init when domain changes OR token becomes available
 
   // Channel switch: call setChannel() instead of remounting → session preserved
   useEffect(() => {
@@ -133,6 +141,21 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
   // null = not yet resolved; player must not mount until we have the real value
   // so it is never initialized twice (which triggers Kasada 429 on passport.twitch.tv).
   const [parentDomain, setParentDomain] = useState<string | null>(null);
+
+  // Gate the embed player mount on token availability when the user is
+  // connected but the access token hasn't been refreshed yet (page reload).
+  // This avoids creating the Twitch Player without oauth_token — critical on
+  // Firefox / browsers with strict third-party cookie blocking.
+  const [tokenWaitExpired, setTokenWaitExpired] = useState(false);
+  useEffect(() => {
+    if (twitchConnected && !twitchAccessToken) {
+      setTokenWaitExpired(false);
+      const timer = setTimeout(() => setTokenWaitExpired(true), 5000);
+      return () => clearTimeout(timer);
+    }
+    // Token present or not connected — no need to wait.
+    setTokenWaitExpired(false);
+  }, [twitchConnected, twitchAccessToken]);
 
   useEffect(() => {
     fetch('/api/parent-domain')
@@ -279,6 +302,29 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     // fires two Kasada fingerprint requests in quick succession → 429.
     if (!parentDomain) {
       return <div style={{ width: '100%', height: '100%', backgroundColor: '#0a0a0a' }} />;
+    }
+    // Wait for the OAuth token to arrive after page reload so the player is
+    // created with oauth_token from the start.  Browsers that block third-party
+    // cookies (Firefox ETP, Brave Shields) can't fall back to Twitch cookies,
+    // so the token is the only way the player can authenticate the viewer.
+    // After 5 s the wait expires to avoid blocking if the refresh fails.
+    if (twitchConnected && !twitchAccessToken && !tokenWaitExpired) {
+      return (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#0a0a0a',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#999',
+            fontSize: '13px',
+          }}
+        >
+          Authenticating…
+        </div>
+      );
     }
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
