@@ -53,3 +53,10 @@ pnpm build
 ```
 
 The production server uses the Astro Node adapter.
+
+I wouldn't say no to a tip :D
+<p>
+ <a href="https://ko-fi.com/masterofhollows" >
+<img width="100" src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a02fad2b4c413af6d15_support_me_on_kofi_badge_beige.png" alt="Support me on Ko-fi">
+ </a>
+</p>
