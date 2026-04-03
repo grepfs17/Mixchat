@@ -24,8 +24,22 @@ export function clearBadgeCache(): void {
 // Grab badge sets from Twitch. If channelId is null, gets global ones.
 async function fetchBadges(apiClient: ApiClient, channelId?: string): Promise<Map<string, HelixChatBadgeSet>> {
   try {
-    const badgeSets = channelId
-      ? await apiClient.chat.getChannelBadges(channelId)
+    let resolvedId = channelId;
+
+    // The Twitch badge API requires a numeric broadcaster_id. If we received a
+    // login name (non-numeric), resolve it to the numeric user ID first.
+    if (resolvedId && !/^\d+$/.test(resolvedId)) {
+      const user = await apiClient.users.getUserByName(resolvedId);
+      if (user) {
+        resolvedId = user.id;
+      } else {
+        console.warn(`Could not resolve Twitch username "${resolvedId}" to a user ID — skipping channel badges.`);
+        return new Map();
+      }
+    }
+
+    const badgeSets = resolvedId
+      ? await apiClient.chat.getChannelBadges(resolvedId)
       : await apiClient.chat.getGlobalBadges();
 
     const map = new Map<string, HelixChatBadgeSet>();
