@@ -14,6 +14,7 @@ import { useStreamMonitor } from '../hooks/useStreamMonitor';
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { markStreamerNotified } from '../lib/streamMonitor';
 import { primeAudioContext } from '../hooks/useTwitchChat';
+import type { MentionSoundType } from '../hooks/useTwitchChat';
 import StreamGrid from './StreamGrid';
 
 // Don't save access tokens to localStorage for security. 
@@ -74,6 +75,8 @@ export default function AppContainer() {
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
   const [chatFont, setChatFont] = useState<ChatFont>('inter'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
+  const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0–1
+  const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
   const hasLoadedSessionsRef = useRef(false);
@@ -495,6 +498,32 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_mention_sound', JSON.stringify(mentionSoundEnabled));
   }, [mentionSoundEnabled]);
 
+  // Load mention volume from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_mention_volume');
+    if (saved !== null) {
+      try { setMentionVolume(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save mention volume to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_mention_volume', JSON.stringify(mentionVolume));
+  }, [mentionVolume]);
+
+  // Load mention sound type from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_mention_sound_type');
+    if (saved !== null) {
+      try { setMentionSoundType(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save mention sound type to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_mention_sound_type', JSON.stringify(mentionSoundType));
+  }, [mentionSoundType]);
+
   // Load chat font setting from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('mixchat_chat_font');
@@ -826,6 +855,10 @@ export default function AppContainer() {
             onChatFontChange={setChatFont}
             mentionSoundEnabled={mentionSoundEnabled}
             onMentionSoundEnabledChange={setMentionSoundEnabled}
+            mentionVolume={mentionVolume}
+            onMentionVolumeChange={setMentionVolume}
+            mentionSoundType={mentionSoundType}
+            onMentionSoundTypeChange={setMentionSoundType}
             onGoHome={() => {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
@@ -945,6 +978,8 @@ export default function AppContainer() {
             fontSize={fontSize}
             chatFont={chatFont}
             mentionSoundEnabled={mentionSoundEnabled}
+            mentionVolume={mentionVolume}
+            mentionSoundType={mentionSoundType}
           />
         </div>
         </>)}

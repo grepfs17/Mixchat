@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { FaStar, FaRegStar, FaUsers, FaEye, FaYoutube, FaCog } from 'react-icons/fa';
 import EmbedConfigModal from './EmbedConfigModal';
 import type { ChatFont } from '../lib/types';
+import type { MentionSoundType } from '../hooks/useTwitchChat';
 
 interface TwitchChannel {
   id: string;
@@ -41,6 +42,10 @@ interface LoginPanelProps {
   onChatFontChange?: (value: ChatFont) => void;
   mentionSoundEnabled?: boolean;
   onMentionSoundEnabledChange?: (value: boolean) => void;
+  mentionVolume?: number;
+  onMentionVolumeChange?: (value: number) => void;
+  mentionSoundType?: MentionSoundType;
+  onMentionSoundTypeChange?: (value: MentionSoundType) => void;
   onGoHome?: () => void;
 }
 
@@ -73,6 +78,10 @@ function LoginPanel({
   onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
+  mentionVolume = 0.5,
+  onMentionVolumeChange,
+  mentionSoundType = 'ding' as MentionSoundType,
+  onMentionSoundTypeChange,
   onGoHome,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState('');
@@ -295,6 +304,18 @@ function LoginPanel({
           onMentionSoundEnabledChange={(value) => {
             if (onMentionSoundEnabledChange) {
               onMentionSoundEnabledChange(value);
+            }
+          }}
+          mentionVolume={mentionVolume}
+          onMentionVolumeChange={(value) => {
+            if (onMentionVolumeChange) {
+              onMentionVolumeChange(value);
+            }
+          }}
+          mentionSoundType={mentionSoundType}
+          onMentionSoundTypeChange={(value) => {
+            if (onMentionSoundTypeChange) {
+              onMentionSoundTypeChange(value);
             }
           }}
           onClose={() => setShowEmbedConfig(false)}

@@ -7,7 +7,16 @@ import type { ChatMessage } from '../lib/types';
 // Cache for user info - limit to 500 entries for memory efficiency
 const userInfoCache = new Map<string, { displayName: string; profileImageUrl: string | null }>();
 const MAX_CACHE_SIZE = 500;
-const NOTIFICATION_AUDIO_VOLUME = 0.3;
+
+export type MentionSoundType = 'ding' | 'double' | 'chime' | 'pop' | 'ping';
+
+export const MENTION_SOUND_OPTIONS: { value: MentionSoundType; label: string }[] = [
+  { value: 'ding', label: 'Ding' },
+  { value: 'double', label: 'Double Beep' },
+  { value: 'chime', label: 'Chime' },
+  { value: 'pop', label: 'Pop' },
+  { value: 'ping', label: 'Ping' },
+];
 
 // Cache for source channel (shared chat) info keyed by channel ID
 // Twitch IRC does NOT send source-room-login — we fetch it from the API
@@ -106,23 +115,33 @@ export function primeAudioContext() {
   }
 }
 
-/** Plays a short notification beep using the Web Audio API. */
-function playMentionSound(volume: number) {
+/** Plays a notification sound using the Web Audio API. Exported for previewing in the settings modal. */
+export function playMentionSoundPreview(volume: number, type: MentionSoundType) {
   const ctx = getAudioContext();
   if (!ctx) return;
 
   const play = () => {
     try {
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(volume, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.25);
+      const now = ctx.currentTime;
+      const beep = (freq: number, start: number, duration: number, wave: OscillatorType = 'sine') => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = wave;
+        osc.frequency.setValueAtTime(freq, now + start);
+        gain.gain.setValueAtTime(volume, now + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + start + duration);
+        osc.start(now + start);
+        osc.stop(now + start + duration);
+      };
+      switch (type) {
+        case 'ding':   beep(880, 0, 0.25); break;
+        case 'double': beep(880, 0, 0.1); beep(880, 0.18, 0.1); break;
+        case 'chime':  beep(1047, 0, 0.2); beep(784, 0.22, 0.2); break;
+        case 'pop':    beep(440, 0, 0.08, 'square'); break;
+        case 'ping':   beep(1200, 0, 0.4); break;
+      }
     } catch { /* audio not supported */ }
   };
 
@@ -133,6 +152,10 @@ function playMentionSound(volume: number) {
   }
 }
 
+function playMentionSound(volume: number, type: MentionSoundType) {
+  playMentionSoundPreview(volume, type);
+}
+
 export function useTwitchChat(
   channelName: string,
   accessToken: string,
@@ -140,17 +163,21 @@ export function useTwitchChat(
   onMessage: (message: ChatMessage) => void,
   enabled: boolean = true,
   mentionSoundEnabled: boolean = true,
+  mentionVolume: number = 0.5,
+  mentionSoundType: MentionSoundType = 'ding',
   onOwnBadgesLoaded?: (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => void
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
 
-  // Use a ref so the stale closure inside the IRC handler always reads the
-  // latest value without having to tear down and rebuild the WebSocket.
+  // Refs so the stale closure inside the IRC handler always reads the latest
+  // values without tearing down and rebuilding the WebSocket.
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
-  useEffect(() => {
-    mentionSoundEnabledRef.current = mentionSoundEnabled;
-  }, [mentionSoundEnabled]);
+  const mentionVolumeRef = useRef(mentionVolume);
+  const mentionSoundTypeRef = useRef(mentionSoundType);
+  useEffect(() => { mentionSoundEnabledRef.current = mentionSoundEnabled; }, [mentionSoundEnabled]);
+  useEffect(() => { mentionVolumeRef.current = mentionVolume; }, [mentionVolume]);
+  useEffect(() => { mentionSoundTypeRef.current = mentionSoundType; }, [mentionSoundType]);
 
   // Retrieve Client ID from env; it's required for twurple's AuthProvider
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -311,7 +338,7 @@ export function useTwitchChat(
         });
 
         if (mentionsUser && mentionSoundEnabledRef.current) {
-          playMentionSound(NOTIFICATION_AUDIO_VOLUME);
+          playMentionSound(mentionVolumeRef.current, mentionSoundTypeRef.current);
         }
         return;
       }
@@ -319,7 +346,7 @@ export function useTwitchChat(
       onMessage(chatMessage);
 
       if (mentionsUser && mentionSoundEnabledRef.current) {
-        playMentionSound(NOTIFICATION_AUDIO_VOLUME);
+        playMentionSound(mentionVolumeRef.current, mentionSoundTypeRef.current);
       }
     });
 

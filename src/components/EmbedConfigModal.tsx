@@ -1,6 +1,7 @@
 import { FaTimes } from 'react-icons/fa';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
+import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
 
 interface EmbedConfigModalProps {
   embedDefaultOpen: boolean;
@@ -13,6 +14,10 @@ interface EmbedConfigModalProps {
   onChatFontChange: (value: ChatFont) => void;
   mentionSoundEnabled: boolean;
   onMentionSoundEnabledChange: (value: boolean) => void;
+  mentionVolume: number;
+  onMentionVolumeChange: (value: number) => void;
+  mentionSoundType: MentionSoundType;
+  onMentionSoundTypeChange: (value: MentionSoundType) => void;
   onClose: () => void;
 }
 
@@ -27,6 +32,10 @@ export default function EmbedConfigModal({
   onChatFontChange,
   mentionSoundEnabled,
   onMentionSoundEnabledChange,
+  mentionVolume,
+  onMentionVolumeChange,
+  mentionSoundType,
+  onMentionSoundTypeChange,
   onClose,
 }: EmbedConfigModalProps) {
   return (
@@ -287,6 +296,63 @@ export default function EmbedConfigModal({
           >
             Plays a notification sound when someone mentions your name or replies to your message.
           </p>
+
+          {mentionSoundEnabled && (
+            <div style={{ marginLeft: '30px', marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Volume */}
+              <div>
+                <label style={{ color: '#e2e8f0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                  Volume: <span style={{ color: '#6366f1' }}>{Math.round(mentionVolume * 100)}%</span>
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>0%</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={mentionVolume}
+                    onChange={(e) => onMentionVolumeChange(parseFloat(e.target.value))}
+                    style={{ flex: 1, cursor: 'pointer', accentColor: '#6366f1', height: '4px' }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>100%</span>
+                </div>
+              </div>
+
+              {/* Sound type */}
+              <div>
+                <label style={{ color: '#e2e8f0', fontSize: '13px', display: 'block', marginBottom: '8px' }}>
+                  Sound
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {MENTION_SOUND_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        onMentionSoundTypeChange(opt.value);
+                        playMentionSoundPreview(mentionVolume, opt.value);
+                      }}
+                      style={{
+                        padding: '5px 12px',
+                        border: mentionSoundType === opt.value ? '2px solid #6366f1' : '1px solid #444',
+                        borderRadius: '6px',
+                        backgroundColor: mentionSoundType === opt.value ? '#1e1e3f' : '#0a0a0a',
+                        color: '#e2e8f0',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p style={{ margin: '6px 0 0', color: '#94a3b8', fontSize: '11px' }}>
+                  Click a sound to preview it.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

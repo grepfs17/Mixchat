@@ -6,6 +6,7 @@ import YouTubeChat from './YouTubeChat';
 import YouTubeMessageInput from './YouTubeMessageInput';
 import UnifiedChat, { type YTMessage } from './UnifiedChat';
 import { useTwitchChat } from '../hooks/useTwitchChat';
+import type { MentionSoundType } from '../hooks/useTwitchChat';
 import { initializeEmotes, clearEmoteCache } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages } from '../lib/twitch';
@@ -48,6 +49,8 @@ interface ChatAppProps {
   fontSize?: number;
   chatFont?: ChatFont;
   mentionSoundEnabled?: boolean;
+  mentionVolume?: number;
+  mentionSoundType?: MentionSoundType;
 }
 
 export default function ChatApp({
@@ -67,6 +70,8 @@ export default function ChatApp({
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   mentionSoundEnabled = true,
+  mentionVolume = 0.5,
+  mentionSoundType = 'ding' as MentionSoundType,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -300,6 +305,8 @@ export default function ChatApp({
       handleTwitchMessage,
       badgesReady,
       mentionSoundEnabled,
+      mentionVolume,
+      mentionSoundType,
       handleOwnBadgesLoaded
     );
 
