@@ -85,6 +85,15 @@ export const useTokenRefresh = (
       const err = error instanceof Error ? error : new Error('Unknown error');
       console.error('✗ Token refresh failed:', err.message);
 
+      // A 401 from the refresh endpoint means the refresh token itself is
+      // invalid/expired — retrying will never succeed, so log out immediately.
+      if (err.message.includes('401')) {
+        console.error('Refresh token invalid or expired. Logging out immediately.');
+        onRefreshError(err);
+        retryCountRef.current = 0;
+        return;
+      }
+
       retryCountRef.current += 1;
 
       if (retryCountRef.current >= maxRetries) {

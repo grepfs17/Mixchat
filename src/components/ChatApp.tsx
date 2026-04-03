@@ -364,6 +364,11 @@ export default function ChatApp({
       // Initialize emotes and badges first, then load recent messages to ensure
       // badges are ready for the initial historical messages.
       const initializeAssets = async () => {
+        // Don't attempt API calls until the access token has been populated by
+        // useTokenRefresh. If it's absent we'll be re-triggered once it arrives.
+        if (!twitchSession?.accessToken) {
+          return;
+        }
         try {
           await Promise.all([
             initializeEmotes(
@@ -406,12 +411,14 @@ export default function ChatApp({
 
       initializeAssets();
     }
-  }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId]);
+  }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
 
   // Fetch stream status on channel change or when component mounts
   useEffect(() => {
     const fetchStreamStatus = async () => {
-      if (selectedTwitchChannel && twitchSession) {
+      // Don't call the API until we have a valid token useTokenRefresh will
+      // populate it shortly after page load, re-triggering this effect.
+      if (selectedTwitchChannel && twitchSession?.accessToken) {
         try {
           const status = await getStreamStatus(
             twitchSession.accessToken,
@@ -450,7 +457,7 @@ export default function ChatApp({
       clearInterval(statusInterval);
       clearInterval(uptimeInterval);
     };
-  }, [selectedTwitchChannel, twitchSession]);
+  }, [selectedTwitchChannel, twitchSession, twitchSession?.accessToken]);
 
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], _replyToId?: string) => {
