@@ -83,7 +83,14 @@ function getCachedEmotes(cacheKey: string): EmoteMap | null {
       return null;
     }
 
-    return cacheData.emotes;
+    // Sanitize: drop any entry whose value is not a plain string
+    // (guards against old cache formats that stored objects instead of URLs)
+    const raw = cacheData.emotes;
+    const clean: EmoteMap = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof v === 'string') clean[k] = v;
+    }
+    return clean;
   } catch {
     return null;
   }
@@ -595,6 +602,7 @@ function replaceSize(url: string): string {
   return parts.join("/");
 }
 function createEmoteImg(emoteUrl: string, emoteName: string): string {
+  if (typeof emoteUrl !== 'string') return escapeHtml(emoteName);
   // Convert any quality URL to 4x quality for tooltip (highest resolution)
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
@@ -612,6 +620,7 @@ function createEmoteImg(emoteUrl: string, emoteName: string): string {
  * The span is absolutely centred over the base emote by CSS.
  */
 function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
+  if (typeof emoteUrl !== 'string') return escapeHtml(emoteName);
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
   if (
