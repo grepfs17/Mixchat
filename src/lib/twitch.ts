@@ -430,7 +430,6 @@ export const getRecentMessages = async (
           const contentMatch = rawMsg.match(/PRIVMSG #[^\s]+ :(.+)$/);
 
           if (!userMatch || !contentMatch) {
-            console.warn("Failed to parse message:", rawMsg.substring(0, 100));
             return null;
           }
 
