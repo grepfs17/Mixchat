@@ -81,6 +81,24 @@ async function getSourceChannelInfo(
   return fallback;
 }
 
+/** Plays a short notification beep using the Web Audio API. */
+function playMentionSound(volume: number) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.25);
+    oscillator.onended = () => ctx.close();
+  } catch (e) { /* audio not supported */ }
+}
+
 export function useTwitchChat(
   channelName: string,
   accessToken: string,
@@ -259,11 +277,7 @@ export function useTwitchChat(
         });
 
         if (mentionsUser && mentionSoundEnabledRef.current) {
-          try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGG2S36+OZSgwOUKXh8bllHgU2jtXywH0pBSl+zPLaizsIGGS56+idTgwNU6rm8bllHAU5kdXx');
-            audio.volume = NOTIFICATION_AUDIO_VOLUME;
-            audio.play().catch(() => { });
-          } catch (e) { }
+          playMentionSound(NOTIFICATION_AUDIO_VOLUME);
         }
         return;
       }
@@ -271,11 +285,7 @@ export function useTwitchChat(
       onMessage(chatMessage);
 
       if (mentionsUser && mentionSoundEnabledRef.current) {
-        try {
-          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGG2S36+OZSgwOUKXh8bllHgU2jtXywH0pBSl+zPLaizsIGGS56+idTgwNU6rm8bllHAU5kdXx');
-          audio.volume = NOTIFICATION_AUDIO_VOLUME;
-          audio.play().catch(() => { });
-        } catch (e) { }
+        playMentionSound(NOTIFICATION_AUDIO_VOLUME);
       }
     });
 
