@@ -36,6 +36,7 @@ export interface ChatMessage {
   isDeleted?: boolean; // True if this message was deleted by a moderator
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
+  rewardTitle?: string; // Title/name of the redeemed reward
   /** Twitch Shared Chat: the originating channel's ID (differs from current channel when message is shared) */
   sourceChannelId?: string;
   /** Twitch Shared Chat: the originating channel's login name */

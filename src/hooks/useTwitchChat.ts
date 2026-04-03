@@ -278,6 +278,7 @@ export function useTwitchChat(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawTags = (msg as any).tags as Map<string, string> | undefined;
       const sourceRoomId: string | undefined = rawTags?.get('source-room-id') || undefined;
+      const rewardTitle: string | undefined = msg.isRedemption ? (rawTags?.get('custom-reward-title') || undefined) : undefined;
       // Only treat as shared-chat if the source room differs from the current channel
       const isSharedChat = Boolean(
         sourceRoomId &&
@@ -307,6 +308,7 @@ export function useTwitchChat(
         isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
         messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : 'chat'),
         rewardId: msg.isRedemption ? (msg.rewardId || undefined) : undefined,
+        rewardTitle: rewardTitle,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
