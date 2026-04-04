@@ -151,27 +151,30 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
     >
   </footer>
   <script is:inline>
-    // When the virtual keyboard opens, visualViewport.height shrinks.
-    // Adjust padding-bottom so the message input stays above the keyboard.
-    // Persistent browser chrome bars (Firefox Android bottom nav, Brave
-    // tab strip, etc.) are handled by height: 100svh on #app — svh excludes
-    // browser chrome from the measured height so no extra padding is needed.
+    // No CSS viewport unit (svh/dvh/lvh/vh) reliably excludes persistent
+    // browser chrome on all mobile browsers:
+    //   • Firefox Android bottom toolbar  → not a "dynamic" toolbar in CSS
+    //   • Chrome Android URL bar          → partially handled by svh/dvh
+    //   • Virtual keyboard                → shrinks visualViewport only
+    //
+    // window.visualViewport.height is the ONLY value that always equals the
+    // exact visible height regardless of browser chrome or keyboard state.
+    // We set #app's height to this value on every resize so content is never
+    // hidden behind Firefox's nav bar, Brave's tab strip, the keyboard, etc.
     (function () {
       var vv = window.visualViewport;
       if (!vv) return;
       function update() {
-        // Only use vv.height when keyboard is open (i.e., it's smaller than
-        // the CSS-computed height). The padding-bottom on #app handles chrome.
+        // Desktop: let CSS handle layout (footer needs padding-bottom: 30px)
+        if (window.innerWidth > 768) {
+          var appEl = document.getElementById('app');
+          if (appEl) appEl.style.height = '';
+          return;
+        }
         var appEl = document.getElementById('app');
         if (!appEl) return;
-        var cssHeight = appEl.getBoundingClientRect().height;
-        if (vv.height < cssHeight - 10) {
-          // Keyboard is open — shrink app to match visual viewport
-          appEl.style.paddingBottom = (window.innerHeight - vv.height) + 'px';
-        } else {
-          // Keyboard closed — reset to CSS-defined padding
-          appEl.style.paddingBottom = '';
-        }
+        // Directly size the app to the visible viewport — excludes all chrome.
+        appEl.style.height = Math.round(vv.height) + 'px';
       }
       vv.addEventListener('resize', update);
       update();
