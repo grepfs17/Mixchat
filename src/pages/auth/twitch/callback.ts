@@ -52,9 +52,13 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       });
     }
 
-    // Safely serialize all values with JSON.stringify so that special characters
-    // (quotes, backslashes, newlines, etc.) in any user-controlled field can never
-    // break out of the JavaScript context and execute arbitrary code.
+    // Build the session object and then double-stringify it:
+    // - First JSON.stringify turns it into a JSON string.
+    // - Second JSON.stringify (applied in the template below via JSON.stringify(sessionPayload))
+    //   wraps that JSON string in JS string-literal quotes, escaping all special characters
+    //   (backslashes, quotes, U+2028/U+2029 line separators, </script> sequences, etc.)
+    //   so it can never cause a SyntaxError or break out of the <script> context.
+    // The browser then calls JSON.parse() to recover the object.
     const sessionPayload = JSON.stringify({
       platform: "twitch",
       userId: user.userId,
@@ -66,6 +70,10 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       expiresAt: Date.now() + ((tokenData.expiresIn ?? 3600) * 1000),
       timestamp: Date.now(),
     });
+    // Double-stringify for safe JS embedding (same pattern as returnedStateJson).
+    const sessionPayloadJson = JSON.stringify(sessionPayload)
+      // Extra safety: escape </ so the string can never end the <script> block.
+      .replace(/</g, "\\u003c");
     // Pass the returned state value safely so the browser can verify it.
     const returnedStateJson = JSON.stringify(returnedState);
 
@@ -150,7 +158,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       return;
     }
 
-    var session = ${sessionPayload};
+    var session = JSON.parse(${sessionPayloadJson});
     console.log('[twitch-callback] session ok, user:', session.username, 'redirecting to:', returnUrl);
 
     try {
