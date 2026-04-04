@@ -118,7 +118,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       JSON.stringify({
         error: errorMessage,
         details:
-          process.env.NODE_ENV === "development" ? errorStack : undefined,
+          import.meta.env.MODE === "development" ? errorStack : undefined,
       }),
       { status: 500, headers },
     );

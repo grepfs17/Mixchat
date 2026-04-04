@@ -109,10 +109,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   } catch (error) {
     console.error("Stream URL error:", error);
     return new Response(
-      JSON.stringify({
-        error:
-          error instanceof Error ? error.message : "Failed to get stream URL",
-      }),
+      JSON.stringify({ error: "Failed to get stream URL" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

@@ -67,6 +67,12 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       expiresAt: Date.now() + ((tokenData.expires_in ?? 3600) * 1000),
       timestamp: Date.now(),
     });
+    // Double-stringify for safe JS embedding: the outer JSON.stringify wraps the
+    // JSON string in JS string-literal quotes, escaping all special characters.
+    // The extra replace guards against </script> sequences that would terminate
+
+    const sessionPayloadJson = JSON.stringify(sessionPayload)
+      .replace(/</g, "\\u003c");
     // Pass the returned state value safely so the browser can verify it.
     const returnedStateJson = JSON.stringify(returnedState);
 
@@ -108,7 +114,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     }
     // --- End CSRF check ---
 
-    var session = ${sessionPayload};
+    var session = JSON.parse(${sessionPayloadJson});
 
     try {
       var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
@@ -124,7 +130,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     // and also via a dedicated localStorage key as a reliable fallback.
     // Some browsers null out window.opener after cross-origin navigation.
     try {
-      localStorage.setItem('mixchat_youtube_auth', JSON.stringify({ session: session, ts: Date.now() }));
+      // Strip the access token before writing to localStorage — it belongs only
+      // in memory (React state) and is re-hydrated on reload via the httpOnly cookie.
+      var persistedYT = Object.assign({}, session);
+      delete persistedYT.accessToken;
+      localStorage.setItem('mixchat_youtube_auth', JSON.stringify({ session: persistedYT, ts: Date.now() }));
     } catch (e) { /* storage unavailable */ }
 
     try {
