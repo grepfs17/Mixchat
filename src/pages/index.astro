@@ -111,9 +111,12 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       
       #app {
         position: fixed;
-        inset: 0;
-        /* JS in the <script> below will shrink height to visualViewport.height
-           so the bottom browser chrome (Firefox nav bar, etc.) is excluded. */
+        top: 0;
+        left: 0;
+        right: 0;
+        /* No bottom:0 — that would cause height to be ignored.
+           JS sets the exact pixel height via visualViewport. */
+        height: 100svh; /* fallback before JS runs */
         padding: 0;
         padding-bottom: env(safe-area-inset-bottom, 0px);
         overflow: hidden;
@@ -158,21 +161,15 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       var vv = window.visualViewport;
       if (!vv) return;
       function update() {
-        var h = Math.round(vv.height);
-        var isMobile = window.innerWidth <= 768;
         var appEl = document.getElementById('app');
-        if (!isMobile) {
-          // Desktop: restore CSS-controlled sizing
-          document.documentElement.style.height = '';
-          document.body.style.height = '';
-          if (appEl) appEl.style.height = '';
+        if (!appEl) return;
+        if (window.innerWidth > 768) {
+          appEl.style.height = '';
           return;
         }
-        // Set all three so height:100% cascade resolves to the
-        // exact visual viewport — excludes Firefox nav bar, keyboard, etc.
-        document.documentElement.style.height = h + 'px';
-        document.body.style.height = h + 'px';
-        if (appEl) appEl.style.height = h + 'px';
+        // visualViewport.height is the only reliable cross-browser value that
+        // excludes ALL chrome: Firefox nav bar, Brave tab strip, keyboard, etc.
+        appEl.style.height = Math.round(vv.height) + 'px';
       }
       vv.addEventListener('resize', update);
       update();
