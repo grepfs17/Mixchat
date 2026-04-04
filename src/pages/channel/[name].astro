@@ -106,7 +106,7 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
         inset: 0;
         height: auto;
         padding: 0;
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 60px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
         overflow: hidden;
       }
 

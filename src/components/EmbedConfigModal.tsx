@@ -63,6 +63,8 @@ export default function EmbedConfigModal({
           padding: '24px',
           maxWidth: '400px',
           width: '90%',
+          maxHeight: '90svh',
+          overflowY: 'auto',
           boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8)',
         }}
         onClick={(e) => e.stopPropagation()}

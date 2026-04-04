@@ -30,6 +30,7 @@
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
+    height: 100% !important;
   }
 
   /* When stream embed is hidden the chat fills all remaining space — no change needed */
