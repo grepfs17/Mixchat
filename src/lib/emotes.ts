@@ -115,12 +115,14 @@ function setCachedEmotes(cacheKey: string, emotes: EmoteMap): void {
  * Clear all emote caches
  */
 export function clearEmoteCache(): void {
+  const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key && key.startsWith("emotes_")) {
-      localStorage.removeItem(key);
+      keysToRemove.push(key);
     }
   }
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
 
   emotes7tv = {};
   emotesBttv = {};

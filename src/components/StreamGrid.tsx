@@ -68,7 +68,6 @@ export default function StreamGrid({
 
     return (
         <div className="stream-grid-container">
-            {/* ── Header ── */}
             <div className="stream-grid-header">
                 <div className="stream-grid-title-row">
                     <span className="live-dot" aria-hidden="true" />
@@ -77,7 +76,6 @@ export default function StreamGrid({
                 </div>
 
                 <div className="stream-grid-controls">
-                    {/* Search */}
                     <div className="stream-search-wrap">
                         <span className="stream-search-icon" aria-hidden="true">⌕</span>
                         <input
@@ -90,8 +88,6 @@ export default function StreamGrid({
                             spellCheck={false}
                         />
                     </div>
-
-                    {/* Sort pills */}
                     <div className="stream-sort-group" role="group" aria-label="Sort by">
                         <button
                             className={`sort-btn${sortBy === 'favorites' ? ' active' : ''}`}
@@ -148,7 +144,6 @@ export default function StreamGrid({
                                     onKeyDown={(e) => e.key === 'Enter' && onChannelSelect(channel.id)}
                                     aria-label={`Watch ${channel.displayName}`}
                                 >
-                                    {/* Thumbnail */}
                                     <div className="stream-card-thumb">
                                         {thumbFailed ? (
                                             <div className="stream-card-thumb-placeholder">📺</div>
