@@ -148,11 +148,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     if (!expectedState || expectedState !== returnedState) {
       document.body.innerHTML =
         '<pre style="font-family:sans-serif;padding:2rem">' +
-        'Authentication failed: invalid state.\n\n' +
-        'expectedState: ' + (expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING') + '\n' +
-        'returnedState: ' + (returnedState ? 'present (len=' + returnedState.length + ')' : 'MISSING') + '\n' +
-        'match: ' + (expectedState === returnedState) + '\n\n' +
-        'Check the browser console for details.\n\n' +
+        'Authentication failed: invalid state.\\n\\n' +
+        'expectedState: ' + (expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING') + '\\n' +
+        'returnedState: ' + (returnedState ? 'present (len=' + returnedState.length + ')' : 'MISSING') + '\\n' +
+        'match: ' + (expectedState === returnedState) + '\\n\\n' +
+        'Check the browser console for details.\\n\\n' +
         '<a href="/">Go back and try again</a>' +
         '</pre>';
       return;
