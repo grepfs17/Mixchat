@@ -889,6 +889,7 @@ export default function AppContainer() {
             favoriteChannels={favoriteChannels}
             onToggleFavorite={toggleFavorite}
             onChannelChange={(channelId) => setChannelData(channelId)}
+            onRequestClose={() => { if (window.innerWidth < 1366) setLeftColumnVisible(false); }}
             onTwitchLogin={handleTwitchLogin}
             onTwitchLogout={handleTwitchLogout}
             youtubeConnected={!!sessions.youtube}

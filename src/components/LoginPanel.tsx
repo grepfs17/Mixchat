@@ -49,6 +49,7 @@ interface LoginPanelProps {
   showDeletedMessages?: boolean;
   onShowDeletedMessagesChange?: (value: boolean) => void;
   onGoHome?: () => void;
+  onRequestClose?: () => void;
 }
 
 function LoginPanel({
@@ -87,6 +88,7 @@ function LoginPanel({
   showDeletedMessages = true,
   onShowDeletedMessagesChange,
   onGoHome,
+  onRequestClose,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -107,6 +109,7 @@ function LoginPanel({
     if (manualChannel.trim() && onChannelChange) {
       onChannelChange(manualChannel.trim().toLowerCase());
       setManualChannel('');
+      onRequestClose?.();
     }
   };
   return (
@@ -139,7 +142,7 @@ function LoginPanel({
             <div className="user-profile-container">
               <div
                 className="user-profile-link"
-                onClick={() => (twitchUserId || twitchUserName) && onChannelChange?.(twitchUserId || twitchUserName!)}
+                onClick={() => { if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } }}
                 title={`Switch to ${twitchUser}'s channel`}
               >
                 {twitchProfileImage && (
@@ -153,7 +156,7 @@ function LoginPanel({
               <div className="user-actions">
                 {onManageWatchlist && (
                   <button
-                    onClick={onManageWatchlist}
+                    onClick={() => { onManageWatchlist(); onRequestClose?.(); }}
                     className="icon-button"
                     title="Manage Notification Streams"
                   >
@@ -162,7 +165,7 @@ function LoginPanel({
                 )}
                 {onManageYoutubeLinks && (
                   <button
-                    onClick={onManageYoutubeLinks}
+                    onClick={() => { onManageYoutubeLinks(); onRequestClose?.(); }}
                     className="icon-button youtube-icon-btn"
                     title="Link YouTube channels"
                   >
@@ -192,7 +195,7 @@ function LoginPanel({
                     <div
                       key={channel.id}
                       className={`channel-item ${selectedTwitchChannel === channel.id ? 'selected' : ''}`}
-                      onClick={() => onChannelChange?.(channel.id)}
+                      onClick={() => { onChannelChange?.(channel.id); onRequestClose?.(); }}
                       title={channel.displayName}
                     >
                       {channel.profileImageUrl && (
