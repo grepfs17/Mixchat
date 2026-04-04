@@ -75,20 +75,27 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 <html>
 <head><title>Twitch Auth</title></head>
 <body>
+<p style="font-family:sans-serif;padding:2rem;color:#555">Completing sign-in…</p>
 <script nonce="${locals.nonce}">
   (function () {
     var returnedState = ${returnedStateJson};
     console.log('[twitch-callback] script running, returnedState:', returnedState);
 
     // --- Read CSRF state ---
-    // Primary: sessionStorage (per-tab, survives same-tab navigations).
-    var expectedState = sessionStorage.getItem('twitch_oauth_state');
-    var returnUrl = sessionStorage.getItem('twitch_oauth_return_url') || '/';
-    sessionStorage.removeItem('twitch_oauth_state');
-    sessionStorage.removeItem('twitch_oauth_return_url');
-    console.log('[twitch-callback] sessionStorage state:', expectedState, 'returnUrl:', returnUrl);
+    // Primary: sessionStorage (per-tab, same-tab navigation flow).
+    var expectedState = null;
+    var returnUrl = '/';
+    try {
+      expectedState = sessionStorage.getItem('twitch_oauth_state');
+      returnUrl = sessionStorage.getItem('twitch_oauth_return_url') || '/';
+      sessionStorage.removeItem('twitch_oauth_state');
+      sessionStorage.removeItem('twitch_oauth_return_url');
+      console.log('[twitch-callback] sessionStorage state:', expectedState, 'returnUrl:', returnUrl);
+    } catch (e) {
+      console.error('[twitch-callback] sessionStorage error:', e);
+    }
 
-    // Fallback: localStorage (handles Firefox privacy modes that clear sessionStorage).
+    // Fallback: localStorage (handles new-tab mobile flow and Firefox privacy modes).
     if (!expectedState) {
       try {
         var raw = localStorage.getItem('twitch_oauth_state_fb');
@@ -109,7 +116,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     }
     try { localStorage.removeItem('twitch_oauth_state_fb'); } catch (_) {}
 
-    console.log('[twitch-callback] expectedState:', expectedState, 'match:', expectedState === returnedState);
+    console.log('[twitch-callback] expectedState:', expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING', 'match:', expectedState === returnedState);
 
     if (!expectedState || expectedState !== returnedState) {
       document.body.innerHTML =
@@ -138,36 +145,18 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       console.error('[twitch-callback] localStorage write error:', e);
     }
 
-    window.location.href = returnUrl;
-log('[twitch-callback] expectedState:', expectedState, 'match:', expectedState === returnedState);
-
-    if (!expectedState || expectedState !== returnedState) {
-      document.body.innerHTML =
-        '<pre style="font-family:sans-serif;padding:2rem">' +
-        'Authentication failed: invalid state.\n\n' +
-        'expectedState: ' + (expectedState ? 'present (len=' + expectedState.length + ')' : 'MISSING') + '\n' +
-        'returnedState: ' + (returnedState ? 'present (len=' + returnedState.length + ')' : 'MISSING') + '\n' +
-        'match: ' + (expectedState === returnedState) + '\n\n' +
-        'Check the browser console for details.\n\n' +
-        '<a href="/">Go back and try again</a>' +
-        '</pre>';
-      return;
+    // Popup flow: notify the opener and close this window.
+    if (window.opener && !window.opener.closed) {
+      try {
+        window.opener.postMessage({ type: 'mixchat_session', session: session }, window.location.origin);
+        window.close();
+      } catch (e) {
+        console.error('[twitch-callback] postMessage to opener failed:', e);
+      }
     }
 
-    var session = ${sessionPayload};
-    console.log('[twitch-callback] session ok, user:', session.username, 'redirecting to:', returnUrl);
-
-    try {
-      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
-      var persisted = Object.assign({}, session);
-      delete persisted.accessToken;
-      sessions.twitch = persisted;
-      localStorage.setItem('mixchat_sessions', JSON.stringify(sessions));
-      console.log('[twitch-callback] session written to localStorage');
-    } catch (e) {
-      console.error('[twitch-callback] localStorage write error:', e);
-    }
-
+    // Redirect flow (mobile or if opener is unavailable / window.close() was ignored):
+    // navigate back to the app.
     window.location.href = returnUrl;
   })();
 <\/script>

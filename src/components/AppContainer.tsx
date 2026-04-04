@@ -592,6 +592,15 @@ export default function AppContainer() {
     // Generate a random CSRF state token and persist it for the callback to verify.
     const state = crypto.randomUUID();
     sessionStorage.setItem('twitch_oauth_state', state);
+    // Also persist to localStorage as a fallback for mobile browsers where window.open
+    // creates a new tab instead of a popup (new tabs do not inherit sessionStorage).
+    try {
+      localStorage.setItem('twitch_oauth_state_fb', JSON.stringify({
+        state,
+        returnUrl: window.location.href,
+        exp: Date.now() + 5 * 60 * 1000, // 5-minute expiry
+      }));
+    } catch (_) {}
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -603,7 +612,15 @@ export default function AppContainer() {
 
     const authUrl = `https://id.twitch.tv/oauth2/authorize?${params}`;
 
-    // Open OAuth in a popup so the user can authenticate on twitch.tv (sets Twitch cookies)
+    // On mobile, popups are not supported — navigate the current tab instead.
+    // The callback stores the session and redirects back to the app.
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (isMobileDevice) {
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Desktop: open OAuth in a popup so the main window's React state is preserved.
     const width = 600;
     const height = 700;
     const left = window.screenX + (window.outerWidth - width) / 2;
@@ -614,6 +631,12 @@ export default function AppContainer() {
       'twitch_oauth',
       `width=${width},height=${height},left=${left},top=${top}`,
     );
+
+    // If the popup was blocked by the browser, fall back to a same-tab redirect.
+    if (!popup || popup.closed) {
+      window.location.href = authUrl;
+      return;
+    }
 
     setIsLoggingIn(true);
 
@@ -646,6 +669,21 @@ export default function AppContainer() {
           }
         } catch (err) {
           console.error('Failed to parse youtube auth storage event', err);
+        }
+      }
+      // Twitch session written by the callback (new-tab/mobile flow).
+      if (e.key === 'mixchat_sessions' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && parsed.twitch) {
+            setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
+            setIsLoggingIn(false);
+            if (popup && !popup.closed) popup.close();
+            window.removeEventListener('message', onMessage);
+            window.removeEventListener('storage', onStorage);
+          }
+        } catch (err) {
+          console.error('Failed to parse sessions storage event', err);
         }
       }
     };
