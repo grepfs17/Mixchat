@@ -46,14 +46,19 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        operationName: "PlaybackAccessToken",
-        extensions: {
-          persistedQuery: {
-            version: 1,
-            sha256Hash:
-              "0828119ded1c13477966434e15800ff57ddacf13ba1911c129dc2200705b0712",
-          },
-        },
+        operationName: "PlaybackAccessToken_Template",
+        query: `query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {
+  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {
+    value
+    signature
+    __typename
+  }
+  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {
+    value
+    signature
+    __typename
+  }
+}`,
         variables: {
           isLive: true,
           login: channel,
@@ -69,6 +74,14 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     }
 
     const gqlData = await gqlRes.json();
+
+    // Surface GQL-level errors before checking for token data.
+    if (Array.isArray(gqlData?.errors) && gqlData.errors.length > 0) {
+      const msg = gqlData.errors.map((e: { message?: string }) => e.message).join("; ");
+      console.error("Twitch GQL errors:", gqlData.errors);
+      throw new Error(`Twitch GQL returned errors: ${msg}`);
+    }
+
     const tokenData = gqlData?.data?.streamPlaybackAccessToken;
 
     if (!tokenData?.value || !tokenData?.signature) {
