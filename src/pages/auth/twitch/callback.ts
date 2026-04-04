@@ -76,26 +76,45 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 <head><title>Twitch Auth</title></head>
 <body>
 <p style="font-family:sans-serif;padding:2rem;color:#555">Completing sign-in…</p>
-<script nonce="${locals.nonce}">
+<script>
   (function () {
     var returnedState = ${returnedStateJson};
     console.log('[twitch-callback] script running, returnedState:', returnedState);
 
-    // --- Read CSRF state ---
-    // Primary: sessionStorage (per-tab, same-tab navigation flow).
     var expectedState = null;
     var returnUrl = '/';
+
+    // --- Read CSRF state ---
+    // Popup flow: read from the opener window's sessionStorage first (the state
+    // was stored in the parent before window.open() was called).
     try {
-      expectedState = sessionStorage.getItem('twitch_oauth_state');
-      returnUrl = sessionStorage.getItem('twitch_oauth_return_url') || '/';
-      sessionStorage.removeItem('twitch_oauth_state');
-      sessionStorage.removeItem('twitch_oauth_return_url');
-      console.log('[twitch-callback] sessionStorage state:', expectedState, 'returnUrl:', returnUrl);
+      if (window.opener && window.opener.sessionStorage) {
+        expectedState = window.opener.sessionStorage.getItem('twitch_oauth_state');
+        var openerReturnUrl = window.opener.sessionStorage.getItem('twitch_oauth_return_url');
+        if (openerReturnUrl) returnUrl = openerReturnUrl;
+        window.opener.sessionStorage.removeItem('twitch_oauth_state');
+        window.opener.sessionStorage.removeItem('twitch_oauth_return_url');
+        console.log('[twitch-callback] opener sessionStorage state:', expectedState);
+      }
     } catch (e) {
-      console.error('[twitch-callback] sessionStorage error:', e);
+      console.error('[twitch-callback] opener sessionStorage error:', e);
     }
 
-    // Fallback: localStorage (handles new-tab mobile flow and Firefox privacy modes).
+    // Redirect flow: try own sessionStorage (same-tab navigation preserves it).
+    if (!expectedState) {
+      try {
+        expectedState = sessionStorage.getItem('twitch_oauth_state');
+        var savedReturnUrl = sessionStorage.getItem('twitch_oauth_return_url');
+        if (savedReturnUrl) returnUrl = savedReturnUrl;
+        sessionStorage.removeItem('twitch_oauth_state');
+        sessionStorage.removeItem('twitch_oauth_return_url');
+        console.log('[twitch-callback] own sessionStorage state:', expectedState);
+      } catch (e) {
+        console.error('[twitch-callback] sessionStorage error:', e);
+      }
+    }
+
+    // Fallback: localStorage (mobile browsers and Firefox private mode).
     if (!expectedState) {
       try {
         var raw = localStorage.getItem('twitch_oauth_state_fb');
@@ -164,7 +183,22 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 </html>`,
       {
         status: 200,
-        headers: { "Content-Type": "text/html" },
+        headers: {
+          "Content-Type": "text/html",
+          // Set CSP explicitly here so the middleware does not override it with a
+          // nonce-based policy. This page contains only server-generated JSON data
+          // (sanitised via JSON.stringify) so unsafe-inline is safe and necessary
+          // for the script to execute even when a reverse proxy has already set its
+          // own Content-Security-Policy header upstream.
+          "Content-Security-Policy": [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'unsafe-inline'",
+            "connect-src 'self'",
+            "img-src 'none'",
+            "frame-src 'none'",
+          ].join("; "),
+        },
       },
     );
   } catch (error) {
