@@ -145,7 +145,7 @@ export default function ChatApp({
       try {
         const params = new URLSearchParams();
         params.append('channelUrl', linkedYoutubeUrl);
-        
+
         const res = await fetch(`/api/youtube-live?${params.toString()}`);
 
         const data = await res.json();
@@ -186,7 +186,7 @@ export default function ChatApp({
     };
   }, [linkedYoutubeUrl]);
 
-  // Reset manual video ID when channel changes
+  // Reset all YouTube state when the channel changes
   useEffect(() => {
     setManualVideoId('');
     setAutoVideoId(null);
@@ -286,14 +286,13 @@ export default function ChatApp({
     });
   }, [twitchSession]);
 
-  // Use Twitch chat hook - pass the channel NAME not ID
   const [badgesReady, setBadgesReady] = useState(false);
 
   // Ref so handleMessageDeleted closure always reads the latest prop value
   const showDeletedMessagesRef = useRef(showDeletedMessages);
   useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
 
-  // Populate badges for optimistic message
+  // Cache the current user's own badges so they can be shown on optimistic messages
   const handleOwnBadgesLoaded = useCallback(
     (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
@@ -314,6 +313,7 @@ export default function ChatApp({
     });
   }, []);
 
+  // Connect to the Twitch chat channel
   const { sendMessage: sendTwitchMessage } =
     useTwitchChat(
       selectedTwitchChannelName, // Use the channel name (login), not the ID
@@ -328,7 +328,7 @@ export default function ChatApp({
       handleMessageDeleted
     );
 
-  // Simulate loading chat messages from selected channel
+  // Initialize assets and load recent messages when the selected channel changes
   useEffect(() => {
     // Reset badge cache and readiness when channel changes
     clearBadgeCache();
@@ -416,7 +416,7 @@ export default function ChatApp({
   // Fetch stream status on channel change or when component mounts
   useEffect(() => {
     const fetchStreamStatus = async () => {
-      // Don't call the API until we have a valid token useTokenRefresh will
+      // Don't call the API until we have a valid token. useTokenRefresh will
       // populate it shortly after page load, re-triggering this effect.
       if (selectedTwitchChannel && twitchSession?.accessToken) {
         try {
