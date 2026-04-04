@@ -111,17 +111,10 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       
       #app {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        /* 100svh = small viewport height — constant, always excludes browser
-           chrome (Firefox Android bottom nav bar, Brave tab strip, etc.).
-           We intentionally omit `bottom: 0` so the element is sized by
-           height rather than stretching into the area behind the nav bar. */
-        height: 100vh;   /* legacy fallback for very old mobile browsers */
-        height: 100svh;
+        inset: 0;
+        /* JS in the <script> below will shrink height to visualViewport.height
+           so the bottom browser chrome (Firefox nav bar, etc.) is excluded. */
         padding: 0;
-        /* iOS home-indicator / notch safe area */
         padding-bottom: env(safe-area-inset-bottom, 0px);
         overflow: hidden;
       }
@@ -165,16 +158,21 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       var vv = window.visualViewport;
       if (!vv) return;
       function update() {
-        // Desktop: let CSS handle layout (footer needs padding-bottom: 30px)
-        if (window.innerWidth > 768) {
-          var appEl = document.getElementById('app');
+        var h = Math.round(vv.height);
+        var isMobile = window.innerWidth <= 768;
+        var appEl = document.getElementById('app');
+        if (!isMobile) {
+          // Desktop: restore CSS-controlled sizing
+          document.documentElement.style.height = '';
+          document.body.style.height = '';
           if (appEl) appEl.style.height = '';
           return;
         }
-        var appEl = document.getElementById('app');
-        if (!appEl) return;
-        // Directly size the app to the visible viewport — excludes all chrome.
-        appEl.style.height = Math.round(vv.height) + 'px';
+        // Set all three so height:100% cascade resolves to the
+        // exact visual viewport — excludes Firefox nav bar, keyboard, etc.
+        document.documentElement.style.height = h + 'px';
+        document.body.style.height = h + 'px';
+        if (appEl) appEl.style.height = h + 'px';
       }
       vv.addEventListener('resize', update);
       update();

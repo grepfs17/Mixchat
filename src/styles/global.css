@@ -19,9 +19,17 @@ body {
 }
 
 /* On mobile, lock html/body against scroll so the browser can't scroll the
-   embed off-screen when the virtual keyboard opens */
+   embed off-screen when the virtual keyboard opens.
+   height is set to a fixed px value by the visualViewport JS in index.astro
+   so the height:100% chain from #app → ChatApp works correctly. */
 @media (max-width: 768px) {
-  html, body {
+  html {
+    overflow: hidden;
+    /* JS will override this with the exact visualViewport pixel height */
+    height: 100vh;
+    height: 100svh;
+  }
+  body {
     overflow: hidden;
     height: 100%;
   }
