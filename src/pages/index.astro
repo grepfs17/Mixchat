@@ -111,10 +111,18 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
       
       #app {
         position: fixed;
-        inset: 0;
-        height: auto;
+        top: 0;
+        left: 0;
+        right: 0;
+        /* 100svh = small viewport height — constant, always excludes browser
+           chrome (Firefox Android bottom nav bar, Brave tab strip, etc.).
+           We intentionally omit `bottom: 0` so the element is sized by
+           height rather than stretching into the area behind the nav bar. */
+        height: 100vh;   /* legacy fallback for very old mobile browsers */
+        height: 100svh;
         padding: 0;
-        padding-bottom: max(env(safe-area-inset-bottom, 0px), 60px);
+        /* iOS home-indicator / notch safe area */
+        padding-bottom: env(safe-area-inset-bottom, 0px);
         overflow: hidden;
       }
 
@@ -144,10 +152,10 @@ const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
   </footer>
   <script is:inline>
     // When the virtual keyboard opens, visualViewport.height shrinks.
-    // We update --vv-height so the keyboard-open case is handled,
-    // but NOTE: this does NOT help with persistent browser chrome bars
-    // (Brave/Firefox bottom tab strip) — those are handled by the
-    // padding-bottom: max(env(safe-area-inset-bottom), 60px) on #app in CSS.
+    // Adjust padding-bottom so the message input stays above the keyboard.
+    // Persistent browser chrome bars (Firefox Android bottom nav, Brave
+    // tab strip, etc.) are handled by height: 100svh on #app — svh excludes
+    // browser chrome from the measured height so no extra padding is needed.
     (function () {
       var vv = window.visualViewport;
       if (!vv) return;
