@@ -186,11 +186,18 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
           hlsRef.current = null;
         }
 
-        // /api/stream-playlist handles the full server-side proxy chain:
-        //   Twitch GQL (token) → usher.ttvnw.net (master) → best variant →
-        //   rewrite segment URLs to /api/stream-segment
-        // This avoids all browser CORS issues and IP-mismatch 403s.
-        const playlistUrl = `/api/stream-playlist?channel=${encodeURIComponent(channelName)}`;
+        // The server fetches the GQL token and contacts usher.ttvnw.net
+        // (which has no CORS headers, so it must be done server-side).
+        // It returns the best-quality CDN variant URL, which lives on
+        // *.ttvnw.net — those CDN domains DO support CORS, so HLS.js can
+        // fetch all playlists and segments directly from the CDN with zero
+        // server bandwidth involved.
+        const playlistRes = await fetch(`/api/stream-playlist?channel=${encodeURIComponent(channelName)}`);
+        if (!playlistRes.ok) throw new Error('Failed to get stream playlist');
+        const playlistData = await playlistRes.json();
+        if (playlistData.error) throw new Error(playlistData.error);
+
+        const playlistUrl = playlistData.variantUrl as string;
 
         if (HLS.isSupported()) {
           const hls = new HLS({

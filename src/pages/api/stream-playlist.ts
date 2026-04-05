@@ -136,36 +136,19 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       );
     }
 
-    // Fetch the quality-specific sub-playlist. This one contains the actual .ts segment URLs.
-    const variantRes = await fetch(bestVariantUrl);
-    if (!variantRes.ok) {
-      throw new Error(`Variant playlist fetch failed: ${variantRes.status}`);
-    }
-
-    const variantText = await variantRes.text();
-
-    // Rewrite every segment URL to go through our proxy so the browser
-    // doesn't run into CORS issues when HLS.js fetches the video chunks.
-    const rewrittenVariant = variantText
-      .split("\n")
-      .map((line) => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("http")) {
-          return `/api/stream-segment?url=${encodeURIComponent(trimmed)}`;
-        }
-        return line;
-      })
-      .join("\n");
-
-    return new Response(rewrittenVariant, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/vnd.apple.mpegurl",
-        "Access-Control-Allow-Origin": "*",
-        // Tell HLS.js to always re-fetch — this is a live stream
-        "Cache-Control": "no-cache, no-store",
+    // Return the CDN variant URL to the browser.
+    // usher.ttvnw.net has no CORS headers so we must fetch it server-side,
+    // but the CDN subdomains (*.ttvnw.net) DO support CORS — Twitch's own
+    // web player uses HLS.js browser-side and hits them directly.
+    // HLS.js will fetch the variant playlist and all segments straight from
+    // the CDN with zero server bandwidth involved.
+    return new Response(
+      JSON.stringify({ variantUrl: bestVariantUrl }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
       },
-    });
+    );
   } catch (error) {
     console.error("Stream playlist proxy error:", error);
     return new Response(

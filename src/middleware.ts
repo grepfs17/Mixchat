@@ -62,6 +62,10 @@ function buildCSP(nonce?: string): string {
     "connect-src 'self'" +
       " https://api.twitch.tv" + // Twitch Helix API (Twurple)
       " https://id.twitch.tv" + // Twitch OAuth validate
+      " https://gql.twitch.tv" + // Twitch GQL (HLS token)
+      " https://usher.ttvnw.net" + // Twitch HLS master playlist
+      " https://*.ttvnw.net" + // Twitch HLS CDN segment subdomains
+      " https://video.twitch.tv" + // Twitch video CDN
       " https://www.googleapis.com" + // YouTube Data API
       " https://youtube.googleapis.com" + // YouTube API (alt)
       " https://recent-messages.robotty.de" + // Recent Twitch chat messages
