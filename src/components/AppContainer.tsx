@@ -158,6 +158,12 @@ export default function AppContainer() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Pin the viewport height once on mount so the stream embed height is immune
+  // to the mobile virtual keyboard resizing the layout viewport.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--initial-vh-px', `${window.innerHeight}px`);
+  }, []);
+
   // Keep the stream embed visible when the mobile keyboard opens
 
   useEffect(() => {

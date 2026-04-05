@@ -35,11 +35,13 @@
 
   /* When stream embed is hidden the chat fills all remaining space — no change needed */
 
-  /* Embed fixed at top: uses svh (small viewport height, never changes with keyboard)
-     so height stays constant whether the keyboard is open or not */
+  /* Embed fixed at top: height is derived from --initial-vh-px (captured once on
+     JS mount, before the keyboard can open) so it never shrinks when the virtual
+     keyboard appears.  Falls back to 40svh for SSR / before JS runs. */
   .app-grid > [data-stream-embed] {
     flex-shrink: 0 !important;
-    height: min(56.25vw, 40svh) !important;
+    height: min(66.25vw, calc(var(--initial-vh-px, 100svh) * 0.4)) !important;
+    max-height: min(66.25vw, calc(var(--initial-vh-px, 100svh) * 0.4)) !important;
     overflow: hidden !important;
   }
 

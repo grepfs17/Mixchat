@@ -45,7 +45,7 @@ body {
   }
   
   [data-stream-embed] {
-    max-height: 50vh;
+    min-height: 50vh;
   }
 }
 
