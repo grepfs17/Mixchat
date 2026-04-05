@@ -289,9 +289,6 @@
     gap: 8px;
     padding: 12px;
     flex-shrink: 0;   /* never shrink — stay fully visible */
-    position: sticky; /* stick to bottom of the scroll container */
-    bottom: 0;
-    z-index: 10;
   }
   
   .platform-selector {
@@ -331,9 +328,6 @@
     gap: 6px;
     padding: 8px;
     flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
   }
   
   .platform-selector {
