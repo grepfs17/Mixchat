@@ -15,21 +15,22 @@
 
 /* ── Quality selector ─────────────────────────────────────────────────────── */
 .quality-selector {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  position: relative;
   z-index: 10;
+}
+.quality-selector--header {
+  position: relative;
 }
 
 .quality-selector__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 9;
+  z-index: 999;
 }
 
 .quality-selector__inner {
   position: relative;
-  z-index: 10;
+  z-index: 1000;
 }
 
 .quality-selector__toggle {
@@ -60,6 +61,7 @@
   overflow: hidden;
   min-width: 140px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
 }
 
 .quality-selector__option {
@@ -82,6 +84,12 @@
 .quality-selector__option--active {
   background: rgba(99, 102, 241, 0.35);
   color: #a5b4fc;
+}
+
+@media (max-width: 600px) {
+  .quality-selector__label {
+    display: none;
+  }
 }
 
 /* ── Loading overlay ──────────────────────────────────────────────────────── */

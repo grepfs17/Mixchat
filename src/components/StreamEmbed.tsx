@@ -35,6 +35,8 @@ interface StreamEmbedProps {
   /** User's Twitch OAuth access token — passed to the embed player so it can
    *  authenticate without relying on cookies/localStorage (Brave Shields). */
   twitchAccessToken?: string;
+  onQualitiesLoaded?: (qualities: Array<{ label: string; url: string }>) => void;
+  externalSelectedQualityIdx?: number;
 }
 
 
@@ -133,14 +135,13 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
   );
 }
 
-export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken }: StreamEmbedProps) {
+export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken, onQualitiesLoaded, externalSelectedQualityIdx }: StreamEmbedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qualities, setQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
-  const [showQualityMenu, setShowQualityMenu] = useState(false);
   // null = not yet resolved; player must not mount until we have the real value
   // so it is never initialized twice (which triggers Kasada 429 on passport.twitch.tv).
   const [parentDomain, setParentDomain] = useState<string | null>(null);
@@ -167,14 +168,19 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       .catch(() => setParentDomain('localhost'));
   }, []);
 
-  const handleQualityChange = (idx: number) => {
-    setSelectedQualityIdx(idx);
-    setShowQualityMenu(false);
-    if (hlsRef.current && qualities[idx]) {
-      hlsRef.current.loadSource(qualities[idx].url);
+  // Watch external quality index and switch the HLS source accordingly
+  useEffect(() => {
+    if (
+      externalSelectedQualityIdx !== undefined &&
+      hlsRef.current &&
+      qualities[externalSelectedQualityIdx]
+    ) {
+      hlsRef.current.loadSource(qualities[externalSelectedQualityIdx].url);
+      setSelectedQualityIdx(externalSelectedQualityIdx);
       videoRef.current?.play().catch(() => {});
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalSelectedQualityIdx]);
 
   // No longer forcing iframe remount on channel switch to help preserve session state.
   // The browser will handle navigating the existing iframe to the new URL.
@@ -191,7 +197,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
         setError(null);
         setQualities([]);
         setSelectedQualityIdx(0);
-        setShowQualityMenu(false);
+        onQualitiesLoaded?.([]);
 
         if (!videoRef.current) return;
 
@@ -213,6 +219,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
 
         const fetchedQualities: Array<{ label: string; url: string }> = playlistData.qualities;
         setQualities(fetchedQualities);
+        onQualitiesLoaded?.(fetchedQualities);
         const playlistUrl = fetchedQualities[0].url;
 
         if (HLS.isSupported()) {
@@ -388,38 +395,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
         controls
         title={`${channelName} Twitch Stream`}
       />
-      {/* Quality selector — only shown once qualities are loaded */}
-      {qualities.length > 1 && (
-        <div className="quality-selector">
-          {showQualityMenu && (
-            <div
-              className="quality-selector__backdrop"
-              onClick={() => setShowQualityMenu(false)}
-            />
-          )}
-          <div className="quality-selector__inner">
-            <button
-              className="quality-selector__toggle"
-              onClick={() => setShowQualityMenu(q => !q)}
-            >
-              ⚙ {qualities[selectedQualityIdx]?.label ?? 'Quality'}
-            </button>
-            {showQualityMenu && (
-              <div className="quality-selector__menu">
-                {qualities.map((q, i) => (
-                  <button
-                    key={q.label}
-                    onClick={() => handleQualityChange(i)}
-                    className={`quality-selector__option${i === selectedQualityIdx ? ' quality-selector__option--active' : ''}`}
-                  >
-                    {i === selectedQualityIdx ? '✓ ' : '  '}{q.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Quality selector is rendered in the stream-embed header (AppContainer) */}
       {loading && (
         <div className="stream-loading">
           <div className="stream-loading__spinner" />

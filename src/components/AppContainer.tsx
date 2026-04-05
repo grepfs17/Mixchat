@@ -78,6 +78,9 @@ export default function AppContainer() {
   const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0–1
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
+  const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
+  const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
+  const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
   const hasLoadedSessionsRef = useRef(false);
@@ -322,6 +325,13 @@ export default function AppContainer() {
   }, [videoRatio]);
 
   // Player always defaults to Twitch embed on load — no localStorage restore
+
+  // Reset HLS quality state when channel or player type changes
+  useEffect(() => {
+    setHlsQualities([]);
+    setSelectedHlsQualityIdx(0);
+    setShowHlsQualityMenu(false);
+  }, [selectedTwitchChannelName, playerType]);
 
   // If player is set to youtube but there's no linked URL, fall back to embed
   useEffect(() => {
@@ -967,13 +977,47 @@ export default function AppContainer() {
                   </button>
                 )}
               </div>
-              <button
-                onClick={() => setShowStreamEmbed(false)}
-                className="stream-embed-close"
-                title="Hide stream embed"
-              >
-                <FaTimes size={15} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                {playerType === 'm3u8' && hlsQualities.length > 1 && (
+                  <div className="quality-selector quality-selector--header">
+                    {showHlsQualityMenu && (
+                      <div
+                        className="quality-selector__backdrop"
+                        onClick={() => setShowHlsQualityMenu(false)}
+                      />
+                    )}
+                    <div className="quality-selector__inner">
+                      <button
+                        className="quality-selector__toggle"
+                        onClick={() => setShowHlsQualityMenu(q => !q)}
+                        title={hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}
+                      >
+                        ⚙ <span className="quality-selector__label">{hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}</span>
+                      </button>
+                      {showHlsQualityMenu && (
+                        <div className="quality-selector__menu">
+                          {hlsQualities.map((q, i) => (
+                            <button
+                              key={q.label}
+                              onClick={() => { setSelectedHlsQualityIdx(i); setShowHlsQualityMenu(false); }}
+                              className={`quality-selector__option${i === selectedHlsQualityIdx ? ' quality-selector__option--active' : ''}`}
+                            >
+                              {i === selectedHlsQualityIdx ? '✓ ' : '  '}{q.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowStreamEmbed(false)}
+                  className="stream-embed-close"
+                  title="Hide stream embed"
+                >
+                  <FaTimes size={15} />
+                </button>
+              </div>
             </div>
             <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a', position: 'relative' }}>
               {playerType === 'youtube' ? (
@@ -1000,6 +1044,8 @@ export default function AppContainer() {
                   twitchConnected={!!sessions.twitch}
                   onTwitchLogin={handleTwitchLogin}
                   twitchAccessToken={sessions.twitch?.accessToken}
+                  onQualitiesLoaded={setHlsQualities}
+                  externalSelectedQualityIdx={selectedHlsQualityIdx}
                 />
               )}
             </div>

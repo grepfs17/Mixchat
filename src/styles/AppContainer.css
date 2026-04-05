@@ -65,7 +65,6 @@
 /* Stream Embed Header */
 .stream-embed-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 6px 10px;
   background: linear-gradient(135deg, #0e0e0e 0%, #111111 100%);
@@ -93,6 +92,7 @@
   padding: 2px;
   border-radius: 8px;
   border: 1px solid #1e1e1e;
+  flex: 1;
 }
 
 .player-type-btn {
