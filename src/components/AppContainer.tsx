@@ -6,7 +6,7 @@ import StreamEmbed from './StreamEmbed';
 import LiveNotification from './LiveNotification';
 import WatchlistManager from './WatchlistManager';
 import YouTubeLinker from './YouTubeLinker';
-import '../styles/AppContainer.css';
+
 import type { PlatformSession, ChatFont } from '../lib/types';
 import { getYoutubeLinkForChannel } from '../lib/youtubeLinks';
 import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';

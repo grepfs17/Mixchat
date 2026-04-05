@@ -6,7 +6,7 @@ import {
   removeWatchedStreamer,
 } from '../lib/streamMonitor';
 import type { TwitchChannel } from '../components/AppContainer';
-import '../styles/WatchlistManager.css';
+
 
 interface WatchlistManagerProps {
   availableChannels: TwitchChannel[];

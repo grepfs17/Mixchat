@@ -7,7 +7,7 @@ import {
 } from '../lib/youtubeLinks';
 import type { YouTubeLink } from '../lib/youtubeLinks';
 import type { TwitchChannel } from '../components/AppContainer';
-import '../styles/YouTubeLinker.css';
+
 
 interface YouTubeLinkerProps {
   availableChannels: TwitchChannel[];

@@ -4,7 +4,7 @@ import { getColorFromName } from '../lib/chatColors';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
-import '../styles/YouTubeChat.css';
+
 
 interface YouTubeChatProps {
   videoId: string;

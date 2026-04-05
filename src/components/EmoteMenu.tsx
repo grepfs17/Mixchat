@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, memo } from 'react';
 import { FaSearch } from 'react-icons/fa';
 import type { EmotesBySource } from '../lib/emotes';
 import { toggleDisableEmote, getDisabledEmotes } from '../lib/emotes';
-import '../styles/EmoteMenu.css';
+
 
 interface EmoteMenuProps {
   emotes: EmotesBySource;

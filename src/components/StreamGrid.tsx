@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { TwitchChannel } from './AppContainer';
-import '../styles/StreamGrid.css';
+
 
 type SortOption = 'favorites' | 'name' | 'viewers';
 

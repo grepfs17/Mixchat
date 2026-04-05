@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { FaYoutube } from 'react-icons/fa';
 import { FaRegSmile } from 'react-icons/fa';
 import { searchEmojis, EMOJI_LIST, type EmojiEntry } from '../lib/emojiShortcodes';
-import '../styles/MessageInput.css';
+
 
 interface YouTubeMessageInputProps {
     youtubeVideoId: string;

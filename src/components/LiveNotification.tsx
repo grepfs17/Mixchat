@@ -1,6 +1,6 @@
 import { FaTimes } from 'react-icons/fa';
 import type { LiveStreamer } from '../lib/streamMonitor';
-import '../styles/LiveNotification.css';
+
 
 interface LiveNotificationProps {
   streamer: LiveStreamer;

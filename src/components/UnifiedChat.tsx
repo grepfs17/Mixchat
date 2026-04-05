@@ -9,7 +9,7 @@ import { getColorFromName } from '../lib/chatColors';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
 import YTMessageParts from './YTMessageParts';
-import '../styles/UnifiedChat.css';
+
 
 // YouTube message shape — mirrors what YouTubeChat.tsx uses internally
 interface MessagePart {
