@@ -25,6 +25,14 @@ body {
     overflow: hidden;
     height: 100%;
   }
+
+  /* Astro renders client islands as <astro-island> (display:inline by default).
+     Without an explicit height the AppContainer's height:100% resolves to ~0,
+     causing .message-input to be pushed below the visible viewport. */
+  #app > astro-island {
+    display: block;
+    height: 100%;
+  }
 }
 
 #app {
