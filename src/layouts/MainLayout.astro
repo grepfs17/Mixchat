@@ -47,15 +47,16 @@ const resolvedOgUrl = ogUrl ?? mainUrl;
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content="Mixchat" />
-    <meta property="og:image" content={mainUrl + "favicon.png"} />
+    <meta property="og:image" content={mainUrl + "logo.png"} />
 
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={resolvedOgUrl} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={mainUrl + "favicon.png"} />
+    <meta name="twitter:image" content={mainUrl + "logo.png"} />
 
     <meta name="author" content="Mixchat" />
-    <link rel="canonical" href={mainUrl} />
+    <link rel="canonical" href={resolvedOgUrl} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
