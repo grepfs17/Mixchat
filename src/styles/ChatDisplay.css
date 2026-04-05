@@ -544,16 +544,11 @@
     height: 16px;
   }
   
-  .author {
-    font-size: 0.8rem;
-  }
-  
   .timestamp {
     display: none;
   }
   
   .message-text {
-    font-size: 0.85rem;
     flex: 1;
     flex-basis: auto;
     margin-top: 0;
@@ -570,7 +565,6 @@
 @media (max-width: 480px) {
   .message-single-line {
     gap: 1px;
-    font-size: 0.75rem;
   }
   
   .message {
@@ -584,16 +578,11 @@
     height: 14px;
   }
   
-  .author {
-    font-size: 0.75rem;
-  }
-  
   .timestamp {
     display: none;
   }
   
   .message-text {
-    font-size: 0.8rem;
     flex: 1;
     flex-basis: auto;
     margin-top: 0;
