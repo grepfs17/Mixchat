@@ -3,11 +3,28 @@ import MainLayout from "../../layouts/MainLayout.astro";
 
 const { name } = Astro.params;
 
-const title = `Mixchat — ${name}`;
+const title = `${name} — Mixchat`;
 const description =
-  "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.";
+  `Watch and chat on ${name}'s stream with full 7TV, BTTV, and FFZ emote support. No browser extensions needed.`;
 
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 ---
 
-<MainLayout title={title} description={description} ogUrl={`${mainUrl}channel/${name}`} footerLogo />
+<MainLayout title={title} description={description} ogUrl={`${mainUrl}channel/${name}`} footerLogo>
+  <Fragment slot="head">
+    <meta
+      name="keywords"
+      content={`${name}, twitch chat, live stream, 7tv emotes, bttv emotes, ffz emotes, mixchat`}
+    />
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: title,
+        description: description,
+        url: `${mainUrl}channel/${name}`,
+      })}
+    />
+  </Fragment>
+</MainLayout>

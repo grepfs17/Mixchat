@@ -1,14 +1,14 @@
 ---
-import "../styles/global.css";
+import ContentLayout from "../layouts/ContentLayout.astro";
+
+const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
+const title = "Terms of Service - Mixchat";
+const description =
+  "Mixchat Terms of Service — unofficial Twitch and YouTube chat client provided as-is under the MIT License.";
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Mixchat Terms of Service" />
-    <title>Terms of Service - Mixchat</title>
+<ContentLayout {title} {description} ogUrl={`${mainUrl}terms`}>
+  <Fragment slot="head">
     <style>
       body {
         font-family:
@@ -48,12 +48,13 @@ import "../styles/global.css";
         font-family: "Courier New", monospace;
       }
     </style>
-  </head>
-  <body>
+  </Fragment>
     <div style="text-align: center; margin-bottom: 30px;">
       <img
         src="/logo.png"
         alt="Mixchat Logo"
+        width="80"
+        height="80"
         style="width: auto; height: 80px;"
       />
     </div>
@@ -121,5 +122,4 @@ import "../styles/global.css";
     >
       <a href="/">Back to Mixchat</a>
     </p>
-  </body>
-</html>
+</ContentLayout>
