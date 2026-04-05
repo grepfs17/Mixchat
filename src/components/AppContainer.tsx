@@ -952,30 +952,32 @@ export default function AppContainer() {
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }} data-stream-embed>
             <div className="stream-embed-header">
               <span className="stream-embed-title">{playerType === 'youtube' ? 'YouTube' : 'Twitch'}</span>
-              <div className="player-type-buttons">
-                <button
-                  onClick={() => setPlayerType('embed')}
-                  className={`player-type-btn${playerType === 'embed' ? ' active-twitch' : ''}`}
-                  title="Twitch embed player"
-                >
-                  Twitch
-                </button>
-                <button
-                  onClick={() => setPlayerType('m3u8')}
-                  className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
-                  title="M3U8 HLS player"
-                >
-                  M3U8 (experimental)
-                </button>
-                {linkedYoutubeUrl && (
+              <div className="player-type-center">
+                <div className="player-type-buttons">
                   <button
-                    onClick={() => setPlayerType('youtube')}
-                    className={`player-type-btn${playerType === 'youtube' ? ' active-youtube' : ''}`}
-                    title="YouTube live stream"
+                    onClick={() => setPlayerType('embed')}
+                    className={`player-type-btn${playerType === 'embed' ? ' active-twitch' : ''}`}
+                    title="Twitch embed player"
                   >
-                    YouTube
+                    Twitch
                   </button>
-                )}
+                  <button
+                    onClick={() => setPlayerType('m3u8')}
+                    className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
+                    title="M3U8 HLS player"
+                  >
+                    M3U8 (experimental)
+                  </button>
+                  {linkedYoutubeUrl && (
+                    <button
+                      onClick={() => setPlayerType('youtube')}
+                      className={`player-type-btn${playerType === 'youtube' ? ' active-youtube' : ''}`}
+                      title="YouTube live stream"
+                    >
+                      YouTube
+                    </button>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
                 {playerType === 'm3u8' && hlsQualities.length > 1 && (

@@ -84,6 +84,13 @@
   flex-shrink: 0;
 }
 
+.player-type-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .player-type-buttons {
   display: flex;
   gap: 2px;
@@ -92,7 +99,6 @@
   padding: 2px;
   border-radius: 8px;
   border: 1px solid #1e1e1e;
-  flex: 1;
 }
 
 .player-type-btn {
