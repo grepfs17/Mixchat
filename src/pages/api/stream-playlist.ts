@@ -141,7 +141,14 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
         const variantUrl = masterLines[i + 1]?.trim();
         if (variantUrl?.startsWith("http")) {
           const label = (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
-          qualities.push({ label, url: variantUrl });
+          // Route the variant playlist through our server-side proxy.
+          // *.playlist.ttvnw.net URLs are IP-locked to the server that
+          // requested the access token — fetching them from the browser
+          // results in a 403. The proxy re-fetches server-side and rewrites
+          // relative segment URLs to absolute CDN URLs so HLS.js can pull
+          // the actual .ts segments directly without any proxy overhead.
+          const proxied = `/api/hls-proxy?url=${encodeURIComponent(variantUrl)}`;
+          qualities.push({ label, url: proxied });
         }
       }
     }
@@ -163,10 +170,12 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
 
     // Return all qualities to the browser.
-    // usher.ttvnw.net has no CORS headers so we must fetch it server-side,
-    // but the CDN subdomains (*.ttvnw.net) DO support CORS — Twitch's own
-    // web player uses HLS.js browser-side and hits them directly.
-    // HLS.js will fetch all playlists and segments straight from the CDN.
+    // Variant playlist URLs (*.playlist.ttvnw.net) are IP-locked to the server
+    // that requested the GQL access token, so they are routed through
+    // /api/hls-proxy. The proxy re-fetches them server-side and rewrites any
+    // relative URLs to absolute CDN paths. Actual .ts segments on
+    // video-weaver.*.hls.twitchsvc.net are not IP-locked, so HLS.js fetches
+    // them directly from the CDN without going through the proxy.
     return new Response(
       JSON.stringify({ qualities }),
       {
