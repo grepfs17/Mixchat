@@ -289,9 +289,6 @@
     gap: 8px;
     padding: 12px;
     flex-shrink: 0;
-    position: fixed;
-    bottom: 0px;
-    width: 100%;
   }
   
   .platform-selector {
