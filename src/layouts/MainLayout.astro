@@ -151,32 +151,5 @@ const resolvedOgUrl = ogUrl ?? mainUrl;
         <img src="/logo.png" alt="Mixchat Logo" style="width: auto; height: 24px;" />
       )}
     </footer>
-    <script is:inline>
-      // No CSS viewport unit (svh/dvh/lvh/vh) reliably excludes persistent
-      // browser chrome on all mobile browsers:
-      //   • Firefox Android bottom toolbar  → not a "dynamic" toolbar in CSS
-      //   • Chrome Android URL bar          → partially handled by svh/dvh
-      //   • Virtual keyboard                → shrinks visualViewport only
-      //
-      // window.visualViewport.height is the ONLY value that always equals the
-      // exact visible height regardless of browser chrome or keyboard state.
-      // We set #app's height to this value on every resize so content is never
-      // hidden behind Firefox's nav bar, Brave's tab strip, the keyboard, etc.
-      (function () {
-        var vv = window.visualViewport;
-        if (!vv) return;
-        function update() {
-          var appEl = document.getElementById('app');
-          if (!appEl) return;
-          if (window.innerWidth > 768) {
-            appEl.style.height = '';
-            return;
-          }
-          appEl.style.height = Math.round(vv.height) + 'px';
-        }
-        vv.addEventListener('resize', update);
-        update();
-      })();
-    </script>
   </body>
 </html>
