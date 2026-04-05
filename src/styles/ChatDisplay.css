@@ -549,13 +549,14 @@
   }
   
   .timestamp {
-    font-size: 0.65rem;
+    display: none;
   }
   
   .message-text {
     font-size: 0.85rem;
-    margin-top: 2px;
-    flex-basis: 100%;
+    flex: 1;
+    flex-basis: auto;
+    margin-top: 0;
   }
   
   
@@ -588,18 +589,14 @@
   }
   
   .timestamp {
-    font-size: 0.6rem;
+    display: none;
   }
   
   .message-text {
     font-size: 0.8rem;
-    margin-top: 1px;
-    flex-basis: 100%;
-  }
-  
-  
-  .message-separator {
-    display: none;
+    flex: 1;
+    flex-basis: auto;
+    margin-top: 0;
   }
   
   .message-actions {
