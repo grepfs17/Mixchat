@@ -289,6 +289,12 @@
     gap: 8px;
     padding: 12px;
     flex-shrink: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 10;
   }
   
   .platform-selector {
