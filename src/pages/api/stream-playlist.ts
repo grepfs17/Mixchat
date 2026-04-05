@@ -118,32 +118,57 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
     const masterText = await masterRes.text();
 
-    // The master playlist lists qualities from best to worst, so the first URL is source quality.
+    // Parse all quality variants from the HLS master playlist.
+    // #EXT-X-MEDIA:TYPE=VIDEO lines carry the human-readable quality name.
+    // #EXT-X-STREAM-INF lines reference a VIDEO group-id; the next line is the URL.
     const masterLines = masterText.split("\n");
-    let bestVariantUrl = "";
+
+    // Build GROUP-ID → display name map
+    const nameMap = new Map<string, string>();
     for (const line of masterLines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("http")) {
-        bestVariantUrl = trimmed;
-        break;
+      if (line.startsWith("#EXT-X-MEDIA:TYPE=VIDEO")) {
+        const groupId = line.match(/GROUP-ID="([^"]+)"/)?.[1];
+        const name = line.match(/NAME="([^"]+)"/)?.[1];
+        if (groupId && name) nameMap.set(groupId, name);
       }
     }
 
-    if (!bestVariantUrl) {
+    // Pair each #EXT-X-STREAM-INF with its variant URL
+    const qualities: Array<{ label: string; url: string }> = [];
+    for (let i = 0; i < masterLines.length; i++) {
+      if (masterLines[i].startsWith("#EXT-X-STREAM-INF:")) {
+        const videoGroup = masterLines[i].match(/VIDEO="([^"]+)"/)?.[1];
+        const variantUrl = masterLines[i + 1]?.trim();
+        if (variantUrl?.startsWith("http")) {
+          const label = (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
+          qualities.push({ label, url: variantUrl });
+        }
+      }
+    }
+
+    if (qualities.length === 0) {
       return new Response(
         JSON.stringify({ error: "Could not parse master playlist" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    // Return the CDN variant URL to the browser.
+    // Sort highest resolution first, audio_only last.
+    // Labels look like "1080p60 (source)", "720p60", "480p30", "audio_only".
+    const qualityRank = (label: string): number => {
+      if (label === "audio_only") return -1;
+      const match = label.match(/^(\d+)p/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+    qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
+
+    // Return all qualities to the browser.
     // usher.ttvnw.net has no CORS headers so we must fetch it server-side,
     // but the CDN subdomains (*.ttvnw.net) DO support CORS — Twitch's own
     // web player uses HLS.js browser-side and hits them directly.
-    // HLS.js will fetch the variant playlist and all segments straight from
-    // the CDN with zero server bandwidth involved.
+    // HLS.js will fetch all playlists and segments straight from the CDN.
     return new Response(
-      JSON.stringify({ variantUrl: bestVariantUrl }),
+      JSON.stringify({ qualities }),
       {
         status: 200,
         headers: { "Content-Type": "application/json" },

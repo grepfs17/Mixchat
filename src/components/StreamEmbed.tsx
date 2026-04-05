@@ -138,6 +138,9 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [qualities, setQualities] = useState<Array<{ label: string; url: string }>>([]);
+  const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
+  const [showQualityMenu, setShowQualityMenu] = useState(false);
   // null = not yet resolved; player must not mount until we have the real value
   // so it is never initialized twice (which triggers Kasada 429 on passport.twitch.tv).
   const [parentDomain, setParentDomain] = useState<string | null>(null);
@@ -164,6 +167,15 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       .catch(() => setParentDomain('localhost'));
   }, []);
 
+  const handleQualityChange = (idx: number) => {
+    setSelectedQualityIdx(idx);
+    setShowQualityMenu(false);
+    if (hlsRef.current && qualities[idx]) {
+      hlsRef.current.loadSource(qualities[idx].url);
+      videoRef.current?.play().catch(() => {});
+    }
+  };
+
   // No longer forcing iframe remount on channel switch to help preserve session state.
   // The browser will handle navigating the existing iframe to the new URL.
 
@@ -177,6 +189,9 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       try {
         setLoading(true);
         setError(null);
+        setQualities([]);
+        setSelectedQualityIdx(0);
+        setShowQualityMenu(false);
 
         if (!videoRef.current) return;
 
@@ -188,16 +203,17 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
 
         // The server fetches the GQL token and contacts usher.ttvnw.net
         // (which has no CORS headers, so it must be done server-side).
-        // It returns the best-quality CDN variant URL, which lives on
-        // *.ttvnw.net — those CDN domains DO support CORS, so HLS.js can
-        // fetch all playlists and segments directly from the CDN with zero
-        // server bandwidth involved.
+        // It returns all available quality variants on *.ttvnw.net CDN,
+        // which DO support CORS — HLS.js fetches segments directly from
+        // the CDN with zero server bandwidth involved.
         const playlistRes = await fetch(`/api/stream-playlist?channel=${encodeURIComponent(channelName)}`);
         if (!playlistRes.ok) throw new Error('Failed to get stream playlist');
         const playlistData = await playlistRes.json();
         if (playlistData.error) throw new Error(playlistData.error);
 
-        const playlistUrl = playlistData.variantUrl as string;
+        const fetchedQualities: Array<{ label: string; url: string }> = playlistData.qualities;
+        setQualities(fetchedQualities);
+        const playlistUrl = fetchedQualities[0].url;
 
         if (HLS.isSupported()) {
           const hls = new HLS({
@@ -366,49 +382,48 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
 
   // M3U8 mode — video player
   return (
-    <div style={{ height: '100%', width: '100%', backgroundColor: '#0a0a0a', position: 'relative' }}>
+    <div className="stream-player">
       <video
         ref={videoRef}
         controls
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'block',
-          backgroundColor: '#0a0a0a',
-        }}
         title={`${channelName} Twitch Stream`}
       />
+      {/* Quality selector — only shown once qualities are loaded */}
+      {qualities.length > 1 && (
+        <div className="quality-selector">
+          {showQualityMenu && (
+            <div
+              className="quality-selector__backdrop"
+              onClick={() => setShowQualityMenu(false)}
+            />
+          )}
+          <div className="quality-selector__inner">
+            <button
+              className="quality-selector__toggle"
+              onClick={() => setShowQualityMenu(q => !q)}
+            >
+              ⚙ {qualities[selectedQualityIdx]?.label ?? 'Quality'}
+            </button>
+            {showQualityMenu && (
+              <div className="quality-selector__menu">
+                {qualities.map((q, i) => (
+                  <button
+                    key={q.label}
+                    onClick={() => handleQualityChange(i)}
+                    className={`quality-selector__option${i === selectedQualityIdx ? ' quality-selector__option--active' : ''}`}
+                  >
+                    {i === selectedQualityIdx ? '✓ ' : '  '}{q.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {loading && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            color: '#999',
-            fontSize: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <div
-            style={{
-              width: '30px',
-              height: '30px',
-              border: '3px solid #333',
-              borderTop: '3px solid #6366f1',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
+        <div className="stream-loading">
+          <div className="stream-loading__spinner" />
           <div>Loading stream...</div>
-          <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
-          `}</style>
         </div>
       )}
     </div>
