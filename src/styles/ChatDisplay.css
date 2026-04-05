@@ -506,6 +506,22 @@
 
 /* Responsive design for lower resolutions */
 @media (max-width: 768px) {
+  .status-badge-live {
+    background-color: transparent;
+    padding: 0;
+    margin-right: 6px;
+  }
+
+  .status-badge-live .status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-live);
+  }
+
+  .status-badge-live-text {
+    display: none;
+  }
+
   .header-button {
     font-size: 0;
     gap: 0 !important;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MdRefresh, MdReply, MdContentCopy } from 'react-icons/md';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
@@ -198,7 +198,7 @@ function ChatDisplay({
               className="sidebar-toggle-button"
               title={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
             >
-              {sidebarVisible ? '◀' : '▶'}
+              {sidebarVisible ? <FaTimes /> : <FaBars />}
             </button>
           )}
           {!showStreamEmbed && onToggleStreamEmbed && (
@@ -214,7 +214,7 @@ function ChatDisplay({
             {isStreamLive ? (
               <span className="status-badge-live">
                 <span className="status-dot pulse" />
-                LIVE
+                <span className="status-badge-live-text">LIVE</span>
               </span>
             ) : (
               <span className="status-badge-offline">
