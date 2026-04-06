@@ -1090,6 +1090,7 @@ export default function AppContainer() {
             mentionVolume={mentionVolume}
             mentionSoundType={mentionSoundType}
             showDeletedMessages={showDeletedMessages}
+            onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
           />
         </div>
         </>)}

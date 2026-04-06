@@ -8,6 +8,9 @@ import YouTubeMessageInput from './YouTubeMessageInput';
 import UnifiedChat, { type YTMessage, type UnifiedChatHandle } from './UnifiedChat';
 import { useTwitchChat } from '../hooks/useTwitchChat';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
+import { useRaidDetection } from '../hooks/useRaidDetection';
+import type { RaidOutEvent } from '../hooks/useRaidDetection';
+import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages } from '../lib/twitch';
@@ -53,6 +56,8 @@ interface ChatAppProps {
   mentionVolume?: number;
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
+  /** Called when the viewer clicks "Follow Raid" on the raid banner */
+  onFollowRaid?: (channelLogin: string) => void;
 }
 
 export default function ChatApp({
@@ -75,9 +80,11 @@ export default function ChatApp({
   mentionVolume = 0.5,
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
+  onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
   const [isRefreshingEmotes, setIsRefreshingEmotes] = useState(false);
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
@@ -315,6 +322,17 @@ export default function ChatApp({
       }
     });
   }, []);
+
+  // Detect outgoing raids via Twitch EventSub WebSocket
+  useRaidDetection({
+    channelId: selectedTwitchChannel,
+    accessToken: twitchSession?.accessToken || '',
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    onRaidOut: (raid) => {
+      setPendingRaid(raid);
+    },
+  });
 
   // Connect to the Twitch chat channel
   const { sendMessage: sendTwitchMessage } =
@@ -579,6 +597,18 @@ export default function ChatApp({
           message={notification.message}
           type={notification.type}
           onClose={() => setNotification(null)}
+        />
+      )}
+
+      {/* Outgoing raid notification */}
+      {pendingRaid && (
+        <RaidNotification
+          raid={pendingRaid}
+          onFollowRaid={() => {
+            onFollowRaid?.(pendingRaid.targetLogin);
+            setPendingRaid(null);
+          }}
+          onDismiss={() => setPendingRaid(null)}
         />
       )}
 
