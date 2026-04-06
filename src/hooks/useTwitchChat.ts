@@ -574,6 +574,7 @@ export function useTwitchChat(
       const color = msg.tags.get('color') || '#FFFFFF';
       const userId = msg.tags.get('user-id') || undefined;
       const msgId = msg.tags.get('id') || crypto.randomUUID();
+      const userMessage = msg.text ?? '';
 
       const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
 
@@ -581,7 +582,7 @@ export function useTwitchChat(
         id: msgId,
         platform: 'twitch',
         author: displayName,
-        content: `is on a ${streakCount}-month watch streak!`,
+        content: userMessage ? `[${streakCount} streak] - ${userMessage}` : `[${streakCount} streak]`,
         timestamp: new Date(),
         userId,
         authorColor: color,
