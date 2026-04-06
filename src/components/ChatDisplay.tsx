@@ -7,6 +7,7 @@ import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
+import { EVENT_CONFIG } from './TwitchEventIcon';
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
@@ -364,6 +365,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                 {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
                 <div
                   className={messageClasses}
+                  style={(() => {
+                    const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
+                    return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
+                  })()}
                   onTouchStart={() => handleMessageTouchStart(msg)}
                   onTouchEnd={() => handleMessageTouchEnd(msg)}
                   onTouchMove={handleMessageTouchMove}
@@ -393,6 +398,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
 
                     </div>
                   )}
+                  <TwitchEventIcon messageType={msg.messageType} rewardTitle={msg.rewardTitle} />
                   <div className="message-single-line">
                     <span className="timestamp">
                       {msg.timestamp.toLocaleTimeString()}
@@ -449,10 +455,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                         className="avatar"
                       />
                     )*/}
-                    <TwitchEventIcon messageType={msg.messageType} size={16} />
-                    {msg.messageType === 'redemption' && msg.rewardTitle && (
-                      <span className="reward-title-badge">{msg.rewardTitle}</span>
-                    )}
                     <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
                     <a
                       href={`https://twitch.tv/${msg.author}`}

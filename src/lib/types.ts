@@ -8,6 +8,8 @@ export const MESSAGE_TYPES = [
   "resub",
   "subgift",
   "redemption",
+  "first-time-chatter",
+  "raid",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 

@@ -279,6 +279,7 @@ export function useTwitchChat(
       const rawTags = (msg as any).tags as Map<string, string> | undefined;
       const sourceRoomId: string | undefined = rawTags?.get('source-room-id') || undefined;
       const rewardTitle: string | undefined = msg.isRedemption ? (rawTags?.get('custom-reward-title') || undefined) : undefined;
+      const isFirstTimeChatter: boolean = msg.isFirst === true;
       // Only treat as shared-chat if the source room differs from the current channel
       const isSharedChat = Boolean(
         sourceRoomId &&
@@ -306,7 +307,7 @@ export function useTwitchChat(
         badges: badgeImages,
         badgeDetails,
         isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
-        messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : 'chat'),
+        messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : (isFirstTimeChatter ? 'first-time-chatter' : 'chat')),
         rewardId: msg.isRedemption ? (msg.rewardId || undefined) : undefined,
         rewardTitle: rewardTitle,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
@@ -489,6 +490,39 @@ export function useTwitchChat(
         badges: badgeImages,
         badgeDetails,
         messageType: 'subgift',
+      };
+
+      onMessage(chatMessage);
+    });
+
+    newClient.onRaid((_channel, _user, raidInfo, msg) => {
+      if (!active) return;
+      const raidMessage = `is raiding with a party of ${raidInfo.viewerCount} viewers!`;
+
+      const badgeImages: Record<string, string> = {};
+      const badgeDetails: Record<string, { url: string; title: string }> = {};
+      msg.userInfo.badges.forEach((version, badgeName) => {
+        const detail = getBadgeDetail(badgeName, version);
+        if (detail) {
+          badgeImages[badgeName] = detail.url;
+          badgeDetails[badgeName] = { url: detail.url, title: detail.title };
+        }
+      });
+
+      const chatMessage: ChatMessage = {
+        id: msg.id,
+        platform: 'twitch',
+        author: raidInfo.displayName || msg.userInfo.displayName || msg.userInfo.userName || 'Anonymous',
+        content: raidMessage,
+        timestamp: msg.date,
+        userId: msg.userInfo.userId,
+        authorColor: msg.userInfo.color || '#FFFFFF',
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: badgeImages,
+        badgeDetails,
+        messageType: 'raid',
       };
 
       onMessage(chatMessage);

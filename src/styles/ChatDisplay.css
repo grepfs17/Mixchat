@@ -425,6 +425,23 @@
   background-color: var(--color-bg-bot);
 }
 
+.twitch-event-label {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-bottom: 3px;
+  opacity: 0.9;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .reward-title-badge {
   display: inline-flex;
   align-items: center;
@@ -446,14 +463,12 @@
 .message.redemption,
 .message.subscription,
 .message.resub,
-.message.subgift {
-  background-color: var(--color-bg-twitch-event);
-  border-left: 2px solid var(--color-border-twitch-event);
-}
-
-.message.cheer {
-  background-color: var(--color-bg-cheer-event);
-  border-left: 2px solid var(--color-border-cheer-event);
+.message.subgift,
+.message.cheer,
+.message.first-time-chatter,
+.message.raid {
+  background-color: var(--event-bg);
+  border-left: 2px solid var(--event-color);
 }
 
 .message.mention {
