@@ -258,6 +258,16 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
     }
   }, []);
 
+  const scrollToMessage = useCallback((targetId: string) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const el = container.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(targetId)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('message-highlight');
+    setTimeout(() => el.classList.remove('message-highlight'), 2000);
+  }, []);
+
 
 
 
@@ -365,6 +375,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                 {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
                 <div
                   className={messageClasses}
+                  data-message-id={msg.id}
                   style={(() => {
                     const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
                     return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
@@ -374,7 +385,11 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                   onTouchMove={handleMessageTouchMove}
                 >
                   {msg.replyTo && (
-                    <div className="reply-info">
+                    <div
+                      className="reply-info reply-info-clickable"
+                      onClick={() => scrollToMessage(msg.replyTo!.id)}
+                      title="Jump to original message"
+                    >
                       <span>response to{' '}
                         <span
                           style={{
