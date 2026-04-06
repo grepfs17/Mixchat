@@ -563,7 +563,7 @@
   .messages-container::after {
     content: '';
     display: block;
-    min-height: 100px;
+    min-height: 105px;
     flex-shrink: 0;
   }
   
