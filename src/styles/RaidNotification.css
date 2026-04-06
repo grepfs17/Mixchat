@@ -28,7 +28,6 @@
   }
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
 
 .raid-notification-header {
   display: flex;
@@ -96,7 +95,6 @@
   color: var(--color-text-primary);
 }
 
-/* ── Body ────────────────────────────────────────────────────────────────── */
 
 .raid-notification-body {
   color: var(--color-text-secondary);
@@ -109,7 +107,6 @@
   color: var(--color-text-primary);
 }
 
-/* ── Footer ──────────────────────────────────────────────────────────────── */
 
 .raid-notification-footer {
   display: flex;
@@ -140,7 +137,6 @@
   transform: translateY(0);
 }
 
-/* ── Countdown ───────────────────────────────────────────────────────────── */
 
 .raid-countdown {
   color: var(--color-text-muted);
@@ -148,7 +144,6 @@
   white-space: nowrap;
 }
 
-/* ── Progress bar (shrinks from full width to 0 over countdown) ───────────── */
 
 .raid-progress {
   position: absolute;
