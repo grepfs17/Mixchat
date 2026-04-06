@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import ChatDisplay, { type ChatDisplayHandle } from './ChatDisplay';
+import MobileTouchHintModal from './MobileTouchHintModal';
 import MessageInput from './MessageInput';
 import Notification from './Notification';
 import YouTubeChat from './YouTubeChat';
@@ -835,6 +836,7 @@ export default function ChatApp({
           />
         </>
       )}
+      <MobileTouchHintModal twitchConnected={twitchConnected} />
     </div>
   );
 }
