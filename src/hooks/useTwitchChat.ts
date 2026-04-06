@@ -170,6 +170,9 @@ export function useTwitchChat(
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
+  const [slowModeWaitTime, setSlowModeWaitTime] = useState<number | null>(null);
+  // null = follower mode off, 0 = any follower, N = must have followed for N minutes
+  const [followerModeMinutes, setFollowerModeMinutes] = useState<number | null>(null);
 
   // Refs so the stale closure inside the IRC handler always reads the latest
   // values without tearing down and rebuilding the WebSocket.
@@ -210,6 +213,44 @@ export function useTwitchChat(
       if (!active) return;
       console.log(`Connected to ${channelName}`);
       setIsConnected(true);
+
+      // Fetch channel chat settings
+      (async () => {
+        try {
+          // Step 1: resolve login name → broadcaster ID
+          const usersRes = await fetch(
+            `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelName)}`,
+          );
+          if (!usersRes.ok) return;
+          const usersData = await usersRes.json();
+          const broadcasterId: string | undefined = usersData?.data?.[0]?.id;
+          if (!broadcasterId) return;
+
+          // Step 2: fetch chat settings
+          const settingsRes = await fetch(
+            `/api/twitch-proxy?path=/helix/chat/settings&broadcaster_id=${broadcasterId}`,
+          );
+          if (!settingsRes.ok) return;
+          const settingsData = await settingsRes.json();
+          console.log('[useTwitchChat] chat settings response:', settingsData);
+          const slowMode: boolean = settingsData?.data?.[0]?.slow_mode ?? false;
+          const waitTime: number | null = slowMode
+            ? (settingsData?.data?.[0]?.slow_mode_wait_time ?? 30)
+            : null;
+          console.log(`[useTwitchChat] slow_mode=${slowMode}, slow_mode_wait_time=${waitTime} for channel "${channelName}"`);
+          const followerMode: boolean = settingsData?.data?.[0]?.follower_mode ?? false;
+          const followerMinutes: number | null = followerMode
+            ? (settingsData?.data?.[0]?.follower_mode_duration ?? 0)
+            : null;
+          console.log(`[useTwitchChat] follower_mode=${followerMode}, follower_mode_duration=${followerMinutes} for channel "${channelName}"`);
+          if (active) {
+            setSlowModeWaitTime(waitTime);
+            setFollowerModeMinutes(followerMinutes);
+          }
+        } catch {
+          // Non-fatal
+        }
+      })();
     });
 
     newClient.onDisconnect(() => {
@@ -655,5 +696,5 @@ export function useTwitchChat(
     [client, isConnected, channelName]
   );
 
-  return { isConnected, sendMessage };
+  return { isConnected, sendMessage, slowModeWaitTime, followerModeMinutes };
 }

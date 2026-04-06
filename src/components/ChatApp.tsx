@@ -335,7 +335,7 @@ export default function ChatApp({
   });
 
   // Connect to the Twitch chat channel
-  const { sendMessage: sendTwitchMessage } =
+  const { sendMessage: sendTwitchMessage, slowModeWaitTime, followerModeMinutes } =
     useTwitchChat(
       selectedTwitchChannelName, // Use the channel name (login), not the ID
       twitchSession?.accessToken || '',
@@ -687,6 +687,8 @@ export default function ChatApp({
             chatMessages={messages}
             currentUsername={twitchSession?.username || ''}
             onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
+            slowModeWaitTime={slowModeWaitTime}
+            followerModeMinutes={followerModeMinutes}
           />
 
           {/* YouTube message input (when we have a live video) */}
@@ -863,6 +865,8 @@ export default function ChatApp({
             chatMessages={messages}
             currentUsername={twitchSession?.username || ''}
             onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
+            slowModeWaitTime={slowModeWaitTime}
+            followerModeMinutes={followerModeMinutes}
           />
         </>
       )}

@@ -15,6 +15,8 @@ interface MessageInputProps {
   chatMessages?: ChatMessage[];
   currentUsername?: string;
   onInputFocus?: () => void;
+  slowModeWaitTime?: number | null;
+  followerModeMinutes?: number | null;
 }
 
 function MessageInput({
@@ -26,6 +28,8 @@ function MessageInput({
   chatMessages = [],
   currentUsername = '',
   onInputFocus,
+  slowModeWaitTime = null,
+  followerModeMinutes = null,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [placeholder, _setPlaceholder] = useState('Type your message');
@@ -53,6 +57,8 @@ function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
   const shouldRefocusRef = useRef(false);
+  const [slowModeCooldown, setSlowModeCooldown] = useState(0);
+  const slowModeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Position of the textarea, used to anchor the portal-rendered autocomplete menu
   const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
 
@@ -70,6 +76,12 @@ function MessageInput({
     window.addEventListener('emotes-reloaded', handleEmotesReloaded);
     return () => {
       window.removeEventListener('emotes-reloaded', handleEmotesReloaded);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (slowModeTimerRef.current) clearInterval(slowModeTimerRef.current);
     };
   }, []);
 
@@ -228,6 +240,22 @@ function MessageInput({
       setShowEmoteMenu(false);
       setShowEmotePickerMenu(false);
       if (onCancelReply) onCancelReply();
+
+      // Start slow mode cooldown if the channel has slow mode enabled
+      if (slowModeWaitTime && slowModeWaitTime > 0) {
+        if (slowModeTimerRef.current) clearInterval(slowModeTimerRef.current);
+        setSlowModeCooldown(slowModeWaitTime);
+        slowModeTimerRef.current = setInterval(() => {
+          setSlowModeCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(slowModeTimerRef.current!);
+              slowModeTimerRef.current = null;
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -432,11 +460,13 @@ function MessageInput({
           disabled={
             !message.trim() ||
             selectedPlatforms.length === 0 ||
-            isLoading
+            isLoading ||
+            slowModeCooldown > 0
           }
           className="send-button"
+          title={slowModeCooldown > 0 ? `Slow mode – wait ${slowModeCooldown}s` : undefined}
         >
-          {isLoading ? '...' : <FaTwitch size={16} />}
+          {isLoading ? '...' : slowModeCooldown > 0 ? `${slowModeCooldown}s` : <FaTwitch size={16} />}
         </button>
 
         {showEmoteMenu && emoteResults.length > 0 && menuRect && createPortal(
@@ -591,6 +621,19 @@ function MessageInput({
         isOpen={showEmotePickerMenu}
         onClose={() => setShowEmotePickerMenu(false)}
       />
+
+      {followerModeMinutes !== null && (
+        <div className="warning" style={{ color: '#9ca3af', fontSize: '0.8rem', padding: '4px 12px', borderTop: '1px solid #1e293b' }}>
+          {followerModeMinutes === 0
+            ? '⚠ Follower-only chat — follow this channel to send messages'
+            : followerModeMinutes < 60
+            ? `⚠ Follower-only chat — you must have followed for at least ${followerModeMinutes} minute${followerModeMinutes === 1 ? '' : 's'}`
+            : followerModeMinutes < 1440
+            ? `⚠ Follower-only chat — you must have followed for at least ${Math.round(followerModeMinutes / 60)} hour${Math.round(followerModeMinutes / 60) === 1 ? '' : 's'}`
+            : `⚠ Follower-only chat — you must have followed for at least ${Math.round(followerModeMinutes / 1440)} day${Math.round(followerModeMinutes / 1440) === 1 ? '' : 's'}`
+          }
+        </div>
+      )}
 
       {selectedPlatforms.length === 0 && (
         <div className="warning">
