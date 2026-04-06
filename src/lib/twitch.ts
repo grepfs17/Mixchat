@@ -496,7 +496,25 @@ export const getRecentMessages = async (
           if (replyTo && content.startsWith("@")) {
             const spaceIdx = content.indexOf(" ");
             if (spaceIdx !== -1) {
-              content = content.substring(spaceIdx + 1);
+              const emoteOffset = spaceIdx + 1;
+              content = content.substring(emoteOffset);
+
+              // Adjust emote character offsets, they point into the original
+              // rawContent which still has the "@login " prefix.  After stripping
+              // that prefix every position must be shifted left by emoteOffset.
+              if (Object.keys(emotes).length > 0) {
+                const adjusted: Record<string, string[]> = {};
+                for (const [id, positions] of Object.entries(emotes)) {
+                  const shiftedPositions = positions
+                    .map((pos) => {
+                      const [s, e] = pos.split("-").map(Number);
+                      return `${s - emoteOffset}-${e - emoteOffset}`;
+                    })
+                    .filter((pos) => Number(pos.split("-")[0]) >= 0);
+                  if (shiftedPositions.length > 0) adjusted[id] = shiftedPositions;
+                }
+                emotes = adjusted;
+              }
             }
           }
 
