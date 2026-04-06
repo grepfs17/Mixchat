@@ -1,7 +1,5 @@
 @import './vars.css';
 
-/* ── Raid Notification Banner ────────────────────────────────────────────── */
-
 .raid-notification {
   position: fixed;
   bottom: 20px;
