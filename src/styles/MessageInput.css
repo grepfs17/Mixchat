@@ -283,6 +283,11 @@
   font-size: 0.9rem;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
+/* Hide scrollbar on the mobile emote autocomplete strip */
+.emote-autocomplete-mobile-strip::-webkit-scrollbar {
+  display: none;
+}
+
 /* Responsive design for lower resolutions */
 @media (max-width: 768px) {
   .message-input {

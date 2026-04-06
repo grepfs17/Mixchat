@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MdContentCopy, MdReply } from 'react-icons/md';
+import { isMobileDevice } from '../lib/device';
 
 const STORAGE_KEY = 'mixchat_mobile_hint_seen';
-
-function isMobileDevice(): boolean {
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-}
 
 interface MobileTouchHintModalProps {
   twitchConnected: boolean;
