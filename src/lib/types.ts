@@ -10,6 +10,7 @@ export const MESSAGE_TYPES = [
   "redemption",
   "first-time-chatter",
   "raid",
+  "watch-streak",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 

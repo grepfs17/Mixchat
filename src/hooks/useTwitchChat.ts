@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StaticAuthProvider } from '@twurple/auth';
-import { ChatClient, UserState } from '@twurple/chat';
+import { ChatClient, UserState, UserNotice } from '@twurple/chat';
 import { getBadgeDetail } from '../lib/badges';
 import type { ChatMessage } from '../lib/types';
 
@@ -561,6 +561,49 @@ export function useTwitchChat(
       };
 
       onMessage(chatMessage);
+    });
+
+    // Handle watch streaks (viewermilestone USERNOTICE — no dedicated Twurple event)
+    newClient.irc.onTypedMessage(UserNotice, (msg) => {
+      if (!active) return;
+      if (msg.tags.get('msg-id') !== 'viewermilestone') return;
+      if (msg.tags.get('msg-param-category') !== 'watch-streak') return;
+
+      const streakCount = msg.tags.get('msg-param-value') ?? '?';
+      const displayName = msg.tags.get('display-name') || msg.tags.get('login') || 'Someone';
+      const color = msg.tags.get('color') || '#FFFFFF';
+      const userId = msg.tags.get('user-id') || undefined;
+      const msgId = msg.tags.get('id') || crypto.randomUUID();
+
+      const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
+
+      const chatMessage: ChatMessage = {
+        id: msgId,
+        platform: 'twitch',
+        author: displayName,
+        content: `is on a ${streakCount}-month watch streak!`,
+        timestamp: new Date(),
+        userId,
+        authorColor: color,
+        authorAvatar: cachedUserInfo?.profileImageUrl || undefined,
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: {},
+        badgeDetails: {},
+        messageType: 'watch-streak',
+      };
+
+      if (!cachedUserInfo && userId) {
+        getUserInfo(userId, accessToken).then((info) => {
+          onMessage({
+            ...chatMessage,
+            authorAvatar: (info as { profileImageUrl?: string | null } | null)?.profileImageUrl || undefined,
+          });
+        }).catch(() => onMessage(chatMessage));
+      } else {
+        onMessage(chatMessage);
+      }
     });
 
     // DEV ONLY: expose a manual test helper so you can call
