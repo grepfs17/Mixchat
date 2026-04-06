@@ -35,6 +35,11 @@ interface UseRaidDetectionOptions {
   enabled: boolean;
   /** Called when the watched channel initiates an outgoing raid */
   onRaidOut: (event: RaidOutEvent) => void;
+  /**
+   * Called when the EventSub subscription is rejected (401/403).
+   * This typically means the access token is invalid or expired.
+   */
+  onScopeError?: () => void;
 }
 
 const EVENTSUB_WS_URL = 'wss://eventsub.wss.twitch.tv/ws';
@@ -50,10 +55,13 @@ export function useRaidDetection({
   clientId,
   enabled,
   onRaidOut,
+  onScopeError,
 }: UseRaidDetectionOptions): void {
-  // Keep the callback in a ref so the WebSocket closure never goes stale
+  // Keep the callbacks in refs so the WebSocket closure never goes stale
   const onRaidOutRef = useRef(onRaidOut);
   useEffect(() => { onRaidOutRef.current = onRaidOut; }, [onRaidOut]);
+  const onScopeErrorRef = useRef(onScopeError);
+  useEffect(() => { onScopeErrorRef.current = onScopeError; }, [onScopeError]);
 
   useEffect(() => {
     // Guard: only run when we have valid credentials and a numeric channel ID
@@ -125,7 +133,15 @@ export function useRaidDetection({
 
             if (!res.ok) {
               const errBody = await res.json().catch(() => ({}));
-              console.warn('[useRaidDetection] Subscription failed:', res.status, errBody);
+              if (res.status === 401 || res.status === 403) {
+                console.warn(
+                  '[useRaidDetection] Subscription rejected — token may be invalid or expired.',
+                  errBody,
+                );
+                onScopeErrorRef.current?.();
+              } else {
+                console.warn('[useRaidDetection] Subscription failed:', res.status, errBody);
+              }
             } else {
               console.log('[useRaidDetection] Subscribed to channel.raid from channel', channelId);
             }

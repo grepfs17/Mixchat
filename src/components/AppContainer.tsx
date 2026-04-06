@@ -261,15 +261,19 @@ export default function AppContainer() {
     // Use the resolved numeric ID so 7TV/BTTV/Twitch APIs receive the correct value
     const resolvedId = channel?.id || channelId;
 
-    // If not found in any channel list but channelId is the user's own numeric userId,
-    // fall back to session data so Twitch IRC still gets the login name (not the numeric ID)
     const ownSession = sessions.twitch;
     const isOwnUserId = !channel && ownSession?.userId === channelId;
 
-    const channelName = channel?.name || (isOwnUserId ? (ownSession!.username ?? channelId) : channelId);
-    const channelDisplayName = channel?.displayName || (isOwnUserId ? (ownSession!.displayName ?? channelId) : channel?.name || channelId);
+    const isOwnLogin = !channel && !!ownSession?.username &&
+      ownSession.username.toLowerCase() === channelId.toLowerCase();
 
-    setSelectedTwitchChannel(resolvedId);
+    const channelName = channel?.name ||
+      ((isOwnUserId || isOwnLogin) ? (ownSession!.username ?? channelId) : channelId);
+    const channelDisplayName = channel?.displayName ||
+      ((isOwnUserId || isOwnLogin) ? (ownSession!.displayName ?? channelId) : channel?.name || channelId);
+    const finalId = (isOwnUserId || isOwnLogin) ? (ownSession!.userId || resolvedId) : resolvedId;
+
+    setSelectedTwitchChannel(finalId);
     setSelectedTwitchChannelName(channelName);
     setSelectedTwitchChannelDisplayName(channelDisplayName);
 

@@ -332,6 +332,14 @@ export default function ChatApp({
     onRaidOut: (raid) => {
       setPendingRaid(raid);
     },
+    onScopeError: () => {
+      notificationIdRef.current += 1;
+      setNotification({
+        message: 'Raid detection unavailable — please re-login to refresh your Twitch session',
+        type: 'info',
+        id: notificationIdRef.current,
+      });
+    },
   });
 
   // Connect to the Twitch chat channel

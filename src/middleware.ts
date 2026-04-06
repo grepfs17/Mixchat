@@ -72,7 +72,8 @@ function buildCSP(nonce?: string): string {
       " https://7tv.io" + // 7TV emote API
       " https://api.betterttv.net" + // BTTV emote API
       " https://api.frankerfacez.com" + // FFZ emote API
-      " wss://irc-ws.chat.twitch.tv", // Twitch chat WebSocket
+      " wss://irc-ws.chat.twitch.tv" + // Twitch chat IRC WebSocket
+      " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket (raid detection)
     // Twitch and YouTube embedded players
     "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)
