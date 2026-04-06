@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, memo } from 'react';
+﻿import React, { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdReply, MdContentCopy } from 'react-icons/md';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';
@@ -79,7 +79,11 @@ function PlatformTag({ source }: { source: 'twitch' | 'youtube' }) {
     );
 }
 
-function UnifiedChat({
+export interface UnifiedChatHandle {
+    scrollToBottom: () => void;
+}
+
+const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function UnifiedChat({
     twitchMessages,
     ytMessages,
     onReply,
@@ -87,12 +91,22 @@ function UnifiedChat({
     currentUserDisplayName,
     fontSize = 14,
     chatFont = 'inter' as ChatFont,
-}: UnifiedChatProps) {
+}: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
     const [newMessagesCount, setNewMessagesCount] = useState(0);
     const prevCountRef = useRef(0);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
+
+    useImperativeHandle(ref, () => ({
+        scrollToBottom: () => {
+            if (containerRef.current) {
+                containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                setIsAtBottom(true);
+                setNewMessagesCount(0);
+            }
+        },
+    }));
 
     // Merge Twitch and YouTube messages into one list sorted by time
     const entries: UnifiedEntry[] = React.useMemo(() => {
@@ -377,6 +391,6 @@ function UnifiedChat({
             )}
         </div>
     );
-}
+});
 
 export default memo(UnifiedChat);

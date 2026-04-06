@@ -13,6 +13,7 @@ interface MessageInputProps {
   onCancelReply?: () => void;
   chatMessages?: ChatMessage[];
   currentUsername?: string;
+  onInputFocus?: () => void;
 }
 
 function MessageInput({
@@ -23,6 +24,7 @@ function MessageInput({
   onCancelReply,
   chatMessages = [],
   currentUsername = '',
+  onInputFocus,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [placeholder, _setPlaceholder] = useState('Type your message');
@@ -418,6 +420,7 @@ function MessageInput({
           value={message}
           onChange={handleMessageChange}
           onKeyDown={handleKeyPress}
+          onFocus={onInputFocus}
           placeholder={placeholder}
           disabled={selectedPlatforms.length === 0 || isLoading}
           className="message-textarea twitch"

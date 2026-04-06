@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdRefresh, MdReply, MdContentCopy } from 'react-icons/md';
 import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
@@ -44,7 +44,11 @@ function hashChannelColor(id: string): string {
   return `hsl(${hue}, 80%, 60%)`;
 }
 
-function ChatDisplay({
+export interface ChatDisplayHandle {
+  scrollToBottom: () => void;
+}
+
+const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function ChatDisplay({
   messages,
   isLoading,
   selectedPlatforms,
@@ -66,12 +70,23 @@ function ChatDisplay({
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   unifiedChatSlot,
-}: ChatDisplayProps) {
+}: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        setIsAtBottom(true);
+        setNewMessagesCount(0);
+      }
+    },
+  }));
+
   const touchLongPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchLastTapTime = React.useRef<number>(0);
   const touchStartTime = React.useRef<number>(0);
@@ -525,6 +540,6 @@ function ChatDisplay({
       ) : null}
     </div>
   );
-}
+});
 
 export default memo(ChatDisplay);

@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import ChatDisplay from './ChatDisplay';
+import ChatDisplay, { type ChatDisplayHandle } from './ChatDisplay';
 import MessageInput from './MessageInput';
 import Notification from './Notification';
 import YouTubeChat from './YouTubeChat';
 import YouTubeMessageInput from './YouTubeMessageInput';
-import UnifiedChat, { type YTMessage } from './UnifiedChat';
+import UnifiedChat, { type YTMessage, type UnifiedChatHandle } from './UnifiedChat';
 import { useTwitchChat } from '../hooks/useTwitchChat';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
 import { initializeEmotes, clearEmoteCache } from '../lib/emotes';
@@ -85,6 +85,8 @@ export default function ChatApp({
   const [showPreloadedMessages, _setShowPreloadedMessages] = useState(true);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info'; id?: number } | null>(null);
   const notificationIdRef = React.useRef(0);
+  const chatDisplayRef = React.useRef<ChatDisplayHandle>(null);
+  const unifiedChatRef = React.useRef<UnifiedChatHandle>(null);
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
   // Cache the current user's own badge data so optimistic messages can show badges
   const currentUserBadgesRef = useRef<{ badges: Record<string, string>; badgeDetails: Record<string, { url: string; title: string }> }>({ badges: {}, badgeDetails: {} });
@@ -623,6 +625,7 @@ export default function ChatApp({
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
+                  ref={unifiedChatRef}
                   twitchMessages={messages}
                   ytMessages={[
                     ...ytMessages,
@@ -652,6 +655,7 @@ export default function ChatApp({
             onCancelReply={() => setReplyingTo(undefined)}
             chatMessages={messages}
             currentUsername={twitchSession?.username || ''}
+            onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
           />
 
           {/* YouTube message input (when we have a live video) */}
@@ -792,6 +796,7 @@ export default function ChatApp({
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <ChatDisplay
+              ref={chatDisplayRef}
               messages={messages}
               isLoading={isLoading}
               selectedPlatforms={selectedPlatforms}
@@ -826,6 +831,7 @@ export default function ChatApp({
             onCancelReply={() => setReplyingTo(undefined)}
             chatMessages={messages}
             currentUsername={twitchSession?.username || ''}
+            onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
           />
         </>
       )}
