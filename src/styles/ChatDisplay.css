@@ -466,6 +466,7 @@
 .message.subgift,
 .message.cheer,
 .message.first-time-chatter,
+.message.watch-streak,
 .message.raid {
   background-color: var(--event-bg);
   border-left: 2px solid var(--event-color);
