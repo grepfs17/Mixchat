@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StaticAuthProvider } from '@twurple/auth';
-import { ChatClient, UserState } from '@twurple/chat';
+import { ChatClient, UserState, UserNotice } from '@twurple/chat';
 import { getBadgeDetail } from '../lib/badges';
 import type { ChatMessage } from '../lib/types';
 
@@ -170,6 +170,9 @@ export function useTwitchChat(
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [client, setClient] = useState<ChatClient | null>(null);
+  const [slowModeWaitTime, setSlowModeWaitTime] = useState<number | null>(null);
+  // null = follower mode off, 0 = any follower, N = must have followed for N minutes
+  const [followerModeMinutes, setFollowerModeMinutes] = useState<number | null>(null);
 
   // Refs so the stale closure inside the IRC handler always reads the latest
   // values without tearing down and rebuilding the WebSocket.
@@ -210,6 +213,44 @@ export function useTwitchChat(
       if (!active) return;
       console.log(`Connected to ${channelName}`);
       setIsConnected(true);
+
+      // Fetch channel chat settings
+      (async () => {
+        try {
+          // Step 1: resolve login name → broadcaster ID
+          const usersRes = await fetch(
+            `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelName)}`,
+          );
+          if (!usersRes.ok) return;
+          const usersData = await usersRes.json();
+          const broadcasterId: string | undefined = usersData?.data?.[0]?.id;
+          if (!broadcasterId) return;
+
+          // Step 2: fetch chat settings
+          const settingsRes = await fetch(
+            `/api/twitch-proxy?path=/helix/chat/settings&broadcaster_id=${broadcasterId}`,
+          );
+          if (!settingsRes.ok) return;
+          const settingsData = await settingsRes.json();
+          console.log('[useTwitchChat] chat settings response:', settingsData);
+          const slowMode: boolean = settingsData?.data?.[0]?.slow_mode ?? false;
+          const waitTime: number | null = slowMode
+            ? (settingsData?.data?.[0]?.slow_mode_wait_time ?? 30)
+            : null;
+          console.log(`[useTwitchChat] slow_mode=${slowMode}, slow_mode_wait_time=${waitTime} for channel "${channelName}"`);
+          const followerMode: boolean = settingsData?.data?.[0]?.follower_mode ?? false;
+          const followerMinutes: number | null = followerMode
+            ? (settingsData?.data?.[0]?.follower_mode_duration ?? 0)
+            : null;
+          console.log(`[useTwitchChat] follower_mode=${followerMode}, follower_mode_duration=${followerMinutes} for channel "${channelName}"`);
+          if (active) {
+            setSlowModeWaitTime(waitTime);
+            setFollowerModeMinutes(followerMinutes);
+          }
+        } catch {
+          // Non-fatal
+        }
+      })();
     });
 
     newClient.onDisconnect(() => {
@@ -563,6 +604,50 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
+    // Handle watch streaks (viewermilestone USERNOTICE — no dedicated Twurple event)
+    newClient.irc.onTypedMessage(UserNotice, (msg) => {
+      if (!active) return;
+      if (msg.tags.get('msg-id') !== 'viewermilestone') return;
+      if (msg.tags.get('msg-param-category') !== 'watch-streak') return;
+
+      const streakCount = msg.tags.get('msg-param-value') ?? '?';
+      const displayName = msg.tags.get('display-name') || msg.tags.get('login') || 'Someone';
+      const color = msg.tags.get('color') || '#FFFFFF';
+      const userId = msg.tags.get('user-id') || undefined;
+      const msgId = msg.tags.get('id') || crypto.randomUUID();
+      const userMessage = msg.text ?? '';
+
+      const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
+
+      const chatMessage: ChatMessage = {
+        id: msgId,
+        platform: 'twitch',
+        author: displayName,
+        content: userMessage ? `[${streakCount} streak] - ${userMessage}` : `[${streakCount} streak]`,
+        timestamp: new Date(),
+        userId,
+        authorColor: color,
+        authorAvatar: cachedUserInfo?.profileImageUrl || undefined,
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: {},
+        badgeDetails: {},
+        messageType: 'watch-streak',
+      };
+
+      if (!cachedUserInfo && userId) {
+        getUserInfo(userId, accessToken).then((info) => {
+          onMessage({
+            ...chatMessage,
+            authorAvatar: (info as { profileImageUrl?: string | null } | null)?.profileImageUrl || undefined,
+          });
+        }).catch(() => onMessage(chatMessage));
+      } else {
+        onMessage(chatMessage);
+      }
+    });
+
     // DEV ONLY: expose a manual test helper so you can call
     // window.__testDeleteMessage('some-msg-id') from the browser console
     if (typeof window !== 'undefined') {
@@ -611,5 +696,5 @@ export function useTwitchChat(
     [client, isConnected, channelName]
   );
 
-  return { isConnected, sendMessage };
+  return { isConnected, sendMessage, slowModeWaitTime, followerModeMinutes };
 }

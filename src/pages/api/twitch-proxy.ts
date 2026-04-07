@@ -12,6 +12,7 @@ const ALLOWED_PATH_PREFIXES = [
     "/helix/chat/emotes",       // covers /helix/chat/emotes?broadcaster_id=...
     "/helix/chat/badges/global",
     "/helix/chat/badges",       // covers /helix/chat/badges?broadcaster_id=...
+    "/helix/chat/settings",     // used to check show_first_message_highlights
     "/helix/users",             // used to resolve broadcaster IDs -> display names
 ] as const;
 
