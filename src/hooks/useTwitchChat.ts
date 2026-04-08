@@ -145,7 +145,7 @@ function getAudioContext(): AudioContext | null {
 export function primeAudioContext() {
   const ctx = getAudioContext();
   if (ctx && ctx.state === 'suspended') {
-    ctx.resume().catch(() => {});
+    ctx.resume().catch(() => { });
   }
 }
 
@@ -170,17 +170,17 @@ export function playMentionSoundPreview(volume: number, type: MentionSoundType) 
         osc.stop(now + start + duration);
       };
       switch (type) {
-        case 'ding':   beep(880, 0, 0.25); break;
+        case 'ding': beep(880, 0, 0.25); break;
         case 'double': beep(880, 0, 0.1); beep(880, 0.18, 0.1); break;
-        case 'chime':  beep(1047, 0, 0.2); beep(784, 0.22, 0.2); break;
-        case 'pop':    beep(440, 0, 0.08, 'square'); break;
-        case 'ping':   beep(1200, 0, 0.4); break;
+        case 'chime': beep(1047, 0, 0.2); beep(784, 0.22, 0.2); break;
+        case 'pop': beep(440, 0, 0.08, 'square'); break;
+        case 'ping': beep(1200, 0, 0.4); break;
       }
     } catch { /* audio not supported */ }
   };
 
   if (ctx.state === 'suspended') {
-    ctx.resume().then(play).catch(() => {});
+    ctx.resume().then(play).catch(() => { });
   } else {
     play();
   }
@@ -217,6 +217,12 @@ export function useTwitchChat(
   // Broadcaster ID is resolved once in onConnect and reused by onMessage to
   // look up reward titles without re-fetching the users endpoint each time.
   const broadcasterIdRef = useRef<string | null>(null);
+  // A promise that resolves to the broadcaster ID once fetched; redemptions
+  // that arrive before the ID is ready can await this instead of skipping.
+  const broadcasterIdResolveRef = useRef<((id: string) => void) | null>(null);
+  const broadcasterIdPromiseRef = useRef<Promise<string>>(new Promise<string>((resolve) => {
+    broadcasterIdResolveRef.current = resolve;
+  }));
   useEffect(() => { mentionSoundEnabledRef.current = mentionSoundEnabled; }, [mentionSoundEnabled]);
   useEffect(() => { mentionVolumeRef.current = mentionVolume; }, [mentionVolume]);
   useEffect(() => { mentionSoundTypeRef.current = mentionSoundType; }, [mentionSoundType]);
@@ -262,7 +268,10 @@ export function useTwitchChat(
           const usersData = await usersRes.json();
           const broadcasterId: string | undefined = usersData?.data?.[0]?.id;
           if (!broadcasterId) return;
-          if (active) broadcasterIdRef.current = broadcasterId;
+          if (active) {
+            broadcasterIdRef.current = broadcasterId;
+            broadcasterIdResolveRef.current?.(broadcasterId);
+          }
 
           // Step 2: fetch chat settings
           const settingsRes = await fetch(
@@ -404,7 +413,10 @@ export function useTwitchChat(
       // of which combination is required — avoids an off-by-one index bug.
       const needsUserInfo = !cachedUserInfo && !!msg.userInfo.userId;
       const needsSourceAvatar = isSharedChat && !!sourceRoomId && !sourceChannelInfoCache.has(sourceRoomId);
-      const needsRewardTitle = !!chatMessage.rewardId && !chatMessage.rewardTitle && !!broadcasterIdRef.current;
+      // Fetch reward title when there is a rewardId and no cached title yet.
+      // Even if broadcasterIdRef is not populated yet, we still need to fetch;
+      // in that case we await the broadcasterIdPromise so we don't miss it.
+      const needsRewardTitle = !!chatMessage.rewardId && !chatMessage.rewardTitle;
 
       if (needsUserInfo || needsSourceAvatar || needsRewardTitle) {
         const userInfoPromise = needsUserInfo && msg.userInfo.userId
@@ -413,8 +425,13 @@ export function useTwitchChat(
         const sourceInfoPromise = needsSourceAvatar && sourceRoomId
           ? getSourceChannelInfo(sourceRoomId, accessToken)
           : Promise.resolve(null);
-        const rewardTitlePromise = needsRewardTitle && chatMessage.rewardId && broadcasterIdRef.current
-          ? getRewardTitle(chatMessage.rewardId, broadcasterIdRef.current, accessToken)
+        const rewardTitlePromise = (needsRewardTitle && chatMessage.rewardId)
+          ? (broadcasterIdRef.current
+            ? getRewardTitle(chatMessage.rewardId, broadcasterIdRef.current, accessToken)
+            : broadcasterIdPromiseRef.current.then((broadcasterId) =>
+              getRewardTitle(chatMessage.rewardId!, broadcasterId, accessToken)
+            )
+          )
           : Promise.resolve(null);
 
         Promise.all([userInfoPromise, sourceInfoPromise, rewardTitlePromise]).then(([userInfoResult, sourceInfoResult, rewardTitleResult]) => {
