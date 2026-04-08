@@ -11,6 +11,7 @@ interface TwitchChannel {
   title: string;
   profileImageUrl?: string;
   viewerCount?: number;
+  gameName?: string;
 }
 
 interface LoginPanelProps {
@@ -196,7 +197,7 @@ function LoginPanel({
                       key={channel.id}
                       className={`channel-item ${selectedTwitchChannel === channel.id ? 'selected' : ''}`}
                       onClick={() => { onChannelChange?.(channel.id); onRequestClose?.(); }}
-                      title={channel.displayName}
+                      title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ''}`}
                     >
                       {channel.profileImageUrl && (
                         <img
@@ -205,9 +206,16 @@ function LoginPanel({
                           className="channel-item-image"
                         />
                       )}
-                      <span className="channel-item-name">
-                        {channel.displayName}
-                      </span>
+                      <div className="channel-item-details">
+                        <span className="channel-item-name">
+                          {channel.displayName}
+                        </span>
+                        {channel.gameName && (
+                          <span className="channel-game-name">
+                            {channel.gameName}
+                          </span>
+                        )}
+                      </div>
                       {channel.viewerCount !== undefined && channel.viewerCount !== null && (
                         <span className="viewer-count">
                           <FaUsers size={12} /> {channel.viewerCount.toLocaleString()}
