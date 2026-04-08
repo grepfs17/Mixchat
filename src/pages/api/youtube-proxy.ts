@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
   try {
     const action = url.searchParams.get("action");
-    
+
     if (!action) {
       return new Response(
         JSON.stringify({ error: "action parameter is required" }),
@@ -109,16 +109,27 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
 
   let channelId = channelUrlParam;
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
-  
-  if (channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be')) {
+
+  const isFullUrl = channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be');
+
+  if (isFullUrl) {
     try {
       const endpoint = await (yt as any).resolveURL(channelUrlParam);
       if (endpoint?.payload?.browseId) {
         channelId = endpoint.payload.browseId;
         console.log(`[YouTube Proxy] Resolved channel ID: ${channelId}`);
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Could not resolve YouTube URL" }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
       }
     } catch (urlError) {
-      console.warn('[YouTube Proxy] Failed to resolve URL, will try direct lookup:', urlError);
+      console.warn('[YouTube Proxy] Failed to resolve URL:', urlError);
+      return new Response(
+        JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
     }
   }
 
@@ -189,14 +200,25 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
 
   let channelId = channelUrlParam;
 
-  if (channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be')) {
+  const isFullUrl = channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be');
+
+  if (isFullUrl) {
     try {
       const endpoint = await (yt as any).resolveURL(channelUrlParam);
       if (endpoint?.payload?.browseId) {
         channelId = endpoint.payload.browseId;
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Could not resolve YouTube URL" }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
       }
     } catch (urlError) {
       console.warn('[YouTube Proxy] Failed to resolve URL:', urlError);
+      return new Response(
+        JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
     }
   }
 

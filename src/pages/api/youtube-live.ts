@@ -53,20 +53,33 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     // Resolve the URL to get the channel ID/endpoint
     let channelId = channelUrl;
     console.log(`[YouTube Live] Looking up channel: ${channelUrl}`);
-    if (channelUrl.includes('youtube.com') || channelUrl.includes('youtu.be')) {
+
+    const isFullUrl = channelUrl.includes('youtube.com') || channelUrl.includes('youtu.be');
+
+    if (isFullUrl) {
       try {
         const endpoint = await (yt as any).resolveURL(channelUrl);
         console.log(`[YouTube Live] Resolved URL to endpoint:`, endpoint?.payload);
         if (endpoint?.payload?.browseId) {
           channelId = endpoint.payload.browseId;
           console.log(`[YouTube Live] Using channel ID: ${channelId}`);
+        } else {
+          // If we couldn't resolve a full URL, it's an invalid input for getChannel
+          return new Response(
+            JSON.stringify({ error: "Could not resolve YouTube URL" }),
+            { status: 400, headers },
+          );
         }
       } catch (urlError) {
-        console.warn('Failed to resolve URL, will try direct lookup:', urlError);
+        console.warn('Failed to resolve URL:', urlError);
+        return new Response(
+          JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+          { status: 400, headers },
+        );
       }
     }
 
-    // Use getChannel with the resolved ID
+    // Use getChannel with the resolved ID. handles (@name) are supported by getChannel directly.
     const channel = await yt.getChannel(channelId);
     console.log(`[YouTube Live] Retrieved channel info`);
 
