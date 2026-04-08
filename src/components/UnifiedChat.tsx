@@ -9,6 +9,7 @@ import { getColorFromName } from '../lib/chatColors';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
 import YTMessageParts from './YTMessageParts';
+import { useChatTouchGestures } from '../hooks/useChatTouchGestures';
 
 
 // YouTube message shape — mirrors what YouTubeChat.tsx uses internally
@@ -181,7 +182,20 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             }
         };
     }, []);
-
+    const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures<UnifiedEntry>({
+        onReply: onReply
+            ? (entry) => { if (entry.source === 'twitch') onReply(entry.msg as ChatMessage); }
+            : undefined,
+        onCopyMessage,
+        getContent: (entry) => {
+            if (entry.source === 'twitch') return (entry.msg as ChatMessage).content;
+            return (entry.msg as YTMessage).parts
+                .map((p) => (p.type === 'text' ? (p.text ?? '') : (p.emojiText ?? p.alt ?? '')))
+                .join('');
+        },
+        // Only Twitch messages support replies
+        canReply: (entry) => entry.source === 'twitch',
+    });
     return (
         <div className="unified-chat-wrapper">
             <div
@@ -214,7 +228,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                         return (
                             <React.Fragment key={getKey(entry)}>
                             {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
-                            <div className={messageClasses}>
+                            <div
+                                className={messageClasses}
+                                onTouchStart={() => handleTouchStart(entry)}
+                                onTouchEnd={() => handleTouchEnd(entry)}
+                                onTouchMove={handleTouchMove}
+                            >
                                 {msg.replyTo && (
                                     <div className="reply-info">
                                         <span>
@@ -297,7 +316,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     const msg = entry.msg as YTMessage;
                     if (msg.superchat) {
                         return (
-                            <div key={getKey(entry)} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
+                        <div key={getKey(entry)} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}
+                            onTouchStart={() => handleTouchStart(entry)}
+                            onTouchEnd={() => handleTouchEnd(entry)}
+                            onTouchMove={handleTouchMove}
+                        >
                                 <div className="yt-superchat-header">
                                     {msg.authorAvatar && (
                                         <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
@@ -325,7 +348,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     }
 
                     return (
-                        <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
+                        <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}
+                            onTouchStart={() => handleTouchStart(entry)}
+                            onTouchEnd={() => handleTouchEnd(entry)}
+                            onTouchMove={handleTouchMove}
+                        >
                             <div className="message-single-line">
                                 <span className="timestamp">
                                     {(msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp))

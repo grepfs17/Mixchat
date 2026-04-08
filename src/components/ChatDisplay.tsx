@@ -8,6 +8,7 @@ import { parseMessageWithEmotes } from '../lib/emotes';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
 import { EVENT_CONFIG } from './TwitchEventIcon';
+import { useChatTouchGestures } from '../hooks/useChatTouchGestures';
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
@@ -88,9 +89,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
     },
   }));
 
-  const touchLongPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touchLastTapTime = React.useRef<number>(0);
-  const touchStartTime = React.useRef<number>(0);
   const authorColorById = useMemo(() => {
     const map = new Map<string, string>();
     messages.forEach((message) => {
@@ -202,61 +200,11 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
     };
   }, [handleEmoteHover]);
 
-  const copyMessage = useCallback((message: ChatMessage) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(message.content).then(() => {
-        onCopyMessage?.();
-      }).catch((err) => {
-        console.error('Failed to copy:', err);
-      });
-    } else {
-      const textArea = document.createElement('textarea');
-      textArea.value = message.content;
-      document.body.appendChild(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        onCopyMessage?.();
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-      document.body.removeChild(textArea);
-    }
-  }, [onCopyMessage]);
-
-  const handleMessageTouchStart = useCallback((msg: ChatMessage) => {
-    touchStartTime.current = Date.now();
-    if (onReply) {
-      touchLongPressTimer.current = setTimeout(() => {
-        touchLongPressTimer.current = null;
-        onReply(msg);
-      }, 500);
-    }
-  }, [onReply]);
-
-  const handleMessageTouchEnd = useCallback((msg: ChatMessage) => {
-    const elapsed = Date.now() - touchStartTime.current;
-    if (touchLongPressTimer.current) {
-      clearTimeout(touchLongPressTimer.current);
-      touchLongPressTimer.current = null;
-    }
-    if (elapsed < 250) {
-      const now = Date.now();
-      if (now - touchLastTapTime.current < 300) {
-        copyMessage(msg);
-        touchLastTapTime.current = 0;
-      } else {
-        touchLastTapTime.current = now;
-      }
-    }
-  }, [copyMessage]);
-
-  const handleMessageTouchMove = useCallback(() => {
-    if (touchLongPressTimer.current) {
-      clearTimeout(touchLongPressTimer.current);
-      touchLongPressTimer.current = null;
-    }
-  }, []);
+  const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } = useChatTouchGestures<ChatMessage>({
+    onReply,
+    onCopyMessage,
+    getContent: (msg) => msg.content,
+  });
 
   const scrollToMessage = useCallback((targetId: string) => {
     const container = messagesContainerRef.current;
@@ -380,9 +328,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                     const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
                     return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
                   })()}
-                  onTouchStart={() => handleMessageTouchStart(msg)}
-                  onTouchEnd={() => handleMessageTouchEnd(msg)}
-                  onTouchMove={handleMessageTouchMove}
+                  onTouchStart={() => handleTouchStart(msg)}
+                  onTouchEnd={() => handleTouchEnd(msg)}
+                  onTouchMove={handleTouchMove}
                 >
                   {msg.replyTo && (
                     <div
@@ -504,7 +452,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                         </button>
                       )}
                       <button
-                        onClick={() => copyMessage(msg)}
+                        onClick={() => handleCopy(msg)}
                         className="action-button"
                         title="Copy message"
                         style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
