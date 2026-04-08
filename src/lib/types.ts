@@ -10,6 +10,7 @@ export const MESSAGE_TYPES = [
   "redemption",
   "raid",
   "watch-streak",
+  "notice",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
