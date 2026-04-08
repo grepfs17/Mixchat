@@ -466,7 +466,8 @@
 .message.subgift,
 .message.cheer,
 .message.watch-streak,
-.message.raid {
+.message.raid,
+.message.notice {
   background-color: var(--event-bg);
   border-left: 2px solid var(--event-color);
 }
@@ -477,6 +478,12 @@
   padding-left: 8px;
   margin-left: -8px;
 }
+ 
+ .message.notice .message-text {
+   font-style: italic;
+   color: var(--color-text-secondary);
+   font-size: 0.85em;
+ }
 
 .reply-info {
   font-size: 0.85em;

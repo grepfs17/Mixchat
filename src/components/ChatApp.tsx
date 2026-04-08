@@ -11,7 +11,7 @@ import type { MentionSoundType } from '../hooks/useTwitchChat';
 import { useRaidDetection } from '../hooks/useRaidDetection';
 import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
-import { initializeEmotes, clearEmoteCache } from '../lib/emotes';
+import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
@@ -392,6 +392,8 @@ export default function ChatApp({
 
       // Initialize emotes and badges first, then load recent messages to ensure
       // badges are ready for the initial historical messages.
+      let unsubscribe7tv: (() => void) | undefined;
+
       const initializeAssets = async () => {
         // Don't attempt API calls until the access token has been populated by
         // useTokenRefresh. If it's absent we'll be re-triggered once it arrives.
@@ -412,6 +414,9 @@ export default function ChatApp({
             ),
           ]);
           setBadgesReady(true);
+
+          unsubscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
+
           const recentMessages = await loadRecentMessages();
 
           // Seed the current user's badge cache from historical messages so that
@@ -439,6 +444,10 @@ export default function ChatApp({
       };
 
       initializeAssets();
+
+      return () => {
+        if (unsubscribe7tv) unsubscribe7tv();
+      };
     }
   }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
 
