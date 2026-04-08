@@ -414,7 +414,7 @@ export function useTwitchChat(
         id: msg.id,
         platform: 'twitch',
         author: msg.userInfo.displayName || msg.userInfo.userName || 'Anonymous',
-        content: msg.isCheer ? `${message} [${msg.bits} bits]` : message,
+        content: message,
         timestamp: msg.date,
         userId: msg.userInfo.userId,
         authorColor: msg.userInfo.color || '#FFFFFF',
