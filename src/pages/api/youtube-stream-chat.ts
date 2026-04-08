@@ -15,6 +15,7 @@ interface MessagePart {
 interface ChatMessage {
   id: string;
   author: string;
+  authorChannelId?: string;
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
@@ -255,7 +256,7 @@ function parseLiveChatMessage(msg: any): ChatMessage {
   const rawTimestamp = parseInt(msg.timestamp);
   const asMillisecondsDirectly = new Date(rawTimestamp);
   const asUsToMs = new Date(rawTimestamp / 1000);
-  
+
   // Use the one that seems more reasonable (closer to now)
   const now = new Date();
   const msTimeDiff = Math.abs(now.getTime() - asMillisecondsDirectly.getTime());
@@ -265,6 +266,7 @@ function parseLiveChatMessage(msg: any): ChatMessage {
   return {
     id: msg.id,
     author: msg.author.name.toString(),
+    authorChannelId: msg.author.id,
     badges,
     parts,
     timestamp
@@ -284,7 +286,7 @@ function parsePaidMessage(msg: any): ChatMessage {
 
 function parsePaidSticker(msg: any): ChatMessage {
   const stickerUrl = msg.sticker?.thumbnails?.[0]?.url;
-  
+
   return {
     id: msg.id,
     author: msg.author.name.toString(),

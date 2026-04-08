@@ -46,7 +46,7 @@ interface ChatMessage {
 export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
   /** Merge polled messages with any optimistic ones not yet confirmed by the server */
   const getTextContent = (m: ChatMessage) =>
-    m.parts.filter(p => p.type === 'text').map(p => p.text || '').join('');
+    m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -58,12 +58,21 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
   const lastMessageCountRef = useRef(0);
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
+    const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+
     const realKeys = new Set(
-      messages.map((m) => `${m.author.toLowerCase()}|${getTextContent(m)}`)
+      messages.map((m) => {
+        const textKey = norm(getTextContent(m));
+        return m.authorChannelId ? `${m.authorChannelId}|${textKey}` : `${norm(m.author)}|${textKey}`;
+      })
     );
-    const unmatched = optimisticMessages.filter(
-      (opt) => !realKeys.has(`${opt.author.toLowerCase()}|${getTextContent(opt)}`)
-    );
+
+    const unmatched = optimisticMessages.filter((opt) => {
+      const textKey = norm(getTextContent(opt));
+      const key = opt.authorChannelId ? `${opt.authorChannelId}|${textKey}` : `${norm(opt.author)}|${textKey}`;
+      return !realKeys.has(key);
+    });
+
     return unmatched.length ? [...messages, ...unmatched] : messages;
   }, [messages, optimisticMessages]);
 

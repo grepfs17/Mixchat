@@ -566,20 +566,31 @@ export default function ChatApp({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
-  // Extracts plain text from a YTMessage for reconciliation matching
+  // Extracts comprehensive text from a YTMessage for reconciliation matching
   const getYtMessageText = (m: import('./UnifiedChat').YTMessage) =>
-    m.parts.filter((p) => p.type === 'text').map((p) => (p as any).text || '').join('');
+    m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join('');
 
   // Callback to receive YouTube messages in unified mode
   const handleYtMessages = useCallback((msgs: import('./UnifiedChat').YTMessage[]) => {
     setYtOptimisticMessages((prev) => {
       if (!prev.length) return prev;
+      // Normalization function to ensure consistent string comparison
+      const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+
       const realKeys = new Set(
-        msgs.map((m) => `${m.author.toLowerCase()}|${getYtMessageText(m)}`)
+        msgs.map((m) => {
+          const textKey = norm(getYtMessageText(m));
+          // Prioritize channel ID if available, otherwise fall back to author name
+          return m.authorChannelId ? `${m.authorChannelId}|${textKey}` : `${norm(m.author)}|${textKey}`;
+        })
       );
-      const remaining = prev.filter(
-        (opt) => !realKeys.has(`${opt.author.toLowerCase()}|${getYtMessageText(opt)}`)
-      );
+
+      const remaining = prev.filter((opt) => {
+        const textKey = norm(getYtMessageText(opt));
+        const key = opt.authorChannelId ? `${opt.authorChannelId}|${textKey}` : `${norm(opt.author)}|${textKey}`;
+        return !realKeys.has(key);
+      });
+
       return remaining.length === prev.length ? prev : remaining;
     });
     setYtMessages(msgs);
@@ -589,6 +600,7 @@ export default function ChatApp({
     const optimistic: import('./UnifiedChat').YTMessage = {
       id,
       author: youtubeSession?.displayName || 'You',
+      authorChannelId: youtubeSession?.userId,
       authorAvatar: youtubeSession?.profileImageUrl,
       parts: [{ type: 'text', text }],
       timestamp: new Date(),
@@ -671,12 +683,20 @@ export default function ChatApp({
                   twitchMessages={messages}
                   ytMessages={[
                     ...ytMessages,
-                    ...ytOptimisticMessages.filter(
-                      (opt) => !ytMessages.some(
-                        (m) => m.author.toLowerCase() === opt.author.toLowerCase() &&
-                          getYtMessageText(m) === getYtMessageText(opt)
-                      )
-                    ),
+                    ...ytOptimisticMessages.filter((opt) => {
+                      const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+                      const optText = norm(getYtMessageText(opt));
+                      const optAuthor = norm(opt.author);
+
+                      return !ytMessages.some((m) => {
+                        const mText = norm(getYtMessageText(m));
+                        // Match by ID if both have it, else match by normalized name
+                        if (opt.authorChannelId && m.authorChannelId) {
+                          return m.authorChannelId === opt.authorChannelId && mText === optText;
+                        }
+                        return norm(m.author) === optAuthor && mText === optText;
+                      });
+                    }),
                   ]}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
