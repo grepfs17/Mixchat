@@ -1,6 +1,4 @@
-/**
- * App version constant
- * Update here to reflect current release version
- */
-export const APP_VERSION = "0.8.1-beta";
-export const DISPLAY_VERSION = "Beta 0.8.1";
+import pkg from '../../package.json' with { type: 'json' };
+
+export const APP_VERSION = pkg.version;
+export const DISPLAY_VERSION = `Beta ${pkg.version.replace(/-beta$/, '')}`;
