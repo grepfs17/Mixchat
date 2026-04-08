@@ -372,7 +372,7 @@ export default function AppContainer() {
         const params = new URLSearchParams();
         params.append('action', 'getLiveVideo');
         params.append('channelUrl', linkedYoutubeUrl);
-        
+
         const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
         const data = await res.json();
         if (!cancelled && res.ok && data.videoId) {
@@ -620,13 +620,13 @@ export default function AppContainer() {
         returnUrl: window.location.href,
         exp: Date.now() + 5 * 60 * 1000, // 5-minute expiry
       }));
-    } catch (_) {}
+    } catch (_) { }
 
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes',
+      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions',
       state,
     });
 
@@ -860,9 +860,9 @@ export default function AppContainer() {
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
         >
-          
+
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
           </svg>
           Login with Twitch
         </button>
@@ -952,151 +952,151 @@ export default function AppContainer() {
             onToggleFavorite={toggleFavorite}
           />
         ) : (<>
-        {showStreamEmbed && (
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }} data-stream-embed>
-            <div className="stream-embed-header">
-              <span className="stream-embed-title">{playerType === 'youtube' ? 'YouTube' : 'Twitch'}</span>
-              <div className="player-type-center">
-                <div className="player-type-buttons">
-                  <button
-                    onClick={() => setPlayerType('embed')}
-                    className={`player-type-btn${playerType === 'embed' ? ' active-twitch' : ''}`}
-                    title="Twitch embed player"
-                  >
-                    Twitch
-                  </button>
-                  <button
-                    onClick={() => setPlayerType('m3u8')}
-                    className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
-                    title="M3U8 HLS player"
-                  >
-                    M3U8 (experimental)
-                  </button>
-                  {linkedYoutubeUrl && (
+          {showStreamEmbed && (
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }} data-stream-embed>
+              <div className="stream-embed-header">
+                <span className="stream-embed-title">{playerType === 'youtube' ? 'YouTube' : 'Twitch'}</span>
+                <div className="player-type-center">
+                  <div className="player-type-buttons">
                     <button
-                      onClick={() => setPlayerType('youtube')}
-                      className={`player-type-btn${playerType === 'youtube' ? ' active-youtube' : ''}`}
-                      title="YouTube live stream"
+                      onClick={() => setPlayerType('embed')}
+                      className={`player-type-btn${playerType === 'embed' ? ' active-twitch' : ''}`}
+                      title="Twitch embed player"
                     >
-                      YouTube
+                      Twitch
                     </button>
+                    <button
+                      onClick={() => setPlayerType('m3u8')}
+                      className={`player-type-btn${playerType === 'm3u8' ? ' active-m3u8' : ''}`}
+                      title="M3U8 HLS player"
+                    >
+                      M3U8 (experimental)
+                    </button>
+                    {linkedYoutubeUrl && (
+                      <button
+                        onClick={() => setPlayerType('youtube')}
+                        className={`player-type-btn${playerType === 'youtube' ? ' active-youtube' : ''}`}
+                        title="YouTube live stream"
+                      >
+                        YouTube
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                  {playerType === 'm3u8' && hlsQualities.length > 1 && (
+                    <div className="quality-selector quality-selector--header">
+                      {showHlsQualityMenu && (
+                        <div
+                          className="quality-selector__backdrop"
+                          onClick={() => setShowHlsQualityMenu(false)}
+                        />
+                      )}
+                      <div className="quality-selector__inner">
+                        <button
+                          className="quality-selector__toggle"
+                          onClick={() => setShowHlsQualityMenu(q => !q)}
+                          title={hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}
+                        >
+                          ⚙ <span className="quality-selector__label">{hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}</span>
+                        </button>
+                        {showHlsQualityMenu && (
+                          <div className="quality-selector__menu">
+                            {hlsQualities.map((q, i) => (
+                              <button
+                                key={q.label}
+                                onClick={() => { setSelectedHlsQualityIdx(i); setShowHlsQualityMenu(false); }}
+                                className={`quality-selector__option${i === selectedHlsQualityIdx ? ' quality-selector__option--active' : ''}`}
+                              >
+                                {i === selectedHlsQualityIdx ? '✓ ' : '  '}{q.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
+                  <button
+                    onClick={() => setShowStreamEmbed(false)}
+                    className="stream-embed-close"
+                    title="Hide stream embed"
+                  >
+                    <FaTimes size={15} />
+                  </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-                {playerType === 'm3u8' && hlsQualities.length > 1 && (
-                  <div className="quality-selector quality-selector--header">
-                    {showHlsQualityMenu && (
-                      <div
-                        className="quality-selector__backdrop"
-                        onClick={() => setShowHlsQualityMenu(false)}
-                      />
-                    )}
-                    <div className="quality-selector__inner">
-                      <button
-                        className="quality-selector__toggle"
-                        onClick={() => setShowHlsQualityMenu(q => !q)}
-                        title={hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}
-                      >
-                        ⚙ <span className="quality-selector__label">{hlsQualities[selectedHlsQualityIdx]?.label ?? 'Quality'}</span>
-                      </button>
-                      {showHlsQualityMenu && (
-                        <div className="quality-selector__menu">
-                          {hlsQualities.map((q, i) => (
-                            <button
-                              key={q.label}
-                              onClick={() => { setSelectedHlsQualityIdx(i); setShowHlsQualityMenu(false); }}
-                              className={`quality-selector__option${i === selectedHlsQualityIdx ? ' quality-selector__option--active' : ''}`}
-                            >
-                              {i === selectedHlsQualityIdx ? '✓ ' : '  '}{q.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+              <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a', position: 'relative' }}>
+                {playerType === 'youtube' ? (
+                  youtubeStreamVideoId ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={`https://www.youtube.com/embed/${youtubeStreamVideoId}?autoplay=1`}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title="YouTube Stream"
+                      style={{ border: 'none' }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '13px' }}>
+                      No YouTube live stream found for this channel
                     </div>
-                  </div>
+                  )
+                ) : (
+                  <StreamEmbed
+                    channelName={selectedTwitchChannelName}
+                    playerType={playerType as 'embed' | 'm3u8'}
+                    twitchConnected={!!sessions.twitch}
+                    onTwitchLogin={handleTwitchLogin}
+                    twitchAccessToken={sessions.twitch?.accessToken}
+                    onQualitiesLoaded={setHlsQualities}
+                    externalSelectedQualityIdx={selectedHlsQualityIdx}
+                  />
                 )}
-                <button
-                  onClick={() => setShowStreamEmbed(false)}
-                  className="stream-embed-close"
-                  title="Hide stream embed"
-                >
-                  <FaTimes size={15} />
-                </button>
               </div>
             </div>
-            <div ref={embedRef} style={{ flex: 1, overflow: 'hidden', backgroundColor: '#0a0a0a', position: 'relative' }}>
-              {playerType === 'youtube' ? (
-                youtubeStreamVideoId ? (
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={`https://www.youtube.com/embed/${youtubeStreamVideoId}?autoplay=1`}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title="YouTube Stream"
-                    style={{ border: 'none' }}
-                  />
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#999', fontSize: '13px' }}>
-                    No YouTube live stream found for this channel
-                  </div>
-                )
-              ) : (
-                <StreamEmbed
-                  channelName={selectedTwitchChannelName}
-                  playerType={playerType as 'embed' | 'm3u8'}
-                  twitchConnected={!!sessions.twitch}
-                  onTwitchLogin={handleTwitchLogin}
-                  twitchAccessToken={sessions.twitch?.accessToken}
-                  onQualitiesLoaded={setHlsQualities}
-                  externalSelectedQualityIdx={selectedHlsQualityIdx}
-                />
-              )}
-            </div>
+          )}
+          {showStreamEmbed && (
+            <div
+              data-resizer
+              style={{
+                width: '4px',
+                backgroundColor: '#1a1a1a',
+                cursor: 'col-resize',
+                userSelect: 'none',
+                transition: isDragging ? 'none' : 'background-color 0.2s',
+              }}
+              onMouseDown={() => setIsDragging(true)}
+              onMouseEnter={(e) => !isDragging && (e.currentTarget.style.backgroundColor = '#6366f1')}
+              onMouseLeave={(e) => !isDragging && (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+              title="Drag to resize"
+            />
+          )}
+          <div data-chat-section style={{ display: 'flex', flexDirection: 'column', gap: '0', overflow: 'hidden', minHeight: '0' }}>
+            <ChatApp
+              twitchConnected={!!sessions.twitch}
+              selectedTwitchChannel={selectedTwitchChannel}
+              selectedTwitchChannelName={selectedTwitchChannelName}
+              selectedTwitchChannelDisplayName={selectedTwitchChannelDisplayName}
+              twitchSession={sessions.twitch}
+              onToggleSidebar={() => setLeftColumnVisible(!leftColumnVisible)}
+              sidebarVisible={leftColumnVisible}
+              showStreamEmbed={showStreamEmbed}
+              onToggleStreamEmbed={() => setShowStreamEmbed(!showStreamEmbed)}
+              viewerCount={viewerCount}
+              linkedYoutubeUrl={linkedYoutubeUrl || undefined}
+              youtubeSession={sessions.youtube}
+              unifyChatEnabled={unifyChatEnabled}
+              fontSize={fontSize}
+              chatFont={chatFont}
+              mentionSoundEnabled={mentionSoundEnabled}
+              mentionVolume={mentionVolume}
+              mentionSoundType={mentionSoundType}
+              showDeletedMessages={showDeletedMessages}
+              onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
+            />
           </div>
-        )}
-        {showStreamEmbed && (
-          <div
-            data-resizer
-            style={{
-              width: '4px',
-              backgroundColor: '#1a1a1a',
-              cursor: 'col-resize',
-              userSelect: 'none',
-              transition: isDragging ? 'none' : 'background-color 0.2s',
-            }}
-            onMouseDown={() => setIsDragging(true)}
-            onMouseEnter={(e) => !isDragging && (e.currentTarget.style.backgroundColor = '#6366f1')}
-            onMouseLeave={(e) => !isDragging && (e.currentTarget.style.backgroundColor = '#1a1a1a')}
-            title="Drag to resize"
-          />
-        )}
-        <div data-chat-section style={{ display: 'flex', flexDirection: 'column', gap: '0', overflow: 'hidden', minHeight: '0' }}>
-          <ChatApp
-            twitchConnected={!!sessions.twitch}
-            selectedTwitchChannel={selectedTwitchChannel}
-            selectedTwitchChannelName={selectedTwitchChannelName}
-            selectedTwitchChannelDisplayName={selectedTwitchChannelDisplayName}
-            twitchSession={sessions.twitch}
-            onToggleSidebar={() => setLeftColumnVisible(!leftColumnVisible)}
-            sidebarVisible={leftColumnVisible}
-            showStreamEmbed={showStreamEmbed}
-            onToggleStreamEmbed={() => setShowStreamEmbed(!showStreamEmbed)}
-            viewerCount={viewerCount}
-            linkedYoutubeUrl={linkedYoutubeUrl || undefined}
-            youtubeSession={sessions.youtube}
-            unifyChatEnabled={unifyChatEnabled}
-            fontSize={fontSize}
-            chatFont={chatFont}
-            mentionSoundEnabled={mentionSoundEnabled}
-            mentionVolume={mentionVolume}
-            mentionSoundType={mentionSoundType}
-            showDeletedMessages={showDeletedMessages}
-            onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
-          />
-        </div>
         </>)}
       </div>
 
