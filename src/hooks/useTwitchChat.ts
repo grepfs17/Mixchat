@@ -107,7 +107,6 @@ async function getRewardTitle(
   try {
     const response = await fetch(
       `/api/twitch-proxy?path=/helix/channel_points/custom_rewards&broadcaster_id=${broadcasterId}&id=${encodeURIComponent(rewardId)}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
     );
     if (response.ok) {
       const data = await response.json();
@@ -115,7 +114,12 @@ async function getRewardTitle(
       if (title) {
         rewardTitleCache.set(rewardId, title);
         return title;
+      } else {
+        console.warn('[getRewardTitle] API returned ok but no title found. Response:', data);
       }
+    } else {
+      const body = await response.text().catch(() => '(unreadable)');
+      console.warn(`[getRewardTitle] API returned ${response.status} for rewardId=${rewardId} broadcasterId=${broadcasterId}. Body:`, body);
     }
   } catch (error) {
     console.error('Failed to fetch reward title:', error);
@@ -293,6 +297,30 @@ export function useTwitchChat(
           if (active) {
             setSlowModeWaitTime(waitTime);
             setFollowerModeMinutes(followerMinutes);
+          }
+
+          // Step 3: pre-fetch ALL custom rewards and cache their titles so that
+          // when a redemption IRC message arrives, the title is already in cache.
+          // This only succeeds when the logged-in user is the broadcaster of this
+          // channel (Twitch requires channel:read:redemptions AND the token user
+          // must match the broadcaster). For viewers it returns 403 — that's fine.
+          try {
+            const rewardsRes = await fetch(
+              `/api/twitch-proxy?path=/helix/channel_points/custom_rewards&broadcaster_id=${broadcasterId}`,
+            );
+            if (rewardsRes.ok) {
+              const rewardsData = await rewardsRes.json();
+              const rewards: { id: string; title: string }[] = rewardsData?.data ?? [];
+              rewards.forEach((r) => {
+                if (r.id && r.title) rewardTitleCache.set(r.id, r.title);
+              });
+              console.log(`[useTwitchChat] Pre-cached ${rewards.length} custom reward title(s) for channel "${channelName}"`);
+            } else {
+              const body = await rewardsRes.text().catch(() => '(unreadable)');
+              console.info(`[useTwitchChat] Could not pre-fetch custom rewards (${rewardsRes.status}) — reward titles will not be shown. This is expected when viewing another broadcaster's channel. Body:`, body);
+            }
+          } catch {
+            // Non-fatal — viewers will simply not see reward titles
           }
         } catch {
           // Non-fatal
