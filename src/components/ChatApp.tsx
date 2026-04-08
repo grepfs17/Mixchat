@@ -572,11 +572,14 @@ export default function ChatApp({
 
   // Callback to receive YouTube messages in unified mode
   const handleYtMessages = useCallback((msgs: import('./UnifiedChat').YTMessage[]) => {
-    // Remove any optimistic entries whose text now appears in the polled feed
     setYtOptimisticMessages((prev) => {
       if (!prev.length) return prev;
-      const realTexts = new Set(msgs.map(getYtMessageText));
-      const remaining = prev.filter((opt) => !realTexts.has(getYtMessageText(opt)));
+      const realKeys = new Set(
+        msgs.map((m) => `${m.author.toLowerCase()}|${getYtMessageText(m)}`)
+      );
+      const remaining = prev.filter(
+        (opt) => !realKeys.has(`${opt.author.toLowerCase()}|${getYtMessageText(opt)}`)
+      );
       return remaining.length === prev.length ? prev : remaining;
     });
     setYtMessages(msgs);
@@ -669,7 +672,10 @@ export default function ChatApp({
                   ytMessages={[
                     ...ytMessages,
                     ...ytOptimisticMessages.filter(
-                      (opt) => !ytMessages.some((m) => getYtMessageText(m) === getYtMessageText(opt))
+                      (opt) => !ytMessages.some(
+                        (m) => m.author.toLowerCase() === opt.author.toLowerCase() &&
+                          getYtMessageText(m) === getYtMessageText(opt)
+                      )
                     ),
                   ]}
                   onReply={setReplyingTo}

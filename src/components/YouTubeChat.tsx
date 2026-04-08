@@ -58,8 +58,12 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
   const lastMessageCountRef = useRef(0);
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
-    const realTexts = new Set(messages.map(getTextContent));
-    const unmatched = optimisticMessages.filter(opt => !realTexts.has(getTextContent(opt)));
+    const realKeys = new Set(
+      messages.map((m) => `${m.author.toLowerCase()}|${getTextContent(m)}`)
+    );
+    const unmatched = optimisticMessages.filter(
+      (opt) => !realKeys.has(`${opt.author.toLowerCase()}|${getTextContent(opt)}`)
+    );
     return unmatched.length ? [...messages, ...unmatched] : messages;
   }, [messages, optimisticMessages]);
 
@@ -197,63 +201,63 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         )}
         {(() => {
           return mergedMessages.map((msg, index) => {
-          if (msg.superchat) {
-            return (
-              <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
-                <div className="yt-superchat-header">
-                  <div className="yt-superchat-info">
-                    <div className="yt-superchat-author">{msg.author}</div>
-                    <div className="yt-superchat-amount">{msg.superchat.amount}</div>
+            if (msg.superchat) {
+              return (
+                <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
+                  <div className="yt-superchat-header">
+                    <div className="yt-superchat-info">
+                      <div className="yt-superchat-author">{msg.author}</div>
+                      <div className="yt-superchat-amount">{msg.superchat.amount}</div>
+                    </div>
                   </div>
+                  {(msg.parts.length > 0 || msg.superchat.sticker) && (
+                    <div className="yt-superchat-body">
+                      <YTMessageParts parts={msg.parts} />
+                      {msg.superchat.sticker && (
+                        <img
+                          src={msg.superchat.sticker.url}
+                          alt={msg.superchat.sticker.alt}
+                          className="yt-superchat-sticker"
+                          loading="lazy"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
-                {(msg.parts.length > 0 || msg.superchat.sticker) && (
-                  <div className="yt-superchat-body">
+              );
+            }
+
+            return (
+              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
+                <div className="message-single-line">
+                  <span className="timestamp">
+                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                  {msg.badges && Object.keys(msg.badges).length > 0 && (
+                    <div className="yt-message-badges">
+                      {Object.entries(msg.badges).map(([name, url]) => (
+                        <img
+                          key={name}
+                          src={url}
+                          alt={name}
+                          className="badge yt-badge"
+                          title={name}
+                          loading="lazy"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <span className="author" style={{ color: getColorFromName(msg.author) }}>
+                    {msg.author}
+                  </span>
+                  <span className="message-separator">:</span>
+                  <span className="message-text">
                     <YTMessageParts parts={msg.parts} />
-                    {msg.superchat.sticker && (
-                      <img
-                        src={msg.superchat.sticker.url}
-                        alt={msg.superchat.sticker.alt}
-                        className="yt-superchat-sticker"
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                )}
+                  </span>
+                </div>
               </div>
             );
-          }
-
-          return (
-            <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
-              <div className="message-single-line">
-                <span className="timestamp">
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </span>
-                {msg.badges && Object.keys(msg.badges).length > 0 && (
-                  <div className="yt-message-badges">
-                    {Object.entries(msg.badges).map(([name, url]) => (
-                      <img
-                        key={name}
-                        src={url}
-                        alt={name}
-                        className="badge yt-badge"
-                        title={name}
-                        loading="lazy"
-                      />
-                    ))}
-                  </div>
-                )}
-                <span className="author" style={{ color: getColorFromName(msg.author) }}>
-                  {msg.author}
-                </span>
-                <span className="message-separator">:</span>
-                <span className="message-text">
-                  <YTMessageParts parts={msg.parts} />
-                </span>
-              </div>
-            </div>
-          );
-        });
+          });
         })()}
       </div>
     </div>
