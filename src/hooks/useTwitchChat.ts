@@ -399,7 +399,6 @@ export function useTwitchChat(
       const cachedRewardTitle = (msg.isRedemption && msg.rewardId)
         ? rewardTitleCache.get(msg.rewardId)
         : undefined;
-      const isFirstTimeChatter: boolean = msg.isFirst === true;
       // Only treat as shared-chat if the source room differs from the current channel
       const isSharedChat = Boolean(
         sourceRoomId &&
@@ -427,7 +426,7 @@ export function useTwitchChat(
         badges: badgeImages,
         badgeDetails,
         isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
-        messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : (isFirstTimeChatter ? 'first-time-chatter' : 'chat')),
+        messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : 'chat'),
         rewardId: msg.isRedemption ? (msg.rewardId || undefined) : undefined,
         rewardTitle: cachedRewardTitle,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,

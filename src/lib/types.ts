@@ -8,7 +8,6 @@ export const MESSAGE_TYPES = [
   "resub",
   "subgift",
   "redemption",
-  "first-time-chatter",
   "raid",
   "watch-streak",
 ] as const;
