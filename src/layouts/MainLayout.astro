@@ -21,19 +21,30 @@ interface Props {
   title: string;
   description: string;
   ogUrl?: string;
+  canonicalUrl?: string;
   footerLogo?: boolean;
 }
 
-const { title, description, ogUrl, footerLogo = false } = Astro.props;
+const {
+  title,
+  description,
+  ogUrl,
+  canonicalUrl,
+  footerLogo = false,
+} = Astro.props;
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const resolvedOgUrl = ogUrl ?? mainUrl;
+const canonical = canonicalUrl ?? resolvedOgUrl;
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="mobile-web-app-capable" content="true" />
@@ -59,80 +70,84 @@ const resolvedOgUrl = ogUrl ?? mainUrl;
     <meta name="twitter:image" content={mainUrl + "logo.png"} />
 
     <meta name="author" content="Mixchat" />
-    <link rel="canonical" href={resolvedOgUrl} />
+    <link rel="canonical" href={canonical} />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=Josefin+Sans:wght@400;600&family=Montserrat:wght@400;500;600&family=Nunito:wght@400;500;600&family=Open+Sans:wght@400;500;600&family=Roboto:wght@400;500;700&family=Rubik:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=Josefin+Sans:wght@400;600&family=Montserrat:wght@400;500;600&family=Nunito:wght@400;500;600&family=Open+Sans:wght@400;500;600&family=Roboto:wght@400;500;700&family=Rubik:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
 
     <link rel="preconnect" href="https://www.twitch.tv" />
     <link rel="preconnect" href="https://www.youtube.com" />
 
     <slot name="head" />
-  </head>
-  <style>
-    #app {
-      height: 100vh; /* fallback */
-      height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
-      padding: 0;
-      padding-bottom: 30px;
-      background: var(--color-bg-primary);
-      overflow: hidden;
-    }
-
-    footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      border-top: 1px solid var(--color-border-medium);
-      padding: 6px 20px;
-      background: var(--color-bg-primary);
-      font-size: 12px;
-      color: var(--color-text-secondary);
-      text-align: center;
-      z-index: 100;
-      height: 30px;
-      box-sizing: border-box;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-    }
-
-    footer img {
-      position: absolute;
-      left: 20px;
-      opacity: 0.7;
-    }
-
-    footer a {
-      color: var(--color-accent);
-      text-decoration: none;
-      margin: 0 12px;
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    @media (max-width: 768px) {
+    <style>
       #app {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 100svh; /* fallback before JS runs */
+        height: 100vh; /* fallback */
+        height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
         padding: 0;
-        padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-bottom: 30px;
+        background: var(--color-bg-primary);
         overflow: hidden;
       }
 
       footer {
-        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-top: 1px solid var(--color-border-medium);
+        padding: 6px 20px;
+        background: var(--color-bg-primary);
+        font-size: 12px;
+        color: var(--color-text-secondary);
+        text-align: center;
+        z-index: 100;
+        height: 30px;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
       }
-    }
-  </style>
+
+      footer img {
+        position: absolute;
+        left: 20px;
+        opacity: 0.7;
+      }
+
+      footer a {
+        color: var(--color-accent);
+        text-decoration: none;
+        margin: 0 12px;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 768px) {
+        #app {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 100svh; /* fallback before JS runs */
+          padding: 0;
+          padding-bottom: env(safe-area-inset-bottom, 0px);
+          overflow: hidden;
+        }
+
+        footer {
+          display: none;
+        }
+      }
+    </style></head
+  >
+
   <body>
     <div id="app">
       <AppContainer client:load />
@@ -150,9 +165,15 @@ const resolvedOgUrl = ogUrl ?? mainUrl;
           target="_blank">MIT</a
         > — {DISPLAY_VERSION}</span
       >
-      {footerLogo && (
-        <img src="/logo.png" alt="Mixchat Logo" style="width: auto; height: 24px;" />
-      )}
+      {
+        footerLogo && (
+          <img
+            src="/logo.png"
+            alt="Mixchat Logo"
+            style="width: auto; height: 24px;"
+          />
+        )
+      }
     </footer>
   </body>
 </html>

@@ -4,13 +4,18 @@ import MainLayout from "../../layouts/MainLayout.astro";
 const { name } = Astro.params;
 
 const title = `${name} — Mixchat`;
-const description =
-  `Watch and chat on ${name}'s stream with full 7TV, BTTV, and FFZ emote support. No browser extensions needed.`;
+const description = `Watch and chat on ${name}'s stream with full 7TV, BTTV, and FFZ emote support. No browser extensions needed.`;
 
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 ---
 
-<MainLayout title={title} description={description} ogUrl={`${mainUrl}channel/${name}`} footerLogo>
+<MainLayout
+  title={title}
+  description={description}
+  ogUrl={`${mainUrl}channel/${name}`}
+  canonicalUrl={mainUrl}
+  footerLogo
+>
   <Fragment slot="head">
     <meta
       name="keywords"
