@@ -268,7 +268,7 @@
 }
 
 .channel-game-name {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   color: var(--color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
