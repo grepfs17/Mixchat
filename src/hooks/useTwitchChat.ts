@@ -90,6 +90,40 @@ async function getSourceChannelInfo(
   return fallback;
 }
 
+// Twitch IRC does NOT send the reward title in the message tags (only
+// the reward ID is present). We fetch the title from the Helix API once and
+// cache it so subsequent redemptions of the same reward are instant.
+const rewardTitleCache = new Map<string, string>();
+
+async function getRewardTitle(
+  rewardId: string,
+  broadcasterId: string,
+  accessToken: string,
+): Promise<string | null> {
+  if (rewardTitleCache.has(rewardId)) {
+    return rewardTitleCache.get(rewardId)!;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/twitch-proxy?path=/helix/channel_points/custom_rewards&broadcaster_id=${broadcasterId}&id=${encodeURIComponent(rewardId)}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    if (response.ok) {
+      const data = await response.json();
+      const title: string | undefined = data?.data?.[0]?.title;
+      if (title) {
+        rewardTitleCache.set(rewardId, title);
+        return title;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch reward title:', error);
+  }
+
+  return null;
+}
+
 // Single shared AudioContext — reusing it avoids the browser suspending a
 // freshly-created context that has no prior user-gesture association.
 let sharedAudioCtx: AudioContext | null = null;
@@ -180,6 +214,9 @@ export function useTwitchChat(
   const mentionVolumeRef = useRef(mentionVolume);
   const mentionSoundTypeRef = useRef(mentionSoundType);
   const onMessageDeletedRef = useRef(onMessageDeleted);
+  // Broadcaster ID is resolved once in onConnect and reused by onMessage to
+  // look up reward titles without re-fetching the users endpoint each time.
+  const broadcasterIdRef = useRef<string | null>(null);
   useEffect(() => { mentionSoundEnabledRef.current = mentionSoundEnabled; }, [mentionSoundEnabled]);
   useEffect(() => { mentionVolumeRef.current = mentionVolume; }, [mentionVolume]);
   useEffect(() => { mentionSoundTypeRef.current = mentionSoundType; }, [mentionSoundType]);
@@ -225,6 +262,7 @@ export function useTwitchChat(
           const usersData = await usersRes.json();
           const broadcasterId: string | undefined = usersData?.data?.[0]?.id;
           if (!broadcasterId) return;
+          if (active) broadcasterIdRef.current = broadcasterId;
 
           // Step 2: fetch chat settings
           const settingsRes = await fetch(
@@ -319,7 +357,11 @@ export function useTwitchChat(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawTags = (msg as any).tags as Map<string, string> | undefined;
       const sourceRoomId: string | undefined = rawTags?.get('source-room-id') || undefined;
-      const rewardTitle: string | undefined = msg.isRedemption ? (rawTags?.get('custom-reward-title') || undefined) : undefined;
+      // NOTE: Twitch IRC does NOT send a reward title tag — only the reward ID
+      // is present. We resolve the title from the cache populated by getRewardTitle.
+      const cachedRewardTitle = (msg.isRedemption && msg.rewardId)
+        ? rewardTitleCache.get(msg.rewardId)
+        : undefined;
       const isFirstTimeChatter: boolean = msg.isFirst === true;
       // Only treat as shared-chat if the source room differs from the current channel
       const isSharedChat = Boolean(
@@ -350,7 +392,7 @@ export function useTwitchChat(
         isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
         messageType: msg.isRedemption ? 'redemption' : (msg.isCheer ? 'cheer' : (isFirstTimeChatter ? 'first-time-chatter' : 'chat')),
         rewardId: msg.isRedemption ? (msg.rewardId || undefined) : undefined,
-        rewardTitle: rewardTitle,
+        rewardTitle: cachedRewardTitle,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
@@ -362,16 +404,20 @@ export function useTwitchChat(
       // of which combination is required — avoids an off-by-one index bug.
       const needsUserInfo = !cachedUserInfo && !!msg.userInfo.userId;
       const needsSourceAvatar = isSharedChat && !!sourceRoomId && !sourceChannelInfoCache.has(sourceRoomId);
+      const needsRewardTitle = !!chatMessage.rewardId && !chatMessage.rewardTitle && !!broadcasterIdRef.current;
 
-      if (needsUserInfo || needsSourceAvatar) {
+      if (needsUserInfo || needsSourceAvatar || needsRewardTitle) {
         const userInfoPromise = needsUserInfo && msg.userInfo.userId
           ? getUserInfo(msg.userInfo.userId, accessToken)
           : Promise.resolve(null);
         const sourceInfoPromise = needsSourceAvatar && sourceRoomId
           ? getSourceChannelInfo(sourceRoomId, accessToken)
           : Promise.resolve(null);
+        const rewardTitlePromise = needsRewardTitle && chatMessage.rewardId && broadcasterIdRef.current
+          ? getRewardTitle(chatMessage.rewardId, broadcasterIdRef.current, accessToken)
+          : Promise.resolve(null);
 
-        Promise.all([userInfoPromise, sourceInfoPromise]).then(([userInfoResult, sourceInfoResult]) => {
+        Promise.all([userInfoPromise, sourceInfoPromise, rewardTitlePromise]).then(([userInfoResult, sourceInfoResult, rewardTitleResult]) => {
           const resolvedAvatar = (userInfoResult as { profileImageUrl?: string | null } | null)?.profileImageUrl;
           const resolvedSource = sourceInfoResult as { login: string | null; avatar: string | null } | null;
           onMessage({
@@ -379,6 +425,7 @@ export function useTwitchChat(
             authorAvatar: resolvedAvatar || chatMessage.authorAvatar,
             sourceChannelLogin: resolvedSource?.login || chatMessage.sourceChannelLogin || undefined,
             sourceChannelAvatar: resolvedSource?.avatar || chatMessage.sourceChannelAvatar || undefined,
+            rewardTitle: (rewardTitleResult as string | null) || chatMessage.rewardTitle,
           });
         }).catch(() => {
           onMessage(chatMessage);

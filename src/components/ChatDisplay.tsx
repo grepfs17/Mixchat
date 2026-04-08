@@ -470,6 +470,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                         className="avatar"
                       />
                     )*/}
+                    {msg.messageType === 'redemption' && msg.rewardTitle && (
+                      <span className="reward-title-badge">{msg.rewardTitle}</span>
+                    )}
                     <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
                     <a
                       href={`https://twitch.tv/${msg.author}`}

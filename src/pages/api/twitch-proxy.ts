@@ -14,6 +14,7 @@ const ALLOWED_PATH_PREFIXES = [
     "/helix/chat/badges",       // covers /helix/chat/badges?broadcaster_id=...
     "/helix/chat/settings",     // used to check show_first_message_highlights
     "/helix/users",             // used to resolve broadcaster IDs -> display names
+    "/helix/channel_points/custom_rewards", // used to resolve reward titles by reward ID
 ] as const;
 
 const TWITCH_API_BASE = "https://api.twitch.tv";

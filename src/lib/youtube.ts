@@ -1,6 +1,13 @@
-import { Innertube } from 'youtubei.js';
+import { Innertube, Parser } from 'youtubei.js';
 
 let yt: Innertube | null = null;
+
+// Suppress noisy "class_not_found" warnings for unknown YouTube.js nodes (e.g.
+// LiveChatReportModerationStateCommand). These are harmless — youtubei.js JIT-
+// generates a stub in the meantime — but they would otherwise spam the logs.
+Parser.setParserErrorHandler(({ error_type }) => {
+  if (error_type === 'class_not_found') return;
+});
 
 export async function getInnertube() {
   if (!yt) {

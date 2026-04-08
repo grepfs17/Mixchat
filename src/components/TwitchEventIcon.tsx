@@ -13,8 +13,9 @@ export const EVENT_CONFIG: Record<string, { title: string; color: string; bg: st
 
 interface TwitchEventLabelProps {
     messageType?: string;
-    /** Optional reward title to append for redemption events */
+    /** Optional: no longer used internally; kept for API compatibility */
     rewardTitle?: string;
+    size?: number;
 }
 
 /**
@@ -22,14 +23,12 @@ interface TwitchEventLabelProps {
  * (cheer, sub, resub, subgift, channel-points redemption).
  * Returns null for regular chat messages.
  */
-export default function TwitchEventIcon({ messageType, rewardTitle }: TwitchEventLabelProps) {
+export default function TwitchEventIcon({ messageType }: TwitchEventLabelProps) {
     if (!messageType) return null;
     const cfg = EVENT_CONFIG[messageType];
     if (!cfg) return null;
 
-    const label = messageType === 'redemption' && rewardTitle
-        ? `${cfg.title}: ${rewardTitle}`
-        : cfg.title;
+    const label = cfg.title;
 
     return (
         <div
