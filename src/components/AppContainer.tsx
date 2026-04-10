@@ -72,6 +72,7 @@ export default function AppContainer() {
   const [ytLinksVersion, setYtLinksVersion] = useState(0);
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<string | null>(null);
   const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
+  const [useYoutubeEmbed, setUseYoutubeEmbed] = useState(false);
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
   const [chatFont, setChatFont] = useState<ChatFont>('inter'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
@@ -488,6 +489,21 @@ export default function AppContainer() {
   useEffect(() => {
     localStorage.setItem('mixchat_unify_chat', JSON.stringify(unifyChatEnabled));
   }, [unifyChatEnabled]);
+
+  // Load YouTube embed setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_use_youtube_embed');
+    if (saved !== null) {
+      try {
+        setUseYoutubeEmbed(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save YouTube embed setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_use_youtube_embed', JSON.stringify(useYoutubeEmbed));
+  }, [useYoutubeEmbed]);
 
   // Load font size setting from localStorage
   useEffect(() => {
@@ -922,6 +938,8 @@ export default function AppContainer() {
             onEmbedDefaultOpenChange={setEmbedDefaultOpen}
             unifyChatEnabled={unifyChatEnabled}
             onUnifyChatEnabledChange={setUnifyChatEnabled}
+            useYoutubeEmbed={useYoutubeEmbed}
+            onUseYoutubeEmbedChange={setUseYoutubeEmbed}
             fontSize={fontSize}
             onFontSizeChange={setFontSize}
             chatFont={chatFont}
@@ -1088,6 +1106,7 @@ export default function AppContainer() {
               linkedYoutubeUrl={linkedYoutubeUrl || undefined}
               youtubeSession={sessions.youtube}
               unifyChatEnabled={unifyChatEnabled}
+              useYoutubeEmbed={useYoutubeEmbed}
               fontSize={fontSize}
               chatFont={chatFont}
               mentionSoundEnabled={mentionSoundEnabled}

@@ -37,6 +37,8 @@ interface LoginPanelProps {
   onEmbedDefaultOpenChange?: (value: boolean) => void;
   unifyChatEnabled?: boolean;
   onUnifyChatEnabledChange?: (value: boolean) => void;
+  useYoutubeEmbed?: boolean;
+  onUseYoutubeEmbedChange?: (value: boolean) => void;
   fontSize?: number;
   onFontSizeChange?: (value: number) => void;
   chatFont?: ChatFont;
@@ -76,6 +78,8 @@ function LoginPanel({
   onEmbedDefaultOpenChange,
   unifyChatEnabled = false,
   onUnifyChatEnabledChange,
+  useYoutubeEmbed = false,
+  onUseYoutubeEmbedChange,
   fontSize = 14,
   onFontSizeChange,
   chatFont = 'inter' as ChatFont,
@@ -301,6 +305,12 @@ function LoginPanel({
           onUnifyChatEnabledChange={(value) => {
             if (onUnifyChatEnabledChange) {
               onUnifyChatEnabledChange(value);
+            }
+          }}
+          useYoutubeEmbed={useYoutubeEmbed}
+          onUseYoutubeEmbedChange={(value) => {
+            if (onUseYoutubeEmbedChange) {
+              onUseYoutubeEmbedChange(value);
             }
           }}
           fontSize={fontSize}

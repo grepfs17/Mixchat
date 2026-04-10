@@ -8,6 +8,8 @@ interface EmbedConfigModalProps {
   onEmbedDefaultOpenChange: (value: boolean) => void;
   unifyChatEnabled: boolean;
   onUnifyChatEnabledChange: (value: boolean) => void;
+  useYoutubeEmbed: boolean;
+  onUseYoutubeEmbedChange: (value: boolean) => void;
   fontSize: number;
   onFontSizeChange: (value: number) => void;
   chatFont: ChatFont;
@@ -28,6 +30,8 @@ export default function EmbedConfigModal({
   onEmbedDefaultOpenChange,
   unifyChatEnabled,
   onUnifyChatEnabledChange,
+  useYoutubeEmbed,
+  onUseYoutubeEmbedChange,
   fontSize,
   onFontSizeChange,
   chatFont,
@@ -263,6 +267,44 @@ export default function EmbedConfigModal({
             }}
           >
             When enabled, Twitch and YouTube messages appear together in a single chronological feed. Each platform keeps its own styling and features.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              color: '#e2e8f0',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={useYoutubeEmbed}
+              onChange={(e) => onUseYoutubeEmbedChange(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#6366f1',
+              }}
+            />
+            <span style={{ fontSize: '14px' }}>
+              Use official YouTube chat embed
+            </span>
+          </label>
+          <p
+            style={{
+              marginTop: '8px',
+              color: '#94a3b8',
+              fontSize: '12px',
+              margin: '8px 0 0 30px',
+            }}
+          >
+            Replaces the custom YouTube chat with the official iframe embed. Note: This disables some features like custom emotes and unified chat for YouTube.
           </p>
         </div>
 

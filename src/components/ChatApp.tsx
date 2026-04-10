@@ -50,6 +50,7 @@ interface ChatAppProps {
   /** Full YouTube session (may exist while accessToken is still being refreshed) */
   youtubeSession?: PlatformSession;
   unifyChatEnabled?: boolean;
+  useYoutubeEmbed?: boolean;
   fontSize?: number;
   chatFont?: ChatFont;
   mentionSoundEnabled?: boolean;
@@ -74,6 +75,7 @@ export default function ChatApp({
   linkedYoutubeUrl,
   youtubeSession,
   unifyChatEnabled = false,
+  useYoutubeEmbed = false,
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   mentionSoundEnabled = true,
@@ -768,13 +770,21 @@ export default function ChatApp({
               {youtubeVideoId ? (
                 <>
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                    <YouTubeChat
-                      videoId={youtubeVideoId}
-                      onMessages={handleYtMessages}
-                      optimisticMessages={ytOptimisticMessages}
-                      fontSize={fontSize}
-                      chatFont={chatFont}
-                    />
+                    {useYoutubeEmbed ? (
+                      <iframe
+                        src={`https://www.youtube.com/live_chat?v=${youtubeVideoId}&embed_domain=${window.location.hostname}&dark_theme=1`}
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        title="YouTube Live Chat"
+                      />
+                    ) : (
+                      <YouTubeChat
+                        videoId={youtubeVideoId}
+                        onMessages={handleYtMessages}
+                        optimisticMessages={ytOptimisticMessages}
+                        fontSize={fontSize}
+                        chatFont={chatFont}
+                      />
+                    )}
                     <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
                       <button
                         onClick={() => { setManualVideoId(''); setAutoVideoId(null); }}
