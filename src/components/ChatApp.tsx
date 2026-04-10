@@ -392,7 +392,7 @@ export default function ChatApp({
 
       // Initialize emotes and badges first, then load recent messages to ensure
       // badges are ready for the initial historical messages.
-      let unsubscribe7tv: (() => void) | undefined;
+      let subscribe7tv: (() => void) | undefined;
 
       const initializeAssets = async () => {
         // Don't attempt API calls until the access token has been populated by
@@ -415,7 +415,7 @@ export default function ChatApp({
           ]);
           setBadgesReady(true);
 
-          unsubscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
+          subscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
 
           const recentMessages = await loadRecentMessages();
 
@@ -446,7 +446,7 @@ export default function ChatApp({
       initializeAssets();
 
       return () => {
-        if (unsubscribe7tv) unsubscribe7tv();
+        if (subscribe7tv) subscribe7tv();
       };
     }
   }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
