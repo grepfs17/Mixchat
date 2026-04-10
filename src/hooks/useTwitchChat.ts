@@ -766,6 +766,45 @@ export function useTwitchChat(
     };
   }, [channelName, accessToken, username, onMessage, enabled, clientId, onOwnBadgesLoaded]);
 
+  // Handle real-time 7TV emote updates (system notices)
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleEmoteAdded = (e: any) => {
+      const { name } = e.detail;
+      onMessage({
+        id: `7tv-added-${Date.now()}`,
+        platform: 'twitch',
+        author: '7TV',
+        content: `Emote added: ${name}`,
+        timestamp: new Date(),
+        authorColor: '#00ccff',
+        messageType: 'notice',
+      });
+    };
+
+    const handleEmoteRemoved = (e: any) => {
+      const { name } = e.detail;
+      onMessage({
+        id: `7tv-removed-${Date.now()}`,
+        platform: 'twitch',
+        author: '7TV',
+        content: `Emote removed: ${name}`,
+        timestamp: new Date(),
+        authorColor: '#ff4444',
+        messageType: 'notice',
+      });
+    };
+
+    window.addEventListener('7tv-emote-added', handleEmoteAdded);
+    window.addEventListener('7tv-emote-removed', handleEmoteRemoved);
+
+    return () => {
+      window.removeEventListener('7tv-emote-added', handleEmoteAdded);
+      window.removeEventListener('7tv-emote-removed', handleEmoteRemoved);
+    };
+  }, [enabled, onMessage]);
+
   const sendMessage = useCallback(
     async (message: string, replyToMessageId?: string) => {
       if (!client || !isConnected) {
