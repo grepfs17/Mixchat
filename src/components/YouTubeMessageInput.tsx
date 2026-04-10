@@ -1,12 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { FaYoutube } from 'react-icons/fa';
 import { FaRegSmile } from 'react-icons/fa';
 import { searchEmojis, EMOJI_LIST, type EmojiEntry } from '../lib/emojiShortcodes';
 
+// YouTube message shape — mirrors what YouTubeChat.tsx uses internally
+interface YTMessage {
+    id: string;
+    author: string;
+    authorAvatar?: string;
+    badges?: Record<string, string>;
+    parts: any[];
+    timestamp: Date;
+    authorChannelId?: string;
+    optimistic?: boolean;
+}
 
 interface YouTubeMessageInputProps {
     youtubeVideoId: string;
+    chatMessages?: YTMessage[];
     /** Called when the API returns an error so the parent can show a notification */
     onError?: (message: string) => void;
     /** Called immediately when send is triggered (before the API call) so the parent can show an optimistic placeholder */
@@ -16,12 +28,12 @@ interface YouTubeMessageInputProps {
 }
 
 /**
- * YouTube message input with Unicode emoji :shortcode: autocomplete.
- * Autocomplete triggers when the user types :xx (colon + 2+ chars).
- * Selecting an entry inserts the real Unicode character so YouTube renders it natively.
+ * YouTube message input with Unicode emoji :shortcode: autocomplete
+ * and @user mention autocomplete.
  */
 export default function YouTubeMessageInput({
     youtubeVideoId,
+    chatMessages = [],
     onError,
     onOptimisticMessage,
     onOptimisticFailed,
@@ -33,9 +45,27 @@ export default function YouTubeMessageInput({
     const [emojiResults, setEmojiResults] = useState<EmojiEntry[]>([]);
     const [emojiIndex, setEmojiIndex] = useState(-1);
     const [showEmojiMenu, setShowEmojiMenu] = useState(false);
-    const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
     /** Start position of the current :query in the input value */
     const colonPosRef = useRef(-1);
+
+    // @mention autocomplete
+    const [mentionResults, setMentionResults] = useState<string[]>([]);
+    const [mentionIndex, setMentionIndex] = useState(-1);
+    const [showMentionMenu, setShowMentionMenu] = useState(false);
+    /** Start position of the current @query in the input value */
+    const mentionPosRef = useRef(-1);
+
+    // Get unique authors from chat messages for mentions
+    const chatAuthors = useMemo(() => {
+        const authors = new Set<string>();
+        chatMessages.forEach(m => {
+            if (m.author) authors.add(m.author);
+        });
+        return Array.from(authors);
+    }, [chatMessages]);
+
+    // Portal menu positioning
+    const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
 
     // Emoji picker popup
     const [showPicker, setShowPicker] = useState(false);
@@ -47,6 +77,7 @@ export default function YouTubeMessageInput({
 
     const ytInputRef = useRef<HTMLInputElement>(null);
     const emojiMenuRef = useRef<HTMLDivElement>(null);
+    const mentionMenuRef = useRef<HTMLDivElement>(null);
 
     const handleSendYoutubeMessage = useCallback(async () => {
         const text = ytMessage.trim();
@@ -95,6 +126,25 @@ export default function YouTubeMessageInput({
         }, 0);
     }, [ytMessage]);
 
+    /** Insert a chosen author name, replacing the @query token */
+    const insertMention = useCallback((author: string) => {
+        const input = ytInputRef.current;
+        if (!input || mentionPosRef.current === -1) return;
+        const before = ytMessage.substring(0, mentionPosRef.current);
+        const cursor = input.selectionStart ?? ytMessage.length;
+        const after = ytMessage.substring(cursor);
+        const mentionPrefix = author.startsWith('@') ? '' : '@';
+        const newVal = before + mentionPrefix + author + ' ' + after;
+        setYtMessage(newVal);
+        setShowMentionMenu(false);
+        mentionPosRef.current = -1;
+        setTimeout(() => {
+            const pos = (before + '@' + author + ' ').length;
+            input.setSelectionRange(pos, pos);
+            input.focus();
+        }, 0);
+    }, [ytMessage]);
+
     /** Insert emoji character from the picker at current cursor position */
     const insertEmojiFromPicker = useCallback((char: string) => {
         const input = ytInputRef.current;
@@ -119,32 +169,31 @@ export default function YouTubeMessageInput({
         }
     }, [showPicker]);
 
-    // Close picker on outside click
+    // Close picker/menus on outside click
     useEffect(() => {
-        if (!showPicker) return;
         const handler = (e: MouseEvent) => {
-            if (
-                pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
-                pickerBtnRef.current && !pickerBtnRef.current.contains(e.target as Node)
+            const target = e.target as Node;
+            // Picker
+            if (showPicker &&
+                pickerRef.current && !pickerRef.current.contains(target) &&
+                pickerBtnRef.current && !pickerBtnRef.current.contains(target)
             ) setShowPicker(false);
-        };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [showPicker]);
 
-    // Close on outside click (autocomplete)
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (
-                emojiMenuRef.current && !emojiMenuRef.current.contains(e.target as Node) &&
-                ytInputRef.current && !ytInputRef.current.contains(e.target as Node)
-            ) {
-                setShowEmojiMenu(false);
-            }
+            // Emoji Menu
+            if (showEmojiMenu &&
+                emojiMenuRef.current && !emojiMenuRef.current.contains(target) &&
+                ytInputRef.current && !ytInputRef.current.contains(target)
+            ) setShowEmojiMenu(false);
+
+            // Mention Menu
+            if (showMentionMenu &&
+                mentionMenuRef.current && !mentionMenuRef.current.contains(target) &&
+                ytInputRef.current && !ytInputRef.current.contains(target)
+            ) setShowMentionMenu(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
-    }, []);
+    }, [showPicker, showEmojiMenu, showMentionMenu]);
 
     // Scroll selected item into view
     useEffect(() => {
@@ -154,22 +203,30 @@ export default function YouTubeMessageInput({
         }
     }, [emojiIndex, showEmojiMenu]);
 
-    // Update portal position when menu opens
     useEffect(() => {
-        setMenuRect(showEmojiMenu && ytInputRef.current ? ytInputRef.current.getBoundingClientRect() : null);
-    }, [showEmojiMenu]);
+        if (showMentionMenu && mentionMenuRef.current && mentionIndex >= 0) {
+            const el = mentionMenuRef.current.children[mentionIndex] as HTMLElement;
+            el?.scrollIntoView({ block: 'nearest' });
+        }
+    }, [mentionIndex, showMentionMenu]);
+
+    // Update portal position when menus open
+    useEffect(() => {
+        const show = showEmojiMenu || showMentionMenu;
+        setMenuRect(show && ytInputRef.current ? ytInputRef.current.getBoundingClientRect() : null);
+    }, [showEmojiMenu, showMentionMenu]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setYtMessage(val);
 
         const cursor = e.target.selectionStart ?? val.length;
-        // Find the last unmatched ':' before the cursor
         const beforeCursor = val.substring(0, cursor);
+
+        // Emoji check (:)
         const lastColon = beforeCursor.lastIndexOf(':');
         if (lastColon !== -1) {
             const query = beforeCursor.substring(lastColon + 1);
-            // Only trigger if no space in query and at least 2 chars typed
             if (query.length >= 2 && !query.includes(' ')) {
                 const matches = searchEmojis(query);
                 if (matches.length > 0) {
@@ -177,11 +234,33 @@ export default function YouTubeMessageInput({
                     setEmojiResults(matches);
                     setEmojiIndex(-1);
                     setShowEmojiMenu(true);
+                    setShowMentionMenu(false);
                     return;
                 }
             }
         }
         setShowEmojiMenu(false);
+
+        // Mention check (@)
+        const lastAt = beforeCursor.lastIndexOf('@');
+        if (lastAt !== -1 && (lastAt === 0 || beforeCursor[lastAt - 1] === ' ')) {
+            const query = beforeCursor.substring(lastAt + 1).toLowerCase();
+            // Trigger if query doesn't have spaces
+            if (!query.includes(' ')) {
+                const matches = chatAuthors.filter(a => {
+                    const normalizedA = a.toLowerCase().startsWith('@') ? a.toLowerCase().slice(1) : a.toLowerCase();
+                    return normalizedA.startsWith(query);
+                });
+                if (matches.length > 0) {
+                    mentionPosRef.current = lastAt;
+                    setMentionResults(matches);
+                    setMentionIndex(-1);
+                    setShowMentionMenu(true);
+                    return;
+                }
+            }
+        }
+        setShowMentionMenu(false);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -207,6 +286,30 @@ export default function YouTubeMessageInput({
                 return;
             }
         }
+
+        if (showMentionMenu) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setMentionIndex((p) => Math.min(p + 1, mentionResults.length - 1));
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setMentionIndex((p) => Math.max(p - 1, 0));
+                return;
+            }
+            if ((e.key === 'Tab' || e.key === 'Enter') && mentionIndex >= 0 && mentionResults[mentionIndex]) {
+                e.preventDefault();
+                insertMention(mentionResults[mentionIndex]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setShowMentionMenu(false);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendYoutubeMessage();
@@ -220,6 +323,7 @@ export default function YouTubeMessageInput({
                 {showEmojiMenu && emojiResults.length > 0 && menuRect && createPortal(
                     <div
                         ref={emojiMenuRef}
+                        className="autocomplete-menu"
                         style={{
                             position: 'fixed',
                             bottom: window.innerHeight - menuRect.top + 6,
@@ -247,6 +351,43 @@ export default function YouTubeMessageInput({
                                 <div className="emote-autocomplete-info">
                                     <span className="emote-autocomplete-name">:{entry.shortcode}:</span>
                                     <span className="emote-autocomplete-type">emoji</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>,
+                    document.body
+                )}
+
+                {/* Mention autocomplete dropdown */}
+                {showMentionMenu && mentionResults.length > 0 && menuRect && createPortal(
+                    <div
+                        ref={mentionMenuRef}
+                        className="autocomplete-menu"
+                        style={{
+                            position: 'fixed',
+                            bottom: window.innerHeight - menuRect.top + 6,
+                            left: menuRect.left,
+                            width: menuRect.width,
+                            maxHeight: '260px',
+                            overflowY: 'auto',
+                            background: 'var(--color-autocomplete-bg, #1e293b)',
+                            border: '1px solid var(--color-autocomplete-border, #475569)',
+                            borderRadius: '8px',
+                            zIndex: 99999,
+                            boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
+                        }}
+                    >
+                        {mentionResults.map((author, idx) => (
+                            <div
+                                key={author}
+                                onMouseDown={(e) => { e.preventDefault(); insertMention(author); }}
+                                onMouseEnter={() => setMentionIndex(idx)}
+                                className={`emote-autocomplete-item${idx === mentionIndex ? ' selected' : ''}`}
+                            >
+                                <div className="emote-autocomplete-info">
+                                    <span className="emote-autocomplete-name">
+                                        {author.startsWith('@') ? author : `@${author}`}
+                                    </span>
                                 </div>
                             </div>
                         ))}

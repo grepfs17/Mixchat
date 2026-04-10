@@ -740,6 +740,7 @@ export default function ChatApp({
               {youtubeSession ? (
                 <YouTubeMessageInput
                   youtubeVideoId={youtubeVideoId}
+                  chatMessages={ytMessages}
                   onOptimisticMessage={handleYtOptimisticMessage}
                   onOptimisticFailed={handleYtOptimisticFailed}
                   onError={(msg) => {
@@ -769,6 +770,7 @@ export default function ChatApp({
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <YouTubeChat
                       videoId={youtubeVideoId}
+                      onMessages={handleYtMessages}
                       optimisticMessages={ytOptimisticMessages}
                       fontSize={fontSize}
                       chatFont={chatFont}
@@ -793,6 +795,7 @@ export default function ChatApp({
                   {youtubeSession ? (
                     <YouTubeMessageInput
                       youtubeVideoId={youtubeVideoId}
+                      chatMessages={ytMessages}
                       onOptimisticMessage={handleYtOptimisticMessage}
                       onOptimisticFailed={handleYtOptimisticFailed}
                       onError={(msg) => {
