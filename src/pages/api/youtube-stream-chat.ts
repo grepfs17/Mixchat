@@ -16,6 +16,7 @@ interface ChatMessage {
   id: string;
   author: string;
   authorChannelId?: string;
+  authorAvatar?: string;
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
@@ -93,16 +94,19 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 
       // Helper: map an AddChatItemAction item to a ChatMessage
       const parseChatItem = (item: any): ChatMessage | null => {
-        switch (item.type) {
-          case 'LiveChatTextMessage':
-            return parseLiveChatMessage(item);
-          case 'LiveChatPaidMessage':
-            return parsePaidMessage(item);
-          case 'LiveChatPaidSticker':
-            return parsePaidSticker(item);
-          default:
-            return null;
+        if (item.is(YTNodes.LiveChatTextMessage)) {
+          return parseLiveChatMessage(item);
         }
+        if (item.is(YTNodes.LiveChatPaidMessage)) {
+          return parsePaidMessage(item);
+        }
+        if (item.is(YTNodes.LiveChatPaidSticker)) {
+          return parsePaidSticker(item);
+        }
+        if (item.is(YTNodes.LiveChatMembershipItem)) {
+          return parseMembershipItem(item);
+        }
+        return null;
       };
 
       chat.on('start', (initialData: any) => {
@@ -205,18 +209,16 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 function parseLiveChatMessage(msg: any): ChatMessage {
   const parts: MessagePart[] = [];
 
-  if (msg.message && msg.message.runs) {
-    for (const run of msg.message.runs) {
+  const message = msg.message || msg.header_subtext;
+
+  if (message && message.runs) {
+    for (const run of message.runs) {
       if (run.emoji) {
         const emoji = run.emoji;
-        // shortcuts[0] is the shortcode e.g. ":cat-orange-whistling:"
-        // emoji_id is the unicode character for standard emojis
         const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-        // image is Thumbnail[] directly in YouTube.js — no nested .thumbnails
         const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
         const isCustom = !!emoji.is_custom;
 
-        // Standard (non-custom) emojis: always render as the raw Unicode character
         if (!isCustom) {
           if (emoji.emoji_id) {
             parts.push({ type: 'text', text: emoji.emoji_id });
@@ -224,7 +226,6 @@ function parseLiveChatMessage(msg: any): ChatMessage {
           continue;
         }
 
-        // Custom channel emote, needs the image URL
         if (!url) continue;
 
         parts.push({
@@ -244,7 +245,7 @@ function parseLiveChatMessage(msg: any): ChatMessage {
   }
 
   const badges: Record<string, string> = {};
-  if (msg.author.badges) {
+  if (msg.author?.badges) {
     for (const badge of msg.author.badges) {
       if (badge.thumbnails && badge.thumbnails[0]) {
         badges[badge.label || 'badge'] = badge.thumbnails[0].url;
@@ -252,12 +253,10 @@ function parseLiveChatMessage(msg: any): ChatMessage {
     }
   }
 
-  // YouTube timestamps might already be in millisecond
-  const rawTimestamp = parseInt(msg.timestamp);
+  const rawTimestamp = parseInt(msg.timestamp || msg.timestamp_usec || '0');
   const asMillisecondsDirectly = new Date(rawTimestamp);
   const asUsToMs = new Date(rawTimestamp / 1000);
 
-  // Use the one that seems more reasonable (closer to now)
   const now = new Date();
   const msTimeDiff = Math.abs(now.getTime() - asMillisecondsDirectly.getTime());
   const usTimeDiff = Math.abs(now.getTime() - asUsToMs.getTime());
@@ -265,8 +264,9 @@ function parseLiveChatMessage(msg: any): ChatMessage {
 
   return {
     id: msg.id,
-    author: msg.author.name.toString(),
-    authorChannelId: msg.author.id,
+    author: msg.author?.name?.toString() || 'Unknown',
+    authorChannelId: msg.author?.id,
+    authorAvatar: Array.isArray(msg.author?.thumbnails) ? msg.author.thumbnails[0]?.url : undefined,
     badges,
     parts,
     timestamp
@@ -275,32 +275,51 @@ function parseLiveChatMessage(msg: any): ChatMessage {
 
 function parsePaidMessage(msg: any): ChatMessage {
   const base = parseLiveChatMessage(msg);
+  const amount = msg.purchase_amount?.toString() || 'Unknown';
+  // Use header color as fallback if body color is missing
+  const colorInt = msg.body_background_color || msg.header_background_color || msg.card_background_color || 0;
+
   return {
     ...base,
     superchat: {
-      amount: String(msg.purchase_amount),
-      color: ARGBtoHex(msg.body_background_color),
+      amount,
+      color: ARGBtoHex(colorInt),
     }
   };
 }
 
 function parsePaidSticker(msg: any): ChatMessage {
-  const stickerUrl = msg.sticker?.thumbnails?.[0]?.url;
+  const base = parseLiveChatMessage(msg);
+  const stickerUrl = msg.sticker?.thumbnails?.[0]?.url || msg.sticker?.image?.[0]?.url;
+  const amount = msg.purchase_amount?.toString() || 'Unknown';
+  const colorInt = msg.background_color || msg.money_chip_background_color || 0;
 
   return {
-    id: msg.id,
-    author: msg.author.name.toString(),
+    ...base,
     parts: [],
-    timestamp: new Date(parseInt(msg.timestamp) / 1000),
     superchat: {
-      amount: String(msg.purchase_amount),
-      color: ARGBtoHex(msg.background_color),
+      amount,
+      color: ARGBtoHex(colorInt),
       ...(stickerUrl && {
         sticker: {
           url: stickerUrl,
-          alt: msg.author.name.toString() + ' sticker'
+          alt: (msg.author?.name?.toString() || 'System') + ' sticker'
         }
       })
+    }
+  };
+}
+
+function parseMembershipItem(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
+  // Membership items often have the amount in a different field or just a text
+  const amount = msg.header_subtext?.toString() || 'Member';
+
+  return {
+    ...base,
+    superchat: {
+      amount,
+      color: '#0f9d58', // YouTube Green for memberships
     }
   };
 }

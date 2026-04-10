@@ -28,6 +28,7 @@ interface MessagePart {
 interface ChatMessage {
   id: string;
   author: string;
+  authorAvatar?: string;
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
@@ -110,6 +111,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           const fetchedMessages = (data.messages as any[]).map((msg: any) => ({
             id: msg.id,
             author: msg.author,
+            authorAvatar: msg.authorAvatar,
             badges: msg.badges,
             parts: (msg.parts || []) as MessagePart[],
             timestamp: new Date(msg.timestamp),
@@ -214,6 +216,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
               return (
                 <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
                   <div className="yt-superchat-header">
+                    {msg.authorAvatar && (
+                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                    )}
                     <div className="yt-superchat-info">
                       <div className="yt-superchat-author">{msg.author}</div>
                       <div className="yt-superchat-amount">{msg.superchat.amount}</div>
