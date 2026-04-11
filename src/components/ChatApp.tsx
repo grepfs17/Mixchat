@@ -16,7 +16,7 @@ import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
-const MAX_DISPLAYED_MESSAGES = 150;
+const MAX_DISPLAYED_MESSAGES = 80;
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
 
