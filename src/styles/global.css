@@ -100,3 +100,16 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
   font-style: italic;
   transition: opacity 0.3s;
 }
+
+/* Improve font rendering for chat and tooltip layers on mobile devices. */
+.messages-container,
+.messages-container *,
+.message,
+.message-text,
+.chat-emote-tooltip,
+.chat-emote-tooltip * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
