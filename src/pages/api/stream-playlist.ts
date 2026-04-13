@@ -44,6 +44,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       headers: {
         "Client-ID": GQL_CLIENT_ID,
         "Content-Type": "application/json",
+        ...(twitchToken ? { Authorization: `OAuth ${twitchToken}` } : {}),
       },
       body: JSON.stringify({
         operationName: "PlaybackAccessToken_Template",
