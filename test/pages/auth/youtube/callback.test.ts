@@ -27,8 +27,9 @@ describe("YouTube callback route", () => {
 
     const cookies = { set: vi.fn() } as any;
     const url = new URL("http://localhost/?code=abc123&state=test_state");
+    const locals = { nonce: "test_nonce" };
 
-    const res: Response = await GET({ url, cookies } as any);
+    const res: Response = await GET({ url, cookies, locals } as any);
 
     expect(res).toBeDefined();
     expect((res as any).status).toBe(200);

@@ -46,6 +46,7 @@ describe("getYoutubeUser", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         statusText: "Unauthorized",
+        text: vi.fn().mockResolvedValue("Unauthorized"),
       }),
     );
 

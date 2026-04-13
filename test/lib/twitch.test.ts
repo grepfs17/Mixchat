@@ -55,7 +55,7 @@ describe("twitch lib mocked HTTP tests", () => {
     const messages = await getRecentMessages("channel");
     expect(messages).toHaveLength(1);
     const m = messages[0];
-    expect(m.author).toBe("mod");
+    expect(m.author).toBe("Mod");
     expect(m.content).toBe("Hello there");
     expect(m.userId).toBe("456");
     expect(m.isPreloaded).toBe(true);
