@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { resolveBroadcasterId } from '../lib/twitch';
 
 export interface RaidOutEvent {
   /** Login name (all-lowercase) of the raid target channel */
@@ -87,24 +88,13 @@ export function useRaidDetection({
 
       if (!/^\d+$/.test(channelId)) {
         try {
-          const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channelId)}`, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Client-Id': clientId,
-            },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            numericId = data.data?.[0]?.id;
-            if (!numericId) {
-              console.warn(`[useRaidDetection] Could not resolve channel name "${channelId}" to ID`);
-              return;
-            }
-            console.log(`[useRaidDetection] Resolved "${channelId}" to numeric ID ${numericId}`);
-          } else {
-            console.warn(`[useRaidDetection] Failed to resolve channel name "${channelId}":`, res.status);
+          const resolved = await resolveBroadcasterId(channelId);
+          if (!resolved || !/^\d+$/.test(resolved)) {
+            console.warn(`[useRaidDetection] Could not resolve channel name "${channelId}" to ID`);
             return;
           }
+          numericId = resolved;
+          console.log(`[useRaidDetection] Resolved "${channelId}" to numeric ID ${numericId}`);
         } catch (err) {
           console.error(`[useRaidDetection] Error resolving channel name "${channelId}":`, err);
           return;

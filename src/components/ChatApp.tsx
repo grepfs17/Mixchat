@@ -13,7 +13,7 @@ import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
-import { getStreamStatus, getRecentMessages } from '../lib/twitch';
+import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
 const MAX_DISPLAYED_MESSAGES = 80;
@@ -299,6 +299,8 @@ export default function ChatApp({
   }, [twitchSession]);
 
   const [badgesReady, setBadgesReady] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [modModeActive, setModModeActive] = useState(false);
 
   // Ref so handleMessageDeleted closure always reads the latest prop value
   const showDeletedMessagesRef = useRef(showDeletedMessages);
@@ -310,6 +312,9 @@ export default function ChatApp({
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
         currentUserBadgesRef.current = { badges, badgeDetails };
       }
+      // Detect moderator badge for the logged-in user in this channel
+      const isMod = Boolean(badges && badges['moderator']);
+      setIsModerator(isMod);
     },
     []
   );
@@ -577,6 +582,69 @@ export default function ChatApp({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
+  // Moderation actions (only available when user is a moderator and mod mode is active)
+  const handleToggleModMode = useCallback(() => {
+    if (!isModerator) return;
+    setModModeActive((v) => !v);
+  }, [isModerator]);
+
+  const handleDelete = useCallback(async (messageId: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    if (!confirm('Delete this message from chat?')) return;
+    try {
+      await deleteChatMessage(selectedTwitchChannel, twitchSession.userId, messageId);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Message deleted', type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to delete message', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleBan = useCallback(async (userId: string, displayName?: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    if (!confirm(`Ban ${displayName || userId} from this channel?`)) return;
+    try {
+      await createBan(selectedTwitchChannel, twitchSession.userId, userId, undefined, 'Banned via Mixchat');
+      notificationIdRef.current += 1;
+      setNotification({ message: `${displayName || userId} banned`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to ban user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to ban user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleTimeout = useCallback(async (userId: string, seconds: number, displayName?: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    if (!confirm(`Timeout ${displayName || userId} for ${seconds} seconds?`)) return;
+    try {
+      await createBan(selectedTwitchChannel, twitchSession.userId, userId, seconds, `Timeout ${seconds}s`);
+      notificationIdRef.current += 1;
+      setNotification({ message: `${displayName || userId} timed out for ${seconds}s`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to timeout user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to timeout user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleWarn = useCallback(async (userName: string) => {
+    if (!sendTwitchMessage) return;
+    const reason = prompt(`Enter a warning message for @${userName}:`, 'Please follow the chat rules');
+    if (!reason) return;
+    try {
+      await sendTwitchMessage(`@${userName} ${reason}`, undefined);
+      notificationIdRef.current += 1;
+      setNotification({ message: `Warned ${userName}`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to send warn message:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to warn user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [sendTwitchMessage]);
+
   // Extracts comprehensive text from a YTMessage for reconciliation matching
   const getYtMessageText = (m: import('./UnifiedChat').YTMessage) =>
     m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join('');
@@ -687,6 +755,9 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+              isModerator={isModerator}
+              modModeActive={modModeActive}
+              onToggleModMode={handleToggleModMode}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
@@ -717,6 +788,12 @@ export default function ChatApp({
                   currentUserDisplayName={twitchSession?.displayName}
                   fontSize={fontSize}
                   chatFont={chatFont}
+                  isModerator={isModerator}
+                  modModeActive={modModeActive}
+                  onDeleteMessage={handleDelete}
+                  onBanUser={handleBan}
+                  onTimeoutUser={handleTimeout}
+                  onWarnUser={handleWarn}
                 />
               }
             />
@@ -909,6 +986,13 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+              isModerator={isModerator}
+              modModeActive={modModeActive}
+              onToggleModMode={handleToggleModMode}
+              onDeleteMessage={handleDelete}
+              onBanUser={handleBan}
+              onTimeoutUser={handleTimeout}
+              onWarnUser={handleWarn}
             />
           </div>
 

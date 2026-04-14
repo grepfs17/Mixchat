@@ -5,6 +5,24 @@ const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
 const BATCH_SIZE = 100;
 
+/** Resolve a broadcaster login name to a numeric ID when necessary.
+ * If the input is already numeric, it is returned unchanged.
+ * Returns the resolved numeric ID or the original input if resolution fails.
+ */
+export const resolveBroadcasterId = async (broadcasterIdOrLogin: string) => {
+  if (/^\d+$/.test(broadcasterIdOrLogin)) return broadcasterIdOrLogin;
+
+  try {
+    const r = await fetch(`/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(broadcasterIdOrLogin)}`);
+    if (!r.ok) return broadcasterIdOrLogin;
+    const d = await r.json();
+    const id = d?.data?.[0]?.id;
+    return id || broadcasterIdOrLogin;
+  } catch (e) {
+    return broadcasterIdOrLogin;
+  }
+};
+
 export const getTwitchAccessToken = async (
   code: string,
   clientId: string,
@@ -36,6 +54,78 @@ export const getTwitchAccessToken = async (
     };
   } catch (error) {
     console.error("Twitch token exchange failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: delete a single chat message by message ID.
+ * Requires the server-side twitch token to belong to a moderator for the
+ * specified broadcaster (the httpOnly cookie is used by the proxy).
+ */
+export const deleteChatMessage = async (
+  broadcasterId: string,
+  moderatorId: string,
+  messageId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}&message_id=${encodeURIComponent(messageId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to delete message: ${res.status} ${body}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("deleteChatMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: ban (or timeout if duration provided) a user.
+ * If `durationSeconds` is provided the action will be a temporary timeout.
+ */
+export const createBan = async (
+  broadcasterId: string,
+  moderatorId: string,
+  userId: string,
+  durationSeconds?: number | null,
+  reason?: string | null,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const body: any = { data: { user_id: userId } };
+    if (durationSeconds) body.data.duration = durationSeconds;
+    if (reason) body.data.reason = reason;
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/bans&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to create ban/timeout: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("createBan failed:", error);
     throw error;
   }
 };

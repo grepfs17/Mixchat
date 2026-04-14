@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdReply, MdContentCopy } from 'react-icons/md';
+import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';
 import type { ChatMessage, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
@@ -64,6 +65,13 @@ interface UnifiedChatProps {
     currentUserDisplayName?: string;
     fontSize?: number;
     chatFont?: ChatFont;
+    isModerator?: boolean;
+    modModeActive?: boolean;
+    onToggleModMode?: () => void;
+    onDeleteMessage?: (messageId: string) => void;
+    onBanUser?: (userId: string, displayName?: string) => void;
+    onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+    onWarnUser?: (userName: string) => void;
 }
 
 const MAX_MESSAGES = 300;
@@ -92,6 +100,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     currentUserDisplayName,
     fontSize = 14,
     chatFont = 'inter' as ChatFont,
+    isModerator = false,
+    modModeActive = false,
+    onDeleteMessage,
+    onBanUser,
+    onTimeoutUser,
+    onWarnUser,
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
@@ -300,6 +314,55 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                         >
                                             <MdContentCopy size={12} />
                                         </button>
+
+                                        {isModerator && modModeActive && (
+                                            <>
+                                                {(() => {
+                                                    const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                                                    const disabledTitle = isBroadcaster ? 'Cannot moderate the broadcaster\'s messages' : undefined;
+                                                    return (
+                                                        <>
+                                                            <button
+                                                                onClick={() => onDeleteMessage?.(msg.id)}
+                                                                className="action-button mod-action"
+                                                                title={isBroadcaster ? disabledTitle : 'Delete message'}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                disabled={isBroadcaster}
+                                                            >
+                                                                <MdDelete size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                                                className="action-button mod-action"
+                                                                title={isBroadcaster ? disabledTitle : 'Timeout (10m)'}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                disabled={isBroadcaster}
+                                                            >
+                                                                <MdHourglassEmpty size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => onBanUser?.(msg.userId || '', msg.author)}
+                                                                className="action-button mod-action"
+                                                                title={isBroadcaster ? disabledTitle : 'Ban user'}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                disabled={isBroadcaster}
+                                                            >
+                                                                <MdBlock size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => onWarnUser?.(msg.author)}
+                                                                className="action-button mod-action"
+                                                                title={isBroadcaster ? disabledTitle : 'Warn user'}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                disabled={isBroadcaster}
+                                                            >
+                                                                <MdWarning size={12} />
+                                                            </button>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </>
+                                        )}
                                     </div>
                                     {msg.isDeleted && (
                                         <div className="deleted-notice">

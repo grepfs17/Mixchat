@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
-import { MdRefresh, MdReply, MdContentCopy } from 'react-icons/md';
+import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
@@ -33,6 +33,13 @@ interface ChatDisplayProps {
   chatFont?: ChatFont;
   /** When provided (unified chat mode), renders this instead of the normal messages area */
   unifiedChatSlot?: React.ReactNode;
+  isModerator?: boolean;
+  modModeActive?: boolean;
+  onToggleModMode?: () => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onBanUser?: (userId: string, displayName?: string) => void;
+  onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+  onWarnUser?: (userName: string) => void;
 }
 
 /** Derives a stable, visually-distinct HSL color from a channel ID string. */
@@ -72,6 +79,13 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   unifiedChatSlot,
+  isModerator = false,
+  modModeActive = false,
+  onToggleModMode,
+  onDeleteMessage,
+  onBanUser,
+  onTimeoutUser,
+  onWarnUser,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -289,6 +303,16 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               {isRefreshingEmotes ? 'Reloading...' : 'Reload Emotes'}
             </button>
           )}
+          {isModerator && (
+            <button
+              onClick={onToggleModMode}
+              className={`header-button ${modModeActive ? 'mod-active' : ''}`}
+              title={modModeActive ? 'Disable Mod Mode' : 'Enable Mod Mode'}
+              style={{ marginLeft: '8px' }}
+            >
+              {modModeActive ? 'Mod Mode: ON' : 'Mod Mode: OFF'}
+            </button>
+          )}
           {isLoading && <span className="loading-indicator">●</span>}
         </div>
       </div>
@@ -459,6 +483,55 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                       >
                         <MdContentCopy size={12} />
                       </button>
+
+                      {isModerator && modModeActive && (
+                        <>
+                          {(() => {
+                            const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                            const disabledTitle = isBroadcaster ? 'Cannot moderate the broadcaster\'s messages' : undefined;
+                            return (
+                              <>
+                                <button
+                                  onClick={() => onDeleteMessage?.(msg.id)}
+                                  className="action-button mod-action"
+                                  title={isBroadcaster ? disabledTitle : 'Delete message'}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  disabled={isBroadcaster}
+                                >
+                                  <MdDelete size={12} />
+                                </button>
+                                <button
+                                  onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                  className="action-button mod-action"
+                                  title={isBroadcaster ? disabledTitle : 'Timeout (10m)'}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  disabled={isBroadcaster}
+                                >
+                                  <MdHourglassEmpty size={12} />
+                                </button>
+                                <button
+                                  onClick={() => onBanUser?.(msg.userId || '', msg.author)}
+                                  className="action-button mod-action"
+                                  title={isBroadcaster ? disabledTitle : 'Ban user'}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  disabled={isBroadcaster}
+                                >
+                                  <MdBlock size={12} />
+                                </button>
+                                <button
+                                  onClick={() => onWarnUser?.(msg.author)}
+                                  className="action-button mod-action"
+                                  title={isBroadcaster ? disabledTitle : 'Warn user'}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  disabled={isBroadcaster}
+                                >
+                                  <MdWarning size={12} />
+                                </button>
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
                     </div>
                     {msg.isDeleted && (
                       <div className="deleted-notice">

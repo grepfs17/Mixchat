@@ -15,6 +15,7 @@ const ALLOWED_PATH_PREFIXES = [
     "/helix/chat/settings",     // used to check show_first_message_highlights
     "/helix/users",             // used to resolve broadcaster IDs -> display names
     "/helix/channel_points/custom_rewards", // used to resolve reward titles by reward ID
+    "/helix/moderation", // moderation endpoints (moderators only)
 ] as const;
 
 const TWITCH_API_BASE = "https://api.twitch.tv";
@@ -31,6 +32,44 @@ const TWITCH_API_BASE = "https://api.twitch.tv";
  *        GET /api/twitch-proxy?path=/helix/chat/emotes&broadcaster_id=12345
  *        GET /api/twitch-proxy?path=/helix/chat/badges/global
  */
+function isPathAllowed(path: string) {
+    return ALLOWED_PATH_PREFIXES.some((prefix) =>
+        path === prefix || path.startsWith(prefix + "?") || path.startsWith(prefix + "/")
+    );
+}
+
+async function forwardRequest(method: string, targetUrl: string, accessToken: string, clientId: string, body?: any) {
+    const headers: Record<string, string> = {
+        "Client-Id": clientId,
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+    };
+
+    let opts: any = { method, headers };
+    if (body !== undefined) {
+        headers["Content-Type"] = "application/json";
+        opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+    }
+
+    try {
+        const response = await fetch(targetUrl, opts);
+        const contentType = response.headers.get('content-type') || 'application/json';
+
+        // 204/205 responses must not include a body. Return an empty Response
+        // with the same status for those codes to avoid invalid Response errors.
+        if (response.status === 204 || response.status === 205) {
+            return new Response(null, { status: response.status, headers: { 'Content-Type': contentType } });
+        }
+
+        const text = await response.text();
+        return new Response(text, { status: response.status, headers: { 'Content-Type': contentType } });
+    } catch (err: any) {
+        console.error('Error forwarding request to Twitch:', err);
+        const bodyText = JSON.stringify({ error: 'Upstream request failed', details: err?.message || String(err) });
+        return new Response(bodyText, { status: 502, headers: { 'Content-Type': 'application/json' } });
+    }
+}
+
 export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     if (!checkRateLimit(`${clientAddress}:twitch-proxy`, 120, 60_000)) {
         return new Response(
@@ -49,10 +88,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
         }
 
         // Validate the path against the allowlist
-        const isAllowed = ALLOWED_PATH_PREFIXES.some((prefix) =>
-            path === prefix || path.startsWith(prefix + "?") || path.startsWith(prefix + "/"),
-        );
-        if (!isAllowed) {
+        if (!isPathAllowed(path)) {
             return new Response(
                 JSON.stringify({ error: `Path not permitted: ${path}` }),
                 { status: 400, headers: { "Content-Type": "application/json" } },
@@ -84,25 +120,75 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
         const targetUrl = `${TWITCH_API_BASE}${path}${forwardParams.size > 0 ? `?${forwardParams}` : ""
             }`;
 
-        const response = await fetch(targetUrl, {
-            headers: {
-                "Client-Id": clientId,
-                Authorization: `Bearer ${accessToken}`,
-                Accept: "application/json",
-            },
-        });
-
-        const data = await response.json();
-
-        return new Response(JSON.stringify(data), {
-            status: response.status,
-            headers: { "Content-Type": "application/json" },
-        });
+        return await forwardRequest('GET', targetUrl, accessToken, clientId);
     } catch (error) {
         console.error("Twitch proxy error:", error);
         return new Response(
             JSON.stringify({ error: "Proxy request failed" }),
             { status: 500, headers: { "Content-Type": "application/json" } },
         );
+    }
+};
+
+export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) => {
+    if (!checkRateLimit(`${clientAddress}:twitch-proxy-post`, 60, 60_000)) {
+        return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } });
+    }
+
+    try {
+        const path = url.searchParams.get("path");
+        if (!path) {
+            return new Response(JSON.stringify({ error: "path parameter required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+
+        if (!isPathAllowed(path)) {
+            return new Response(JSON.stringify({ error: `Path not permitted: ${path}` }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+
+        const accessToken = cookies.get("twitch_token")?.value;
+        if (!accessToken) return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: { "Content-Type": "application/json" } });
+
+        const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+        if (!clientId) return new Response(JSON.stringify({ error: "Server configuration error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+
+        const forwardParams = new URLSearchParams(url.searchParams);
+        forwardParams.delete("path");
+        const targetUrl = `${TWITCH_API_BASE}${path}${forwardParams.size > 0 ? `?${forwardParams}` : ""}`;
+
+        const body = await request.text().catch(() => '');
+        const parsedBody = body ? JSON.parse(body) : undefined;
+
+        return await forwardRequest('POST', targetUrl, accessToken, clientId, parsedBody);
+    } catch (error) {
+        console.error('Twitch proxy POST error:', error);
+        return new Response(JSON.stringify({ error: 'Proxy request failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+};
+
+export const DELETE: APIRoute = async ({ url, cookies, clientAddress }) => {
+    if (!checkRateLimit(`${clientAddress}:twitch-proxy-delete`, 60, 60_000)) {
+        return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } });
+    }
+
+    try {
+        const path = url.searchParams.get("path");
+        if (!path) return new Response(JSON.stringify({ error: "path parameter required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+
+        if (!isPathAllowed(path)) return new Response(JSON.stringify({ error: `Path not permitted: ${path}` }), { status: 400, headers: { "Content-Type": "application/json" } });
+
+        const accessToken = cookies.get("twitch_token")?.value;
+        if (!accessToken) return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401, headers: { "Content-Type": "application/json" } });
+
+        const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+        if (!clientId) return new Response(JSON.stringify({ error: "Server configuration error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+
+        const forwardParams = new URLSearchParams(url.searchParams);
+        forwardParams.delete("path");
+        const targetUrl = `${TWITCH_API_BASE}${path}${forwardParams.size > 0 ? `?${forwardParams}` : ""}`;
+
+        return await forwardRequest('DELETE', targetUrl, accessToken, clientId);
+    } catch (error) {
+        console.error('Twitch proxy DELETE error:', error);
+        return new Response(JSON.stringify({ error: 'Proxy request failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 };
