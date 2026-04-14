@@ -53,7 +53,7 @@ function buildCSP(nonce?: string): string {
     " https://cdn.7tv.app" + // 7TV emotes
     " https://cdn.betterttv.net" + // BTTV emotes
     " https://cdn.frankerfacez.com" + // FFZ emotes
-    " https://*.ggpht.com" + // YouTube avatars (yt1–ytN subdomains)
+    " https://*.ggpht.com" + // YouTube avatars (yt1,ytN subdomains)
     " https://yt3.googleusercontent.com" + // YouTube avatars (alt)
     " https://i.ytimg.com" + // YouTube thumbnails
     " https://lh3.googleusercontent.com" + // Google profile images

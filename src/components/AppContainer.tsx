@@ -76,7 +76,7 @@ export default function AppContainer() {
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
   const [chatFont, setChatFont] = useState<ChatFont>('inter'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
-  const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0–1
+  const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0,1
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
@@ -213,7 +213,7 @@ export default function AppContainer() {
 
           const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
 
-          // Single API call – returns ALL followed channels (online first).
+          // Single API call , returns ALL followed channels (online first).
           // Derive the online-only list by filtering, avoiding duplicate requests.
           const allChannels = await getAllFollowedChannels(
             accessToken,

@@ -477,7 +477,7 @@ export const getRecentMessages = async (
           // Parse reply-parent tags (present when this message is itself a reply)
           let replyTo: { id: string; author: string; content: string } | undefined = undefined;
           if (tags["reply-parent-msg-id"]) {
-            // IRC tag values escape spaces as \s – unescape for display
+            // IRC tag values escape spaces as \s
             const parentBody = (tags["reply-parent-msg-body"] || "")
               .replace(/\\s/g, " ")
               .replace(/\\:/g, ";")

@@ -12,8 +12,8 @@ export interface MessagePart {
 interface YTMessagePartsProps {
     parts: MessagePart[];
     /**
-     * - `'unified'`  – used inside UnifiedChat; emoji get `chat-emote` class.
-     * - `'standalone'` – used inside YouTubeChat; emoji get `yt-emoji` class.
+     * - `'unified'` used inside UnifiedChat; emoji get `chat-emote` class.
+     * - `'standalone'` used inside YouTubeChat; emoji get `yt-emoji` class.
      */
     variant?: 'unified' | 'standalone';
 }

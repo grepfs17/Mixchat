@@ -101,7 +101,7 @@ export default function StreamGrid({
                             onClick={() => setSortBy('name')}
                             title="Sort alphabetically"
                         >
-                            <SortAlphaIcon /> A–Z
+                            <SortAlphaIcon /> A-Z
                         </button>
                         <button
                             className={`sort-btn${sortBy === 'viewers' ? ' active' : ''}`}

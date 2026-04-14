@@ -59,7 +59,7 @@ export const useTokenRefresh = (
         if (response.status === 429) {
           const retryAfterSec = parseInt(response.headers.get('Retry-After') || '60', 10);
           retryAfterRef.current = Date.now() + retryAfterSec * 1000;
-          throw new Error(`Rate limited – retry after ${retryAfterSec}s`);
+          throw new Error(`Rate limited, retry after ${retryAfterSec}s`);
         }
         throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
       }

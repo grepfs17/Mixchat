@@ -464,7 +464,7 @@ function MessageInput({
             slowModeCooldown > 0
           }
           className="send-button"
-          title={slowModeCooldown > 0 ? `Slow mode – wait ${slowModeCooldown}s` : undefined}
+          title={slowModeCooldown > 0 ? `Slow mode, wait ${slowModeCooldown}s` : undefined}
         >
           {isLoading ? '...' : slowModeCooldown > 0 ? `${slowModeCooldown}s` : <FaTwitch size={16} />}
         </button>
