@@ -9,10 +9,18 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
   ALLOWED_TAGS: ["img", "a", "strong", "span"],
   ALLOWED_ATTR: [
     // <img>
-    "src", "alt", "title", "class", "style", "loading",
-    "data-emote-name", "data-tooltip-url",
+    "src",
+    "alt",
+    "title",
+    "class",
+    "style",
+    "loading",
+    "data-emote-name",
+    "data-tooltip-url",
     // <a>
-    "href", "target", "rel",
+    "href",
+    "target",
+    "rel",
   ],
   ALLOW_DATA_ATTR: false,
   FORCE_BODY: false,
@@ -24,7 +32,7 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const CACHE_DURATION = CACHE_DURATION_DAYS * MS_PER_DAY;
 
 /** URL prefix that marks a 7TV emote as zero-width (overlay). */
-const ZW_EMOTE_PREFIX = 'ZW:';
+const ZW_EMOTE_PREFIX = "ZW:";
 /** 7TV emote flag bit for zero-width/overlay emotes (1 << 8 = 256). */
 const ZERO_WIDTH_FLAG = 1 << 8;
 
@@ -35,7 +43,9 @@ function isZeroWidthUrl(url: string): boolean {
 
 /** Strips the zero-width prefix from a stored URL, returning the real CDN URL. */
 function getEmoteUrl(url: string): string {
-  return url.startsWith(ZW_EMOTE_PREFIX) ? url.slice(ZW_EMOTE_PREFIX.length) : url;
+  return url.startsWith(ZW_EMOTE_PREFIX)
+    ? url.slice(ZW_EMOTE_PREFIX.length)
+    : url;
 }
 
 interface EmoteMap {
@@ -91,7 +101,7 @@ function getCachedEmotes(cacheKey: string): EmoteMap | null {
     const raw = cacheData.emotes;
     const clean: EmoteMap = {};
     for (const [k, v] of Object.entries(raw)) {
-      if (typeof v === 'string') clean[k] = v;
+      if (typeof v === "string") clean[k] = v;
     }
 
     // Restore 7TV specific data if present
@@ -108,7 +118,11 @@ function getCachedEmotes(cacheKey: string): EmoteMap | null {
 /**
  * Save emotes to cache
  */
-function setCachedEmotes(cacheKey: string, emotes: EmoteMap, emoteSetId?: string): void {
+function setCachedEmotes(
+  cacheKey: string,
+  emotes: EmoteMap,
+  emoteSetId?: string,
+): void {
   try {
     const cacheData: EmoteCache = {
       emotes,
@@ -149,12 +163,15 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_7tv_global_v2";
   const cached = getCachedEmotes(cacheKey);
   if (cached) {
-    console.log('Using cached 7TV global emotes, count:', Object.keys(cached).length);
+    console.log(
+      "Using cached 7TV global emotes, count:",
+      Object.keys(cached).length,
+    );
     return cached;
   }
 
   try {
-    console.log('Fetching 7TV global emotes from 7tv.io');
+    console.log("Fetching 7TV global emotes from 7tv.io");
     const response = await fetch("https://7tv.io/v3/emote-sets/global");
     const data = await response.json();
 
@@ -163,11 +180,15 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
       data.emotes.forEach((emote: any) => {
         const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
         const flags: number = emote.data?.flags ?? 0;
-        emotes[emote.name] = (flags & ZERO_WIDTH_FLAG) ? ZW_EMOTE_PREFIX + url : url;
+        emotes[emote.name] =
+          flags & ZERO_WIDTH_FLAG ? ZW_EMOTE_PREFIX + url : url;
       });
     }
     setCachedEmotes(cacheKey, emotes);
-    console.log('Fetched 7TV global emotes, count:', Object.keys(emotes).length);
+    console.log(
+      "Fetched 7TV global emotes, count:",
+      Object.keys(emotes).length,
+    );
     return emotes;
   } catch (error) {
     console.warn("7TV global emotes not loaded", error);
@@ -185,13 +206,21 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
 
   try {
     console.log(`[7TV] Fetching emotes for channelId: ${channelId}`);
-    const response = await fetch(`https://7tv.io/v3/users/twitch/${channelId}?t=${Date.now()}`);
+    const response = await fetch(
+      `https://7tv.io/v3/users/twitch/${channelId}?t=${Date.now()}`,
+    );
     if (!response.ok) {
-      console.warn(`[7TV] Failed to fetch channel data for ${channelId}: ${response.status}`);
+      console.warn(
+        `[7TV] Failed to fetch channel data for ${channelId}: ${response.status}`,
+      );
       return {};
     }
     const data = await response.json();
-    console.log(`[7TV] Data received for ${channelId}:`, data.username, data.emote_set?.id);
+    console.log(
+      `[7TV] Data received for ${channelId}:`,
+      data.username,
+      data.emote_set?.id,
+    );
 
     const emotes: EmoteMap = {};
     let emoteSet = data.emote_set;
@@ -200,18 +229,26 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
     // Deep Fallback: if root fields are null, check user.emote_sets array
     if (!emoteSet && !emoteSetIdToFetch && data.user?.emote_sets?.[0]) {
       emoteSetIdToFetch = data.user.emote_sets[0].id;
-      console.log(`[7TV] Found emote set ID ${emoteSetIdToFetch} in user.emote_sets`);
+      console.log(
+        `[7TV] Found emote set ID ${emoteSetIdToFetch} in user.emote_sets`,
+      );
     }
 
     // Fallback Fetch: if emote_set is not embedded (null), but we have the ID, fetch it separately
     if (!emoteSet && emoteSetIdToFetch) {
-      console.log(`[7TV] Emote set not embedded for ${channelId}, fetching set ${emoteSetIdToFetch} separately`);
+      console.log(
+        `[7TV] Emote set not embedded for ${channelId}, fetching set ${emoteSetIdToFetch} separately`,
+      );
       try {
-        const setResponse = await fetch(`https://7tv.io/v3/emote-sets/${emoteSetIdToFetch}?t=${Date.now()}`);
+        const setResponse = await fetch(
+          `https://7tv.io/v3/emote-sets/${emoteSetIdToFetch}?t=${Date.now()}`,
+        );
         if (setResponse.ok) {
           emoteSet = await setResponse.json();
         } else {
-          console.warn(`[7TV] Failed to fetch separate emote set ${emoteSetIdToFetch}: ${setResponse.status}`);
+          console.warn(
+            `[7TV] Failed to fetch separate emote set ${emoteSetIdToFetch}: ${setResponse.status}`,
+          );
         }
       } catch (e) {
         console.warn(`[7TV] Error fetching separate emote set:`, e);
@@ -220,17 +257,25 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
 
     if (emoteSet) {
       activeEmoteSetId = emoteSet.id;
-      console.log(`[7TV] Set activeEmoteSetId to ${activeEmoteSetId} for ${channelId}`);
+      console.log(
+        `[7TV] Set activeEmoteSetId to ${activeEmoteSetId} for ${channelId}`,
+      );
       if (emoteSet.emotes) {
-        console.log(`[7TV] Emote set ${activeEmoteSetId} has ${emoteSet.emotes.length} emotes`);
+        console.log(
+          `[7TV] Emote set ${activeEmoteSetId} has ${emoteSet.emotes.length} emotes`,
+        );
         emoteSet.emotes.forEach((emote: any) => {
           const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
           const flags: number = emote.data?.flags ?? 0;
-          emotes[emote.name] = (flags & ZERO_WIDTH_FLAG) ? ZW_EMOTE_PREFIX + url : url;
+          emotes[emote.name] =
+            flags & ZERO_WIDTH_FLAG ? ZW_EMOTE_PREFIX + url : url;
         });
       }
     } else {
-      console.warn(`[7TV] Response for ${channelId} has no emote_set available:`, Object.keys(data));
+      console.warn(
+        `[7TV] Response for ${channelId} has no emote_set available:`,
+        Object.keys(data),
+      );
     }
     setCachedEmotes(cacheKey, emotes, activeEmoteSetId || undefined);
     return emotes;
@@ -378,7 +423,9 @@ async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
 
   try {
     // Route through server-side proxy — token comes from httpOnly cookie, not localStorage.
-    const response = await fetch("/api/twitch-proxy?path=/helix/chat/emotes/global");
+    const response = await fetch(
+      "/api/twitch-proxy?path=/helix/chat/emotes/global",
+    );
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -462,7 +509,9 @@ async function fetchBroadcasterInfo(
     await Promise.all(
       batch.map(async (id) => {
         try {
-          const response = await fetch(`/api/user-info?userId=${encodeURIComponent(id)}`);
+          const response = await fetch(
+            `/api/user-info?userId=${encodeURIComponent(id)}`,
+          );
           if (!response.ok) return;
           const user = await response.json();
           const name = user?.displayName || user?.display_name || user?.login;
@@ -533,7 +582,9 @@ async function fetchUserEmotesByChannel(
       if (pageData.data) {
         pageData.data.forEach((emote: any) => {
           if (!emote.owner_id) return;
-          const format = emote.format?.includes("animated") ? "animated" : "static";
+          const format = emote.format?.includes("animated")
+            ? "animated"
+            : "static";
           const url = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/${format}/dark/2.0`;
           rawEmotes.push({ name: emote.name, url, ownerId: emote.owner_id });
         });
@@ -597,17 +648,25 @@ export async function initializeEmotes(
   channelName: string,
   userId?: string,
 ): Promise<void> {
-  const [stv7Global, stv7Channel, bttvGlobal, bttvChannel, ffzGlobal, ffzChannel, twitchGlobal, twitchChannel] =
-    await Promise.all([
-      fetch7TVGlobalEmotes(),
-      fetch7TVEmotes(channelId),
-      fetchBTTVGlobalEmotes(),
-      fetchBTTVEmotes(channelId),
-      fetchFFZGlobalEmotes(),
-      fetchFFZEmotes(channelName),
-      fetchTwitchGlobalEmotes(),
-      fetchTwitchChannelEmotes(channelId),
-    ]);
+  const [
+    stv7Global,
+    stv7Channel,
+    bttvGlobal,
+    bttvChannel,
+    ffzGlobal,
+    ffzChannel,
+    twitchGlobal,
+    twitchChannel,
+  ] = await Promise.all([
+    fetch7TVGlobalEmotes(),
+    fetch7TVEmotes(channelId),
+    fetchBTTVGlobalEmotes(),
+    fetchBTTVEmotes(channelId),
+    fetchFFZGlobalEmotes(),
+    fetchFFZEmotes(channelName),
+    fetchTwitchGlobalEmotes(),
+    fetchTwitchChannelEmotes(channelId),
+  ]);
 
   emotes7tv = { ...stv7Global, ...stv7Channel };
   emotesBttv = { ...bttvGlobal, ...bttvChannel };
@@ -630,8 +689,11 @@ export async function initializeEmotes(
   }
 
   // Dispatch a custom event to notify listeners that emotes have been reloaded
-  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-    window.dispatchEvent(new Event('emotes-reloaded'));
+  if (
+    typeof window !== "undefined" &&
+    typeof window.dispatchEvent === "function"
+  ) {
+    window.dispatchEvent(new Event("emotes-reloaded"));
   }
 }
 
@@ -640,37 +702,45 @@ export function subscribeTo7TVUpdates(
   channelId: string,
   channelName: string,
 ): () => void {
-  if (typeof window === 'undefined') return () => { };
+  if (typeof window === "undefined") return () => {};
 
   if (!activeEmoteSetId) {
-    console.warn(`[7TV] Cannot subscribe to updates: activeEmoteSetId is missing for ${channelName} (${channelId}).`);
-    return () => { };
+    console.warn(
+      `[7TV] Cannot subscribe to updates: activeEmoteSetId is missing for ${channelName} (${channelId}).`,
+    );
+    return () => {};
   }
 
-  console.log(`[7TV] Connecting to EventAPI for emote set: ${activeEmoteSetId} (channel: ${channelName})`);
+  console.log(
+    `[7TV] Connecting to EventAPI for emote set: ${activeEmoteSetId} (channel: ${channelName})`,
+  );
   if (eventSource7tv) {
     eventSource7tv.close();
   }
 
-  const subscription = encodeURIComponent(`emote_set.update<object_id=${activeEmoteSetId}>`);
+  const subscription = encodeURIComponent(
+    `emote_set.update<object_id=${activeEmoteSetId}>`,
+  );
   const url = `https://events.7tv.io/v3@${subscription}`;
 
-  console.log(`[7TV] Connecting to EventAPI for emote set: ${activeEmoteSetId}`);
+  console.log(
+    `[7TV] Connecting to EventAPI for emote set: ${activeEmoteSetId}`,
+  );
   eventSource7tv = new EventSource(url);
 
-  eventSource7tv.addEventListener('hello', (event: any) => {
-    console.log('[7TV] EventAPI: Handshake successful (hello received)');
+  eventSource7tv.addEventListener("hello", (event: any) => {
+    console.log("[7TV] EventAPI: Handshake successful (hello received)");
   });
 
-  eventSource7tv.addEventListener('heartbeat', () => {
+  eventSource7tv.addEventListener("heartbeat", () => {
     // console.log('[7TV] EventAPI: Heartbeat received');
   });
 
-  eventSource7tv.addEventListener('dispatch', async (event: any) => {
+  eventSource7tv.addEventListener("dispatch", async (event: any) => {
     try {
       const data = JSON.parse(event.data);
       // d.type is what identifies the event inside a dispatch
-      if (data.type === 'emote_set.update') {
+      if (data.type === "emote_set.update") {
         const body = data.body;
         if (!body) return;
 
@@ -679,26 +749,32 @@ export function subscribeTo7TVUpdates(
         const pulled = body.pulled || [];
 
         const emotesAdded = pushed
-          .filter((p: any) => p.key === 'emotes')
+          .filter((p: any) => p.key === "emotes")
           .map((p: any) => p.value);
 
         const emotesRemoved = pulled
-          .filter((p: any) => p.key === 'emotes')
+          .filter((p: any) => p.key === "emotes")
           .map((p: any) => p.old_value);
 
         if (emotesAdded.length > 0 || emotesRemoved.length > 0) {
-          console.log(`[7TV] Emote set update: ${emotesAdded.length} added, ${emotesRemoved.length} removed`);
+          console.log(
+            `[7TV] Emote set update: ${emotesAdded.length} added, ${emotesRemoved.length} removed`,
+          );
 
           emotesAdded.forEach((v: any) => {
-            window.dispatchEvent(new CustomEvent('7tv-emote-added', {
-              detail: { name: v?.name, id: v?.id }
-            }));
+            window.dispatchEvent(
+              new CustomEvent("7tv-emote-added", {
+                detail: { name: v?.name, id: v?.id },
+              }),
+            );
           });
 
           emotesRemoved.forEach((v: any) => {
-            window.dispatchEvent(new CustomEvent('7tv-emote-removed', {
-              detail: { name: v?.name, id: v?.id }
-            }));
+            window.dispatchEvent(
+              new CustomEvent("7tv-emote-removed", {
+                detail: { name: v?.name, id: v?.id },
+              }),
+            );
           });
 
           // Clear cache and re-initialize
@@ -707,12 +783,12 @@ export function subscribeTo7TVUpdates(
         }
       }
     } catch (err) {
-      console.error('[7TV] Failed to parse EventAPI message:', err);
+      console.error("[7TV] Failed to parse EventAPI message:", err);
     }
   });
 
   eventSource7tv.onerror = (err) => {
-    console.error('[7TV] EventAPI connection error:', err);
+    console.error("[7TV] EventAPI connection error:", err);
     if (eventSource7tv) eventSource7tv.close();
     // Try to reconnect after a delay
     setTimeout(() => subscribeTo7TVUpdates(channelId, channelName), 5000);
@@ -720,7 +796,7 @@ export function subscribeTo7TVUpdates(
 
   return () => {
     if (eventSource7tv) {
-      console.log('[7TV] Disconnecting EventAPI');
+      console.log("[7TV] Disconnecting EventAPI");
       eventSource7tv.close();
       eventSource7tv = null;
     }
@@ -735,7 +811,7 @@ function replaceSize(url: string): string {
   // Replace the first number in the last part with '4'
   // This works for: 1x.webp -> 4x.webp, 1.0 -> 4.0, 2 -> 4, etc.
 
-  if (url.includes('betterttv')) {
+  if (url.includes("betterttv")) {
     parts[parts.length - 1] = parts[parts.length - 1].replace(/\d+/, "3");
   } else {
     parts[parts.length - 1] = parts[parts.length - 1].replace(/\d+/, "4");
@@ -743,7 +819,7 @@ function replaceSize(url: string): string {
   return parts.join("/");
 }
 function createEmoteImg(emoteUrl: string, emoteName: string): string {
-  if (typeof emoteUrl !== 'string') return escapeHtml(emoteName);
+  if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   // Convert any quality URL to 4x quality for tooltip (highest resolution)
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
@@ -761,7 +837,7 @@ function createEmoteImg(emoteUrl: string, emoteName: string): string {
  * The span is absolutely centred over the base emote by CSS.
  */
 function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
-  if (typeof emoteUrl !== 'string') return escapeHtml(emoteName);
+  if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
   if (
@@ -922,7 +998,9 @@ function parseThirdPartyEmotes(text: string): string {
             const nextWord = words[j];
             const nextUrl = emotes7tv[nextWord];
             if (nextUrl && isZeroWidthUrl(nextUrl)) {
-              overlays.push(createZeroWidthEmoteImg(getEmoteUrl(nextUrl), nextWord));
+              overlays.push(
+                createZeroWidthEmoteImg(getEmoteUrl(nextUrl), nextWord),
+              );
               j++;
             } else {
               break;
@@ -930,7 +1008,7 @@ function parseThirdPartyEmotes(text: string): string {
           }
           if (overlays.length > 0) {
             output.push(
-              `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`
+              `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`,
             );
             i = j; // skip consumed zero-width words
           } else {
@@ -1031,7 +1109,7 @@ export function searchEmotes(
 /**
  * Disabled emotes management (stored in localStorage as array of names)
  */
-const DISABLED_EMOTES_KEY = 'disabled_emotes_v1';
+const DISABLED_EMOTES_KEY = "disabled_emotes_v1";
 
 export function getDisabledEmotes(): Set<string> {
   try {
@@ -1056,11 +1134,14 @@ export function toggleDisableEmote(name: string): void {
     localStorage.setItem(DISABLED_EMOTES_KEY, JSON.stringify(Array.from(set)));
 
     // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
-    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-      window.dispatchEvent(new Event('emotes-reloaded'));
+    if (
+      typeof window !== "undefined" &&
+      typeof window.dispatchEvent === "function"
+    ) {
+      window.dispatchEvent(new Event("emotes-reloaded"));
     }
   } catch (e) {
-    console.warn('Failed to toggle emote disabled state', e);
+    console.warn("Failed to toggle emote disabled state", e);
   }
 }
 

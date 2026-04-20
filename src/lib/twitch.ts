@@ -5,6 +5,26 @@ const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
 const BATCH_SIZE = 100;
 
+/** Resolve a broadcaster login name to a numeric ID when necessary.
+ * If the input is already numeric, it is returned unchanged.
+ * Returns the resolved numeric ID or the original input if resolution fails.
+ */
+export const resolveBroadcasterId = async (broadcasterIdOrLogin: string) => {
+  if (/^\d+$/.test(broadcasterIdOrLogin)) return broadcasterIdOrLogin;
+
+  try {
+    const r = await fetch(
+      `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(broadcasterIdOrLogin)}`,
+    );
+    if (!r.ok) return broadcasterIdOrLogin;
+    const d = await r.json();
+    const id = d?.data?.[0]?.id;
+    return id || broadcasterIdOrLogin;
+  } catch (e) {
+    return broadcasterIdOrLogin;
+  }
+};
+
 export const getTwitchAccessToken = async (
   code: string,
   clientId: string,
@@ -40,6 +60,176 @@ export const getTwitchAccessToken = async (
   }
 };
 
+/**
+ * Send a chat message via Helix and return the message ID.
+ * Requires user:write:chat scope.
+ */
+export const sendHelixMessage = async (
+  broadcasterId: string,
+  senderId: string,
+  message: string,
+  replyParentMessageId?: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const body: any = {
+      broadcaster_id: resolvedBroadcasterId,
+      sender_id: senderId,
+      message,
+    };
+    if (replyParentMessageId) {
+      body.reply_parent_message_id = replyParentMessageId;
+    }
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/chat/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to send Helix message: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    return data?.data?.[0]?.message_id as string | undefined;
+  } catch (error) {
+    console.error("sendHelixMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: delete a single chat message by message ID.
+ * Requires the server-side twitch token to belong to a moderator for the
+ * specified broadcaster (the httpOnly cookie is used by the proxy).
+ */
+export const deleteChatMessage = async (
+  broadcasterId: string,
+  moderatorId: string,
+  messageId: string,
+) => {
+  console.log("deleteChatMessage", messageId);
+  try {
+    if (messageId.startsWith("optimistic_")) {
+      messageId = messageId.split("optimistic_")[1];
+    }
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}&message_id=${encodeURIComponent(messageId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to delete message: ${res.status} ${body}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("deleteChatMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: ban (or timeout if duration provided) a user.
+ * If `durationSeconds` is provided the action will be a temporary timeout.
+ */
+export const createBan = async (
+  broadcasterId: string,
+  moderatorId: string,
+  userId: string,
+  durationSeconds?: number | null,
+  reason?: string | null,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const body: any = { data: { user_id: userId } };
+    if (durationSeconds) body.data.duration = durationSeconds;
+    if (reason) body.data.reason = reason;
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/bans&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to create ban/timeout: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("createBan failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: unban (or untimeout) a user.
+ */
+export const removeBan = async (
+  broadcasterId: string,
+  moderatorId: string,
+  userId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/bans&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}&user_id=${encodeURIComponent(userId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to remove ban: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("removeBan failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: Clear all messages from the chat.
+ */
+export const clearChat = async (broadcasterId: string, moderatorId: string) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to clear chat: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("clearChat failed:", error);
+    throw error;
+  }
+};
+
 export const refreshTwitchAccessToken = async (
   refreshToken: string,
   clientId: string,
@@ -59,7 +249,9 @@ export const refreshTwitchAccessToken = async (
 
     if (!response.ok) {
       if (response.status === 400 || response.status === 401) {
-        throw new Error(`Invalid refresh token (Twitch returned ${response.status})`);
+        throw new Error(
+          `Invalid refresh token (Twitch returned ${response.status})`,
+        );
       }
       throw new Error(`Failed to refresh token: ${response.status}`);
     }
@@ -206,46 +398,69 @@ export const getAllFollowedChannels = async (
     const streamDataMap = new Map<string, any>();
 
     await Promise.all(
-      Array.from({ length: Math.ceil(followedChannels.length / BATCH_SIZE) }, (_, idx) => {
-        const batch = followedChannels.slice(idx * BATCH_SIZE, (idx + 1) * BATCH_SIZE);
+      Array.from(
+        { length: Math.ceil(followedChannels.length / BATCH_SIZE) },
+        (_, idx) => {
+          const batch = followedChannels.slice(
+            idx * BATCH_SIZE,
+            (idx + 1) * BATCH_SIZE,
+          );
 
-        const profilePromise = fetch(
-          `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
-          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
-        ).then(async (res) => {
-          if (res.ok) {
-            const usersData = await res.json();
-            const userProfiles = new Map(
-              (usersData.data || []).map((user: any) => [user.id, user.profile_image_url]),
-            );
-            batch.forEach((ch: any) => { ch.profileImageUrl = userProfiles.get(ch.id); });
-          }
-        });
+          const profilePromise = fetch(
+            `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Client-ID": clientId,
+              },
+            },
+          ).then(async (res) => {
+            if (res.ok) {
+              const usersData = await res.json();
+              const userProfiles = new Map(
+                (usersData.data || []).map((user: any) => [
+                  user.id,
+                  user.profile_image_url,
+                ]),
+              );
+              batch.forEach((ch: any) => {
+                ch.profileImageUrl = userProfiles.get(ch.id);
+              });
+            }
+          });
 
-        const streamPromise = fetch(
-          `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
-          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
-        ).then(async (res) => {
-          if (res.ok) {
-            const streamsData = await res.json();
-            (streamsData.data || []).forEach((s: any) => { streamDataMap.set(s.user_id, s); });
-          }
-        });
+          const streamPromise = fetch(
+            `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Client-ID": clientId,
+              },
+            },
+          ).then(async (res) => {
+            if (res.ok) {
+              const streamsData = await res.json();
+              (streamsData.data || []).forEach((s: any) => {
+                streamDataMap.set(s.user_id, s);
+              });
+            }
+          });
 
-        return Promise.all([profilePromise, streamPromise]);
-      }),
+          return Promise.all([profilePromise, streamPromise]);
+        },
+      ),
     );
 
     followedChannels.forEach((ch: any) => {
       if (streamDataMap.has(ch.id)) {
         const s = streamDataMap.get(ch.id);
         ch.viewerCount = s.viewer_count;
-        ch.gameName = s.game_name || '';
-        ch.thumbnailUrl = s.thumbnail_url || '';
+        ch.gameName = s.game_name || "";
+        ch.thumbnailUrl = s.thumbnail_url || "";
       } else {
         ch.viewerCount = 0;
-        ch.gameName = '';
-        ch.thumbnailUrl = '';
+        ch.gameName = "";
+        ch.thumbnailUrl = "";
       }
     });
 
@@ -283,6 +498,45 @@ export const getFollowedChannels = async (
   return all.filter((ch: any) => ch.viewerCount > 0);
 };
 
+/**
+ * Check whether a user is following a broadcaster.
+ * Returns true if `fromUserId` follows `toBroadcasterIdOrLogin`.
+ */
+export const isFollowingChannel = async (
+  accessToken: string,
+  clientId: string,
+  fromUserId: string,
+  toBroadcasterIdOrLogin: string,
+) => {
+  try {
+    const toId = await resolveBroadcasterId(toBroadcasterIdOrLogin);
+    const url = new URL(`${TWITCH_API_BASE}/users/follows`);
+    url.searchParams.set("from_id", fromUserId);
+    url.searchParams.set("to_id", toId);
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-ID": clientId,
+      },
+    });
+    // Helix may return 410 (Gone) for some follow checks (deleted account / unavailable)
+    // Treat 410 as "not following" instead of failing the flow.
+    if (res.status === 410) {
+      console.info(
+        "[isFollowingChannel] Twitch API returned 410 (Gone) for follow check; treating as not following.",
+      );
+      return false;
+    }
+    if (!res.ok) return false;
+    const data = await res.json();
+    return (data.total || 0) > 0;
+  } catch (err) {
+    console.error("isFollowingChannel failed:", err);
+    return false;
+  }
+};
+
 export const getStreamStatus = async (
   accessToken: string,
   clientId: string,
@@ -296,16 +550,15 @@ export const getStreamStatus = async (
   try {
     // Support both numeric user IDs and login names (e.g. manually joined channels)
     const isNumericId = /^\d+$/.test(userId);
-    const queryParam = isNumericId ? `user_id=${userId}` : `user_login=${encodeURIComponent(userId)}`;
-    const response = await fetch(
-      `${TWITCH_API_BASE}/streams?${queryParam}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Client-ID": clientId,
-        },
+    const queryParam = isNumericId
+      ? `user_id=${userId}`
+      : `user_login=${encodeURIComponent(userId)}`;
+    const response = await fetch(`${TWITCH_API_BASE}/streams?${queryParam}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-ID": clientId,
       },
-    );
+    });
 
     if (!response.ok) {
       throw new Error(`Twitch API error: ${response.status}`);
@@ -335,6 +588,44 @@ export const getStreamStatus = async (
  * Instead of making N individual requests, batches into groups of up to 100
  * user_ids per request (Twitch API maximum).
  */
+export const checkUserModStatus = async (
+  accessToken: string,
+  clientId: string,
+  broadcasterId: string,
+  userId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    // Broadcaster is always a 'moderator' in their own channel
+    if (resolvedBroadcasterId === userId) return true;
+
+    const response = await fetch(
+      `${TWITCH_API_BASE}/moderation/channels?user_id=${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const channels = data.data || [];
+      return channels.some(
+        (ch: any) => ch.broadcaster_id === resolvedBroadcasterId,
+      );
+    } else if (response.status === 403) {
+      // Scope missing or not a moderator.
+      // We'll fall back to badge-based check in the component if this returns false.
+      return false;
+    }
+  } catch (error) {
+    console.error("Failed to check user mod status:", error);
+  }
+  return false;
+};
+
 export const getStreamStatuses = async (
   accessToken: string,
   clientId: string,
@@ -475,7 +766,9 @@ export const getRecentMessages = async (
           }
 
           // Parse reply-parent tags (present when this message is itself a reply)
-          let replyTo: { id: string; author: string; content: string } | undefined = undefined;
+          let replyTo:
+            | { id: string; author: string; content: string }
+            | undefined = undefined;
           if (tags["reply-parent-msg-id"]) {
             // IRC tag values escape spaces as \s
             const parentBody = (tags["reply-parent-msg-body"] || "")
@@ -484,7 +777,10 @@ export const getRecentMessages = async (
               .replace(/\\\\/g, "\\");
             replyTo = {
               id: tags["reply-parent-msg-id"],
-              author: tags["reply-parent-display-name"] || tags["reply-parent-user-login"] || "",
+              author:
+                tags["reply-parent-display-name"] ||
+                tags["reply-parent-user-login"] ||
+                "",
               content: parentBody,
             };
           }
@@ -511,7 +807,8 @@ export const getRecentMessages = async (
                       return `${s - emoteOffset}-${e - emoteOffset}`;
                     })
                     .filter((pos) => Number(pos.split("-")[0]) >= 0);
-                  if (shiftedPositions.length > 0) adjusted[id] = shiftedPositions;
+                  if (shiftedPositions.length > 0)
+                    adjusted[id] = shiftedPositions;
                 }
                 emotes = adjusted;
               }
@@ -519,7 +816,9 @@ export const getRecentMessages = async (
           }
 
           // Use the actual Twitch message ID if available, otherwise fall back to a composite ID
-          const messageId = tags["id"] || `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
+          const messageId =
+            tags["id"] ||
+            `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
 
           const message: ChatMessage = {
             id: messageId,

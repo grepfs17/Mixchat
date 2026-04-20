@@ -10,7 +10,8 @@
  * No special OAuth scopes are required for `channel.raid` subscriptions, any valid user access token works.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
+import { resolveBroadcasterId } from "../lib/twitch";
 
 export interface RaidOutEvent {
   /** Login name (all-lowercase) of the raid target channel */
@@ -42,7 +43,7 @@ interface UseRaidDetectionOptions {
   onScopeError?: () => void;
 }
 
-const EVENTSUB_WS_URL = 'wss://eventsub.wss.twitch.tv/ws';
+const EVENTSUB_WS_URL = "wss://eventsub.wss.twitch.tv/ws";
 /**
  * Extra grace period (seconds) added to the server's keepalive_timeout_seconds
  * before we consider the connection dead and reconnect.
@@ -59,9 +60,13 @@ export function useRaidDetection({
 }: UseRaidDetectionOptions): void {
   // Keep the callbacks in refs so the WebSocket closure never goes stale
   const onRaidOutRef = useRef(onRaidOut);
-  useEffect(() => { onRaidOutRef.current = onRaidOut; }, [onRaidOut]);
+  useEffect(() => {
+    onRaidOutRef.current = onRaidOut;
+  }, [onRaidOut]);
   const onScopeErrorRef = useRef(onScopeError);
-  useEffect(() => { onScopeErrorRef.current = onScopeError; }, [onScopeError]);
+  useEffect(() => {
+    onScopeErrorRef.current = onScopeError;
+  }, [onScopeError]);
 
   useEffect(() => {
     // Guard: only run when we have valid credentials and a numeric channel ID
@@ -74,10 +79,13 @@ export function useRaidDetection({
     /** Resets the watchdog timer. If no message arrives within the window, reconnect. */
     const resetKeepalive = (timeoutSeconds: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
-      keepaliveTimer = setTimeout(() => {
-        console.warn('[useRaidDetection] Keepalive timeout — reconnecting');
-        ws?.close();
-      }, (timeoutSeconds + KEEPALIVE_GRACE_S) * 1000);
+      keepaliveTimer = setTimeout(
+        () => {
+          console.warn("[useRaidDetection] Keepalive timeout — reconnecting");
+          ws?.close();
+        },
+        (timeoutSeconds + KEEPALIVE_GRACE_S) * 1000,
+      );
     };
 
     const resolveAndConnect = async (url = EVENTSUB_WS_URL) => {
@@ -87,26 +95,22 @@ export function useRaidDetection({
 
       if (!/^\d+$/.test(channelId)) {
         try {
-          const res = await fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channelId)}`, {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Client-Id': clientId,
-            },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            numericId = data.data?.[0]?.id;
-            if (!numericId) {
-              console.warn(`[useRaidDetection] Could not resolve channel name "${channelId}" to ID`);
-              return;
-            }
-            console.log(`[useRaidDetection] Resolved "${channelId}" to numeric ID ${numericId}`);
-          } else {
-            console.warn(`[useRaidDetection] Failed to resolve channel name "${channelId}":`, res.status);
+          const resolved = await resolveBroadcasterId(channelId);
+          if (!resolved || !/^\d+$/.test(resolved)) {
+            console.warn(
+              `[useRaidDetection] Could not resolve channel name "${channelId}" to ID`,
+            );
             return;
           }
+          numericId = resolved;
+          console.log(
+            `[useRaidDetection] Resolved "${channelId}" to numeric ID ${numericId}`,
+          );
         } catch (err) {
-          console.error(`[useRaidDetection] Error resolving channel name "${channelId}":`, err);
+          console.error(
+            `[useRaidDetection] Error resolving channel name "${channelId}":`,
+            err,
+          );
           return;
         }
       }
@@ -116,7 +120,7 @@ export function useRaidDetection({
         ws = new WebSocket(targetUrl);
 
         ws.onopen = () => {
-          console.log('[useRaidDetection] EventSub WebSocket connected');
+          console.log("[useRaidDetection] EventSub WebSocket connected");
         };
 
         ws.onmessage = async (event) => {
@@ -124,61 +128,79 @@ export function useRaidDetection({
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           let data: any;
-          try { data = JSON.parse(event.data as string); } catch { return; }
+          try {
+            data = JSON.parse(event.data as string);
+          } catch {
+            return;
+          }
 
           const msgType: string | undefined = data?.metadata?.message_type;
 
-          if (msgType === 'session_welcome') {
+          if (msgType === "session_welcome") {
             const session = data.payload?.session;
             const sessionId: string | undefined = session?.id;
-            const keepaliveTimeout: number = session?.keepalive_timeout_seconds ?? 10;
+            const keepaliveTimeout: number =
+              session?.keepalive_timeout_seconds ?? 10;
 
             if (!sessionId) return;
             resetKeepalive(keepaliveTimeout);
 
             // Subscribe to outgoing raids from the broadcaster via the Helix API
             try {
-              const subRes = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
-                  'Client-Id': clientId,
+              const subRes = await fetch(
+                "https://api.twitch.tv/helix/eventsub/subscriptions",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${accessToken}`,
+                    "Client-Id": clientId,
+                  },
+                  body: JSON.stringify({
+                    type: "channel.raid",
+                    version: "1",
+                    condition: { from_broadcaster_user_id: numericId },
+                    transport: { method: "websocket", session_id: sessionId },
+                  }),
                 },
-                body: JSON.stringify({
-                  type: 'channel.raid',
-                  version: '1',
-                  condition: { from_broadcaster_user_id: numericId },
-                  transport: { method: 'websocket', session_id: sessionId },
-                }),
-              });
+              );
 
               if (!subRes.ok) {
                 const errBody = await subRes.json().catch(() => ({}));
                 if (subRes.status === 401 || subRes.status === 403) {
                   console.warn(
-                    '[useRaidDetection] Subscription rejected — token may be invalid or expired.',
+                    "[useRaidDetection] Subscription rejected — token may be invalid or expired.",
                     errBody,
                   );
                   onScopeErrorRef.current?.();
                 } else {
-                  console.warn('[useRaidDetection] Subscription failed:', subRes.status, errBody);
+                  console.warn(
+                    "[useRaidDetection] Subscription failed:",
+                    subRes.status,
+                    errBody,
+                  );
                 }
               } else {
-                console.log('[useRaidDetection] Subscribed to channel.raid from channel', numericId);
+                console.log(
+                  "[useRaidDetection] Subscribed to channel.raid from channel",
+                  numericId,
+                );
               }
             } catch (err) {
-              console.error('[useRaidDetection] Subscription request error:', err);
+              console.error(
+                "[useRaidDetection] Subscription request error:",
+                err,
+              );
             }
-
-          } else if (msgType === 'session_keepalive') {
-            const keepaliveTimeout: number = data.payload?.session?.keepalive_timeout_seconds ?? 10;
+          } else if (msgType === "session_keepalive") {
+            const keepaliveTimeout: number =
+              data.payload?.session?.keepalive_timeout_seconds ?? 10;
             resetKeepalive(keepaliveTimeout);
-
-          } else if (msgType === 'notification') {
+          } else if (msgType === "notification") {
             resetKeepalive(10);
-            const subType: string | undefined = data?.payload?.subscription?.type;
-            if (subType === 'channel.raid') {
+            const subType: string | undefined =
+              data?.payload?.subscription?.type;
+            if (subType === "channel.raid") {
               const ev = data.payload.event;
               onRaidOutRef.current({
                 targetLogin: ev.to_broadcaster_user_login as string,
@@ -186,29 +208,30 @@ export function useRaidDetection({
                 viewerCount: ev.viewers as number,
               });
             }
-
-          } else if (msgType === 'session_reconnect') {
-            const reconnectUrl: string | undefined = data.payload?.session?.reconnect_url;
-            ws?.close(1000, 'reconnect requested by server');
+          } else if (msgType === "session_reconnect") {
+            const reconnectUrl: string | undefined =
+              data.payload?.session?.reconnect_url;
+            ws?.close(1000, "reconnect requested by server");
             if (active) connect(reconnectUrl ?? EVENTSUB_WS_URL);
-
-          } else if (msgType === 'revocation') {
+          } else if (msgType === "revocation") {
             console.warn(
-              '[useRaidDetection] Subscription revoked:',
+              "[useRaidDetection] Subscription revoked:",
               data.payload?.subscription?.status,
             );
           }
         };
 
         ws.onerror = () => {
-          console.error('[useRaidDetection] WebSocket error');
+          console.error("[useRaidDetection] WebSocket error");
         };
 
         ws.onclose = (evt) => {
           if (keepaliveTimer) clearTimeout(keepaliveTimer);
           if (!active) return;
           if (evt.code !== 1000) {
-            console.log(`[useRaidDetection] WS closed (code ${evt.code}) — reconnecting in 5 s`);
+            console.log(
+              `[useRaidDetection] WS closed (code ${evt.code}) — reconnecting in 5 s`,
+            );
             reconnectTimer = setTimeout(() => resolveAndConnect(), 5000);
           }
         };
@@ -223,7 +246,7 @@ export function useRaidDetection({
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
-      ws?.close(1000, 'hook unmounting');
+      ws?.close(1000, "hook unmounting");
     };
     // Re-run only when the channel/credentials change
   }, [channelId, accessToken, clientId, enabled]);

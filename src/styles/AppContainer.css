@@ -1,4 +1,4 @@
-@import './vars.css';
+@import "./vars.css";
 
 /* AppContainer responsive layout */
 
@@ -41,7 +41,10 @@
   .app-grid > [data-stream-embed] {
     flex-shrink: 0 !important;
     height: min(66.25vw, calc(var(--initial-vh-px, 100svh) * 0.4)) !important;
-    max-height: min(66.25vw, calc(var(--initial-vh-px, 100svh) * 0.4)) !important;
+    max-height: min(
+      66.25vw,
+      calc(var(--initial-vh-px, 100svh) * 0.4)
+    ) !important;
     overflow: hidden !important;
   }
 
@@ -112,7 +115,7 @@
   border-radius: 6px;
   transition: all 0.18s ease;
   letter-spacing: 0.3px;
-  font-family: var(--font-ui, 'Figtree', system-ui, sans-serif);
+  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
 }
 
 .player-type-btn:hover {
@@ -148,12 +151,12 @@
   display: flex;
   align-items: center;
   border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .stream-embed-close:hover {
   color: #aaa;
   background: rgba(255, 255, 255, 0.06);
 }
-
-

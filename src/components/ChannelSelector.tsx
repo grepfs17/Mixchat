@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TwitchChannel {
   id: string;
@@ -77,6 +78,51 @@ export default function ChannelSelector({
     },
   };
 
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; channel: TwitchChannel } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onAnyClick = () => setContextMenu(null);
+    if (contextMenu) {
+      window.addEventListener('click', onAnyClick);
+      window.addEventListener('contextmenu', onAnyClick);
+    }
+    return () => {
+      window.removeEventListener('click', onAnyClick);
+      window.removeEventListener('contextmenu', onAnyClick);
+    };
+  }, [contextMenu]);
+
+  const openContextMenuAt = (x: number, y: number, channel: TwitchChannel) => {
+    setContextMenu({ x, y, channel });
+  };
+
+  const handleTouchStart = (channel: TwitchChannel, e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const x = touch.clientX;
+    const y = touch.clientY;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current as any);
+    longPressTimer.current = setTimeout(() => {
+      longPressTimer.current = null;
+      openContextMenuAt(x, y, channel);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current as any);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current as any);
+      longPressTimer.current = null;
+    }
+  };
+
   const handleManualJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (manualChannel.trim()) {
@@ -90,7 +136,7 @@ export default function ChannelSelector({
       <label style={styles.label}>
         {platform === 'twitch' ? '📺 Channels' : '▶ Streams'}
       </label>
-      
+
       <div style={styles.listContainer as React.CSSProperties}>
         {channels.map((channel) => (
           <div
@@ -98,6 +144,14 @@ export default function ChannelSelector({
             style={styles.channelItem(selectedChannel === channel.id) as React.CSSProperties}
             onClick={() => onChannelChange(channel.id)}
             title={channel.displayName}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openContextMenuAt(e.clientX, e.clientY, channel);
+            }}
+            onTouchStart={(e) => handleTouchStart(channel, e)}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
           >
             {channel.profileImageUrl && (
               <img
@@ -112,6 +166,21 @@ export default function ChannelSelector({
           </div>
         ))}
       </div>
+
+      {contextMenu && createPortal(
+        <div
+          className="context-menu channel-context-menu"
+          onContextMenu={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 9999 }}
+        >
+          <div className="context-menu-header">{contextMenu.channel.displayName}</div>
+          <button onClick={() => { onChannelChange(contextMenu.channel.id); setContextMenu(null); }}>Join</button>
+          <button onClick={() => { window.open(platform === 'twitch' ? `https://twitch.tv/${contextMenu?.channel.name}` : `https://youtube.com/${contextMenu?.channel.name}`, '_blank'); setContextMenu(null); }}>Open in {platform === 'twitch' ? 'Twitch' : 'YouTube'}</button>
+          <button onClick={() => { const text = contextMenu?.channel.name || ''; if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); setContextMenu(null); }}>Copy name</button>
+        </div>,
+        document.body,
+      )}
 
       <div style={{ marginTop: '12px' }}>
         <label style={styles.label}>Or join manually</label>

@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdReply, MdContentCopy } from 'react-icons/md';
+import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';
 import type { ChatMessage, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
@@ -64,6 +65,15 @@ interface UnifiedChatProps {
     currentUserDisplayName?: string;
     fontSize?: number;
     chatFont?: ChatFont;
+    isModerator?: boolean;
+    modModeActive?: boolean;
+    onToggleModMode?: () => void;
+    onDeleteMessage?: (messageId: string) => void;
+    onBanUser?: (userId: string, displayName?: string) => void;
+    onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+    onUntimeoutUser?: (userName: string) => void;
+    onWarnUser?: (userName: string) => void;
+    compactActions?: boolean;
 }
 
 const MAX_MESSAGES = 300;
@@ -92,12 +102,34 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     currentUserDisplayName,
     fontSize = 14,
     chatFont = 'inter' as ChatFont,
+    isModerator = false,
+    modModeActive = false,
+    onDeleteMessage,
+    onBanUser,
+    onTimeoutUser,
+    onUntimeoutUser,
+    onWarnUser,
+    compactActions = false,
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
     const [newMessagesCount, setNewMessagesCount] = useState(0);
     const prevCountRef = useRef(0);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
+    const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
+
+    // Close timeout menu when clicking anywhere else
+    useEffect(() => {
+        const handleClick = () => setTimeoutMenu(null);
+        if (timeoutMenu) {
+            window.addEventListener('click', handleClick);
+            window.addEventListener('contextmenu', handleClick);
+        }
+        return () => {
+            window.removeEventListener('click', handleClick);
+            window.removeEventListener('contextmenu', handleClick);
+        };
+    }, [timeoutMenu]);
 
     useImperativeHandle(ref, () => ({
         scrollToBottom: () => {
@@ -182,10 +214,25 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             }
         };
     }, []);
+    const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
+
+    useEffect(() => {
+        const handleClick = () => setMessageMenu(null);
+        if (messageMenu) {
+            window.addEventListener('click', handleClick);
+            window.addEventListener('contextmenu', handleClick);
+        }
+        return () => {
+            window.removeEventListener('click', handleClick);
+            window.removeEventListener('contextmenu', handleClick);
+        };
+    }, [messageMenu]);
+
     const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures<UnifiedEntry>({
         onReply: onReply
             ? (entry) => { if (entry.source === 'twitch') onReply(entry.msg as ChatMessage); }
             : undefined,
+        onLongPress: (entry) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, entry }),
         onCopyMessage,
         getContent: (entry) => {
             if (entry.source === 'twitch') return (entry.msg as ChatMessage).content;
@@ -227,87 +274,171 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
 
                         return (
                             <React.Fragment key={getKey(entry)}>
-                            {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
-                            <div
-                                className={messageClasses}
-                                onTouchStart={() => handleTouchStart(entry)}
-                                onTouchEnd={() => handleTouchEnd(entry)}
-                                onTouchMove={handleTouchMove}
-                            >
-                                {msg.replyTo && (
-                                    <div className="reply-info">
-                                        <span>
-                                            response to{' '}
-                                            <span style={{ color: '#94a3b8' }}>@{msg.replyTo.author}</span>
-                                            {msg.replyTo.content && (
-                                                <>
-                                                    {': '}
-                                                    <span
-                                                        className="reply-target-content"
-                                                        dangerouslySetInnerHTML={{
-                                                            __html: parseMessageWithEmotes(msg.replyTo.content)
-                                                        }}
-                                                    />
-                                                </>
-                                            )}
-                                        </span>
-                                    </div>
-                                )}
-                                <div className="message-single-line">
-                                    <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
-                                    <PlatformTag source="twitch" />
-                                    <TwitchEventIcon messageType={msg.messageType} size={14} />
-                                    {msg.messageType === 'redemption' && msg.rewardTitle && (
-                                        <span className="reward-title-badge">{msg.rewardTitle}</span>
-                                    )}
-                                    <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
-                                    <a
-                                        href={`https://twitch.tv/${msg.author}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
-                                        style={{
-                                            color: msg.isCurrentUser ? '#ffffff' : (msg.authorColor || '#e2e8f0'),
-                                        }}
-                                    >
-                                        {msg.author}
-                                    </a>
-                                    <span className="message-separator">:</span>
-                                    <span
-                                        className="message-text"
-                                        dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
-                                    />
-                                    <div className="message-actions">
-                                        {onReply && (
-                                            <button
-                                                onClick={() => onReply(msg)}
-                                                className="action-button"
-                                                title="Reply to this message"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                            >
-                                                <MdReply size={12} />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                if (navigator.clipboard) {
-                                                    navigator.clipboard.writeText(msg.content).then(() => onCopyMessage?.()).catch(() => { });
-                                                }
-                                            }}
-                                            className="action-button"
-                                            title="Copy message"
-                                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                        >
-                                            <MdContentCopy size={12} />
-                                        </button>
-                                    </div>
-                                    {msg.isDeleted && (
-                                        <div className="deleted-notice">
-                                            Deleted by a moderator
+                                {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
+                                <div
+                                    className={messageClasses}
+                                    onTouchStart={() => handleTouchStart(entry)}
+                                    onTouchEnd={() => handleTouchEnd(entry)}
+                                    onTouchMove={handleTouchMove}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setMessageMenu({ x: e.clientX, y: e.clientY, entry });
+                                    }}
+                                >
+                                    {msg.replyTo && (
+                                        <div className="reply-info">
+                                            <span>
+                                                response to{' '}
+                                                <span style={{ color: '#94a3b8' }}>@{msg.replyTo.author}</span>
+                                                {msg.replyTo.content && (
+                                                    <>
+                                                        {': '}
+                                                        <span
+                                                            className="reply-target-content"
+                                                            dangerouslySetInnerHTML={{
+                                                                __html: parseMessageWithEmotes(msg.replyTo.content)
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
+                                            </span>
                                         </div>
                                     )}
+                                    <div className="message-single-line">
+                                        <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
+                                        <PlatformTag source="twitch" />
+                                        <TwitchEventIcon messageType={msg.messageType} size={14} />
+                                        {msg.messageType === 'redemption' && msg.rewardTitle && (
+                                            <span className="reward-title-badge">{msg.rewardTitle}</span>
+                                        )}
+                                        <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
+                                        <a
+                                            href={`https://twitch.tv/${msg.author}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
+                                            style={{
+                                                color: msg.isCurrentUser ? '#ffffff' : (msg.authorColor || '#e2e8f0'),
+                                            }}
+                                        >
+                                            {msg.author}
+                                        </a>
+                                        <span className="message-separator">:</span>
+                                        <span
+                                            className="message-text"
+                                            dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
+                                        />
+                                        {!compactActions && (
+                                            <div className="message-actions">
+                                            {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
+                                                isModerator && msg.targetUsername ? (
+                                                    <button
+                                                        onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
+                                                        className="action-button mod-action"
+                                                        title="Undo moderation action"
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid currentColor', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', marginTop: '2px' }}
+                                                    >
+                                                        Undo
+                                                    </button>
+                                                ) : null
+                                            ) : (
+                                                <>
+                                                    {onReply && (
+                                                        <button
+                                                            onClick={() => onReply(msg)}
+                                                            className="action-button"
+                                                            title="Reply to this message"
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                        >
+                                                            <MdReply size={12} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (navigator.clipboard) {
+                                                                navigator.clipboard.writeText(msg.content).then(() => onCopyMessage?.()).catch(() => { });
+                                                            }
+                                                        }}
+                                                        className="action-button"
+                                                        title="Copy message"
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                    >
+                                                        <MdContentCopy size={12} />
+                                                    </button>
+
+                                                    {isModerator && modModeActive && (
+                                                        <>
+                                                            {(() => {
+                                                                const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                                                                const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                                                                const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+
+                                                                return (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => onDeleteMessage?.(msg.id)}
+                                                                            className="action-button mod-action"
+                                                                            title="Delete message"
+                                                                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                        >
+                                                                            <MdDelete size={12} />
+                                                                        </button>
+
+                                                                        {!isUnmoderatable && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                                                                    onContextMenu={(e) => {
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        setTimeoutMenu({
+                                                                                            x: e.clientX,
+                                                                                            y: e.clientY,
+                                                                                            userId: msg.userId || '',
+                                                                                            username: msg.author
+                                                                                        });
+                                                                                    }}
+                                                                                    className="action-button mod-action"
+                                                                                    title="Timeout (10m) - Right-click for more"
+                                                                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                                >
+                                                                                    <MdHourglassEmpty size={12} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => onBanUser?.(msg.userId || '', msg.author)}
+                                                                                    className="action-button mod-action"
+                                                                                    title="Ban user"
+                                                                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                                >
+                                                                                    <MdBlock size={12} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => onWarnUser?.(msg.author)}
+                                                                                    className="action-button mod-action"
+                                                                                    title="Warn user"
+                                                                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                                                                >
+                                                                                    <MdWarning size={12} />
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        )}
+                                        {msg.isDeleted && (
+                                            <div className="deleted-notice">
+                                                Deleted by a moderator
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
                             </React.Fragment>
                         );
                     }
@@ -316,11 +447,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     const msg = entry.msg as YTMessage;
                     if (msg.superchat) {
                         return (
-                        <div key={getKey(entry)} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}
-                            onTouchStart={() => handleTouchStart(entry)}
-                            onTouchEnd={() => handleTouchEnd(entry)}
-                            onTouchMove={handleTouchMove}
-                        >
+                            <div key={getKey(entry)} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}
+                                onTouchStart={() => handleTouchStart(entry)}
+                                onTouchEnd={() => handleTouchEnd(entry)}
+                                onTouchMove={handleTouchMove}
+                            >
                                 <div className="yt-superchat-header">
                                     {msg.authorAvatar && (
                                         <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
@@ -413,6 +544,68 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                 >
                     <img src={emoteTooltip.url} alt={emoteTooltip.name} />
                     <div className="chat-emote-tooltip-name">{emoteTooltip.name}</div>
+                </div>,
+                document.body
+            )}
+            {messageMenu && createPortal(
+                <div
+                    className="context-menu message-context-menu"
+                    onContextMenu={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ position: 'fixed', top: messageMenu.y, left: messageMenu.x, zIndex: 9999 }}
+                >
+                    <div className="context-menu-header">{messageMenu.entry.source === 'twitch' ? `@${(messageMenu.entry.msg as ChatMessage).author}` : `${(messageMenu.entry.msg as YTMessage).author}`}</div>
+                    {
+                        (() => {
+                            const items: Array<{ key: string; label: string; onClick: () => void } > = [];
+                            if (messageMenu.entry.source === 'twitch' && onReply) items.push({ key: 'reply', label: 'Reply', onClick: () => { onReply((messageMenu.entry.msg as ChatMessage)); setMessageMenu(null); } });
+                            items.push({ key: 'copy', label: 'Copy message', onClick: () => { onCopyMessage?.(); setMessageMenu(null); } });
+
+                            if (isModerator && modModeActive && messageMenu.entry.source === 'twitch') {
+                                const msg = messageMenu.entry.msg as ChatMessage;
+                                const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                                const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                                const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+                                if (!isUnmoderatable) {
+                                    items.push({ key: 'delete', label: 'Delete', onClick: () => { onDeleteMessage?.(msg.id); setMessageMenu(null); } });
+                                    items.push({ key: 'timeout', label: 'Timeout (10m)', onClick: () => { onTimeoutUser?.(msg.userId || '', 600, msg.author); setMessageMenu(null); } });
+                                    items.push({ key: 'ban', label: 'Ban', onClick: () => { onBanUser?.(msg.userId || '', msg.author); setMessageMenu(null); } });
+                                    items.push({ key: 'warn', label: 'Warn', onClick: () => { onWarnUser?.(msg.author); setMessageMenu(null); } });
+                                }
+                            }
+
+                            if (compactActions) items.sort((a, b) => a.label.localeCompare(b.label));
+
+                            return items.map((it) => (
+                                <button key={it.key} onClick={it.onClick} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>{it.label}</button>
+                            ));
+                        })()
+                    }
+                </div>, document.body)
+            }
+            {timeoutMenu && createPortal(
+                <div
+                    className="mod-context-menu"
+                    onContextMenu={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        top: timeoutMenu.y,
+                        right: window.innerWidth - timeoutMenu.x,
+                        left: 'auto',
+                        zIndex: 9999,
+                    }}
+                >
+                    <div className="mod-context-menu-header">Timeout {timeoutMenu.username}</div>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 10, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        10 Seconds
+                    </button>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 600, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        10 Minutes
+                    </button>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 86400, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        1 Day
+                    </button>
                 </div>,
                 document.body
             )}

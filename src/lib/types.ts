@@ -11,6 +11,8 @@ export const MESSAGE_TYPES = [
   "raid",
   "watch-streak",
   "notice",
+  "timeout",
+  "ban",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
@@ -40,6 +42,7 @@ export interface ChatMessage {
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
   rewardTitle?: string; // Title/name of the redeemed reward
+  targetUsername?: string; // Username of the target for a moderation action
   /** Twitch Shared Chat: the originating channel's ID (differs from current channel when message is shared) */
   sourceChannelId?: string;
   /** Twitch Shared Chat: the originating channel's login name */
@@ -61,24 +64,31 @@ export interface PlatformSession {
   badgeDetails?: Record<string, { url: string; title: string }>; // detailed badge info
 }
 
-export type ChatFont = 'inter' | 'open-sans' | 'roboto' | 'rubik' | 'josefin-sans' | 'nunito' | 'montserrat';
+export type ChatFont =
+  | "inter"
+  | "open-sans"
+  | "roboto"
+  | "rubik"
+  | "josefin-sans"
+  | "nunito"
+  | "montserrat";
 
 export const FONT_FAMILY_MAP: Record<ChatFont, string> = {
-  'inter': 'Inter, sans-serif',
-  'open-sans': '"Open Sans", sans-serif',
-  'roboto': 'Roboto, sans-serif',
-  'rubik': 'Rubik, sans-serif',
-  'josefin-sans': '"Josefin Sans", sans-serif',
-  'nunito': 'Nunito, sans-serif',
-  'montserrat': 'Montserrat, sans-serif',
+  inter: "Inter, sans-serif",
+  "open-sans": '"Open Sans", sans-serif',
+  roboto: "Roboto, sans-serif",
+  rubik: "Rubik, sans-serif",
+  "josefin-sans": '"Josefin Sans", sans-serif',
+  nunito: "Nunito, sans-serif",
+  montserrat: "Montserrat, sans-serif",
 };
 
 export const CHAT_FONT_OPTIONS: { value: ChatFont; label: string }[] = [
-  { value: 'inter', label: 'Inter' },
-  { value: 'josefin-sans', label: 'Josefin Sans' },
-  { value: 'rubik', label: 'Rubik' },
-  { value: 'open-sans', label: 'Open Sans' },
-  { value: 'roboto', label: 'Roboto' },
-  { value: 'nunito', label: 'Nunito' },
-  { value: 'montserrat', label: 'Montserrat' },
+  { value: "inter", label: "Inter" },
+  { value: "josefin-sans", label: "Josefin Sans" },
+  { value: "rubik", label: "Rubik" },
+  { value: "open-sans", label: "Open Sans" },
+  { value: "roboto", label: "Roboto" },
+  { value: "nunito", label: "Nunito" },
+  { value: "montserrat", label: "Montserrat" },
 ];

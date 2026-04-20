@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import ChatDisplay, { type ChatDisplayHandle } from './ChatDisplay';
 import MobileTouchHintModal from './MobileTouchHintModal';
+import NewFeaturesModal from './NewFeaturesModal';
 import MessageInput from './MessageInput';
 import Notification from './Notification';
 import YouTubeChat from './YouTubeChat';
@@ -13,7 +14,7 @@ import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
-import { getStreamStatus, getRecentMessages } from '../lib/twitch';
+import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
 const MAX_DISPLAYED_MESSAGES = 80;
@@ -50,6 +51,7 @@ interface ChatAppProps {
   /** Full YouTube session (may exist while accessToken is still being refreshed) */
   youtubeSession?: PlatformSession;
   unifyChatEnabled?: boolean;
+  compactActions?: boolean;
   useYoutubeEmbed?: boolean;
   fontSize?: number;
   chatFont?: ChatFont;
@@ -82,6 +84,7 @@ export default function ChatApp({
   mentionVolume = 0.5,
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
+  compactActions = false,
   onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -233,8 +236,15 @@ export default function ChatApp({
     }
 
     setMessages((prev) => {
-      // Prevent duplicate messages by ID
-      if (prev.some((m) => m.id === message.id)) {
+      // If we already have this message ID (or its optimistic placeholder), 
+      // replace it with the real one to get full metadata (badges, server timestamp, etc).
+      const existingIdx = prev.findIndex((m) => m.id === message.id || m.id === `optimistic_${message.id}`);
+      if (existingIdx !== -1) {
+        if (prev[existingIdx].optimistic || prev[existingIdx].id.startsWith('optimistic_')) {
+          const copy = [...prev];
+          copy[existingIdx] = message;
+          return copy;
+        }
         return prev;
       }
 
@@ -299,10 +309,45 @@ export default function ChatApp({
   }, [twitchSession]);
 
   const [badgesReady, setBadgesReady] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [modModeActive, setModModeActive] = useState(false);
+  const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
 
   // Ref so handleMessageDeleted closure always reads the latest prop value
   const showDeletedMessagesRef = useRef(showDeletedMessages);
   useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
+
+  useEffect(() => {
+    if (twitchSession && selectedTwitchChannelName) {
+      const isOwner = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      if (isOwner) {
+        setIsModerator(true);
+      }
+    }
+  }, [twitchSession, selectedTwitchChannelName]);
+
+  // Check moderator status via API for better reliability (Twitch Helix)
+  useEffect(() => {
+    const checkModViaApi = async () => {
+      if (twitchSession?.accessToken && selectedTwitchChannel && twitchSession.userId) {
+        try {
+          const isMod = await checkUserModStatus(
+            twitchSession.accessToken,
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+            selectedTwitchChannel,
+            twitchSession.userId
+          );
+          if (isMod) {
+            setIsModerator(true);
+          }
+        } catch (err) {
+          console.error('[ChatApp] API mod check failed:', err);
+        }
+      }
+    };
+
+    checkModViaApi();
+  }, [twitchSession?.accessToken, selectedTwitchChannel, twitchSession?.userId]);
 
   // Cache the current user's own badges so they can be shown on optimistic messages
   const handleOwnBadgesLoaded = useCallback(
@@ -310,8 +355,13 @@ export default function ChatApp({
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
         currentUserBadgesRef.current = { badges, badgeDetails };
       }
+      // Detect moderator or broadcaster badge for the logged-in user in this channel.
+      // We also verify username match as a fallback.
+      const isOwner = (twitchSession?.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      const isMod = Boolean(badges && (badges['moderator'] || badges['broadcaster']));
+      setIsModerator(isMod || isOwner);
     },
-    []
+    [twitchSession?.username, selectedTwitchChannelName]
   );
 
   // Mark a message as deleted or remove it depending on user preference
@@ -443,6 +493,47 @@ export default function ChatApp({
         } catch (err) {
           console.error('Failed to initialize chat assets:', err);
         }
+        // Check whether the logged-in viewer follows this channel (for follower-only chat messaging)
+        try {
+          if (twitchSession?.accessToken && twitchSession?.userId && selectedTwitchChannelName) {
+            const twitchLib = await import('../lib/twitch');
+            let follows = await twitchLib.isFollowingChannel(
+              twitchSession.accessToken,
+              import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+              twitchSession.userId,
+              selectedTwitchChannelName,
+            );
+
+            // Fallback: if the simple follow check returned false, try fetching
+            // the full followed-channels list to guard against Helix anomalies
+            // (410/Gone or other transient issues). This is heavier but more
+            // reliable when the lightweight check fails.
+            if (!follows) {
+              try {
+                const all = await twitchLib.getAllFollowedChannels(
+                  twitchSession.accessToken,
+                  import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+                  twitchSession.userId,
+                );
+                const match = all.some((ch: any) => {
+                  const login = (ch.name || '').toLowerCase();
+                  const display = (ch.displayName || '').toLowerCase();
+                  return login === selectedTwitchChannelName.toLowerCase() || display === selectedTwitchChannelName.toLowerCase();
+                });
+                if (match) follows = true;
+              } catch (fallbackErr) {
+                console.warn('Fallback follow-list check failed:', fallbackErr);
+              }
+            }
+
+            setIsFollowingChannelState(follows);
+          } else {
+            setIsFollowingChannelState(null);
+          }
+        } catch (err) {
+          console.error('Failed to check follow status:', err);
+          setIsFollowingChannelState(null);
+        }
       };
 
       initializeAssets();
@@ -507,40 +598,110 @@ export default function ChatApp({
       try {
         // Send to Twitch if selected
         if (platforms.includes('twitch') && selectedTwitchChannel && twitchSession) {
-          // Add an optimistic message so replies show immediately. When the
-          // server echoes the message back the display will replace it.
-          const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
-          const optimisticMessage: ChatMessage = {
-            id: optimisticId,
-            platform: 'twitch',
-            author: twitchSession.displayName || twitchSession.username || 'You',
-            content: message,
-            timestamp: new Date(),
-            userId: twitchSession.userId,
-            authorColor: '#FFFFFF',
-            authorAvatar: twitchSession.profileImageUrl,
-            replyTo: replyingTo ? {
-              id: replyingTo.id,
-              author: replyingTo.author,
-              content: replyingTo.content,
-            } : undefined,
-            mentionsUser: false,
-            emotes: {},
-            isBot: false,
-            badges: currentUserBadgesRef.current.badges,
-            badgeDetails: currentUserBadgesRef.current.badgeDetails,
-            isCurrentUser: true,
-            optimistic: true,
-          };
-
-          setMessages((prev) => [...prev, optimisticMessage]);
-
           try {
-            await sendTwitchMessage(message, replyingTo?.id);
+            // Detect slash commands and route them through IRC (since Helix doesn't parse them)
+            if (message.startsWith('/')) {
+              const parts = message.split(/\s+/);
+              const cmd = parts[0].toLowerCase();
+
+              // Handle specific moderation commands via Helix for reliability
+              if (cmd === '/timeout' || cmd === '/ban' || cmd === '/unban' || cmd === '/untimeout' || cmd === '/clear') {
+                try {
+                  if (cmd === '/clear') {
+                    await clearChat(selectedTwitchChannel, twitchSession.userId);
+                    return;
+                  }
+
+                  const targetUser = parts[1];
+                  if (!targetUser) throw new Error(`${cmd} requires a username`);
+
+                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
+                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                    throw new Error(`Could not find user ${targetUser}`);
+                  }
+
+                  if (cmd === '/unban' || cmd === '/untimeout') {
+                    await removeBan(selectedTwitchChannel, twitchSession.userId, resolvedTargetId);
+                  } else {
+                    let duration: number | undefined = undefined;
+                    let reasonIndex = 2;
+
+                    if (cmd === '/timeout') {
+                      const durationStr = parts[2] || '600';
+                      // Parse duration like 10s, 5m, 1h, 1d
+                      const match = durationStr.match(/^(\d+)([smhd])?$/i);
+                      if (match) {
+                        const val = parseInt(match[1]);
+                        const unit = (match[2] || 's').toLowerCase();
+                        const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+                        duration = val * (multipliers[unit] || 1);
+                        reasonIndex = 3;
+                      } else {
+                        duration = 600; // default 10m
+                      }
+                    }
+
+                    const reason = parts.slice(reasonIndex).join(' ') || null;
+                    await createBan(
+                      selectedTwitchChannel,
+                      twitchSession.userId,
+                      resolvedTargetId,
+                      duration,
+                      reason
+                    );
+                  }
+                  return; // Don't send the command text to chat
+                } catch (err: any) {
+                  console.error(`Moderation command ${cmd} failed:`, err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || `Failed to execute ${cmd}`, type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+              }
+
+              // Normal slash commands (like /me, /announce) go through IRC
+              await sendTwitchMessage(message, replyingTo?.id);
+            } else {
+              const serverMessageId = await sendHelixMessage(
+                selectedTwitchChannel,
+                twitchSession.userId,
+                message,
+                replyingTo?.id
+              );
+
+              if (serverMessageId) {
+                const optimisticId = `optimistic_${serverMessageId}`;
+                const optimisticMessage: ChatMessage = {
+                  id: optimisticId,
+                  platform: 'twitch',
+                  author: twitchSession.displayName || twitchSession.username || 'You',
+                  content: message,
+                  timestamp: new Date(),
+                  userId: twitchSession.userId,
+                  authorColor: '#FFFFFF',
+                  authorAvatar: twitchSession.profileImageUrl,
+                  replyTo: replyingTo ? {
+                    id: replyingTo.id,
+                    author: replyingTo.author,
+                    content: replyingTo.content,
+                  } : undefined,
+                  mentionsUser: false,
+                  emotes: {},
+                  isBot: false,
+                  badges: currentUserBadgesRef.current.badges,
+                  badgeDetails: currentUserBadgesRef.current.badgeDetails,
+                  isCurrentUser: true,
+                  optimistic: true,
+                };
+
+                setMessages((prev) => [...prev, optimisticMessage]);
+              } else {
+                // Fallback to IRC if somehow Helix didn't return an ID (shouldn't happen on success)
+                await sendTwitchMessage(message, replyingTo?.id);
+              }
+            }
           } catch (error) {
             console.error('Failed to send Twitch message:', error);
-            // Remove optimistic message on failure
-            setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
             notificationIdRef.current += 1;
             setNotification({ message: 'Failed to send message', type: 'error', id: notificationIdRef.current });
           }
@@ -576,6 +737,80 @@ export default function ChatApp({
       setIsRefreshingEmotes(false);
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
+
+  // Moderation actions (only available when user is a moderator and mod mode is active)
+  const handleToggleModMode = useCallback(() => {
+    if (!isModerator) return;
+    setModModeActive((v) => !v);
+  }, [isModerator]);
+
+  const handleDelete = useCallback(async (messageId: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    try {
+      await deleteChatMessage(selectedTwitchChannel, twitchSession.userId, messageId);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Message deleted', type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to delete message', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleBan = useCallback(async (userId: string, displayName?: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    try {
+      await createBan(selectedTwitchChannel, twitchSession.userId, userId, undefined, 'Banned via Mixchat');
+      notificationIdRef.current += 1;
+      setNotification({ message: `${displayName || userId} banned`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to ban user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to ban user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleTimeout = useCallback(async (userId: string, seconds: number, displayName?: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    try {
+      await createBan(selectedTwitchChannel, twitchSession.userId, userId, seconds, `Timeout ${seconds}s`);
+      notificationIdRef.current += 1;
+      setNotification({ message: `${displayName || userId} timed out for ${seconds}s`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to timeout user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to timeout user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleUntimeout = useCallback(async (userName: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    try {
+      const targetUserId = await resolveBroadcasterId(userName);
+      await removeBan(selectedTwitchChannel, twitchSession.userId, targetUserId);
+      notificationIdRef.current += 1;
+      setNotification({ message: `Removed timeout/ban for ${userName}`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to untimeout user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to remove timeout', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
+  const handleWarn = useCallback(async (userName: string) => {
+    if (!sendTwitchMessage) return;
+    const reason = prompt(`Enter a warning message for @${userName}:`, 'Please follow the chat rules');
+    if (!reason) return;
+    try {
+      await sendTwitchMessage(`@${userName} ${reason}`, undefined);
+      notificationIdRef.current += 1;
+      setNotification({ message: `Warned ${userName}`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to send warn message:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to warn user', type: 'error', id: notificationIdRef.current });
+    }
+  }, [sendTwitchMessage]);
 
   // Extracts comprehensive text from a YTMessage for reconciliation matching
   const getYtMessageText = (m: import('./UnifiedChat').YTMessage) =>
@@ -687,6 +922,9 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+              isModerator={isModerator}
+              modModeActive={modModeActive}
+              onToggleModMode={handleToggleModMode}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
@@ -717,6 +955,14 @@ export default function ChatApp({
                   currentUserDisplayName={twitchSession?.displayName}
                   fontSize={fontSize}
                   chatFont={chatFont}
+                  isModerator={isModerator}
+                  compactActions={compactActions}
+                  modModeActive={modModeActive}
+                  onDeleteMessage={handleDelete}
+                  onBanUser={handleBan}
+                  onTimeoutUser={handleTimeout}
+                  onUntimeoutUser={handleUntimeout}
+                  onWarnUser={handleWarn}
                 />
               }
             />
@@ -734,6 +980,8 @@ export default function ChatApp({
             onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
+            isFollowing={isFollowingChannelState}
+            isModerator={isModerator}
           />
 
           {/* YouTube message input (when we have a live video) */}
@@ -909,6 +1157,15 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+              isModerator={isModerator}
+              modModeActive={modModeActive}
+              onToggleModMode={handleToggleModMode}
+              compactActions={compactActions}
+              onDeleteMessage={handleDelete}
+              onBanUser={handleBan}
+              onTimeoutUser={handleTimeout}
+              onUntimeoutUser={handleUntimeout}
+              onWarnUser={handleWarn}
             />
           </div>
 
@@ -923,9 +1180,12 @@ export default function ChatApp({
             onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
+            isFollowing={isFollowingChannelState}
+            isModerator={isModerator}
           />
         </>
       )}
+      <NewFeaturesModal />
       <MobileTouchHintModal twitchConnected={twitchConnected} />
     </div>
   );

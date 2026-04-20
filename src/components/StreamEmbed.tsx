@@ -40,7 +40,7 @@ interface StreamEmbedProps {
 }
 
 
- // Renders a Twitch stream using the Twitch Player JS API
+// Renders a Twitch stream using the Twitch Player JS API
 
 function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName: string; parentDomain: string; oauthToken?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,7 +117,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
         playerRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]); // Re-init when domain changes OR token becomes available
 
   // Channel switch: call setChannel() instead of remounting → session preserved
@@ -177,9 +177,9 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     ) {
       hlsRef.current.loadSource(qualities[externalSelectedQualityIdx].url);
       setSelectedQualityIdx(externalSelectedQualityIdx);
-      videoRef.current?.play().catch(() => {});
+      videoRef.current?.play().catch(() => { });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalSelectedQualityIdx]);
 
   // No longer forcing iframe remount on channel switch to help preserve session state.
@@ -191,13 +191,19 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       return;
     }
 
-    const loadStream = async () => {
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const loadStream = async (isRetry = false) => {
+      if (cancelled) return;
       try {
         setLoading(true);
         setError(null);
-        setQualities([]);
-        setSelectedQualityIdx(0);
-        onQualitiesLoaded?.([]);
+        if (!isRetry) {
+          setQualities([]);
+          setSelectedQualityIdx(0);
+          onQualitiesLoaded?.([]);
+        }
 
         if (!videoRef.current) return;
 
@@ -213,9 +219,34 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
         // which DO support CORS — HLS.js fetches segments directly from
         // the CDN with zero server bandwidth involved.
         const playlistRes = await fetch(`/api/stream-playlist?channel=${encodeURIComponent(channelName)}`);
-        if (!playlistRes.ok) throw new Error('Failed to get stream playlist');
+
+        // Surface actionable error messages by HTTP status before reading body
+        if (!playlistRes.ok) {
+          if (playlistRes.status === 401) {
+            if (!isRetry && !cancelled) {
+              // The session cookie may not have been refreshed yet — wait 3 s and retry once.
+              setError('Authenticating… retrying in 3 s');
+              retryTimer = setTimeout(() => loadStream(true), 3000);
+              return;
+            }
+            throw new Error('Authentication required. Please check your Twitch session.');
+          }
+          if (playlistRes.status === 404) {
+            throw new Error('Channel is offline or does not exist');
+          }
+          if (playlistRes.status === 429) {
+            throw new Error('Too many requests — please wait a moment and try again');
+          }
+          // Attempt to surface a server-side error message if available
+          let serverMsg = '';
+          try { serverMsg = (await playlistRes.json()).error ?? ''; } catch { /* ignore */ }
+          throw new Error(serverMsg || `Server error (${playlistRes.status})`);
+        }
+
         const playlistData = await playlistRes.json();
         if (playlistData.error) throw new Error(playlistData.error);
+
+        if (cancelled) return;
 
         const fetchedQualities: Array<{ label: string; url: string }> = playlistData.qualities;
         setQualities(fetchedQualities);
@@ -233,6 +264,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
           });
 
           hls.on(HLS.Events.MANIFEST_PARSED, () => {
+            if (cancelled) { hls.destroy(); return; }
             setLoading(false);
             videoRef.current?.play().catch(() => {
               // Auto-play failed — user will need to click play
@@ -258,6 +290,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
           setLoading(false);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Failed to load stream:', err);
         setError(err instanceof Error ? err.message : 'Failed to load stream');
         setLoading(false);
@@ -267,6 +300,8 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     loadStream();
 
     return () => {
+      cancelled = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;

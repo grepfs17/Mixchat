@@ -117,7 +117,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
     );
   };
 
-  // ── Twitch panel content ──────────────────────────────────────────────────
+  // Twitch panel conten
 
   const twitchSidebar = (
     <div className="emote-channel-sidebar">
@@ -129,7 +129,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       >
         <div className="emote-channel-avatar emote-channel-avatar--global">
           <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 1a5.5 5.5 0 00-4.47 8.72l.28-.72h1.44l-.5 2H8.5l.5-2h2l.5 2h1.75l-.5-2h1.44l.28.72A5.5 5.5 0 0010 4.5z"/>
+            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 1a5.5 5.5 0 00-4.47 8.72l.28-.72h1.44l-.5 2H8.5l.5-2h2l.5 2h1.75l-.5-2h1.44l.28.72A5.5 5.5 0 0010 4.5z" />
           </svg>
         </div>
         <span className="emote-channel-label">Global</span>
@@ -215,8 +215,6 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       </div>
     </div>
   );
-
-  // ── Third-party panel ────────────────────────────────────────────────────
 
   const renderThirdPartyPanel = (
     key: '7tv' | 'bttv' | 'ffz',

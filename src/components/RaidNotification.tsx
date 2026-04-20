@@ -19,7 +19,7 @@ export default function RaidNotification({
 }: RaidNotificationProps) {
   const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SECONDS);
 
-  
+
   useEffect(() => {
     if (secondsLeft <= 0) {
       onDismiss();

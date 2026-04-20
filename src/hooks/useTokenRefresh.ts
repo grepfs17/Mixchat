@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
-import type { PlatformSession } from '../lib/types';
+import { useEffect, useRef, useCallback } from "react";
+import type { PlatformSession } from "../lib/types";
 
 interface TokenRefreshOptions {
   warningThreshold?: number; // ms before expiry to start refresh (default: 5 min)
@@ -19,7 +19,7 @@ export const useTokenRefresh = (
   session: PlatformSession | null,
   onSessionUpdate: (session: PlatformSession) => void,
   onRefreshError: (error: Error) => void,
-  options: TokenRefreshOptions = {}
+  options: TokenRefreshOptions = {},
 ) => {
   const {
     warningThreshold = DEFAULT_WARNING_THRESHOLD,
@@ -42,12 +42,12 @@ export const useTokenRefresh = (
     isRefreshingRef.current = true;
 
     try {
-      const response = await fetch('/api/refresh-token', {
-        method: 'POST',
+      const response = await fetch("/api/refresh-token", {
+        method: "POST",
         // Ensure httpOnly auth cookies are sent with the request so the
         // server-side refresh endpoint can read the refresh token.
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
         // Only send the platform — the server reads the refresh token
         // from the httpOnly cookie, not from client-supplied data.
         body: JSON.stringify({
@@ -57,11 +57,16 @@ export const useTokenRefresh = (
 
       if (!response.ok) {
         if (response.status === 429) {
-          const retryAfterSec = parseInt(response.headers.get('Retry-After') || '60', 10);
+          const retryAfterSec = parseInt(
+            response.headers.get("Retry-After") || "60",
+            10,
+          );
           retryAfterRef.current = Date.now() + retryAfterSec * 1000;
           throw new Error(`Rate limited, retry after ${retryAfterSec}s`);
         }
-        throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Token refresh failed: ${response.status} ${response.statusText}`,
+        );
       }
 
       const newTokenData = await response.json();
@@ -71,24 +76,26 @@ export const useTokenRefresh = (
         ...session,
         accessToken: newTokenData.accessToken,
         refreshToken: newTokenData.refreshToken || session.refreshToken,
-        expiresAt: now + ((newTokenData.expiresIn || 3600) * 1000),
+        expiresAt: now + (newTokenData.expiresIn || 3600) * 1000,
       };
 
       onSessionUpdate(updatedSession);
       retryCountRef.current = 0; // Reset retry count on success
 
-      console.log('✓ Token refreshed successfully', {
+      console.log("✓ Token refreshed successfully", {
         expiresIn: newTokenData.expiresIn,
         expiresAt: new Date(updatedSession.expiresAt).toISOString(),
       });
     } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error');
-      console.error('✗ Token refresh failed:', err.message);
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      console.error("✗ Token refresh failed:", err.message);
 
       // A 401 from the refresh endpoint means the refresh token itself is
       // invalid/expired — retrying will never succeed, so log out immediately.
-      if (err.message.includes('401')) {
-        console.error('Refresh token invalid or expired. Logging out immediately.');
+      if (err.message.includes("401")) {
+        console.error(
+          "Refresh token invalid or expired. Logging out immediately.",
+        );
         onRefreshError(err);
         retryCountRef.current = 0;
         return;
@@ -97,7 +104,9 @@ export const useTokenRefresh = (
       retryCountRef.current += 1;
 
       if (retryCountRef.current >= maxRetries) {
-        console.error(`Token refresh failed after ${maxRetries} retries. Logging out.`);
+        console.error(
+          `Token refresh failed after ${maxRetries} retries. Logging out.`,
+        );
         onRefreshError(err);
         retryCountRef.current = 0;
       }
@@ -128,9 +137,13 @@ export const useTokenRefresh = (
 
     if (tokenMissing || timeUntilExpiry < warningThreshold) {
       if (tokenMissing) {
-        console.log('Access token missing (page reload), refreshing immediately...');
+        console.log(
+          "Access token missing (page reload), refreshing immediately...",
+        );
       } else {
-        console.log(`Token expiring in ${Math.round(timeUntilExpiry / 1000)}s, refreshing...`);
+        console.log(
+          `Token expiring in ${Math.round(timeUntilExpiry / 1000)}s, refreshing...`,
+        );
       }
       refreshToken();
     }
