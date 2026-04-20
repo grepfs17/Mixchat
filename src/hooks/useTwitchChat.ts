@@ -748,6 +748,63 @@ export function useTwitchChat(
       };
     }
 
+    newClient.onTimeout((_channel, user, duration) => {
+      if (!active) return;
+      onMessage({
+        id: `timeout-${user}-${Date.now()}`,
+        platform: 'twitch',
+        author: 'System',
+        content: `${user} was timed out for ${duration} seconds.`,
+        timestamp: new Date(),
+        userId: 'system',
+        authorColor: '#ef4444',
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: 'chat', // Use chat so it renders clearly
+      });
+    });
+
+    newClient.onBan((_channel, user) => {
+      if (!active) return;
+      onMessage({
+        id: `ban-${user}-${Date.now()}`,
+        platform: 'twitch',
+        author: 'System',
+        content: `${user} was permanently banned.`,
+        timestamp: new Date(),
+        userId: 'system',
+        authorColor: '#ef4444',
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: 'chat',
+      });
+    });
+
+    newClient.onChatClear((_channel) => {
+      if (!active) return;
+      onMessage({
+        id: `clear-${Date.now()}`,
+        platform: 'twitch',
+        author: 'System',
+        content: `Chat was cleared by a moderator.`,
+        timestamp: new Date(),
+        userId: 'system',
+        authorColor: '#ef4444',
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: 'chat',
+      });
+    });
+
     newClient.onMessageRemove((_channel, messageId) => {
       if (!active) return;
       console.log('[useTwitchChat] CLEARMSG received, messageId:', messageId);

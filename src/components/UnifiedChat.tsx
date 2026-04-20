@@ -514,7 +514,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     style={{
                         position: 'fixed',
                         top: timeoutMenu.y,
-                        left: timeoutMenu.x,
+                        right: window.innerWidth - timeoutMenu.x,
+                        left: 'auto',
                         zIndex: 9999,
                     }}
                 >

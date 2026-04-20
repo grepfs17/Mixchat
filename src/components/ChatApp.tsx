@@ -701,7 +701,6 @@ export default function ChatApp({
 
   const handleDelete = useCallback(async (messageId: string) => {
     if (!twitchSession || !selectedTwitchChannel) return;
-    if (!confirm('Delete this message from chat?')) return;
     try {
       await deleteChatMessage(selectedTwitchChannel, twitchSession.userId, messageId);
       notificationIdRef.current += 1;
@@ -715,7 +714,6 @@ export default function ChatApp({
 
   const handleBan = useCallback(async (userId: string, displayName?: string) => {
     if (!twitchSession || !selectedTwitchChannel) return;
-    if (!confirm(`Ban ${displayName || userId} from this channel?`)) return;
     try {
       await createBan(selectedTwitchChannel, twitchSession.userId, userId, undefined, 'Banned via Mixchat');
       notificationIdRef.current += 1;
@@ -729,7 +727,6 @@ export default function ChatApp({
 
   const handleTimeout = useCallback(async (userId: string, seconds: number, displayName?: string) => {
     if (!twitchSession || !selectedTwitchChannel) return;
-    if (!confirm(`Timeout ${displayName || userId} for ${seconds} seconds?`)) return;
     try {
       await createBan(selectedTwitchChannel, twitchSession.userId, userId, seconds, `Timeout ${seconds}s`);
       notificationIdRef.current += 1;

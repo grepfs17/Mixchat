@@ -616,7 +616,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           style={{
             position: 'fixed',
             top: timeoutMenu.y,
-            left: timeoutMenu.x,
+            right: window.innerWidth - timeoutMenu.x,
+            left: 'auto',
             zIndex: 9999,
           }}
         >
@@ -632,8 +633,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           </button>
         </div>,
         document.body
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 });
 
