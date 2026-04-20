@@ -59,6 +59,46 @@ export const getTwitchAccessToken = async (
 };
 
 /**
+ * Send a chat message via Helix and return the message ID.
+ * Requires user:write:chat scope.
+ */
+export const sendHelixMessage = async (
+  broadcasterId: string,
+  senderId: string,
+  message: string,
+  replyParentMessageId?: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const body: any = {
+      broadcaster_id: resolvedBroadcasterId,
+      sender_id: senderId,
+      message,
+    };
+    if (replyParentMessageId) {
+      body.reply_parent_message_id = replyParentMessageId;
+    }
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/chat/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to send Helix message: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    return data?.data?.[0]?.message_id as string | undefined;
+  } catch (error) {
+    console.error("sendHelixMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Moderation helper: delete a single chat message by message ID.
  * Requires the server-side twitch token to belong to a moderator for the
  * specified broadcaster (the httpOnly cookie is used by the proxy).
@@ -68,7 +108,12 @@ export const deleteChatMessage = async (
   moderatorId: string,
   messageId: string,
 ) => {
+  console.log('deleteChatMessage', messageId);
   try {
+    if (messageId.startsWith('optimistic_')) {
+      messageId = messageId.split('optimistic_')[1];
+
+    }
     const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
     const res = await fetch(
       `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
@@ -425,6 +470,42 @@ export const getStreamStatus = async (
  * Instead of making N individual requests, batches into groups of up to 100
  * user_ids per request (Twitch API maximum).
  */
+export const checkUserModStatus = async (
+  accessToken: string,
+  clientId: string,
+  broadcasterId: string,
+  userId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    // Broadcaster is always a 'moderator' in their own channel
+    if (resolvedBroadcasterId === userId) return true;
+
+    const response = await fetch(
+      `${TWITCH_API_BASE}/moderation/channels?user_id=${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const channels = data.data || [];
+      return channels.some((ch: any) => ch.broadcaster_id === resolvedBroadcasterId);
+    } else if (response.status === 403) {
+      // Scope missing or not a moderator. 
+      // We'll fall back to badge-based check in the component if this returns false.
+      return false;
+    }
+  } catch (error) {
+    console.error("Failed to check user mod status:", error);
+  }
+  return false;
+};
+
 export const getStreamStatuses = async (
   accessToken: string,
   clientId: string,

@@ -13,7 +13,7 @@ import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
-import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan } from '../lib/twitch';
+import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
 const MAX_DISPLAYED_MESSAGES = 80;
@@ -233,8 +233,15 @@ export default function ChatApp({
     }
 
     setMessages((prev) => {
-      // Prevent duplicate messages by ID
-      if (prev.some((m) => m.id === message.id)) {
+      // If we already have this message ID (or its optimistic placeholder), 
+      // replace it with the real one to get full metadata (badges, server timestamp, etc).
+      const existingIdx = prev.findIndex((m) => m.id === message.id || m.id === `optimistic_${message.id}`);
+      if (existingIdx !== -1) {
+        if (prev[existingIdx].optimistic || prev[existingIdx].id.startsWith('optimistic_')) {
+          const copy = [...prev];
+          copy[existingIdx] = message;
+          return copy;
+        }
         return prev;
       }
 
@@ -306,17 +313,51 @@ export default function ChatApp({
   const showDeletedMessagesRef = useRef(showDeletedMessages);
   useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
 
+  useEffect(() => {
+    if (twitchSession && selectedTwitchChannelName) {
+      const isOwner = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      if (isOwner) {
+        setIsModerator(true);
+      }
+    }
+  }, [twitchSession, selectedTwitchChannelName]);
+
+  // Check moderator status via API for better reliability (Twitch Helix)
+  useEffect(() => {
+    const checkModViaApi = async () => {
+      if (twitchSession?.accessToken && selectedTwitchChannel && twitchSession.userId) {
+        try {
+          const isMod = await checkUserModStatus(
+            twitchSession.accessToken,
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+            selectedTwitchChannel,
+            twitchSession.userId
+          );
+          if (isMod) {
+            setIsModerator(true);
+          }
+        } catch (err) {
+          console.error('[ChatApp] API mod check failed:', err);
+        }
+      }
+    };
+
+    checkModViaApi();
+  }, [twitchSession?.accessToken, selectedTwitchChannel, twitchSession?.userId]);
+
   // Cache the current user's own badges so they can be shown on optimistic messages
   const handleOwnBadgesLoaded = useCallback(
     (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
         currentUserBadgesRef.current = { badges, badgeDetails };
       }
-      // Detect moderator badge for the logged-in user in this channel
-      const isMod = Boolean(badges && badges['moderator']);
-      setIsModerator(isMod);
+      // Detect moderator or broadcaster badge for the logged-in user in this channel.
+      // We also verify username match as a fallback.
+      const isOwner = (twitchSession?.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      const isMod = Boolean(badges && (badges['moderator'] || badges['broadcaster']));
+      setIsModerator(isMod || isOwner);
     },
-    []
+    [twitchSession?.username, selectedTwitchChannelName]
   );
 
   // Mark a message as deleted or remove it depending on user preference
@@ -512,40 +553,46 @@ export default function ChatApp({
       try {
         // Send to Twitch if selected
         if (platforms.includes('twitch') && selectedTwitchChannel && twitchSession) {
-          // Add an optimistic message so replies show immediately. When the
-          // server echoes the message back the display will replace it.
-          const optimisticId = `optimistic_${Date.now()}_${Math.random()}`;
-          const optimisticMessage: ChatMessage = {
-            id: optimisticId,
-            platform: 'twitch',
-            author: twitchSession.displayName || twitchSession.username || 'You',
-            content: message,
-            timestamp: new Date(),
-            userId: twitchSession.userId,
-            authorColor: '#FFFFFF',
-            authorAvatar: twitchSession.profileImageUrl,
-            replyTo: replyingTo ? {
-              id: replyingTo.id,
-              author: replyingTo.author,
-              content: replyingTo.content,
-            } : undefined,
-            mentionsUser: false,
-            emotes: {},
-            isBot: false,
-            badges: currentUserBadgesRef.current.badges,
-            badgeDetails: currentUserBadgesRef.current.badgeDetails,
-            isCurrentUser: true,
-            optimistic: true,
-          };
-
-          setMessages((prev) => [...prev, optimisticMessage]);
-
           try {
-            await sendTwitchMessage(message, replyingTo?.id);
+            const serverMessageId = await sendHelixMessage(
+              selectedTwitchChannel,
+              twitchSession.userId,
+              message,
+              replyingTo?.id
+            );
+
+            if (serverMessageId) {
+              const optimisticId = `optimistic_${serverMessageId}`;
+              const optimisticMessage: ChatMessage = {
+                id: optimisticId,
+                platform: 'twitch',
+                author: twitchSession.displayName || twitchSession.username || 'You',
+                content: message,
+                timestamp: new Date(),
+                userId: twitchSession.userId,
+                authorColor: '#FFFFFF',
+                authorAvatar: twitchSession.profileImageUrl,
+                replyTo: replyingTo ? {
+                  id: replyingTo.id,
+                  author: replyingTo.author,
+                  content: replyingTo.content,
+                } : undefined,
+                mentionsUser: false,
+                emotes: {},
+                isBot: false,
+                badges: currentUserBadgesRef.current.badges,
+                badgeDetails: currentUserBadgesRef.current.badgeDetails,
+                isCurrentUser: true,
+                optimistic: true,
+              };
+
+              setMessages((prev) => [...prev, optimisticMessage]);
+            } else {
+              // Fallback to IRC if somehow Helix didn't return an ID (shouldn't happen on success)
+              await sendTwitchMessage(message, replyingTo?.id);
+            }
           } catch (error) {
             console.error('Failed to send Twitch message:', error);
-            // Remove optimistic message on failure
-            setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
             notificationIdRef.current += 1;
             setNotification({ message: 'Failed to send message', type: 'error', id: notificationIdRef.current });
           }

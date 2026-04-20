@@ -344,202 +344,205 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
 
               return (
                 <React.Fragment key={msg.id}>
-                {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
-                <div
-                  className={messageClasses}
-                  data-message-id={msg.id}
-                  style={(() => {
-                    const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
-                    return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
-                  })()}
-                  onTouchStart={() => handleTouchStart(msg)}
-                  onTouchEnd={() => handleTouchEnd(msg)}
-                  onTouchMove={handleTouchMove}
-                >
-                  {msg.replyTo && (
-                    <div
-                      className="reply-info reply-info-clickable"
-                      onClick={() => scrollToMessage(msg.replyTo!.id)}
-                      title="Jump to original message"
-                    >
-                      <span>response to{' '}
-                        <span
-                          style={{
-                            color: authorColorById.get(msg.replyTo.id) || '#94a3b8',
-                          }}
-                        >
-                          @{msg.replyTo.author}
-                        </span>
-                        {msg.replyTo.content && (
-                          <>
-                            {': '}
-                            <span
-                              className="reply-target-content"
-                              dangerouslySetInnerHTML={{
-                                __html: parseMessageWithEmotes(msg.replyTo.content)
-                              }}
-                            />
-                          </>
-                        )}
-                      </span>
-
-                    </div>
-                  )}
-                  <TwitchEventIcon messageType={msg.messageType} rewardTitle={msg.rewardTitle} />
-                  <div className="message-single-line">
-                    <span className="timestamp">
-                      {msg.timestamp.toLocaleTimeString()}
-                    </span>
-                    {msg.sourceChannelId && (
-                      <span
-                        className="shared-chat-source"
-                        title={`From ${msg.sourceChannelLogin ?? msg.sourceChannelLogin}'s chat (Shared Chat)`}
-                        style={{ display: 'inline-flex', alignItems: 'center', marginRight: '2px', position: 'relative', flexShrink: 0 }}
+                  {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
+                  <div
+                    className={messageClasses}
+                    data-message-id={msg.id}
+                    style={(() => {
+                      const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
+                      return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
+                    })()}
+                    onTouchStart={() => handleTouchStart(msg)}
+                    onTouchEnd={() => handleTouchEnd(msg)}
+                    onTouchMove={handleTouchMove}
+                  >
+                    {msg.replyTo && (
+                      <div
+                        className="reply-info reply-info-clickable"
+                        onClick={() => scrollToMessage(msg.replyTo!.id)}
+                        title="Jump to original message"
                       >
-                        {(() => {
-                          const channelColor = hashChannelColor(msg.sourceChannelId!);
-                          return msg.sourceChannelAvatar ? (
-                            <img
-                              src={msg.sourceChannelAvatar}
-                              alt={msg.sourceChannelLogin ?? msg.sourceChannelId}
-                              style={{
-                                width: '22px',
-                                height: '22px',
-                                borderRadius: '50%',
-                                border: `1.5px solid ${channelColor}`,
-                                verticalAlign: 'middle',
-                                display: 'block',
-                              }}
-                            />
-                          ) : (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                border: `2px solid ${channelColor}`,
-                                background: '#18181b',
-                                fontSize: '9px',
-                                color: channelColor,
-                                fontWeight: 'bold',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {(msg.sourceChannelLogin ?? msg.sourceChannelId!).charAt(0).toUpperCase()}
-                            </span>
-                          );
-                        })()}
-                      </span>
+                        <span>response to{' '}
+                          <span
+                            style={{
+                              color: authorColorById.get(msg.replyTo.id) || '#94a3b8',
+                            }}
+                          >
+                            @{msg.replyTo.author}
+                          </span>
+                          {msg.replyTo.content && (
+                            <>
+                              {': '}
+                              <span
+                                className="reply-target-content"
+                                dangerouslySetInnerHTML={{
+                                  __html: parseMessageWithEmotes(msg.replyTo.content)
+                                }}
+                              />
+                            </>
+                          )}
+                        </span>
+
+                      </div>
                     )}
-                    
-                    {/*msg.authorAvatar && (
+                    <TwitchEventIcon messageType={msg.messageType} rewardTitle={msg.rewardTitle} />
+                    <div className="message-single-line">
+                      <span className="timestamp">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </span>
+                      {msg.sourceChannelId && (
+                        <span
+                          className="shared-chat-source"
+                          title={`From ${msg.sourceChannelLogin ?? msg.sourceChannelLogin}'s chat (Shared Chat)`}
+                          style={{ display: 'inline-flex', alignItems: 'center', marginRight: '2px', position: 'relative', flexShrink: 0 }}
+                        >
+                          {(() => {
+                            const channelColor = hashChannelColor(msg.sourceChannelId!);
+                            return msg.sourceChannelAvatar ? (
+                              <img
+                                src={msg.sourceChannelAvatar}
+                                alt={msg.sourceChannelLogin ?? msg.sourceChannelId}
+                                style={{
+                                  width: '22px',
+                                  height: '22px',
+                                  borderRadius: '50%',
+                                  border: `1.5px solid ${channelColor}`,
+                                  verticalAlign: 'middle',
+                                  display: 'block',
+                                }}
+                              />
+                            ) : (
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '16px',
+                                  height: '16px',
+                                  borderRadius: '50%',
+                                  border: `2px solid ${channelColor}`,
+                                  background: '#18181b',
+                                  fontSize: '9px',
+                                  color: channelColor,
+                                  fontWeight: 'bold',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {(msg.sourceChannelLogin ?? msg.sourceChannelId!).charAt(0).toUpperCase()}
+                              </span>
+                            );
+                          })()}
+                        </span>
+                      )}
+
+                      {/*msg.authorAvatar && (
                       <img
                         src={msg.authorAvatar}
                         alt={msg.author}
                         className="avatar"
                       />
                     )*/}
-                    {msg.messageType === 'redemption' && msg.rewardTitle && (
-                      <span className="reward-title-badge">{msg.rewardTitle}</span>
-                    )}
-                    <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
-                    <a
-                      href={`https://twitch.tv/${msg.author}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
-                      style={{
-                        color: msg.isCurrentUser ? '#ffffff' : (msg.authorColor || '#e2e8f0'),
-                      }}
-                    >
-                      {msg.author}
-                    </a>
-                    <span className="message-separator">:</span>
-                    <span
-                      className="message-text"
-                      dangerouslySetInnerHTML={{
-                        __html: parseMessageWithEmotes(msg.content, msg.emotes),
-                      }}
-                    />
-                    <div className="message-actions">
-                      {onReply && (
+                      {msg.messageType === 'redemption' && msg.rewardTitle && (
+                        <span className="reward-title-badge">{msg.rewardTitle}</span>
+                      )}
+                      <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
+                      <a
+                        href={`https://twitch.tv/${msg.author}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
+                        style={{
+                          color: msg.isCurrentUser ? '#ffffff' : (msg.authorColor || '#e2e8f0'),
+                        }}
+                      >
+                        {msg.author}
+                      </a>
+                      <span className="message-separator">:</span>
+                      <span
+                        className="message-text"
+                        dangerouslySetInnerHTML={{
+                          __html: parseMessageWithEmotes(msg.content, msg.emotes),
+                        }}
+                      />
+                      <div className="message-actions">
+                        {onReply && (
+                          <button
+                            onClick={() => onReply(msg)}
+                            className="action-button"
+                            title="Reply to this message"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <MdReply size={12} />
+                          </button>
+                        )}
                         <button
-                          onClick={() => onReply(msg)}
+                          onClick={() => handleCopy(msg)}
                           className="action-button"
-                          title="Reply to this message"
+                          title="Copy message"
                           style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          <MdReply size={12} />
+                          <MdContentCopy size={12} />
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleCopy(msg)}
-                        className="action-button"
-                        title="Copy message"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <MdContentCopy size={12} />
-                      </button>
 
-                      {isModerator && modModeActive && (
-                        <>
-                          {(() => {
-                            const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
-                            const disabledTitle = isBroadcaster ? 'Cannot moderate the broadcaster\'s messages' : undefined;
-                            return (
-                              <>
-                                <button
-                                  onClick={() => onDeleteMessage?.(msg.id)}
-                                  className="action-button mod-action"
-                                  title={isBroadcaster ? disabledTitle : 'Delete message'}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  disabled={isBroadcaster}
-                                >
-                                  <MdDelete size={12} />
-                                </button>
-                                <button
-                                  onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
-                                  className="action-button mod-action"
-                                  title={isBroadcaster ? disabledTitle : 'Timeout (10m)'}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  disabled={isBroadcaster}
-                                >
-                                  <MdHourglassEmpty size={12} />
-                                </button>
-                                <button
-                                  onClick={() => onBanUser?.(msg.userId || '', msg.author)}
-                                  className="action-button mod-action"
-                                  title={isBroadcaster ? disabledTitle : 'Ban user'}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  disabled={isBroadcaster}
-                                >
-                                  <MdBlock size={12} />
-                                </button>
-                                <button
-                                  onClick={() => onWarnUser?.(msg.author)}
-                                  className="action-button mod-action"
-                                  title={isBroadcaster ? disabledTitle : 'Warn user'}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  disabled={isBroadcaster}
-                                >
-                                  <MdWarning size={12} />
-                                </button>
-                              </>
-                            );
-                          })()}
-                        </>
+                        {isModerator && modModeActive && (
+                          <>
+                            {(() => {
+                              const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                              const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                              const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+
+                              return (
+                                <>
+                                  <button
+                                    onClick={() => onDeleteMessage?.(msg.id)}
+                                    className="action-button mod-action"
+                                    title="Delete message"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <MdDelete size={12} />
+                                  </button>
+
+                                  {!isUnmoderatable && (
+                                    <>
+                                      <button
+                                        onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                        className="action-button mod-action"
+                                        title="Timeout (10m)"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        <MdHourglassEmpty size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => onBanUser?.(msg.userId || '', msg.author)}
+                                        className="action-button mod-action"
+                                        title="Ban user"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        <MdBlock size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => onWarnUser?.(msg.author)}
+                                        className="action-button mod-action"
+                                        title="Warn user"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        <MdWarning size={12} />
+                                      </button>
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                      {msg.isDeleted && (
+                        <div className="deleted-notice">
+                          Deleted by a moderator
+                        </div>
                       )}
                     </div>
-                    {msg.isDeleted && (
-                      <div className="deleted-notice">
-                        Deleted by a moderator
-                      </div>
-                    )}
                   </div>
-                </div>
                 </React.Fragment>
               );
             })
