@@ -978,6 +978,7 @@ export default function ChatApp({
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
             isFollowing={isFollowingChannelState}
+            isModerator={isModerator}
           />
 
           {/* YouTube message input (when we have a live video) */}
@@ -1176,6 +1177,7 @@ export default function ChatApp({
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
             isFollowing={isFollowingChannelState}
+            isModerator={isModerator}
           />
         </>
       )}

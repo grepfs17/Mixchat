@@ -18,6 +18,7 @@ interface MessageInputProps {
   slowModeWaitTime?: number | null;
   followerModeMinutes?: number | null;
   isFollowing?: boolean | null;
+  isModerator?: boolean;
 }
 
 const COMMANDS = [
@@ -45,6 +46,7 @@ function MessageInput({
   slowModeWaitTime = null,
   followerModeMinutes = null,
   isFollowing = null,
+  isModerator = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [placeholder, _setPlaceholder] = useState('Type your message');
@@ -144,18 +146,22 @@ function MessageInput({
         setShowUsernameMenu(false);
       }
     }
-    // Check for / commands
+    // Check for / commands (only show for moderators / broadcaster)
     else if (currentWord.startsWith('/') && lastSpaceIndex === -1) {
-      const query = currentWord.toLowerCase();
-      const matching = COMMANDS.filter(cmd => cmd.name.startsWith(query));
-      if (matching.length > 0) {
-        setCommandResults(matching);
-        setShowCommandMenu(true);
-        setSelectedCommandIndex(0);
-        setShowEmoteMenu(false);
-        setShowUsernameMenu(false);
-      } else {
+      if (!isModerator) {
         setShowCommandMenu(false);
+      } else {
+        const query = currentWord.toLowerCase();
+        const matching = COMMANDS.filter(cmd => cmd.name.startsWith(query));
+        if (matching.length > 0) {
+          setCommandResults(matching);
+          setShowCommandMenu(true);
+          setSelectedCommandIndex(0);
+          setShowEmoteMenu(false);
+          setShowUsernameMenu(false);
+        } else {
+          setShowCommandMenu(false);
+        }
       }
     }
     // Show emote autocomplete if typing a word
@@ -387,6 +393,7 @@ function MessageInput({
   };
 
   useEffect(() => {
+    if (!isModerator) setShowCommandMenu(false);
     const handleClickOutside = (event: MouseEvent) => {
       if (
         emoteMenuRef.current && !emoteMenuRef.current.contains(event.target as Node) &&
