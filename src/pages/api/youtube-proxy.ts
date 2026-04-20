@@ -44,13 +44,13 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       );
     }
 
-    // Read the access token from the httpOnly cookie — never from client input.
+    // Read the access token from the httpOnly cookie if present.
+    // Note: public lookups (getLiveVideo, getChannelInfo) do not strictly
+    // require authentication. Allow unauthenticated requests so clients can
+    // still resolve public channel/video info without having a cookie set.
     const accessToken = cookies.get("youtube_token")?.value;
     if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers },
-      );
+      console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
 
     const yt = await getInnertube();
