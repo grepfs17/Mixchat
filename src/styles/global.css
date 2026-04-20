@@ -157,8 +157,9 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .mod-context-menu button:hover {
-  background: #3a3a3a;
-  color: #fff;
+  background: var(--color-bg-hover);
+  color: var(--color-text-white);
+  box-shadow: inset 4px 0 0 var(--color-accent);
 }
 
 /* Generic context menu styles used across components */
@@ -200,8 +201,24 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .context-menu button:hover {
-  background: #333;
-  color: #fff;
+  background: var(--color-bg-hover);
+  color: var(--color-text-white);
+  box-shadow: inset 4px 0 0 var(--color-accent);
+}
+
+/* Explicit class for context menu items to ensure consistent padding and
+   allow components to avoid inline styles that block :hover rules. */
+.context-menu-item,
+.context-menu > button {
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-chat);
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.15s, color 0.15s, box-shadow 0.12s;
 }
 
 .channel-context-menu { min-width: 160px; }

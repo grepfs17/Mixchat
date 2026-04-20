@@ -577,7 +577,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                             if (compactActions) items.sort((a, b) => a.label.localeCompare(b.label));
 
                             return items.map((it) => (
-                                <button key={it.key} onClick={it.onClick} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>{it.label}</button>
+                                <button key={it.key} onClick={it.onClick} className="context-menu-item">{it.label}</button>
                             ));
                         })()
                     }

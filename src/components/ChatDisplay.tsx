@@ -711,7 +711,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               }
 
               return items.map((it) => (
-                <button key={it.key} onClick={it.onClick} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>{it.label}</button>
+                <button key={it.key} onClick={it.onClick} className="context-menu-item">{it.label}</button>
               ));
             })()
           }
