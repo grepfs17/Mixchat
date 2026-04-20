@@ -13,7 +13,7 @@ import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
-import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage } from '../lib/twitch';
+import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 
 const MAX_DISPLAYED_MESSAGES = 80;
@@ -554,42 +554,106 @@ export default function ChatApp({
         // Send to Twitch if selected
         if (platforms.includes('twitch') && selectedTwitchChannel && twitchSession) {
           try {
-            const serverMessageId = await sendHelixMessage(
-              selectedTwitchChannel,
-              twitchSession.userId,
-              message,
-              replyingTo?.id
-            );
+            // Detect slash commands and route them through IRC (since Helix doesn't parse them)
+            if (message.startsWith('/')) {
+              const parts = message.split(/\s+/);
+              const cmd = parts[0].toLowerCase();
 
-            if (serverMessageId) {
-              const optimisticId = `optimistic_${serverMessageId}`;
-              const optimisticMessage: ChatMessage = {
-                id: optimisticId,
-                platform: 'twitch',
-                author: twitchSession.displayName || twitchSession.username || 'You',
-                content: message,
-                timestamp: new Date(),
-                userId: twitchSession.userId,
-                authorColor: '#FFFFFF',
-                authorAvatar: twitchSession.profileImageUrl,
-                replyTo: replyingTo ? {
-                  id: replyingTo.id,
-                  author: replyingTo.author,
-                  content: replyingTo.content,
-                } : undefined,
-                mentionsUser: false,
-                emotes: {},
-                isBot: false,
-                badges: currentUserBadgesRef.current.badges,
-                badgeDetails: currentUserBadgesRef.current.badgeDetails,
-                isCurrentUser: true,
-                optimistic: true,
-              };
+              // Handle specific moderation commands via Helix for reliability
+              if (cmd === '/timeout' || cmd === '/ban' || cmd === '/unban' || cmd === '/untimeout' || cmd === '/clear') {
+                try {
+                  if (cmd === '/clear') {
+                    await clearChat(selectedTwitchChannel, twitchSession.userId);
+                    return;
+                  }
 
-              setMessages((prev) => [...prev, optimisticMessage]);
-            } else {
-              // Fallback to IRC if somehow Helix didn't return an ID (shouldn't happen on success)
+                  const targetUser = parts[1];
+                  if (!targetUser) throw new Error(`${cmd} requires a username`);
+
+                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
+                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                    throw new Error(`Could not find user ${targetUser}`);
+                  }
+
+                  if (cmd === '/unban' || cmd === '/untimeout') {
+                    await removeBan(selectedTwitchChannel, twitchSession.userId, resolvedTargetId);
+                  } else {
+                    let duration: number | undefined = undefined;
+                    let reasonIndex = 2;
+
+                    if (cmd === '/timeout') {
+                      const durationStr = parts[2] || '600';
+                      // Parse duration like 10s, 5m, 1h, 1d
+                      const match = durationStr.match(/^(\d+)([smhd])?$/i);
+                      if (match) {
+                        const val = parseInt(match[1]);
+                        const unit = (match[2] || 's').toLowerCase();
+                        const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+                        duration = val * (multipliers[unit] || 1);
+                        reasonIndex = 3;
+                      } else {
+                        duration = 600; // default 10m
+                      }
+                    }
+
+                    const reason = parts.slice(reasonIndex).join(' ') || null;
+                    await createBan(
+                      selectedTwitchChannel,
+                      twitchSession.userId,
+                      resolvedTargetId,
+                      duration,
+                      reason
+                    );
+                  }
+                  return; // Don't send the command text to chat
+                } catch (err: any) {
+                  console.error(`Moderation command ${cmd} failed:`, err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || `Failed to execute ${cmd}`, type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+              }
+
+              // Normal slash commands (like /me, /announce) go through IRC
               await sendTwitchMessage(message, replyingTo?.id);
+            } else {
+              const serverMessageId = await sendHelixMessage(
+                selectedTwitchChannel,
+                twitchSession.userId,
+                message,
+                replyingTo?.id
+              );
+
+              if (serverMessageId) {
+                const optimisticId = `optimistic_${serverMessageId}`;
+                const optimisticMessage: ChatMessage = {
+                  id: optimisticId,
+                  platform: 'twitch',
+                  author: twitchSession.displayName || twitchSession.username || 'You',
+                  content: message,
+                  timestamp: new Date(),
+                  userId: twitchSession.userId,
+                  authorColor: '#FFFFFF',
+                  authorAvatar: twitchSession.profileImageUrl,
+                  replyTo: replyingTo ? {
+                    id: replyingTo.id,
+                    author: replyingTo.author,
+                    content: replyingTo.content,
+                  } : undefined,
+                  mentionsUser: false,
+                  emotes: {},
+                  isBot: false,
+                  badges: currentUserBadgesRef.current.badges,
+                  badgeDetails: currentUserBadgesRef.current.badgeDetails,
+                  isCurrentUser: true,
+                  optimistic: true,
+                };
+
+                setMessages((prev) => [...prev, optimisticMessage]);
+              } else {
+                // Fallback to IRC if somehow Helix didn't return an ID (shouldn't happen on success)
+                await sendTwitchMessage(message, replyingTo?.id);
+              }
             }
           } catch (error) {
             console.error('Failed to send Twitch message:', error);

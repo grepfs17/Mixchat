@@ -175,6 +175,63 @@ export const createBan = async (
   }
 };
 
+/**
+ * Moderation helper: unban (or untimeout) a user.
+ */
+export const removeBan = async (
+  broadcasterId: string,
+  moderatorId: string,
+  userId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/bans&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}&user_id=${encodeURIComponent(userId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to remove ban: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("removeBan failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Moderation helper: Clear all messages from the chat.
+ */
+export const clearChat = async (
+  broadcasterId: string,
+  moderatorId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to clear chat: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("clearChat failed:", error);
+    throw error;
+  }
+};
+
 export const refreshTwitchAccessToken = async (
   refreshToken: string,
   clientId: string,
