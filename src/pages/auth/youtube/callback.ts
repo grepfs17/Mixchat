@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
   }
 
   try {
-    const isDev = import.meta.env.MODE === 'development';
+    const isDev = import.meta.env.MODE === "development";
     const isSecure = !isDev;
 
     const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
@@ -63,16 +63,20 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       // Only include refreshToken when Google actually returns one.
       // An empty string would be falsy and cause useTokenRefresh to skip
       // the httpOnly-cookie-based token refresh on page reload.
-      ...(tokenData.refresh_token ? { refreshToken: tokenData.refresh_token } : {}),
-      expiresAt: Date.now() + ((tokenData.expires_in ?? 3600) * 1000),
+      ...(tokenData.refresh_token
+        ? { refreshToken: tokenData.refresh_token }
+        : {}),
+      expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000,
       timestamp: Date.now(),
     });
     // Double-stringify for safe JS embedding: the outer JSON.stringify wraps the
     // JSON string in JS string-literal quotes, escaping all special characters.
     // The extra replace guards against </script> sequences that would terminate
 
-    const sessionPayloadJson = JSON.stringify(sessionPayload)
-      .replace(/</g, "\\u003c");
+    const sessionPayloadJson = JSON.stringify(sessionPayload).replace(
+      /</g,
+      "\\u003c",
+    );
     // Pass the returned state value safely so the browser can verify it.
     const returnedStateJson = JSON.stringify(returnedState);
 

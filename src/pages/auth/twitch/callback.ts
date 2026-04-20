@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
   }
 
   try {
-    const isDev = import.meta.env.MODE === 'development';
+    const isDev = import.meta.env.MODE === "development";
     const isSecure = !isDev;
 
     const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -67,7 +67,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       profileImageUrl: user.profileImageUrl,
       accessToken: tokenData.accessToken,
       refreshToken: tokenData.refreshToken ?? "",
-      expiresAt: Date.now() + ((tokenData.expiresIn ?? 3600) * 1000),
+      expiresAt: Date.now() + (tokenData.expiresIn ?? 3600) * 1000,
       timestamp: Date.now(),
     });
     // Double-stringify for safe JS embedding (same pattern as returnedStateJson).

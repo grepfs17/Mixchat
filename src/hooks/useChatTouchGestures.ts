@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback } from "react";
 
 interface UseChatTouchGesturesOptions<T> {
   /** Called after a 500 ms long press. Only fires when provided. */
@@ -45,12 +45,12 @@ export function useChatTouchGestures<T>({
           .then(() => onCopyMessage?.())
           .catch(() => {});
       } else {
-        const textArea = document.createElement('textarea');
+        const textArea = document.createElement("textarea");
         textArea.value = text;
         document.body.appendChild(textArea);
         textArea.select();
         try {
-          document.execCommand('copy');
+          document.execCommand("copy");
           onCopyMessage?.();
         } catch (_) {}
         document.body.removeChild(textArea);
@@ -99,5 +99,10 @@ export function useChatTouchGestures<T>({
     }
   }, []);
 
-  return { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy: copyMsg };
+  return {
+    handleTouchStart,
+    handleTouchEnd,
+    handleTouchMove,
+    handleCopy: copyMsg,
+  };
 }

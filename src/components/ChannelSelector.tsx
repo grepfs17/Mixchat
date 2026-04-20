@@ -90,7 +90,7 @@ export default function ChannelSelector({
       <label style={styles.label}>
         {platform === 'twitch' ? '📺 Channels' : '▶ Streams'}
       </label>
-      
+
       <div style={styles.listContainer as React.CSSProperties}>
         {channels.map((channel) => (
           <div

@@ -13,7 +13,9 @@ export const resolveBroadcasterId = async (broadcasterIdOrLogin: string) => {
   if (/^\d+$/.test(broadcasterIdOrLogin)) return broadcasterIdOrLogin;
 
   try {
-    const r = await fetch(`/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(broadcasterIdOrLogin)}`);
+    const r = await fetch(
+      `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(broadcasterIdOrLogin)}`,
+    );
     if (!r.ok) return broadcasterIdOrLogin;
     const d = await r.json();
     const id = d?.data?.[0]?.id;
@@ -108,11 +110,10 @@ export const deleteChatMessage = async (
   moderatorId: string,
   messageId: string,
 ) => {
-  console.log('deleteChatMessage', messageId);
+  console.log("deleteChatMessage", messageId);
   try {
-    if (messageId.startsWith('optimistic_')) {
-      messageId = messageId.split('optimistic_')[1];
-
+    if (messageId.startsWith("optimistic_")) {
+      messageId = messageId.split("optimistic_")[1];
     }
     const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
     const res = await fetch(
@@ -207,10 +208,7 @@ export const removeBan = async (
 /**
  * Moderation helper: Clear all messages from the chat.
  */
-export const clearChat = async (
-  broadcasterId: string,
-  moderatorId: string,
-) => {
+export const clearChat = async (broadcasterId: string, moderatorId: string) => {
   try {
     const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
     const res = await fetch(
@@ -251,7 +249,9 @@ export const refreshTwitchAccessToken = async (
 
     if (!response.ok) {
       if (response.status === 400 || response.status === 401) {
-        throw new Error(`Invalid refresh token (Twitch returned ${response.status})`);
+        throw new Error(
+          `Invalid refresh token (Twitch returned ${response.status})`,
+        );
       }
       throw new Error(`Failed to refresh token: ${response.status}`);
     }
@@ -398,46 +398,69 @@ export const getAllFollowedChannels = async (
     const streamDataMap = new Map<string, any>();
 
     await Promise.all(
-      Array.from({ length: Math.ceil(followedChannels.length / BATCH_SIZE) }, (_, idx) => {
-        const batch = followedChannels.slice(idx * BATCH_SIZE, (idx + 1) * BATCH_SIZE);
+      Array.from(
+        { length: Math.ceil(followedChannels.length / BATCH_SIZE) },
+        (_, idx) => {
+          const batch = followedChannels.slice(
+            idx * BATCH_SIZE,
+            (idx + 1) * BATCH_SIZE,
+          );
 
-        const profilePromise = fetch(
-          `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
-          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
-        ).then(async (res) => {
-          if (res.ok) {
-            const usersData = await res.json();
-            const userProfiles = new Map(
-              (usersData.data || []).map((user: any) => [user.id, user.profile_image_url]),
-            );
-            batch.forEach((ch: any) => { ch.profileImageUrl = userProfiles.get(ch.id); });
-          }
-        });
+          const profilePromise = fetch(
+            `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Client-ID": clientId,
+              },
+            },
+          ).then(async (res) => {
+            if (res.ok) {
+              const usersData = await res.json();
+              const userProfiles = new Map(
+                (usersData.data || []).map((user: any) => [
+                  user.id,
+                  user.profile_image_url,
+                ]),
+              );
+              batch.forEach((ch: any) => {
+                ch.profileImageUrl = userProfiles.get(ch.id);
+              });
+            }
+          });
 
-        const streamPromise = fetch(
-          `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
-          { headers: { Authorization: `Bearer ${accessToken}`, "Client-ID": clientId } },
-        ).then(async (res) => {
-          if (res.ok) {
-            const streamsData = await res.json();
-            (streamsData.data || []).forEach((s: any) => { streamDataMap.set(s.user_id, s); });
-          }
-        });
+          const streamPromise = fetch(
+            `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Client-ID": clientId,
+              },
+            },
+          ).then(async (res) => {
+            if (res.ok) {
+              const streamsData = await res.json();
+              (streamsData.data || []).forEach((s: any) => {
+                streamDataMap.set(s.user_id, s);
+              });
+            }
+          });
 
-        return Promise.all([profilePromise, streamPromise]);
-      }),
+          return Promise.all([profilePromise, streamPromise]);
+        },
+      ),
     );
 
     followedChannels.forEach((ch: any) => {
       if (streamDataMap.has(ch.id)) {
         const s = streamDataMap.get(ch.id);
         ch.viewerCount = s.viewer_count;
-        ch.gameName = s.game_name || '';
-        ch.thumbnailUrl = s.thumbnail_url || '';
+        ch.gameName = s.game_name || "";
+        ch.thumbnailUrl = s.thumbnail_url || "";
       } else {
         ch.viewerCount = 0;
-        ch.gameName = '';
-        ch.thumbnailUrl = '';
+        ch.gameName = "";
+        ch.thumbnailUrl = "";
       }
     });
 
@@ -488,23 +511,28 @@ export const isFollowingChannel = async (
   try {
     const toId = await resolveBroadcasterId(toBroadcasterIdOrLogin);
     const url = new URL(`${TWITCH_API_BASE}/users/follows`);
-    url.searchParams.set('from_id', fromUserId);
-    url.searchParams.set('to_id', toId);
+    url.searchParams.set("from_id", fromUserId);
+    url.searchParams.set("to_id", toId);
 
     const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}`, 'Client-ID': clientId },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-ID": clientId,
+      },
     });
     // Helix may return 410 (Gone) for some follow checks (deleted account / unavailable)
     // Treat 410 as "not following" instead of failing the flow.
     if (res.status === 410) {
-      console.info('[isFollowingChannel] Twitch API returned 410 (Gone) for follow check; treating as not following.');
+      console.info(
+        "[isFollowingChannel] Twitch API returned 410 (Gone) for follow check; treating as not following.",
+      );
       return false;
     }
     if (!res.ok) return false;
     const data = await res.json();
     return (data.total || 0) > 0;
   } catch (err) {
-    console.error('isFollowingChannel failed:', err);
+    console.error("isFollowingChannel failed:", err);
     return false;
   }
 };
@@ -522,16 +550,15 @@ export const getStreamStatus = async (
   try {
     // Support both numeric user IDs and login names (e.g. manually joined channels)
     const isNumericId = /^\d+$/.test(userId);
-    const queryParam = isNumericId ? `user_id=${userId}` : `user_login=${encodeURIComponent(userId)}`;
-    const response = await fetch(
-      `${TWITCH_API_BASE}/streams?${queryParam}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Client-ID": clientId,
-        },
+    const queryParam = isNumericId
+      ? `user_id=${userId}`
+      : `user_login=${encodeURIComponent(userId)}`;
+    const response = await fetch(`${TWITCH_API_BASE}/streams?${queryParam}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-ID": clientId,
       },
-    );
+    });
 
     if (!response.ok) {
       throw new Error(`Twitch API error: ${response.status}`);
@@ -585,9 +612,11 @@ export const checkUserModStatus = async (
     if (response.ok) {
       const data = await response.json();
       const channels = data.data || [];
-      return channels.some((ch: any) => ch.broadcaster_id === resolvedBroadcasterId);
+      return channels.some(
+        (ch: any) => ch.broadcaster_id === resolvedBroadcasterId,
+      );
     } else if (response.status === 403) {
-      // Scope missing or not a moderator. 
+      // Scope missing or not a moderator.
       // We'll fall back to badge-based check in the component if this returns false.
       return false;
     }
@@ -737,7 +766,9 @@ export const getRecentMessages = async (
           }
 
           // Parse reply-parent tags (present when this message is itself a reply)
-          let replyTo: { id: string; author: string; content: string } | undefined = undefined;
+          let replyTo:
+            | { id: string; author: string; content: string }
+            | undefined = undefined;
           if (tags["reply-parent-msg-id"]) {
             // IRC tag values escape spaces as \s
             const parentBody = (tags["reply-parent-msg-body"] || "")
@@ -746,7 +777,10 @@ export const getRecentMessages = async (
               .replace(/\\\\/g, "\\");
             replyTo = {
               id: tags["reply-parent-msg-id"],
-              author: tags["reply-parent-display-name"] || tags["reply-parent-user-login"] || "",
+              author:
+                tags["reply-parent-display-name"] ||
+                tags["reply-parent-user-login"] ||
+                "",
               content: parentBody,
             };
           }
@@ -773,7 +807,8 @@ export const getRecentMessages = async (
                       return `${s - emoteOffset}-${e - emoteOffset}`;
                     })
                     .filter((pos) => Number(pos.split("-")[0]) >= 0);
-                  if (shiftedPositions.length > 0) adjusted[id] = shiftedPositions;
+                  if (shiftedPositions.length > 0)
+                    adjusted[id] = shiftedPositions;
                 }
                 emotes = adjusted;
               }
@@ -781,7 +816,9 @@ export const getRecentMessages = async (
           }
 
           // Use the actual Twitch message ID if available, otherwise fall back to a composite ID
-          const messageId = tags["id"] || `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
+          const messageId =
+            tags["id"] ||
+            `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
 
           const message: ChatMessage = {
             id: messageId,

@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   checkLiveStreamers,
   getWatchedStreamers,
   markStreamerNotified,
   markStreamerOffline,
   getNotifiedStreamers,
-} from '../lib/streamMonitor';
-import type { LiveStreamer } from '../lib/streamMonitor';
-import type { PlatformSession } from '../lib/types';
+} from "../lib/streamMonitor";
+import type { LiveStreamer } from "../lib/streamMonitor";
+import type { PlatformSession } from "../lib/types";
 
 interface UseStreamMonitorOptions {
   session: PlatformSession | undefined;
@@ -23,7 +23,9 @@ export function useStreamMonitor({
   checkInterval = 60000,
 }: UseStreamMonitorOptions) {
   const [liveStreamers, setLiveStreamers] = useState<LiveStreamer[]>([]);
-  const [newLiveStreamer, setNewLiveStreamer] = useState<LiveStreamer | null>(null);
+  const [newLiveStreamer, setNewLiveStreamer] = useState<LiveStreamer | null>(
+    null,
+  );
   const [isChecking, setIsChecking] = useState(false);
 
   const checkStreamers = useCallback(async () => {
@@ -32,12 +34,18 @@ export function useStreamMonitor({
     setIsChecking(true);
     try {
       const watchedStreamers = getWatchedStreamers();
-      const nowLive = await checkLiveStreamers(watchedStreamers, session.accessToken, clientId);
+      const nowLive = await checkLiveStreamers(
+        watchedStreamers,
+        session.accessToken,
+        clientId,
+      );
 
       const notifiedStreamers = getNotifiedStreamers();
 
       // Check for newly live streamers
-      const newlyLive = nowLive.filter((streamer) => !notifiedStreamers.has(streamer.id));
+      const newlyLive = nowLive.filter(
+        (streamer) => !notifiedStreamers.has(streamer.id),
+      );
 
       if (newlyLive.length > 0) {
         // Notify about the first newly live streamer
@@ -55,7 +63,7 @@ export function useStreamMonitor({
 
       setLiveStreamers(nowLive);
     } catch (error) {
-      console.error('Error monitoring streams:', error);
+      console.error("Error monitoring streams:", error);
     } finally {
       setIsChecking(false);
     }

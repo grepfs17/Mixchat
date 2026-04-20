@@ -1,4 +1,4 @@
-import { Innertube, Parser } from 'youtubei.js';
+import { Innertube, Parser } from "youtubei.js";
 
 let yt: Innertube | null = null;
 
@@ -6,7 +6,7 @@ let yt: Innertube | null = null;
 // LiveChatReportModerationStateCommand). These are harmless — youtubei.js JIT-
 // generates a stub in the meantime — but they would otherwise spam the logs.
 Parser.setParserErrorHandler(({ error_type }) => {
-  if (error_type === 'class_not_found') return;
+  if (error_type === "class_not_found") return;
 });
 
 export async function getInnertube() {
@@ -26,17 +26,17 @@ export async function getYoutubeAccessToken(
   code: string,
   clientId: string,
   clientSecret: string,
-  redirectUri: string
+  redirectUri: string,
 ) {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
       client_id: clientId,
       client_secret: clientSecret,
       redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
     }),
   });
 
@@ -50,10 +50,10 @@ export async function getYoutubeAccessToken(
 
 export async function getYoutubeUser(accessToken: string) {
   const res = await fetch(
-    'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
+    "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
     {
       headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    },
   );
 
   if (!res.ok) {
@@ -63,7 +63,7 @@ export async function getYoutubeUser(accessToken: string) {
 
   const data = await res.json();
   if (!data.items || data.items.length === 0) {
-    throw new Error('No YouTube channel found for this user');
+    throw new Error("No YouTube channel found for this user");
   }
 
   const channel = data.items[0];
@@ -77,16 +77,16 @@ export async function getYoutubeUser(accessToken: string) {
 export async function refreshYoutubeToken(
   refreshToken: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
 ) {
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
       refresh_token: refreshToken,
-      grant_type: 'refresh_token',
+      grant_type: "refresh_token",
     }),
   });
 
