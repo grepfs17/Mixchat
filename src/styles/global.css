@@ -113,3 +113,50 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
 }
+
+/* Moderator Context Menu (Timeout Options) */
+.mod-context-menu {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: tooltipFade 0.1s ease-out;
+}
+
+.mod-context-menu-header {
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  border-bottom: 1px solid #333;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mod-context-menu button {
+  background: transparent;
+  border: none;
+  color: #eee;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.mod-context-menu button:hover {
+  background: #3a3a3a;
+  color: #fff;
+}

@@ -112,6 +112,20 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     const [newMessagesCount, setNewMessagesCount] = useState(0);
     const prevCountRef = useRef(0);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
+    const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
+
+    // Close timeout menu when clicking anywhere else
+    useEffect(() => {
+        const handleClick = () => setTimeoutMenu(null);
+        if (timeoutMenu) {
+            window.addEventListener('click', handleClick);
+            window.addEventListener('contextmenu', handleClick);
+        }
+        return () => {
+            window.removeEventListener('click', handleClick);
+            window.removeEventListener('contextmenu', handleClick);
+        };
+    }, [timeoutMenu]);
 
     useImperativeHandle(ref, () => ({
         scrollToBottom: () => {
@@ -337,8 +351,18 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                                                     <>
                                                                         <button
                                                                             onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                                                            onContextMenu={(e) => {
+                                                                                e.preventDefault();
+                                                                                e.stopPropagation();
+                                                                                setTimeoutMenu({
+                                                                                    x: e.clientX,
+                                                                                    y: e.clientY,
+                                                                                    userId: msg.userId || '',
+                                                                                    username: msg.author
+                                                                                });
+                                                                            }}
                                                                             className="action-button mod-action"
-                                                                            title="Timeout (10m)"
+                                                                            title="Timeout (10m) - Right-click for more"
                                                                             style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                                                                         >
                                                                             <MdHourglassEmpty size={12} />
@@ -479,6 +503,31 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                 >
                     <img src={emoteTooltip.url} alt={emoteTooltip.name} />
                     <div className="chat-emote-tooltip-name">{emoteTooltip.name}</div>
+                </div>,
+                document.body
+            )}
+            {timeoutMenu && createPortal(
+                <div
+                    className="mod-context-menu"
+                    onContextMenu={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                        position: 'fixed',
+                        top: timeoutMenu.y,
+                        left: timeoutMenu.x,
+                        zIndex: 9999,
+                    }}
+                >
+                    <div className="mod-context-menu-header">Timeout {timeoutMenu.username}</div>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 10, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        10 Seconds
+                    </button>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 600, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        10 Minutes
+                    </button>
+                    <button onClick={() => { onTimeoutUser?.(timeoutMenu.userId, 86400, timeoutMenu.username); setTimeoutMenu(null); }}>
+                        1 Day
+                    </button>
                 </div>,
                 document.body
             )}
