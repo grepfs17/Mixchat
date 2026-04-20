@@ -64,18 +64,47 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
           channelId = endpoint.payload.browseId;
           console.log(`[YouTube Live] Using channel ID: ${channelId}`);
         } else {
-          // If we couldn't resolve a full URL, it's an invalid input for getChannel
-          return new Response(
-            JSON.stringify({ error: "Could not resolve YouTube URL" }),
-            { status: 400, headers },
-          );
+          // Try a best-effort fallback: parse the path component and use that
+          // as a handle/channel identifier (e.g. @name, channel/UC..., user/name).
+          try {
+            const parsed = new URL(channelUrl);
+            let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+            if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
+            if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
+            if (candidate) {
+              channelId = candidate;
+              console.log(`[YouTube Live] Fallback using path candidate: ${channelId}`);
+            } else {
+              console.warn('[YouTube Live] Could not resolve URL and no path candidate found');
+            }
+          } catch (parseErr) {
+            console.warn('[YouTube Live] Failed to parse URL for fallback:', parseErr);
+          }
         }
       } catch (urlError) {
         console.warn('Failed to resolve URL:', urlError);
-        return new Response(
-          JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-          { status: 400, headers },
-        );
+        // Best-effort fallback: try parsing pathname segment instead of failing fast.
+        try {
+          const parsed = new URL(channelUrl);
+          let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+          if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
+          if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
+          if (candidate) {
+            channelId = candidate;
+            console.log(`[YouTube Live] Fallback after resolve failure, using: ${channelId}`);
+          } else {
+            return new Response(
+              JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+              { status: 400, headers },
+            );
+          }
+        } catch (parseErr) {
+          console.warn('[YouTube Live] Failed to parse URL for fallback after resolve error:', parseErr);
+          return new Response(
+            JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+            { status: 400, headers },
+          );
+        }
       }
     }
 
