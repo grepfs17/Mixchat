@@ -48,7 +48,21 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
       return new Response(JSON.stringify({ videoId: cached.videoId }), { status: 200, headers });
     }
 
-    const yt = await getInnertube();
+    let yt: any;
+    try {
+      yt = await getInnertube();
+    } catch (ytErr) {
+      const msg = ytErr instanceof Error ? ytErr.message : String(ytErr);
+      const stack = ytErr instanceof Error ? ytErr.stack : undefined;
+      console.error('[YouTube Live] getInnertube() failed', { message: msg, stack, channelUrl });
+      return new Response(
+        JSON.stringify({
+          error: import.meta.env.MODE === 'development' ? msg : 'YouTube service unavailable',
+          details: import.meta.env.MODE === 'development' ? stack : undefined,
+        }),
+        { status: 503, headers },
+      );
+    }
 
     // Resolve the URL to get the channel ID/endpoint
     let channelId = channelUrl;
@@ -109,8 +123,22 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     }
 
     // Use getChannel with the resolved ID. handles (@name) are supported by getChannel directly.
-    const channel = await yt.getChannel(channelId);
-    console.log(`[YouTube Live] Retrieved channel info`);
+    let channel: any;
+    try {
+      channel = await yt.getChannel(channelId);
+      console.log(`[YouTube Live] Retrieved channel info`);
+    } catch (chErr) {
+      const msg = chErr instanceof Error ? chErr.message : String(chErr);
+      const stack = chErr instanceof Error ? chErr.stack : undefined;
+      console.error('[YouTube Live] getChannel failed', { message: msg, stack, channelId, channelUrl });
+      return new Response(
+        JSON.stringify({
+          error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve channel info',
+          details: import.meta.env.MODE === 'development' ? stack : undefined,
+        }),
+        { status: 500, headers },
+      );
+    }
 
     /** Returns true if a video object from youtubei.js is currently live */
     function isActuallyLive(video: any): boolean {
@@ -231,6 +259,7 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     console.error("youtube-live API error:", {
       message: errorMessage,
       stack: errorStack,
+      action: 'getLiveVideo',
       channelUrl: url.searchParams.get("channelUrl"),
     });
     return new Response(
