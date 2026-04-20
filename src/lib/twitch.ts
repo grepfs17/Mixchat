@@ -475,6 +475,40 @@ export const getFollowedChannels = async (
   return all.filter((ch: any) => ch.viewerCount > 0);
 };
 
+/**
+ * Check whether a user is following a broadcaster.
+ * Returns true if `fromUserId` follows `toBroadcasterIdOrLogin`.
+ */
+export const isFollowingChannel = async (
+  accessToken: string,
+  clientId: string,
+  fromUserId: string,
+  toBroadcasterIdOrLogin: string,
+) => {
+  try {
+    const toId = await resolveBroadcasterId(toBroadcasterIdOrLogin);
+    const url = new URL(`${TWITCH_API_BASE}/users/follows`);
+    url.searchParams.set('from_id', fromUserId);
+    url.searchParams.set('to_id', toId);
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}`, 'Client-ID': clientId },
+    });
+    // Helix may return 410 (Gone) for some follow checks (deleted account / unavailable)
+    // Treat 410 as "not following" instead of failing the flow.
+    if (res.status === 410) {
+      console.info('[isFollowingChannel] Twitch API returned 410 (Gone) for follow check; treating as not following.');
+      return false;
+    }
+    if (!res.ok) return false;
+    const data = await res.json();
+    return (data.total || 0) > 0;
+  } catch (err) {
+    console.error('isFollowingChannel failed:', err);
+    return false;
+  }
+};
+
 export const getStreamStatus = async (
   accessToken: string,
   clientId: string,

@@ -302,6 +302,27 @@
   color: var(--color-text-primary);
 }
 
+/* Mod mode icon + label behavior */
+.header-button .mod-icon {
+  display: inline-flex;
+  vertical-align: middle;
+}
+.mod-label {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.header-button.mod-active {
+  border-color: rgba(34,197,94,0.6);
+}
+
+@media (max-width: 640px) {
+  /* On mobile hide the label and show icon-only */
+  .mod-label { display: none; }
+  .header-button { padding: 5px 8px; }
+}
+
 .show-stream-button {
   padding: 4px 10px;
   background: linear-gradient(135deg, var(--color-indigo) 0%, var(--color-indigo-hover) 100%);
@@ -344,6 +365,30 @@
   font-size: 0.75em;
   font-weight: 600;
   margin-right: 8px;
+}
+
+@media (max-width: 640px) {
+  /* On small screens show only the status dot without background or text */
+  .status-badge-live,
+  .status-badge-offline {
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    margin-right: 6px !important;
+    border: none !important;
+    color: inherit !important;
+  }
+
+  .status-badge-live-text,
+  .status-badge-offline-text,
+  .status-badge-offline > span:not(.status-dot) {
+    display: none !important;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+  }
 }
 
 .status-dot {

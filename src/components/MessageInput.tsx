@@ -17,6 +17,7 @@ interface MessageInputProps {
   onInputFocus?: () => void;
   slowModeWaitTime?: number | null;
   followerModeMinutes?: number | null;
+  isFollowing?: boolean | null;
 }
 
 const COMMANDS = [
@@ -43,6 +44,7 @@ function MessageInput({
   onInputFocus,
   slowModeWaitTime = null,
   followerModeMinutes = null,
+  isFollowing = null,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [placeholder, _setPlaceholder] = useState('Type your message');
@@ -522,7 +524,7 @@ function MessageInput({
 
       <EmoteMenu emotes={emotesOrganized} onSelectEmote={insertEmote} isOpen={showEmotePickerMenu} onClose={() => setShowEmotePickerMenu(false)} />
 
-      {followerModeMinutes !== null && (
+      {followerModeMinutes !== null && isFollowing === false && (
         <div className="warning" style={{ color: '#9ca3af', fontSize: '0.8rem', padding: '4px 12px', borderTop: '1px solid #1e293b' }}>
           {followerModeMinutes === 0
             ? '⚠ Follower-only chat — follow this channel to send messages'

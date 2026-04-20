@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHa
 import { createPortal } from 'react-dom';
 import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
+import { GiCrossedSwords } from 'react-icons/gi';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
@@ -282,7 +283,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
             ) : (
               <span className="status-badge-offline">
                 <span className="status-dot" />
-                OFFLINE
+                <span className="status-badge-offline-text">OFFLINE</span>
               </span>
             )}
             <a
@@ -324,9 +325,14 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               onClick={onToggleModMode}
               className={`header-button ${modModeActive ? 'mod-active' : ''}`}
               title={modModeActive ? 'Disable Mod Mode' : 'Enable Mod Mode'}
-              style={{ marginLeft: '8px' }}
+              style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              {modModeActive ? 'Mod Mode: ON' : 'Mod Mode: OFF'}
+              <GiCrossedSwords
+                size={16}
+                className="mod-icon"
+                style={{ color: modModeActive ? 'var(--color-green)' : 'var(--color-text-muted)' }}
+              />
+              <span className="mod-label">Mod Mode</span>
             </button>
           )}
           {isLoading && <span className="loading-indicator">●</span>}

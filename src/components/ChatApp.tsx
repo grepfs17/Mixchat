@@ -308,6 +308,7 @@ export default function ChatApp({
   const [badgesReady, setBadgesReady] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
+  const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
 
   // Ref so handleMessageDeleted closure always reads the latest prop value
   const showDeletedMessagesRef = useRef(showDeletedMessages);
@@ -488,6 +489,47 @@ export default function ChatApp({
           }
         } catch (err) {
           console.error('Failed to initialize chat assets:', err);
+        }
+        // Check whether the logged-in viewer follows this channel (for follower-only chat messaging)
+        try {
+          if (twitchSession?.accessToken && twitchSession?.userId && selectedTwitchChannelName) {
+            const twitchLib = await import('../lib/twitch');
+            let follows = await twitchLib.isFollowingChannel(
+              twitchSession.accessToken,
+              import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+              twitchSession.userId,
+              selectedTwitchChannelName,
+            );
+
+            // Fallback: if the simple follow check returned false, try fetching
+            // the full followed-channels list to guard against Helix anomalies
+            // (410/Gone or other transient issues). This is heavier but more
+            // reliable when the lightweight check fails.
+            if (!follows) {
+              try {
+                const all = await twitchLib.getAllFollowedChannels(
+                  twitchSession.accessToken,
+                  import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+                  twitchSession.userId,
+                );
+                const match = all.some((ch: any) => {
+                  const login = (ch.name || '').toLowerCase();
+                  const display = (ch.displayName || '').toLowerCase();
+                  return login === selectedTwitchChannelName.toLowerCase() || display === selectedTwitchChannelName.toLowerCase();
+                });
+                if (match) follows = true;
+              } catch (fallbackErr) {
+                console.warn('Fallback follow-list check failed:', fallbackErr);
+              }
+            }
+
+            setIsFollowingChannelState(follows);
+          } else {
+            setIsFollowingChannelState(null);
+          }
+        } catch (err) {
+          console.error('Failed to check follow status:', err);
+          setIsFollowingChannelState(null);
         }
       };
 
@@ -934,6 +976,7 @@ export default function ChatApp({
             onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
+            isFollowing={isFollowingChannelState}
           />
 
           {/* YouTube message input (when we have a live video) */}
@@ -1131,6 +1174,7 @@ export default function ChatApp({
             onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
+            isFollowing={isFollowingChannelState}
           />
         </>
       )}
