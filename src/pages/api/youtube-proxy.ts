@@ -27,6 +27,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
   try {
     const action = url.searchParams.get("action");
+    const channelUrl = url.searchParams.get("channelUrl") ?? null;
 
     if (!action) {
       return new Response(
@@ -53,7 +54,23 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
 
-    const yt = await getInnertube();
+    // Initialize Innertube client with request-scoped diagnostics so failures
+    // include the action and channel context in server logs.
+    let yt: any;
+    try {
+      yt = await getInnertube();
+    } catch (ytErr) {
+      const msg = ytErr instanceof Error ? ytErr.message : String(ytErr);
+      const stack = ytErr instanceof Error ? ytErr.stack : undefined;
+      console.error('[YouTube Proxy] getInnertube() failed', { message: msg, stack, action, channelUrl });
+      return new Response(
+        JSON.stringify({
+          error: import.meta.env.MODE === 'development' ? msg : 'YouTube service unavailable',
+          details: import.meta.env.MODE === 'development' ? stack : undefined,
+        }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     // Route to appropriate handler
     if (action === "getLiveVideo") {
@@ -72,6 +89,8 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     console.error("[YouTube Proxy] Error:", {
       message: errorMessage,
       stack: errorStack,
+      action: url.searchParams.get("action"),
+      channelUrl: url.searchParams.get("channelUrl"),
     });
     return new Response(
       JSON.stringify({
@@ -133,12 +152,32 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
     }
   }
 
-  const channel = await yt.getChannel(channelId);
-  console.log(`[YouTube Proxy] Retrieved channel info`);
+  let channel: any;
+  try {
+    channel = await yt.getChannel(channelId);
+    console.log(`[YouTube Proxy] Retrieved channel info`);
+  } catch (chErr) {
+    const msg = chErr instanceof Error ? chErr.message : String(chErr);
+    const stack = chErr instanceof Error ? chErr.stack : undefined;
+    console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
+    return new Response(
+      JSON.stringify({
+        error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve channel info',
+        details: import.meta.env.MODE === 'development' ? stack : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   // Check if the channel is currently live
-  const liveStreams = await (channel as any).getLiveStreams();
-  let videoId = liveStreams.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+  let videoId: string | null = null;
+  try {
+    const liveStreams = await (channel as any).getLiveStreams();
+    videoId = liveStreams?.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+  } catch (lsErr) {
+    console.warn('[YouTube Proxy] getLiveStreams failed:', lsErr);
+    // continue to try other strategies (home feed)
+  }
 
   // If getLiveStreams didn't find anything, try checking the home tab
   if (!videoId) {
@@ -222,7 +261,21 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
     }
   }
 
-  const channel = await yt.getChannel(channelId);
+  let channel: any;
+  try {
+    channel = await yt.getChannel(channelId);
+  } catch (chErr) {
+    const msg = chErr instanceof Error ? chErr.message : String(chErr);
+    const stack = chErr instanceof Error ? chErr.stack : undefined;
+    console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
+    return new Response(
+      JSON.stringify({
+        error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve channel info',
+        details: import.meta.env.MODE === 'development' ? stack : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
   const basicInfo = (channel as any).basic_info || {};
   const headerInfo = (channel as any).header?.author || {};
 
