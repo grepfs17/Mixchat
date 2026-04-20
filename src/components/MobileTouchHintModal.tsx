@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MdContentCopy, MdReply } from 'react-icons/md';
+import { MdContentCopy, MdMoreVert } from 'react-icons/md';
 import { isMobileDevice } from '../lib/device';
 
 const STORAGE_KEY = 'mixchat_mobile_hint_seen';
@@ -92,9 +92,9 @@ export default function MobileTouchHintModal({ twitchConnected }: MobileTouchHin
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <HintRow
-            icon={<MdReply size={20} color="var(--color-twitch)" />}
+            icon={<MdMoreVert size={20} color="var(--color-twitch)" />}
             action="Long press"
-            description="a message to reply to it"
+            description="a message to open the context menu"
           />
           <HintRow
             icon={<MdContentCopy size={18} color="var(--color-twitch)" />}
