@@ -73,6 +73,7 @@ interface UnifiedChatProps {
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
     onUntimeoutUser?: (userName: string) => void;
     onWarnUser?: (userName: string) => void;
+    compactActions?: boolean;
 }
 
 const MAX_MESSAGES = 300;
@@ -108,6 +109,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     onTimeoutUser,
     onUntimeoutUser,
     onWarnUser,
+    compactActions = false,
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
@@ -327,7 +329,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                             className="message-text"
                                             dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
                                         />
-                                        <div className="message-actions">
+                                        {!compactActions && (
+                                            <div className="message-actions">
                                             {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
                                                 isModerator && msg.targetUsername ? (
                                                     <button
@@ -428,6 +431,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                                 </>
                                             )}
                                         </div>
+                                        )}
                                         {msg.isDeleted && (
                                             <div className="deleted-notice">
                                                 Deleted by a moderator
@@ -551,24 +555,32 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     style={{ position: 'fixed', top: messageMenu.y, left: messageMenu.x, zIndex: 9999 }}
                 >
                     <div className="context-menu-header">{messageMenu.entry.source === 'twitch' ? `@${(messageMenu.entry.msg as ChatMessage).author}` : `${(messageMenu.entry.msg as YTMessage).author}`}</div>
-                    {messageMenu.entry.source === 'twitch' && onReply && (
-                        <button onClick={() => { onReply((messageMenu.entry.msg as ChatMessage)); setMessageMenu(null); }}>Reply</button>
-                    )}
-                    <button onClick={() => { onCopyMessage?.(); setMessageMenu(null); }}>Copy message</button>
-                    {isModerator && modModeActive && messageMenu.entry.source === 'twitch' && (() => {
-                        const msg = messageMenu.entry.msg as ChatMessage;
-                        const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
-                        const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
-                        const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
-                        return (
-                            <>
-                                {!isUnmoderatable && <button onClick={() => { onDeleteMessage?.(msg.id); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Delete</button>}
-                                {!isUnmoderatable && <button onClick={() => { onTimeoutUser?.(msg.userId || '', 600, msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Timeout (10m)</button>}
-                                {!isUnmoderatable && <button onClick={() => { onBanUser?.(msg.userId || '', msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Ban</button>}
-                                {!isUnmoderatable && <button onClick={() => { onWarnUser?.(msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Warn</button>}
-                            </>
-                        );
-                    })()}
+                    {
+                        (() => {
+                            const items: Array<{ key: string; label: string; onClick: () => void } > = [];
+                            if (messageMenu.entry.source === 'twitch' && onReply) items.push({ key: 'reply', label: 'Reply', onClick: () => { onReply((messageMenu.entry.msg as ChatMessage)); setMessageMenu(null); } });
+                            items.push({ key: 'copy', label: 'Copy message', onClick: () => { onCopyMessage?.(); setMessageMenu(null); } });
+
+                            if (isModerator && modModeActive && messageMenu.entry.source === 'twitch') {
+                                const msg = messageMenu.entry.msg as ChatMessage;
+                                const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                                const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                                const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+                                if (!isUnmoderatable) {
+                                    items.push({ key: 'delete', label: 'Delete', onClick: () => { onDeleteMessage?.(msg.id); setMessageMenu(null); } });
+                                    items.push({ key: 'timeout', label: 'Timeout (10m)', onClick: () => { onTimeoutUser?.(msg.userId || '', 600, msg.author); setMessageMenu(null); } });
+                                    items.push({ key: 'ban', label: 'Ban', onClick: () => { onBanUser?.(msg.userId || '', msg.author); setMessageMenu(null); } });
+                                    items.push({ key: 'warn', label: 'Warn', onClick: () => { onWarnUser?.(msg.author); setMessageMenu(null); } });
+                                }
+                            }
+
+                            if (compactActions) items.sort((a, b) => a.label.localeCompare(b.label));
+
+                            return items.map((it) => (
+                                <button key={it.key} onClick={it.onClick} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>{it.label}</button>
+                            ));
+                        })()
+                    }
                 </div>, document.body)
             }
             {timeoutMenu && createPortal(

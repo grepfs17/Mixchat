@@ -206,3 +206,22 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 
 .channel-context-menu { min-width: 160px; }
 .message-context-menu { min-width: 180px; }
+
+/* Scrollbar style for Embed Config Modal (match chat messages scrollbar) */
+.embed-config-modal-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+.embed-config-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+.embed-config-modal-content::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+.embed-config-modal-content::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: var(--radius-md);
+}
+.embed-config-modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-lighter);
+}

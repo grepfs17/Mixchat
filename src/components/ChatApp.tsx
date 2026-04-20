@@ -51,6 +51,7 @@ interface ChatAppProps {
   /** Full YouTube session (may exist while accessToken is still being refreshed) */
   youtubeSession?: PlatformSession;
   unifyChatEnabled?: boolean;
+  compactActions?: boolean;
   useYoutubeEmbed?: boolean;
   fontSize?: number;
   chatFont?: ChatFont;
@@ -83,6 +84,7 @@ export default function ChatApp({
   mentionVolume = 0.5,
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
+  compactActions = false,
   onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -954,6 +956,7 @@ export default function ChatApp({
                   fontSize={fontSize}
                   chatFont={chatFont}
                   isModerator={isModerator}
+                  compactActions={compactActions}
                   modModeActive={modModeActive}
                   onDeleteMessage={handleDelete}
                   onBanUser={handleBan}
@@ -1157,6 +1160,7 @@ export default function ChatApp({
               isModerator={isModerator}
               modModeActive={modModeActive}
               onToggleModMode={handleToggleModMode}
+              compactActions={compactActions}
               onDeleteMessage={handleDelete}
               onBanUser={handleBan}
               onTimeoutUser={handleTimeout}

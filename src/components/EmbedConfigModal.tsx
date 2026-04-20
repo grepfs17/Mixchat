@@ -22,6 +22,8 @@ interface EmbedConfigModalProps {
   onMentionSoundTypeChange: (value: MentionSoundType) => void;
   showDeletedMessages: boolean;
   onShowDeletedMessagesChange: (value: boolean) => void;
+  compactActions: boolean;
+  onCompactActionsChange: (value: boolean) => void;
   onClose: () => void;
 }
 
@@ -44,6 +46,9 @@ export default function EmbedConfigModal({
   onMentionSoundTypeChange,
   showDeletedMessages,
   onShowDeletedMessagesChange,
+  // New prop: compact actions
+  compactActions,
+  onCompactActionsChange,
   onClose,
 }: EmbedConfigModalProps) {
   return (
@@ -59,7 +64,7 @@ export default function EmbedConfigModal({
       }}
       onClick={onClose}
     >
-      <div
+      <div className="embed-config-modal-content"
         style={{
           backgroundColor: '#1a1a1a',
           borderRadius: '8px',
@@ -438,6 +443,44 @@ export default function EmbedConfigModal({
             }}
           >
             When enabled, messages deleted by a moderator remain visible but are dimmed and marked as deleted. When disabled, they are removed from chat.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              color: '#e2e8f0',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={compactActions}
+              onChange={(e) => onCompactActionsChange(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#6366f1',
+              }}
+            />
+            <span style={{ fontSize: '14px' }}>
+              Hide inline action buttons
+            </span>
+          </label>
+          <p
+            style={{
+              marginTop: '8px',
+              color: '#94a3b8',
+              fontSize: '12px',
+              margin: '8px 0 0 30px',
+            }}
+          >
+            When enabled, the small reply/copy/mod buttons are hidden from each message and . You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
           </p>
         </div>
 

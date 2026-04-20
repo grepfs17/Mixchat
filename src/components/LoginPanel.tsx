@@ -51,6 +51,8 @@ interface LoginPanelProps {
   onMentionSoundTypeChange?: (value: MentionSoundType) => void;
   showDeletedMessages?: boolean;
   onShowDeletedMessagesChange?: (value: boolean) => void;
+  compactActions?: boolean;
+  onCompactActionsChange?: (value: boolean) => void;
   onGoHome?: () => void;
   onRequestClose?: () => void;
 }
@@ -92,6 +94,8 @@ function LoginPanel({
   onMentionSoundTypeChange,
   showDeletedMessages = true,
   onShowDeletedMessagesChange,
+  compactActions = false,
+  onCompactActionsChange,
   onGoHome,
   onRequestClose,
 }: LoginPanelProps) {
@@ -349,6 +353,8 @@ function LoginPanel({
               onShowDeletedMessagesChange(value);
             }
           }}
+          compactActions={compactActions}
+          onCompactActionsChange={(value) => { if (onCompactActionsChange) onCompactActionsChange(value); }}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}

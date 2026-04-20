@@ -42,6 +42,7 @@ interface ChatDisplayProps {
   onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
+  compactActions?: boolean;
 }
 
 /** Derives a stable, visually-distinct HSL color from a channel ID string. */
@@ -89,6 +90,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   onTimeoutUser,
   onUntimeoutUser,
   onWarnUser,
+  compactActions = false,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -503,7 +505,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                           __html: parseMessageWithEmotes(msg.content, msg.emotes),
                         }}
                       />
-                      <div className="message-actions">
+                      {!compactActions && (
+                        <div className="message-actions">
                         {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
                           isModerator && msg.targetUsername ? (
                             <button
@@ -601,7 +604,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                             )}
                           </>
                         )}
-                      </div>
+                        </div>
+                      )}
                       {msg.isDeleted && (
                         <div className="deleted-notice">
                           Deleted by a moderator
@@ -683,33 +687,34 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           style={{ position: 'fixed', top: messageMenu.y, left: messageMenu.x, zIndex: 9999 }}
         >
           <div className="context-menu-header">@{messageMenu.message.author}</div>
-          {onReply && (
-            <button onClick={() => { onReply(messageMenu.message); setMessageMenu(null); }}>Reply</button>
-          )}
-          <button onClick={() => { handleCopy(messageMenu.message); setMessageMenu(null); }}>Copy message</button>
-          {isModerator && modModeActive && (
+          {/* Build menu items programmatically so we can sort when compactActions is enabled */}
+          {
             (() => {
-              const isBroadcaster = Boolean(messageMenu.message.badges && messageMenu.message.badges['broadcaster']);
-              const isModeratorMsg = Boolean(messageMenu.message.badges && messageMenu.message.badges['moderator']);
-              const isUnmoderatable = isBroadcaster || isModeratorMsg || messageMenu.message.isCurrentUser;
-              return (
-                <>
-                  {!isUnmoderatable && (
-                    <button onClick={() => { onDeleteMessage?.(messageMenu.message.id); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Delete</button>
-                  )}
-                  {!isUnmoderatable && (
-                    <button onClick={() => { onTimeoutUser?.(messageMenu.message.userId || '', 600, messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Timeout (10m)</button>
-                  )}
-                  {!isUnmoderatable && (
-                    <button onClick={() => { onBanUser?.(messageMenu.message.userId || '', messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Ban</button>
-                  )}
-                  {!isUnmoderatable && (
-                    <button onClick={() => { onWarnUser?.(messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Warn</button>
-                  )}
-                </>
-              );
+              const items: Array<{ key: string; label: string; onClick: () => void } > = [];
+              if (onReply) items.push({ key: 'reply', label: 'Reply', onClick: () => { onReply(messageMenu.message); setMessageMenu(null); } });
+              items.push({ key: 'copy', label: 'Copy message', onClick: () => { handleCopy(messageMenu.message); setMessageMenu(null); } });
+
+              if (isModerator && modModeActive) {
+                const isBroadcaster = Boolean(messageMenu.message.badges && messageMenu.message.badges['broadcaster']);
+                const isModeratorMsg = Boolean(messageMenu.message.badges && messageMenu.message.badges['moderator']);
+                const isUnmoderatable = isBroadcaster || isModeratorMsg || messageMenu.message.isCurrentUser;
+                if (!isUnmoderatable) {
+                  items.push({ key: 'delete', label: 'Delete', onClick: () => { onDeleteMessage?.(messageMenu.message.id); setMessageMenu(null); } });
+                  items.push({ key: 'timeout', label: 'Timeout (10m)', onClick: () => { onTimeoutUser?.(messageMenu.message.userId || '', 600, messageMenu.message.author); setMessageMenu(null); } });
+                  items.push({ key: 'ban', label: 'Ban', onClick: () => { onBanUser?.(messageMenu.message.userId || '', messageMenu.message.author); setMessageMenu(null); } });
+                  items.push({ key: 'warn', label: 'Warn', onClick: () => { onWarnUser?.(messageMenu.message.author); setMessageMenu(null); } });
+                }
+              }
+
+              if (compactActions) {
+                items.sort((a, b) => a.label.localeCompare(b.label));
+              }
+
+              return items.map((it) => (
+                <button key={it.key} onClick={it.onClick} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>{it.label}</button>
+              ));
             })()
-          )}
+          }
         </div>,
         document.body,
       )}

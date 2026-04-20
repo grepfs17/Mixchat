@@ -79,6 +79,7 @@ export default function AppContainer() {
   const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0,1
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
+  const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
@@ -569,10 +570,23 @@ export default function AppContainer() {
     }
   }, []);
 
+  // Load compact actions setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_compact_actions');
+    if (saved !== null) {
+      try { setCompactActions(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
   // Save show deleted messages setting to localStorage
   useEffect(() => {
     localStorage.setItem('mixchat_show_deleted_messages', JSON.stringify(showDeletedMessages));
   }, [showDeletedMessages]);
+
+  // Save compact actions setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_compact_actions', JSON.stringify(compactActions));
+  }, [compactActions]);
 
   // Load chat font setting from localStorage
   useEffect(() => {
@@ -952,6 +966,8 @@ export default function AppContainer() {
             onMentionSoundTypeChange={setMentionSoundType}
             showDeletedMessages={showDeletedMessages}
             onShowDeletedMessagesChange={setShowDeletedMessages}
+            compactActions={compactActions}
+            onCompactActionsChange={setCompactActions}
             onGoHome={() => {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
@@ -1113,6 +1129,7 @@ export default function AppContainer() {
               mentionVolume={mentionVolume}
               mentionSoundType={mentionSoundType}
               showDeletedMessages={showDeletedMessages}
+              compactActions={compactActions}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>
