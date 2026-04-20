@@ -11,6 +11,8 @@ export const MESSAGE_TYPES = [
   "raid",
   "watch-streak",
   "notice",
+  "timeout",
+  "ban",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
@@ -40,6 +42,7 @@ export interface ChatMessage {
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
   rewardTitle?: string; // Title/name of the redeemed reward
+  targetUsername?: string; // Username of the target for a moderation action
   /** Twitch Shared Chat: the originating channel's ID (differs from current channel when message is shared) */
   sourceChannelId?: string;
   /** Twitch Shared Chat: the originating channel's login name */

@@ -39,6 +39,7 @@ interface ChatDisplayProps {
   onDeleteMessage?: (messageId: string) => void;
   onBanUser?: (userId: string, displayName?: string) => void;
   onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+  onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
 }
 
@@ -85,6 +86,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   onDeleteMessage,
   onBanUser,
   onTimeoutUser,
+  onUntimeoutUser,
   onWarnUser,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -479,86 +481,101 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                         }}
                       />
                       <div className="message-actions">
-                        {onReply && (
-                          <button
-                            onClick={() => onReply(msg)}
-                            className="action-button"
-                            title="Reply to this message"
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <MdReply size={12} />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleCopy(msg)}
-                          className="action-button"
-                          title="Copy message"
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <MdContentCopy size={12} />
-                        </button>
-
-                        {isModerator && modModeActive && (
+                        {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
+                          isModerator && msg.targetUsername ? (
+                            <button
+                              onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
+                              className="action-button mod-action"
+                              title="Undo moderation action"
+                              style={{ display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid currentColor', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', marginTop: '2px' }}
+                            >
+                              Undo
+                            </button>
+                          ) : null
+                        ) : (
                           <>
-                            {(() => {
-                              const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
-                              const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
-                              const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+                            {onReply && (
+                              <button
+                                onClick={() => onReply(msg)}
+                                className="action-button"
+                                title="Reply to this message"
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <MdReply size={12} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleCopy(msg)}
+                              className="action-button"
+                              title="Copy message"
+                              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <MdContentCopy size={12} />
+                            </button>
 
-                              return (
-                                <>
-                                  <button
-                                    onClick={() => onDeleteMessage?.(msg.id)}
-                                    className="action-button mod-action"
-                                    title="Delete message"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                  >
-                                    <MdDelete size={12} />
-                                  </button>
+                            {isModerator && modModeActive && (
+                              <>
+                                {(() => {
+                                  const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                                  const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                                  const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
 
-                                  {!isUnmoderatable && (
-                                    <button
-                                      onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
-                                      onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setTimeoutMenu({
-                                          x: e.clientX,
-                                          y: e.clientY,
-                                          userId: msg.userId || '',
-                                          username: msg.author
-                                        });
-                                      }}
-                                      className="action-button mod-action"
-                                      title="Timeout (10m) - Right-click for more"
-                                      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    >
-                                      <MdHourglassEmpty size={12} />
-                                    </button>
-                                  )}
-                                  {!isUnmoderatable && (
-                                    <button
-                                      onClick={() => onBanUser?.(msg.userId || '', msg.author)}
-                                      className="action-button mod-action"
-                                      title="Ban user"
-                                      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    >
-                                      <MdBlock size={12} />
-                                    </button>
-                                  )}
-                                  {!isUnmoderatable && (
-                                    <button
-                                      onClick={() => onWarnUser?.(msg.author)}
-                                      className="action-button mod-action"
-                                      title="Warn user"
-                                      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    >
-                                      <MdWarning size={12} />
-                                    </button>
-                                  )}
-                                </>
-                              );
-                            })()}
+                                  return (
+                                    <>
+                                      <button
+                                        onClick={() => onDeleteMessage?.(msg.id)}
+                                        className="action-button mod-action"
+                                        title="Delete message"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      >
+                                        <MdDelete size={12} />
+                                      </button>
+
+                                      {!isUnmoderatable && (
+                                        <button
+                                          onClick={() => onTimeoutUser?.(msg.userId || '', 600, msg.author)}
+                                          onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setTimeoutMenu({
+                                              x: e.clientX,
+                                              y: e.clientY,
+                                              userId: msg.userId || '',
+                                              username: msg.author
+                                            });
+                                          }}
+                                          className="action-button mod-action"
+                                          title="Timeout (10m) - Right-click for more"
+                                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          <MdHourglassEmpty size={12} />
+                                        </button>
+                                      )}
+                                      {!isUnmoderatable && (
+                                        <button
+                                          onClick={() => onBanUser?.(msg.userId || '', msg.author)}
+                                          className="action-button mod-action"
+                                          title="Ban user"
+                                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          <MdBlock size={12} />
+                                        </button>
+                                      )}
+                                      {!isUnmoderatable && (
+                                        <button
+                                          onClick={() => onWarnUser?.(msg.author)}
+                                          className="action-button mod-action"
+                                          title="Warn user"
+                                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          <MdWarning size={12} />
+                                        </button>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </>
+                            )}
                           </>
                         )}
                       </div>

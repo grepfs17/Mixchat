@@ -738,6 +738,20 @@ export default function ChatApp({
     }
   }, [selectedTwitchChannel, twitchSession]);
 
+  const handleUntimeout = useCallback(async (userName: string) => {
+    if (!twitchSession || !selectedTwitchChannel) return;
+    try {
+      const targetUserId = await resolveBroadcasterId(userName);
+      await removeBan(selectedTwitchChannel, twitchSession.userId, targetUserId);
+      notificationIdRef.current += 1;
+      setNotification({ message: `Removed timeout/ban for ${userName}`, type: 'success', id: notificationIdRef.current });
+    } catch (err) {
+      console.error('Failed to untimeout user:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to remove timeout', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel, twitchSession]);
+
   const handleWarn = useCallback(async (userName: string) => {
     if (!sendTwitchMessage) return;
     const reason = prompt(`Enter a warning message for @${userName}:`, 'Please follow the chat rules');
@@ -901,6 +915,7 @@ export default function ChatApp({
                   onDeleteMessage={handleDelete}
                   onBanUser={handleBan}
                   onTimeoutUser={handleTimeout}
+                  onUntimeoutUser={handleUntimeout}
                   onWarnUser={handleWarn}
                 />
               }
@@ -1100,6 +1115,7 @@ export default function ChatApp({
               onDeleteMessage={handleDelete}
               onBanUser={handleBan}
               onTimeoutUser={handleTimeout}
+              onUntimeoutUser={handleUntimeout}
               onWarnUser={handleWarn}
             />
           </div>

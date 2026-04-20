@@ -763,7 +763,8 @@ export function useTwitchChat(
         isBot: true,
         badges: {},
         badgeDetails: {},
-        messageType: 'chat', // Use chat so it renders clearly
+        messageType: 'timeout', // Specific type so we can render undo
+        targetUsername: user,
       });
     });
 
@@ -782,7 +783,8 @@ export function useTwitchChat(
         isBot: true,
         badges: {},
         badgeDetails: {},
-        messageType: 'chat',
+        messageType: 'ban',
+        targetUsername: user,
       });
     });
 
