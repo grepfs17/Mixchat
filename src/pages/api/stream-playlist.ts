@@ -186,8 +186,11 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     );
   } catch (error) {
     console.error("Stream playlist proxy error:", error);
+    const isProd = process.env.NODE_ENV === 'production';
+    const body: any = { error: "Failed to get playlist" };
+    if (!isProd) body.details = String(error ?? '');
     return new Response(
-      JSON.stringify({ error: "Failed to get playlist" }),
+      JSON.stringify(body),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }
