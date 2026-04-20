@@ -138,17 +138,54 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
         channelId = endpoint.payload.browseId;
         console.log(`[YouTube Proxy] Resolved channel ID: ${channelId}`);
       } else {
-        return new Response(
-          JSON.stringify({ error: "Could not resolve YouTube URL" }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
-        );
+        // Best-effort fallback: parse the path component and use it as a handle/ID
+        try {
+          const parsed = new URL(channelUrlParam);
+          let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+          if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
+          if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
+          if (candidate) {
+            channelId = candidate;
+            console.log(`[YouTube Proxy] Fallback using path candidate: ${channelId}`);
+          } else {
+            console.warn('[YouTube Proxy] Could not resolve URL and no path candidate found');
+            return new Response(
+              JSON.stringify({ error: "Could not resolve YouTube URL" }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+        } catch (parseErr) {
+          console.warn('[YouTube Proxy] Failed to parse URL for fallback:', parseErr);
+          return new Response(
+            JSON.stringify({ error: "Could not resolve YouTube URL" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
       }
     } catch (urlError) {
       console.warn('[YouTube Proxy] Failed to resolve URL:', urlError);
-      return new Response(
-        JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      // Try parsing pathname segment instead of failing fast.
+      try {
+        const parsed = new URL(channelUrlParam);
+        let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+        if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
+        if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
+        if (candidate) {
+          channelId = candidate;
+          console.log(`[YouTube Proxy] Fallback after resolve failure, using: ${channelId}`);
+        } else {
+          return new Response(
+            JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+            { status: 400, headers: { "Content-Type": "application/json" } },
+          );
+        }
+      } catch (parseErr) {
+        console.warn('[YouTube Proxy] Failed to parse URL for fallback after resolve error:', parseErr);
+        return new Response(
+          JSON.stringify({ error: "Failed to resolve YouTube URL" }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      }
     }
   }
 
