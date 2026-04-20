@@ -95,6 +95,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   const [previousMessageCount, setPreviousMessageCount] = useState(0);
   const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
   const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
+  const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Close timeout menu when clicking anywhere else
@@ -109,6 +110,18 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       window.removeEventListener('contextmenu', handleClick);
     };
   }, [timeoutMenu]);
+
+  useEffect(() => {
+    const handleClick = () => setMessageMenu(null);
+    if (messageMenu) {
+      window.addEventListener('click', handleClick);
+      window.addEventListener('contextmenu', handleClick);
+    }
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('contextmenu', handleClick);
+    };
+  }, [messageMenu]);
 
   useImperativeHandle(ref, () => ({
     scrollToBottom: () => {
@@ -233,6 +246,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
 
   const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } = useChatTouchGestures<ChatMessage>({
     onReply,
+    onLongPress: (msg) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, message: msg }),
     onCopyMessage,
     getContent: (msg) => msg.content,
   });
@@ -314,10 +328,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               disabled={isRefreshingEmotes}
               className="header-button"
               title={isRefreshingEmotes ? 'Reloading emotes...' : 'Reload all emotes (clears cache)'}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <MdRefresh size={14} style={{ animation: isRefreshingEmotes ? 'spin 1s linear infinite' : 'none' }} />
-              {isRefreshingEmotes ? 'Reloading...' : 'Reload Emotes'}
+              <span className="header-button-label">{isRefreshingEmotes ? 'Reloading...' : 'Reload Emotes'}</span>
             </button>
           )}
           {isModerator && (
@@ -325,7 +338,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               onClick={onToggleModMode}
               className={`header-button ${modModeActive ? 'mod-active' : ''}`}
               title={modModeActive ? 'Disable Mod Mode' : 'Enable Mod Mode'}
-              style={{ marginLeft: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <GiCrossedSwords
                 size={16}
@@ -377,6 +389,11 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                     onTouchStart={() => handleTouchStart(msg)}
                     onTouchEnd={() => handleTouchEnd(msg)}
                     onTouchMove={handleTouchMove}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMessageMenu({ x: e.clientX, y: e.clientY, message: msg });
+                    }}
                   >
                     {msg.replyTo && (
                       <div
@@ -658,6 +675,44 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
         document.body
       )
       }
+      {messageMenu && createPortal(
+        <div
+          className="context-menu message-context-menu"
+          onContextMenu={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          style={{ position: 'fixed', top: messageMenu.y, left: messageMenu.x, zIndex: 9999 }}
+        >
+          <div className="context-menu-header">@{messageMenu.message.author}</div>
+          {onReply && (
+            <button onClick={() => { onReply(messageMenu.message); setMessageMenu(null); }}>Reply</button>
+          )}
+          <button onClick={() => { handleCopy(messageMenu.message); setMessageMenu(null); }}>Copy message</button>
+          {isModerator && modModeActive && (
+            (() => {
+              const isBroadcaster = Boolean(messageMenu.message.badges && messageMenu.message.badges['broadcaster']);
+              const isModeratorMsg = Boolean(messageMenu.message.badges && messageMenu.message.badges['moderator']);
+              const isUnmoderatable = isBroadcaster || isModeratorMsg || messageMenu.message.isCurrentUser;
+              return (
+                <>
+                  {!isUnmoderatable && (
+                    <button onClick={() => { onDeleteMessage?.(messageMenu.message.id); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Delete</button>
+                  )}
+                  {!isUnmoderatable && (
+                    <button onClick={() => { onTimeoutUser?.(messageMenu.message.userId || '', 600, messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Timeout (10m)</button>
+                  )}
+                  {!isUnmoderatable && (
+                    <button onClick={() => { onBanUser?.(messageMenu.message.userId || '', messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Ban</button>
+                  )}
+                  {!isUnmoderatable && (
+                    <button onClick={() => { onWarnUser?.(messageMenu.message.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Warn</button>
+                  )}
+                </>
+              );
+            })()
+          )}
+        </div>,
+        document.body,
+      )}
     </div >
   );
 });

@@ -212,10 +212,25 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             }
         };
     }, []);
+    const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
+
+    useEffect(() => {
+        const handleClick = () => setMessageMenu(null);
+        if (messageMenu) {
+            window.addEventListener('click', handleClick);
+            window.addEventListener('contextmenu', handleClick);
+        }
+        return () => {
+            window.removeEventListener('click', handleClick);
+            window.removeEventListener('contextmenu', handleClick);
+        };
+    }, [messageMenu]);
+
     const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures<UnifiedEntry>({
         onReply: onReply
             ? (entry) => { if (entry.source === 'twitch') onReply(entry.msg as ChatMessage); }
             : undefined,
+        onLongPress: (entry) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, entry }),
         onCopyMessage,
         getContent: (entry) => {
             if (entry.source === 'twitch') return (entry.msg as ChatMessage).content;
@@ -263,6 +278,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                     onTouchStart={() => handleTouchStart(entry)}
                                     onTouchEnd={() => handleTouchEnd(entry)}
                                     onTouchMove={handleTouchMove}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setMessageMenu({ x: e.clientX, y: e.clientY, entry });
+                                    }}
                                 >
                                     {msg.replyTo && (
                                         <div className="reply-info">
@@ -523,6 +543,34 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                 </div>,
                 document.body
             )}
+            {messageMenu && createPortal(
+                <div
+                    className="context-menu message-context-menu"
+                    onContextMenu={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ position: 'fixed', top: messageMenu.y, left: messageMenu.x, zIndex: 9999 }}
+                >
+                    <div className="context-menu-header">{messageMenu.entry.source === 'twitch' ? `@${(messageMenu.entry.msg as ChatMessage).author}` : `${(messageMenu.entry.msg as YTMessage).author}`}</div>
+                    {messageMenu.entry.source === 'twitch' && onReply && (
+                        <button onClick={() => { onReply((messageMenu.entry.msg as ChatMessage)); setMessageMenu(null); }}>Reply</button>
+                    )}
+                    <button onClick={() => { onCopyMessage?.(); setMessageMenu(null); }}>Copy message</button>
+                    {isModerator && modModeActive && messageMenu.entry.source === 'twitch' && (() => {
+                        const msg = messageMenu.entry.msg as ChatMessage;
+                        const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
+                        const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
+                        const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
+                        return (
+                            <>
+                                {!isUnmoderatable && <button onClick={() => { onDeleteMessage?.(msg.id); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Delete</button>}
+                                {!isUnmoderatable && <button onClick={() => { onTimeoutUser?.(msg.userId || '', 600, msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Timeout (10m)</button>}
+                                {!isUnmoderatable && <button onClick={() => { onBanUser?.(msg.userId || '', msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Ban</button>}
+                                {!isUnmoderatable && <button onClick={() => { onWarnUser?.(msg.author); setMessageMenu(null); }} style={{ padding: '6px', background: 'transparent', color: '#e2e8f0', border: 'none', textAlign: 'left' }}>Warn</button>}
+                            </>
+                        );
+                    })()}
+                </div>, document.body)
+            }
             {timeoutMenu && createPortal(
                 <div
                     className="mod-context-menu"

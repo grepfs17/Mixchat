@@ -3,6 +3,8 @@ import { useRef, useCallback } from "react";
 interface UseChatTouchGesturesOptions<T> {
   /** Called after a 500 ms long press. Only fires when provided. */
   onReply?: (msg: T) => void;
+  /** Called after a 500 ms long press to perform a custom long-press action (e.g. open actions menu). If provided, takes precedence over `onReply`. */
+  onLongPress?: (msg: T) => void;
   /** Called after a successful double-tap copy. */
   onCopyMessage?: () => void;
   /** Extract the plain-text content to copy from a message. */
@@ -28,6 +30,7 @@ interface UseChatTouchGesturesOptions<T> {
  */
 export function useChatTouchGestures<T>({
   onReply,
+  onLongPress,
   onCopyMessage,
   getContent,
   canReply,
@@ -62,7 +65,14 @@ export function useChatTouchGestures<T>({
   const handleTouchStart = useCallback(
     (msg: T) => {
       touchStartTime.current = Date.now();
-      if (onReply && canReply?.(msg) !== false) {
+      // Prefer an explicit long-press handler (e.g. open menu). Fall back
+      // to `onReply` for backward compatibility.
+      if (onLongPress) {
+        longPressTimer.current = setTimeout(() => {
+          longPressTimer.current = null;
+          onLongPress(msg);
+        }, 500);
+      } else if (onReply && canReply?.(msg) !== false) {
         longPressTimer.current = setTimeout(() => {
           longPressTimer.current = null;
           onReply(msg);
