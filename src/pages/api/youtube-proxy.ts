@@ -2,6 +2,11 @@ import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 
+// In-memory cache for channel -> live video lookup. Short TTL to reduce repeated
+// Innertube/API calls while keeping results reasonably fresh.
+const channelLiveCache = new Map<string, { videoId: string | null; channelId: string; expires: number }>();
+const inflightLiveLookup = new Map<string, Promise<{ videoId: string | null; channelId: string }>>();
+
 /**
  * Server-side proxy for YouTube Innertube operations.
  *
@@ -189,65 +194,97 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
     }
   }
 
-  let channel: any;
-  try {
-    channel = await yt.getChannel(channelId);
-    console.log(`[YouTube Proxy] Retrieved channel info`);
-  } catch (chErr) {
-    const msg = chErr instanceof Error ? chErr.message : String(chErr);
-    const stack = chErr instanceof Error ? chErr.stack : undefined;
-    console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
-    return new Response(
-      JSON.stringify({
-        error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve channel info',
-        details: import.meta.env.MODE === 'development' ? stack : undefined,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+  // Use a short-lived cache and inflight dedupe keyed by resolved channelId to
+  // avoid repeating heavy Innertube calls when many clients ask for the same
+  // channel at once.
+  const now = Date.now();
+  const cached = channelLiveCache.get(channelId);
+  if (cached && cached.expires > now) {
+    console.log(`[YouTube Proxy] Returning cached live video for ${channelId}: ${cached.videoId}`);
+    return new Response(JSON.stringify({ videoId: cached.videoId, channelId: cached.channelId }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  // Check if the channel is currently live
-  let videoId: string | null = null;
-  try {
-    const liveStreams = await (channel as any).getLiveStreams();
-    videoId = liveStreams?.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
-  } catch (lsErr) {
-    console.warn('[YouTube Proxy] getLiveStreams failed:', lsErr);
-    // continue to try other strategies (home feed)
+  if (inflightLiveLookup.has(channelId)) {
+    // Another request is already resolving this channel — wait for it.
+    const result = await inflightLiveLookup.get(channelId);
+    return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
-  // If getLiveStreams didn't find anything, try checking the home tab
-  if (!videoId) {
-    console.log(`[YouTube Proxy] No live streams found, checking home feed...`);
+  const lookup = (async (): Promise<{ videoId: string | null; channelId: string }> => {
+    let channel: any;
     try {
-      const home = await (channel as any).getHome();
-      if (home?.contents) {
-        const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
-        for (const section of sections) {
-          const items = section.itemSectionRenderer?.contents || [];
-          for (const item of items) {
-            if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
-              videoId = item.videoRenderer?.videoId;
-              if (videoId) {
-                console.log(`[YouTube Proxy] Found live video: ${videoId}`);
-                break;
+      channel = await yt.getChannel(channelId);
+      console.log(`[YouTube Proxy] Retrieved channel info`);
+    } catch (chErr) {
+      const msg = chErr instanceof Error ? chErr.message : String(chErr);
+      const stack = chErr instanceof Error ? chErr.stack : undefined;
+      console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
+      throw chErr;
+    }
+
+    // Check if the channel is currently live
+    let videoId: string | null = null;
+    try {
+      const liveStreams = await (channel as any).getLiveStreams();
+      videoId = liveStreams?.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+    } catch (lsErr) {
+      console.warn('[YouTube Proxy] getLiveStreams failed:', lsErr);
+      // continue to try other strategies (home feed)
+    }
+
+    // If getLiveStreams didn't find anything, try checking the home tab
+    if (!videoId) {
+      console.log(`[YouTube Proxy] No live streams found, checking home feed...`);
+      try {
+        const home = await (channel as any).getHome();
+        if (home?.contents) {
+          const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
+          for (const section of sections) {
+            const items = section.itemSectionRenderer?.contents || [];
+            for (const item of items) {
+              if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
+                videoId = item.videoRenderer?.videoId;
+                if (videoId) {
+                  console.log(`[YouTube Proxy] Found live video: ${videoId}`);
+                  break;
+                }
               }
             }
+            if (videoId) break;
           }
-          if (videoId) break;
         }
+      } catch (homeError) {
+        console.warn('[YouTube Proxy] Failed to check home feed:', homeError);
       }
-    } catch (homeError) {
-      console.warn('[YouTube Proxy] Failed to check home feed:', homeError);
     }
+
+    const returnChannelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
+
+    // Cache the result briefly to avoid repeated fetches
+    try {
+      channelLiveCache.set(channelId, { videoId, channelId: returnChannelId, expires: Date.now() + 30_000 });
+    } catch (_) {
+      // ignore cache set failures in edge cases
+    }
+
+    return { videoId, channelId: returnChannelId };
+  })();
+
+  inflightLiveLookup.set(channelId, lookup);
+  try {
+    const result = await lookup;
+    return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+  } catch (e) {
+    // If the lookup failed, surface a helpful error to the client and log details
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[YouTube Proxy] Live lookup failed for', channelId, msg);
+    return new Response(JSON.stringify({ error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
+  } finally {
+    inflightLiveLookup.delete(channelId);
   }
-
-  const returnChannelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
-
-  return new Response(JSON.stringify({ videoId, channelId: returnChannelId }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 

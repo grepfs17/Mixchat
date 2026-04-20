@@ -1,4 +1,5 @@
 import { Innertube, Parser } from "youtubei.js";
+import { googleFetch } from "./google";
 
 let yt: Innertube | null = null;
 
@@ -49,19 +50,14 @@ export async function getYoutubeAccessToken(
 }
 
 export async function getYoutubeUser(accessToken: string) {
-  const res = await fetch(
+  const data = await googleFetch(
     "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     },
+    { action: "channels.list", caller: "getYoutubeUser" },
   );
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Failed to get YouTube user: ${err}`);
-  }
-
-  const data = await res.json();
   if (!data.items || data.items.length === 0) {
     throw new Error("No YouTube channel found for this user");
   }
@@ -70,7 +66,7 @@ export async function getYoutubeUser(accessToken: string) {
   return {
     userId: channel.id,
     displayName: channel.snippet.title,
-    profileImageUrl: channel.snippet.thumbnails.default.url,
+    profileImageUrl: channel.snippet.thumbnails.default?.url,
   };
 }
 

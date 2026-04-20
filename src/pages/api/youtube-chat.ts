@@ -1,5 +1,10 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { googleFetch } from "../../lib/google";
+
+// Simple in-memory cache for videoId -> liveChatId to reduce repeated Data API calls.
+const liveChatIdCache = new Map<string, { liveChatId: string | null; expires: number }>();
+const inflightVideos = new Map<string, Promise<string | null>>();
 
 /**
  * Sends a message to a YouTube live chat using the YouTube Data API v3.
@@ -41,26 +46,32 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
     }
 
-    // Step 1: Get the liveChatId for this video via the Data API
-    const videoRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}&key=${import.meta.env.YOUTUBE_API_KEY || ''}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    );
-
-    if (!videoRes.ok) {
-      const err = await videoRes.text();
-      console.error("[YouTube Chat] Failed to fetch video details:", videoRes.status, err);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch video details" }),
-        { status: videoRes.status, headers },
-      );
+    // Step 1: Get the liveChatId for this video via the Data API (with caching + inflight dedupe)
+    let liveChatId: string | null = null;
+    const now = Date.now();
+    const cached = liveChatIdCache.get(videoId);
+    if (cached && cached.expires > now) {
+      liveChatId = cached.liveChatId;
+      console.debug('[YouTube Chat] Using cached liveChatId for', videoId, liveChatId);
+    } else {
+      if (inflightVideos.has(videoId)) {
+        liveChatId = await inflightVideos.get(videoId);
+      } else {
+        const p = (async () => {
+          const url = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
+          const videoData = await googleFetch(url, { headers: { Authorization: `Bearer ${accessToken}` } }, { action: 'videos.list', videoId });
+          const id = videoData.items?.[0]?.liveStreamingDetails?.activeLiveChatId ?? null;
+          liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + 30_000 });
+          return id;
+        })();
+        inflightVideos.set(videoId, p);
+        try {
+          liveChatId = await p;
+        } finally {
+          inflightVideos.delete(videoId);
+        }
+      }
     }
-
-    const videoData = await videoRes.json();
-    const liveChatId =
-      videoData.items?.[0]?.liveStreamingDetails?.activeLiveChatId;
 
     if (!liveChatId) {
       return new Response(
@@ -70,35 +81,36 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     }
 
     // Step 2: Send the message via liveChatMessages.insert
-    const sendRes = await fetch(
-      "https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          snippet: {
-            liveChatId,
-            type: "textMessageEvent",
-            textMessageDetails: {
-              messageText: message,
-            },
+    try {
+      await googleFetch(
+        "https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-      },
-    );
-
-    if (!sendRes.ok) {
-      const err = await sendRes.text();
-      console.error("[YouTube Chat] Failed to send message:", sendRes.status, err);
-      console.error("[YouTube Chat] Google API error details:", err);
+          body: JSON.stringify({
+            snippet: {
+              liveChatId,
+              type: "textMessageEvent",
+              textMessageDetails: {
+                messageText: message,
+              },
+            },
+          }),
+        },
+        { action: 'liveChatMessages.insert', videoId, liveChatId },
+      );
+    } catch (e: any) {
+      const status = e?.status || 500;
+      console.error("[YouTube Chat] Failed to send message:", e);
       return new Response(
         JSON.stringify({
-          error: `Failed to send message: ${sendRes.status}`,
+          error: `Failed to send message: ${status}`,
+          details: import.meta.env.MODE === "development" ? e?.body ?? String(e) : undefined,
         }),
-        { status: sendRes.status, headers },
+        { status, headers },
       );
     }
 

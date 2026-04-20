@@ -81,7 +81,6 @@ StreamGrid stream cards list
   color: var(--color-text-muted);
   pointer-events: none;
   font-size: 13px;
-  line-height: 1;
 }
 
 .stream-search {
