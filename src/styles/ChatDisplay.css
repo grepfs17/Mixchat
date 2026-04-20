@@ -423,7 +423,6 @@
   font-size: 0.85em;
   color: var(--color-text-timestamp);
   font-weight: 500;
-  display: inline-flex;
   align-items: center;
   gap: 4px;
 }
