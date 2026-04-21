@@ -14,6 +14,7 @@ interface YouTubeChatProps {
   optimisticMessages?: ChatMessage[];
   fontSize?: number;
   chatFont?: ChatFont;
+  splitChatEnabled?: boolean;
 }
 
 interface MessagePart {
@@ -44,7 +45,7 @@ interface ChatMessage {
   };
 }
 
-export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false }: YouTubeChatProps) {
   /** Merge polled messages with any optimistic ones not yet confirmed by the server */
   const getTextContent = (m: ChatMessage) =>
     m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
@@ -197,7 +198,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     <div ref={containerRef} className="yt-chat-outer">
       <div
         ref={messagesContainerRef}
-        className="yt-chat-container"
+        className={`yt-chat-container${splitChatEnabled ? ' split-chat' : ''}`}
         style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
       >
         {!isConnected && (
@@ -241,8 +242,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
               );
             }
 
+            const parityClass = (index % 2 === 0) ? 'even' : 'odd';
             return (
-              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}>
+              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''} ${parityClass}`}>
                 <div className="message-single-line">
                   <span className="timestamp">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}

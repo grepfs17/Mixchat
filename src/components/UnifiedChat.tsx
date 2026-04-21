@@ -8,7 +8,7 @@ import { FONT_FAMILY_MAP } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import { getColorFromName } from '../lib/chatColors';
 import MessageBadges from './MessageBadges';
-import TwitchEventIcon from './TwitchEventIcon';
+import TwitchEventIcon, { EVENT_CONFIG } from './TwitchEventIcon';
 import YTMessageParts from './YTMessageParts';
 import { useChatTouchGestures } from '../hooks/useChatTouchGestures';
 
@@ -74,6 +74,7 @@ interface UnifiedChatProps {
     onUntimeoutUser?: (userName: string) => void;
     onWarnUser?: (userName: string) => void;
     compactActions?: boolean;
+    splitChatEnabled?: boolean;
 }
 
 const MAX_MESSAGES = 300;
@@ -110,6 +111,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     onUntimeoutUser,
     onWarnUser,
     compactActions = false,
+    splitChatEnabled = false,
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isAtBottom, setIsAtBottom] = useState(true);
@@ -247,7 +249,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         <div className="unified-chat-wrapper">
             <div
                 ref={containerRef}
-                className="messages-container unified-messages-container"
+                className={`messages-container unified-messages-container${splitChatEnabled ? ' split-chat' : ''}`}
                 style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
             >
                 {entries.length === 0 && (
@@ -263,13 +265,15 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                         const prevEntry = index > 0 ? entries[index - 1] : null;
                         const prevWasPreloaded = prevEntry?.source === 'twitch' && (prevEntry.msg as ChatMessage).isPreloaded;
                         const isFirstLive = !msg.isPreloaded && prevWasPreloaded;
+                        const parityClass = (index % 2 === 0) ? 'even' : 'odd';
                         const messageClasses = [
                             'message',
                             msg.messageType,
                             msg.isPreloaded ? 'preloaded' : '',
                             msg.isDeleted ? 'deleted' : '',
                             msg.isBot ? 'bot' : '',
-                            ((msg.mentionsUser || isMentioned) && !msg.isBot) ? 'mention' : ''
+                            ((msg.mentionsUser || isMentioned) && !msg.isBot) ? 'mention' : '',
+                            parityClass,
                         ].filter(Boolean).join(' ');
 
                         return (
@@ -277,6 +281,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                 {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
                                 <div
                                     className={messageClasses}
+                                    style={(() => {
+                                        const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
+                                        return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
+                                    })()}
                                     onTouchStart={() => handleTouchStart(entry)}
                                     onTouchEnd={() => handleTouchEnd(entry)}
                                     onTouchMove={handleTouchMove}
@@ -305,10 +313,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                             </span>
                                         </div>
                                     )}
+
+                                    <TwitchEventIcon messageType={msg.messageType} rewardTitle={msg.rewardTitle} />
+
                                     <div className="message-single-line">
                                         <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
                                         <PlatformTag source="twitch" />
-                                        <TwitchEventIcon messageType={msg.messageType} size={14} />
                                         {msg.messageType === 'redemption' && msg.rewardTitle && (
                                             <span className="reward-title-badge">{msg.rewardTitle}</span>
                                         )}
@@ -478,8 +488,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                         );
                     }
 
+                    const parityClass = (index % 2 === 0) ? 'even' : 'odd';
                     return (
-                        <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''}`}
+                        <div key={getKey(entry)} className={`message${msg.optimistic ? ' yt-optimistic' : ''} ${parityClass}`}
                             onTouchStart={() => handleTouchStart(entry)}
                             onTouchEnd={() => handleTouchEnd(entry)}
                             onTouchMove={handleTouchMove}

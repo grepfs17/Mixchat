@@ -748,3 +748,24 @@
   margin: 0;
   pointer-events: none;
 }
+
+/* Split Chat: alternate odd/even subtle background without adding spacing */
+.messages-container.split-chat {
+  /* intentionally keep default container padding/gap to avoid extra spacing */
+}
+
+.messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+  background-color: rgba(255,255,255,0.07);
+}
+
+.messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+  background-color: rgba(255,255,255,0.00);
+}
+
+.messages-container.split-chat .message:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+.unified-messages-container.split-chat {
+  /* no extra padding or gap */
+}

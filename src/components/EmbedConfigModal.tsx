@@ -24,6 +24,8 @@ interface EmbedConfigModalProps {
   onShowDeletedMessagesChange: (value: boolean) => void;
   compactActions: boolean;
   onCompactActionsChange: (value: boolean) => void;
+  splitChatEnabled: boolean;
+  onSplitChatEnabledChange: (value: boolean) => void;
   onClose: () => void;
 }
 
@@ -49,6 +51,8 @@ export default function EmbedConfigModal({
   // New prop: compact actions
   compactActions,
   onCompactActionsChange,
+  splitChatEnabled,
+  onSplitChatEnabledChange,
   onClose,
 }: EmbedConfigModalProps) {
   return (
@@ -288,6 +292,44 @@ export default function EmbedConfigModal({
           >
             <input
               type="checkbox"
+              checked={splitChatEnabled}
+              onChange={(e) => onSplitChatEnabledChange(e.target.checked)}
+              style={{
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+                accentColor: '#6366f1',
+              }}
+            />
+            <span style={{ fontSize: '14px' }}>
+              Split chat
+            </span>
+          </label>
+          <p
+            style={{
+              marginTop: '8px',
+              color: '#94a3b8',
+              fontSize: '12px',
+              margin: '8px 0 0 30px',
+            }}
+          >
+            When enabled, messages show a subtle darker background to visually separate each message.
+          </p>
+        </div>
+
+        <div style={{ marginBottom: '24px' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              color: '#e2e8f0',
+              userSelect: 'none',
+            }}
+          >
+            <input
+              type="checkbox"
               checked={useYoutubeEmbed}
               onChange={(e) => onUseYoutubeEmbedChange(e.target.checked)}
               style={{
@@ -480,7 +522,7 @@ export default function EmbedConfigModal({
               margin: '8px 0 0 30px',
             }}
           >
-            When enabled, the small reply/copy/mod buttons are hidden from each message and . You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
+            When enabled, the small reply/copy/mod buttons are hidden from each message. You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
           </p>
         </div>
 

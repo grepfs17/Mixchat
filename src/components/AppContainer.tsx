@@ -80,6 +80,7 @@ export default function AppContainer() {
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
   const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
+  const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
@@ -490,6 +491,21 @@ export default function AppContainer() {
   useEffect(() => {
     localStorage.setItem('mixchat_unify_chat', JSON.stringify(unifyChatEnabled));
   }, [unifyChatEnabled]);
+
+  // Load split chat setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_split_chat');
+    if (saved !== null) {
+      try {
+        setSplitChatEnabled(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save split chat setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_split_chat', JSON.stringify(splitChatEnabled));
+  }, [splitChatEnabled]);
 
   // Load YouTube embed setting from localStorage
   useEffect(() => {
@@ -968,6 +984,8 @@ export default function AppContainer() {
             onShowDeletedMessagesChange={setShowDeletedMessages}
             compactActions={compactActions}
             onCompactActionsChange={setCompactActions}
+            splitChatEnabled={splitChatEnabled}
+            onSplitChatEnabledChange={setSplitChatEnabled}
             onGoHome={() => {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
@@ -1130,6 +1148,7 @@ export default function AppContainer() {
               mentionSoundType={mentionSoundType}
               showDeletedMessages={showDeletedMessages}
               compactActions={compactActions}
+              splitChatEnabled={splitChatEnabled}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>

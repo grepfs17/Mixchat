@@ -212,3 +212,16 @@
   object-fit: contain;
 }
 
+/* Split Chat styling for YouTube chat container */
+.yt-chat-container.split-chat {
+  /* keep default spacing to avoid introducing visible gaps between messages */
+}
+
+.yt-chat-container.split-chat .message.odd {
+  background-color: rgba(255,255,255,0.07);
+}
+
+.yt-chat-container.split-chat .message.even {
+  background-color: rgba(255,255,255,0.00);
+}
+

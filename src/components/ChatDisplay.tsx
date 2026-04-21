@@ -43,6 +43,7 @@ interface ChatDisplayProps {
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
   compactActions?: boolean;
+  splitChatEnabled?: boolean;
 }
 
 /** Derives a stable, visually-distinct HSL color from a channel ID string. */
@@ -91,6 +92,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   onUntimeoutUser,
   onWarnUser,
   compactActions = false,
+  splitChatEnabled = false,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -357,7 +359,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
         unifiedChatSlot
       ) : (
         <div
-          className="messages-container"
+          className={`messages-container${splitChatEnabled ? ' split-chat' : ''}`}
           ref={messagesContainerRef}
           style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
         >
@@ -369,13 +371,15 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
             filteredMessages.map((msg, index) => {
               const isMentioned = currentUserDisplayName && msg.content.includes(currentUserDisplayName);
               const isFirstLive = !msg.isPreloaded && index > 0 && filteredMessages[index - 1].isPreloaded;
+              const parityClass = (index % 2 === 0) ? 'even' : 'odd';
               const messageClasses = [
                 'message',
                 msg.messageType || 'chat',
                 msg.isPreloaded ? 'preloaded' : '',
                 msg.isDeleted ? 'deleted' : '',
                 msg.isBot ? 'bot' : '',
-                ((msg.mentionsUser || isMentioned) && !msg.isBot) ? 'mention' : ''
+                ((msg.mentionsUser || isMentioned) && !msg.isBot) ? 'mention' : '',
+                parityClass,
               ].filter(Boolean).join(' ');
 
               return (

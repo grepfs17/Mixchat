@@ -59,6 +59,7 @@ interface ChatAppProps {
   mentionVolume?: number;
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
+  splitChatEnabled?: boolean;
   /** Called when the viewer clicks "Follow Raid" on the raid banner */
   onFollowRaid?: (channelLogin: string) => void;
 }
@@ -85,6 +86,7 @@ export default function ChatApp({
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
   compactActions = false,
+  splitChatEnabled = false,
   onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -913,6 +915,7 @@ export default function ChatApp({
                 onMessages={handleYtMessages}
                 fontSize={fontSize}
                 chatFont={chatFont}
+                splitChatEnabled={splitChatEnabled}
               />
             </div>
           )}
@@ -943,6 +946,7 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+                splitChatEnabled={splitChatEnabled}
               isModerator={isModerator}
               modModeActive={modModeActive}
               onToggleModMode={handleToggleModMode}
@@ -976,6 +980,7 @@ export default function ChatApp({
                   currentUserDisplayName={twitchSession?.displayName}
                   fontSize={fontSize}
                   chatFont={chatFont}
+                  splitChatEnabled={splitChatEnabled}
                   isModerator={isModerator}
                   compactActions={compactActions}
                   modModeActive={modModeActive}
@@ -1052,6 +1057,7 @@ export default function ChatApp({
                         optimisticMessages={ytOptimisticMessages}
                         fontSize={fontSize}
                         chatFont={chatFont}
+                        splitChatEnabled={splitChatEnabled}
                       />
                     )}
                     <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
@@ -1178,6 +1184,7 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
+              splitChatEnabled={splitChatEnabled}
               isModerator={isModerator}
               modModeActive={modModeActive}
               onToggleModMode={handleToggleModMode}

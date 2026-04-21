@@ -53,6 +53,8 @@ interface LoginPanelProps {
   onShowDeletedMessagesChange?: (value: boolean) => void;
   compactActions?: boolean;
   onCompactActionsChange?: (value: boolean) => void;
+  splitChatEnabled?: boolean;
+  onSplitChatEnabledChange?: (value: boolean) => void;
   onGoHome?: () => void;
   onRequestClose?: () => void;
 }
@@ -96,6 +98,8 @@ function LoginPanel({
   onShowDeletedMessagesChange,
   compactActions = false,
   onCompactActionsChange,
+  splitChatEnabled = false,
+  onSplitChatEnabledChange,
   onGoHome,
   onRequestClose,
 }: LoginPanelProps) {
@@ -355,6 +359,8 @@ function LoginPanel({
           }}
           compactActions={compactActions}
           onCompactActionsChange={(value) => { if (onCompactActionsChange) onCompactActionsChange(value); }}
+          splitChatEnabled={splitChatEnabled}
+          onSplitChatEnabledChange={(value) => { if (onSplitChatEnabledChange) onSplitChatEnabledChange(value); }}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}
