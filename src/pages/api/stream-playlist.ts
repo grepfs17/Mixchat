@@ -1,13 +1,10 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID;
-if (!GQL_CLIENT_ID) {
-  throw new Error(
-    "TWITCH_GQL_CLIENT_ID environment variable is required. " +
-    "Set it in your .env file.",
-  );
-}
+// Use configured client id, or fall back to Streamlink's public client id.
+// The public client id is used by many clients and is safe for playback token
+// requests when no private client id is provided.
+const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
 export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   // Require an active session — prevents open-proxy abuse of this endpoint.
@@ -39,36 +36,91 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     // Grab a playback access token from Twitch on the server side.
     // The token is tied to the server's IP, so everything that follows
     // must also go through the server to avoid 403 errors from the CDN.
-    const gqlRes = await fetch("https://gql.twitch.tv/gql", {
-      method: "POST",
-      headers: {
-        "Client-ID": GQL_CLIENT_ID,
-        "Content-Type": "application/json",
-        ...(twitchToken ? { Authorization: `OAuth ${twitchToken}` } : {}),
-      },
-      body: JSON.stringify({
-        operationName: "PlaybackAccessToken_Template",
-        query: `query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {
-  streamPlaybackAccessToken(channelName: $login, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isLive) {
-    value
-    signature
-    __typename
-  }
-  videoPlaybackAccessToken(id: $vodID, params: {platform: "web", playerBackend: "mediaplayer", playerType: $playerType}) @include(if: $isVod) {
-    value
-    signature
-    __typename
-  }
-}`,
-        variables: {
-          isLive: true,
-          login: channel,
-          isVod: false,
-          vodID: "",
-          playerType: "embed",
+    // Use Twitch's persisted GraphQL PlaybackAccessToken query (same approach
+    // as Streamlink). Twitch may require a client-integrity token for live
+    // playback requests; if we receive 401/403 try acquiring one and retry.
+    const gqlBody = {
+      operationName: "PlaybackAccessToken",
+      extensions: {
+        persistedQuery: {
+          version: 1,
+          // SHA256 used by Streamlink for the PlaybackAccessToken persisted query
+          sha256Hash: "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
         },
-      }),
+      },
+      variables: {
+        isLive: true,
+        login: channel,
+        isVod: false,
+        vodID: "",
+        playerType: "embed",
+        platform: "site",
+      },
+    };
+
+    const baseGqlHeaders = {
+      "Client-ID": GQL_CLIENT_ID,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
+      ...(twitchToken ? { Authorization: `OAuth ${twitchToken}` } : {}),
+    };
+
+    let gqlRes = await fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers: baseGqlHeaders,
+      body: JSON.stringify(gqlBody),
     });
+
+    // If Twitch requires a client-integrity token (401/403), try acquiring it
+    // from /integrity and retry the GQL request with Device-Id + Client-Integrity.
+    if (!gqlRes.ok && (gqlRes.status === 401 || gqlRes.status === 403)) {
+      try {
+        const integrityRes = await fetch("https://gql.twitch.tv/integrity", {
+          method: "POST",
+          headers: { "Client-ID": GQL_CLIENT_ID },
+        });
+        if (integrityRes.ok) {
+          const integrityData = await integrityRes.json();
+          const clientIntegrity = integrityData?.token;
+          // Try to capture any cookies/headers set by the integrity response
+          // and replay them when calling the GQL endpoint (mirrors browser flow).
+          const setCookie = integrityRes.headers?.get?.("set-cookie");
+          const kpsdkCt = integrityRes.headers?.get?.("x-kpsdk-ct");
+          let cookieHeader: Record<string, string> = {};
+          if (kpsdkCt) {
+            // The integrity response typically sets KP_UIDz and KP_UIDz-ssn
+            // to the same value as X-Kpsdk-Ct. Reuse that value for Cookie.
+            cookieHeader = { Cookie: `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}` };
+          } else if (setCookie) {
+            // Fallback: use raw Set-Cookie header(s) if available.
+            cookieHeader = { Cookie: setCookie.split(/\r?\n/).join('; ') };
+          }
+          if (clientIntegrity) {
+            const deviceId = Math.random().toString(36).slice(2, 34);
+            // Retry the GQL request but drop any Authorization header that
+            // might contain an expired/invalid OAuth token. Twitch will
+            // accept the client-integrity flow without Authorization for
+            // public playback tokens.
+            const retryHeaders: Record<string, string> = {
+              ...baseGqlHeaders,
+              "Device-Id": deviceId,
+              "Client-Integrity": clientIntegrity,
+              ...cookieHeader,
+            };
+            if (retryHeaders.Authorization) delete retryHeaders.Authorization;
+
+            gqlRes = await fetch("https://gql.twitch.tv/gql", {
+              method: "POST",
+              headers: retryHeaders,
+              body: JSON.stringify(gqlBody),
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to acquire client-integrity token:", err);
+      }
+    }
 
     if (!gqlRes.ok) {
       throw new Error(`Twitch GQL error: ${gqlRes.status}`);
