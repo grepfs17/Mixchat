@@ -694,7 +694,28 @@ export default function ChatApp({
                   optimistic: true,
                 };
 
-                setMessages((prev) => [...prev, optimisticMessage]);
+                setMessages((prev) => {
+                  // If a real server message already arrived (race), don't add the optimistic placeholder.
+                  const hasRealById = prev.some((m) => m.id === serverMessageId && !m.optimistic);
+                  if (hasRealById) return prev;
+
+                  // Also avoid adding if a non-optimistic message with same user/content/reply target exists.
+                  const hasRealByContent = prev.some((m) =>
+                    !m.optimistic &&
+                    m.isCurrentUser &&
+                    m.userId === twitchSession?.userId &&
+                    m.content === message &&
+                    ((m.replyTo?.id || '') === (replyingTo?.id || ''))
+                  );
+                  if (hasRealByContent) return prev;
+
+                  // Avoid double-inserting the same optimistic id
+                  const optimisticIdExists = prev.some((m) => m.id === optimisticId);
+                  if (optimisticIdExists) return prev;
+
+                  const updated = [...prev, optimisticMessage];
+                  return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
+                });
               } else {
                 // Fallback to IRC if somehow Helix didn't return an ID (shouldn't happen on success)
                 await sendTwitchMessage(message, replyingTo?.id);
