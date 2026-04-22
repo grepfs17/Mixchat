@@ -62,6 +62,69 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
 
+    // If this is a public `getLiveVideo` request and a `YT_API_KEY` is
+    // configured, attempt a lightweight Data API lookup first. This avoids
+    // initializing Innertube (which may be blocked with 403s) for simple
+    // public lookups.
+    if (action === 'getLiveVideo' && process.env.YT_API_KEY && !accessToken) {
+      try {
+        const apiKey = process.env.YT_API_KEY as string;
+        const ch = channelUrl;
+        if (ch) {
+          let apiChannelId = ch;
+
+          // Resolve a handle/URL to a canonical channel ID via search if needed
+          if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
+            try {
+              const q = String(apiChannelId || "");
+              const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
+              const sres = await fetch(searchUrl);
+              if (sres.ok) {
+                const sdata = await sres.json();
+                if (sdata.items?.length) {
+                  apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
+                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check resolved channel id', apiChannelId);
+                }
+              } else {
+                if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check channel search failed', sres.status);
+              }
+            } catch (se) {
+              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check channel search error', se);
+            }
+          }
+
+          // If we have a proper channel ID, query for live videos on that channel.
+          if (/^UC[\w-]{22}$/.test(apiChannelId)) {
+            try {
+              const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
+              const r = await fetch(apiUrl);
+              if (r.ok) {
+                const data = await r.json();
+                if (data.items?.length) {
+                  const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
+                  if (vid) {
+                    console.log('[YouTube Proxy] Data API pre-check found live video', vid);
+                    return new Response(JSON.stringify({ videoId: vid, channelId: apiChannelId }), { status: 200, headers: { "Content-Type": "application/json" } });
+                  }
+                } else {
+                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check returned no live items', data);
+                }
+              } else {
+                if (DEBUG_YT) {
+                  const txt = await r.text().catch(() => '<no body>');
+                  console.warn('[YouTube Proxy] Data API pre-check live search failed', r.status, txt);
+                }
+              }
+            } catch (err) {
+              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check error', err);
+            }
+          }
+        }
+      } catch (err) {
+        if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check outer error', err);
+      }
+    }
+
     // Initialize Innertube client with request-scoped diagnostics so failures
     // include the action and channel context in server logs.
     let yt: any;

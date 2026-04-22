@@ -34,6 +34,11 @@ interface ChatMessage {
  * Prevents unbounded memory growth from malicious or accidental videoId flooding. */
 const MAX_ACTIVE_SESSIONS = 50;
 
+// When YouTube responds with repeated 403s for a given video, avoid retrying
+// continuously by marking the video as temporarily blocked for a short period.
+const CHAT_FAILURE_COOLDOWN_MS = parseInt(process.env.YT_CHAT_COOLDOWN_MS || '600000', 10); // default 10 minutes
+const blockedChatFailures = new Map<string, number>();
+
 // Global map to store active LiveChat sessions
 const activeLiveChats = new Map<
   string,
@@ -73,6 +78,17 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     let chatSession = activeLiveChats.get(videoId);
 
     if (!chatSession) {
+      // If recent attempts for this video resulted in blocking 403s, avoid
+      // retrying until the cooldown expires.
+      const blockedUntil = blockedChatFailures.get(videoId);
+      if (blockedUntil && blockedUntil > Date.now()) {
+        return new Response(
+          JSON.stringify({ error: 'Live chat temporarily unavailable due to repeated failures' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
       // Evict the least-recently-used session when the cap is reached.
       if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
         let oldestKey = '';
@@ -86,10 +102,10 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         if (oldestKey) activeLiveChats.delete(oldestKey);
       }
 
-      const yt = await getInnertube();
-      const info = await yt.getInfo(videoId);
+        const yt = await getInnertube();
+        const info = await yt.getInfo(videoId);
 
-      const chat = info.getLiveChat();
+        const chat = info.getLiveChat();
       const messages: ChatMessage[] = [];
 
       // Helper: map an AddChatItemAction item to a ChatMessage
@@ -159,16 +175,31 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         }, 30000);
       });
 
-      console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
-      chat.start();
+        console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
+        chat.start();
 
-      chatSession = {
-        chat,
-        messages,
-        lastUpdate: Date.now(),
-      };
+        chatSession = {
+          chat,
+          messages,
+          lastUpdate: Date.now(),
+        };
 
-      activeLiveChats.set(videoId, chatSession);
+        activeLiveChats.set(videoId, chatSession);
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // If we see 403 responses (common when Google blocks scraping), mark
+        // the video as temporarily blocked so we don't repeatedly hammer
+        // YouTube and spam logs.
+        if (msg && msg.includes('status code 403')) {
+          blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
+          console.error('[YouTube Chat] Marking chat temporarily blocked for', videoId, 'due to 403');
+          return new Response(
+            JSON.stringify({ error: 'Live chat temporarily unavailable due to YouTube blocking (403)' }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        throw err;
+      }
     }
 
     chatSession.lastUpdate = Date.now();
