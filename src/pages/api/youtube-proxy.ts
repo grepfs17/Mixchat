@@ -62,11 +62,13 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
 
-    // If this is a public `getLiveVideo` request and a `YT_API_KEY` is
-    // configured, attempt a lightweight Data API lookup first. This avoids
-    // initializing Innertube (which may be blocked with 403s) for simple
-    // public lookups.
-    if (action === 'getLiveVideo' && process.env.YT_API_KEY && !accessToken) {
+    // If this is a `getLiveVideo` request and a `YT_API_KEY` is configured,
+    // optionally prefer the Data API to avoid initializing Innertube (which
+    // may be blocked with 403s) for simple public lookups. Set
+    // `YT_PREFER_DATA_API=1` to force preferring the Data API even when an
+    // access cookie is present.
+    const preferDataApi = process.env.YT_PREFER_DATA_API === '1';
+    if (action === 'getLiveVideo' && process.env.YT_API_KEY && (!accessToken || preferDataApi)) {
       try {
         const apiKey = process.env.YT_API_KEY as string;
         const ch = channelUrl;
