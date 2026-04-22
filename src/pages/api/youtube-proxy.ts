@@ -226,6 +226,67 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
       const msg = chErr instanceof Error ? chErr.message : String(chErr);
       const stack = chErr instanceof Error ? chErr.stack : undefined;
       console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
+
+      // If Innertube's getChannel fails (often due to hosting/network blocks),
+      // attempt a Data API fallback when a `YT_API_KEY` is configured. This
+      // helps recover from environment-level 403s by using the official API.
+      if (process.env.YT_API_KEY) {
+        try {
+          const apiKey = process.env.YT_API_KEY as string;
+          let apiChannelId = channelId;
+
+          if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
+            try {
+              const q = String(apiChannelId || channelUrlParam || "");
+              const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
+              const sres = await fetch(searchUrl);
+              if (sres.ok) {
+                const sdata = await sres.json();
+                if (sdata.items?.length) {
+                  apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
+                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API resolved channel id (fallback)', apiChannelId);
+                }
+              } else {
+                if (DEBUG_YT) {
+                  const txt = await sres.text().catch(() => '<no body>');
+                  console.warn('[YouTube Proxy] Data API channel search failed (fallback)', sres.status, txt);
+                }
+              }
+            } catch (se) {
+              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API channel search error (fallback)', se);
+            }
+          }
+
+          if (/^UC[\w-]{22}$/.test(apiChannelId)) {
+            const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
+            const r = await fetch(apiUrl);
+            if (r.ok) {
+              const data = await r.json();
+              if (data.items?.length) {
+                const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
+                if (vid) {
+                  console.log('[YouTube Proxy] Data API fallback found live video', vid);
+                  const returnChannelId = apiChannelId;
+                  try {
+                    channelLiveCache.set(channelId, { videoId: vid, channelId: returnChannelId, expires: Date.now() + 30_000 });
+                  } catch (_) {}
+                  return { videoId: vid, channelId: returnChannelId };
+                }
+              } else {
+                if (DEBUG_YT) console.debug('[YouTube Proxy] Data API fallback returned no live items', data);
+              }
+            } else {
+              if (DEBUG_YT) {
+                const txt = await r.text().catch(() => '<no body>');
+                console.warn('[YouTube Proxy] Data API search failed (fallback)', r.status, txt);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[YouTube Proxy] Data API fallback after getChannel failure error:', err);
+        }
+      }
+
       throw chErr;
     }
 
