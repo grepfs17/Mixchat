@@ -44,14 +44,23 @@ export async function getInnertube() {
       innertubeOptions.fetch = async (input: any, init?: any) => {
         const headers: Record<string, string> = {};
         const orig = init?.headers;
-        if (orig instanceof Headers) {
-          for (const [k, v] of orig.entries()) headers[k.toLowerCase()] = v;
-        } else if (orig && typeof orig === 'object') {
-          for (const k of Object.keys(orig)) {
+        if (orig) {
+          // Support different Headers implementations (global Headers, undici/node-fetch,
+          // youtubei.js Platform.shim.Headers, or a plain object). Copy existing headers
+          // so we don't drop values like `Cookie` or `Authorization` that Innertube sets.
+          if (typeof (orig as any).entries === 'function') {
+            for (const [k, v] of (orig as any).entries()) {
+              try { headers[k.toLowerCase()] = String(v); } catch {}
+            }
+          } else if (typeof (orig as any).forEach === 'function') {
             try {
-              headers[k.toLowerCase()] = String((orig as any)[k]);
-            } catch {
-              // ignore
+              (orig as any).forEach((v: any, k: string) => {
+                try { headers[k.toLowerCase()] = String(v); } catch {}
+              });
+            } catch {}
+          } else if (typeof orig === 'object') {
+            for (const k of Object.keys(orig)) {
+              try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch {}
             }
           }
         }
@@ -59,6 +68,13 @@ export async function getInnertube() {
         if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
+
+        if (process.env.YT_DEBUG === '1') {
+          try {
+            const keys = Object.keys(headers);
+            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), keys.includes('cookie') ? '(cookie present)' : '(no cookie)');
+          } catch {}
+        }
 
         const merged = { ...(init || {}), headers };
         try {
