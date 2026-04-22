@@ -77,6 +77,16 @@ export async function getInnertube() {
         }
 
         const merged = { ...(init || {}), headers };
+        // Compute a readable URL string for logging (handles Request objects).
+        let urlStr = '';
+        try {
+          if (typeof input === 'string') urlStr = input;
+          else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
+          else urlStr = String(input);
+        } catch {
+          urlStr = String(input);
+        }
+
         try {
           const res = await fetch(input, merged);
           // If the response is an error (4xx/5xx), clone and log a truncated
@@ -88,17 +98,17 @@ export async function getInnertube() {
               const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
               
               if (res.status === 403 && (short.includes('automated queries') || short.includes('Sorry...'))) {
-                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries". Consider providing a valid YT_COOKIE or using a different IP/User-Agent.', { url: String(input) });
+                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries". Consider providing a valid YT_COOKIE or using a different IP/User-Agent.', { url: urlStr });
               } else {
-                console.error('[YouTube Proxy] innertube fetch non-OK', { url: String(input), status: res.status, body: short });
+                console.error('[YouTube Proxy] innertube fetch non-OK', { url: urlStr, status: res.status, body: short });
               }
             } catch (logErr) {
-              console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: String(input), status: res.status, err: String(logErr) });
+              console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: urlStr, status: res.status, err: String(logErr) });
             }
           } else {
             if (process.env.YT_DEBUG === '1') {
               try {
-                console.debug('[YouTube Proxy] innertube fetch', { url: String(input), status: res.status });
+                console.debug('[YouTube Proxy] innertube fetch', { url: urlStr, status: res.status });
               } catch {}
             }
           }
