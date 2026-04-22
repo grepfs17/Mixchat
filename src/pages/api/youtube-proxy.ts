@@ -265,6 +265,67 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
       }
     }
 
+    // Optional Data API fallback: if a `YT_API_KEY` is configured, query the
+    // YouTube Data API for live broadcasts on this channel. This is useful
+    // in production when Innertube fails or is blocked by hosting limits.
+    if (!videoId && process.env.YT_API_KEY) {
+      try {
+        const apiKey = process.env.YT_API_KEY as string;
+        let apiChannelId = (channel as any)?.basic_info?.id || (channel as any)?.header?.author?.id || channelId;
+
+        // If we don't have a canonical channel ID, try resolving via a
+        // lightweight channel search using the Data API.
+        if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
+          try {
+            const q = String(apiChannelId || channelUrlParam || "");
+            const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
+            const sres = await fetch(searchUrl);
+            if (sres.ok) {
+              const sdata = await sres.json();
+              if (sdata.items?.length) {
+                apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
+                if (DEBUG_YT) console.debug('[YouTube Proxy] Data API resolved channel id', apiChannelId);
+              }
+            } else {
+              if (DEBUG_YT) {
+                const txt = await sres.text().catch(() => '<no body>');
+                console.warn('[YouTube Proxy] Data API channel search failed', sres.status, txt);
+              }
+            }
+          } catch (se) {
+            if (DEBUG_YT) console.warn('[YouTube Proxy] Data API channel search error', se);
+          }
+        }
+
+        // If we now have a proper channel ID, query for live videos on that channel.
+        if (/^UC[\w-]{22}$/.test(apiChannelId)) {
+          const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
+          const r = await fetch(apiUrl);
+          if (r.ok) {
+            const data = await r.json();
+            if (data.items?.length) {
+              const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
+              if (vid) {
+                videoId = vid;
+                console.log('[YouTube Proxy] Data API found live video', videoId);
+              }
+            } else {
+              if (DEBUG_YT) console.debug('[YouTube Proxy] Data API returned no live items', data);
+            }
+          } else {
+            if (DEBUG_YT) {
+              const txt = await r.text().catch(() => '<no body>');
+              console.warn('[YouTube Proxy] Data API search failed', r.status, txt);
+            }
+          }
+        } else {
+          if (DEBUG_YT) console.debug('[YouTube Proxy] Data API fallback skipped: could not resolve channelId', apiChannelId);
+        }
+      } catch (err) {
+        console.warn('[YouTube Proxy] Data API fallback error:', err);
+      }
+    }
+
     // Fallback: some channels expose a `/live` redirect (e.g. /@handle/live)
     // which will redirect to the watch page when live. Try following that
     // redirect as a last-resort method to obtain the `v` query param.

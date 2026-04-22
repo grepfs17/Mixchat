@@ -29,6 +29,44 @@ export async function getInnertube() {
       innertubeOptions.generate_session_locally =
         process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
 
+      // Provide a custom fetch wrapper to ensure outgoing Innertube requests
+      // include a realistic User-Agent and Referer header which helps avoid
+      // YouTube rejecting requests with 403 in some hosting environments.
+      const baseUserAgent = innertubeOptions.user_agent;
+      innertubeOptions.fetch = async (input: any, init?: any) => {
+        const headers: Record<string, string> = {};
+        const orig = init?.headers;
+        if (orig instanceof Headers) {
+          for (const [k, v] of orig.entries()) headers[k.toLowerCase()] = v;
+        } else if (orig && typeof orig === 'object') {
+          for (const k of Object.keys(orig)) {
+            try {
+              headers[k.toLowerCase()] = String((orig as any)[k]);
+            } catch {
+              // ignore
+            }
+          }
+        }
+
+        if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
+        if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
+        if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
+
+        const merged = { ...(init || {}), headers };
+        try {
+          const res = await fetch(input, merged);
+          if (process.env.YT_DEBUG === '1') {
+            try {
+              console.debug('[YouTube Proxy] innertube fetch', { url: String(input), status: res.status });
+            } catch {}
+          }
+          return res;
+        } catch (err) {
+          if (process.env.YT_DEBUG === '1') console.error('[YouTube Proxy] innertube fetch failed', err);
+          throw err;
+        }
+      };
+
       yt = await Innertube.create(innertubeOptions);
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
