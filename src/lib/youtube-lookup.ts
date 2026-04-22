@@ -52,7 +52,7 @@ async function dataApiFindLiveForChannelId(apiChannelId: string): Promise<string
   }
 }
 
-async function dataApiFindLiveForParam(channelParam: string): Promise<LookupResult | null> {
+export async function dataApiFindLiveForParam(channelParam: string): Promise<LookupResult | null> {
   if (!process.env.YT_API_KEY) return null;
   let apiChannelId = channelParam;
   if (!CHANNEL_ID_RE.test(apiChannelId)) {
@@ -114,7 +114,7 @@ function isActuallyLive(video: any): boolean {
   return false;
 }
 
-async function resolveChannelId(channelParam: string, yt?: any): Promise<string | null> {
+export async function resolveChannelId(channelParam: string, yt?: any): Promise<string | null> {
   const isFullUrl = YT_URL_RE.test(channelParam);
   if (isFullUrl) {
     if (yt?.resolveURL) {
@@ -128,6 +128,11 @@ async function resolveChannelId(channelParam: string, yt?: any): Promise<string 
     return null;
   }
   return channelParam;
+}
+
+export function isValidYouTubeParam(param: string | null | undefined): boolean {
+  if (!param) return false;
+  return YT_URL_RE.test(param) || CHANNEL_ID_RE.test(param) || HANDLE_RE.test(param);
 }
 
 export async function findLiveForChannel(channelParam: string, options?: { yt?: any; preferDataApi?: boolean; ttl?: number; debug?: boolean }): Promise<LookupResult> {
