@@ -2,6 +2,9 @@ import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 
+// Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
+const DEBUG_YT = process.env.YT_DEBUG === '1' || import.meta.env?.MODE === 'development';
+
 // In-memory cache for channel -> live video lookup. Short TTL to reduce repeated
 // Innertube/API calls while keeping results reasonably fresh.
 const channelLiveCache = new Map<string, { videoId: string | null; channelId: string; expires: number }>();
@@ -64,14 +67,15 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     let yt: any;
     try {
       yt = await getInnertube();
+      console.debug('[YouTube Proxy] Innertube initialized');
     } catch (ytErr) {
       const msg = ytErr instanceof Error ? ytErr.message : String(ytErr);
       const stack = ytErr instanceof Error ? ytErr.stack : undefined;
       console.error('[YouTube Proxy] getInnertube() failed', { message: msg, stack, action, channelUrl });
       return new Response(
         JSON.stringify({
-          error: import.meta.env.MODE === 'development' ? msg : 'YouTube service unavailable',
-          details: import.meta.env.MODE === 'development' ? stack : undefined,
+          error: DEBUG_YT ? msg : 'YouTube service unavailable',
+          details: DEBUG_YT ? stack : undefined,
         }),
         { status: 503, headers: { "Content-Type": "application/json" } },
       );
@@ -99,8 +103,8 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     });
     return new Response(
       JSON.stringify({
-        error: import.meta.env.MODE === 'development' ? errorMessage : "YouTube proxy request failed",
-        details: import.meta.env.MODE === 'development' ? errorStack : undefined,
+        error: DEBUG_YT ? errorMessage : "YouTube proxy request failed",
+        details: DEBUG_YT ? errorStack : undefined,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
@@ -281,7 +285,7 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
     // If the lookup failed, surface a helpful error to the client and log details
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[YouTube Proxy] Live lookup failed for', channelId, msg);
-    return new Response(JSON.stringify({ error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
   } finally {
     inflightLiveLookup.delete(channelId);
   }
@@ -344,8 +348,8 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
     console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
     return new Response(
       JSON.stringify({
-        error: import.meta.env.MODE === 'development' ? msg : 'Failed to retrieve channel info',
-        details: import.meta.env.MODE === 'development' ? stack : undefined,
+        error: DEBUG_YT ? msg : 'Failed to retrieve channel info',
+        details: DEBUG_YT ? stack : undefined,
       }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
