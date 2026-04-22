@@ -55,10 +55,23 @@ export async function getInnertube() {
         const merged = { ...(init || {}), headers };
         try {
           const res = await fetch(input, merged);
-          if (process.env.YT_DEBUG === '1') {
+          // If the response is an error (4xx/5xx), clone and log a truncated
+          // response body to help diagnose why YouTube is rejecting the request.
+          if (res.status >= 400) {
             try {
-              console.debug('[YouTube Proxy] innertube fetch', { url: String(input), status: res.status });
-            } catch {}
+              const clone = res.clone();
+              const txt = await clone.text().catch(() => '<failed to read body>');
+              const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
+              console.error('[YouTube Proxy] innertube fetch non-OK', { url: String(input), status: res.status, body: short });
+            } catch (logErr) {
+              console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: String(input), status: res.status, err: String(logErr) });
+            }
+          } else {
+            if (process.env.YT_DEBUG === '1') {
+              try {
+                console.debug('[YouTube Proxy] innertube fetch', { url: String(input), status: res.status });
+              } catch {}
+            }
           }
           return res;
         } catch (err) {
