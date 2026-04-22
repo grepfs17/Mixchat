@@ -13,7 +13,23 @@ Parser.setParserErrorHandler(({ error_type }) => {
 export async function getInnertube() {
   if (!yt) {
     try {
-      yt = await Innertube.create();
+      // Allow a configurable user agent and session generation to avoid
+      // server-side 403s from YouTube. These options are documented by
+      // youtubei.js (Innertube.create options).
+      const innertubeOptions: Record<string, any> = {};
+      if (process.env.YT_USER_AGENT) {
+        innertubeOptions.user_agent = process.env.YT_USER_AGENT;
+      } else {
+        // A modern desktop UA helps avoid some server-side blocking.
+        innertubeOptions.user_agent =
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36';
+      }
+      // Generate a session locally by default to reduce extra network requests
+      // that may be blocked. Set YT_GENERATE_SESSION_LOCALLY=false to disable.
+      innertubeOptions.generate_session_locally =
+        process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
+
+      yt = await Innertube.create(innertubeOptions);
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
