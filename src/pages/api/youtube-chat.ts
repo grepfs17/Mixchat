@@ -55,7 +55,10 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       console.debug('[YouTube Chat] Using cached liveChatId for', videoId, liveChatId);
     } else {
       if (inflightVideos.has(videoId)) {
-        liveChatId = await inflightVideos.get(videoId);
+        const p = inflightVideos.get(videoId);
+        if (p) {
+          liveChatId = await p;
+        }
       } else {
         const p = (async () => {
           const url = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;

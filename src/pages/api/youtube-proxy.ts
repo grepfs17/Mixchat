@@ -10,6 +10,213 @@ const DEBUG_YT = process.env.YT_DEBUG === '1' || import.meta.env?.MODE === 'deve
 const channelLiveCache = new Map<string, { videoId: string | null; channelId: string; expires: number }>();
 const inflightLiveLookup = new Map<string, Promise<{ videoId: string | null; channelId: string }>>();
 
+// Common regexes and helpers to dedupe repeated logic
+const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
+const HANDLE_RE = /^@[\w.]{1,100}$/;
+const YT_URL_RE = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i;
+
+function getChannelParam(url: URL | URLSearchParams): string | null {
+  if (url instanceof URLSearchParams) return url.get("channelUrl");
+  return url.searchParams.get("channelUrl");
+}
+
+function isValidYouTubeParam(param: string | null | undefined): boolean {
+  if (!param) return false;
+  return YT_URL_RE.test(param) || CHANNEL_ID_RE.test(param) || HANDLE_RE.test(param);
+}
+
+function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
+  try {
+    const parsed = new URL(channelUrlParam);
+    let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+    if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
+    if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
+    return candidate || null;
+  } catch {
+    return null;
+  }
+}
+
+async function dataApiResolveChannelId(q: string): Promise<string | null> {
+  if (!process.env.YT_API_KEY) return null;
+  try {
+    const apiKey = process.env.YT_API_KEY as string;
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
+    const sres = await fetch(searchUrl);
+    if (!sres.ok) {
+      if (DEBUG_YT) {
+        const txt = await sres.text().catch(() => '<no body>');
+        console.warn('[YouTube Proxy] Data API resolve channel failed', sres.status, txt);
+      }
+      return null;
+    }
+    const sdata = await sres.json();
+    if (sdata.items?.length) return sdata.items[0]?.id?.channelId || null;
+    return null;
+  } catch (err) {
+    if (DEBUG_YT) console.warn('[YouTube Proxy] Data API resolve channel error', err);
+    return null;
+  }
+}
+
+async function dataApiFindLiveForChannelId(apiChannelId: string): Promise<string | null> {
+  if (!process.env.YT_API_KEY) return null;
+  try {
+    const apiKey = process.env.YT_API_KEY as string;
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
+    const r = await fetch(apiUrl);
+    if (!r.ok) {
+      if (DEBUG_YT) {
+        const txt = await r.text().catch(() => '<no body>');
+        console.warn('[YouTube Proxy] Data API search failed', r.status, txt);
+      }
+      return null;
+    }
+    const data = await r.json();
+    if (data.items?.length) return data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId || null;
+    return null;
+  } catch (err) {
+    if (DEBUG_YT) console.warn('[YouTube Proxy] Data API live search error', err);
+    return null;
+  }
+}
+
+async function dataApiFindLiveForParam(channelParam: string): Promise<{ videoId: string; channelId: string } | null> {
+  if (!process.env.YT_API_KEY) return null;
+  let apiChannelId = channelParam;
+  if (!CHANNEL_ID_RE.test(apiChannelId)) {
+    const resolved = await dataApiResolveChannelId(apiChannelId);
+    if (resolved) apiChannelId = resolved;
+  }
+  if (!CHANNEL_ID_RE.test(apiChannelId)) {
+    if (DEBUG_YT) console.debug('[YouTube Proxy] Data API skipped: could not resolve channelId', apiChannelId);
+    return null;
+  }
+  const vid = await dataApiFindLiveForChannelId(apiChannelId);
+  if (vid) return { videoId: vid, channelId: apiChannelId };
+  return null;
+}
+
+async function resolveChannelId(channelParam: string, yt?: any): Promise<string | null> {
+  const isFullUrl = YT_URL_RE.test(channelParam);
+  if (isFullUrl) {
+    // Prefer Innertube's resolver when available, then path parsing as fallback
+    if (yt?.resolveURL) {
+      try {
+        const endpoint = await yt.resolveURL(channelParam);
+        if (endpoint?.payload?.browseId) return endpoint.payload.browseId;
+      } catch (err) {
+        if (DEBUG_YT) console.warn('[YouTube Proxy] resolveURL failed', err);
+      }
+    }
+    const pathCandidate = parsePathCandidateFromUrl(channelParam);
+    if (pathCandidate) return pathCandidate;
+    return null; // purposefully mirror original behavior for full URLs
+  }
+  return channelParam;
+}
+
+async function redirectFallbackLive(channelParam: string): Promise<string | null> {
+  try {
+    const candidates: string[] = [];
+    const isFullUrl = YT_URL_RE.test(channelParam);
+    if (isFullUrl) {
+      candidates.push(channelParam.replace(/\/$/, "") + "/live");
+    } else if (channelParam.startsWith("@")) {
+      candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, "")}/live`);
+    } else if (CHANNEL_ID_RE.test(channelParam)) {
+      candidates.push(`https://www.youtube.com/channel/${channelParam}/live`);
+    } else {
+      candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, "")}/live`);
+    }
+
+    for (const candidate of candidates) {
+      try {
+        if (DEBUG_YT) console.log('[YouTube Proxy] Trying redirect fallback:', candidate);
+        const res = await fetch(candidate, { method: 'GET', redirect: 'follow' });
+        const finalUrl = res.url || '';
+        if (finalUrl.includes('watch?v=')) {
+          const parsed = new URL(finalUrl);
+          const vid = parsed.searchParams.get('v');
+          if (vid) return vid;
+        }
+        if ((res.status === 301 || res.status === 302) && !finalUrl) {
+          const loc = res.headers.get('location');
+          if (loc && loc.includes('watch?v=')) {
+            const parsed = new URL(loc.startsWith('http') ? loc : `https://www.youtube.com${loc}`);
+            const vid = parsed.searchParams.get('v');
+            if (vid) return vid;
+          }
+        }
+      } catch (err) {
+        if (DEBUG_YT) console.warn('[YouTube Proxy] Redirect fallback fetch failed for', candidate, err);
+        continue;
+      }
+    }
+  } catch (err) {
+    if (DEBUG_YT) console.warn('[YouTube Proxy] Redirect fallback error:', err);
+  }
+  return null;
+}
+
+async function findLiveWithInnertube(channelIdCandidate: string, channelParam: string, yt: any): Promise<{ videoId: string | null; channelId: string }> {
+  let channel: any = null;
+  try {
+    channel = await yt.getChannel(channelIdCandidate);
+  } catch (chErr) {
+    if (DEBUG_YT) {
+      const msg = chErr instanceof Error ? chErr.message : String(chErr);
+      console.warn('[YouTube Proxy] getChannel failed', msg, channelIdCandidate);
+    }
+    channel = null;
+  }
+
+  let videoId: string | null = null;
+  if (channel) {
+    try {
+      const liveStreams = await (channel as any).getLiveStreams();
+      videoId = liveStreams?.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
+    } catch (lsErr) {
+      if (DEBUG_YT) console.warn('[YouTube Proxy] getLiveStreams failed:', lsErr);
+    }
+
+    if (!videoId) {
+      try {
+        const home = await (channel as any).getHome();
+        if (home?.contents) {
+          const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
+          for (const section of sections) {
+            const items = section.itemSectionRenderer?.contents || [];
+            for (const item of items) {
+              if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
+                videoId = item.videoRenderer?.videoId;
+                if (videoId) break;
+              }
+            }
+            if (videoId) break;
+          }
+        }
+      } catch (homeError) {
+        if (DEBUG_YT) console.warn('[YouTube Proxy] Failed to check home feed:', homeError);
+      }
+    }
+  }
+
+  // Optional Data API fallback
+  if (!videoId && process.env.YT_API_KEY) {
+    const apiResult = await dataApiFindLiveForParam(channelParam);
+    if (apiResult?.videoId) return { videoId: apiResult.videoId, channelId: apiResult.channelId };
+  }
+
+  // Redirect fallback
+  if (!videoId) {
+    const redirectVid = await redirectFallbackLive(channelParam);
+    if (redirectVid) return { videoId: redirectVid, channelId: channel ? ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '') : '' };
+  }
+
+  return { videoId, channelId: channel ? ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '') : '' };
+}
+
 /**
  * Server-side proxy for YouTube Innertube operations.
  *
@@ -70,56 +277,18 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     const preferDataApi = process.env.YT_PREFER_DATA_API === '1';
     if (action === 'getLiveVideo' && process.env.YT_API_KEY && (!accessToken || preferDataApi)) {
       try {
-        const apiKey = process.env.YT_API_KEY as string;
         const ch = channelUrl;
         if (ch) {
-          let apiChannelId = ch;
-
-          // Resolve a handle/URL to a canonical channel ID via search if needed
-          if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
-            try {
-              const q = String(apiChannelId || "");
-              const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
-              const sres = await fetch(searchUrl);
-              if (sres.ok) {
-                const sdata = await sres.json();
-                if (sdata.items?.length) {
-                  apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
-                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check resolved channel id', apiChannelId);
-                }
-              } else {
-                if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check channel search failed', sres.status);
-              }
-            } catch (se) {
-              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check channel search error', se);
+          try {
+            const apiResult = await dataApiFindLiveForParam(ch);
+            if (apiResult?.videoId) {
+              console.log('[YouTube Proxy] Data API pre-check found live video', apiResult.videoId);
+              return new Response(JSON.stringify({ videoId: apiResult.videoId, channelId: apiResult.channelId }), { status: 200, headers: { "Content-Type": "application/json" } });
+            } else {
+              if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check returned no live items or could not resolve channel', ch);
             }
-          }
-
-          // If we have a proper channel ID, query for live videos on that channel.
-          if (/^UC[\w-]{22}$/.test(apiChannelId)) {
-            try {
-              const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
-              const r = await fetch(apiUrl);
-              if (r.ok) {
-                const data = await r.json();
-                if (data.items?.length) {
-                  const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
-                  if (vid) {
-                    console.log('[YouTube Proxy] Data API pre-check found live video', vid);
-                    return new Response(JSON.stringify({ videoId: vid, channelId: apiChannelId }), { status: 200, headers: { "Content-Type": "application/json" } });
-                  }
-                } else {
-                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check returned no live items', data);
-                }
-              } else {
-                if (DEBUG_YT) {
-                  const txt = await r.text().catch(() => '<no body>');
-                  console.warn('[YouTube Proxy] Data API pre-check live search failed', r.status, txt);
-                }
-              }
-            } catch (err) {
-              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check error', err);
-            }
+          } catch (err) {
+            if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check error', err);
           }
         }
       } catch (err) {
@@ -176,354 +345,49 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   }
 };
 
-//Get the live video for a YouTube channel
+// Get the live video for a YouTube channel
 async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
-  const channelUrl = url instanceof URLSearchParams ? null : url.searchParams.get("channelUrl");
-  const channelUrlParam = channelUrl || (url instanceof URL ? url.searchParams.get("channelUrl") : url.get("channelUrl"));
-
+  const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
-    return new Response(
-      JSON.stringify({ error: "channelUrl parameter is required" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  // Validate that channelUrl is actually a YouTube URL/handle/channel ID.
-  const isYouTubeUrl =
-    /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrlParam) ||
-    /^UC[\w-]{22}$/.test(channelUrlParam) ||
-    /^@[\w.]{1,100}$/.test(channelUrlParam);
-  if (!isYouTubeUrl) {
-    return new Response(
-      JSON.stringify({ error: "Invalid channelUrl" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+  if (!isValidYouTubeParam(channelUrlParam)) {
+    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   let channelId = channelUrlParam;
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
 
-  const isFullUrl = channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be');
-
+  const isFullUrl = YT_URL_RE.test(channelUrlParam);
   if (isFullUrl) {
-    try {
-      const endpoint = await (yt as any).resolveURL(channelUrlParam);
-      if (endpoint?.payload?.browseId) {
-        channelId = endpoint.payload.browseId;
-        console.log(`[YouTube Proxy] Resolved channel ID: ${channelId}`);
-      } else {
-        // Best-effort fallback: parse the path component and use it as a handle/ID
-        try {
-          const parsed = new URL(channelUrlParam);
-          let candidate = (parsed.pathname || "").replace(/^\/+/, "");
-          if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
-          if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
-          if (candidate) {
-            channelId = candidate;
-            console.log(`[YouTube Proxy] Fallback using path candidate: ${channelId}`);
-          } else {
-            console.warn('[YouTube Proxy] Could not resolve URL and no path candidate found');
-            return new Response(
-              JSON.stringify({ error: "Could not resolve YouTube URL" }),
-              { status: 400, headers: { "Content-Type": "application/json" } },
-            );
-          }
-        } catch (parseErr) {
-          console.warn('[YouTube Proxy] Failed to parse URL for fallback:', parseErr);
-          return new Response(
-            JSON.stringify({ error: "Could not resolve YouTube URL" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
-      }
-    } catch (urlError) {
-      console.warn('[YouTube Proxy] Failed to resolve URL:', urlError);
-      // Try parsing pathname segment instead of failing fast.
-      try {
-        const parsed = new URL(channelUrlParam);
-        let candidate = (parsed.pathname || "").replace(/^\/+/, "");
-        if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
-        if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
-        if (candidate) {
-          channelId = candidate;
-          console.log(`[YouTube Proxy] Fallback after resolve failure, using: ${channelId}`);
-        } else {
-          return new Response(
-            JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-            { status: 400, headers: { "Content-Type": "application/json" } },
-          );
-        }
-      } catch (parseErr) {
-        console.warn('[YouTube Proxy] Failed to parse URL for fallback after resolve error:', parseErr);
-        return new Response(
-          JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
-        );
-      }
+    const resolved = await resolveChannelId(channelUrlParam, yt);
+    if (!resolved) {
+      return new Response(JSON.stringify({ error: "Could not resolve YouTube URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
+    channelId = resolved;
+    console.log(`[YouTube Proxy] Resolved channel ID: ${channelId}`);
   }
 
-  // Use a short-lived cache and inflight dedupe keyed by resolved channelId to
-  // avoid repeating heavy Innertube calls when many clients ask for the same
-  // channel at once.
+  // Use a short-lived cache and inflight dedupe keyed by resolved channelId
   const now = Date.now();
   const cached = channelLiveCache.get(channelId);
   if (cached && cached.expires > now) {
     console.log(`[YouTube Proxy] Returning cached live video for ${channelId}: ${cached.videoId}`);
-    return new Response(JSON.stringify({ videoId: cached.videoId, channelId: cached.channelId }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ videoId: cached.videoId, channelId: cached.channelId }), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
   if (inflightLiveLookup.has(channelId)) {
-    // Another request is already resolving this channel — wait for it.
     const result = await inflightLiveLookup.get(channelId);
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   }
 
   const lookup = (async (): Promise<{ videoId: string | null; channelId: string }> => {
-    let channel: any;
+    const result = await findLiveWithInnertube(channelId, channelUrlParam, yt);
     try {
-      channel = await yt.getChannel(channelId);
-      console.log(`[YouTube Proxy] Retrieved channel info`);
-    } catch (chErr) {
-      const msg = chErr instanceof Error ? chErr.message : String(chErr);
-      const stack = chErr instanceof Error ? chErr.stack : undefined;
-      console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
-
-      // If Innertube's getChannel fails (often due to hosting/network blocks),
-      // attempt a Data API fallback when a `YT_API_KEY` is configured. This
-      // helps recover from environment-level 403s by using the official API.
-      if (process.env.YT_API_KEY) {
-        try {
-          const apiKey = process.env.YT_API_KEY as string;
-          let apiChannelId = channelId;
-
-          if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
-            try {
-              const q = String(apiChannelId || channelUrlParam || "");
-              const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
-              const sres = await fetch(searchUrl);
-              if (sres.ok) {
-                const sdata = await sres.json();
-                if (sdata.items?.length) {
-                  apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
-                  if (DEBUG_YT) console.debug('[YouTube Proxy] Data API resolved channel id (fallback)', apiChannelId);
-                }
-              } else {
-                if (DEBUG_YT) {
-                  const txt = await sres.text().catch(() => '<no body>');
-                  console.warn('[YouTube Proxy] Data API channel search failed (fallback)', sres.status, txt);
-                }
-              }
-            } catch (se) {
-              if (DEBUG_YT) console.warn('[YouTube Proxy] Data API channel search error (fallback)', se);
-            }
-          }
-
-          if (/^UC[\w-]{22}$/.test(apiChannelId)) {
-            const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
-            const r = await fetch(apiUrl);
-            if (r.ok) {
-              const data = await r.json();
-              if (data.items?.length) {
-                const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
-                if (vid) {
-                  console.log('[YouTube Proxy] Data API fallback found live video', vid);
-                  const returnChannelId = apiChannelId;
-                  try {
-                    channelLiveCache.set(channelId, { videoId: vid, channelId: returnChannelId, expires: Date.now() + 30_000 });
-                  } catch (_) {}
-                  return { videoId: vid, channelId: returnChannelId };
-                }
-              } else {
-                if (DEBUG_YT) console.debug('[YouTube Proxy] Data API fallback returned no live items', data);
-              }
-            } else {
-              if (DEBUG_YT) {
-                const txt = await r.text().catch(() => '<no body>');
-                console.warn('[YouTube Proxy] Data API search failed (fallback)', r.status, txt);
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('[YouTube Proxy] Data API fallback after getChannel failure error:', err);
-        }
-      }
-
-      throw chErr;
-    }
-
-    // Check if the channel is currently live
-    let videoId: string | null = null;
-    try {
-      const liveStreams = await (channel as any).getLiveStreams();
-      videoId = liveStreams?.videos && liveStreams.videos.length > 0 ? liveStreams.videos[0].id : null;
-    } catch (lsErr) {
-      console.warn('[YouTube Proxy] getLiveStreams failed:', lsErr);
-      // continue to try other strategies (home feed)
-    }
-
-    // If getLiveStreams didn't find anything, try checking the home tab
-    if (!videoId) {
-      console.log(`[YouTube Proxy] No live streams found, checking home feed...`);
-      try {
-        const home = await (channel as any).getHome();
-        if (home?.contents) {
-          const sections = home.contents.tabContents?.sectionListRenderer?.contents || [];
-          for (const section of sections) {
-            const items = section.itemSectionRenderer?.contents || [];
-            for (const item of items) {
-              if (item.videoRenderer?.isLiveContent || item.videoRenderer?.badges?.some((b: any) => b.metadataBadgeRenderer?.label === 'LIVE')) {
-                videoId = item.videoRenderer?.videoId;
-                if (videoId) {
-                  console.log(`[YouTube Proxy] Found live video: ${videoId}`);
-                  break;
-                }
-              }
-            }
-            if (videoId) break;
-          }
-        }
-      } catch (homeError) {
-        console.warn('[YouTube Proxy] Failed to check home feed:', homeError);
-      }
-    }
-
-    // Optional Data API fallback: if a `YT_API_KEY` is configured, query the
-    // YouTube Data API for live broadcasts on this channel. This is useful
-    // in production when Innertube fails or is blocked by hosting limits.
-    if (!videoId && process.env.YT_API_KEY) {
-      try {
-        const apiKey = process.env.YT_API_KEY as string;
-        let apiChannelId = (channel as any)?.basic_info?.id || (channel as any)?.header?.author?.id || channelId;
-
-        // If we don't have a canonical channel ID, try resolving via a
-        // lightweight channel search using the Data API.
-        if (!/^UC[\w-]{22}$/.test(apiChannelId)) {
-          try {
-            const q = String(apiChannelId || channelUrlParam || "");
-            const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1&key=${apiKey}`;
-            const sres = await fetch(searchUrl);
-            if (sres.ok) {
-              const sdata = await sres.json();
-              if (sdata.items?.length) {
-                apiChannelId = sdata.items[0]?.id?.channelId || apiChannelId;
-                if (DEBUG_YT) console.debug('[YouTube Proxy] Data API resolved channel id', apiChannelId);
-              }
-            } else {
-              if (DEBUG_YT) {
-                const txt = await sres.text().catch(() => '<no body>');
-                console.warn('[YouTube Proxy] Data API channel search failed', sres.status, txt);
-              }
-            }
-          } catch (se) {
-            if (DEBUG_YT) console.warn('[YouTube Proxy] Data API channel search error', se);
-          }
-        }
-
-        // If we now have a proper channel ID, query for live videos on that channel.
-        if (/^UC[\w-]{22}$/.test(apiChannelId)) {
-          const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1&key=${apiKey}`;
-          const r = await fetch(apiUrl);
-          if (r.ok) {
-            const data = await r.json();
-            if (data.items?.length) {
-              const vid = data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId;
-              if (vid) {
-                videoId = vid;
-                console.log('[YouTube Proxy] Data API found live video', videoId);
-              }
-            } else {
-              if (DEBUG_YT) console.debug('[YouTube Proxy] Data API returned no live items', data);
-            }
-          } else {
-            if (DEBUG_YT) {
-              const txt = await r.text().catch(() => '<no body>');
-              console.warn('[YouTube Proxy] Data API search failed', r.status, txt);
-            }
-          }
-        } else {
-          if (DEBUG_YT) console.debug('[YouTube Proxy] Data API fallback skipped: could not resolve channelId', apiChannelId);
-        }
-      } catch (err) {
-        console.warn('[YouTube Proxy] Data API fallback error:', err);
-      }
-    }
-
-    // Fallback: some channels expose a `/live` redirect (e.g. /@handle/live)
-    // which will redirect to the watch page when live. Try following that
-    // redirect as a last-resort method to obtain the `v` query param.
-    if (!videoId) {
-      try {
-        const candidates: string[] = [];
-        if (isFullUrl && channelUrlParam) {
-          candidates.push(channelUrlParam.replace(/\/$/, "") + "/live");
-        } else if (channelUrlParam?.startsWith("@")) {
-          candidates.push(`https://www.youtube.com/${channelUrlParam.replace(/^\/+/, "")}/live`);
-        } else if (/^UC[\w-]{22}$/.test(channelUrlParam || "")) {
-          candidates.push(`https://www.youtube.com/channel/${channelUrlParam}/live`);
-        } else if (channelUrlParam) {
-          candidates.push(`https://www.youtube.com/${channelUrlParam.replace(/^\/+/, "")}/live`);
-        }
-
-        for (const candidate of candidates) {
-          try {
-            console.log('[YouTube Proxy] Trying redirect fallback:', candidate);
-            const res = await fetch(candidate, { method: 'GET', redirect: 'follow' });
-            const finalUrl = res.url || '';
-            if (finalUrl.includes('watch?v=')) {
-              try {
-                const parsed = new URL(finalUrl);
-                const vid = parsed.searchParams.get('v');
-                if (vid) {
-                  videoId = vid;
-                  console.log(`[YouTube Proxy] Redirect fallback found video: ${videoId}`);
-                  break;
-                }
-              } catch (uErr) {
-                // ignore parsing errors and continue
-              }
-            }
-
-            // If the response itself was a redirect (manual redirect response), check Location
-            if (!videoId && (res.status === 301 || res.status === 302)) {
-              const loc = res.headers.get('location');
-              if (loc && loc.includes('watch?v=')) {
-                try {
-                  const parsedLoc = new URL(loc.startsWith('http') ? loc : `https://www.youtube.com${loc}`);
-                  const vid = parsedLoc.searchParams.get('v');
-                  if (vid) {
-                    videoId = vid;
-                    console.log(`[YouTube Proxy] Redirect (Location) fallback found video: ${videoId}`);
-                    break;
-                  }
-                } catch (_p) {
-                  // noop
-                }
-              }
-            }
-          } catch (fetchErr) {
-            console.warn('[YouTube Proxy] Redirect fallback fetch failed for', candidate, fetchErr);
-            continue;
-          }
-        }
-      } catch (rbErr) {
-        console.warn('[YouTube Proxy] Redirect fallback error:', rbErr);
-      }
-    }
-
-    const returnChannelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
-
-    // Cache the result briefly to avoid repeated fetches
-    try {
-      channelLiveCache.set(channelId, { videoId, channelId: returnChannelId, expires: Date.now() + 30_000 });
-    } catch (_) {
-      // ignore cache set failures in edge cases
-    }
-
-    return { videoId, channelId: returnChannelId };
+      channelLiveCache.set(channelId, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + 30_000 });
+    } catch (_) {}
+    return result;
   })();
 
   inflightLiveLookup.set(channelId, lookup);
@@ -531,7 +395,6 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
     const result = await lookup;
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
-    // If the lookup failed, surface a helpful error to the client and log details
     const msg = e instanceof Error ? e.message : String(e);
     console.error('[YouTube Proxy] Live lookup failed for', channelId, msg);
     return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
@@ -542,50 +405,23 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
 
 
 async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
-  const channelUrl = url instanceof URLSearchParams ? null : url.searchParams.get("channelUrl");
-  const channelUrlParam = channelUrl || (url instanceof URL ? url.searchParams.get("channelUrl") : url.get("channelUrl"));
-
+  const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
-    return new Response(
-      JSON.stringify({ error: "channelUrl parameter is required" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  // Validate that channelUrl is actually a YouTube URL/handle/channel ID.
-  const isYouTubeUrl =
-    /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrlParam) ||
-    /^UC[\w-]{22}$/.test(channelUrlParam) ||
-    /^@[\w.]{1,100}$/.test(channelUrlParam);
-  if (!isYouTubeUrl) {
-    return new Response(
-      JSON.stringify({ error: "Invalid channelUrl" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+  if (!isValidYouTubeParam(channelUrlParam)) {
+    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
   let channelId = channelUrlParam;
-
-  const isFullUrl = channelUrlParam.includes('youtube.com') || channelUrlParam.includes('youtu.be');
-
+  const isFullUrl = YT_URL_RE.test(channelUrlParam);
   if (isFullUrl) {
-    try {
-      const endpoint = await (yt as any).resolveURL(channelUrlParam);
-      if (endpoint?.payload?.browseId) {
-        channelId = endpoint.payload.browseId;
-      } else {
-        return new Response(
-          JSON.stringify({ error: "Could not resolve YouTube URL" }),
-          { status: 400, headers: { "Content-Type": "application/json" } },
-        );
-      }
-    } catch (urlError) {
-      console.warn('[YouTube Proxy] Failed to resolve URL:', urlError);
-      return new Response(
-        JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+    const resolved = await resolveChannelId(channelUrlParam, yt);
+    if (!resolved) {
+      return new Response(JSON.stringify({ error: "Could not resolve YouTube URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
+    channelId = resolved;
   }
 
   let channel: any;
@@ -595,22 +431,11 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
     const msg = chErr instanceof Error ? chErr.message : String(chErr);
     const stack = chErr instanceof Error ? chErr.stack : undefined;
     console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
-    return new Response(
-      JSON.stringify({
-        error: DEBUG_YT ? msg : 'Failed to retrieve channel info',
-        details: DEBUG_YT ? stack : undefined,
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve channel info', details: DEBUG_YT ? stack : undefined }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
+
   const basicInfo = (channel as any).basic_info || {};
   const headerInfo = (channel as any).header?.author || {};
 
-  return new Response(
-    JSON.stringify({
-      channelId: basicInfo.id || headerInfo.id || "",
-      displayName: basicInfo.title || headerInfo.title || "",
-    }),
-    { status: 200, headers: { "Content-Type": "application/json" } },
-  );
+  return new Response(JSON.stringify({ channelId: basicInfo.id || headerInfo.id || "", displayName: basicInfo.title || headerInfo.title || "" }), { status: 200, headers: { "Content-Type": "application/json" } });
 }

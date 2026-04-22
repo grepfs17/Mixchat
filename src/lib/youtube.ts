@@ -24,6 +24,14 @@ export async function getInnertube() {
         innertubeOptions.user_agent =
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36';
       }
+
+      // Allow passing a persistent cookie to authenticate InnerTube requests.
+      // This is often required to avoid 403 Forbidden ("automated queries")
+      // errors in hosting environments where the IP is flagged by YouTube.
+      if (process.env.YT_COOKIE) {
+        innertubeOptions.cookie = process.env.YT_COOKIE;
+      }
+
       // Generate a session locally by default to reduce extra network requests
       // that may be blocked. Set YT_GENERATE_SESSION_LOCALLY=false to disable.
       innertubeOptions.generate_session_locally =
@@ -62,7 +70,12 @@ export async function getInnertube() {
               const clone = res.clone();
               const txt = await clone.text().catch(() => '<failed to read body>');
               const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
-              console.error('[YouTube Proxy] innertube fetch non-OK', { url: String(input), status: res.status, body: short });
+              
+              if (res.status === 403 && (short.includes('automated queries') || short.includes('Sorry...'))) {
+                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries". Consider providing a valid YT_COOKIE or using a different IP/User-Agent.', { url: String(input) });
+              } else {
+                console.error('[YouTube Proxy] innertube fetch non-OK', { url: String(input), status: res.status, body: short });
+              }
             } catch (logErr) {
               console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: String(input), status: res.status, err: String(logErr) });
             }
@@ -117,13 +130,21 @@ export async function getYoutubeAccessToken(
 }
 
 export async function getYoutubeUser(accessToken: string) {
-  const data = await googleFetch(
-    "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-    { action: "channels.list", caller: "getYoutubeUser" },
-  );
+  let data: any;
+  try {
+    data = await googleFetch(
+      "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+      { action: "channels.list", caller: "getYoutubeUser" },
+    );
+  } catch (e: any) {
+    const raw = e?.message ?? String(e);
+    // Strip generic prefix from googleFetch where present
+    const message = raw.replace(/^Google API error:\s*/i, '');
+    throw new Error(`Failed to get YouTube user: ${message}`);
+  }
 
   if (!data.items || data.items.length === 0) {
     throw new Error("No YouTube channel found for this user");
