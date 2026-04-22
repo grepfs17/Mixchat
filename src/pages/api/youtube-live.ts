@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
+import findLiveForChannel from "../../lib/youtube-lookup";
 
 // Simple in-memory cache to save on InnerTube calls
 const liveVideoCache = new Map<string, { videoId: string | null; expires: number }>();
@@ -14,180 +15,18 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     "Cache-Control": "public, max-age=60",
   };
 
-  if (!checkRateLimit(`${clientAddress}:youtube-live`, 30, 60_000)) {
-    return new Response(
-      JSON.stringify({ error: "Too many requests" }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
-    );
-  }
-
-  try {
-    const channelUrl = url.searchParams.get("channelUrl");
-
-    if (!channelUrl) {
-      return new Response(
-        JSON.stringify({ error: "channelUrl parameter is required" }),
-        { status: 400, headers },
-      );
-    }
-
-    // Validate that channelUrl is actually a YouTube URL.
-    const isYouTubeUrl =
-      /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(channelUrl) ||
-      /^UC[\w-]{22}$/.test(channelUrl) || // raw channel ID
-      /^@[\w.]{1,100}$/.test(channelUrl);  // handle e.g. @username
-    if (!isYouTubeUrl) {
-      return new Response(
-        JSON.stringify({ error: "Invalid channelUrl" }),
-        { status: 400, headers },
-      );
-    }
-
-    // Check cache
-    const now = Date.now();
-    const cached = liveVideoCache.get(channelUrl);
-    if (cached && cached.expires > now) {
-      return new Response(JSON.stringify({ videoId: cached.videoId }), { status: 200, headers });
-    }
-
-    let yt: any;
-    try {
-      yt = await getInnertube();
-    } catch (ytErr) {
-      const msg = ytErr instanceof Error ? ytErr.message : String(ytErr);
-      const stack = ytErr instanceof Error ? ytErr.stack : undefined;
-      console.error('[YouTube Live] getInnertube() failed', { message: msg, stack, channelUrl });
-      return new Response(
-        JSON.stringify({
-          error: DEBUG_YT ? msg : 'YouTube service unavailable',
-          details: DEBUG_YT ? stack : undefined,
-        }),
-        { status: 503, headers },
-      );
-    }
-
-    // Resolve the URL to get the channel ID/endpoint
-    let channelId = channelUrl;
+    // Delegate the heavy lifting to the centralized lookup function
     console.log(`[YouTube Live] Looking up channel: ${channelUrl}`);
-
-    const isFullUrl = channelUrl.includes('youtube.com') || channelUrl.includes('youtu.be');
-
-    if (isFullUrl) {
-      try {
-        const endpoint = await (yt as any).resolveURL(channelUrl);
-        console.log(`[YouTube Live] Resolved URL to endpoint:`, endpoint?.payload);
-        if (endpoint?.payload?.browseId) {
-          channelId = endpoint.payload.browseId;
-          console.log(`[YouTube Live] Using channel ID: ${channelId}`);
-        } else {
-          // Try a best-effort fallback: parse the path component and use that
-          // as a handle/channel identifier (e.g. @name, channel/UC..., user/name).
-          try {
-            const parsed = new URL(channelUrl);
-            let candidate = (parsed.pathname || "").replace(/^\/+/, "");
-            if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
-            if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
-            if (candidate) {
-              channelId = candidate;
-              console.log(`[YouTube Live] Fallback using path candidate: ${channelId}`);
-            } else {
-              console.warn('[YouTube Live] Could not resolve URL and no path candidate found');
-            }
-          } catch (parseErr) {
-            console.warn('[YouTube Live] Failed to parse URL for fallback:', parseErr);
-          }
-        }
-      } catch (urlError) {
-        console.warn('Failed to resolve URL:', urlError);
-        // Best-effort fallback: try parsing pathname segment instead of failing fast.
-        try {
-          const parsed = new URL(channelUrl);
-          let candidate = (parsed.pathname || "").replace(/^\/+/, "");
-          if (candidate.startsWith("channel/")) candidate = candidate.split("/")[1] || candidate;
-          if (candidate.startsWith("user/")) candidate = candidate.split("/")[1] || candidate;
-          if (candidate) {
-            channelId = candidate;
-            console.log(`[YouTube Live] Fallback after resolve failure, using: ${channelId}`);
-          } else {
-            return new Response(
-              JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-              { status: 400, headers },
-            );
-          }
-        } catch (parseErr) {
-          console.warn('[YouTube Live] Failed to parse URL for fallback after resolve error:', parseErr);
-          return new Response(
-            JSON.stringify({ error: "Failed to resolve YouTube URL" }),
-            { status: 400, headers },
-          );
-        }
-      }
-    }
-
-    // Use getChannel with the resolved ID. handles (@name) are supported by getChannel directly.
-    let channel: any;
-    try {
-      channel = await yt.getChannel(channelId);
-      console.log(`[YouTube Live] Retrieved channel info`);
-    } catch (chErr) {
-      const msg = chErr instanceof Error ? chErr.message : String(chErr);
-      const stack = chErr instanceof Error ? chErr.stack : undefined;
-      console.error('[YouTube Live] getChannel failed', { message: msg, stack, channelId, channelUrl });
-      
-      channel = null;
-    }
-
-    /** Returns true if a video object from youtubei.js is currently live */
-    function isActuallyLive(video: any): boolean {
-      if (video.is_live === true) return true;
-      // Some builds expose it under thumbnailOverlays or badges
-      const badges: any[] = video.badges ?? [];
-      if (badges.some((b: any) =>
-        b?.metadataBadgeRenderer?.label === 'LIVE' ||
-        b?.liveBadge != null
-      )) return true;
-      // thumbnailOverlays array (compact video renderers)
-      const overlays: any[] = video.thumbnailOverlays ?? [];
-      if (overlays.some((o: any) =>
-        o?.thumbnailOverlayTimeStatusRenderer?.style === 'LIVE'
-      )) return true;
-      return false;
-    }
-
     let videoId: string | null = null;
-
-    if (channel) {
-      // 1. Try getLiveStreams() — filter to only currently-live videos
-      try {
-        const liveStreams = await (channel as any).getLiveStreams();
-        const videos: any[] = liveStreams?.videos ?? [];
-        console.log(`[YouTube Live] getLiveStreams returned ${videos.length} video(s)`);
-        const liveVideo = videos.find((v: any) => isActuallyLive(v));
-        if (liveVideo) {
-          videoId = liveVideo.id ?? liveVideo.videoId ?? null;
-          console.log(`[YouTube Live] Found live video via getLiveStreams: ${videoId}`);
-        } else if (videos.length > 0) {
-          // Fallback: take the first result even if we can't confirm live status
-          // (some youtubei.js builds don't expose is_live)
-          videoId = videos[0].id ?? videos[0].videoId ?? null;
-          console.log(`[YouTube Live] getLiveStreams: taking first result (live status unknown): ${videoId}`);
-        }
-      } catch (liveStreamsError) {
-        console.warn('[YouTube Live] getLiveStreams failed:', liveStreamsError);
-      }
-
-      // 2. If no result, try the Videos tab and look for a live indicator
-      if (!videoId) {
-        console.log('[YouTube Live] No result from getLiveStreams, trying getVideos...');
-        try {
-          const videosTab = await (channel as any).getVideos();
-          const videos: any[] = videosTab?.videos ?? [];
-          const liveVideo = videos.find((v: any) => isActuallyLive(v));
-          if (liveVideo) {
-            videoId = liveVideo.id ?? liveVideo.videoId ?? null;
-            console.log(`[YouTube Live] Found live video in Videos tab: ${videoId}`);
-          }
-        } catch (videosError) {
+    let returnChannelId = '';
+    try {
+      const result = await findLiveForChannel(channelUrl, { yt, debug: DEBUG_YT });
+      videoId = result.videoId;
+      returnChannelId = result.channelId;
+      if (videoId) console.log(`[YouTube Live] Found live video: ${videoId}`);
+    } catch (err) {
+      console.warn('[YouTube Live] Central lookup failed:', err);
+    }
           console.warn('[YouTube Live] getVideos failed:', videosError);
         }
       }
@@ -359,9 +198,6 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     console.log(`[YouTube Live] Final videoId: ${videoId}`);
 
     liveVideoCache.set(channelUrl, { videoId, expires: now + LIVE_CACHE_TTL });
-
-    // Try to get channel ID from metadata or basic_info
-    const returnChannelId = channel ? ((channel as any).basic_info?.id || (channel as any).header?.author?.id || "") : "";
 
     return new Response(JSON.stringify({ videoId, channelId: returnChannelId }), {
       status: 200,

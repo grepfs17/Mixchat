@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
+import findLiveForChannel from "../../lib/youtube-lookup";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 // Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
@@ -356,50 +357,15 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
     return new Response(JSON.stringify({ error: "Invalid channelUrl" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  let channelId = channelUrlParam;
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
 
-  const isFullUrl = YT_URL_RE.test(channelUrlParam);
-  if (isFullUrl) {
-    const resolved = await resolveChannelId(channelUrlParam, yt);
-    if (!resolved) {
-      return new Response(JSON.stringify({ error: "Could not resolve YouTube URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
-    }
-    channelId = resolved;
-    console.log(`[YouTube Proxy] Resolved channel ID: ${channelId}`);
-  }
-
-  // Use a short-lived cache and inflight dedupe keyed by resolved channelId
-  const now = Date.now();
-  const cached = channelLiveCache.get(channelId);
-  if (cached && cached.expires > now) {
-    console.log(`[YouTube Proxy] Returning cached live video for ${channelId}: ${cached.videoId}`);
-    return new Response(JSON.stringify({ videoId: cached.videoId, channelId: cached.channelId }), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
-
-  if (inflightLiveLookup.has(channelId)) {
-    const result = await inflightLiveLookup.get(channelId);
-    return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
-  }
-
-  const lookup = (async (): Promise<{ videoId: string | null; channelId: string }> => {
-    const result = await findLiveWithInnertube(channelId, channelUrlParam, yt);
-    try {
-      channelLiveCache.set(channelId, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + 30_000 });
-    } catch (_) {}
-    return result;
-  })();
-
-  inflightLiveLookup.set(channelId, lookup);
   try {
-    const result = await lookup;
+    const result = await findLiveForChannel(channelUrlParam, { yt, debug: DEBUG_YT });
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error('[YouTube Proxy] Live lookup failed for', channelId, msg);
+    console.error('[YouTube Proxy] Live lookup failed for', channelUrlParam, msg);
     return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
-  } finally {
-    inflightLiveLookup.delete(channelId);
   }
 }
 
