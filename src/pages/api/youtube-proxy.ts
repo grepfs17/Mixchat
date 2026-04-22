@@ -265,6 +265,68 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
       }
     }
 
+    // Fallback: some channels expose a `/live` redirect (e.g. /@handle/live)
+    // which will redirect to the watch page when live. Try following that
+    // redirect as a last-resort method to obtain the `v` query param.
+    if (!videoId) {
+      try {
+        const candidates: string[] = [];
+        if (isFullUrl && channelUrlParam) {
+          candidates.push(channelUrlParam.replace(/\/$/, "") + "/live");
+        } else if (channelUrlParam?.startsWith("@")) {
+          candidates.push(`https://www.youtube.com/${channelUrlParam.replace(/^\/+/, "")}/live`);
+        } else if (/^UC[\w-]{22}$/.test(channelUrlParam || "")) {
+          candidates.push(`https://www.youtube.com/channel/${channelUrlParam}/live`);
+        } else if (channelUrlParam) {
+          candidates.push(`https://www.youtube.com/${channelUrlParam.replace(/^\/+/, "")}/live`);
+        }
+
+        for (const candidate of candidates) {
+          try {
+            console.log('[YouTube Proxy] Trying redirect fallback:', candidate);
+            const res = await fetch(candidate, { method: 'GET', redirect: 'follow' });
+            const finalUrl = res.url || '';
+            if (finalUrl.includes('watch?v=')) {
+              try {
+                const parsed = new URL(finalUrl);
+                const vid = parsed.searchParams.get('v');
+                if (vid) {
+                  videoId = vid;
+                  console.log(`[YouTube Proxy] Redirect fallback found video: ${videoId}`);
+                  break;
+                }
+              } catch (uErr) {
+                // ignore parsing errors and continue
+              }
+            }
+
+            // If the response itself was a redirect (manual redirect response), check Location
+            if (!videoId && (res.status === 301 || res.status === 302)) {
+              const loc = res.headers.get('location');
+              if (loc && loc.includes('watch?v=')) {
+                try {
+                  const parsedLoc = new URL(loc.startsWith('http') ? loc : `https://www.youtube.com${loc}`);
+                  const vid = parsedLoc.searchParams.get('v');
+                  if (vid) {
+                    videoId = vid;
+                    console.log(`[YouTube Proxy] Redirect (Location) fallback found video: ${videoId}`);
+                    break;
+                  }
+                } catch (_p) {
+                  // noop
+                }
+              }
+            }
+          } catch (fetchErr) {
+            console.warn('[YouTube Proxy] Redirect fallback fetch failed for', candidate, fetchErr);
+            continue;
+          }
+        }
+      } catch (rbErr) {
+        console.warn('[YouTube Proxy] Redirect fallback error:', rbErr);
+      }
+    }
+
     const returnChannelId = (channel as any).basic_info?.id || (channel as any).header?.author?.id || "";
 
     // Cache the result briefly to avoid repeated fetches
