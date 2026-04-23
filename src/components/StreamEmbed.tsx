@@ -309,58 +309,6 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     };
   }, [channelName, playerType]);
 
-
-  if (!channelName) {
-    // If user is not logged in, show logo + Login with Twitch button
-    if (!twitchConnected) {
-      return (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            backgroundColor: '#0a0a0a',
-            color: '#999',
-            fontSize: '14px',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          <img src="/logo.png" alt="Mixchat" style={{ height: 115 }} />
-          <button
-            onClick={() => onTwitchLogin && onTwitchLogin()}
-            style={{
-              backgroundColor: '#6441a5',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            Login with Twitch
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          backgroundColor: '#0a0a0a',
-          color: '#999',
-          fontSize: '14px',
-        }}
-      >
-        Select a channel to view stream
-      </div>
-    );
-  }
   if (playerType === 'embed') {
     // Wait for the parent domain to resolve before mounting the player.
     // Mounting with 'localhost' then immediately remounting with the real domain

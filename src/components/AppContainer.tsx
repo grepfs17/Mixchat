@@ -885,6 +885,7 @@ export default function AppContainer() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--color-bg-primary)', gap: '28px' }}>
         <img src="/logo.png" alt="Mixchat" style={{ width: 'clamp(180px, 30vw, 280px)', height: 'auto', opacity: 0.95 }} />
+        <p style={{ fontSize: '14px', color: '#666', textAlign: 'center' }}>Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions</p>
         <button
           onClick={handleTwitchLogin}
           style={{
