@@ -89,91 +89,100 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
       }
 
       try {
-      // Evict the least-recently-used session when the cap is reached.
-      if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
-        let oldestKey = '';
-        let oldestTime = Infinity;
-        for (const [key, s] of activeLiveChats) {
-          if (s.lastUpdate < oldestTime) {
-            oldestTime = s.lastUpdate;
-            oldestKey = key;
+        // Evict the least-recently-used session when the cap is reached.
+        if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
+          let oldestKey = '';
+          let oldestTime = Infinity;
+          for (const [key, s] of activeLiveChats) {
+            if (s.lastUpdate < oldestTime) {
+              oldestTime = s.lastUpdate;
+              oldestKey = key;
+            }
           }
+          if (oldestKey) activeLiveChats.delete(oldestKey);
         }
-        if (oldestKey) activeLiveChats.delete(oldestKey);
-      }
 
         const yt = await getInnertube();
         const info = await yt.getInfo(videoId);
 
         const chat = info.getLiveChat();
-      const messages: ChatMessage[] = [];
+        const messages: ChatMessage[] = [];
 
-      // Helper: map an AddChatItemAction item to a ChatMessage
-      const parseChatItem = (item: any): ChatMessage | null => {
-        if (item.is(YTNodes.LiveChatTextMessage)) {
-          return parseLiveChatMessage(item);
-        }
-        if (item.is(YTNodes.LiveChatPaidMessage)) {
-          return parsePaidMessage(item);
-        }
-        if (item.is(YTNodes.LiveChatPaidSticker)) {
-          return parsePaidSticker(item);
-        }
-        if (item.is(YTNodes.LiveChatMembershipItem)) {
-          return parseMembershipItem(item);
-        }
-        return null;
-      };
+        // Helper: map an AddChatItemAction item to a ChatMessage
+        const parseChatItem = (item: any): ChatMessage | null => {
+          if (item.is(YTNodes.LiveChatTextMessage)) {
+            return parseLiveChatMessage(item);
+          }
+          if (item.is(YTNodes.LiveChatPaidMessage)) {
+            return parsePaidMessage(item);
+          }
+          if (item.is(YTNodes.LiveChatPaidSticker)) {
+            return parsePaidSticker(item);
+          }
+          if (item.is(YTNodes.LiveChatMembershipItem)) {
+            return parseMembershipItem(item);
+          }
+          return null;
+        };
 
-      chat.on('start', (initialData: any) => {
-        console.log(`[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || 'Guest'}`);
-        // Parse initial chat actions provided in the start payload
-        if (initialData?.actions) {
-          for (const action of initialData.actions) {
-            if (action.is(YTNodes.AddChatItemAction)) {
-              const item = action.as(YTNodes.AddChatItemAction).item;
-              if (!item) continue;
-              const chatMsg = parseChatItem(item);
-              if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-                messages.push(chatMsg);
-                if (messages.length > 200) messages.shift();
+        chat.on('start', (initialData: any) => {
+          console.log(`[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || 'Guest'}`);
+          // Parse initial chat actions provided in the start payload
+          if (initialData?.actions) {
+            for (const action of initialData.actions) {
+              if (action.is(YTNodes.AddChatItemAction)) {
+                const item = action.as(YTNodes.AddChatItemAction).item;
+                if (!item) continue;
+                const chatMsg = parseChatItem(item);
+                if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+                  messages.push(chatMsg);
+                  if (messages.length > 200) messages.shift();
+                }
               }
             }
           }
-        }
-      });
+        });
 
-      chat.on('chat-update', (action: any) => {
-        if (action.is(YTNodes.AddChatItemAction)) {
-          const item = action.as(YTNodes.AddChatItemAction).item;
-          if (!item) return;
-          const chatMsg = parseChatItem(item);
-          if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-            messages.push(chatMsg);
-            if (messages.length > 200) messages.shift();
+        chat.on('chat-update', (action: any) => {
+          if (action.is(YTNodes.AddChatItemAction)) {
+            const item = action.as(YTNodes.AddChatItemAction).item;
+            if (!item) return;
+            const chatMsg = parseChatItem(item);
+            if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+              messages.push(chatMsg);
+              if (messages.length > 200) messages.shift();
+            }
           }
-        }
 
-        if (action.is(YTNodes.RemoveChatItemAction)) {
-          const targetId = action.target_item_id;
-          const idx = messages.findIndex(m => m.id === targetId);
-          if (idx !== -1) messages.splice(idx, 1);
-        }
-      });
+          if (action.is(YTNodes.RemoveChatItemAction)) {
+            const targetId = action.target_item_id;
+            const idx = messages.findIndex(m => m.id === targetId);
+            if (idx !== -1) messages.splice(idx, 1);
+          }
+        });
 
-      chat.on('end', () => {
-        console.log(`[YouTube Chat] Live stream ended for video ${videoId}`);
-        activeLiveChats.delete(videoId);
-      });
+        chat.on('end', () => {
+          console.log(`[YouTube Chat] Live stream ended for video ${videoId}`);
+          activeLiveChats.delete(videoId);
+        });
 
-      chat.on('error', (err: any) => {
-        console.error('YouTube LiveChat error:', err);
-        setTimeout(() => {
-          if (activeLiveChats.get(videoId)?.chat === chat) {
+        chat.on('error', (err: any) => {
+          console.error('YouTube LiveChat error:', err);
+          const errMsg = err instanceof Error ? err.message : String(err);
+          // On 403 ("automated queries"), apply the blocking cooldown immediately
+          // so subsequent client polls don't keep hammering YouTube.
+          if (errMsg && (errMsg.includes('status code 403') || errMsg.includes('403'))) {
+            blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
+            console.error('[YouTube Chat] Marking chat blocked for', videoId, 'due to 403 from polling. Set YT_COOKIE env var to fix this.');
             activeLiveChats.delete(videoId);
+          } else {
+            setTimeout(() => {
+              if (activeLiveChats.get(videoId)?.chat === chat) {
+                activeLiveChats.delete(videoId);
+              }
+            }, 30000);
           }
-        }, 30000);
-      });
+        });
 
         console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
         chat.start();
