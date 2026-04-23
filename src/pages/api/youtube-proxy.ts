@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
-import findLiveForChannel, { isValidYouTubeParam, dataApiFindLiveForParam, resolveChannelId } from "../../lib/youtube-lookup";
+import findLiveForChannel, { isValidYouTubeParam, resolveChannelId } from "../../lib/youtube-lookup";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 // Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
@@ -63,32 +63,11 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
 
-    // If this is a `getLiveVideo` request and a `YT_API_KEY` is configured,
-    // optionally prefer the Data API to avoid initializing Innertube (which
-    // may be blocked with 403s) for simple public lookups. Set
-    // `YT_PREFER_DATA_API=1` to force preferring the Data API even when an
-    // access cookie is present.
-    const preferDataApi = process.env.YT_PREFER_DATA_API === '1';
-    if (action === 'getLiveVideo' && process.env.YT_API_KEY && (!accessToken || preferDataApi)) {
-      try {
-        const ch = channelUrl;
-        if (ch) {
-          try {
-            const apiResult = await dataApiFindLiveForParam(ch);
-            if (apiResult?.videoId) {
-              console.log('[YouTube Proxy] Data API pre-check found live video', apiResult.videoId);
-              return new Response(JSON.stringify({ videoId: apiResult.videoId, channelId: apiResult.channelId }), { status: 200, headers: { "Content-Type": "application/json" } });
-            } else {
-              if (DEBUG_YT) console.debug('[YouTube Proxy] Data API pre-check returned no live items or could not resolve channel', ch);
-            }
-          } catch (err) {
-            if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check error', err);
-          }
-        }
-      } catch (err) {
-        if (DEBUG_YT) console.warn('[YouTube Proxy] Data API pre-check outer error', err);
-      }
-    }
+    // Prefer the Data API when no auth cookie is present or when explicitly
+    // requested via YT_PREFER_DATA_API=1. The actual pre-check + fallback
+    // logic is handled inside findLiveForChannel via the `preferDataApi` option,
+    // keeping all lookup strategy decisions in one place (youtube-lookup.ts).
+    const preferDataApi = process.env.YT_PREFER_DATA_API === '1' || !accessToken;
 
     // Initialize Innertube client with request-scoped diagnostics so failures
     // include the action and channel context in server logs.
@@ -111,7 +90,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
     // Route to appropriate handler
     if (action === "getLiveVideo") {
-      return await handleGetLiveVideo(url, yt);
+      return await handleGetLiveVideo(url, yt, preferDataApi);
     } else if (action === "getChannelInfo") {
       return await handleGetChannelInfo(url, yt);
     } else {
@@ -140,7 +119,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 };
 
 // Get the live video for a YouTube channel
-async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
+async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any, preferDataApi: boolean) {
   const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
     return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
@@ -153,7 +132,7 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
 
   try {
-    const result = await findLiveForChannel(channelUrlParam, { yt, debug: DEBUG_YT });
+    const result = await findLiveForChannel(channelUrlParam, { yt, preferDataApi, debug: DEBUG_YT });
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
