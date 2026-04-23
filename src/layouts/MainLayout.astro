@@ -22,15 +22,13 @@ interface Props {
   description: string;
   ogUrl?: string;
   canonicalUrl?: string;
-  footerLogo?: boolean;
 }
 
 const {
   title,
   description,
   ogUrl,
-  canonicalUrl,
-  footerLogo = false,
+  canonicalUrl
 } = Astro.props;
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const resolvedOgUrl = ogUrl ?? mainUrl;
@@ -113,12 +111,6 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
         gap: 12px;
       }
 
-      footer img {
-        position: absolute;
-        left: 20px;
-        opacity: 0.7;
-      }
-
       footer a {
         color: var(--color-accent);
         text-decoration: none;
@@ -165,15 +157,6 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
           target="_blank">MIT</a
         > — {DISPLAY_VERSION}</span
       >
-      {
-        footerLogo && (
-          <img
-            src="/logo.png"
-            alt="Mixchat Logo"
-            style="width: auto; height: 24px;"
-          />
-        )
-      }
     </footer>
   </body>
 </html>
