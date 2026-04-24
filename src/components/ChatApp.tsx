@@ -111,6 +111,43 @@ export default function ChatApp({
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [showYoutubeSection, setShowYoutubeSection] = useState(true);
+  const [chatSplitRatio, setChatSplitRatio] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mixchat_chat_split_ratio');
+      return saved ? parseFloat(saved) : 50;
+    }
+    return 50;
+  });
+  const [isDraggingChatSplit, setIsDraggingChatSplit] = useState(false);
+
+  useEffect(() => {
+    if (!isDraggingChatSplit) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const container = document.querySelector('[data-chat-app-container]');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      let percentage = ((e.clientY - rect.top) / rect.height) * 100;
+
+      // Constraints: allow between 20% and 80%
+      if (percentage < 20) percentage = 20;
+      if (percentage > 80) percentage = 80;
+
+      setChatSplitRatio(percentage);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingChatSplit(false);
+      localStorage.setItem('mixchat_chat_split_ratio', chatSplitRatio.toString());
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingChatSplit, chatSplitRatio]);
 
   // Collected YouTube messages for unified mode
   const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
@@ -883,7 +920,7 @@ export default function ChatApp({
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div data-chat-app-container style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       {notification && (
         <Notification
           message={notification.message}
@@ -946,7 +983,7 @@ export default function ChatApp({
               currentUserDisplayName={twitchSession?.displayName}
               fontSize={fontSize}
               chatFont={chatFont}
-                splitChatEnabled={splitChatEnabled}
+              splitChatEnabled={splitChatEnabled}
               isModerator={isModerator}
               modModeActive={modModeActive}
               onToggleModMode={handleToggleModMode}
@@ -1040,7 +1077,14 @@ export default function ChatApp({
           {/* NORMAL SPLIT MODE */}
 
           {linkedYoutubeUrl && showYoutubeSection && (
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderBottom: '2px solid #333' }}>
+            <div style={{
+              height: `${chatSplitRatio}%`,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderBottom: '1px solid #333'
+            }}>
               {youtubeVideoId ? (
                 <>
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -1076,7 +1120,7 @@ export default function ChatApp({
                       </button>
                     </div>
                   </div>
-                  {/* YouTube message input: hide when using the official embed which includes its own input. */}
+                  {/* YouTube message input */}
                   {!useYoutubeEmbed && (
                     youtubeSession ? (
                       <YouTubeMessageInput
@@ -1115,10 +1159,10 @@ export default function ChatApp({
                           <span>No live stream detected. Enter a video ID manually:</span>
                         )}
                       </p>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                         <input
                           type="text"
-                          placeholder="e.g. zFQFquAw74o or full URL"
+                          placeholder="e.g. zFQFquAw74o"
                           className="channel-search"
                           style={{ padding: '6px 10px', fontSize: '13px', width: '220px', backgroundColor: '#222', border: '1px solid #444', color: '#fff', borderRadius: '4px' }}
                           onKeyDown={(e) => {
@@ -1150,7 +1194,7 @@ export default function ChatApp({
                           onClick={() => setShowYoutubeSection(false)}
                           style={{ background: '#333', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontSize: '13px' }}
                         >
-                          Remove Chat
+                          Remove
                         </button>
                       </div>
                     </>
@@ -1160,59 +1204,98 @@ export default function ChatApp({
             </div>
           )}
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <ChatDisplay
-              ref={chatDisplayRef}
-              messages={messages}
-              isLoading={isLoading}
-              selectedPlatforms={selectedPlatforms}
-              onReply={(message) => setReplyingTo(message)}
-              channelName={selectedTwitchChannelName}
-              channelDisplayName={selectedTwitchChannelDisplayName}
-              streamTitle=''
-              isStreamLive={streamIsLive}
-              streamUptime={streamUptime}
-              viewerCount={viewerCount}
-              onRefreshEmotes={handleRefreshEmotes}
-              isRefreshingEmotes={isRefreshingEmotes}
-              onToggleSidebar={onToggleSidebar}
-              sidebarVisible={sidebarVisible}
-              onCopyMessage={() => {
-                notificationIdRef.current += 1;
-                setNotification({ message: 'Message copied!', type: 'success', id: notificationIdRef.current });
+          {linkedYoutubeUrl && showYoutubeSection && (
+            <div
+              style={{
+                height: '4px',
+                backgroundColor: '#1a1a1a',
+                cursor: 'row-resize',
+                userSelect: 'none',
+                zIndex: 10,
+                transition: isDraggingChatSplit ? 'none' : 'background-color 0.2s',
               }}
-              showStreamEmbed={showStreamEmbed}
-              onToggleStreamEmbed={onToggleStreamEmbed}
-              currentUserDisplayName={twitchSession?.displayName}
-              fontSize={fontSize}
-              chatFont={chatFont}
-              splitChatEnabled={splitChatEnabled}
+              onMouseDown={() => setIsDraggingChatSplit(true)}
+              onMouseEnter={(e) => !isDraggingChatSplit && (e.currentTarget.style.backgroundColor = '#6366f1')}
+              onMouseLeave={(e) => !isDraggingChatSplit && (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+            />
+          )}
+
+          <div style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <ChatDisplay
+                ref={chatDisplayRef}
+                messages={messages}
+                isLoading={isLoading}
+                selectedPlatforms={selectedPlatforms}
+                onReply={(message) => setReplyingTo(message)}
+                channelName={selectedTwitchChannelName}
+                channelDisplayName={selectedTwitchChannelDisplayName}
+                streamTitle=''
+                isStreamLive={streamIsLive}
+                streamUptime={streamUptime}
+                viewerCount={viewerCount}
+                onRefreshEmotes={handleRefreshEmotes}
+                isRefreshingEmotes={isRefreshingEmotes}
+                onToggleSidebar={onToggleSidebar}
+                sidebarVisible={sidebarVisible}
+                onCopyMessage={() => {
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Message copied!', type: 'success', id: notificationIdRef.current });
+                }}
+                showStreamEmbed={showStreamEmbed}
+                onToggleStreamEmbed={onToggleStreamEmbed}
+                currentUserDisplayName={twitchSession?.displayName}
+                fontSize={fontSize}
+                chatFont={chatFont}
+                splitChatEnabled={splitChatEnabled}
+                isModerator={isModerator}
+                modModeActive={modModeActive}
+                onToggleModMode={handleToggleModMode}
+                compactActions={compactActions}
+                onDeleteMessage={handleDelete}
+                onBanUser={handleBan}
+                onTimeoutUser={handleTimeout}
+                onUntimeoutUser={handleUntimeout}
+                onWarnUser={handleWarn}
+              />
+            </div>
+
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              isConnected={{ twitch: twitchConnected }}
+              replyingTo={replyingTo}
+              onCancelReply={() => setReplyingTo(undefined)}
+              chatMessages={messages}
+              currentUsername={twitchSession?.username || ''}
+              onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
+              slowModeWaitTime={slowModeWaitTime}
+              followerModeMinutes={followerModeMinutes}
+              isFollowing={isFollowingChannelState}
               isModerator={isModerator}
-              modModeActive={modModeActive}
-              onToggleModMode={handleToggleModMode}
-              compactActions={compactActions}
-              onDeleteMessage={handleDelete}
-              onBanUser={handleBan}
-              onTimeoutUser={handleTimeout}
-              onUntimeoutUser={handleUntimeout}
-              onWarnUser={handleWarn}
             />
           </div>
 
-          <MessageInput
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            isConnected={{ twitch: twitchConnected }}
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(undefined)}
-            chatMessages={messages}
-            currentUsername={twitchSession?.username || ''}
-            onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
-            slowModeWaitTime={slowModeWaitTime}
-            followerModeMinutes={followerModeMinutes}
-            isFollowing={isFollowingChannelState}
-            isModerator={isModerator}
-          />
+          {/* Dragging overlay to prevent iframe focus issues */}
+          {isDraggingChatSplit && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 9999,
+                cursor: 'row-resize',
+                background: 'transparent',
+              }}
+            />
+          )}
         </>
       )}
       <NewFeaturesModal />
