@@ -1,5 +1,7 @@
 
-/** Example file for PM2 ecosystem configuration */
+/** Example file for PM2 ecosystem configuration.
+ *  All environment variables live in .env (see .env.example).
+ *  Copy this to ecosystem.config.cjs and adjust cwd/paths as needed. */
 module.exports = {
   apps: [
     {
@@ -7,15 +9,8 @@ module.exports = {
       script: './dist/server/entry.mjs',
       interpreter: 'node',
       cwd: '/home/user/devel/Mixchat',
-      env: {
-        NODE_ENV: 'production',
-        HOST: '127.0.0.1',
-        PORT: '3000',
-        // Tells Astro's Node adapter the public-facing origin.
-        // Without this, SSR routing behind a reverse proxy can produce 404s
-        // on direct navigation to dynamic routes like /channel/[name].
-        ORIGIN: 'https://mixchat.grepfs.xyz',
-      },
+      // Load all env vars from .env instead of inlining them here.
+      env_file: '.env',
       // Restart on crash, but not too aggressively
       max_restarts: 10,
       min_uptime: '10s',

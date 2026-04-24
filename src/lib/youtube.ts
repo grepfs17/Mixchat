@@ -1,7 +1,10 @@
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
+import { loadServerCredentials } from "./youtube-server-auth";
 
 let yt: Innertube | null = null;
+/** Track which access_token the singleton was built with so we can rebuild on refresh. */
+let _ytAccessToken: string | null = null;
 
 // Suppress noisy "class_not_found" warnings for unknown YouTube.js nodes (e.g.
 // LiveChatReportModerationStateCommand). These are harmless — youtubei.js JIT-
@@ -11,6 +14,16 @@ Parser.setParserErrorHandler(({ error_type }) => {
 });
 
 export async function getInnertube() {
+  // Load the server's own OAuth credential (set up via /api/youtube-device-auth).
+  // If present and fresh, use it. If the access token has changed (after a refresh),
+  // rebuild the Innertube singleton so it picks up the new token.
+  const serverCreds = await loadServerCredentials();
+  const currentToken = serverCreds?.access_token ?? null;
+  if (yt && _ytAccessToken !== currentToken) {
+    // Token was refreshed — invalidate singleton so it rebuilds with new token.
+    yt = null;
+  }
+
   if (!yt) {
     try {
       // Allow a configurable user agent and session generation to avoid
@@ -25,11 +38,21 @@ export async function getInnertube() {
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36';
       }
 
-      // Allow passing a persistent cookie to authenticate InnerTube requests.
-      // This is often required to avoid 403 Forbidden ("automated queries")
-      // errors in hosting environments where the IP is flagged by YouTube.
-      if (process.env.YT_COOKIE) {
+      // Prefer the server OAuth credential (device-code flow) over the manual
+      // YT_COOKIE env var. The access_token is passed as a cookie header in the
+      // format YouTube's InnerTube API expects.
+      if (serverCreds?.access_token) {
+        innertubeOptions.access_token = serverCreds.access_token;
+        _ytAccessToken = serverCreds.access_token;
+        console.debug('[YouTube] Using server OAuth credential for Innertube');
+      } else if (process.env.YT_COOKIE) {
+        // Fallback: manual cookie string from env (legacy)
         innertubeOptions.cookie = process.env.YT_COOKIE;
+        _ytAccessToken = null;
+        console.debug('[YouTube] Using YT_COOKIE env var for Innertube (consider running device auth setup)');
+      } else {
+        _ytAccessToken = null;
+        console.warn('[YouTube] No server credential or YT_COOKIE — Innertube requests are unauthenticated and may be blocked by YouTube (403).');
       }
 
       // Generate a session locally by default to reduce extra network requests
@@ -50,17 +73,17 @@ export async function getInnertube() {
           // so we don't drop values like `Cookie` or `Authorization` that Innertube sets.
           if (typeof (orig as any).entries === 'function') {
             for (const [k, v] of (orig as any).entries()) {
-              try { headers[k.toLowerCase()] = String(v); } catch {}
+              try { headers[k.toLowerCase()] = String(v); } catch { }
             }
           } else if (typeof (orig as any).forEach === 'function') {
             try {
               (orig as any).forEach((v: any, k: string) => {
-                try { headers[k.toLowerCase()] = String(v); } catch {}
+                try { headers[k.toLowerCase()] = String(v); } catch { }
               });
-            } catch {}
+            } catch { }
           } else if (typeof orig === 'object') {
             for (const k of Object.keys(orig)) {
-              try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch {}
+              try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch { }
             }
           }
         }
@@ -73,7 +96,7 @@ export async function getInnertube() {
           try {
             const keys = Object.keys(headers);
             console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), keys.includes('cookie') ? '(cookie present)' : '(no cookie)');
-          } catch {}
+          } catch { }
         }
 
         const merged = { ...(init || {}), headers };
@@ -96,7 +119,7 @@ export async function getInnertube() {
               const clone = res.clone();
               const txt = await clone.text().catch(() => '<failed to read body>');
               const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
-              
+
               if (res.status === 403 && (short.includes('automated queries') || short.includes('Sorry...'))) {
                 console.error('[YouTube Proxy] YouTube blocked this request for "automated queries". Consider providing a valid YT_COOKIE or using a different IP/User-Agent.', { url: urlStr });
               } else {
@@ -109,7 +132,7 @@ export async function getInnertube() {
             if (process.env.YT_DEBUG === '1') {
               try {
                 console.debug('[YouTube Proxy] innertube fetch', { url: urlStr, status: res.status });
-              } catch {}
+              } catch { }
             }
           }
           return res;
