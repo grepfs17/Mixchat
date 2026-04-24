@@ -2,9 +2,10 @@ export async function googleFetch(url: string, init?: RequestInit, context?: { a
   const start = Date.now();
 
   // Ensure we have a Referer header to avoid 403 errors with restricted API keys
+  const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
   const headers = new Headers(init?.headers);
   if (!headers.has('Referer')) {
-    headers.set('Referer', 'https://www.youtube.com/');
+    headers.set('Referer', referrer.endsWith('/') ? referrer : referrer + '/');
   }
 
   const res = await fetch(url, { ...init, headers });

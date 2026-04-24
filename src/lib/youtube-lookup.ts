@@ -25,9 +25,10 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
 }
 
 async function authenticatedDataApiFetch(url: string): Promise<any> {
+  const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
   const headers: Record<string, string> = {
     'Accept': 'application/json',
-    'Referer': 'https://www.youtube.com/',
+    'Referer': referrer.endsWith('/') ? referrer : referrer + '/',
   };
 
   // Try to use OAuth token first if available

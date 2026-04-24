@@ -33,9 +33,10 @@ export async function getInnertube() {
       const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
 
       if (isTvClient) {
-        // Use TVHTML5 when authenticated via device code flow (TV client ID).
-        // This avoids 400 INVALID_ARGUMENT errors on endpoints like /browse.
-        innertubeOptions.client_type = 'TVHTML5';
+        // We use WEB client type even for TV tokens because high-level helpers 
+        // like getChannel() in youtubei.js 17.x do not yet support parsing 
+        // the TVHTML5 (TvBrowse) response format.
+        innertubeOptions.client_type = 'WEB';
       } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
@@ -61,6 +62,9 @@ export async function getInnertube() {
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
       // include a realistic User-Agent and Referer header.
       const baseUserAgent = innertubeOptions.user_agent;
+      const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
+      const baseReferer = referrer.endsWith('/') ? referrer : referrer + '/';
+
       innertubeOptions.fetch = async (input: any, init?: any) => {
         // Compute a readable URL string for logging and diagnostics.
         let urlStr = '';
@@ -94,7 +98,7 @@ export async function getInnertube() {
         }
 
         if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
-        if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
+        if (!headers['referer']) headers['referer'] = baseReferer;
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
         // This is a fallback for endpoints that are frequently blocked for "automated queries".
