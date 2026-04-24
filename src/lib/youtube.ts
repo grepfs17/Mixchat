@@ -33,9 +33,9 @@ export async function getInnertube() {
       const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
 
       if (isTvClient) {
-        innertubeOptions.client_type = 'TV';
+        innertubeOptions.client_type = 'TVHTML5';
         // A typical YouTube TV User-Agent.
-        innertubeOptions.user_agent = 'Mozilla/5.0 (PlayStation; PlayStation 5/8.20) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+        innertubeOptions.user_agent = 'Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.2 Chrome/63.0.3239.111 TV Safari/537.36';
       } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
