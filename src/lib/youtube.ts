@@ -30,40 +30,29 @@ export async function getInnertube() {
       // server-side 403s from YouTube. These options are documented by
       // youtubei.js (Innertube.create options).
       const innertubeOptions: Record<string, any> = {};
-      if (process.env.YT_USER_AGENT) {
+      const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
+
+      if (isTvClient) {
+        innertubeOptions.client_type = 'TV';
+        // A typical YouTube TV User-Agent.
+        innertubeOptions.user_agent = 'Mozilla/5.0 (PlayStation; PlayStation 5/8.20) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+      } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
-        // A modern desktop UA helps avoid some server-side blocking.
+        // A modern desktop UA helps avoid some server-side blocking for standard web clients.
         innertubeOptions.user_agent =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36';
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
       }
 
-      // Prefer the server OAuth credential (device-code flow) over the manual
-      // YT_COOKIE env var. The credential is used to sign in the session.
-      if (serverCreds?.access_token) {
-        _ytAccessToken = serverCreds.access_token;
-        console.debug('[YouTube] Using server OAuth credential for Innertube');
-      } else if (process.env.YT_COOKIE) {
-        // Fallback: manual cookie string from env (legacy)
-        innertubeOptions.cookie = process.env.YT_COOKIE;
-        _ytAccessToken = null;
-        console.debug('[YouTube] Using YT_COOKIE env var for Innertube (consider running device auth setup)');
-      } else {
-        _ytAccessToken = null;
-        console.warn('[YouTube] No server credential or YT_COOKIE — Innertube requests are unauthenticated and may be blocked by YouTube (403).');
-      }
-
-      // Generate a session locally by default to reduce extra network requests
-      // that may be blocked. Set YT_GENERATE_SESSION_LOCALLY=false to disable.
+      // Generate a session locally by default to reduce extra network requests.
       innertubeOptions.generate_session_locally =
         process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
 
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
-      // include a realistic User-Agent and Referer header which helps avoid
-      // YouTube rejecting requests with 403 in some hosting environments.
+      // include a realistic User-Agent and Referer header.
       const baseUserAgent = innertubeOptions.user_agent;
       innertubeOptions.fetch = async (input: any, init?: any) => {
-        // Compute a readable URL string for logging and conditional logic.
+        // Compute a readable URL string for logging and diagnostics.
         let urlStr = '';
         try {
           if (typeof input === 'string') urlStr = input;
@@ -76,9 +65,7 @@ export async function getInnertube() {
         const headers: Record<string, string> = {};
         const orig = init?.headers;
         if (orig) {
-          // Support different Headers implementations (global Headers, undici/node-fetch,
-          // youtubei.js Platform.shim.Headers, or a plain object). Copy existing headers
-          // so we don't drop values like `Cookie` or `Authorization` that Innertube sets.
+          // Copy existing headers so we don't drop headers youtubei.js sets.
           if (typeof (orig as any).entries === 'function') {
             for (const [k, v] of (orig as any).entries()) {
               try { headers[k.toLowerCase()] = String(v); } catch { }
@@ -99,14 +86,6 @@ export async function getInnertube() {
         if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
-
-        // We only inject the token for endpoints that are frequently blocked for "automated queries" 
-        // (like live chat and its metadata) to avoid "ACCESS_TOKEN_SCOPE_INSUFFICIENT" on other services 
-        // (like Browse/WatchNext) which are often rejected when using device-flow tokens.
-        const needsAuth = urlStr.includes('/v1/live_chat/get_live_chat') || urlStr.includes('/v1/updated_metadata');
-        if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
-          headers['authorization'] = `Bearer ${_ytAccessToken}`;
-        }
 
         if (process.env.YT_DEBUG === '1') {
           try {
@@ -151,6 +130,21 @@ export async function getInnertube() {
       };
 
       yt = await Innertube.create(innertubeOptions);
+
+      // Re-enable explicit sign-in if we have credentials.
+      // With the 'TV' client, this is the expected way to authenticate OAuth tokens.
+      if (serverCreds?.access_token) {
+        try {
+          await yt.session.signIn({
+            access_token: serverCreds.access_token,
+            refresh_token: serverCreds.refresh_token,
+            expiry_date: new Date(serverCreds.expires_at).toISOString(),
+          });
+          console.debug('[YouTube] Innertube signed in (TV client)');
+        } catch (signInErr) {
+          console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
+        }
+      }
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
