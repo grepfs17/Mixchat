@@ -150,8 +150,8 @@ export async function getInnertube() {
 
       yt = await Innertube.create(innertubeOptions);
 
+      /*
       // Re-enable explicit sign-in if we have credentials.
-      // With the 'TV' client, this is the expected way to authenticate OAuth tokens.
       if (serverCreds?.access_token) {
         try {
           await yt.session.signIn({
@@ -159,11 +159,12 @@ export async function getInnertube() {
             refresh_token: serverCreds.refresh_token,
             expiry_date: new Date(serverCreds.expires_at).toISOString(),
           });
-          console.debug('[YouTube] Innertube signed in (TV client)');
+          console.debug('[YouTube] Innertube signed in (ANDROID client)');
         } catch (signInErr) {
           console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
         }
       }
+      */
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
