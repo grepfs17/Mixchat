@@ -100,12 +100,11 @@ export async function getInnertube() {
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
-        // Ensure the server OAuth token is used if present and no other auth (cookie/auth header) is provided.
-        // Innertube should handle this if signed in, but we inject as a fallback to prevent 403 blocks.
-        // We specifically exclude '/v1/next' and '/v1/player' as these often reject standard OAuth tokens 
-        // with ACCESS_TOKEN_SCOPE_INSUFFICIENT or other errors when using device-flow tokens.
-        const isSensitive = urlStr.includes('/v1/next') || urlStr.includes('/v1/player');
-        if (_ytAccessToken && !isSensitive && !headers['authorization'] && !headers['cookie']) {
+        // We only inject the token for endpoints that are frequently blocked for "automated queries" 
+        // (like live chat and its metadata) to avoid "ACCESS_TOKEN_SCOPE_INSUFFICIENT" on other services 
+        // (like Browse/WatchNext) which are often rejected when using device-flow tokens.
+        const needsAuth = urlStr.includes('/v1/live_chat/get_live_chat') || urlStr.includes('/v1/updated_metadata');
+        if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
           headers['authorization'] = `Bearer ${_ytAccessToken}`;
         }
 
