@@ -34,8 +34,8 @@ export async function getInnertube() {
 
       if (isTvClient) {
         innertubeOptions.client_type = 'ANDROID';
-        // A typical YouTube Android User-Agent.
-        innertubeOptions.user_agent = 'com.google.android.youtube/19.12.35 (Linux; U; Android 14; en_US; SM-S911B Build/UP1A.231005.007) gzip';
+        // Match the version exactly with what youtubei.js 17.0.1 uses internally to avoid 400 errors.
+        innertubeOptions.user_agent = 'com.google.android.youtube/21.03.36(Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip';
       } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
