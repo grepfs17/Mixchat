@@ -33,15 +33,15 @@ export async function getInnertube() {
       const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
 
       if (isTvClient) {
-        innertubeOptions.client_type = 'TVHTML5';
-        // A typical YouTube TV User-Agent.
-        innertubeOptions.user_agent = 'Mozilla/5.0 (SMART-TV; LINUX; Tizen 5.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/2.2 Chrome/63.0.3239.111 TV Safari/537.36';
+        innertubeOptions.client_type = 'ANDROID';
+        // A typical YouTube Android User-Agent.
+        innertubeOptions.user_agent = 'com.google.android.youtube/19.12.35 (Linux; U; Android 14; en_US; SM-S911B Build/UP1A.231005.007) gzip';
       } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
         // A modern desktop UA helps avoid some server-side blocking for standard web clients.
         innertubeOptions.user_agent =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
       }
 
       // Generate a session locally by default to reduce extra network requests.
@@ -97,11 +97,11 @@ export async function getInnertube() {
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
-        // Ensure the server OAuth token is used if present and no other auth (cookie/auth header) is provided.
         // This is a fallback for endpoints that are frequently blocked for "automated queries".
         const needsAuth = urlStr.includes('/v1/live_chat/') ||
           urlStr.includes('/v1/updated_metadata') ||
-          urlStr.includes('/v1/browse');
+          urlStr.includes('/v1/browse') ||
+          urlStr.includes('/v1/navigation/resolve_url');
         if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
           headers['authorization'] = `Bearer ${_ytAccessToken}`;
         }
