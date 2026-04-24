@@ -61,7 +61,7 @@ const DEVICE_CLIENT_SECRET =
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const DEVICE_AUTH_URL = 'https://oauth2.googleapis.com/device/code';
-const SCOPE = 'https://www.googleapis.com/auth/youtube.readonly';
+const SCOPE = 'https://www.googleapis.com/auth/youtube';
 
 
 let _cached: ServerCredentials | null = null;
