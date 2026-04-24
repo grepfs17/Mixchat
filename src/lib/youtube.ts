@@ -151,21 +151,6 @@ export async function getInnertube() {
       };
 
       yt = await Innertube.create(innertubeOptions);
-
-      // Explicitly sign in with the server credentials if we have them.
-      // This ensures youtubei.js session is fully authenticated.
-      if (serverCreds?.access_token) {
-        try {
-          await yt.session.signIn({
-            access_token: serverCreds.access_token,
-            refresh_token: serverCreds.refresh_token,
-            expiry_date: new Date(serverCreds.expires_at).toISOString(),
-          });
-          console.debug('[YouTube] Innertube session signed in successfully');
-        } catch (signInErr) {
-          console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
-        }
-      }
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
