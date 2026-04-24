@@ -27,6 +27,7 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
 async function authenticatedDataApiFetch(url: string): Promise<any> {
   const headers: Record<string, string> = {
     'Accept': 'application/json',
+    'Referer': 'https://www.youtube.com/',
   };
 
   // Try to use OAuth token first if available

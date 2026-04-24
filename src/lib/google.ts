@@ -1,6 +1,13 @@
-export async function googleFetch(url: string, init?: RequestInit, context?: { action?: string; [k: string]: any }) {
+export async function googleFetch(url: string, init?: RequestInit, context?: { action?: string;[k: string]: any }) {
   const start = Date.now();
-  const res = await fetch(url, init);
+
+  // Ensure we have a Referer header to avoid 403 errors with restricted API keys
+  const headers = new Headers(init?.headers);
+  if (!headers.has('Referer')) {
+    headers.set('Referer', 'https://www.youtube.com/');
+  }
+
+  const res = await fetch(url, { ...init, headers });
   const duration = Date.now() - start;
 
   if (!res.ok) {

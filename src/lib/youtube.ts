@@ -33,15 +33,15 @@ export async function getInnertube() {
       const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
 
       if (isTvClient) {
-        innertubeOptions.client_type = 'ANDROID';
-        // Match the version exactly with what youtubei.js 17.0.1 uses internally to avoid 400 errors.
-        innertubeOptions.user_agent = 'com.google.android.youtube/21.03.36(Linux; U; Android 16; en_US; SM-S908E Build/TP1A.220624.014) gzip';
+        // Use TVHTML5 when authenticated via device code flow (TV client ID).
+        // This avoids 400 INVALID_ARGUMENT errors on endpoints like /browse.
+        innertubeOptions.client_type = 'TVHTML5';
       } else if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
       } else {
-        // A modern desktop UA helps avoid some server-side blocking for standard web clients.
+        // Default to a modern desktop User-Agent for WEB client type.
         innertubeOptions.user_agent =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36';
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
       }
 
       // Generate a session locally by default to reduce extra network requests.
