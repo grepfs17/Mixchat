@@ -63,6 +63,16 @@ export async function getInnertube() {
       // YouTube rejecting requests with 403 in some hosting environments.
       const baseUserAgent = innertubeOptions.user_agent;
       innertubeOptions.fetch = async (input: any, init?: any) => {
+        // Compute a readable URL string for logging and conditional logic.
+        let urlStr = '';
+        try {
+          if (typeof input === 'string') urlStr = input;
+          else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
+          else urlStr = String(input);
+        } catch {
+          urlStr = String(input);
+        }
+
         const headers: Record<string, string> = {};
         const orig = init?.headers;
         if (orig) {
@@ -92,7 +102,10 @@ export async function getInnertube() {
 
         // Ensure the server OAuth token is used if present and no other auth (cookie/auth header) is provided.
         // Innertube should handle this if signed in, but we inject as a fallback to prevent 403 blocks.
-        if (_ytAccessToken && !headers['authorization'] && !headers['cookie']) {
+        // We specifically exclude '/v1/next' and '/v1/player' as these often reject standard OAuth tokens 
+        // with ACCESS_TOKEN_SCOPE_INSUFFICIENT or other errors when using device-flow tokens.
+        const isSensitive = urlStr.includes('/v1/next') || urlStr.includes('/v1/player');
+        if (_ytAccessToken && !isSensitive && !headers['authorization'] && !headers['cookie']) {
           headers['authorization'] = `Bearer ${_ytAccessToken}`;
         }
 
@@ -106,16 +119,6 @@ export async function getInnertube() {
         }
 
         const merged = { ...(init || {}), headers };
-        // Compute a readable URL string for logging (handles Request objects).
-        let urlStr = '';
-        try {
-          if (typeof input === 'string') urlStr = input;
-          else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
-          else urlStr = String(input);
-        } catch {
-          urlStr = String(input);
-        }
-
         try {
           const res = await fetch(input, merged);
           // If the response is an error (4xx/5xx), clone and log a truncated
