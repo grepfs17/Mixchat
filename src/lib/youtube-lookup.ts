@@ -100,7 +100,7 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
         continue;
       }
     }
-  } catch (err) {}
+  } catch (err) { }
   return null;
 }
 
@@ -115,19 +115,42 @@ function isActuallyLive(video: any): boolean {
 }
 
 export async function resolveChannelId(channelParam: string, yt?: any): Promise<string | null> {
-  const isFullUrl = YT_URL_RE.test(channelParam);
-  if (isFullUrl) {
-    if (yt?.resolveURL) {
-      try {
-        const endpoint = await yt.resolveURL(channelParam);
-        if (endpoint?.payload?.browseId) return endpoint.payload.browseId;
-      } catch {}
+  const trimmed = (channelParam || '').trim();
+  if (!trimmed) return null;
+
+  // If it's already a canonical channel ID, return it immediately
+  if (CHANNEL_ID_RE.test(trimmed)) return trimmed;
+
+  const isFullUrl = YT_URL_RE.test(trimmed);
+  const isHandle = HANDLE_RE.test(trimmed);
+
+  // If we have an Innertube client, try to resolve the URL/handle to a browseId (UC...)
+  if (yt?.resolveURL) {
+    try {
+      let url = trimmed;
+      if (isHandle) {
+        url = `https://www.youtube.com/${trimmed}`;
+      } else if (!isFullUrl && !trimmed.includes('/')) {
+        // Might be a legacy /user/ path or just a custom name
+        url = `https://www.youtube.com/${trimmed}`;
+      }
+
+      const endpoint = await yt.resolveURL(url);
+      if (endpoint?.payload?.browseId) {
+        return endpoint.payload.browseId;
+      }
+    } catch (e) {
+      // resolveURL failed, will fallback to manual parsing or returning as is
     }
-    const pathCandidate = parsePathCandidateFromUrl(channelParam);
+  }
+
+  if (isFullUrl) {
+    const pathCandidate = parsePathCandidateFromUrl(trimmed);
     if (pathCandidate) return pathCandidate;
     return null;
   }
-  return channelParam;
+
+  return trimmed;
 }
 
 export function isValidYouTubeParam(param: string | null | undefined): boolean {
@@ -136,9 +159,12 @@ export function isValidYouTubeParam(param: string | null | undefined): boolean {
 }
 
 export async function findLiveForChannel(channelParam: string, options?: { yt?: any; preferDataApi?: boolean; ttl?: number; debug?: boolean }): Promise<LookupResult> {
+  const trimmedParam = (channelParam || '').trim();
+  if (!trimmedParam) return { videoId: null, channelId: '' };
+
   const debug = options?.debug ?? (process.env.YT_DEBUG === '1');
   const ttl = options?.ttl ?? DEFAULT_TTL;
-  const paramKey = `param:${channelParam}`;
+  const paramKey = `param:${trimmedParam}`;
   const now = Date.now();
 
   // Fast cache check by original param
@@ -153,7 +179,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     // Optional Data API pre-check (useful when not authenticated or explicitly preferred)
     if (options?.preferDataApi && process.env.YT_API_KEY) {
       try {
-        const apiResult = await dataApiFindLiveForParam(channelParam);
+        const apiResult = await dataApiFindLiveForParam(trimmedParam);
         if (apiResult?.videoId) {
           channelLiveCache.set(paramKey, { videoId: apiResult.videoId, channelId: apiResult.channelId, expires: Date.now() + ttl });
           if (apiResult.channelId) channelLiveCache.set(`id:${apiResult.channelId}`, { videoId: apiResult.videoId, channelId: apiResult.channelId, expires: Date.now() + ttl });
@@ -176,7 +202,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     // Try to resolve channel -> canonical id
     let resolvedChannelId: string | null = null;
     try {
-      resolvedChannelId = await resolveChannelId(channelParam, ytClient);
+      resolvedChannelId = await resolveChannelId(trimmedParam, ytClient);
     } catch (e) {
       if (debug) console.warn('[YouTube Lookup] resolveChannelId failed', e);
     }
@@ -192,11 +218,12 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     let videoId: string | null = null;
     let finalChannelId = resolvedChannelId || '';
 
-    if (ytClient) {
+    if (ytClient && (resolvedChannelId || trimmedParam)) {
+      const targetId = resolvedChannelId || trimmedParam;
       try {
-        channel = await ytClient.getChannel(resolvedChannelId || channelParam);
+        channel = await ytClient.getChannel(targetId);
       } catch (chErr) {
-        if (debug) console.warn('[YouTube Lookup] getChannel failed', chErr);
+        if (debug) console.warn(`[YouTube Lookup] getChannel failed for "${targetId}" (source: "${trimmedParam}")`, chErr);
         channel = null;
       }
     }
@@ -272,7 +299,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     // Data API fallback
     if (!videoId && process.env.YT_API_KEY) {
       try {
-        const apiResult = await dataApiFindLiveForParam(channelParam);
+        const apiResult = await dataApiFindLiveForParam(trimmedParam);
         if (apiResult?.videoId) {
           videoId = apiResult.videoId;
           finalChannelId = apiResult.channelId || finalChannelId;
@@ -285,7 +312,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     // Redirect fallback
     if (!videoId) {
       try {
-        const redirectVid = await redirectFallbackLive(channelParam);
+        const redirectVid = await redirectFallbackLive(trimmedParam);
         if (redirectVid) videoId = redirectVid;
       } catch (err) {
         if (debug) console.warn('[YouTube Lookup] Redirect fallback error:', err);
@@ -296,7 +323,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     try {
       channelLiveCache.set(paramKey, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + ttl });
       if (result.channelId) channelLiveCache.set(`id:${result.channelId}`, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + ttl });
-    } catch {}
+    } catch { }
 
     return result;
   })();
