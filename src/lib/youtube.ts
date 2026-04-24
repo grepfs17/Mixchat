@@ -39,10 +39,8 @@ export async function getInnertube() {
       }
 
       // Prefer the server OAuth credential (device-code flow) over the manual
-      // YT_COOKIE env var. The access_token is passed as a cookie header in the
-      // format YouTube's InnerTube API expects.
+      // YT_COOKIE env var. The credential is used to sign in the session.
       if (serverCreds?.access_token) {
-        innertubeOptions.access_token = serverCreds.access_token;
         _ytAccessToken = serverCreds.access_token;
         console.debug('[YouTube] Using server OAuth credential for Innertube');
       } else if (process.env.YT_COOKIE) {
@@ -92,10 +90,18 @@ export async function getInnertube() {
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
+        // Ensure the server OAuth token is used if present and no other auth (cookie/auth header) is provided.
+        // Innertube should handle this if signed in, but we inject as a fallback to prevent 403 blocks.
+        if (_ytAccessToken && !headers['authorization'] && !headers['cookie']) {
+          headers['authorization'] = `Bearer ${_ytAccessToken}`;
+        }
+
         if (process.env.YT_DEBUG === '1') {
           try {
             const keys = Object.keys(headers);
-            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), keys.includes('cookie') ? '(cookie present)' : '(no cookie)');
+            const hasAuth = keys.includes('authorization');
+            const hasCookie = keys.includes('cookie');
+            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), hasAuth ? '(auth present)' : '(no auth)', hasCookie ? '(cookie present)' : '(no cookie)');
           } catch { }
         }
 
@@ -143,6 +149,21 @@ export async function getInnertube() {
       };
 
       yt = await Innertube.create(innertubeOptions);
+
+      // Explicitly sign in with the server credentials if we have them.
+      // This ensures youtubei.js session is fully authenticated.
+      if (serverCreds?.access_token) {
+        try {
+          await yt.session.signIn({
+            access_token: serverCreds.access_token,
+            refresh_token: serverCreds.refresh_token,
+            expiry_date: new Date(serverCreds.expires_at).toISOString(),
+          });
+          console.debug('[YouTube] Innertube session signed in successfully');
+        } catch (signInErr) {
+          console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
+        }
+      }
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
