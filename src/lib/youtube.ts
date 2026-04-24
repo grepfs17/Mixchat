@@ -48,6 +48,16 @@ export async function getInnertube() {
       innertubeOptions.generate_session_locally =
         process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
 
+      // Ensure the token variable is populated for use in the fetch wrapper.
+      if (serverCreds?.access_token) {
+        _ytAccessToken = serverCreds.access_token;
+      } else if (process.env.YT_COOKIE) {
+        innertubeOptions.cookie = process.env.YT_COOKIE;
+        _ytAccessToken = null;
+      } else {
+        _ytAccessToken = null;
+      }
+
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
       // include a realistic User-Agent and Referer header.
       const baseUserAgent = innertubeOptions.user_agent;
@@ -86,6 +96,15 @@ export async function getInnertube() {
         if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
         if (!headers['referer']) headers['referer'] = 'https://www.youtube.com/';
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
+
+        // Ensure the server OAuth token is used if present and no other auth (cookie/auth header) is provided.
+        // This is a fallback for endpoints that are frequently blocked for "automated queries".
+        const needsAuth = urlStr.includes('/v1/live_chat/') ||
+          urlStr.includes('/v1/updated_metadata') ||
+          urlStr.includes('/v1/browse');
+        if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
+          headers['authorization'] = `Bearer ${_ytAccessToken}`;
+        }
 
         if (process.env.YT_DEBUG === '1') {
           try {
