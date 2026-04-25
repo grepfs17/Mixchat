@@ -72,7 +72,7 @@ export default function AppContainer() {
   const [ytLinksVersion, setYtLinksVersion] = useState(0);
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<string | null>(null);
   const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
-  const [useYoutubeEmbed, setUseYoutubeEmbed] = useState(false);
+  const [useYoutubeEmbed, setUseYoutubeEmbed] = useState(true);
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
   const [chatFont, setChatFont] = useState<ChatFont>('inter'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound

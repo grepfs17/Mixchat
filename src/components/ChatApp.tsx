@@ -78,7 +78,7 @@ export default function ChatApp({
   linkedYoutubeUrl,
   youtubeSession,
   unifyChatEnabled = false,
-  useYoutubeEmbed = false,
+  useYoutubeEmbed = true,
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   mentionSoundEnabled = true,
