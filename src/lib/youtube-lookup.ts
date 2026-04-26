@@ -1,5 +1,4 @@
 import { getInnertube } from './youtube';
-import { loadServerCredentials } from './youtube-server-auth';
 
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
 const HANDLE_RE = /^@[\w.]{1,100}$/;
@@ -22,85 +21,6 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
   } catch {
     return null;
   }
-}
-
-async function authenticatedDataApiFetch(url: string): Promise<any> {
-  const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    'Referer': referrer.endsWith('/') ? referrer : referrer + '/',
-  };
-
-  // Try to use OAuth token first if available
-  const creds = await loadServerCredentials();
-  if (creds?.access_token) {
-    headers['Authorization'] = `Bearer ${creds.access_token}`;
-  }
-
-  // If no OAuth token, we MUST have an API key in the URL or headers
-  // (The URL passed in usually already has &key=... if using API key fallback)
-
-  try {
-    const res = await fetch(url, { headers });
-    if (!res.ok) {
-      const errorBody = await res.text().catch(() => '');
-      console.warn(`[YouTube Data API] Request failed with status ${res.status}: ${errorBody.slice(0, 500)}`);
-      return null;
-    }
-    return await res.json();
-  } catch (err) {
-    console.error('[YouTube Data API] Fetch error:', err);
-    return null;
-  }
-}
-
-async function dataApiResolveChannelId(q: string): Promise<string | null> {
-  const apiKey = process.env.YT_API_KEY;
-  // We can proceed if we have an API key OR if we have server credentials (which will be handled by authenticatedDataApiFetch)
-  const creds = await loadServerCredentials();
-  if (!apiKey && !creds?.access_token) return null;
-
-  try {
-    let searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&type=channel&maxResults=1`;
-    if (apiKey) searchUrl += `&key=${apiKey}`;
-
-    const sdata = await authenticatedDataApiFetch(searchUrl);
-    return sdata?.items?.length ? sdata.items[0]?.id?.channelId || null : null;
-  } catch (err) {
-    return null;
-  }
-}
-
-async function dataApiFindLiveForChannelId(apiChannelId: string): Promise<string | null> {
-  const apiKey = process.env.YT_API_KEY;
-  const creds = await loadServerCredentials();
-  if (!apiKey && !creds?.access_token) return null;
-
-  try {
-    let apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(apiChannelId)}&eventType=live&type=video&maxResults=1`;
-    if (apiKey) apiUrl += `&key=${apiKey}`;
-
-    const data = await authenticatedDataApiFetch(apiUrl);
-    if (data?.items?.length) return data.items[0]?.id?.videoId || data.items[0]?.snippet?.resourceId?.videoId || null;
-    return null;
-  } catch (err) {
-    return null;
-  }
-}
-
-export async function dataApiFindLiveForParam(channelParam: string): Promise<LookupResult | null> {
-  const apiKey = process.env.YT_API_KEY;
-  const creds = await loadServerCredentials();
-  if (!apiKey && !creds?.access_token) return null;
-  let apiChannelId = channelParam;
-  if (!CHANNEL_ID_RE.test(apiChannelId)) {
-    const resolved = await dataApiResolveChannelId(apiChannelId);
-    if (resolved) apiChannelId = resolved;
-  }
-  if (!CHANNEL_ID_RE.test(apiChannelId)) return null;
-  const vid = await dataApiFindLiveForChannelId(apiChannelId);
-  if (vid) return { videoId: vid, channelId: apiChannelId };
-  return null;
 }
 
 async function redirectFallbackLive(channelParam: string): Promise<string | null> {
@@ -162,14 +82,6 @@ export async function resolveChannelId(channelParam: string, yt?: any): Promise<
   const isFullUrl = YT_URL_RE.test(trimmed);
   const isHandle = HANDLE_RE.test(trimmed);
 
-  const preferDataApi = process.env.YT_PREFER_DATA_API === '1' || process.env.YT_PREFER_DATA_API === 'true';
-
-  // If Data API is preferred, try it first for handle/URL resolution
-  if (preferDataApi) {
-    const resolved = await dataApiResolveChannelId(trimmed);
-    if (resolved) return resolved;
-  }
-
   // If we have an Innertube client, try to resolve the URL/handle to a browseId (UC...)
   if (yt?.resolveURL) {
     try {
@@ -190,12 +102,6 @@ export async function resolveChannelId(channelParam: string, yt?: any): Promise<
     }
   }
 
-  // Fallback to Data API if InnerTube failed or wasn't tried yet
-  if (!preferDataApi) {
-    const resolved = await dataApiResolveChannelId(trimmed);
-    if (resolved) return resolved;
-  }
-
   if (isFullUrl) {
     const pathCandidate = parsePathCandidateFromUrl(trimmed);
     if (pathCandidate) return pathCandidate;
@@ -210,7 +116,7 @@ export function isValidYouTubeParam(param: string | null | undefined): boolean {
   return YT_URL_RE.test(param) || CHANNEL_ID_RE.test(param) || HANDLE_RE.test(param);
 }
 
-export async function findLiveForChannel(channelParam: string, options?: { yt?: any; preferDataApi?: boolean; ttl?: number; debug?: boolean }): Promise<LookupResult> {
+export async function findLiveForChannel(channelParam: string, options?: { yt?: any; ttl?: number; debug?: boolean }): Promise<LookupResult> {
   const trimmedParam = (channelParam || '').trim();
   if (!trimmedParam) return { videoId: null, channelId: '' };
 
@@ -228,22 +134,6 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
   if (inflightLiveLookup.has(paramKey)) return inflightLiveLookup.get(paramKey)!;
 
   const lookup = (async (): Promise<LookupResult> => {
-    const preferDataApi = options?.preferDataApi ?? (process.env.YT_PREFER_DATA_API === '1' || process.env.YT_PREFER_DATA_API === 'true');
-
-    // Optional Data API pre-check (useful when not authenticated or explicitly preferred)
-    if (preferDataApi) {
-      try {
-        const apiResult = await dataApiFindLiveForParam(trimmedParam);
-        if (apiResult?.videoId) {
-          channelLiveCache.set(paramKey, { videoId: apiResult.videoId, channelId: apiResult.channelId, expires: Date.now() + ttl });
-          if (apiResult.channelId) channelLiveCache.set(`id:${apiResult.channelId}`, { videoId: apiResult.videoId, channelId: apiResult.channelId, expires: Date.now() + ttl });
-          return { videoId: apiResult.videoId, channelId: apiResult.channelId };
-        }
-      } catch (e) {
-        if (debug) console.warn('[YouTube Lookup] Data API pre-check error', e);
-      }
-    }
-
     // Ensure we have an Innertube client for the richer lookups
     let ytClient = options?.yt;
     try {
@@ -350,21 +240,6 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       finalChannelId = finalChannelId || ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '');
     }
 
-    // Data API fallback (if not already tried)
-    const apiKey = process.env.YT_API_KEY;
-    const creds = await loadServerCredentials();
-    if (!videoId && (apiKey || creds?.access_token)) {
-      try {
-        const apiResult = await dataApiFindLiveForParam(trimmedParam);
-        if (apiResult?.videoId) {
-          videoId = apiResult.videoId;
-          finalChannelId = apiResult.channelId || finalChannelId;
-        }
-      } catch (err) {
-        if (debug) console.warn('[YouTube Lookup] Data API fallback error:', err);
-      }
-    }
-
     // Redirect fallback
     if (!videoId) {
       try {
@@ -394,3 +269,4 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
 }
 
 export default findLiveForChannel;
+

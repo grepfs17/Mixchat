@@ -62,12 +62,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     if (!accessToken) {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
-
-    // Prefer the Data API when no auth cookie is present or when explicitly
-    // requested via YT_PREFER_DATA_API=1. The actual pre-check + fallback
-    // logic is handled inside findLiveForChannel via the `preferDataApi` option,
-    // keeping all lookup strategy decisions in one place (youtube-lookup.ts).
-    const preferDataApi = process.env.YT_PREFER_DATA_API === '1' || !accessToken;
+    // Initialize Innertube client with request-scoped diagnostics so failures
 
     // Initialize Innertube client with request-scoped diagnostics so failures
     // include the action and channel context in server logs.
@@ -90,7 +85,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
     // Route to appropriate handler
     if (action === "getLiveVideo") {
-      return await handleGetLiveVideo(url, yt, preferDataApi);
+      return await handleGetLiveVideo(url, yt);
     } else if (action === "getChannelInfo") {
       return await handleGetChannelInfo(url, yt);
     } else {
@@ -119,7 +114,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 };
 
 // Get the live video for a YouTube channel
-async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any, preferDataApi: boolean) {
+async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
   const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
     return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
@@ -132,7 +127,7 @@ async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any, preferDat
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
 
   try {
-    const result = await findLiveForChannel(channelUrlParam, { yt, preferDataApi, debug: DEBUG_YT });
+    const result = await findLiveForChannel(channelUrlParam, { yt, debug: DEBUG_YT });
     return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

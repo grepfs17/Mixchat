@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
     }
 
-    // Step 1: Get the liveChatId for this video via the Data API (with caching + inflight dedupe)
+    // Step 1: Get the liveChatId for this video via InnerTube (with caching + inflight dedupe)
     let liveChatId: string | null = null;
     const now = Date.now();
     const cached = liveChatIdCache.get(videoId);
@@ -61,11 +61,17 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
         }
       } else {
         const p = (async () => {
-          const url = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`;
-          const videoData = await googleFetch(url, { headers: { Authorization: `Bearer ${accessToken}` } }, { action: 'videos.list', videoId });
-          const id = videoData.items?.[0]?.liveStreamingDetails?.activeLiveChatId ?? null;
-          liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + 30_000 });
-          return id;
+          try {
+            const { getInnertube } = await import("../../lib/youtube");
+            const yt = await getInnertube();
+            const info = await yt.getInfo(videoId);
+            const id = (info.basic_info as any).live_chat?.active_live_chat_id || null;
+            liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + 300_000 }); // Cache for 5 mins
+            return id;
+          } catch (e) {
+            console.error('[YouTube Chat] Failed to resolve liveChatId via InnerTube:', e);
+            return null;
+          }
         })();
         inflightVideos.set(videoId, p);
         try {

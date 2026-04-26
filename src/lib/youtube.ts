@@ -59,6 +59,18 @@ export async function getInnertube() {
         _ytAccessToken = null;
       }
 
+      // Support for Proof-of-Token (PoToken) and Visitor Data to avoid 403 blocks.
+      if (process.env.YT_POTOKEN) {
+        innertubeOptions.po_token = process.env.YT_POTOKEN;
+      }
+      if (process.env.YT_VISITOR_DATA) {
+        innertubeOptions.visitor_data = process.env.YT_VISITOR_DATA;
+      }
+
+      if (process.env.YT_DEBUG === '1' && (innertubeOptions.po_token || innertubeOptions.visitor_data)) {
+        console.debug('[YouTube] InnerTube initialized with PoToken details');
+      }
+
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
       // include a realistic User-Agent and Referer header.
       const baseUserAgent = innertubeOptions.user_agent;
@@ -101,11 +113,11 @@ export async function getInnertube() {
         if (!headers['referer']) headers['referer'] = baseReferer;
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
-        // This is a fallback for endpoints that are frequently blocked for "automated queries".
+        // This is a fallback for endpoints that strictly require authentication
+        // (like live chat polling). We avoid injecting it for public browse/lookup
+        // endpoints as it often triggers "automated queries" blocks on the WEB client.
         const needsAuth = urlStr.includes('/v1/live_chat/') ||
-          urlStr.includes('/v1/updated_metadata') ||
-          urlStr.includes('/v1/browse') ||
-          urlStr.includes('/v1/navigation/resolve_url');
+          urlStr.includes('/v1/updated_metadata');
         if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
           headers['authorization'] = `Bearer ${_ytAccessToken}`;
         }
