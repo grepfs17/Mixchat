@@ -31,7 +31,11 @@ export async function getInnertube() {
       // youtubei.js (Innertube.create options).
       const innertubeOptions: Record<string, any> = {};
       const hasServerAuth = !!serverCreds?.access_token;
-      const clientType = process.env.YT_CLIENT || (hasServerAuth ? 'ANDROID' : 'WEB');
+      let clientType = (process.env.YT_CLIENT || (hasServerAuth ? 'ANDROID' : 'WEB')).toUpperCase();
+
+      // Normalize common aliases to prevent "INVALID_ARGUMENT" errors from YouTube
+      if (clientType === 'TV') clientType = 'TVHTML5';
+
       innertubeOptions.client_type = clientType;
 
       if (process.env.YT_USER_AGENT) {
