@@ -30,27 +30,22 @@ export async function getInnertube() {
       // server-side 403s from YouTube. These options are documented by
       // youtubei.js (Innertube.create options).
       const innertubeOptions: Record<string, any> = {};
-      const isTvClient = process.env.YT_CLIENT === 'TV' || (!process.env.YT_CLIENT && !!serverCreds?.access_token);
+      const hasServerAuth = !!serverCreds?.access_token;
+      const clientType = process.env.YT_CLIENT || (hasServerAuth ? 'ANDROID' : 'WEB');
+      innertubeOptions.client_type = clientType;
 
-      if (isTvClient) {
-        // We use WEB client type even for TV tokens because high-level helpers 
-        // like getChannel() in youtubei.js 17.x do not yet support parsing 
-        // the TVHTML5 (TvBrowse) response format.
-        innertubeOptions.client_type = 'WEB';
-      } else if (process.env.YT_USER_AGENT) {
+      if (process.env.YT_USER_AGENT) {
         innertubeOptions.user_agent = process.env.YT_USER_AGENT;
-      } else {
-        // Default to a modern desktop User-Agent for WEB client type.
-        innertubeOptions.user_agent =
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+      } else if (clientType === 'WEB') {
+        innertubeOptions.user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
       }
 
       // Generate a session locally by default to reduce extra network requests.
       innertubeOptions.generate_session_locally =
         process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
 
-      // Ensure the token variable is populated for use in the fetch wrapper.
-      if (serverCreds?.access_token) {
+      // Ensure the token variable is populated for use in diagnostics.
+      if (hasServerAuth) {
         _ytAccessToken = serverCreds.access_token;
       } else if (process.env.YT_COOKIE) {
         innertubeOptions.cookie = process.env.YT_COOKIE;
@@ -59,7 +54,7 @@ export async function getInnertube() {
         _ytAccessToken = null;
       }
 
-      // Support for Proof-of-Token (PoToken) and Visitor Data to avoid 403 blocks.
+      // Support for Proof-of-Token (PoToken) and Visitor Data (mainly for WEB client).
       if (process.env.YT_POTOKEN) {
         innertubeOptions.po_token = process.env.YT_POTOKEN;
       }
@@ -67,8 +62,8 @@ export async function getInnertube() {
         innertubeOptions.visitor_data = process.env.YT_VISITOR_DATA;
       }
 
-      if (process.env.YT_DEBUG === '1' && (innertubeOptions.po_token || innertubeOptions.visitor_data)) {
-        console.debug('[YouTube] InnerTube initialized with PoToken details');
+      if (process.env.YT_DEBUG === '1') {
+        console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, { hasPoToken: !!innertubeOptions.po_token, hasAuth: hasServerAuth });
       }
 
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
@@ -109,18 +104,9 @@ export async function getInnertube() {
           }
         }
 
-        if (!headers['user-agent']) headers['user-agent'] = baseUserAgent;
+        if (!headers['user-agent'] && baseUserAgent) headers['user-agent'] = baseUserAgent;
         if (!headers['referer']) headers['referer'] = baseReferer;
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
-
-        // This is a fallback for endpoints that strictly require authentication
-        // (like live chat polling). We avoid injecting it for public browse/lookup
-        // endpoints as it often triggers "automated queries" blocks on the WEB client.
-        const needsAuth = urlStr.includes('/v1/live_chat/') ||
-          urlStr.includes('/v1/updated_metadata');
-        if (_ytAccessToken && needsAuth && !headers['authorization'] && !headers['cookie']) {
-          headers['authorization'] = `Bearer ${_ytAccessToken}`;
-        }
 
         if (process.env.YT_DEBUG === '1') {
           try {
@@ -134,8 +120,6 @@ export async function getInnertube() {
         const merged = { ...(init || {}), headers };
         try {
           const res = await fetch(input, merged);
-          // If the response is an error (4xx/5xx), clone and log a truncated
-          // response body to help diagnose why YouTube is rejecting the request.
           if (res.status >= 400) {
             try {
               const clone = res.clone();
@@ -143,18 +127,12 @@ export async function getInnertube() {
               const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
 
               if (res.status === 403 && (short.includes('automated queries') || short.includes('Sorry...'))) {
-                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries". Consider providing a valid YT_COOKIE or using a different IP/User-Agent.', { url: urlStr });
+                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries".', { url: urlStr, client: clientType });
               } else {
                 console.error('[YouTube Proxy] innertube fetch non-OK', { url: urlStr, status: res.status, body: short });
               }
             } catch (logErr) {
               console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: urlStr, status: res.status, err: String(logErr) });
-            }
-          } else {
-            if (process.env.YT_DEBUG === '1') {
-              try {
-                console.debug('[YouTube Proxy] innertube fetch', { url: urlStr, status: res.status });
-              } catch { }
             }
           }
           return res;
@@ -166,7 +144,6 @@ export async function getInnertube() {
 
       yt = await Innertube.create(innertubeOptions);
 
-      /*
       // Re-enable explicit sign-in if we have credentials.
       if (serverCreds?.access_token) {
         try {
@@ -175,12 +152,11 @@ export async function getInnertube() {
             refresh_token: serverCreds.refresh_token,
             expiry_date: new Date(serverCreds.expires_at).toISOString(),
           });
-          console.debug('[YouTube] Innertube signed in (ANDROID client)');
+          if (process.env.YT_DEBUG === '1') console.debug(`[YouTube] Innertube session signed in (${clientType} client)`);
         } catch (signInErr) {
           console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
         }
       }
-      */
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
