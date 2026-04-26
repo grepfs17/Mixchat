@@ -772,9 +772,15 @@ export default function ChatApp({
         console.error('Failed to send message:', error);
       } finally {
         setIsLoading(false);
+        // Force scroll to bottom when user sends a message
+        if (unifyChatEnabled) {
+          unifiedChatRef.current?.scrollToBottom();
+        } else {
+          chatDisplayRef.current?.scrollToBottom();
+        }
       }
     },
-    [selectedTwitchChannel, sendTwitchMessage, twitchSession, replyingTo]
+    [selectedTwitchChannel, sendTwitchMessage, twitchSession, replyingTo, unifyChatEnabled]
   );
 
   const handleRefreshEmotes = useCallback(async () => {
@@ -913,7 +919,10 @@ export default function ChatApp({
       optimistic: true,
     };
     setYtOptimisticMessages((prev) => [...prev, optimistic]);
-  }, [youtubeSession]);
+    if (unifyChatEnabled) {
+      unifiedChatRef.current?.scrollToBottom();
+    }
+  }, [youtubeSession, unifyChatEnabled]);
 
   const handleYtOptimisticFailed = useCallback((id: string) => {
     setYtOptimisticMessages((prev) => prev.filter((m) => m.id !== id));
