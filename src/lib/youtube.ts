@@ -34,7 +34,7 @@ export async function getInnertube() {
       let clientType = (process.env.YT_CLIENT || (hasServerAuth ? 'ANDROID' : 'WEB')).toUpperCase();
 
       // Normalize common aliases to prevent "INVALID_ARGUMENT" errors from YouTube
-      if (clientType === 'TV') clientType = 'TVHTML5';
+      if (clientType === 'TV' || clientType === 'TVHTML5') clientType = 'ANDROID';
 
       innertubeOptions.client_type = clientType;
 
