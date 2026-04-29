@@ -16,8 +16,8 @@ import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
+import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 
-const MAX_DISPLAYED_MESSAGES = 80;
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
 

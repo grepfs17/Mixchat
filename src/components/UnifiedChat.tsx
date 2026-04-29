@@ -4,7 +4,7 @@ import { MdReply, MdContentCopy } from 'react-icons/md';
 import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { FaTwitch, FaYoutube } from 'react-icons/fa';
 import type { ChatMessage, ChatFont } from '../lib/types';
-import { FONT_FAMILY_MAP } from '../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import { getColorFromName } from '../lib/chatColors';
 import MessageBadges from './MessageBadges';
@@ -77,8 +77,6 @@ interface UnifiedChatProps {
     splitChatEnabled?: boolean;
 }
 
-const MAX_MESSAGES = 300;
-
 // Small platform icon rendered before the username
 function PlatformTag({ source }: { source: 'twitch' | 'youtube' }) {
     return (
@@ -148,7 +146,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         const tw: UnifiedEntry[] = twitchMessages.map((m) => ({ source: 'twitch' as const, msg: m }));
         const yt: UnifiedEntry[] = ytMessages.map((m) => ({ source: 'youtube' as const, msg: m }));
         const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
-        return merged.length > MAX_MESSAGES ? merged.slice(-MAX_MESSAGES) : merged;
+        return merged.length > MAX_DISPLAYED_MESSAGES ? merged.slice(-MAX_DISPLAYED_MESSAGES) : merged;
     }, [twitchMessages, ytMessages]);
 
     // Auto-scroll to bottom when new messages arrive (only if already at bottom)

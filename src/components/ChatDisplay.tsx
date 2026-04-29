@@ -4,7 +4,7 @@ import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock,
 import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
-import { FONT_FAMILY_MAP } from '../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import { parseMessageWithEmotes } from '../lib/emotes';
 import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
@@ -173,7 +173,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       filtered = filtered.filter((msg) => selectedPlatforms.includes(msg.platform));
     }
 
-    return filtered;
+    return filtered.length > MAX_DISPLAYED_MESSAGES
+      ? filtered.slice(-MAX_DISPLAYED_MESSAGES)
+      : filtered;
   }, [messages, selectedPlatforms]);
 
   // Update new-messages badge when user is scrolled away from bottom

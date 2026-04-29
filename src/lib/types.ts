@@ -1,6 +1,8 @@
 export const PLATFORMS = ["twitch", "youtube"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
+export const MAX_DISPLAYED_MESSAGES = 100;
+
 export const MESSAGE_TYPES = [
   "chat",
   "cheer",

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { getColorFromName } from '../lib/chatColors';
 import type { ChatFont } from '../lib/types';
-import { FONT_FAMILY_MAP } from '../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
 
 
@@ -131,8 +131,11 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           const lastCurrentId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
           if (newMessages.length !== messages.length || lastNewId !== lastCurrentId) {
-            setMessages(newMessages);
-            lastMessageCountRef.current = newMessages.length;
+            const limited = newMessages.length > MAX_DISPLAYED_MESSAGES
+              ? newMessages.slice(-MAX_DISPLAYED_MESSAGES)
+              : newMessages;
+            setMessages(limited);
+            lastMessageCountRef.current = limited.length;
           }
 
           // Mark as connected using a ref to avoid restarting the interval
