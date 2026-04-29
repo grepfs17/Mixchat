@@ -22,15 +22,15 @@
 }
 
 .header-button {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
-  padding: 5px 10px;
-  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   /* spacing handled by .chat-header-actions gap */
   display: inline-flex;
   align-items: center;
@@ -38,7 +38,7 @@
 }
 
 .header-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.15);
   color: var(--color-text-white);
 }
@@ -104,23 +104,23 @@
   font-family: var(--chat-font-family, inherit);
 }
 
-/* Custom scrollbar styling */
+/* Custom scrollbar styling - modern thin design */
 .messages-container {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+  scrollbar-color: var(--color-border-light) var(--color-bg-primary);
 }
 
 .messages-container::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .messages-container::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+  background: transparent;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: var(--color-border-medium);
-  border-radius: var(--radius-md);
+  background: var(--color-border-light);
+  border-radius: 3px;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
@@ -138,16 +138,16 @@
 
 .message {
   background: transparent;
-  padding: 4px 8px 4px 10px;
+  padding: 6px 10px 6px 12px;
   border-left: 2px solid transparent;
-  transition: background-color 0.12s ease, border-left-color 0.12s ease;
+  transition: background-color 0.15s ease, border-left-color 0.15s ease;
   cursor: pointer;
-  border-radius: 2px;
+  border-radius: var(--radius-md);
 }
 
 .message:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-left-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  border-left-color: rgba(255, 255, 255, 0.15);
 }
 
 .message-single-line {
@@ -197,23 +197,23 @@
 }
 
 .action-button {
-  background: transparent;
-  border: 1px solid var(--color-border-light);
-  color: var(--color-text-chat);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 500;
-  opacity: 0.8;
+  opacity: 0.7;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .action-button:hover {
   opacity: 1;
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-lighter);
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-light);
   color: var(--color-text-primary);
 }
 
@@ -227,25 +227,24 @@
 
 .go-to-bottom-button {
   position: absolute;
-  bottom: 8px;
-  right: 16px;
-  background: var(--color-accent);
+  bottom: 12px;
+  right: 20px;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
   border: none;
   color: #ffffff;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: var(--radius-pill, 999px);
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
   z-index: 100;
-  box-shadow: 0 2px 12px rgba(158, 64, 115, 0.45);
+  box-shadow: var(--shadow-accent-md);
 }
 
 .go-to-bottom-button:hover {
-  background: #ad4584;
-  box-shadow: 0 4px 16px rgba(158, 64, 115, 0.58);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-accent-lg);
 }
 
 .go-to-bottom-button:active {
@@ -288,20 +287,20 @@
 }
 
 .sidebar-toggle-button {
-  padding: 4px 8px;
-  background-color: rgba(255, 255, 255, 0.04);
+  padding: 6px 12px;
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--color-text-secondary);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .sidebar-toggle-button:hover {
-  background-color: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--color-text-primary);
 }
 
@@ -583,9 +582,10 @@
 }
 
 .author.self {
-  background-color: var(--color-accent);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+  padding: 2px 8px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
 }
 
 .author-link {
