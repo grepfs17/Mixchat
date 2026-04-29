@@ -23,6 +23,20 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
   }
 }
 
+const USER_AGENT = process.env.YT_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const REFERER = 'https://www.youtube.com/';
+const ORIGIN = 'https://www.youtube.com';
+
+function buildFetchHeaders(cookies?: string): HeadersInit {
+  return {
+    'User-Agent': USER_AGENT,
+    'Referer': REFERER,
+    'Origin': ORIGIN,
+    'Accept-Language': 'en-US,en;q=0.9',
+    ...(cookies ? { 'Cookie': cookies } : {}),
+  };
+}
+
 async function redirectFallbackLive(channelParam: string): Promise<string | null> {
   try {
     const candidates: string[] = [];
@@ -37,9 +51,15 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
       candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, '')}/live`);
     }
 
+    const fetchOptions: RequestInit = {
+      method: 'GET',
+      redirect: 'follow',
+      headers: buildFetchHeaders(),
+    };
+
     for (const candidate of candidates) {
       try {
-        const res = await fetch(candidate, { method: 'GET', redirect: 'follow' });
+        const res = await fetch(candidate, fetchOptions);
         const finalUrl = res.url || '';
         if (finalUrl.includes('watch?v=')) {
           const parsed = new URL(finalUrl);
