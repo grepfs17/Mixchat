@@ -11,6 +11,7 @@ import MessageBadges from './MessageBadges';
 import TwitchEventIcon, { EVENT_CONFIG } from './TwitchEventIcon';
 import YTMessageParts from './YTMessageParts';
 import { useChatTouchGestures } from '../hooks/useChatTouchGestures';
+import { useScrollToBottomOnKeyboard } from '../hooks/useScrollToBottomOnKeyboard';
 
 
 // YouTube message shape — mirrors what YouTubeChat.tsx uses internally
@@ -155,6 +156,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             containerRef.current.scrollTop = containerRef.current.scrollHeight;
         }
     }, [entries, isAtBottom]);
+
+    // Handle mobile keyboard - scroll to bottom when keyboard closes (viewport expands)
+    useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
 
     // Track whether the user has scrolled away from the bottom
     useEffect(() => {

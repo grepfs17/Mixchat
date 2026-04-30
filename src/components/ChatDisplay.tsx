@@ -10,6 +10,7 @@ import MessageBadges from './MessageBadges';
 import TwitchEventIcon from './TwitchEventIcon';
 import { EVENT_CONFIG } from './TwitchEventIcon';
 import { useChatTouchGestures } from '../hooks/useChatTouchGestures';
+import { useScrollToBottomOnKeyboard } from '../hooks/useScrollToBottomOnKeyboard';
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
@@ -194,6 +195,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [filteredMessages, isAtBottom]);
+
+  // Handle mobile keyboard - scroll to bottom when keyboard closes (viewport expands)
+  useScrollToBottomOnKeyboard(messagesContainerRef, setIsAtBottom);
 
   // Track scroll position
   useEffect(() => {

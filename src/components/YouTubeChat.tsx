@@ -4,6 +4,7 @@ import { getColorFromName } from '../lib/chatColors';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
+import { useScrollToBottomOnKeyboard } from '../hooks/useScrollToBottomOnKeyboard';
 
 
 interface YouTubeChatProps {
@@ -173,6 +174,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [mergedMessages]);
+
+  // Handle mobile keyboard - scroll to bottom when keyboard closes (viewport expands)
+  useScrollToBottomOnKeyboard(messagesContainerRef);
 
   // Pass the current message list up so the parent can use it in unified chat
   useEffect(() => {
