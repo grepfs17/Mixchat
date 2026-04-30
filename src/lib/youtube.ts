@@ -1,10 +1,7 @@
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
-import { loadServerCredentials } from "./youtube-server-auth";
 
 let yt: Innertube | null = null;
-/** Track which access_token the singleton was built with so we can rebuild on refresh. */
-let _ytAccessToken: string | null = null;
 
 // Suppress noisy "class_not_found" warnings for unknown YouTube.js nodes (e.g.
 // LiveChatReportModerationStateCommand). These are harmless — youtubei.js JIT-
@@ -14,23 +11,12 @@ Parser.setParserErrorHandler(({ error_type }) => {
 });
 
 export async function getInnertube() {
-  // Load the server's own OAuth credential (set up via /api/youtube-device-auth).
-  // If present and fresh, use it. If the access token has changed (after a refresh),
-  // rebuild the Innertube singleton so it picks up the new token.
-  const serverCreds = await loadServerCredentials();
-  const currentToken = serverCreds?.access_token ?? null;
-  if (yt && _ytAccessToken !== currentToken) {
-    // Token was refreshed — invalidate singleton so it rebuilds with new token.
-    yt = null;
-  }
-
   if (!yt) {
     try {
       // Allow a configurable user agent and session generation to avoid
       // server-side 403s from YouTube. These options are documented by
       // youtubei.js (Innertube.create options).
       const innertubeOptions: Record<string, any> = {};
-      const hasServerAuth = !!serverCreds?.access_token;
       let clientType = (process.env.YT_CLIENT || 'WEB').toUpperCase();
 
       // Normalize aliases to valid youtubei.js client names.
@@ -52,14 +38,11 @@ export async function getInnertube() {
       innertubeOptions.generate_session_locally =
         process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
 
-      // Ensure the token variable is populated for use in diagnostics.
-      if (hasServerAuth) {
-        _ytAccessToken = serverCreds.access_token;
-      } else if (process.env.YT_COOKIE) {
+      // Innertube does NOT support OAuth Bearer tokens — it expects either
+      // cookie-based auth (SAPISID hash) or no auth at all.  Use YT_COOKIE
+      // env var for authenticated Innertube access.
+      if (process.env.YT_COOKIE) {
         innertubeOptions.cookie = process.env.YT_COOKIE;
-        _ytAccessToken = null;
-      } else {
-        _ytAccessToken = null;
       }
 
       // Support for Proof-of-Token (PoToken) and Visitor Data (mainly for WEB client).
@@ -71,7 +54,7 @@ export async function getInnertube() {
       }
 
       if (process.env.YT_DEBUG === '1') {
-        console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, { hasPoToken: !!innertubeOptions.po_token, hasAuth: hasServerAuth });
+        console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, { hasPoToken: !!innertubeOptions.po_token, hasCookie: !!innertubeOptions.cookie });
       }
 
       // Provide a custom fetch wrapper to ensure outgoing Innertube requests
@@ -159,27 +142,13 @@ export async function getInnertube() {
       };
 
       yt = await Innertube.create(innertubeOptions);
-
-      // Re-enable explicit sign-in if we have credentials.
-      if (serverCreds?.access_token) {
-        try {
-          await yt.session.signIn({
-            access_token: serverCreds.access_token,
-            refresh_token: serverCreds.refresh_token,
-            expiry_date: new Date(serverCreds.expires_at).toISOString(),
-          });
-          if (process.env.YT_DEBUG === '1') console.debug(`[YouTube] Innertube session signed in (${clientType} client)`);
-        } catch (signInErr) {
-          console.error('[YouTube] Failed to sign in Innertube session:', signInErr);
-        }
-      }
     } catch (error) {
       // Reset to null on error so next call retries instead of returning failed instance
       yt = null;
       throw error;
     }
   }
-  return yt;
+return yt;
 }
 
 export async function getYoutubeAccessToken(
