@@ -472,6 +472,7 @@ function MessageInput({
           disabled={selectedPlatforms.length === 0 || isLoading}
           className="message-textarea twitch"
           autoComplete="off"
+          autoCapitalize='off'
         />
         <button onClick={handleSend} disabled={!message.trim() || selectedPlatforms.length === 0 || isLoading || slowModeCooldown > 0} className="send-button" title={slowModeCooldown > 0 ? `Slow mode, wait ${slowModeCooldown}s` : undefined}>
           {isLoading ? '...' : slowModeCooldown > 0 ? `${slowModeCooldown}s` : <FaTwitch size={16} />}
