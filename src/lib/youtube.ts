@@ -31,10 +31,14 @@ export async function getInnertube() {
       // youtubei.js (Innertube.create options).
       const innertubeOptions: Record<string, any> = {};
       const hasServerAuth = !!serverCreds?.access_token;
-      let clientType = (process.env.YT_CLIENT || (hasServerAuth ? 'ANDROID' : 'WEB')).toUpperCase();
+      let clientType = (process.env.YT_CLIENT || 'WEB').toUpperCase();
 
-      // Normalize common aliases to prevent "INVALID_ARGUMENT" errors from YouTube
-      if (clientType === 'TV' || clientType === 'TVHTML5') clientType = 'ANDROID';
+      // Normalize aliases to valid youtubei.js client names.
+      // ANDROID + OAuth Bearer token causes 400 INVALID_ARGUMENT because
+      // YouTube expects native Google Play Services auth for ANDROID, not web OAuth.
+      // WEB client is compatible with OAuth Bearer tokens.
+      if (clientType === 'TV') clientType = 'TVHTML5';
+      if (clientType === 'TVHTML5_TV') clientType = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
 
       innertubeOptions.client_type = clientType;
 
@@ -108,6 +112,13 @@ export async function getInnertube() {
           }
         }
 
+        // Strip empty or whitespace-only X-Goog-Visitor-Id — YouTube rejects
+        // invalid visitor data with 400 INVALID_ARGUMENT.
+        if ('x-goog-visitor-id' in headers) {
+          const val = headers['x-goog-visitor-id'];
+          if (!val || !val.trim()) delete headers['x-goog-visitor-id'];
+        }
+
         if (!headers['user-agent'] && baseUserAgent) headers['user-agent'] = baseUserAgent;
         if (!headers['referer']) headers['referer'] = baseReferer;
         if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
@@ -117,7 +128,8 @@ export async function getInnertube() {
             const keys = Object.keys(headers);
             const hasAuth = keys.includes('authorization');
             const hasCookie = keys.includes('cookie');
-            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), hasAuth ? '(auth present)' : '(no auth)', hasCookie ? '(cookie present)' : '(no cookie)');
+            const bodyPreview = typeof init?.body === 'string' ? init.body.slice(0, 500) : undefined;
+            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), hasAuth ? '(auth present)' : '(no auth)', hasCookie ? '(cookie present)' : '(no cookie)', bodyPreview ? `\n  body: ${bodyPreview}` : '');
           } catch { }
         }
 
