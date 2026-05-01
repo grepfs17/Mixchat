@@ -120,7 +120,7 @@ export const deleteChatMessage = async (
       `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
         resolvedBroadcasterId,
       )}&moderator_id=${encodeURIComponent(moderatorId)}&message_id=${encodeURIComponent(messageId)}`,
-      { method: "DELETE" },
+      { method: "DELETE", headers: { "Content-Type": "application/json" }, credentials: "same-origin" },
     );
 
     if (!res.ok) {
@@ -190,7 +190,7 @@ export const removeBan = async (
       `/api/twitch-proxy?path=/helix/moderation/bans&broadcaster_id=${encodeURIComponent(
         resolvedBroadcasterId,
       )}&moderator_id=${encodeURIComponent(moderatorId)}&user_id=${encodeURIComponent(userId)}`,
-      { method: "DELETE" },
+      { method: "DELETE", headers: { "Content-Type": "application/json" }, credentials: "same-origin" },
     );
 
     if (!res.ok) {
@@ -215,7 +215,7 @@ export const clearChat = async (broadcasterId: string, moderatorId: string) => {
       `/api/twitch-proxy?path=/helix/moderation/chat&broadcaster_id=${encodeURIComponent(
         resolvedBroadcasterId,
       )}&moderator_id=${encodeURIComponent(moderatorId)}`,
-      { method: "DELETE" },
+      { method: "DELETE", headers: { "Content-Type": "application/json" }, credentials: "same-origin" },
     );
 
     if (!res.ok) {
