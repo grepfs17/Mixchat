@@ -154,12 +154,20 @@ export default function AppContainer() {
     }
   );
   useEffect(() => {
+    // Set initial value based on screen width
+    setLeftColumnVisible(window.innerWidth >= 1366);
+
     const handleResize = () => {
-      setLeftColumnVisible(window.innerWidth >= 1366);
+      // Auto-show sidebar when resizing to a wide screen, but don't
+      // force-close it on narrow screens — the user may have explicitly
+      // opened it on mobile (e.g. tapping the hamburger button).
+      // This also prevents the mobile virtual-keyboard resize from
+      // closing the sidebar when the user taps an input field.
+      if (window.innerWidth >= 1366) {
+        setLeftColumnVisible(true);
+      }
     };
 
-    // Set initial value
-    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
