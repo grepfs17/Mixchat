@@ -515,19 +515,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                           __html: parseMessageWithEmotes(msg.content, msg.emotes),
                         }}
                       />
-                      {!compactActions && (
+                      {!compactActions && (!msg.messageType || msg.messageType === 'chat' || ((msg.messageType === 'timeout' || msg.messageType === 'ban') && isModerator && msg.targetUsername)) && (
                         <div className="message-actions">
                         {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
-                          isModerator && msg.targetUsername ? (
-                            <button
-                              onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
-                              className="action-button mod-action"
-                              title="Undo moderation action"
-                              style={{ display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid currentColor', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', marginTop: '2px' }}
-                            >
-                              Undo
-                            </button>
-                          ) : null
+                          <button
+                            onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
+                            className="action-button mod-action"
+                            title="Undo moderation action"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', border: '1px solid currentColor', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', marginTop: '2px' }}
+                          >
+                            Undo
+                          </button>
                         ) : (
                           <>
                             {onReply && (
@@ -701,10 +699,11 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           {
             (() => {
               const items: Array<{ key: string; label: string; onClick: () => void } > = [];
-              if (onReply) items.push({ key: 'reply', label: 'Reply', onClick: () => { onReply(messageMenu.message); setMessageMenu(null); } });
+              const isSystemMessage = messageMenu.message.messageType && messageMenu.message.messageType !== 'chat';
+              if (!isSystemMessage && onReply) items.push({ key: 'reply', label: 'Reply', onClick: () => { onReply(messageMenu.message); setMessageMenu(null); } });
               items.push({ key: 'copy', label: 'Copy message', onClick: () => { handleCopy(messageMenu.message); setMessageMenu(null); } });
 
-              if (isModerator && modModeActive) {
+              if (!isSystemMessage && isModerator && modModeActive) {
                 const isBroadcaster = Boolean(messageMenu.message.badges && messageMenu.message.badges['broadcaster']);
                 const isModeratorMsg = Boolean(messageMenu.message.badges && messageMenu.message.badges['moderator']);
                 const isUnmoderatable = isBroadcaster || isModeratorMsg || messageMenu.message.isCurrentUser;

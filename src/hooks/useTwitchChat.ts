@@ -948,7 +948,7 @@ export function useTwitchChat(
         isBot: true,
         badges: {},
         badgeDetails: {},
-        messageType: "chat",
+        messageType: "notice",
       });
     });
 

@@ -341,10 +341,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                             className="message-text"
                                             dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
                                         />
-                                        {!compactActions && (
+                                        {!compactActions && (!msg.messageType || msg.messageType === 'chat' || ((msg.messageType === 'timeout' || msg.messageType === 'ban') && isModerator && msg.targetUsername)) && (
                                             <div className="message-actions">
                                             {(msg.messageType === 'timeout' || msg.messageType === 'ban') ? (
-                                                isModerator && msg.targetUsername ? (
                                                     <button
                                                         onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
                                                         className="action-button mod-action"
@@ -353,7 +352,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                                     >
                                                         Undo
                                                     </button>
-                                                ) : null
                                             ) : (
                                                 <>
                                                     {onReply && (
