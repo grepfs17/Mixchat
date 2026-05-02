@@ -33,7 +33,7 @@ export async function saveSettingsToDrive(
   if (existing) {
     // Update existing file
     const res = await fetch('/api/gdrive', {
-      method: 'PATCH',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update', fileId: existing, content: settingsJson }),
     });
