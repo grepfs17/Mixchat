@@ -52,6 +52,20 @@ export function useStreamMonitor({
         const firstNewStreamer = newlyLive[0];
         setNewLiveStreamer(firstNewStreamer);
         markStreamerNotified(firstNewStreamer.id);
+
+        // Send browser notification
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          const gameInfo = firstNewStreamer.gameName ? ` — ${firstNewStreamer.gameName}` : "";
+          const notif = new Notification(`${firstNewStreamer.displayName} is live${gameInfo}`, {
+            body: firstNewStreamer.title || "Come watch the stream!",
+            icon: firstNewStreamer.profileImageUrl || undefined,
+            tag: `mixchat-live-${firstNewStreamer.id}`,
+          });
+          notif.onclick = () => {
+            window.focus();
+            notif.close();
+          };
+        }
       }
 
       // Check for streamers that went offline
@@ -68,6 +82,13 @@ export function useStreamMonitor({
       setIsChecking(false);
     }
   }, [session, clientId, enabled]);
+
+  // Request browser notification permission when monitoring starts
+  useEffect(() => {
+    if (enabled && session && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [enabled, session]);
 
   // Check on mount and then periodically
   useEffect(() => {

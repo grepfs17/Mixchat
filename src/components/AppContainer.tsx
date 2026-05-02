@@ -76,7 +76,7 @@ export default function AppContainer() {
   const [fontSize, setFontSize] = useState(14); // Global chat font size setting
   const [chatFont, setChatFont] = useState<ChatFont>('inter'); // Global chat font family
   const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
-  const [mentionVolume, setMentionVolume] = useState(0.5); // Mention sound volume 0,1
+  const [mentionVolume, setMentionVolume] = useState(0.2); // Mention sound volume 0,1
   const [mentionSoundType, setMentionSoundType] = useState<MentionSoundType>('ding'); // Mention sound style
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
   const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
@@ -798,7 +798,7 @@ export default function AppContainer() {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/youtube.force-ssl',
+      scope: 'https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/drive.file',
       access_type: 'offline',
       prompt: 'consent',
       state,
@@ -995,6 +995,8 @@ export default function AppContainer() {
             onCompactActionsChange={setCompactActions}
             splitChatEnabled={splitChatEnabled}
             onSplitChatEnabledChange={setSplitChatEnabled}
+            hasYoutubeSession={!!sessions.youtube}
+            onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
