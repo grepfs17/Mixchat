@@ -480,21 +480,21 @@ function MessageInput({
 
         {showEmoteMenu && emoteResults.length > 0 && menuRect && createPortal(
           isMobileDevice() ? (
-            <div ref={emoteMenuRef} className="emote-autocomplete-mobile-strip" style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: 0, right: 0, height: '60px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '4px', padding: '4px 8px', overflowX: 'auto', overflowY: 'hidden', background: '#1e293b', borderTop: '1px solid #475569', borderBottom: '1px solid #475569', zIndex: 99999, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)', scrollbarWidth: 'none' }}>
+            <div ref={emoteMenuRef} className="emote-autocomplete-mobile-strip" style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: 0, right: 0, height: '60px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '4px', padding: '4px 8px', overflowX: 'auto', overflowY: 'hidden', background: 'var(--color-autocomplete-bg)', borderTop: '1px solid var(--color-autocomplete-border)', borderBottom: '1px solid var(--color-autocomplete-border)', zIndex: 99999, boxShadow: 'var(--shadow-lg)', scrollbarWidth: 'none' }}>
               {emoteResults.map((emote, index) => (
-                <div key={`${emote.source}-${emote.name}`} onClick={() => insertEmote(emote.name)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: '4px', cursor: 'pointer', borderRadius: '6px', border: index === selectedEmoteIndex ? '1px solid #9146ff' : '1px solid transparent', background: index === selectedEmoteIndex ? '#334155' : 'transparent', transition: 'background 0.15s' }} title={emote.name} onTouchStart={() => setSelectedEmoteIndex(index)}>
-                  <img src={emote.url} alt={emote.name} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                <div key={`${emote.source}-${emote.name}`} onClick={() => insertEmote(emote.name)} className={`autocomplete-item${index === selectedEmoteIndex ? ' selected' : ''}`} style={{ flexShrink: 0, borderRadius: '6px', border: index === selectedEmoteIndex ? '1px solid var(--color-accent)' : '1px solid transparent', padding: '4px' }} title={emote.name} onTouchStart={() => setSelectedEmoteIndex(index)}>
+                  <img src={emote.url} alt={emote.name} style={{ width: '40px', height: '40px' }} />
                 </div>
               ))}
             </div>
           ) : (
-            <div ref={emoteMenuRef} style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh', overflowY: 'auto', background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', zIndex: 99999, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }}>
+            <div ref={emoteMenuRef} className="autocomplete-menu" style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh' }}>
               {emoteResults.map((emote, index) => (
-                <div key={`${emote.source}-${emote.name}`} onClick={() => insertEmote(emote.name)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', cursor: 'pointer', background: index === selectedEmoteIndex ? '#334155' : 'transparent', transition: 'background 0.15s' }} onMouseEnter={() => setSelectedEmoteIndex(index)}>
-                  <img src={emote.url} alt={emote.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <span style={{ color: '#e2e8f0', fontWeight: '500' }}>{emote.name}</span>
-                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{emote.source}</span>
+                <div key={`${emote.source}-${emote.name}`} onClick={() => insertEmote(emote.name)} className={`autocomplete-item${index === selectedEmoteIndex ? ' selected' : ''}`} onMouseEnter={() => setSelectedEmoteIndex(index)}>
+                  <img src={emote.url} alt={emote.name} style={{ width: '32px', height: '32px' }} />
+                  <div className="autocomplete-item-info">
+                    <span className="autocomplete-item-name">{emote.name}</span>
+                    <span className="autocomplete-item-type">{emote.source}</span>
                   </div>
                 </div>
               ))}
@@ -504,9 +504,9 @@ function MessageInput({
         )}
 
         {showUsernameMenu && usernameResults.length > 0 && menuRect && createPortal(
-          <div style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh', overflowY: 'auto', background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', zIndex: 99999, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }}>
+          <div className="autocomplete-menu" style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh' }}>
             {usernameResults.map((username, index) => (
-              <div key={username} onClick={() => insertUsername(username)} style={{ padding: '8px 12px', cursor: 'pointer', background: hasUsernameSelection && index === selectedUsernameIndex ? '#334155' : 'transparent', transition: 'background 0.15s', color: '#e2e8f0', fontSize: '0.95rem' }} onMouseEnter={() => { setSelectedUsernameIndex(index); setHasUsernameSelection(true); }}>
+              <div key={username} onClick={() => insertUsername(username)} className={`autocomplete-item${hasUsernameSelection && index === selectedUsernameIndex ? ' selected' : ''}`} style={{ fontSize: '0.95rem' }} onMouseEnter={() => { setSelectedUsernameIndex(index); setHasUsernameSelection(true); }}>
                 @{username}
               </div>
             ))}
@@ -515,14 +515,14 @@ function MessageInput({
         )}
 
         {showCommandMenu && commandResults.length > 0 && menuRect && createPortal(
-          <div style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh', overflowY: 'auto', background: '#1e293b', border: '1px solid #475569', borderRadius: '8px', zIndex: 99999, boxShadow: '0 -4px 20px rgba(0,0,0,0.6)' }}>
+          <div className="autocomplete-menu" style={{ position: 'fixed', bottom: window.innerHeight - menuRect.top + 6, left: menuRect.left, width: menuRect.width, maxHeight: '40vh' }}>
             {commandResults.map((cmd, index) => (
-              <div key={cmd.name} onClick={() => insertCommand(cmd.name)} style={{ padding: '8px 12px', cursor: 'pointer', background: index === selectedCommandIndex ? '#334155' : 'transparent', transition: 'background 0.15s', borderBottom: '1px solid #334155' }} onMouseEnter={() => setSelectedCommandIndex(index)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                  <span style={{ color: '#9146ff', fontWeight: 'bold', fontSize: '1rem' }}>{cmd.name}</span>
-                  <span style={{ color: '#64748b', fontSize: '0.75rem', fontStyle: 'italic' }}>{cmd.usage}</span>
+              <div key={cmd.name} onClick={() => insertCommand(cmd.name)} className={`autocomplete-command-item${index === selectedCommandIndex ? ' selected' : ''}`} onMouseEnter={() => setSelectedCommandIndex(index)}>
+                <div className="autocomplete-command-header">
+                  <span className="autocomplete-command-name">{cmd.name}</span>
+                  <span className="autocomplete-command-usage">{cmd.usage}</span>
                 </div>
-                <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{cmd.description}</div>
+                <div className="autocomplete-command-desc">{cmd.description}</div>
               </div>
             ))}
           </div>,

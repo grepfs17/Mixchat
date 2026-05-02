@@ -104,9 +104,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 12px;
+  padding: 8px 12px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background 0.15s ease;
+}
+
+.emote-autocomplete-item:hover {
+  background: var(--color-autocomplete-hover);
 }
 
 .emote-autocomplete-item.selected {

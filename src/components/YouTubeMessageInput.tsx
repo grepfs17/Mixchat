@@ -330,12 +330,6 @@ export default function YouTubeMessageInput({
                             left: menuRect.left,
                             width: menuRect.width,
                             maxHeight: '260px',
-                            overflowY: 'auto',
-                            background: 'var(--color-autocomplete-bg, #1e293b)',
-                            border: '1px solid var(--color-autocomplete-border, #475569)',
-                            borderRadius: '8px',
-                            zIndex: 99999,
-                            boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
                         }}
                     >
                         {emojiResults.map((entry, idx) => (
@@ -358,7 +352,7 @@ export default function YouTubeMessageInput({
                     document.body
                 )}
 
-                {/* Mention autocomplete dropdown */}
+{/* Mention autocomplete dropdown */}
                 {showMentionMenu && mentionResults.length > 0 && menuRect && createPortal(
                     <div
                         ref={mentionMenuRef}
@@ -369,12 +363,6 @@ export default function YouTubeMessageInput({
                             left: menuRect.left,
                             width: menuRect.width,
                             maxHeight: '260px',
-                            overflowY: 'auto',
-                            background: 'var(--color-autocomplete-bg, #1e293b)',
-                            border: '1px solid var(--color-autocomplete-border, #475569)',
-                            borderRadius: '8px',
-                            zIndex: 99999,
-                            boxShadow: '0 -4px 20px rgba(0,0,0,0.6)',
                         }}
                     >
                         {mentionResults.map((author, idx) => (

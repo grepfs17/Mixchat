@@ -16,6 +16,7 @@ import { markStreamerNotified } from '../lib/streamMonitor';
 import { primeAudioContext } from '../hooks/useTwitchChat';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
 import StreamGrid from './StreamGrid';
+import LandingPage from './LandingPage';
 
 // Don't save access tokens to localStorage for security. 
 // We keep them in memory and let useTokenRefresh handle re-populating them 
@@ -888,41 +889,9 @@ export default function AppContainer() {
     );
   }
 
-  // Not logged in and not loading, clean splash screen
+  // Not logged in and not loading — show the landing page
   if (!isLoggingIn && !sessions.twitch) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--color-bg-primary)', gap: '28px' }}>
-        <img src="/logo.png" alt="Mixchat" style={{ width: 'clamp(180px, 30vw, 280px)', height: 'auto', opacity: 0.95 }} />
-        <p style={{ fontSize: '14px', color: '#666', textAlign: 'center' }}>Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions</p>
-        <button
-          onClick={handleTwitchLogin}
-          style={{
-            background: 'var(--color-twitch)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 'var(--radius-xl)',
-            padding: '11px 28px',
-            fontSize: '15px',
-            fontWeight: 600,
-            fontFamily: 'var(--font-ui)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 20px rgba(145,70,255,0.35)',
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-        >
-
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-          </svg>
-          Login with Twitch
-        </button>
-      </div>
-    );
+    return <LandingPage onTwitchLogin={handleTwitchLogin} />;
   }
 
   return (
