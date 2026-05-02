@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
-import { FaUsers, FaBars, FaTimes } from 'react-icons/fa';
+import { FaUsers, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
@@ -283,10 +283,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           {onToggleSidebar && (
             <button
               onClick={onToggleSidebar}
-              className="sidebar-toggle-button"
-              title={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
+              className={`sidebar-toggle-button${showStreamEmbed ? ' sidebar-toggle-button--embed-active' : ''}`}
+              title={sidebarVisible ? 'Fold sidebar' : 'Unfold sidebar'}
             >
-              {sidebarVisible ? <FaTimes /> : <FaBars />}
+              {sidebarVisible ? <FaChevronLeft /> : <FaChevronRight />}
             </button>
           )}
           {!showStreamEmbed && onToggleStreamEmbed && (

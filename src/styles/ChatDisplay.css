@@ -304,6 +304,16 @@
   color: var(--color-text-primary);
 }
 
+.sidebar-toggle-button--embed-active {
+  display: none;
+}
+
+@media (max-width: 1365px) {
+  .sidebar-toggle-button--embed-active {
+    display: inline-flex;
+  }
+}
+
 /* Mod mode icon + label behavior */
 .header-button .mod-icon {
   display: inline-flex;

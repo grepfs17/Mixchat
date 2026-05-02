@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import LoginPanel from './LoginPanel';
 import ChatApp from './ChatApp';
 import StreamEmbed from './StreamEmbed';
@@ -1018,6 +1018,13 @@ export default function AppContainer() {
           {showStreamEmbed && (
             <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '0' }} data-stream-embed>
               <div className="stream-embed-header">
+                <button
+                  onClick={() => setLeftColumnVisible(v => !v)}
+                  className="sidebar-toggle-button sidebar-toggle-button--in-embed"
+                  title={leftColumnVisible ? 'Fold sidebar' : 'Unfold sidebar'}
+                >
+                  {leftColumnVisible ? <FaChevronLeft /> : <FaChevronRight />}
+                </button>
                 <span className="stream-embed-title">{playerType === 'youtube' ? 'YouTube' : 'Twitch'}</span>
                 <div className="player-type-center">
                   <div className="player-type-buttons">

@@ -67,6 +67,10 @@
   [data-resizer] {
     display: none !important;
   }
+
+  .sidebar-toggle-button--in-embed {
+    display: none !important;
+  }
 }
 
 /* Stream Embed Header */
@@ -89,6 +93,27 @@
   letter-spacing: 1.2px;
   text-transform: uppercase;
   flex-shrink: 0;
+}
+
+.sidebar-toggle-button--in-embed {
+  padding: 4px 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #777;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-button--in-embed:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ccc;
 }
 
 .player-type-center {
