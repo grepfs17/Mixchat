@@ -1,7 +1,9 @@
-import { FaTimes } from 'react-icons/fa';
+import { useRef, useState } from 'react';
+import { FaTimes, FaDownload, FaUpload } from 'react-icons/fa';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
+import { exportSettings, importSettings } from '../lib/settingsBackup';
 
 interface EmbedConfigModalProps {
   embedDefaultOpen: boolean;
@@ -48,90 +50,46 @@ export default function EmbedConfigModal({
   onMentionSoundTypeChange,
   showDeletedMessages,
   onShowDeletedMessagesChange,
-  // New prop: compact actions
   compactActions,
   onCompactActionsChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
   onClose,
 }: EmbedConfigModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const count = await importSettings(file);
+      setImportMessage(`Restored ${count} settings. Reloading...`);
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err) {
+      setImportMessage(err instanceof Error ? err.message : 'Import failed');
+      setTimeout(() => setImportMessage(null), 3000);
+    }
+    e.target.value = '';
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: '0',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: '1000',
-      }}
-      onClick={onClose}
-    >
-      <div className="embed-config-modal-content"
-        style={{
-          backgroundColor: '#1a1a1a',
-          borderRadius: '8px',
-          border: '1px solid #333333',
-          padding: '24px',
-          maxWidth: '400px',
-          width: '90%',
-          maxHeight: '90svh',
-          overflowY: 'auto',
-          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.8)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              color: '#e2e8f0',
-              fontSize: '18px',
-              fontWeight: '600',
-            }}
-          >
-            Global Settings
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#999',
-              cursor: 'pointer',
-              padding: '0',
-              display: 'flex',
-              alignItems: 'center',
-              lineHeight: '1',
-            }}
-            title="Close"
-          >
+    <div className="embed-config-overlay" onClick={onClose}>
+      <div className="embed-config-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="embed-config-header">
+          <h2 className="embed-config-title">Global Settings</h2>
+          <button className="embed-config-close-btn" onClick={onClose} title="Close">
             <FaTimes size={20} />
           </button>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '12px',
-              color: '#e2e8f0',
-              fontSize: '14px',
-              fontWeight: '500',
-            }}
-          >
-            Chat Font Size: <span style={{ color: '#6366f1', marginLeft: '4px' }}>{fontSize}px</span>
+        {/* Font Size */}
+        <div className="embed-config-section">
+          <label className="embed-config-label">
+            Chat Font Size: <span className="embed-config-value">{fontSize}px</span>
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>12px</span>
+          <div className="embed-config-range-row">
+            <span className="embed-config-range-bound">12px</span>
             <input
               type="range"
               min="12"
@@ -139,52 +97,23 @@ export default function EmbedConfigModal({
               step="1"
               value={fontSize}
               onChange={(e) => onFontSizeChange(parseInt(e.target.value))}
-              style={{
-                flex: 1,
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-                height: '4px',
-              }}
+              className="embed-config-range"
             />
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>32px</span>
+            <span className="embed-config-range-bound">32px</span>
           </div>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-            }}
-          >
+          <p className="embed-config-description">
             Adjust the size of the text in the chat window.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '12px',
-              color: '#e2e8f0',
-              fontSize: '14px',
-              fontWeight: '500',
-            }}
-          >
-            Chat Font
-          </label>
+        {/* Font Family */}
+        <div className="embed-config-section">
+          <label className="embed-config-label">Chat Font</label>
           <select
             value={chatFont}
             onChange={(e) => onChatFontChange(e.target.value as ChatFont)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              backgroundColor: '#0a0a0a',
-              border: '1px solid #333333',
-              borderRadius: '6px',
-              color: '#e2e8f0',
-              fontSize: '14px',
-              fontFamily: FONT_FAMILY_MAP[chatFont],
-              cursor: 'pointer',
-            }}
+            className="embed-config-select"
+            style={{ fontFamily: FONT_FAMILY_MAP[chatFont] }}
           >
             {CHAT_FONT_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value} style={{ fontFamily: FONT_FAMILY_MAP[value] }}>
@@ -192,215 +121,93 @@ export default function EmbedConfigModal({
               </option>
             ))}
           </select>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-            }}
-          >
+          <p className="embed-config-description">
             Choose the font used in the chat window.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Open embed by default */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={embedDefaultOpen}
               onChange={(e) => onEmbedDefaultOpenChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Open stream embed by default
-            </span>
+            <span>Open stream embed by default</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             If enabled, the stream embed will be visible when you open Mixchat. If disabled, the chat will take up the full width.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Unify chats */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={unifyChatEnabled}
               onChange={(e) => onUnifyChatEnabledChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Unify chats
-            </span>
+            <span>Unify chats</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             When enabled, Twitch and YouTube messages appear together in a single chronological feed. Each platform keeps its own styling and features.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Split chat */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={splitChatEnabled}
               onChange={(e) => onSplitChatEnabledChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Split chat
-            </span>
+            <span>Split chat</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             When enabled, messages show a subtle darker background to visually separate each message.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* YouTube embed */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={useYoutubeEmbed}
               onChange={(e) => onUseYoutubeEmbedChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Use official YouTube chat embed
-            </span>
+            <span>Use official YouTube chat embed</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             Replaces the custom YouTube chat with the official iframe embed. Note: This disables some features like custom emotes and unified chat for YouTube.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Mention sound */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={mentionSoundEnabled}
               onChange={(e) => onMentionSoundEnabledChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Play sound on mention
-            </span>
+            <span>Play sound on mention</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             Plays a notification sound when someone mentions your name or replies to your message.
           </p>
 
           {mentionSoundEnabled && (
-            <div style={{ marginLeft: '30px', marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Volume */}
+            <div className="embed-config-mention-options">
               <div>
-                <label style={{ color: '#e2e8f0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-                  Volume: <span style={{ color: '#6366f1' }}>{Math.round(mentionVolume * 100)}%</span>
+                <label className="embed-config-volume-label">
+                  Volume: <span className="embed-config-volume-value">{Math.round(mentionVolume * 100)}%</span>
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>0%</span>
+                <div className="embed-config-volume-row">
+                  <span className="embed-config-volume-bound">0%</span>
                   <input
                     type="range"
                     min="0"
@@ -408,18 +215,15 @@ export default function EmbedConfigModal({
                     step="0.05"
                     value={mentionVolume}
                     onChange={(e) => onMentionVolumeChange(parseFloat(e.target.value))}
-                    style={{ flex: 1, cursor: 'pointer', accentColor: '#6366f1', height: '4px' }}
+                    className="embed-config-range"
                   />
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>100%</span>
+                  <span className="embed-config-volume-bound">100%</span>
                 </div>
               </div>
 
-              {/* Sound type */}
               <div>
-                <label style={{ color: '#e2e8f0', fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-                  Sound
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <label className="embed-config-sound-label">Sound</label>
+                <div className="embed-config-sound-options">
                   {MENTION_SOUND_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
@@ -427,22 +231,13 @@ export default function EmbedConfigModal({
                         onMentionSoundTypeChange(opt.value);
                         playMentionSoundPreview(mentionVolume, opt.value);
                       }}
-                      style={{
-                        padding: '5px 12px',
-                        border: mentionSoundType === opt.value ? '2px solid #6366f1' : '1px solid #444',
-                        borderRadius: '6px',
-                        backgroundColor: mentionSoundType === opt.value ? '#1e1e3f' : '#0a0a0a',
-                        color: '#e2e8f0',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
+                      className={`embed-config-sound-btn${mentionSoundType === opt.value ? ' embed-config-sound-btn--active' : ''}`}
                     >
                       {opt.label}
                     </button>
                   ))}
                 </div>
-                <p style={{ margin: '6px 0 0', color: '#94a3b8', fontSize: '11px' }}>
+                <p className="embed-config-sound-hint">
                   Click a sound to preview it.
                 </p>
               </div>
@@ -450,104 +245,60 @@ export default function EmbedConfigModal({
           )}
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Show deleted messages */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={showDeletedMessages}
               onChange={(e) => onShowDeletedMessagesChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Show deleted messages
-            </span>
+            <span>Show deleted messages</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             When enabled, messages deleted by a moderator remain visible but are dimmed and marked as deleted. When disabled, they are removed from chat.
           </p>
         </div>
 
-        <div style={{ marginBottom: '24px' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              cursor: 'pointer',
-              color: '#e2e8f0',
-              userSelect: 'none',
-            }}
-          >
+        {/* Compact actions */}
+        <div className="embed-config-section">
+          <label className="embed-config-checkbox-label">
             <input
               type="checkbox"
               checked={compactActions}
               onChange={(e) => onCompactActionsChange(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                cursor: 'pointer',
-                accentColor: '#6366f1',
-              }}
             />
-            <span style={{ fontSize: '14px' }}>
-              Hide inline action buttons
-            </span>
+            <span>Hide inline action buttons</span>
           </label>
-          <p
-            style={{
-              marginTop: '8px',
-              color: '#94a3b8',
-              fontSize: '12px',
-              margin: '8px 0 0 30px',
-            }}
-          >
+          <p className="embed-config-description embed-config-description--indented">
             When enabled, the small reply/copy/mod buttons are hidden from each message. You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
           </p>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #333333',
-              backgroundColor: '#0a0a0a',
-              color: '#e2e8f0',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1a1a1a';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#555555';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0a0a0a';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#333333';
-            }}
-          >
+        {/* Backup / Restore */}
+        <div className="embed-config-backup-section">
+          <label className="embed-config-backup-label">Backup & Restore</label>
+          <p className="embed-config-backup-description">
+            Export your settings, favorites, and linked YouTube channels to a json file. Import them later to restore — even on a different device.
+          </p>
+          <div className="embed-config-backup-buttons">
+            <button onClick={exportSettings} className="embed-config-backup-btn">
+              <FaDownload size={13} /> Export
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} className="embed-config-backup-btn">
+              <FaUpload size={13} /> Import
+            </button>
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+          </div>
+          {importMessage && (
+            <p className={`embed-config-backup-message ${importMessage.includes('Restored') ? 'embed-config-backup-message--success' : 'embed-config-backup-message--error'}`}>
+              {importMessage}
+            </p>
+          )}
+        </div>
+
+        <div className="embed-config-footer">
+          <button onClick={onClose} className="embed-config-footer-btn">
             Close
           </button>
         </div>
