@@ -1,22 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface LandingPageProps {
   onTwitchLogin: () => void;
 }
 
 export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
-  const [visibleSections, setVisibleSections] = useState<Set<number>>(new Set());
   const [heroLoaded, setHeroLoaded] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = pageRef.current;
+    if (!el) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     timers.push(setTimeout(() => setHeroLoaded(true), 100));
-    [0, 1, 2, 3, 4, 5, 6].forEach((i) => {
-      timers.push(setTimeout(() => {
-        setVisibleSections((prev) => new Set(prev).add(i));
-      }, 400 + i * 200));
-    });
-    return () => timers.forEach(clearTimeout);
+
+    const targets = el.querySelectorAll(".landing-reveal");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("landing-reveal--visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 }
+    );
+    targets.forEach((t) => observer.observe(t));
+
+    return () => {
+      observer.disconnect();
+      timers.forEach(clearTimeout);
+    };
   }, []);
 
   const features = [
@@ -68,14 +83,14 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
   ];
 
   return (
-    <div className="landing-page">
+    <div className="landing-page" ref={pageRef}>
       <div className="landing-hero" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? 'translateY(0)' : 'translateY(20px)' }}>
         <img src="/logo.png" alt="Mixchat" className="landing-hero-logo" />
         <h1 className="landing-hero-title">
-          Watch streams. Chat everywhere.
+          Watch streams. Use emotes easily.
         </h1>
         <p className="landing-hero-subtitle">
-          A Twitch &amp; YouTube chat client with 7TV, BTTV, and FFZ emotes built in — no extensions needed.
+          A Twitch chat client with 7TV, BTTV, and FFZ emotes built in, no extensions needed. Link streamer's YouTube channel to view both chats together.
         </p>
         <button className="landing-cta-button" onClick={onTwitchLogin}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -99,11 +114,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         {features.map((feature, i) => (
           <section
             key={i}
-            className="landing-feature"
-            style={{
-              opacity: visibleSections.has(i) ? 1 : 0,
-              transform: visibleSections.has(i) ? 'translateY(0)' : 'translateY(30px)',
-            }}
+            className="landing-feature landing-reveal"
           >
             <div className="landing-feature-text">
               <h2 className="landing-feature-title">{feature.title}</h2>
@@ -119,7 +130,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         ))}
       </div>
 
-      <section className="landing-privacy">
+      <section className="landing-privacy landing-reveal">
         <div className="landing-privacy-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -163,7 +174,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         </div>
       </section>
 
-      <section className="landing-cta">
+      <section className="landing-cta landing-reveal">
         <h2 className="landing-cta-title">Ready to chat?</h2>
         <p className="landing-cta-subtitle">Log in with your Twitch account to get started — it takes seconds.</p>
         <button className="landing-cta-button landing-cta-button--large" onClick={onTwitchLogin}>
