@@ -8,16 +8,20 @@
     grid-template-columns: 1fr !important;
   }
 
-  /* Sidebar becomes floating/overlay */
+  /* Sidebar becomes floating/overlay.
+     Use --initial-vh-px (captured once on mount, before the keyboard can
+     open) so the sidebar height is immune to the virtual keyboard resizing
+     the viewport.  Falls back to 100dvh for SSR / before JS runs. */
   [data-sidebar-section] {
     display: flex !important;
     position: fixed !important;
     left: 0 !important;
     top: 0 !important;
-    bottom: 0 !important;
+    height: var(--initial-vh-px, 100dvh) !important;
     width: 280px !important;
     z-index: 1000 !important;
     box-shadow: var(--shadow-sm-dark) !important;
+    overflow: hidden !important;
   }
 
   /* Show close button on mobile */
