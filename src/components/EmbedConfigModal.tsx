@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
-import { FaTimes, FaDownload, FaUpload, FaChevronDown } from 'react-icons/fa';
+import { useRef, useState, useCallback } from 'react';
+import { FaTimes, FaDownload, FaUpload, FaChevronDown, FaCloudUploadAlt, FaCloudDownloadAlt, FaLink, FaCheck } from 'react-icons/fa';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
 import { exportSettings, importSettings } from '../lib/settingsBackup';
+import { saveSettingsToDrive, loadSettingsFromDrive } from '../lib/googleDrive';
 
 const GROUPS = ['appearance', 'chat', 'layout', 'notifications', 'backup'] as const;
 type GroupKey = typeof GROUPS[number];
@@ -31,6 +32,8 @@ interface EmbedConfigModalProps {
   onCompactActionsChange: (value: boolean) => void;
   splitChatEnabled: boolean;
   onSplitChatEnabledChange: (value: boolean) => void;
+  hasYoutubeSession: boolean;
+  onReauthYoutube: () => void;
   onClose: () => void;
 }
 
@@ -57,10 +60,16 @@ export default function EmbedConfigModal({
   onCompactActionsChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
+  hasYoutubeSession,
+  onReauthYoutube,
   onClose,
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [driveMessage, setDriveMessage] = useState<string | null>(null);
+  const [driveLoading, setDriveLoading] = useState<'save' | 'load' | null>(null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>(() => {
     const init: Record<string, boolean> = {};
     for (const g of GROUPS) init[g] = false;
@@ -83,6 +92,81 @@ export default function EmbedConfigModal({
     }
     e.target.value = '';
   };
+
+  const handleDriveSave = useCallback(async () => {
+    setDriveLoading('save');
+    setDriveMessage(null);
+    setShareLink(null);
+    setLinkCopied(false);
+    try {
+      const backup = {
+        _version: 1,
+        _app: 'mixchat',
+        _exportedAt: new Date().toISOString(),
+        settings: Object.fromEntries(
+          [
+            'mixchat_video_ratio', 'mixchat_favorite_channels', 'mixchat_embed_default_open',
+            'mixchat_unify_chat', 'mixchat_split_chat', 'mixchat_use_youtube_embed',
+            'mixchat_font_size', 'mixchat_chat_font', 'mixchat_mention_sound',
+            'mixchat_mention_volume', 'mixchat_mention_sound_type',
+            'mixchat_show_deleted_messages', 'mixchat_compact_actions',
+            'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
+            'mixchat_youtube_links', 'disabled_emotes_v1',
+          ].flatMap(k => {
+            const v = localStorage.getItem(k);
+            return v !== null ? [[k, v]] as [string, string][] : [] as [string, string][];
+          })
+        ),
+      };
+
+      const result = await saveSettingsToDrive(JSON.stringify(backup, null, 2));
+      setDriveMessage('Settings saved to Google Drive!');
+      if (result.webViewLink) {
+        setShareLink(result.webViewLink);
+      }
+    } catch (err: any) {
+      if (err?.message?.includes('Drive permission') || err?.message?.includes('insufficient') || err?.message?.includes('sign in again')) {
+        setDriveMessage('Drive access required. Click "Re-auth with Drive" below.');
+      } else {
+        setDriveMessage(err instanceof Error ? err.message : 'Failed to save to Drive');
+      }
+    } finally {
+      setDriveLoading(null);
+    }
+  }, []);
+
+  const handleDriveLoad = useCallback(async () => {
+    setDriveLoading('load');
+    setDriveMessage(null);
+    setShareLink(null);
+    try {
+      const result = await loadSettingsFromDrive();
+      let count = 0;
+      for (const [key, value] of Object.entries(result.settings)) {
+        localStorage.setItem(key, value);
+        count++;
+      }
+      setDriveMessage(`Loaded ${count} settings from Drive. Reloading...`);
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err: any) {
+      if (err?.message?.includes('Drive permission') || err?.message?.includes('insufficient') || err?.message?.includes('sign in again')) {
+        setDriveMessage('Drive access required. Click "Re-auth with Drive" below.');
+      } else {
+        setDriveMessage(err instanceof Error ? err.message : 'Failed to load from Drive');
+      }
+    } finally {
+      setDriveLoading(null);
+    }
+  }, []);
+
+  const handleCopyLink = useCallback(() => {
+    if (shareLink) {
+      navigator.clipboard.writeText(shareLink).then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      });
+    }
+  }, [shareLink]);
 
   return (
     <div className="embed-config-overlay" onClick={onClose}>
@@ -346,6 +430,56 @@ export default function EmbedConfigModal({
                   <p className={`embed-config-backup-message ${importMessage.includes('Restored') ? 'embed-config-backup-message--success' : 'embed-config-backup-message--error'}`}>
                     {importMessage}
                   </p>
+                )}
+              </div>
+
+              <div className="embed-config-backup-section">
+                <p className="embed-config-backup-description">
+                  {hasYoutubeSession
+                    ? 'Save and load your settings directly from your Google Drive. Requires Google sign-in with Drive access.'
+                    : 'Sign in with Google to save and load settings from Google Drive.'}
+                </p>
+                <div className="embed-config-backup-buttons">
+                  <button
+                    onClick={handleDriveSave}
+                    className="embed-config-backup-btn embed-config-drive-btn"
+                    disabled={driveLoading !== null || !hasYoutubeSession}
+                  >
+                    {driveLoading === 'save' ? (
+                      <><span className="embed-config-spinner" /> Saving...</>
+                    ) : (
+                      <><FaCloudUploadAlt size={13} /> Save to Drive</>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDriveLoad}
+                    className="embed-config-backup-btn embed-config-drive-btn"
+                    disabled={driveLoading !== null || !hasYoutubeSession}
+                  >
+                    {driveLoading === 'load' ? (
+                      <><span className="embed-config-spinner" /> Loading...</>
+                    ) : (
+                      <><FaCloudDownloadAlt size={13} /> Load from Drive</>
+                    )}
+                  </button>
+                </div>
+                {driveMessage && (
+                  <p className={`embed-config-backup-message ${driveMessage.includes('saved') || driveMessage.includes('Loaded') ? 'embed-config-backup-message--success' : 'embed-config-backup-message--error'}`}>
+                    {driveMessage}
+                  </p>
+                )}
+                {shareLink && (
+                  <div className="embed-config-share-link">
+                    <span className="embed-config-share-link-url" title={shareLink}>{shareLink}</span>
+                    <button onClick={handleCopyLink} className="embed-config-share-link-copy" title="Copy link">
+                      {linkCopied ? <FaCheck size={12} /> : <FaLink size={12} />}
+                    </button>
+                  </div>
+                )}
+                {!hasYoutubeSession && (
+                  <button onClick={onReauthYoutube} className="embed-config-backup-btn embed-config-reauth-btn">
+                    Sign in with Google
+                  </button>
                 )}
               </div>
             </div>

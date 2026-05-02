@@ -346,3 +346,77 @@
 .embed-config-backup-message--error {
   color: var(--color-notification-error);
 }
+
+/* Google Drive buttons */
+.embed-config-drive-btn {
+  position: relative;
+}
+
+.embed-config-drive-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.embed-config-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-text-muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: embed-config-spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes embed-config-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Re-auth button */
+.embed-config-reauth-btn {
+  margin-top: 8px;
+  width: 100%;
+  border-color: var(--color-indigo) !important;
+  color: var(--color-indigo) !important;
+}
+
+.embed-config-reauth-btn:hover {
+  background-color: var(--color-indigo) !important;
+  color: #fff !important;
+}
+
+/* Share link */
+.embed-config-share-link {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
+}
+
+.embed-config-share-link-url {
+  flex: 1;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.embed-config-share-link-copy {
+  background: none;
+  border: none;
+  color: var(--color-indigo);
+  cursor: pointer;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.embed-config-share-link-copy:hover {
+  opacity: 0.8;
+}

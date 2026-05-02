@@ -55,6 +55,8 @@ interface LoginPanelProps {
   onCompactActionsChange?: (value: boolean) => void;
   splitChatEnabled?: boolean;
   onSplitChatEnabledChange?: (value: boolean) => void;
+  hasYoutubeSession?: boolean;
+  onReauthYoutube?: () => void;
   onGoHome?: () => void;
   onRequestClose?: () => void;
 }
@@ -100,6 +102,8 @@ function LoginPanel({
   onCompactActionsChange,
   splitChatEnabled = false,
   onSplitChatEnabledChange,
+  hasYoutubeSession = false,
+  onReauthYoutube,
   onGoHome,
   onRequestClose,
 }: LoginPanelProps) {
@@ -361,6 +365,8 @@ function LoginPanel({
           onCompactActionsChange={(value) => { if (onCompactActionsChange) onCompactActionsChange(value); }}
           splitChatEnabled={splitChatEnabled}
           onSplitChatEnabledChange={(value) => { if (onSplitChatEnabledChange) onSplitChatEnabledChange(value); }}
+          hasYoutubeSession={hasYoutubeSession}
+          onReauthYoutube={onReauthYoutube || (() => {})}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}
