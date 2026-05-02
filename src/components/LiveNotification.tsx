@@ -33,6 +33,8 @@ export default function LiveNotification({
         />
       )}
 
+      {streamer.gameName && <div className="stream-game">{streamer.gameName}</div>}
+
       {streamer.title && <div className="stream-title">{streamer.title}</div>}
 
       {streamer.viewerCount && (

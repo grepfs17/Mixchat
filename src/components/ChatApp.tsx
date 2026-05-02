@@ -82,7 +82,7 @@ export default function ChatApp({
   fontSize = 14,
   chatFont = 'inter' as ChatFont,
   mentionSoundEnabled = true,
-  mentionVolume = 0.5,
+  mentionVolume = 0.2,
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
   compactActions = false,

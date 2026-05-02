@@ -10,6 +10,7 @@ export interface StreamerToWatch {
 export interface LiveStreamer extends StreamerToWatch {
   isLive: true;
   title?: string;
+  gameName?: string;
   viewerCount?: number;
 }
 
@@ -40,6 +41,7 @@ export async function checkLiveStreamers(
         ...streamer,
         isLive: true as const,
         title: statuses[streamer.id]?.title,
+        gameName: statuses[streamer.id]?.gameName,
         viewerCount: statuses[streamer.id]?.viewerCount,
       }));
 

@@ -77,6 +77,13 @@
   display: block;
 }
 
+.stream-game {
+  color: var(--color-indigo);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .stream-title {
   color: var(--color-text-secondary);
   font-size: 14px;

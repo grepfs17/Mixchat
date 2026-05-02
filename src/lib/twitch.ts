@@ -633,7 +633,7 @@ export const getStreamStatuses = async (
 ): Promise<
   Record<
     string,
-    { isLive: boolean; title?: string; viewerCount?: number; startedAt?: Date }
+    { isLive: boolean; title?: string; gameName?: string; viewerCount?: number; startedAt?: Date }
   >
 > => {
   try {
@@ -646,6 +646,7 @@ export const getStreamStatuses = async (
       {
         isLive: boolean;
         title?: string;
+        gameName?: string;
         viewerCount?: number;
         startedAt?: Date;
       }
@@ -676,6 +677,7 @@ export const getStreamStatuses = async (
             result[stream.user_id] = {
               isLive: true,
               title: stream.title,
+              gameName: stream.game_name,
               viewerCount: stream.viewer_count,
               startedAt: new Date(stream.started_at),
             };

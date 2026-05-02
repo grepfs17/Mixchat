@@ -90,7 +90,7 @@ function LoginPanel({
   onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
-  mentionVolume = 0.5,
+  mentionVolume = 0.2,
   onMentionVolumeChange,
   mentionSoundType = 'ding' as MentionSoundType,
   onMentionSoundTypeChange,
