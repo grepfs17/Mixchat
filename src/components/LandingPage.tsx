@@ -22,7 +22,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
   const features = [
     {
       title: "Emote Autocomplete",
-      description: "Type a colon and instantly search through 7TV, BTTV, and FFZ emotes — no browser extensions required.",
+      description: "Start typing and instantly search through 7TV, BTTV, and FFZ emotes — no browser extensions required.",
       images: [{ src: "/demo/autocompleteemotes.png", alt: "Emote autocomplete popup showing emote search results" }],
       badge: "7TV / BTTV / FFZ",
     },
