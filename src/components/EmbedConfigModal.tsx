@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react';
-import { FaTimes, FaDownload, FaUpload } from 'react-icons/fa';
+import { FaTimes, FaDownload, FaUpload, FaChevronDown } from 'react-icons/fa';
 import type { ChatFont } from '../lib/types';
 import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
 import { exportSettings, importSettings } from '../lib/settingsBackup';
+
+const GROUPS = ['appearance', 'chat', 'layout', 'notifications', 'backup'] as const;
+type GroupKey = typeof GROUPS[number];
 
 interface EmbedConfigModalProps {
   embedDefaultOpen: boolean;
@@ -58,6 +61,14 @@ export default function EmbedConfigModal({
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<GroupKey, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const g of GROUPS) init[g] = false;
+    return init as Record<GroupKey, boolean>;
+  });
+
+  const toggle = (key: GroupKey) =>
+    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,217 +94,261 @@ export default function EmbedConfigModal({
           </button>
         </div>
 
-        {/* Font Size */}
-        <div className="embed-config-section">
-          <label className="embed-config-label">
-            Chat Font Size: <span className="embed-config-value">{fontSize}px</span>
-          </label>
-          <div className="embed-config-range-row">
-            <span className="embed-config-range-bound">12px</span>
-            <input
-              type="range"
-              min="12"
-              max="32"
-              step="1"
-              value={fontSize}
-              onChange={(e) => onFontSizeChange(parseInt(e.target.value))}
-              className="embed-config-range"
-            />
-            <span className="embed-config-range-bound">32px</span>
-          </div>
-          <p className="embed-config-description">
-            Adjust the size of the text in the chat window.
-          </p>
-        </div>
-
-        {/* Font Family */}
-        <div className="embed-config-section">
-          <label className="embed-config-label">Chat Font</label>
-          <select
-            value={chatFont}
-            onChange={(e) => onChatFontChange(e.target.value as ChatFont)}
-            className="embed-config-select"
-            style={{ fontFamily: FONT_FAMILY_MAP[chatFont] }}
-          >
-            {CHAT_FONT_OPTIONS.map(({ value, label }) => (
-              <option key={value} value={value} style={{ fontFamily: FONT_FAMILY_MAP[value] }}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <p className="embed-config-description">
-            Choose the font used in the chat window.
-          </p>
-        </div>
-
-        {/* Open embed by default */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={embedDefaultOpen}
-              onChange={(e) => onEmbedDefaultOpenChange(e.target.checked)}
-            />
-            <span>Open stream embed by default</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            If enabled, the stream embed will be visible when you open Mixchat. If disabled, the chat will take up the full width.
-          </p>
-        </div>
-
-        {/* Unify chats */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={unifyChatEnabled}
-              onChange={(e) => onUnifyChatEnabledChange(e.target.checked)}
-            />
-            <span>Unify chats</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            When enabled, Twitch and YouTube messages appear together in a single chronological feed. Each platform keeps its own styling and features.
-          </p>
-        </div>
-
-        {/* Split chat */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={splitChatEnabled}
-              onChange={(e) => onSplitChatEnabledChange(e.target.checked)}
-            />
-            <span>Split chat</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            When enabled, messages show a subtle darker background to visually separate each message.
-          </p>
-        </div>
-
-        {/* YouTube embed */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={useYoutubeEmbed}
-              onChange={(e) => onUseYoutubeEmbedChange(e.target.checked)}
-            />
-            <span>Use official YouTube chat embed</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            Replaces the custom YouTube chat with the official iframe embed. Note: This disables some features like custom emotes and unified chat for YouTube.
-          </p>
-        </div>
-
-        {/* Mention sound */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={mentionSoundEnabled}
-              onChange={(e) => onMentionSoundEnabledChange(e.target.checked)}
-            />
-            <span>Play sound on mention</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            Plays a notification sound when someone mentions your name or replies to your message.
-          </p>
-
-          {mentionSoundEnabled && (
-            <div className="embed-config-mention-options">
-              <div>
-                <label className="embed-config-volume-label">
-                  Volume: <span className="embed-config-volume-value">{Math.round(mentionVolume * 100)}%</span>
+        {/* Appearance */}
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('appearance')}>
+            <h3 className="embed-config-group-title">Appearance</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.appearance ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.appearance && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-section">
+                <label className="embed-config-label">
+                  Chat Font Size: <span className="embed-config-value">{fontSize}px</span>
                 </label>
-                <div className="embed-config-volume-row">
-                  <span className="embed-config-volume-bound">0%</span>
+                <div className="embed-config-range-row">
+                  <span className="embed-config-range-bound">12px</span>
                   <input
                     type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={mentionVolume}
-                    onChange={(e) => onMentionVolumeChange(parseFloat(e.target.value))}
+                    min="12"
+                    max="32"
+                    step="1"
+                    value={fontSize}
+                    onChange={(e) => onFontSizeChange(parseInt(e.target.value))}
                     className="embed-config-range"
                   />
-                  <span className="embed-config-volume-bound">100%</span>
+                  <span className="embed-config-range-bound">32px</span>
                 </div>
+                <p className="embed-config-description">
+                  Adjust the size of the text in the chat window.
+                </p>
               </div>
 
-              <div>
-                <label className="embed-config-sound-label">Sound</label>
-                <div className="embed-config-sound-options">
-                  {MENTION_SOUND_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        onMentionSoundTypeChange(opt.value);
-                        playMentionSoundPreview(mentionVolume, opt.value);
-                      }}
-                      className={`embed-config-sound-btn${mentionSoundType === opt.value ? ' embed-config-sound-btn--active' : ''}`}
-                    >
-                      {opt.label}
-                    </button>
+              <div className="embed-config-section">
+                <label className="embed-config-label">Chat Font</label>
+                <select
+                  value={chatFont}
+                  onChange={(e) => onChatFontChange(e.target.value as ChatFont)}
+                  className="embed-config-select"
+                  style={{ fontFamily: FONT_FAMILY_MAP[chatFont] }}
+                >
+                  {CHAT_FONT_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value} style={{ fontFamily: FONT_FAMILY_MAP[value] }}>
+                      {label}
+                    </option>
                   ))}
-                </div>
-                <p className="embed-config-sound-hint">
-                  Click a sound to preview it.
+                </select>
+                <p className="embed-config-description">
+                  Choose the font used in the chat window.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={splitChatEnabled}
+                    onChange={(e) => onSplitChatEnabledChange(e.target.checked)}
+                  />
+                  <span>Split chat</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, messages show a subtle darker background to visually separate each message.
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Show deleted messages */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={showDeletedMessages}
-              onChange={(e) => onShowDeletedMessagesChange(e.target.checked)}
-            />
-            <span>Show deleted messages</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            When enabled, messages deleted by a moderator remain visible but are dimmed and marked as deleted. When disabled, they are removed from chat.
-          </p>
+        {/* Chat */}
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('chat')}>
+            <h3 className="embed-config-group-title">Chat</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.chat ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.chat && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={unifyChatEnabled}
+                    onChange={(e) => onUnifyChatEnabledChange(e.target.checked)}
+                  />
+                  <span>Unify chats</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, Twitch and YouTube messages appear together in a single chronological feed. Each platform keeps its own styling and features.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useYoutubeEmbed}
+                    onChange={(e) => onUseYoutubeEmbedChange(e.target.checked)}
+                  />
+                  <span>Use official YouTube chat embed</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  Replaces the custom YouTube chat with the official iframe embed. Note: This disables some features like custom emotes and unified chat for YouTube.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={showDeletedMessages}
+                    onChange={(e) => onShowDeletedMessagesChange(e.target.checked)}
+                  />
+                  <span>Show deleted messages</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, messages deleted by a moderator remain visible but are dimmed and marked as deleted. When disabled, they are removed from chat.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={compactActions}
+                    onChange={(e) => onCompactActionsChange(e.target.checked)}
+                  />
+                  <span>Hide inline action buttons</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, the small reply/copy/mod buttons are hidden from each message. You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Compact actions */}
-        <div className="embed-config-section">
-          <label className="embed-config-checkbox-label">
-            <input
-              type="checkbox"
-              checked={compactActions}
-              onChange={(e) => onCompactActionsChange(e.target.checked)}
-            />
-            <span>Hide inline action buttons</span>
-          </label>
-          <p className="embed-config-description embed-config-description--indented">
-            When enabled, the small reply/copy/mod buttons are hidden from each message. You can still access all actions by right-clicking (long press on mobile) a message to open the context menu.
-          </p>
+        {/* Layout */}
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('layout')}>
+            <h3 className="embed-config-group-title">Layout</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.layout ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.layout && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={embedDefaultOpen}
+                    onChange={(e) => onEmbedDefaultOpenChange(e.target.checked)}
+                  />
+                  <span>Open stream embed by default</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  If enabled, the stream embed will be visible when you open Mixchat. If disabled, the chat will take up the full width.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notifications */}
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('notifications')}>
+            <h3 className="embed-config-group-title">Notifications</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.notifications ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.notifications && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={mentionSoundEnabled}
+                    onChange={(e) => onMentionSoundEnabledChange(e.target.checked)}
+                  />
+                  <span>Play sound on mention</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  Plays a notification sound when someone mentions your name or replies to your message.
+                </p>
+
+                {mentionSoundEnabled && (
+                  <div className="embed-config-mention-options">
+                    <div>
+                      <label className="embed-config-volume-label">
+                        Volume: <span className="embed-config-volume-value">{Math.round(mentionVolume * 100)}%</span>
+                      </label>
+                      <div className="embed-config-volume-row">
+                        <span className="embed-config-volume-bound">0%</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={mentionVolume}
+                          onChange={(e) => onMentionVolumeChange(parseFloat(e.target.value))}
+                          className="embed-config-range"
+                        />
+                        <span className="embed-config-volume-bound">100%</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="embed-config-sound-label">Sound</label>
+                      <div className="embed-config-sound-options">
+                        {MENTION_SOUND_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => {
+                              onMentionSoundTypeChange(opt.value);
+                              playMentionSoundPreview(mentionVolume, opt.value);
+                            }}
+                            className={`embed-config-sound-btn${mentionSoundType === opt.value ? ' embed-config-sound-btn--active' : ''}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="embed-config-sound-hint">
+                        Click a sound to preview it.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Backup / Restore */}
-        <div className="embed-config-backup-section">
-          <label className="embed-config-backup-label">Backup & Restore</label>
-          <p className="embed-config-backup-description">
-            Export your settings, favorites, and linked YouTube channels to a json file. Import them later to restore — even on a different device.
-          </p>
-          <div className="embed-config-backup-buttons">
-            <button onClick={exportSettings} className="embed-config-backup-btn">
-              <FaDownload size={13} /> Export
-            </button>
-            <button onClick={() => fileInputRef.current?.click()} className="embed-config-backup-btn">
-              <FaUpload size={13} /> Import
-            </button>
-            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
-          </div>
-          {importMessage && (
-            <p className={`embed-config-backup-message ${importMessage.includes('Restored') ? 'embed-config-backup-message--success' : 'embed-config-backup-message--error'}`}>
-              {importMessage}
-            </p>
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('backup')}>
+            <h3 className="embed-config-group-title">Backup & Restore</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.backup ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.backup && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-backup-section">
+                <p className="embed-config-backup-description">
+                  Export your settings, favorites, and linked YouTube channels to a json file. Import them later to restore — even on a different device.
+                </p>
+                <div className="embed-config-backup-buttons">
+                  <button onClick={exportSettings} className="embed-config-backup-btn">
+                    <FaDownload size={13} /> Export
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} className="embed-config-backup-btn">
+                    <FaUpload size={13} /> Import
+                  </button>
+                  <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+                </div>
+                {importMessage && (
+                  <p className={`embed-config-backup-message ${importMessage.includes('Restored') ? 'embed-config-backup-message--success' : 'embed-config-backup-message--error'}`}>
+                    {importMessage}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
         </div>
 

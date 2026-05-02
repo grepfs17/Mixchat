@@ -48,9 +48,72 @@
   line-height: 1;
 }
 
+/* Setting group */
+.embed-config-group {
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-medium);
+  margin-bottom: 8px;
+}
+
+.embed-config-group:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.embed-config-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.embed-config-group-header:hover .embed-config-group-title {
+  opacity: 0.85;
+}
+
+.embed-config-group-title {
+  margin: 0;
+  color: var(--color-indigo);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: opacity 0.15s;
+}
+
+.embed-config-group-chevron {
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.embed-config-group-chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.embed-config-group-body {
+  animation: embed-config-slide-in 0.15s ease-out;
+}
+
+@keyframes embed-config-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Setting section wrapper */
 .embed-config-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 /* Label for block settings (font size, font, etc.) */
@@ -228,7 +291,7 @@
 
 /* Backup / Restore */
 .embed-config-backup-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .embed-config-backup-label {
