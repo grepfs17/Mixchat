@@ -189,3 +189,100 @@
   color: #aaa;
   background: rgba(255, 255, 255, 0.06);
 }
+
+/* ── Stream transition overlay ────────────────────────────────────────────── */
+.stream-transition-overlay__gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.stream-transition-overlay__channel-name {
+  position: absolute;
+  bottom: 16px;
+  left: 20px;
+  color: #fff;
+  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  animation: transition-channel-name-in 0.3s ease 0.15s forwards;
+}
+
+@keyframes transition-channel-name-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Stream embed thumbnail placeholder ────────────────────────────────────── */
+.stream-embed-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: #0a0a0a;
+  overflow: hidden;
+}
+
+.stream-embed-placeholder__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.6s ease;
+}
+
+.stream-embed-placeholder--fading .stream-embed-placeholder__img {
+  opacity: 0;
+}
+
+.stream-embed-placeholder__glass {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(145, 70, 255, 0.06) 100%);
+  backdrop-filter: blur(2px);
+}
+
+.stream-embed-placeholder__spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #ccc;
+  font-size: 13px;
+  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.stream-embed-placeholder__spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--color-indigo, #6366f1);
+  border-radius: 50%;
+  animation: stream-spin 0.8s linear infinite;
+}
+
+/* ── Stream grid fade-out during transition ──────────────────────────────── */
+.app-grid--transitioning .stream-grid-container {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.stream-grid-container--entering {
+  animation: stream-grid-enter 0.3s ease forwards;
+}
+
+@keyframes stream-grid-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

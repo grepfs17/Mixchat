@@ -16,6 +16,8 @@ import { markStreamerNotified } from '../lib/streamMonitor';
 import { primeAudioContext } from '../hooks/useTwitchChat';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
 import StreamGrid from './StreamGrid';
+import type { StreamTransitionInfo } from './StreamGrid';
+import StreamTransitionOverlay from './StreamTransitionOverlay';
 import LandingPage from './LandingPage';
 
 // Don't save access tokens to localStorage for security. 
@@ -85,6 +87,7 @@ export default function AppContainer() {
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
+  const [streamTransition, setStreamTransition] = useState<StreamTransitionInfo | null>(null);
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
   const hasLoadedSessionsRef = useRef(false);
@@ -262,7 +265,7 @@ export default function AppContainer() {
     return () => clearInterval(interval);
   }, [sessions.twitch]);
 
-  const setChannelData = useCallback((channelId: string) => {
+  const setChannelData = useCallback((channelId: string, transitionInfo?: StreamTransitionInfo) => {
     // Search by numeric ID first, then by login name, across online and all channels
     const channel =
       twitchChannels.find((ch) => ch.id === channelId) ||
@@ -288,6 +291,10 @@ export default function AppContainer() {
     setSelectedTwitchChannel(finalId);
     setSelectedTwitchChannelName(channelName);
     setSelectedTwitchChannelDisplayName(channelDisplayName);
+
+    if (transitionInfo) {
+      setStreamTransition(transitionInfo);
+    }
 
     // Update URL to /channel/<name>
     window.history.pushState({}, '', `/channel/${channelName}`);
@@ -970,17 +977,18 @@ export default function AppContainer() {
               setSelectedTwitchChannel('');
               setSelectedTwitchChannelName('');
               setSelectedTwitchChannelDisplayName('');
+              setStreamTransition(null);
               window.history.pushState({}, '', '/');
             }}
           />
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: (showStreamEmbed && !!selectedTwitchChannel) ? `${videoRatio}fr 2px ${100 - videoRatio}fr` : '1fr', gap: '0', overflow: 'hidden', backgroundColor: '#1a1a1a' }} data-app-grid className="app-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: (showStreamEmbed && !!selectedTwitchChannel) ? `${videoRatio}fr 2px ${100 - videoRatio}fr` : '1fr', gap: '0', overflow: 'hidden', backgroundColor: '#1a1a1a' }} data-app-grid className={`app-grid${streamTransition ? ' app-grid--transitioning' : ''}`}>
         {(sessions.twitch && !selectedTwitchChannel) ? (
           <StreamGrid
             channels={twitchChannels}
             favoriteChannels={favoriteChannels}
-            onChannelSelect={(id) => setChannelData(id)}
+            onChannelSelect={(id, transitionInfo) => setChannelData(id, transitionInfo)}
             onToggleFavorite={toggleFavorite}
           />
         ) : (<>
@@ -1091,6 +1099,8 @@ export default function AppContainer() {
                     twitchAccessToken={sessions.twitch?.accessToken}
                     onQualitiesLoaded={setHlsQualities}
                     externalSelectedQualityIdx={selectedHlsQualityIdx}
+                    placeholderThumbnailUrl={streamTransition?.thumbnailUrl}
+                    onPlaceholderFadeOut={() => setStreamTransition(null)}
                   />
                 )}
               </div>
@@ -1199,6 +1209,15 @@ export default function AppContainer() {
           <div className="loading-spinner"></div>
           <div className="loading-text">Connecting...</div>
         </div>
+      )}
+
+      {/* Stream transition animation overlay */}
+      {streamTransition && selectedTwitchChannel && (
+        <StreamTransitionOverlay
+          transitionInfo={streamTransition}
+          targetRef={embedRef}
+          onAnimationComplete={() => setStreamTransition(null)}
+        />
       )}
     </div>
   );

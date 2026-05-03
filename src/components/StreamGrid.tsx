@@ -4,10 +4,16 @@ import type { TwitchChannel } from './AppContainer';
 
 type SortOption = 'favorites' | 'name' | 'viewers';
 
+export interface StreamTransitionInfo {
+    thumbnailUrl: string;
+    rect: DOMRect;
+    channelName: string;
+}
+
 interface StreamGridProps {
     channels: TwitchChannel[];
     favoriteChannels: string[];
-    onChannelSelect: (channelId: string) => void;
+    onChannelSelect: (channelId: string, transitionInfo?: StreamTransitionInfo) => void;
     onToggleFavorite: (channelId: string) => void;
 }
 
@@ -138,7 +144,17 @@ export default function StreamGrid({
                                 <div
                                     key={channel.id}
                                     className={`stream-card${isFav ? ' is-favorite' : ''}`}
-                                    onClick={() => onChannelSelect(channel.id)}
+                                    onClick={(e) => {
+                                        const card = e.currentTarget;
+                                        const thumbEl = card.querySelector('.stream-card-thumb') as HTMLElement | null;
+                                        const rect = (thumbEl ?? card).getBoundingClientRect();
+                                        const info: StreamTransitionInfo = {
+                                            thumbnailUrl: thumbSrc,
+                                            rect,
+                                            channelName: channel.displayName,
+                                        };
+                                        onChannelSelect(channel.id, info);
+                                    }}
                                     role="button"
                                     tabIndex={0}
                                     onKeyDown={(e) => e.key === 'Enter' && onChannelSelect(channel.id)}

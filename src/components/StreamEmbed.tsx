@@ -37,6 +37,10 @@ interface StreamEmbedProps {
   twitchAccessToken?: string;
   onQualitiesLoaded?: (qualities: Array<{ label: string; url: string }>) => void;
   externalSelectedQualityIdx?: number;
+  /** URL of the stream thumbnail to show as a placeholder while the stream loads. */
+  placeholderThumbnailUrl?: string;
+  /** Callback when the stream player has finished loading and the placeholder should fade out. */
+  onPlaceholderFadeOut?: () => void;
 }
 
 
@@ -135,16 +139,36 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
   );
 }
 
-export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken, onQualitiesLoaded, externalSelectedQualityIdx }: StreamEmbedProps) {
+export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken, onQualitiesLoaded, externalSelectedQualityIdx, placeholderThumbnailUrl, onPlaceholderFadeOut }: StreamEmbedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [qualities, setQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
-  // null = not yet resolved; player must not mount until we have the real value
-  // so it is never initialized twice (which triggers Kasada 429 on passport.twitch.tv).
+  const [showPlaceholder, setShowPlaceholder] = useState(!!placeholderThumbnailUrl);
+  const [placeholderFading, setPlaceholderFading] = useState(false);
   const [parentDomain, setParentDomain] = useState<string | null>(null);
+
+  // Fade out and remove the placeholder when stream starts playing
+  useEffect(() => {
+    if (!loading && showPlaceholder && !placeholderFading) {
+      setPlaceholderFading(true);
+      const timer = setTimeout(() => {
+        setShowPlaceholder(false);
+        onPlaceholderFadeOut?.();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+
+  // Reset placeholder on channel change
+  useEffect(() => {
+    if (placeholderThumbnailUrl) {
+      setShowPlaceholder(true);
+      setPlaceholderFading(false);
+    }
+  }, [channelName]);
 
   // Gate the embed player mount on token availability when the user is
   // connected but the access token hasn't been refreshed yet (page reload).
@@ -314,7 +338,19 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     // Mounting with 'localhost' then immediately remounting with the real domain
     // fires two Kasada fingerprint requests in quick succession → 429.
     if (!parentDomain) {
-      return <div style={{ width: '100%', height: '100%', backgroundColor: '#0a0a0a' }} />;
+      return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#0a0a0a' }}>
+          {showPlaceholder && placeholderThumbnailUrl && (
+            <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
+              <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+              <div className="stream-embed-placeholder__glass" />
+              <div className="stream-embed-placeholder__spinner">
+                <div className="stream-embed-placeholder__spinner-ring" />
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
     // Wait for the OAuth token to arrive after page reload so the player is
     // created with oauth_token from the start.  Browsers that block third-party
@@ -328,6 +364,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
             width: '100%',
             height: '100%',
             backgroundColor: '#0a0a0a',
+            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -335,13 +372,30 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
             fontSize: '13px',
           }}
         >
+          {showPlaceholder && placeholderThumbnailUrl && (
+            <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
+              <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+              <div className="stream-embed-placeholder__glass" />
+            </div>
+          )}
           Authenticating…
         </div>
       );
     }
     return (
-      <div style={{ position: 'absolute', inset: 0 }}>
-        <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} oauthToken={twitchAccessToken} />
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} oauthToken={twitchAccessToken} />
+        </div>
+        {showPlaceholder && placeholderThumbnailUrl && (
+          <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
+            <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+            <div className="stream-embed-placeholder__glass" />
+            <div className="stream-embed-placeholder__spinner">
+              <div className="stream-embed-placeholder__spinner-ring" />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -378,8 +432,16 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
         controls
         title={`${channelName} Twitch Stream`}
       />
-      {/* Quality selector is rendered in the stream-embed header (AppContainer) */}
-      {loading && (
+      {showPlaceholder && placeholderThumbnailUrl && (
+        <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
+          <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+          <div className="stream-embed-placeholder__glass" />
+          <div className="stream-embed-placeholder__spinner">
+            <div className="stream-embed-placeholder__spinner-ring" />
+          </div>
+        </div>
+      )}
+      {!showPlaceholder && loading && (
         <div className="stream-loading">
           <div className="stream-loading__spinner" />
           <div>Loading stream...</div>
