@@ -46,7 +46,10 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
     }
 
-    // Step 1: Get the liveChatId for this video via InnerTube (with caching + inflight dedupe)
+    // Step 1: Resolve the liveChatId for this video.
+    // We try InnerTube first (fast, no OAuth needed), then fall back to the
+    // Data API (requires OAuth but returns IDs guaranteed compatible with
+    // liveChatMessages.insert).
     let liveChatId: string | null = null;
     const now = Date.now();
     const cached = liveChatIdCache.get(videoId);
@@ -60,23 +63,47 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
           liveChatId = await p;
         }
       } else {
-        const p = (async () => {
+        const p = (async (): Promise<string | null> => {
+          // 1a. Try InnerTube (no auth required)
           try {
             const { getInnertube } = await import("../../lib/youtube");
             const yt = await getInnertube();
             const info = await yt.getInfo(videoId);
             const livechat = info.livechat;
             const id = livechat?.continuation || null;
-            if (!id) {
-              console.warn('[YouTube Chat] No liveChatId found for video', videoId, 'is_live:', info.basic_info.is_live, 'has livechat:', !!livechat);
+            if (id) {
+              const ttl = 300_000;
+              liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + ttl });
+              return id;
             }
-            const ttl = id ? 300_000 : 60_000;
-            liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + ttl });
-            return id;
+            console.warn('[YouTube Chat] No liveChatId via InnerTube for', videoId, 'is_live:', info.basic_info.is_live, 'has livechat:', !!livechat);
           } catch (e) {
             console.error('[YouTube Chat] Failed to resolve liveChatId via InnerTube:', e);
-            return null;
           }
+
+          // 1b. Fallback: use Data API videos.list (needs the OAuth token we already have)
+          try {
+            const data = await googleFetch(
+              `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } },
+              { action: 'videos.list', videoId },
+            );
+            const items = data?.items;
+            if (items && items.length > 0) {
+              const chatId = items[0]?.liveStreamingDetails?.activeLiveChatId;
+              if (chatId) {
+                const ttl = 300_000;
+                liveChatIdCache.set(videoId, { liveChatId: chatId, expires: Date.now() + ttl });
+                return chatId;
+              }
+            }
+            console.warn('[YouTube Chat] No liveChatId via Data API for', videoId);
+          } catch (e) {
+            console.error('[YouTube Chat] Data API videos.list fallback failed:', e);
+          }
+
+          liveChatIdCache.set(videoId, { liveChatId: null, expires: Date.now() + 60_000 });
+          return null;
         })();
         inflightVideos.set(videoId, p);
         try {
@@ -119,6 +146,14 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
     } catch (e: any) {
       const status = e?.status || 500;
       console.error("[YouTube Chat] Failed to send message:", e);
+
+      // If the liveChatId was rejected, invalidate the cache so the next
+      // request resolves a fresh ID instead of retrying with a stale one.
+      if (status === 404 || status === 400) {
+        liveChatIdCache.delete(videoId);
+        console.warn(`[YouTube Chat] Invalidated liveChatId cache for ${videoId} due to ${status}`);
+      }
+
       return new Response(
         JSON.stringify({
           error: `Failed to send message: ${status}`,
