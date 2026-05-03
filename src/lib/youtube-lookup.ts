@@ -37,7 +37,64 @@ function buildFetchHeaders(cookies?: string): HeadersInit {
   };
 }
 
-async function redirectFallbackLive(channelParam: string): Promise<string | null> {
+const VIDEO_ID_RE = /[\w-]{11}/;
+
+function extractVideoIdFromHtml(html: string): string | null {
+  // 1. <link rel="canonical" href="...watch?v=VIDEO_ID">
+  const canonicalMatch = html.match(/<link\s+rel="canonical"\s+href="[^"]*watch\?v=([\w-]{11})/);
+  if (canonicalMatch) return canonicalMatch[1];
+
+  // 2. og:video:url meta tag
+  const ogMatch = html.match(/property="og:video:url"\s+content="[^"]*watch\?v=([\w-]{11})/);
+  if (ogMatch) return ogMatch[1];
+
+  // 3. ytInitialPlayerResponse embedded JSON
+  const ytiprMatch = html.match(/ytInitialPlayerResponse\s*=\s*\{/);
+  if (ytiprMatch) {
+    const start = (ytiprMatch.index ?? 0) + ytiprMatch[0].length - 1;
+    let depth = 0;
+    for (let i = start; i < html.length; i++) {
+      if (html[i] === '{') depth++;
+      else if (html[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          try {
+            const json = JSON.parse(html.slice(start, i + 1));
+            const vid = json?.videoDetails?.videoId;
+            if (vid && VIDEO_ID_RE.test(vid)) return vid;
+          } catch { }
+          break;
+        }
+      }
+    }
+  }
+
+  // 4. "videoId":"VIDEO_ID" in ytInitialData or other embedded configs
+  const vidMatches = html.matchAll(/"videoId"\s*:\s*"([\w-]{11})"/g);
+  const seen = new Set<string>();
+  // Also look for live broadcast indicators near videoId
+  const liveIndicators = html.matchAll(/"isLivecontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi);
+  const livePositions = [...liveIndicators].map(m => m.index ?? 0);
+  for (const m of vidMatches) {
+    if (!seen.has(m[1])) {
+      seen.add(m[1]);
+      if (livePositions.length > 0) {
+        // If we found live indicators, prefer videoIds nearby
+        const pos = m.index ?? 0;
+        const nearby = livePositions.some(lp => Math.abs(lp - pos) < 5000);
+        if (nearby) return m[1];
+      }
+    }
+  }
+
+  // 5. watch?v=VIDEO_ID in URL patterns (fallback, no live requirement)
+  const urlVidMatch = html.match(/watch\?v=([\w-]{11})/);
+  if (urlVidMatch) return urlVidMatch[1];
+
+  return null;
+}
+
+async function redirectFallbackLive(channelParam: string, customFetch?: typeof fetch): Promise<string | null> {
   try {
     const candidates: string[] = [];
     const isFullUrl = YT_URL_RE.test(channelParam);
@@ -51,28 +108,26 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
       candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, '')}/live`);
     }
 
-    const fetchOptions: RequestInit = {
-      method: 'GET',
-      redirect: 'follow',
-      headers: buildFetchHeaders(),
-    };
+    const doFetch = customFetch || fetch;
+    const headers = buildFetchHeaders();
 
     for (const candidate of candidates) {
       try {
-        const res = await fetch(candidate, fetchOptions);
+        const res = await doFetch(candidate, { method: 'GET', redirect: 'follow', headers });
+
+        // Check redirect URL first (works if YouTube does a real HTTP redirect)
         const finalUrl = res.url || '';
         if (finalUrl.includes('watch?v=')) {
           const parsed = new URL(finalUrl);
           const vid = parsed.searchParams.get('v');
           if (vid) return vid;
         }
-        if ((res.status === 301 || res.status === 302) && !finalUrl) {
-          const loc = res.headers.get('location');
-          if (loc && loc.includes('watch?v=')) {
-            const parsed = new URL(loc.startsWith('http') ? loc : `https://www.youtube.com${loc}`);
-            const vid = parsed.searchParams.get('v');
-            if (vid) return vid;
-          }
+
+        // If no redirect detected, parse the HTML body for a video ID
+        if (res.ok) {
+          const html = await res.text();
+          const vid = extractVideoIdFromHtml(html);
+          if (vid) return vid;
         }
       } catch (err) {
         continue;
@@ -167,6 +222,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     let resolvedChannelId: string | null = null;
     try {
       resolvedChannelId = await resolveChannelId(trimmedParam, ytClient);
+      if (debug) console.log(`[YouTube Lookup] resolveChannelId("${trimmedParam}") → "${resolvedChannelId}"`);
     } catch (e) {
       if (debug) console.warn('[YouTube Lookup] resolveChannelId failed', e);
     }
@@ -186,6 +242,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       const targetId = resolvedChannelId || trimmedParam;
       try {
         channel = await ytClient.getChannel(targetId);
+        if (debug) console.log(`[YouTube Lookup] getChannel("${targetId}") OK — id=${channel?.basic_info?.id ?? 'unknown'}`);
       } catch (chErr) {
         if (debug) console.warn(`[YouTube Lookup] getChannel failed for "${targetId}" (source: "${trimmedParam}")`, chErr);
         channel = null;
@@ -196,11 +253,14 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       try {
         const liveStreams = await (channel as any).getLiveStreams();
         const videos: any[] = liveStreams?.videos ?? [];
+        if (debug) console.log(`[YouTube Lookup] getLiveStreams() → ${videos.length} videos`);
         const liveVideo = videos.find((v: any) => isActuallyLive(v));
         if (liveVideo) {
           videoId = liveVideo.id ?? liveVideo.videoId ?? null;
+          if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${videoId}`);
         } else if (videos.length > 0) {
           videoId = videos[0].id ?? videos[0].videoId ?? null;
+          if (debug) console.log(`[YouTube Lookup] No live video in liveStreams, using first: ${videoId}`);
         }
       } catch (lsErr) {
         if (debug) console.warn('[YouTube Lookup] getLiveStreams failed:', lsErr);
@@ -260,15 +320,25 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       finalChannelId = finalChannelId || ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '');
     }
 
-    // Redirect fallback
+    // Redirect fallback — use the Innertube session's fetch so requests
+    // go through the proxy when YT_PROXY is configured.
     if (!videoId) {
       try {
-        const redirectVid = await redirectFallbackLive(trimmedParam);
-        if (redirectVid) videoId = redirectVid;
+        const sessionFetch = ytClient?.session?.http?.fetch?.bind(ytClient.session.http) ?? undefined;
+        if (debug) console.log(`[YouTube Lookup] Trying redirect fallback for "${trimmedParam}" (sessionFetch=${sessionFetch ? 'yes' : 'no'})`);
+        const redirectVid = await redirectFallbackLive(trimmedParam, sessionFetch);
+        if (redirectVid) {
+          videoId = redirectVid;
+          if (debug) console.log(`[YouTube Lookup] Redirect fallback found: ${videoId}`);
+        } else {
+          if (debug) console.log('[YouTube Lookup] Redirect fallback found no live video');
+        }
       } catch (err) {
         if (debug) console.warn('[YouTube Lookup] Redirect fallback error:', err);
       }
     }
+
+    if (debug) console.log(`[YouTube Lookup] Final result for "${trimmedParam}": videoId=${videoId}, channelId=${finalChannelId || ''}`);
 
     const result: LookupResult = { videoId, channelId: finalChannelId || '' };
     try {
