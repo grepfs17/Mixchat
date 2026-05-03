@@ -65,8 +65,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
             const { getInnertube } = await import("../../lib/youtube");
             const yt = await getInnertube();
             const info = await yt.getInfo(videoId);
-            const id = (info.basic_info as any).live_chat?.active_live_chat_id || null;
-            liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + 300_000 }); // Cache for 5 mins
+            const livechat = info.livechat;
+            const id = livechat?.continuation || null;
+            if (!id) {
+              console.warn('[YouTube Chat] No liveChatId found for video', videoId, 'is_live:', info.basic_info.is_live, 'has livechat:', !!livechat);
+            }
+            const ttl = id ? 300_000 : 60_000;
+            liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + ttl });
             return id;
           } catch (e) {
             console.error('[YouTube Chat] Failed to resolve liveChatId via InnerTube:', e);
