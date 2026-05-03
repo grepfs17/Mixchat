@@ -94,7 +94,7 @@ function extractVideoIdFromHtml(html: string): string | null {
   return null;
 }
 
-async function redirectFallbackLive(channelParam: string, customFetch?: typeof fetch): Promise<string | null> {
+async function redirectFallbackLive(channelParam: string): Promise<string | null> {
   try {
     const candidates: string[] = [];
     const isFullUrl = YT_URL_RE.test(channelParam);
@@ -108,7 +108,7 @@ async function redirectFallbackLive(channelParam: string, customFetch?: typeof f
       candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, '')}/live`);
     }
 
-    const doFetch = customFetch || fetch;
+    const doFetch = fetch;
     const headers = buildFetchHeaders();
 
     for (const candidate of candidates) {
@@ -320,13 +320,12 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       finalChannelId = finalChannelId || ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '');
     }
 
-    // Redirect fallback — use the Innertube session's fetch so requests
-    // go through the proxy when YT_PROXY is configured.
+    // Redirect fallback — fetch the /live page directly (not through Innertube)
+    // to extract the video ID from HTML/redirects.
     if (!videoId) {
       try {
-        const sessionFetch = ytClient?.session?.http?.fetch?.bind(ytClient.session.http) ?? undefined;
-        if (debug) console.log(`[YouTube Lookup] Trying redirect fallback for "${trimmedParam}" (sessionFetch=${sessionFetch ? 'yes' : 'no'})`);
-        const redirectVid = await redirectFallbackLive(trimmedParam, sessionFetch);
+        if (debug) console.log(`[YouTube Lookup] Trying redirect fallback for "${trimmedParam}"`);
+        const redirectVid = await redirectFallbackLive(trimmedParam);
         if (redirectVid) {
           videoId = redirectVid;
           if (debug) console.log(`[YouTube Lookup] Redirect fallback found: ${videoId}`);
