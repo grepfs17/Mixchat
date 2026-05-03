@@ -15,11 +15,30 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-medium);
   padding: 24px;
-  max-width: 400px;
+  max-width: 500px;
   width: 90%;
   max-height: 90svh;
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+/* Scrollbar style for Embed Config Modal (match chat messages scrollbar) */
+.embed-config-modal-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+.embed-config-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+.embed-config-modal-content::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+.embed-config-modal-content::-webkit-scrollbar-thumb {
+  background: var(--color-border-medium);
+  border-radius: var(--radius-md);
+}
+.embed-config-modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-lighter);
 }
 
 /* Header */
@@ -369,7 +388,9 @@
 }
 
 @keyframes embed-config-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Re-auth button */
