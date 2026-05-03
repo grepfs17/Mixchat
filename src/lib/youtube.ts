@@ -17,6 +17,9 @@ export function invalidateInnertube(): void {
 let last403Time = 0;
 const COOLDOWN_AFTER_403_MS = 30_000;
 
+const YT_PROXY = process.env.YT_PROXY;
+const YT_PROXY_TOKEN = process.env.YT_PROXY_TOKEN;
+
 export async function getInnertube() {
   if (yt) return yt;
 
@@ -53,26 +56,32 @@ export async function getInnertube() {
       innertubeOptions.cookie = process.env.YT_COOKIE;
     }
 
-    const envPoToken = process.env.YT_POTOKEN;
-    const envVisitorData = process.env.YT_VISITOR_DATA;
+    // PoToken: when using a proxy, PoToken is handled by the proxy server.
+    // Otherwise, auto-generate or use env vars.
+    if (YT_PROXY) {
+      // PoToken is generated on the proxy server — skip local generation.
+    } else {
+      const envPoToken = process.env.YT_POTOKEN;
+      const envVisitorData = process.env.YT_VISITOR_DATA;
 
-    if (envPoToken) {
-      innertubeOptions.po_token = envPoToken;
-    }
-    if (envVisitorData) {
-      innertubeOptions.visitor_data = envVisitorData;
-    }
+      if (envPoToken) {
+        innertubeOptions.po_token = envPoToken;
+      }
+      if (envVisitorData) {
+        innertubeOptions.visitor_data = envVisitorData;
+      }
 
-    const autoPotoken = !envPoToken && !envVisitorData && clientType === 'WEB' && process.env.YT_POTOKEN !== 'off';
+      const autoPotoken = !envPoToken && !envVisitorData && clientType === 'WEB' && process.env.YT_POTOKEN !== 'off';
 
-    if (autoPotoken) {
-      try {
-        const tokenData = await getPoToken();
-        innertubeOptions.po_token = tokenData.poToken;
-        innertubeOptions.visitor_data = tokenData.visitorData;
-      } catch (poErr) {
-        const msg = poErr instanceof Error ? poErr.message : String(poErr);
-        console.warn('[YouTube] Auto PoToken generation failed, continuing without it:', msg);
+      if (autoPotoken) {
+        try {
+          const tokenData = await getPoToken();
+          innertubeOptions.po_token = tokenData.poToken;
+          innertubeOptions.visitor_data = tokenData.visitorData;
+        } catch (poErr) {
+          const msg = poErr instanceof Error ? poErr.message : String(poErr);
+          console.warn('[YouTube] Auto PoToken generation failed, continuing without it:', msg);
+        }
       }
     }
 
@@ -81,7 +90,7 @@ export async function getInnertube() {
         hasPoToken: !!innertubeOptions.po_token,
         hasCookie: !!innertubeOptions.cookie,
         hasVisitorData: !!innertubeOptions.visitor_data,
-        autoPotoken,
+        useProxy: !!YT_PROXY,
       });
     }
 
@@ -99,6 +108,54 @@ export async function getInnertube() {
         urlStr = String(input);
       }
 
+      // When YT_PROXY is set, route all Innertube requests through the
+      // Vercel proxy. The proxy handles PoToken generation and avoids
+      // datacenter-IP blocks from YouTube.
+      if (YT_PROXY) {
+        try {
+          const targetUrl = new URL(urlStr);
+          // Only proxy youtubei API requests — other URLs (e.g. thumbnail
+          // images, player assets) are fetched directly.
+          if (targetUrl.hostname === 'www.youtube.com' && targetUrl.pathname.startsWith('/youtubei/')) {
+            const proxyPath = targetUrl.pathname + targetUrl.search;
+            const proxyUrl = `${YT_PROXY.replace(/\/+$/, '')}/api/youtube${proxyPath}`;
+
+            const proxyHeaders: Record<string, string> = {
+              'Content-Type': init?.headers ? 'application/json' : 'application/x-www-form-urlencoded',
+            };
+            if (YT_PROXY_TOKEN) {
+              proxyHeaders['Authorization'] = `Bearer ${YT_PROXY_TOKEN}`;
+            }
+
+            // Forward the request body (POST payloads)
+            const body = typeof init?.body === 'string' ? init.body : undefined;
+
+            if (process.env.YT_DEBUG === '1') {
+              console.debug('[YouTube Proxy] Routing through Vercel proxy:', proxyUrl);
+            }
+
+            const method = init?.method || (body ? 'POST' : 'GET');
+            const proxyRes = await fetch(proxyUrl, { method, headers: proxyHeaders, body });
+
+            if (proxyRes.status === 503) {
+              // Proxy saw a 403 from YouTube — propagate as a 403 so the
+              // calling code can handle it (e.g. invalidate session).
+              const errBody = await proxyRes.text().catch(() => '');
+              console.error('[YouTube Proxy] Vercel proxy returned 503 (YouTube blocked):', errBody.slice(0, 500));
+              invalidateInnertube();
+              last403Time = Date.now();
+              return new Response(errBody, { status: 403, headers: { 'Content-Type': 'application/json' } });
+            }
+
+            return proxyRes;
+          }
+        } catch (parseErr) {
+          // If URL parsing fails, fall through to direct fetch.
+          if (process.env.YT_DEBUG === '1') console.debug('[YouTube Proxy] URL parse failed, falling back to direct fetch', parseErr);
+        }
+      }
+
+      // Direct fetch (no proxy or non-YouTube URL)
       const headers: Record<string, string> = {};
       const orig = init?.headers;
       if (orig) {
