@@ -3,6 +3,8 @@
 Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes. It provides a unified interface for streaming environments, including stream replies, badges, and native HLS video support.
 ![Mixchat Demo](https://gitea.grepfs.xyz/grepfs17/Mixchat/raw/branch/main/public/demo/complete.png)
 
+![Mixchat Demo](https://gitea.grepfs.xyz/grepfs17/Mixchat/raw/branch/main/public/demo/complete.webp)
+
 ## Core Features
 
 - Multi-platform integration for Twitch and YouTube chat.

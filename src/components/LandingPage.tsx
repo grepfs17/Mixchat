@@ -38,46 +38,46 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     {
       title: "Emote Autocomplete",
       description: "Start typing and instantly search through 7TV, BTTV, and FFZ emotes — no browser extensions required.",
-      images: [{ src: "/demo/autocompleteemotes.png", alt: "Emote autocomplete popup showing emote search results" }],
+      images: [{ src: "/demo/autocompleteemotes.webp", alt: "Emote autocomplete popup showing emote search results" }],
       badge: "7TV / BTTV / FFZ",
     },
     {
       title: "Link YouTube Channels",
       description: "Connect your Twitch streamer to their youtube channel to view and participate in both chats simultaneously.",
-      images: [{ src: "/demo/link-youtube-channels.png", alt: "YouTube channel linking interface" }],
+      images: [{ src: "/demo/link-youtube-channels.webp", alt: "YouTube channel linking interface" }],
       badge: "Cross-Platform",
     },
     {
       title: "Mobile Friendly",
       description: "Full chat experience on the go — optimized for responsive layout.",
       images: [
-        { src: "/demo/mobile-capture-1.jpg", alt: "Mixchat mobile view showing sidebar and channel list" },
-        { src: "/demo/mobile-capture-2.jpg", alt: "Mixchat mobile view showing chat and stream embed" },
+        { src: "/demo/mobile-capture-1.webp", alt: "Mixchat mobile view showing sidebar and channel list" },
+        { src: "/demo/mobile-capture-2.webp", alt: "Mixchat mobile view showing chat and stream embed" },
       ],
       badge: "Responsive",
     },
     {
       title: "Unified Chat",
       description: "Combine Twitch and YouTube chat into a single stream.",
-      images: [{ src: "/demo/unifiedChat.png", alt: "Unified chat view showing both Twitch and YouTube messages together" }],
+      images: [{ src: "/demo/unifiedChat.webp", alt: "Unified chat view showing both Twitch and YouTube messages together" }],
       badge: "Twitch + YouTube",
     },
     {
       title: "Separated Views",
       description: "Prefer them apart? Split Twitch and YouTube chats side by side for a clean, organized experience.",
-      images: [{ src: "/demo/separated-chats.png", alt: "Separated chat view with Twitch and YouTube side by side" }],
+      images: [{ src: "/demo/separated-chats.webp", alt: "Separated chat view with Twitch and YouTube side by side" }],
       badge: "Flexible Layout",
     },
     {
       title: "Moderator Tools",
       description: "Timeout, ban, and manage chat with context menus and mod actions.",
-      images: [{ src: "/demo/moderator-mode-actions-commands.png", alt: "Moderator mode with timeout and ban actions" }],
+      images: [{ src: "/demo/moderator-mode-actions-commands.webp", alt: "Moderator mode with timeout and ban actions" }],
       badge: "Mod Friendly",
     },
     {
       title: "Full Feature Set",
       description: "Live stream embeds, watchlist notifications, raid detection, and more — all without browser extensions.",
-      images: [{ src: "/demo/complete.png", alt: "Complete Mixchat interface with all features visible" }],
+      images: [{ src: "/demo/complete.webp", alt: "Complete Mixchat interface with all features visible" }],
       badge: "Everything Built In",
     },
   ];
@@ -85,7 +85,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
   return (
     <div className="landing-page" ref={pageRef}>
       <div className="landing-hero" style={{ opacity: heroLoaded ? 1 : 0, transform: heroLoaded ? 'translateY(0)' : 'translateY(20px)' }}>
-        <img src="/logo.png" alt="Mixchat" className="landing-hero-logo" />
+        <img src="/logo.webp" alt="Mixchat" className="landing-hero-logo" />
         <h1 className="landing-hero-title">
           Watch streams. Use emotes easily.
         </h1>

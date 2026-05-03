@@ -138,7 +138,7 @@ function LoginPanel({
           onClick={(e) => { if (onGoHome) { e.preventDefault(); onGoHome(); } }}
           style={{ lineHeight: 0 }}
         >
-          <img src="/logo.png" alt="Mixchat" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
+          <img src="/logo.webp" alt="Mixchat" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
         </a>
         <button
           onClick={() => setShowEmbedConfig(true)}
