@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { DISPLAY_VERSION } from "../lib/version";
 
 interface LandingPageProps {
   onTwitchLogin: () => void;
@@ -186,7 +187,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       </section>
 
       <footer className="landing-footer">
-        <span>&copy; 2026 Mixchat by <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat" target="_blank" rel="noopener noreferrer">grepfs17</a> &mdash; Licensed under <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a></span>
+        <span>&copy; 2026 Mixchat by <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat" target="_blank" rel="noopener noreferrer">grepfs17</a> &mdash; Licensed under <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a> &mdash; {DISPLAY_VERSION}</span>
         <div className="landing-footer-links">
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
