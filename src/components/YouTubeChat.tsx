@@ -155,9 +155,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       }
     };
 
-    // Kick off the first fetch right away, then repeat every 4 s
+    // Kick off the first fetch right away, then repeat every 8 s
     fetchChatMessages();
-    pollingIntervalRef.current = setInterval(fetchChatMessages, 5000);
+    pollingIntervalRef.current = setInterval(fetchChatMessages, 8000);
 
     return () => {
       isMounted = false;
