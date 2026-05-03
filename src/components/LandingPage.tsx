@@ -43,12 +43,6 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       badge: "7TV / BTTV / FFZ",
     },
     {
-      title: "Link YouTube Channels",
-      description: "Connect your Twitch streamer to their youtube channel to view and participate in both chats simultaneously.",
-      images: [{ src: "/demo/link-youtube-channels.webp", alt: "YouTube channel linking interface" }],
-      badge: "Cross-Platform",
-    },
-    {
       title: "Mobile Friendly",
       description: "Full chat experience on the go — optimized for responsive layout.",
       images: [
@@ -56,6 +50,12 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         { src: "/demo/mobile-capture-2.webp", alt: "Mixchat mobile view showing chat and stream embed" },
       ],
       badge: "Responsive",
+    },
+    {
+      title: "Link YouTube Channels",
+      description: "Connect your Twitch streamer to their youtube channel to view and participate in both chats simultaneously.",
+      images: [{ src: "/demo/link-youtube-channels.webp", alt: "YouTube channel linking interface" }],
+      badge: "Cross-Platform",
     },
     {
       title: "Unified Chat",
