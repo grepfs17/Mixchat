@@ -127,37 +127,50 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 
         chat.on('start', (initialData: any) => {
           console.log(`[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || 'Guest'}`);
-          // Parse initial chat actions provided in the start payload
           if (initialData?.actions) {
             for (const action of initialData.actions) {
-              if (action.is(YTNodes.AddChatItemAction)) {
-                const item = action.as(YTNodes.AddChatItemAction).item;
-                if (!item) continue;
-                const chatMsg = parseChatItem(item);
-                if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-                  messages.push(chatMsg);
-                  if (messages.length > 200) messages.shift();
+              if (!action || typeof action.is !== 'function') continue;
+              try {
+                if (action.is(YTNodes.AddChatItemAction)) {
+                  const item = action.as(YTNodes.AddChatItemAction)?.item;
+                  if (!item) continue;
+                  const chatMsg = parseChatItem(item);
+                  if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+                    messages.push(chatMsg);
+                    if (messages.length > 200) messages.shift();
+                  }
                 }
+              } catch (e) {
+                console.warn('[YouTube Chat] Failed to parse initial action:', e instanceof Error ? e.message : String(e));
               }
             }
           }
         });
 
         chat.on('chat-update', (action: any) => {
-          if (action.is(YTNodes.AddChatItemAction)) {
-            const item = action.as(YTNodes.AddChatItemAction).item;
-            if (!item) return;
-            const chatMsg = parseChatItem(item);
-            if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
-              messages.push(chatMsg);
-              if (messages.length > 200) messages.shift();
-            }
-          }
+          if (!action || typeof action.is !== 'function') return;
 
-          if (action.is(YTNodes.RemoveChatItemAction)) {
-            const targetId = action.target_item_id;
-            const idx = messages.findIndex(m => m.id === targetId);
-            if (idx !== -1) messages.splice(idx, 1);
+          try {
+            if (action.is(YTNodes.AddChatItemAction)) {
+              const item = action.as(YTNodes.AddChatItemAction)?.item;
+              if (!item) return;
+              const chatMsg = parseChatItem(item);
+              if (chatMsg && !messages.some(m => m.id === chatMsg.id)) {
+                messages.push(chatMsg);
+                if (messages.length > 200) messages.shift();
+              }
+              return;
+            }
+
+            if (action.is(YTNodes.RemoveChatItemAction)) {
+              const targetId = action.target_item_id;
+              if (targetId) {
+                const idx = messages.findIndex(m => m.id === targetId);
+                if (idx !== -1) messages.splice(idx, 1);
+              }
+            }
+          } catch (e) {
+            console.warn('[YouTube Chat] Failed to parse chat-update action:', e instanceof Error ? e.message : String(e));
           }
         });
 
