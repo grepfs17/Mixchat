@@ -1,154 +1,185 @@
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
+import { getPoToken, invalidatePoToken } from "./potoken";
 
 let yt: Innertube | null = null;
+let isInitializing = false;
 
-// Suppress noisy "class_not_found" warnings for unknown YouTube.js nodes (e.g.
-// LiveChatReportModerationStateCommand). These are harmless — youtubei.js JIT-
-// generates a stub in the meantime — but they would otherwise spam the logs.
 Parser.setParserErrorHandler(({ error_type }) => {
   if (error_type === "class_not_found") return;
 });
 
+export function invalidateInnertube(): void {
+  yt = null;
+  invalidatePoToken();
+}
+
+let last403Time = 0;
+const COOLDOWN_AFTER_403_MS = 30_000;
+
 export async function getInnertube() {
-  if (!yt) {
-    try {
-      // Allow a configurable user agent and session generation to avoid
-      // server-side 403s from YouTube. These options are documented by
-      // youtubei.js (Innertube.create options).
-      const innertubeOptions: Record<string, any> = {};
-      let clientType = (process.env.YT_CLIENT || 'WEB').toUpperCase();
+  if (yt) return yt;
 
-      // Normalize aliases to valid youtubei.js client names.
-      // ANDROID + OAuth Bearer token causes 400 INVALID_ARGUMENT because
-      // YouTube expects native Google Play Services auth for ANDROID, not web OAuth.
-      // WEB client is compatible with OAuth Bearer tokens.
-      if (clientType === 'TV') clientType = 'TVHTML5';
-      if (clientType === 'TVHTML5_TV') clientType = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
+  const timeSince403 = Date.now() - last403Time;
+  if (timeSince403 < COOLDOWN_AFTER_403_MS) {
+    const wait = COOLDOWN_AFTER_403_MS - timeSince403;
+    throw new Error(`[YouTube] Cooldown after 403 — retry in ${Math.ceil(wait / 1000)}s`);
+  }
 
-      innertubeOptions.client_type = clientType;
+  if (isInitializing) {
+    throw new Error('[YouTube] Innertube initialization already in progress');
+  }
+  isInitializing = true;
 
-      if (process.env.YT_USER_AGENT) {
-        innertubeOptions.user_agent = process.env.YT_USER_AGENT;
-      } else if (clientType === 'WEB') {
-        innertubeOptions.user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  try {
+    const innertubeOptions: Record<string, any> = {};
+    let clientType = (process.env.YT_CLIENT || 'WEB').toUpperCase();
+
+    if (clientType === 'TV') clientType = 'TVHTML5';
+    if (clientType === 'TVHTML5_TV') clientType = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
+
+    innertubeOptions.client_type = clientType;
+
+    if (process.env.YT_USER_AGENT) {
+      innertubeOptions.user_agent = process.env.YT_USER_AGENT;
+    } else if (clientType === 'WEB') {
+      innertubeOptions.user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    }
+
+    innertubeOptions.generate_session_locally =
+      process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
+
+    if (process.env.YT_COOKIE) {
+      innertubeOptions.cookie = process.env.YT_COOKIE;
+    }
+
+    const envPoToken = process.env.YT_POTOKEN;
+    const envVisitorData = process.env.YT_VISITOR_DATA;
+
+    if (envPoToken) {
+      innertubeOptions.po_token = envPoToken;
+    }
+    if (envVisitorData) {
+      innertubeOptions.visitor_data = envVisitorData;
+    }
+
+    const autoPotoken = !envPoToken && !envVisitorData && clientType === 'WEB' && process.env.YT_POTOKEN !== 'off';
+
+    if (autoPotoken) {
+      try {
+        const tokenData = await getPoToken();
+        innertubeOptions.po_token = tokenData.poToken;
+        innertubeOptions.visitor_data = tokenData.visitorData;
+      } catch (poErr) {
+        const msg = poErr instanceof Error ? poErr.message : String(poErr);
+        console.warn('[YouTube] Auto PoToken generation failed, continuing without it:', msg);
+      }
+    }
+
+    if (process.env.YT_DEBUG === '1') {
+      console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, {
+        hasPoToken: !!innertubeOptions.po_token,
+        hasCookie: !!innertubeOptions.cookie,
+        hasVisitorData: !!innertubeOptions.visitor_data,
+        autoPotoken,
+      });
+    }
+
+    const baseUserAgent = innertubeOptions.user_agent;
+    const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
+    const baseReferer = referrer.endsWith('/') ? referrer : referrer + '/';
+
+    innertubeOptions.fetch = async (input: any, init?: any) => {
+      let urlStr = '';
+      try {
+        if (typeof input === 'string') urlStr = input;
+        else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
+        else urlStr = String(input);
+      } catch {
+        urlStr = String(input);
       }
 
-      // Generate a session locally by default to reduce extra network requests.
-      innertubeOptions.generate_session_locally =
-        process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
-
-      // Innertube does NOT support OAuth Bearer tokens — it expects either
-      // cookie-based auth (SAPISID hash) or no auth at all.  Use YT_COOKIE
-      // env var for authenticated Innertube access.
-      if (process.env.YT_COOKIE) {
-        innertubeOptions.cookie = process.env.YT_COOKIE;
+      const headers: Record<string, string> = {};
+      const orig = init?.headers;
+      if (orig) {
+        if (typeof (orig as any).entries === 'function') {
+          for (const [k, v] of (orig as any).entries()) {
+            try { headers[k.toLowerCase()] = String(v); } catch { }
+          }
+        } else if (typeof (orig as any).forEach === 'function') {
+          try {
+            (orig as any).forEach((v: any, k: string) => {
+              try { headers[k.toLowerCase()] = String(v); } catch { }
+            });
+          } catch { }
+        } else if (typeof orig === 'object') {
+          for (const k of Object.keys(orig)) {
+            try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch { }
+          }
+        }
       }
 
-      // Support for Proof-of-Token (PoToken) and Visitor Data (mainly for WEB client).
-      if (process.env.YT_POTOKEN) {
-        innertubeOptions.po_token = process.env.YT_POTOKEN;
+      if ('x-goog-visitor-id' in headers) {
+        const val = headers['x-goog-visitor-id'];
+        if (!val || !val.trim()) delete headers['x-goog-visitor-id'];
       }
-      if (process.env.YT_VISITOR_DATA) {
-        innertubeOptions.visitor_data = process.env.YT_VISITOR_DATA;
-      }
+
+      if (!headers['user-agent'] && baseUserAgent) headers['user-agent'] = baseUserAgent;
+      if (!headers['referer']) headers['referer'] = baseReferer;
+      if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
 
       if (process.env.YT_DEBUG === '1') {
-        console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, { hasPoToken: !!innertubeOptions.po_token, hasCookie: !!innertubeOptions.cookie });
+        try {
+          const keys = Object.keys(headers);
+          const hasAuth = keys.includes('authorization');
+          const hasCookie = keys.includes('cookie');
+          const bodyPreview = typeof init?.body === 'string' ? init.body.slice(0, 500) : undefined;
+          console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), hasAuth ? '(auth present)' : '(no auth)', hasCookie ? '(cookie present)' : '(no cookie)', bodyPreview ? `\n  body: ${bodyPreview}` : '');
+        } catch { }
       }
 
-      // Provide a custom fetch wrapper to ensure outgoing Innertube requests
-      // include a realistic User-Agent and Referer header.
-      const baseUserAgent = innertubeOptions.user_agent;
-      const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
-      const baseReferer = referrer.endsWith('/') ? referrer : referrer + '/';
-
-      innertubeOptions.fetch = async (input: any, init?: any) => {
-        // Compute a readable URL string for logging and diagnostics.
-        let urlStr = '';
-        try {
-          if (typeof input === 'string') urlStr = input;
-          else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
-          else urlStr = String(input);
-        } catch {
-          urlStr = String(input);
-        }
-
-        const headers: Record<string, string> = {};
-        const orig = init?.headers;
-        if (orig) {
-          // Copy existing headers so we don't drop headers youtubei.js sets.
-          if (typeof (orig as any).entries === 'function') {
-            for (const [k, v] of (orig as any).entries()) {
-              try { headers[k.toLowerCase()] = String(v); } catch { }
-            }
-          } else if (typeof (orig as any).forEach === 'function') {
-            try {
-              (orig as any).forEach((v: any, k: string) => {
-                try { headers[k.toLowerCase()] = String(v); } catch { }
-              });
-            } catch { }
-          } else if (typeof orig === 'object') {
-            for (const k of Object.keys(orig)) {
-              try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch { }
-            }
-          }
-        }
-
-        // Strip empty or whitespace-only X-Goog-Visitor-Id — YouTube rejects
-        // invalid visitor data with 400 INVALID_ARGUMENT.
-        if ('x-goog-visitor-id' in headers) {
-          const val = headers['x-goog-visitor-id'];
-          if (!val || !val.trim()) delete headers['x-goog-visitor-id'];
-        }
-
-        if (!headers['user-agent'] && baseUserAgent) headers['user-agent'] = baseUserAgent;
-        if (!headers['referer']) headers['referer'] = baseReferer;
-        if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
-
-        if (process.env.YT_DEBUG === '1') {
+      const merged = { ...(init || {}), headers };
+      try {
+        const res = await fetch(input, merged);
+        if (res.status >= 400) {
           try {
-            const keys = Object.keys(headers);
-            const hasAuth = keys.includes('authorization');
-            const hasCookie = keys.includes('cookie');
-            const bodyPreview = typeof init?.body === 'string' ? init.body.slice(0, 500) : undefined;
-            console.debug('[YouTube Proxy] outgoing innertube headers:', keys.join(', '), hasAuth ? '(auth present)' : '(no auth)', hasCookie ? '(cookie present)' : '(no cookie)', bodyPreview ? `\n  body: ${bodyPreview}` : '');
-          } catch { }
-        }
+            const clone = res.clone();
+            const txt = await clone.text().catch(() => '<failed to read body>');
+            const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
 
-        const merged = { ...(init || {}), headers };
-        try {
-          const res = await fetch(input, merged);
-          if (res.status >= 400) {
-            try {
-              const clone = res.clone();
-              const txt = await clone.text().catch(() => '<failed to read body>');
-              const short = typeof txt === 'string' ? txt.slice(0, 2000) : String(txt);
-
-              if (res.status === 403 && (short.includes('automated queries') || short.includes('Sorry...'))) {
-                console.error('[YouTube Proxy] YouTube blocked this request for "automated queries".', { url: urlStr, client: clientType });
+            if (res.status === 403) {
+              last403Time = Date.now();
+              if (short.includes('automated queries') || short.includes('Sorry...')) {
+                console.error('[YouTube Proxy] YouTube blocked for "automated queries". Invalidating session.', { url: urlStr, client: clientType });
               } else {
-                console.error('[YouTube Proxy] innertube fetch non-OK', { url: urlStr, status: res.status, body: short });
+                console.error('[YouTube Proxy] innertube fetch 403 — invalidating session for cooldown.', { url: urlStr, body: short.slice(0, 500) });
               }
-            } catch (logErr) {
-              console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: urlStr, status: res.status, err: String(logErr) });
+              invalidateInnertube();
+            } else {
+              console.error('[YouTube Proxy] innertube fetch non-OK', { url: urlStr, status: res.status, body: short });
             }
+          } catch (logErr) {
+            console.error('[YouTube Proxy] innertube fetch non-OK (failed to log body)', { url: urlStr, status: res.status, err: String(logErr) });
           }
-          return res;
-        } catch (err) {
-          if (process.env.YT_DEBUG === '1') console.error('[YouTube Proxy] innertube fetch failed', err);
-          throw err;
         }
-      };
+        return res;
+      } catch (err) {
+        if (process.env.YT_DEBUG === '1') console.error('[YouTube Proxy] innertube fetch failed', err);
+        throw err;
+      }
+    };
 
-      yt = await Innertube.create(innertubeOptions);
-    } catch (error) {
-      // Reset to null on error so next call retries instead of returning failed instance
-      yt = null;
-      throw error;
+    yt = await Innertube.create(innertubeOptions);
+    return yt;
+  } catch (error) {
+    yt = null;
+    if (error instanceof Error && /status code 403/i.test(error.message)) {
+      last403Time = Date.now();
     }
+    throw error;
+  } finally {
+    isInitializing = false;
   }
-return yt;
 }
 
 export async function getYoutubeAccessToken(
@@ -189,7 +220,6 @@ export async function getYoutubeUser(accessToken: string) {
     );
   } catch (e: any) {
     const raw = e?.message ?? String(e);
-    // Strip generic prefix from googleFetch where present
     const message = raw.replace(/^Google API error:\s*/i, '');
     throw new Error(`Failed to get YouTube user: ${message}`);
   }

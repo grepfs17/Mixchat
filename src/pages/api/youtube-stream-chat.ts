@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { YTNodes } from 'youtubei.js';
-import { getInnertube } from '../../lib/youtube';
+import { getInnertube, invalidateInnertube } from '../../lib/youtube';
 import { checkRateLimit } from '../../lib/rateLimit';
 
 interface MessagePart {
@@ -173,7 +173,8 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
           // so subsequent client polls don't keep hammering YouTube.
           if (errMsg && (errMsg.includes('status code 403') || errMsg.includes('403'))) {
             blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
-            console.error('[YouTube Chat] Marking chat blocked for', videoId, 'due to 403 from polling. Set YT_COOKIE env var to fix this.');
+            console.error('[YouTube Chat] Marking chat blocked for', videoId, 'due to 403 from polling. Invalidating Innertube session.');
+            invalidateInnertube();
             activeLiveChats.delete(videoId);
           } else {
             setTimeout(() => {
@@ -201,7 +202,8 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         // YouTube and spam logs.
         if (msg && msg.includes('status code 403')) {
           blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
-          console.error('[YouTube Chat] Marking chat temporarily blocked for', videoId, 'due to 403');
+          invalidateInnertube();
+          console.error('[YouTube Chat] Marking chat temporarily blocked for', videoId, 'due to 403 — Innertube session invalidated');
           return new Response(
             JSON.stringify({ error: 'Live chat temporarily unavailable due to YouTube blocking (403)' }),
             { status: 503, headers: { 'Content-Type': 'application/json' } }
