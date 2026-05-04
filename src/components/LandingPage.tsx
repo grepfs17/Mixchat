@@ -186,6 +186,18 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         </button>
       </section>
 
+      <section className="landing-beta landing-reveal">
+        <div className="landing-beta-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <h2 className="landing-beta-title">This app is in Beta</h2>
+        <p className="landing-beta-description">
+          Mixchat is actively under development. You may encounter bugs, missing features, or breaking changes. Feedback and bug reports are welcome on the <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat/issues" target="_blank" rel="noopener noreferrer">issue tracker</a>.
+        </p>
+      </section>
+
       <footer className="landing-footer">
         <span>&copy; 2026 Mixchat by <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat" target="_blank" rel="noopener noreferrer">grepfs17</a> &mdash; Licensed under <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a> &mdash; {DISPLAY_VERSION}</span>
         <div className="landing-footer-links">
