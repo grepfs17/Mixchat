@@ -164,9 +164,22 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
         headers: { "Content-Type": "text/html" },
       },
     );
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.name === "NoChannelError") {
+      return new Response(
+        `<!DOCTYPE html>
+<html>
+<head><title>No YouTube Channel</title></head>
+<body>
+<h1>No YouTube Channel Found</h1>
+<p>Your Google account is not associated with a YouTube channel. Please create a YouTube channel first, or sign in with a different Google account that has one.</p>
+<a href="/">Back to home</a>
+</body>
+</html>`,
+        { status: 400, headers: { "Content-Type": "text/html" } },
+      );
+    }
     console.error("YouTube OAuth callback error:", error);
-    // Return a generic error page — never reflect raw error messages to the client.
     return new Response(
       `<!DOCTYPE html>
 <html>

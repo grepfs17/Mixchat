@@ -254,7 +254,9 @@ export async function getYoutubeUser(accessToken: string) {
   }
 
   if (!data.items || data.items.length === 0) {
-    throw new Error("No YouTube channel found for this user");
+    const err = new Error("No YouTube channel found for this user");
+    err.name = "NoChannelError";
+    throw err;
   }
 
   const channel = data.items[0];
