@@ -4,7 +4,7 @@ import React from 'react';
 import ChatDisplay from '../../src/components/ChatDisplay';
 import UnifiedChat from '../../src/components/UnifiedChat';
 import MessageInput from '../../src/components/MessageInput';
-import type { ChatMessage } from '../../src/lib/types';
+import type { ChatMessage, Platform } from '../../src/lib/types';
 
 vi.mock('react-dom', async () => {
   const actual = await vi.importActual('react-dom');
@@ -101,7 +101,7 @@ describe('Moderator Mode', () => {
     const defaultProps = {
       messages: [] as ChatMessage[],
       isLoading: false,
-      selectedPlatforms: ['twitch'] as const,
+      selectedPlatforms: ['twitch'] as Platform[],
     };
 
     it('renders mod mode button when user is a moderator', () => {
