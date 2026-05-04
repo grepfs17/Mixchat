@@ -64,24 +64,9 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
         }
       } else {
         const p = (async (): Promise<string | null> => {
-          // 1a. Try InnerTube (no auth required)
-          try {
-            const { getInnertube } = await import("../../lib/youtube");
-            const yt = await getInnertube();
-            const info = await yt.getInfo(videoId);
-            const livechat = info.livechat;
-            const id = livechat?.continuation || null;
-            if (id) {
-              const ttl = 300_000;
-              liveChatIdCache.set(videoId, { liveChatId: id, expires: Date.now() + ttl });
-              return id;
-            }
-            console.warn('[YouTube Chat] No liveChatId via InnerTube for', videoId, 'is_live:', info.basic_info.is_live, 'has livechat:', !!livechat);
-          } catch (e) {
-            console.error('[YouTube Chat] Failed to resolve liveChatId via InnerTube:', e);
-          }
-
-          // 1b. Fallback: use Data API videos.list (needs the OAuth token we already have)
+          // Use Data API directly — we already have the OAuth token and
+          // liveChatMessages.insert requires activeLiveChatId (not InnerTube's
+          // continuation token, which is incompatible with the Data API).
           try {
             const data = await googleFetch(
               `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
@@ -99,7 +84,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
             }
             console.warn('[YouTube Chat] No liveChatId via Data API for', videoId);
           } catch (e) {
-            console.error('[YouTube Chat] Data API videos.list fallback failed:', e);
+            console.error('[YouTube Chat] Data API videos.list failed:', e);
           }
 
           liveChatIdCache.set(videoId, { liveChatId: null, expires: Date.now() + 60_000 });
