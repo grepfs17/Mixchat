@@ -34,9 +34,9 @@ interface ChatMessage {
  * Prevents unbounded memory growth from malicious or accidental videoId flooding. */
 const MAX_ACTIVE_SESSIONS = 50;
 
-// When YouTube responds with repeated 403s for a given video, avoid retrying
-// continuously by marking the video as temporarily blocked for a short period.
-const CHAT_FAILURE_COOLDOWN_MS = parseInt(process.env.YT_CHAT_COOLDOWN_MS || '600000', 10); // default 10 minutes
+// Cooldown after a 403 block. Set lower than before because the proxy
+// now handles retries — we just need a brief pause to avoid hammering.
+const CHAT_FAILURE_COOLDOWN_MS = parseInt(process.env.YT_CHAT_COOLDOWN_MS || '60000', 10); // default 1 minute
 const blockedChatFailures = new Map<string, number>();
 
 // Global map to store active LiveChat sessions
@@ -210,18 +210,26 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         activeLiveChats.set(videoId, chatSession);
       } catch (err: any) {
         const msg = err instanceof Error ? err.message : String(err);
-        // If we see 403 responses (common when Google blocks scraping), mark
-        // the video as temporarily blocked so we don't repeatedly hammer
-        // YouTube and spam logs.
+        console.error('[YouTube Chat] Error setting up chat for', videoId, msg);
+
         if (msg && msg.includes('status code 403')) {
           blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
           invalidateInnertube();
-          console.error('[YouTube Chat] Marking chat temporarily blocked for', videoId, 'due to 403 — Innertube session invalidated');
           return new Response(
             JSON.stringify({ error: 'Live chat temporarily unavailable due to YouTube blocking (403)' }),
             { status: 503, headers: { 'Content-Type': 'application/json' } }
           );
         }
+
+        // "Live Chat is not available" means the video doesn't have live chat
+        // (not live, or chat disabled). Don't block it — the client will retry.
+        if (msg && msg.includes('not available')) {
+          return new Response(
+            JSON.stringify({ error: 'Live chat is not available for this video', videoId }),
+            { status: 404, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
         throw err;
       }
     }

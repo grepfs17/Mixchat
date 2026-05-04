@@ -99,6 +99,12 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
+          // 404 = live chat not available for this video (not live, chat disabled)
+          // Don't keep retrying aggressively — slow down the polling
+          if (res.status === 404) {
+            setError(errorData.error || 'Live chat not available');
+            return;
+          }
           console.error('Chat API error:', errorData);
           throw new Error(errorData.error || `HTTP ${res.status}`);
         }
