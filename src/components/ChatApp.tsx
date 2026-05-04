@@ -190,17 +190,15 @@ export default function ChatApp({
     }
 
     let cancelled = false;
+    const abortController = new AbortController();
     const fetchLiveVideoId = async () => {
       setYtLoading(true);
       setYtError(null);
-      // Do not clear `autoVideoId` here — clearing before the fetch causes
-      // the YouTube iframe to unmount and remount every poll. Only update
-      // `autoVideoId` after we receive a result, and only if it changed.
       try {
         const params = new URLSearchParams();
         params.append('channelUrl', linkedYoutubeUrl);
 
-        const res = await fetch(`/api/youtube-live?${params.toString()}`);
+        const res = await fetch(`/api/youtube-live?${params.toString()}`, { signal: abortController.signal });
 
         const data = await res.json();
         if (cancelled) return;
@@ -209,8 +207,6 @@ export default function ChatApp({
           setAutoVideoId((prev) => (prev !== data.videoId ? data.videoId : prev));
           setYtError(null);
         } else {
-          // If we got a 200 but videoId is null, it's just not live.
-          // Don't treat it as a hard error unless it's a non-200.
           if (!res.ok) {
             setYtError(data.error || 'Failed to check for live stream');
           } else {
@@ -220,6 +216,7 @@ export default function ChatApp({
         }
 
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         if (!cancelled) {
           setYtError('Failed to check for live stream');
           console.error('YouTube live fetch error:', err);
@@ -231,11 +228,11 @@ export default function ChatApp({
 
     fetchLiveVideoId();
 
-    // Re-check periodically in case the stream starts later (reduced frequency)
-    const interval = setInterval(fetchLiveVideoId, 600000); // 10 minutes
+    const interval = setInterval(fetchLiveVideoId, 600000);
 
     return () => {
       cancelled = true;
+      abortController.abort();
       clearInterval(interval);
     };
   }, [linkedYoutubeUrl]);
@@ -627,7 +624,7 @@ export default function ChatApp({
       clearInterval(statusInterval);
       clearInterval(uptimeInterval);
     };
-  }, [selectedTwitchChannel, twitchSession, twitchSession?.accessToken]);
+  }, [selectedTwitchChannel, twitchSession?.accessToken]);
 
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], _replyToId?: string) => {

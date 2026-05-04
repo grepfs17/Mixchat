@@ -11,6 +11,13 @@ type LookupResult = { videoId: string | null; channelId: string };
 const channelLiveCache = new Map<string, { videoId: string | null; channelId: string; expires: number }>();
 const inflightLiveLookup = new Map<string, Promise<LookupResult>>();
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of channelLiveCache) {
+    if (now > entry.expires) channelLiveCache.delete(key);
+  }
+}, 120_000);
+
 function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
   try {
     const parsed = new URL(channelUrlParam);

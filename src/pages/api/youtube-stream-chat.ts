@@ -34,10 +34,21 @@ interface ChatMessage {
  * Prevents unbounded memory growth from malicious or accidental videoId flooding. */
 const MAX_ACTIVE_SESSIONS = 50;
 
+/** Maximum idle time (ms) before a session is reaped. Prevents stale sessions
+ * from persisting when a stream never formally ends and no client polls it. */
+const MAX_IDLE_MS = 10 * 60_000;
+
 // Cooldown after a 403 block. Set lower than before because the proxy
 // now handles retries — we just need a brief pause to avoid hammering.
 const CHAT_FAILURE_COOLDOWN_MS = parseInt(process.env.YT_CHAT_COOLDOWN_MS || '60000', 10); // default 1 minute
 const blockedChatFailures = new Map<string, number>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiresAt] of blockedChatFailures) {
+    if (now > expiresAt) blockedChatFailures.delete(key);
+  }
+}, 120_000);
 
 // Global map to store active LiveChat sessions
 const activeLiveChats = new Map<
@@ -48,6 +59,16 @@ const activeLiveChats = new Map<
     lastUpdate: number;
   }
 >();
+
+function shutdownActiveSessions() {
+  for (const [key, session] of activeLiveChats) {
+    try { session.chat?.stop(); } catch {}
+  }
+  console.log(`[YouTube Chat] Graceful shutdown — stopped ${activeLiveChats.size} sessions`);
+  activeLiveChats.clear();
+}
+process.on('SIGTERM', shutdownActiveSessions);
+process.on('SIGINT', shutdownActiveSessions);
 
 export const GET: APIRoute = async ({ url, clientAddress }) => {
   if (!checkRateLimit(`${clientAddress}:youtube-stream-chat`, 60, 60_000)) {
@@ -75,17 +96,30 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
   }
 
   try {
+    // Reap idle sessions nobody has polled for a while.
+    const nowMs = Date.now();
+    for (const [key, session] of activeLiveChats) {
+      if (nowMs - session.lastUpdate > MAX_IDLE_MS) {
+        try { session.chat?.stop(); } catch {}
+        activeLiveChats.delete(key);
+        console.log('[YouTube Chat] Reaped idle session for', key);
+      }
+    }
+
     let chatSession = activeLiveChats.get(videoId);
 
     if (!chatSession) {
       // If recent attempts for this video resulted in blocking 403s, avoid
       // retrying until the cooldown expires.
       const blockedUntil = blockedChatFailures.get(videoId);
-      if (blockedUntil && blockedUntil > Date.now()) {
-        return new Response(
-          JSON.stringify({ error: 'Live chat temporarily unavailable due to repeated failures' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        );
+      if (blockedUntil) {
+        if (blockedUntil > Date.now()) {
+          return new Response(
+            JSON.stringify({ error: 'Live chat temporarily unavailable due to repeated failures' }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+        blockedChatFailures.delete(videoId);
       }
 
       try {
@@ -99,7 +133,11 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
               oldestKey = key;
             }
           }
-          if (oldestKey) activeLiveChats.delete(oldestKey);
+          if (oldestKey) {
+            const old = activeLiveChats.get(oldestKey);
+            try { old?.chat?.stop(); } catch {}
+            activeLiveChats.delete(oldestKey);
+          }
         }
 
         const yt = await getInnertube();
@@ -176,6 +214,7 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 
         chat.on('end', () => {
           console.log(`[YouTube Chat] Live stream ended for video ${videoId}`);
+          try { chat.stop(); } catch {}
           activeLiveChats.delete(videoId);
         });
 
@@ -188,10 +227,12 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
             blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
             console.error('[YouTube Chat] Marking chat blocked for', videoId, 'due to 403 from polling. Invalidating Innertube session.');
             invalidateInnertube();
+            try { chat.stop(); } catch {}
             activeLiveChats.delete(videoId);
           } else {
             setTimeout(() => {
               if (activeLiveChats.get(videoId)?.chat === chat) {
+                try { chat.stop(); } catch {}
                 activeLiveChats.delete(videoId);
               }
             }, 30000);
@@ -387,8 +428,8 @@ function parseMembershipItem(msg: any): ChatMessage {
   };
 }
 
-//Converts YouTube's ARGB decimal color to Hex
 function ARGBtoHex(argb: number): string {
-  const hex = (argb & 0xFFFFFF).toString(16).padStart(6, '0');
+  const unsigned = argb >>> 0;
+  const hex = (unsigned & 0xFFFFFF).toString(16).padStart(6, '0');
   return `#${hex}`;
 }

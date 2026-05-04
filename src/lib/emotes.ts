@@ -79,6 +79,10 @@ let emotesTwitchGlobal: EmoteMap = {};
 let emotesTwitchByChannel: ChannelEmoteGroup[] = [];
 let activeEmoteSetId: string | null = null;
 let eventSource7tv: EventSource | null = null;
+let reconnect7tvTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnect7tvDelay = 5000;
+const RECONNECT_7TV_MIN = 5000;
+const RECONNECT_7TV_MAX = 300_000;
 
 /**
  * Get cached emotes if valid
@@ -480,6 +484,7 @@ interface BroadcasterInfo {
 
 /** Module-level cache so repeated emote refreshes don't re-fetch the same IDs */
 const broadcasterInfoCache = new Map<string, BroadcasterInfo>();
+const MAX_BROADCASTER_CACHE = 200;
 
 /**
  * Resolve Twitch user IDs to display names + profile images.
@@ -520,6 +525,10 @@ async function fetchBroadcasterInfo(
               name,
               profileImageUrl: user?.profileImageUrl || user?.profile_image_url,
             };
+            if (broadcasterInfoCache.size >= MAX_BROADCASTER_CACHE) {
+              const firstKey = broadcasterInfoCache.keys().next().value;
+              if (firstKey !== undefined) broadcasterInfoCache.delete(firstKey);
+            }
             broadcasterInfoCache.set(id, info);
             map[String(id)] = info;
           }
@@ -730,6 +739,7 @@ export function subscribeTo7TVUpdates(
 
   eventSource7tv.addEventListener("hello", (event: any) => {
     console.log("[7TV] EventAPI: Handshake successful (hello received)");
+    reconnect7tvDelay = RECONNECT_7TV_MIN;
   });
 
   eventSource7tv.addEventListener("heartbeat", () => {
@@ -790,11 +800,17 @@ export function subscribeTo7TVUpdates(
   eventSource7tv.onerror = (err) => {
     console.error("[7TV] EventAPI connection error:", err);
     if (eventSource7tv) eventSource7tv.close();
-    // Try to reconnect after a delay
-    setTimeout(() => subscribeTo7TVUpdates(channelId, channelName), 5000);
+    reconnect7tvTimer = setTimeout(() => {
+      reconnect7tvDelay = Math.min(reconnect7tvDelay * 2, RECONNECT_7TV_MAX);
+      subscribeTo7TVUpdates(channelId, channelName);
+    }, reconnect7tvDelay);
   };
 
   return () => {
+    if (reconnect7tvTimer) {
+      clearTimeout(reconnect7tvTimer);
+      reconnect7tvTimer = null;
+    }
     if (eventSource7tv) {
       console.log("[7TV] Disconnecting EventAPI");
       eventSource7tv.close();
@@ -849,6 +865,9 @@ function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
   return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" class="chat-emote" style="height: 2em; cursor: pointer;" loading="lazy" /></span>`;
 }
 
+const parseCache = new Map<string, string>();
+const MAX_PARSE_CACHE = 500;
+
 /**
  * Parse message text and replace emote codes with HTML image tags
  * @param text - The message text
@@ -858,6 +877,12 @@ export function parseMessageWithEmotes(
   text: string,
   twitchEmotes?: Record<string, string[]>,
 ): string {
+  const cacheKey = twitchEmotes && Object.keys(twitchEmotes).length > 0
+    ? `${text}|${JSON.stringify(twitchEmotes)}`
+    : text;
+
+  const cached = parseCache.get(cacheKey);
+  if (cached !== undefined) return cached;
   let raw: string;
 
   if (twitchEmotes && Object.keys(twitchEmotes).length > 0) {
@@ -892,7 +917,13 @@ export function parseMessageWithEmotes(
   // Final sanitization pass — strip anything outside the known-safe allowlist.
   // This is the last line of defence against XSS from malformed emote names,
   // crafted CDN responses, or future changes to the HTML-building helpers.
-  return DOMPurify.sanitize(raw, DOMPURIFY_CONFIG) as unknown as string;
+  const result = DOMPurify.sanitize(raw, DOMPURIFY_CONFIG) as unknown as string;
+  if (parseCache.size >= MAX_PARSE_CACHE) {
+    const firstKey = parseCache.keys().next().value;
+    if (firstKey !== undefined) parseCache.delete(firstKey);
+  }
+  parseCache.set(cacheKey, result);
+  return result;
 }
 
 /**

@@ -30,6 +30,18 @@ const sourceChannelInfoCache = new Map<
   string,
   { login: string | null; avatar: string | null }
 >();
+const MAX_SOURCE_CACHE = 200;
+
+function setSourceChannelInfoCache(
+  channelId: string,
+  info: { login: string | null; avatar: string | null },
+) {
+  if (sourceChannelInfoCache.size >= MAX_SOURCE_CACHE) {
+    const firstKey = sourceChannelInfoCache.keys().next().value;
+    if (firstKey !== undefined) sourceChannelInfoCache.delete(firstKey);
+  }
+  sourceChannelInfoCache.set(channelId, info);
+}
 
 function setUserInfoCache(
   userId: string,
@@ -90,7 +102,7 @@ async function getSourceChannelInfo(
         login: (data.login as string | null) ?? null,
         avatar: (data.profileImageUrl as string | null) ?? null,
       };
-      sourceChannelInfoCache.set(channelId, info);
+      setSourceChannelInfoCache(channelId, info);
       return info;
     }
   } catch (error) {
@@ -98,7 +110,7 @@ async function getSourceChannelInfo(
   }
 
   const fallback = { login: null, avatar: null };
-  sourceChannelInfoCache.set(channelId, fallback);
+  setSourceChannelInfoCache(channelId, fallback);
   return fallback;
 }
 
@@ -106,6 +118,15 @@ async function getSourceChannelInfo(
 // the reward ID is present). We fetch the title from the Helix API once and
 // cache it so subsequent redemptions of the same reward are instant.
 const rewardTitleCache = new Map<string, string>();
+const MAX_REWARD_CACHE = 200;
+
+function setRewardTitleCache(rewardId: string, title: string) {
+  if (rewardTitleCache.size >= MAX_REWARD_CACHE) {
+    const firstKey = rewardTitleCache.keys().next().value;
+    if (firstKey !== undefined) rewardTitleCache.delete(firstKey);
+  }
+  setRewardTitleCache(rewardId, title);
+}
 
 async function getRewardTitle(
   rewardId: string,
@@ -124,7 +145,7 @@ async function getRewardTitle(
       const data = await response.json();
       const title: string | undefined = data?.data?.[0]?.title;
       if (title) {
-        rewardTitleCache.set(rewardId, title);
+        setRewardTitleCache(rewardId, title);
         return title;
       } else {
         console.warn(

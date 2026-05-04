@@ -6,6 +6,13 @@ import { googleFetch } from "../../lib/google";
 const liveChatIdCache = new Map<string, { liveChatId: string | null; expires: number }>();
 const inflightVideos = new Map<string, Promise<string | null>>();
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of liveChatIdCache) {
+    if (now > entry.expires) liveChatIdCache.delete(key);
+  }
+}, 120_000);
+
 /**
  * Sends a message to a YouTube live chat using the YouTube Data API v3.
 
@@ -46,10 +53,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
       );
     }
 
-    // Step 1: Resolve the liveChatId for this video.
-    // We try InnerTube first (fast, no OAuth needed), then fall back to the
-    // Data API (requires OAuth but returns IDs guaranteed compatible with
-    // liveChatMessages.insert).
+    // Step 1: Resolve the liveChatId for this video via the Data API.
     let liveChatId: string | null = null;
     const now = Date.now();
     const cached = liveChatIdCache.get(videoId);

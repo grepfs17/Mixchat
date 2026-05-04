@@ -81,30 +81,28 @@ export function useStreamMonitor({
     } finally {
       setIsChecking(false);
     }
-  }, [session, clientId, enabled]);
+  }, [session?.accessToken, clientId, enabled]);
 
   // Request browser notification permission when monitoring starts
   useEffect(() => {
-    if (enabled && session && typeof Notification !== "undefined" && Notification.permission === "default") {
+    if (enabled && session?.accessToken && typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission();
     }
-  }, [enabled, session]);
+  }, [enabled, session?.accessToken]);
 
   // Check on mount and then periodically
   useEffect(() => {
-    if (!enabled || !session) {
+    if (!enabled || !session?.accessToken) {
       setNewLiveStreamer(null);
       return;
     }
 
-    // Check immediately
     checkStreamers();
 
-    // Set up interval
     const interval = setInterval(checkStreamers, checkInterval);
 
     return () => clearInterval(interval);
-  }, [checkStreamers, enabled, session, checkInterval]);
+  }, [checkStreamers, enabled, session?.accessToken, checkInterval]);
 
   const clearNewNotification = useCallback(() => {
     setNewLiveStreamer(null);

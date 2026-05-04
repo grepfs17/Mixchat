@@ -84,9 +84,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     if (!videoId) return;
 
     let isMounted = true;
+    const abortController = new AbortController();
 
     const fetchChatMessages = async () => {
-      // Skip fetches while the tab is in the background to reduce server load
       if (document.hidden) return;
 
       try {
@@ -95,12 +95,10 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         const params = new URLSearchParams();
         params.append('videoId', videoId);
 
-        const res = await fetch(`/api/youtube-stream-chat?${params.toString()}`);
+        const res = await fetch(`/api/youtube-stream-chat?${params.toString()}`, { signal: abortController.signal });
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          // 404 = live chat not available for this video (not live, chat disabled)
-          // Don't keep retrying aggressively — slow down the polling
           if (res.status === 404) {
             setError(errorData.error || 'Live chat not available');
             return;
@@ -127,13 +125,10 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
             superchat: msg.superchat,
           }));
 
-          // Deduplicate just in case the API sends anything twice
           const uniqueMessagesMap = new Map();
           fetchedMessages.forEach(m => uniqueMessagesMap.set(m.id, m));
           const newMessages = Array.from(uniqueMessagesMap.values());
 
-          // Compare the last message ID (not just count) to catch the edge case where
-          // one message rolls off while another comes in, keeping the count identical.
           const lastNewId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null;
           const lastCurrentId = messages.length > 0 ? messages[messages.length - 1].id : null;
 
@@ -145,7 +140,6 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
             lastMessageCountRef.current = limited.length;
           }
 
-          // Mark as connected using a ref to avoid restarting the interval
           if (!isConnectedRef.current) {
             isConnectedRef.current = true;
             setIsConnected(true);
@@ -153,6 +147,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           }
         }
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         if (isMounted) {
           console.error('Error fetching YouTube chat:', err);
           setError(err instanceof Error ? err.message : 'Failed to fetch messages');
@@ -161,18 +156,18 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       }
     };
 
-    // Kick off the first fetch right away, then repeat every 8 s
     fetchChatMessages();
     pollingIntervalRef.current = setInterval(fetchChatMessages, 8000);
 
     return () => {
       isMounted = false;
       isConnectedRef.current = false;
+      abortController.abort();
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [videoId]); // isConnected intentionally excluded — we use isConnectedRef to avoid restarting the interval on first connect
+  }, [videoId]);
 
   // Keep the view pinned to the newest message
   useEffect(() => {

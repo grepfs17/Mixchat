@@ -4,7 +4,14 @@ import findLiveForChannel, { isValidYouTubeParam } from "../../lib/youtube-looku
 
 // Simple in-memory cache to save on Innertube calls
 const liveVideoCache = new Map<string, { videoId: string | null; channelId?: string; expires: number }>();
-const LIVE_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+const LIVE_CACHE_TTL = 1000 * 60 * 5;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of liveVideoCache) {
+    if (now > entry.expires) liveVideoCache.delete(key);
+  }
+}, 120_000); // 5 minutes
 // Enable debug mode when `YT_DEBUG=1` or running in development
 const DEBUG_YT = process.env.YT_DEBUG === '1' || import.meta.env?.MODE === 'development';
 
