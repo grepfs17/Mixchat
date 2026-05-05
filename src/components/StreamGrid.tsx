@@ -15,6 +15,7 @@ interface StreamGridProps {
     favoriteChannels: string[];
     onChannelSelect: (channelId: string, transitionInfo?: StreamTransitionInfo) => void;
     onToggleFavorite: (channelId: string) => void;
+    loading?: boolean;
 }
 
 function formatViewers(n: number): string {
@@ -37,6 +38,7 @@ export default function StreamGrid({
     favoriteChannels,
     onChannelSelect,
     onToggleFavorite,
+    loading,
 }: StreamGridProps) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('favorites');
@@ -121,7 +123,26 @@ export default function StreamGrid({
             </div>
 
             <div className="stream-grid-scroll">
-                {channels.length === 0 ? (
+                {loading ? (
+                    <div className="stream-grid">
+                        {Array.from({ length: 6 }, (_, i) => (
+                            <div key={i} className="stream-card stream-card--skeleton">
+                                <div className="stream-card-thumb">
+                                    <div className="skeleton-shimmer" />
+                                </div>
+                                <div className="stream-card-info">
+                                    <div className="stream-card-avatar-row">
+                                        <div className="skeleton-circle" />
+                                        <div className="stream-card-names">
+                                            <div className="skeleton-bar skeleton-bar--name" />
+                                        </div>
+                                    </div>
+                                    <div className="skeleton-bar skeleton-bar--game" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : channels.length === 0 ? (
                     <div className="stream-grid-empty">
                         <div className="stream-grid-empty-icon">📺</div>
                         <p>No one is live right now</p>

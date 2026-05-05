@@ -60,6 +60,7 @@ export default function AppContainer() {
   const [hasLoadedChannel, setHasLoadedChannel] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [channelsLoading, setChannelsLoading] = useState(true);
   const [leftColumnVisible, setLeftColumnVisible] = useState<boolean | undefined>(undefined);
   const [embedDefaultOpen, setEmbedDefaultOpen] = useState(true); // Should the stream be expanded by default?
   const [showStreamEmbed, setShowStreamEmbed] = useState(true);
@@ -221,14 +222,10 @@ export default function AppContainer() {
     const fetchChannels = async () => {
       if (sessions.twitch && sessions.twitch.accessToken) {
         try {
-          // Rely on `useTokenRefresh` hook for proactive token refreshes.
-          // Remove manual refresh here to avoid duplicate refresh requests.
           const accessToken = sessions.twitch.accessToken;
 
           const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
 
-          // Single API call , returns ALL followed channels (online first).
-          // Derive the online-only list by filtering, avoiding duplicate requests.
           const allChannels = await getAllFollowedChannels(
             accessToken,
             clientId,
@@ -237,7 +234,6 @@ export default function AppContainer() {
 
           setAllTwitchChannels(allChannels);
 
-          // Online channels = those with a viewer count > 0
           const onlineChannels = allChannels.filter((ch) => ch.viewerCount > 0);
           setTwitchChannels(onlineChannels);
 
@@ -250,6 +246,8 @@ export default function AppContainer() {
             setSessions({});
             localStorage.removeItem('mixchat_sessions');
           }
+        } finally {
+          setChannelsLoading(false);
         }
       }
     };
@@ -784,6 +782,7 @@ export default function AppContainer() {
       return next;
     });
     setTwitchChannels([]);
+    setChannelsLoading(true);
     setSelectedTwitchChannel('');
     setSelectedTwitchChannelName('');
     setFavoriteChannels([]);
@@ -886,7 +885,7 @@ export default function AppContainer() {
     [twitchChannels, favoriteChannels]
   );
 
-  // While sessions are being restored from localStorage, render nothing to avoid flash
+  // While sessions are being restored from localStorage, render skeleton cards
   if (isLoading) {
     return (
       <div className="loading-overlay">
@@ -990,6 +989,7 @@ export default function AppContainer() {
             favoriteChannels={favoriteChannels}
             onChannelSelect={(id, transitionInfo) => setChannelData(id, transitionInfo)}
             onToggleFavorite={toggleFavorite}
+            loading={channelsLoading}
           />
         ) : (<>
           {showStreamEmbed && (
