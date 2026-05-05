@@ -3,6 +3,7 @@ import { StaticAuthProvider } from "@twurple/auth";
 import { ChatClient, UserState, UserNotice } from "@twurple/chat";
 import { getBadgeDetail } from "../lib/badges";
 import type { ChatMessage } from "../lib/types";
+import { playEventSound } from "../lib/eventSounds";
 
 // Cache for user info - limit to 500 entries for memory efficiency
 const userInfoCache = new Map<
@@ -269,6 +270,7 @@ export function useTwitchChat(
   mentionSoundEnabled: boolean = true,
   mentionVolume: number = 0.5,
   mentionSoundType: MentionSoundType = "ding",
+  eventSounds: Record<string, string> = {},
   onOwnBadgesLoaded?: (
     badges: Record<string, string>,
     badgeDetails: Record<string, { url: string; title: string }>,
@@ -288,6 +290,7 @@ export function useTwitchChat(
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
   const mentionVolumeRef = useRef(mentionVolume);
   const mentionSoundTypeRef = useRef(mentionSoundType);
+  const eventSoundsRef = useRef(eventSounds);
   const onMessageDeletedRef = useRef(onMessageDeleted);
   // Broadcaster ID is resolved once in onConnect and reused by onMessage to
   // look up reward titles without re-fetching the users endpoint each time.
@@ -309,6 +312,9 @@ export function useTwitchChat(
   useEffect(() => {
     mentionSoundTypeRef.current = mentionSoundType;
   }, [mentionSoundType]);
+  useEffect(() => {
+    eventSoundsRef.current = eventSounds;
+  }, [eventSounds]);
   useEffect(() => {
     onMessageDeletedRef.current = onMessageDeleted;
   }, [onMessageDeleted]);
@@ -610,6 +616,13 @@ const chatMessage: ChatMessage = {
             onMessage(chatMessage);
           });
 
+        if (chatMessage.messageType === "redemption") {
+          const soundData = eventSoundsRef.current["redemption"];
+          if (soundData) {
+            playEventSound("redemption", soundData);
+          }
+        }
+
         if (mentionsUser && mentionSoundEnabledRef.current) {
           playMentionSound(
             mentionVolumeRef.current,
@@ -620,6 +633,13 @@ const chatMessage: ChatMessage = {
       }
 
       onMessage(chatMessage);
+
+      if (chatMessage.messageType === "redemption") {
+        const soundData = eventSoundsRef.current["redemption"];
+        if (soundData) {
+          playEventSound("redemption", soundData);
+        }
+      }
 
       if (mentionsUser && mentionSoundEnabledRef.current) {
         playMentionSound(mentionVolumeRef.current, mentionSoundTypeRef.current);
@@ -717,6 +737,11 @@ const chatMessage: ChatMessage = {
       } else {
         onMessage(chatMessage);
       }
+
+      const soundData = eventSoundsRef.current["announcement"];
+      if (soundData) {
+        playEventSound("announcement", soundData);
+      }
     });
 
     newClient.onRewardGift((_channel, _user, rewardGiftInfo, msg) => {
@@ -750,6 +775,11 @@ const chatMessage: ChatMessage = {
       };
 
       onMessage(chatMessage);
+
+      const soundData = eventSoundsRef.current["reward-gift"];
+      if (soundData) {
+        playEventSound("reward-gift", soundData);
+      }
     });
 
     newClient.onRaidCancel((_channel) => {
@@ -896,6 +926,11 @@ const chatMessage: ChatMessage = {
       };
 
       onMessage(chatMessage);
+
+      const soundData = eventSoundsRef.current["subscription"];
+      if (soundData) {
+        playEventSound("subscription", soundData);
+      }
     });
 
     newClient.onResub((_channel, _user, subInfo, msg) => {
@@ -932,6 +967,11 @@ const chatMessage: ChatMessage = {
       };
 
       onMessage(chatMessage);
+
+      const soundData = eventSoundsRef.current["resub"];
+      if (soundData) {
+        playEventSound("resub", soundData);
+      }
     });
 
     newClient.onSubGift((_channel, recipient, subInfo, msg) => {
@@ -968,6 +1008,11 @@ const chatMessage: ChatMessage = {
       };
 
       onMessage(chatMessage);
+
+      const soundData = eventSoundsRef.current["subgift"];
+      if (soundData) {
+        playEventSound("subgift", soundData);
+      }
     });
 
     newClient.onCommunitySub((_channel, _user, giftInfo, msg) => {
@@ -1041,6 +1086,11 @@ const chatMessage: ChatMessage = {
       };
 
       onMessage(chatMessage);
+
+      const soundData = eventSoundsRef.current["raid"];
+      if (soundData) {
+        playEventSound("raid", soundData);
+      }
     });
 
     // Handle watch streaks (viewermilestone USERNOTICE — no dedicated Twurple event)
@@ -1091,6 +1141,11 @@ const chatMessage: ChatMessage = {
           .catch(() => onMessage(chatMessage));
       } else {
         onMessage(chatMessage);
+      }
+
+      const soundData = eventSoundsRef.current["watch-streak"];
+      if (soundData) {
+        playEventSound("watch-streak", soundData);
       }
     });
 

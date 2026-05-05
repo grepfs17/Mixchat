@@ -81,7 +81,7 @@ function buildCSP(nonce?: string): string {
     // Web workers (HLS.js may use one)
     "worker-src 'self' blob:",
     // Media (video/audio blobs from HLS.js)
-    "media-src 'self' blob:",
+    "media-src 'self' blob: data:",
     "font-src 'self' https://fonts.gstatic.com",
   ].join("; ");
 }

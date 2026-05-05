@@ -61,6 +61,7 @@ interface ChatAppProps {
   showDeletedMessages?: boolean;
   splitChatEnabled?: boolean;
   hideViewerCount?: boolean;
+  eventSounds?: Record<string, string>;
   /** Called when the viewer clicks "Follow Raid" on the raid banner */
   onFollowRaid?: (channelLogin: string) => void;
 }
@@ -89,6 +90,7 @@ export default function ChatApp({
   compactActions = false,
   splitChatEnabled = false,
   hideViewerCount = false,
+  eventSounds = {},
   onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -451,6 +453,7 @@ export default function ChatApp({
       mentionSoundEnabled,
       mentionVolume,
       mentionSoundType,
+      eventSounds,
       handleOwnBadgesLoaded,
       handleMessageDeleted
     );

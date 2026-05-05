@@ -441,3 +441,114 @@
 .embed-config-share-link-copy:hover {
   opacity: 0.8;
 }
+
+/* Event Sounds */
+.embed-config-event-sounds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.embed-config-event-sounds-header:hover .embed-config-label--clickable {
+  opacity: 0.85;
+}
+
+.embed-config-label--clickable {
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.embed-config-event-sounds-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background-color: var(--color-indigo);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9px;
+}
+
+.embed-config-event-sounds {
+  animation: embed-config-slide-in 0.15s ease-out;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.embed-config-event-sound-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
+}
+
+.embed-config-event-sound-label {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.embed-config-event-sound-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.embed-config-event-sound-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.embed-config-event-sound-btn:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.embed-config-event-sound-btn--play {
+  border-color: var(--color-indigo);
+  color: var(--color-indigo);
+}
+
+.embed-config-event-sound-btn--play:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+}
+
+.embed-config-event-sound-btn--remove {
+  border-color: var(--color-notification-error);
+  color: var(--color-notification-error);
+}
+
+.embed-config-event-sound-btn--remove:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.embed-config-event-sound-btn--upload {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.embed-config-event-sound-btn--upload:hover {
+  background-color: rgba(34, 197, 94, 0.1);
+}
