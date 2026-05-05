@@ -66,6 +66,166 @@
   gap: 8px;
 }
 
+.stream-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.stream-info-title {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm, 3px);
+  transition: background 0.15s ease;
+}
+
+.stream-info-title:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stream-info-edit-icon {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.stream-info-title:hover .stream-info-edit-icon,
+.stream-info-category:hover .stream-info-edit-icon {
+  opacity: 0.7;
+}
+
+.stream-info-category {
+  font-size: 0.72rem;
+  color: var(--color-indigo);
+  background: rgba(99, 102, 241, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease;
+}
+
+.stream-info-category:hover {
+  background: rgba(99, 102, 241, 0.22);
+}
+
+.stream-info-edit-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.stream-info-input {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm, 3px);
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.stream-info-input:focus {
+  border-color: var(--color-indigo);
+}
+
+.stream-info-input--category {
+  font-size: 0.72rem;
+  max-width: 280px;
+}
+
+.stream-info-category-edit {
+}
+
+.stream-info-category-dropdown {
+  min-width: 200px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm, 3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.stream-info-category-option {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.stream-info-category-option:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.stream-info-edit-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm, 3px);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  transition: all 0.12s ease;
+}
+
+.stream-info-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-primary);
+}
+
+.stream-info-edit-btn--confirm {
+  color: var(--color-green);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.stream-info-edit-btn--confirm:hover {
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.stream-info-edit-btn--cancel {
+  color: var(--color-text-muted);
+}
+
+.stream-info-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .chat-header h2 {
   margin: 0;
   font-size: 0.95rem;
@@ -335,6 +495,33 @@
   .header-button { padding: 5px 8px; }
   /* Hide textual labels inside header buttons on mobile to keep buttons equal */
   .header-button-label { display: none; }
+
+  .stream-info-bar {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .stream-info-title {
+    font-size: 0.72rem;
+  }
+
+  .stream-info-category {
+    font-size: 0.68rem;
+    padding: 1px 6px;
+  }
+
+  .stream-info-edit-group {
+    gap: 3px;
+  }
+
+  .stream-info-input {
+    font-size: 0.72rem;
+    padding: 2px 6px;
+  }
+
+  .stream-info-category-dropdown {
+    min-width: 160px;
+  }
 }
 
 .show-stream-button {

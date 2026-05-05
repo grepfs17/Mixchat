@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
+import { MdRefresh, MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning, MdEdit, MdCheck, MdClose } from 'react-icons/md';
 import { FaUsers, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import type { ChatMessage, Platform, ChatFont } from '../lib/types';
@@ -20,6 +20,7 @@ interface ChatDisplayProps {
   channelName?: string;
   channelDisplayName?: string;
   streamTitle?: string;
+  streamGameName?: string;
   isStreamLive?: boolean;
   streamUptime?: string;
   viewerCount?: number | null;
@@ -46,6 +47,9 @@ interface ChatDisplayProps {
   compactActions?: boolean;
   splitChatEnabled?: boolean;
   hideViewerCount?: boolean;
+  onUpdateTitle?: (title: string) => Promise<void>;
+  onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
+  onSearchCategories?: (query: string) => Promise<Array<{ id: string; name: string }>>;
 }
 
 /** Derives a stable, visually-distinct HSL color from a channel ID string. */
@@ -71,6 +75,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   channelName,
   channelDisplayName,
   streamTitle,
+  streamGameName,
   isStreamLive,
   streamUptime,
   viewerCount,
@@ -96,6 +101,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   compactActions = false,
   splitChatEnabled = false,
   hideViewerCount = false,
+  onUpdateTitle,
+  onUpdateCategory,
+  onSearchCategories,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -104,6 +112,40 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
   const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Stream info editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [categoryInput, setCategoryInput] = useState('');
+  const [categoryResults, setCategoryResults] = useState<Array<{ id: string; name: string }>>([]);
+  const [searchingCategory, setSearchingCategory] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryDropdownPos, setCategoryDropdownPos] = useState<{ x: number; y: number } | null>(null);
+  const categorySearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editingCategory) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const portalDropdown = document.getElementById('category-dropdown-portal');
+      if (
+        categoryDropdownRef.current?.contains(target) ||
+        portalDropdown?.contains(target) ||
+        categoryInputRef.current === target
+      ) {
+        return;
+      }
+      setEditingCategory(false);
+      setCategoryResults([]);
+      setCategoryDropdownPos(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingCategory]);
 
   // Close timeout menu when clicking anywhere else
   useEffect(() => {
@@ -331,7 +373,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               </span>
             )}
           </h2>
-          {streamTitle && <span className="stream-title">{streamTitle}</span>}
         </div>
         <div className="chat-header-actions">
           {onRefreshEmotes && (
@@ -362,7 +403,169 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           {isLoading && <span className="loading-indicator">●</span>}
         </div>
       </div>
-
+      {modModeActive && (streamTitle || streamGameName || true) && (
+        <div className="stream-info-bar">
+          {editingTitle ? (
+            <div className="stream-info-edit-group">
+              <input
+                className="stream-info-input"
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setSavingTitle(true);
+                    onUpdateTitle?.(titleInput).finally(() => {
+                      setSavingTitle(false);
+                      setEditingTitle(false);
+                    });
+                  } else if (e.key === 'Escape') {
+                    setEditingTitle(false);
+                  }
+                }}
+                placeholder="Stream title"
+                autoFocus
+                disabled={savingTitle}
+              />
+              <button
+                className="stream-info-edit-btn stream-info-edit-btn--confirm"
+                onClick={() => {
+                  setSavingTitle(true);
+                  onUpdateTitle?.(titleInput).finally(() => {
+                    setSavingTitle(false);
+                    setEditingTitle(false);
+                  });
+                }}
+                disabled={savingTitle}
+                title="Save title"
+              >
+                <MdCheck size={14} />
+              </button>
+              <button
+                className="stream-info-edit-btn stream-info-edit-btn--cancel"
+                onClick={() => setEditingTitle(false)}
+                disabled={savingTitle}
+                title="Cancel"
+              >
+                <MdClose size={14} />
+              </button>
+            </div>
+          ) : (
+            <span
+              className="stream-info-title"
+              onClick={() => {
+                setTitleInput(streamTitle || '');
+                setEditingTitle(true);
+              }}
+              title="Click to edit title"
+            >
+              {streamTitle || 'No title set'}
+              <MdEdit size={11} className="stream-info-edit-icon" />
+            </span>
+          )}
+          {editingCategory ? (
+            <div className="stream-info-edit-group stream-info-category-edit" ref={categoryDropdownRef}>
+              <input
+                ref={categoryInputRef}
+                className="stream-info-input stream-info-input--category"
+                type="text"
+                value={categoryInput}
+                onChange={(e) => {
+                  setCategoryInput(e.target.value);
+                  if (categorySearchRef.current) clearTimeout(categorySearchRef.current);
+                  if (e.target.value.trim()) {
+                    setSearchingCategory(true);
+                    categorySearchRef.current = setTimeout(() => {
+                      onSearchCategories?.(e.target.value).then((results) => {
+                        setCategoryResults(results);
+                        setSearchingCategory(false);
+                        const rect = categoryInputRef.current?.getBoundingClientRect();
+                        if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+                      });
+                    }, 300);
+                  } else {
+                    setCategoryResults([]);
+                    setSearchingCategory(false);
+                    setCategoryDropdownPos(null);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setEditingCategory(false);
+                    setCategoryResults([]);
+                    setCategoryDropdownPos(null);
+                  }
+                }}
+                onFocus={() => {
+                  const rect = categoryInputRef.current?.getBoundingClientRect();
+                  if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+                }}
+                placeholder="Search category..."
+                autoFocus
+                disabled={savingCategory}
+              />
+              <button
+                className="stream-info-edit-btn stream-info-edit-btn--cancel"
+                onClick={() => {
+                  setEditingCategory(false);
+                  setCategoryResults([]);
+                  setCategoryDropdownPos(null);
+                }}
+                disabled={savingCategory}
+                title="Cancel"
+              >
+                <MdClose size={14} />
+              </button>
+            </div>
+          ) : (
+            <span
+              className="stream-info-category"
+              onClick={() => {
+                setCategoryInput(streamGameName || '');
+                setEditingCategory(true);
+                onSearchCategories?.(streamGameName || '').then((results) => {
+                  setCategoryResults(results);
+                });
+              }}
+              title="Click to change category"
+            >
+              {streamGameName || 'No category'}
+              <MdEdit size={11} className="stream-info-edit-icon" />
+            </span>
+          )}
+        </div>
+      )}
+      {editingCategory && categoryResults.length > 0 && categoryDropdownPos && createPortal(
+        <div
+          id="category-dropdown-portal"
+          className="stream-info-category-dropdown"
+          style={{
+            position: 'fixed',
+            left: categoryDropdownPos.x,
+            top: categoryDropdownPos.y,
+            zIndex: 9999,
+          }}
+        >
+          {categoryResults.map((cat) => (
+            <button
+              key={cat.id}
+              className="stream-info-category-option"
+              onClick={() => {
+                setSavingCategory(true);
+                onUpdateCategory?.(cat.id, cat.name).finally(() => {
+                  setSavingCategory(false);
+                  setEditingCategory(false);
+                  setCategoryResults([]);
+                  setCategoryDropdownPos(null);
+                });
+              }}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
       {unifiedChatSlot ? (
         unifiedChatSlot
       ) : (

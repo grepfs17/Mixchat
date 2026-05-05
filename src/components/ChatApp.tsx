@@ -14,7 +14,7 @@ import type { RaidOutEvent } from '../hooks/useRaidDetection';
 import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
-import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat } from '../lib/twitch';
+import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat, getChannelInfo, updateChannelInfo, searchCategories } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 
@@ -99,6 +99,9 @@ export default function ChatApp({
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
   const [streamIsLive, setStreamIsLive] = useState(false);
   const [streamUptime, setStreamUptime] = useState<string>('');
+  const [streamTitle, setStreamTitle] = useState<string>('');
+  const [streamGameName, setStreamGameName] = useState<string>('');
+  const [streamGameId, setStreamGameId] = useState<string>('');
   const [showPreloadedMessages, _setShowPreloadedMessages] = useState(true);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info'; id?: number } | null>(null);
   const notificationIdRef = React.useRef(0);
@@ -360,7 +363,12 @@ export default function ChatApp({
       const isOwner = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
       if (isOwner) {
         setIsModerator(true);
+        setModModeActive(true);
+      } else {
+        setModModeActive(false);
       }
+    } else {
+      setModModeActive(false);
     }
   }, [twitchSession, selectedTwitchChannelName]);
 
@@ -452,6 +460,10 @@ export default function ChatApp({
     // Reset badge cache and readiness when channel changes
     clearBadgeCache();
     setBadgesReady(false);
+    setIsModerator(false);
+    setModModeActive(false);
+    setStreamTitle('');
+    setStreamGameName('');
     if (selectedTwitchChannelName && selectedTwitchChannel) {
       // Clear messages when channel changes
       setMessages([]);
@@ -596,6 +608,8 @@ export default function ChatApp({
           );
           if (status) {
             setStreamIsLive(status.isLive);
+            setStreamTitle(status.isLive ? (status.title || '') : '');
+            setStreamGameName(status.isLive ? (status.gameName || '') : '');
             if (status.isLive && status.startedAt) {
               streamStartedAtRef.current = status.startedAt;
               setStreamUptime(calculateUptime(status.startedAt));
@@ -626,6 +640,32 @@ export default function ChatApp({
       clearInterval(statusInterval);
       clearInterval(uptimeInterval);
     };
+  }, [selectedTwitchChannel, twitchSession?.accessToken]);
+
+  // Poll channel info (title & category) — works even when stream is offline
+  useEffect(() => {
+    const fetchChannelInfo = async () => {
+      if (selectedTwitchChannel && twitchSession?.accessToken) {
+        try {
+          const info = await getChannelInfo(
+            twitchSession.accessToken,
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+            selectedTwitchChannel
+          );
+          if (info) {
+            setStreamTitle(info.title);
+            setStreamGameName(info.gameName);
+            setStreamGameId(info.gameId);
+          }
+        } catch (error) {
+          console.error('Failed to fetch channel info:', error);
+        }
+      }
+    };
+
+    fetchChannelInfo();
+    const interval = setInterval(fetchChannelInfo, 30000);
+    return () => clearInterval(interval);
   }, [selectedTwitchChannel, twitchSession?.accessToken]);
 
   const handleSendMessage = useCallback(
@@ -877,7 +917,65 @@ export default function ChatApp({
     }
   }, [sendTwitchMessage]);
 
-  // Extracts comprehensive text from a YTMessage for reconciliation matching
+  const handleUpdateTitle = useCallback(async (title: string) => {
+    if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
+    try {
+      const ok = await updateChannelInfo(
+        twitchSession.accessToken,
+        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+        selectedTwitchChannel,
+        { title }
+      );
+      if (ok) {
+        setStreamTitle(title);
+        notificationIdRef.current += 1;
+        setNotification({ message: 'Title updated', type: 'success', id: notificationIdRef.current });
+      } else {
+        notificationIdRef.current += 1;
+        setNotification({ message: 'Failed to update title (missing permission?)', type: 'error', id: notificationIdRef.current });
+      }
+    } catch {
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to update title', type: 'error', id: notificationIdRef.current });
+    }
+  }, [twitchSession, selectedTwitchChannel]);
+
+  const handleUpdateCategory = useCallback(async (gameId: string, gameName: string) => {
+    if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
+    try {
+      const ok = await updateChannelInfo(
+        twitchSession.accessToken,
+        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+        selectedTwitchChannel,
+        { gameId }
+      );
+      if (ok) {
+        setStreamGameName(gameName);
+        setStreamGameId(gameId);
+        notificationIdRef.current += 1;
+        setNotification({ message: 'Category updated', type: 'success', id: notificationIdRef.current });
+      } else {
+        notificationIdRef.current += 1;
+        setNotification({ message: 'Failed to update category (missing permission?)', type: 'error', id: notificationIdRef.current });
+      }
+    } catch {
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Failed to update category', type: 'error', id: notificationIdRef.current });
+    }
+  }, [twitchSession, selectedTwitchChannel]);
+
+  const handleSearchCategories = useCallback(async (query: string): Promise<Array<{ id: string; name: string }>> => {
+    if (!twitchSession?.accessToken) return [];
+    try {
+      return await searchCategories(
+        twitchSession.accessToken,
+        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+        query
+      );
+    } catch {
+      return [];
+    }
+  }, [twitchSession]);
   const getYtMessageText = (m: import('./UnifiedChat').YTMessage) =>
     m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join('');
 
@@ -974,7 +1072,8 @@ export default function ChatApp({
               onReply={(message) => setReplyingTo(message)}
               channelName={selectedTwitchChannelName}
               channelDisplayName={selectedTwitchChannelDisplayName}
-              streamTitle=''
+              streamTitle={streamTitle}
+              streamGameName={streamGameName}
               isStreamLive={streamIsLive}
               streamUptime={streamUptime}
               viewerCount={viewerCount}
@@ -996,6 +1095,9 @@ export default function ChatApp({
               isModerator={isModerator}
               modModeActive={modModeActive}
               onToggleModMode={handleToggleModMode}
+              onUpdateTitle={handleUpdateTitle}
+              onUpdateCategory={handleUpdateCategory}
+              onSearchCategories={handleSearchCategories}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
@@ -1244,7 +1346,8 @@ export default function ChatApp({
                 onReply={(message) => setReplyingTo(message)}
                 channelName={selectedTwitchChannelName}
                 channelDisplayName={selectedTwitchChannelDisplayName}
-                streamTitle=''
+                streamTitle={streamTitle}
+                streamGameName={streamGameName}
                 isStreamLive={streamIsLive}
                 streamUptime={streamUptime}
                 viewerCount={viewerCount}
@@ -1266,6 +1369,9 @@ export default function ChatApp({
                 isModerator={isModerator}
                 modModeActive={modModeActive}
                 onToggleModMode={handleToggleModMode}
+                onUpdateTitle={handleUpdateTitle}
+                onUpdateCategory={handleUpdateCategory}
+                onSearchCategories={handleSearchCategories}
                 compactActions={compactActions}
                 onDeleteMessage={handleDelete}
                 onBanUser={handleBan}
