@@ -60,6 +60,7 @@ interface ChatAppProps {
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
   splitChatEnabled?: boolean;
+  hideViewerCount?: boolean;
   /** Called when the viewer clicks "Follow Raid" on the raid banner */
   onFollowRaid?: (channelLogin: string) => void;
 }
@@ -87,6 +88,7 @@ export default function ChatApp({
   showDeletedMessages = true,
   compactActions = false,
   splitChatEnabled = false,
+  hideViewerCount = false,
   onFollowRaid,
 }: ChatAppProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -976,6 +978,7 @@ export default function ChatApp({
               isStreamLive={streamIsLive}
               streamUptime={streamUptime}
               viewerCount={viewerCount}
+              hideViewerCount={hideViewerCount}
               onRefreshEmotes={handleRefreshEmotes}
               isRefreshingEmotes={isRefreshingEmotes}
               onToggleSidebar={onToggleSidebar}
@@ -1245,6 +1248,7 @@ export default function ChatApp({
                 isStreamLive={streamIsLive}
                 streamUptime={streamUptime}
                 viewerCount={viewerCount}
+                hideViewerCount={hideViewerCount}
                 onRefreshEmotes={handleRefreshEmotes}
                 isRefreshingEmotes={isRefreshingEmotes}
                 onToggleSidebar={onToggleSidebar}

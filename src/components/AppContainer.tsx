@@ -85,10 +85,19 @@ export default function AppContainer() {
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
   const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
   const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
+  const [hideViewerCount, setHideViewerCount] = useState(false);
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
   const [streamTransition, setStreamTransition] = useState<StreamTransitionInfo | null>(null);
+
+  const isOnOwnChannel = !!(
+    sessions.twitch &&
+    selectedTwitchChannel &&
+    (selectedTwitchChannel === sessions.twitch.userId ||
+      (sessions.twitch.username && selectedTwitchChannelName.toLowerCase() === sessions.twitch.username.toLowerCase()))
+  );
+  const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
 
   // Track if we've successfully loaded sessions yet to prevent overwriting stored data
   const hasLoadedSessionsRef = useRef(false);
@@ -633,6 +642,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_chat_font', JSON.stringify(chatFont));
   }, [chatFont]);
 
+  // Load hide viewer count setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_hide_viewer_count');
+    if (saved !== null) {
+      try { setHideViewerCount(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save hide viewer count setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
+  }, [hideViewerCount]);
+
   // Handle mouse events for resizing
   useEffect(() => {
     if (!isDragging) return;
@@ -970,6 +992,8 @@ export default function AppContainer() {
             onCompactActionsChange={setCompactActions}
             splitChatEnabled={splitChatEnabled}
             onSplitChatEnabledChange={setSplitChatEnabled}
+            hideViewerCount={hideViewerCount}
+            onHideViewerCountChange={setHideViewerCount}
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
@@ -1146,6 +1170,7 @@ export default function AppContainer() {
               showDeletedMessages={showDeletedMessages}
               compactActions={compactActions}
               splitChatEnabled={splitChatEnabled}
+              hideViewerCount={shouldHideViewerCount}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>

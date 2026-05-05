@@ -45,6 +45,7 @@ interface ChatDisplayProps {
   onWarnUser?: (userName: string) => void;
   compactActions?: boolean;
   splitChatEnabled?: boolean;
+  hideViewerCount?: boolean;
 }
 
 /** Derives a stable, visually-distinct HSL color from a channel ID string. */
@@ -94,6 +95,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   onWarnUser,
   compactActions = false,
   splitChatEnabled = false,
+  hideViewerCount = false,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -318,7 +320,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
             >
               {channelDisplayName || channelName || 'Chat'}
             </a>
-            {viewerCount !== undefined && viewerCount !== null && (
+            {!hideViewerCount && viewerCount !== undefined && viewerCount !== null && (
               <span className="viewer-count-display">
                 <FaUsers size={14} /> {viewerCount.toLocaleString()}
               </span>

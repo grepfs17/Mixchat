@@ -6,7 +6,7 @@ import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType }
 import { exportSettings, importSettings } from '../lib/settingsBackup';
 import { saveSettingsToDrive, loadSettingsFromDrive } from '../lib/googleDrive';
 
-const GROUPS = ['appearance', 'chat', 'layout', 'notifications', 'backup'] as const;
+const GROUPS = ['appearance', 'chat', 'layout', 'streamer', 'notifications', 'backup'] as const;
 type GroupKey = typeof GROUPS[number];
 
 interface EmbedConfigModalProps {
@@ -32,6 +32,8 @@ interface EmbedConfigModalProps {
   onCompactActionsChange: (value: boolean) => void;
   splitChatEnabled: boolean;
   onSplitChatEnabledChange: (value: boolean) => void;
+  hideViewerCount: boolean;
+  onHideViewerCountChange: (value: boolean) => void;
   hasYoutubeSession: boolean;
   onReauthYoutube: () => void;
   onClose: () => void;
@@ -60,6 +62,8 @@ export default function EmbedConfigModal({
   onCompactActionsChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
+  hideViewerCount,
+  onHideViewerCountChange,
   hasYoutubeSession,
   onReauthYoutube,
   onClose,
@@ -110,6 +114,7 @@ export default function EmbedConfigModal({
             'mixchat_font_size', 'mixchat_chat_font', 'mixchat_mention_sound',
             'mixchat_mention_volume', 'mixchat_mention_sound_type',
             'mixchat_show_deleted_messages', 'mixchat_compact_actions',
+            'mixchat_hide_viewer_count',
             'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
             'mixchat_youtube_links', 'disabled_emotes_v1',
           ].flatMap(k => {
@@ -330,6 +335,31 @@ export default function EmbedConfigModal({
                 </label>
                 <p className="embed-config-description embed-config-description--indented">
                   If enabled, the stream embed will be visible when you open Mixchat. If disabled, the chat will take up the full width.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Streamer options */}
+        <div className="embed-config-group">
+          <button className="embed-config-group-header" onClick={() => toggle('streamer')}>
+            <h3 className="embed-config-group-title">Streamer options</h3>
+            <FaChevronDown size={12} className={`embed-config-group-chevron${collapsed.streamer ? ' embed-config-group-chevron--collapsed' : ''}`} />
+          </button>
+          {!collapsed.streamer && (
+            <div className="embed-config-group-body">
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={hideViewerCount}
+                    onChange={(e) => onHideViewerCountChange(e.target.checked)}
+                  />
+                  <span>Hide viewer count</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, the viewer count is hidden while viewing your own channel.
                 </p>
               </div>
             </div>

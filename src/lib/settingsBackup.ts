@@ -21,6 +21,7 @@ const SETTINGS_KEYS = [
   'mixchat_mention_sound_type',
   'mixchat_show_deleted_messages',
   'mixchat_compact_actions',
+  'mixchat_hide_viewer_count',
   'mixchat_chat_split_ratio',
   'mixchat_watched_streamers',
   'mixchat_youtube_links',
