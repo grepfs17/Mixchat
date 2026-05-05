@@ -1313,11 +1313,32 @@ export default function ChatApp({
       <NewFeaturesModal />
       <MobileTouchHintModal twitchConnected={twitchConnected} />
       {chatTheme === 'mushu' && (
-        <img
-          src="/themes/Mushu/mushu.webp"
-          alt="Mushu"
-          className="mushu-theme-mascot"
-        />
+        <>
+          <img
+            src="/themes/Mushu/mushu.webp"
+            alt="Mushu"
+            className="mushu-theme-mascot"
+          />
+          <img
+            src="/themes/Mushu/mushuKnife.webp"
+            alt="Mushu Knife"
+            className="mushu-theme-knife"
+          />
+        </>
+      )}
+      {chatTheme === 'lunita' && (
+        <>
+          <img
+            src="/themes/Lunita/lunateDrama.webp"
+            alt="Lunita Drama"
+            className="lunita-theme-drama"
+          />
+          <img
+            src="/themes/Lunita/lunateLurk.webp"
+            alt="Lunita Lurk"
+            className="lunita-theme-lurk"
+          />
+        </>
       )}
     </div>
   );

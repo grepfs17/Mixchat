@@ -104,7 +104,8 @@ export type ChatTheme =
   | "night-owl"
   | "monokai"
   | "sublime-material"
-  | "mushu";
+  | "mushu"
+  | "lunita";
 
 export const THEME_OPTIONS: { value: ChatTheme; label: string; preview: { bg: string; hover: string } }[] = [
   { value: "default", label: "Default", preview: { bg: "#0c0c0e", hover: "#292930" } },
@@ -114,4 +115,5 @@ export const THEME_OPTIONS: { value: ChatTheme; label: string; preview: { bg: st
   { value: "monokai", label: "Monokai", preview: { bg: "#272822", hover: "#3e3d32" } },
   { value: "sublime-material", label: "Sublime Material", preview: { bg: "#263238", hover: "#37474f" } },
   { value: "mushu", label: "Mushu", preview: { bg: "#1a1111", hover: "#3d1c1c" } },
+  { value: "lunita", label: "Lunita", preview: { bg: "#1e2a1e", hover: "#2d4a2d" } },
 ];
