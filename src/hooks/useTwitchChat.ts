@@ -511,7 +511,7 @@ export function useTwitchChat(
           ? sourceChannelInfoCache.get(sourceRoomId)
           : undefined;
 
-      const chatMessage: ChatMessage = {
+const chatMessage: ChatMessage = {
         id: msg.id,
         platform: "twitch",
         author:
@@ -666,6 +666,196 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
+    newClient.onAnnouncement((_channel, _user, announcementInfo, msg) => {
+      if (!active) return;
+
+      const badgeImages: Record<string, string> = {};
+      const badgeDetails: Record<string, { url: string; title: string }> = {};
+      msg.userInfo.badges.forEach((version, badgeName) => {
+        const detail = getBadgeDetail(badgeName, version);
+        if (detail) {
+          badgeImages[badgeName] = detail.url;
+          badgeDetails[badgeName] = { url: detail.url, title: detail.title };
+        }
+      });
+
+      const cachedUserInfo = msg.userInfo.userId
+        ? userInfoCache.get(msg.userInfo.userId)
+        : undefined;
+
+      const chatMessage: ChatMessage = {
+        id: msg.id,
+        platform: "twitch",
+        author:
+          msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
+        content: msg.text ?? "",
+        timestamp: msg.date,
+        userId: msg.userInfo.userId,
+        authorColor: msg.userInfo.color || "#FFFFFF",
+        authorAvatar: cachedUserInfo?.profileImageUrl || undefined,
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: badgeImages,
+        badgeDetails,
+        isCurrentUser:
+          msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
+        messageType: "announcement",
+      };
+
+      if (!cachedUserInfo && msg.userInfo.userId) {
+        getUserInfo(msg.userInfo.userId, accessToken)
+          .then((info) => {
+            onMessage({
+              ...chatMessage,
+              authorAvatar:
+                (info as { profileImageUrl?: string | null } | null)
+                  ?.profileImageUrl || chatMessage.authorAvatar,
+            });
+          })
+          .catch(() => onMessage(chatMessage));
+      } else {
+        onMessage(chatMessage);
+      }
+    });
+
+    newClient.onRewardGift((_channel, _user, rewardGiftInfo, msg) => {
+      if (!active) return;
+
+      const badgeImages: Record<string, string> = {};
+      const badgeDetails: Record<string, { url: string; title: string }> = {};
+      msg.userInfo.badges.forEach((version, badgeName) => {
+        const detail = getBadgeDetail(badgeName, version);
+        if (detail) {
+          badgeImages[badgeName] = detail.url;
+          badgeDetails[badgeName] = { url: detail.url, title: detail.title };
+        }
+      });
+
+      const chatMessage: ChatMessage = {
+        id: msg.id,
+        platform: "twitch",
+        author:
+          msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
+        content: `gifted ${rewardGiftInfo.count} reward${rewardGiftInfo.count > 1 ? "s" : ""} (${rewardGiftInfo.triggerType})`,
+        timestamp: msg.date,
+        userId: msg.userInfo.userId,
+        authorColor: msg.userInfo.color || "#FFFFFF",
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: badgeImages,
+        badgeDetails,
+        messageType: "reward-gift",
+      };
+
+      onMessage(chatMessage);
+    });
+
+    newClient.onRaidCancel((_channel) => {
+      if (!active) return;
+      onMessage({
+        id: `raid-cancel-${Date.now()}`,
+        platform: "twitch",
+        author: "System",
+        content: "The raid was cancelled.",
+        timestamp: new Date(),
+        userId: "system",
+        authorColor: "#94a3b8",
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: "notice",
+      });
+    });
+
+    newClient.onSlow((_channel, enabled, duration) => {
+      if (!active) return;
+      onMessage({
+        id: `slow-${Date.now()}`,
+        platform: "twitch",
+        author: "System",
+        content: enabled
+          ? `Slow mode enabled (${duration}s).`
+          : "Slow mode disabled.",
+        timestamp: new Date(),
+        userId: "system",
+        authorColor: "#94a3b8",
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: "notice",
+      });
+    });
+
+    newClient.onEmoteOnly((_channel, enabled) => {
+      if (!active) return;
+      onMessage({
+        id: `emoteonly-${Date.now()}`,
+        platform: "twitch",
+        author: "System",
+        content: enabled
+          ? "Emote-only mode enabled."
+          : "Emote-only mode disabled.",
+        timestamp: new Date(),
+        userId: "system",
+        authorColor: "#94a3b8",
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: "notice",
+      });
+    });
+
+    newClient.onSubsOnly((_channel, enabled) => {
+      if (!active) return;
+      onMessage({
+        id: `subsonly-${Date.now()}`,
+        platform: "twitch",
+        author: "System",
+        content: enabled
+          ? "Subscribers-only mode enabled."
+          : "Subscribers-only mode disabled.",
+        timestamp: new Date(),
+        userId: "system",
+        authorColor: "#94a3b8",
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: "notice",
+      });
+    });
+
+    newClient.onFollowersOnly((_channel, enabled, duration) => {
+      if (!active) return;
+      const minutes = duration ?? 0;
+      onMessage({
+        id: `followers-${Date.now()}`,
+        platform: "twitch",
+        author: "System",
+        content: enabled
+          ? `Followers-only mode enabled (${minutes === 0 ? "any follow age" : `${minutes} min follow age`}).`
+          : "Followers-only mode disabled.",
+        timestamp: new Date(),
+        userId: "system",
+        authorColor: "#94a3b8",
+        mentionsUser: false,
+        emotes: {},
+        isBot: true,
+        badges: {},
+        badgeDetails: {},
+        messageType: "notice",
+      });
+    });
+
     newClient.onSub((_channel, _user, subInfo, msg) => {
       if (!active) return;
       const tier =
@@ -780,6 +970,42 @@ export function useTwitchChat(
       onMessage(chatMessage);
     });
 
+    newClient.onCommunitySub((_channel, _user, giftInfo, msg) => {
+      if (!active) return;
+      const tier =
+        giftInfo.plan === "3000" ? "3" : giftInfo.plan === "2000" ? "2" : "1";
+      const giftMessage = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;
+
+      const badgeImages: Record<string, string> = {};
+      const badgeDetails: Record<string, { url: string; title: string }> = {};
+      msg.userInfo.badges.forEach((version, badgeName) => {
+        const detail = getBadgeDetail(badgeName, version);
+        if (detail) {
+          badgeImages[badgeName] = detail.url;
+          badgeDetails[badgeName] = { url: detail.url, title: detail.title };
+        }
+      });
+
+      const chatMessage: ChatMessage = {
+        id: msg.id,
+        platform: "twitch",
+        author:
+          msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
+        content: giftMessage,
+        timestamp: msg.date,
+        userId: msg.userInfo.userId,
+        authorColor: msg.userInfo.color || "#FFFFFF",
+        mentionsUser: false,
+        emotes: {},
+        isBot: false,
+        badges: badgeImages,
+        badgeDetails,
+        messageType: "subgift",
+      };
+
+      onMessage(chatMessage);
+    });
+
     newClient.onRaid((_channel, _user, raidInfo, msg) => {
       if (!active) return;
       const raidMessage = `is raiding with a party of ${raidInfo.viewerCount} viewers!`;
@@ -812,43 +1038,6 @@ export function useTwitchChat(
         badges: badgeImages,
         badgeDetails,
         messageType: "raid",
-      };
-
-      onMessage(chatMessage);
-    });
-
-    // Handle community gifted subs (mass gifts)
-    newClient.onCommunitySub((_channel, _user, giftInfo, msg) => {
-      if (!active) return;
-      const tier =
-        giftInfo.plan === "3000" ? "3" : giftInfo.plan === "2000" ? "2" : "1";
-      const giftMessage = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;
-
-      const badgeImages: Record<string, string> = {};
-      const badgeDetails: Record<string, { url: string; title: string }> = {};
-      msg.userInfo.badges.forEach((version, badgeName) => {
-        const detail = getBadgeDetail(badgeName, version);
-        if (detail) {
-          badgeImages[badgeName] = detail.url;
-          badgeDetails[badgeName] = { url: detail.url, title: detail.title };
-        }
-      });
-
-      const chatMessage: ChatMessage = {
-        id: msg.id,
-        platform: "twitch",
-        author:
-          msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
-        content: giftMessage,
-        timestamp: msg.date,
-        userId: msg.userInfo.userId,
-        authorColor: msg.userInfo.color || "#FFFFFF",
-        mentionsUser: false,
-        emotes: {},
-        isBot: false,
-        badges: badgeImages,
-        badgeDetails,
-        messageType: "subgift",
       };
 
       onMessage(chatMessage);

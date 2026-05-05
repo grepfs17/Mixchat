@@ -15,6 +15,8 @@ export const MESSAGE_TYPES = [
   "notice",
   "timeout",
   "ban",
+  "announcement",
+  "reward-gift",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
