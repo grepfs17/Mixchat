@@ -713,7 +713,11 @@
 .message.watch-streak,
 .message.raid,
 .message.announcement,
-.message.notice {
+.message.notice,
+.message.timeout,
+.message.ban,
+.message.untimeout,
+.message.unban {
   background-color: var(--event-bg);
   border-left: 2px solid var(--event-color);
 }

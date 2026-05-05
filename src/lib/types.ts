@@ -15,6 +15,8 @@ export const MESSAGE_TYPES = [
   "notice",
   "timeout",
   "ban",
+  "untimeout",
+  "unban",
   "announcement",
   "reward-gift",
 ] as const;

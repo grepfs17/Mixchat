@@ -15,7 +15,7 @@ import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat, getChannelInfo, updateChannelInfo, searchCategories } from '../lib/twitch';
-import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
+import type { ChatMessage, Platform, PlatformSession, ChatFont, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
@@ -893,6 +893,25 @@ export default function ChatApp({
     try {
       const targetUserId = await resolveBroadcasterId(userName);
       await removeBan(selectedTwitchChannel, twitchSession.userId, targetUserId);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `untimeout-${userName}-${Date.now()}`,
+          platform: 'twitch' as Platform,
+          author: 'System',
+          content: `${userName} timeout/ban was removed.`,
+          timestamp: new Date(),
+          userId: 'system',
+          authorColor: '#22c55e',
+          mentionsUser: false,
+          emotes: {},
+          isBot: true,
+          badges: {},
+          badgeDetails: {},
+          messageType: 'untimeout' as MessageType,
+          targetUsername: userName,
+        },
+      ]);
       notificationIdRef.current += 1;
       setNotification({ message: `Removed timeout/ban for ${userName}`, type: 'success', id: notificationIdRef.current });
     } catch (err) {
