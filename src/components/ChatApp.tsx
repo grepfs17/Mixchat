@@ -15,7 +15,7 @@ import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat } from '../lib/twitch';
-import type { ChatMessage, Platform, PlatformSession, ChatFont } from '../lib/types';
+import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
@@ -60,6 +60,7 @@ interface ChatAppProps {
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
   splitChatEnabled?: boolean;
+  chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
   /** Called when the viewer clicks "Follow Raid" on the raid banner */
   onFollowRaid?: (channelLogin: string) => void;
@@ -88,6 +89,7 @@ export default function ChatApp({
   showDeletedMessages = true,
   compactActions = false,
   splitChatEnabled = false,
+  chatTheme = 'default' as ChatTheme,
   hideViewerCount = false,
   onFollowRaid,
 }: ChatAppProps) {
@@ -1310,6 +1312,13 @@ export default function ChatApp({
       )}
       <NewFeaturesModal />
       <MobileTouchHintModal twitchConnected={twitchConnected} />
+      {chatTheme === 'mushu' && (
+        <img
+          src="/themes/Mushu/mushu.webp"
+          alt="Mushu"
+          className="mushu-theme-mascot"
+        />
+      )}
     </div>
   );
 }

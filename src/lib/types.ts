@@ -96,3 +96,22 @@ export const CHAT_FONT_OPTIONS: { value: ChatFont; label: string }[] = [
   { value: "nunito", label: "Nunito" },
   { value: "montserrat", label: "Montserrat" },
 ];
+
+export type ChatTheme =
+  | "default"
+  | "one-dark"
+  | "catppuccin"
+  | "night-owl"
+  | "monokai"
+  | "sublime-material"
+  | "mushu";
+
+export const THEME_OPTIONS: { value: ChatTheme; label: string; preview: { bg: string; hover: string } }[] = [
+  { value: "default", label: "Default", preview: { bg: "#0c0c0e", hover: "#292930" } },
+  { value: "one-dark", label: "One Dark", preview: { bg: "#282c34", hover: "#3e4452" } },
+  { value: "catppuccin", label: "Catppuccin", preview: { bg: "#1e1e2e", hover: "#313244" } },
+  { value: "night-owl", label: "Night Owl", preview: { bg: "#011627", hover: "#0b2942" } },
+  { value: "monokai", label: "Monokai", preview: { bg: "#272822", hover: "#3e3d32" } },
+  { value: "sublime-material", label: "Sublime Material", preview: { bg: "#263238", hover: "#37474f" } },
+  { value: "mushu", label: "Mushu", preview: { bg: "#1a1111", hover: "#3d1c1c" } },
+];

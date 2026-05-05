@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { FaTimes, FaDownload, FaUpload, FaChevronDown, FaCloudUploadAlt, FaCloudDownloadAlt, FaLink, FaCheck } from 'react-icons/fa';
-import type { ChatFont } from '../lib/types';
-import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS } from '../lib/types';
+import type { ChatFont, ChatTheme } from '../lib/types';
+import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS, THEME_OPTIONS } from '../lib/types';
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
 import { exportSettings, importSettings } from '../lib/settingsBackup';
 import { saveSettingsToDrive, loadSettingsFromDrive } from '../lib/googleDrive';
@@ -32,6 +32,8 @@ interface EmbedConfigModalProps {
   onCompactActionsChange: (value: boolean) => void;
   splitChatEnabled: boolean;
   onSplitChatEnabledChange: (value: boolean) => void;
+  chatTheme: ChatTheme;
+  onChatThemeChange: (value: ChatTheme) => void;
   hideViewerCount: boolean;
   onHideViewerCountChange: (value: boolean) => void;
   hasYoutubeSession: boolean;
@@ -62,6 +64,8 @@ export default function EmbedConfigModal({
   onCompactActionsChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
+  chatTheme,
+  onChatThemeChange,
   hideViewerCount,
   onHideViewerCountChange,
   hasYoutubeSession,
@@ -111,7 +115,7 @@ export default function EmbedConfigModal({
           [
             'mixchat_video_ratio', 'mixchat_favorite_channels', 'mixchat_embed_default_open',
             'mixchat_unify_chat', 'mixchat_split_chat', 'mixchat_use_youtube_embed',
-            'mixchat_font_size', 'mixchat_chat_font', 'mixchat_mention_sound',
+            'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
             'mixchat_mention_volume', 'mixchat_mention_sound_type',
             'mixchat_show_deleted_messages', 'mixchat_compact_actions',
             'mixchat_hide_viewer_count',
@@ -229,6 +233,29 @@ export default function EmbedConfigModal({
                 </select>
                 <p className="embed-config-description">
                   Choose the font used in the chat window.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-label">Chat Theme</label>
+                <div className="embed-config-theme-grid">
+                  {THEME_OPTIONS.map(({ value, label, preview }) => (
+                    <button
+                      key={value}
+                      onClick={() => onChatThemeChange(value as ChatTheme)}
+                      className={`embed-config-theme-btn${chatTheme === value ? ' embed-config-theme-btn--active' : ''}`}
+                    >
+                      <div className="embed-config-theme-preview">
+                        <div className="embed-config-theme-preview-bg" style={{ backgroundColor: preview.bg }} />
+                        <div className="embed-config-theme-preview-hover" style={{ backgroundColor: preview.hover }} />
+                      </div>
+                      <span className="embed-config-theme-label">{label}</span>
+                      {chatTheme === value && <span className="embed-config-theme-check">✓</span>}
+                    </button>
+                  ))}
+                </div>
+                <p className="embed-config-description">
+                  Choose the background and hover colors for chat messages.
                 </p>
               </div>
 

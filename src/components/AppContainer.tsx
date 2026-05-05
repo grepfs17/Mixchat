@@ -7,7 +7,8 @@ import LiveNotification from './LiveNotification';
 import WatchlistManager from './WatchlistManager';
 import YouTubeLinker from './YouTubeLinker';
 
-import type { PlatformSession, ChatFont } from '../lib/types';
+import type { PlatformSession, ChatFont, ChatTheme } from '../lib/types';
+import { applyTheme } from '../lib/themes';
 import { getYoutubeLinkForChannel } from '../lib/youtubeLinks';
 import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';
 import { useStreamMonitor } from '../hooks/useStreamMonitor';
@@ -85,6 +86,7 @@ export default function AppContainer() {
   const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
   const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
   const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
+  const [chatTheme, setChatTheme] = useState<ChatTheme>('default'); // Chat theme
   const [hideViewerCount, setHideViewerCount] = useState(false);
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
@@ -655,6 +657,24 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
   }, [hideViewerCount]);
 
+  // Load chat theme setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_chat_theme');
+    if (saved !== null) {
+      try { setChatTheme(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save chat theme setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_chat_theme', JSON.stringify(chatTheme));
+  }, [chatTheme]);
+
+  // Apply theme to document
+  useEffect(() => {
+    applyTheme(chatTheme);
+  }, [chatTheme]);
+
   // Handle mouse events for resizing
   useEffect(() => {
     if (!isDragging) return;
@@ -992,6 +1012,8 @@ export default function AppContainer() {
             onCompactActionsChange={setCompactActions}
             splitChatEnabled={splitChatEnabled}
             onSplitChatEnabledChange={setSplitChatEnabled}
+            chatTheme={chatTheme}
+            onChatThemeChange={setChatTheme}
             hideViewerCount={hideViewerCount}
             onHideViewerCountChange={setHideViewerCount}
             hasYoutubeSession={!!sessions.youtube}
@@ -1170,6 +1192,7 @@ export default function AppContainer() {
               showDeletedMessages={showDeletedMessages}
               compactActions={compactActions}
               splitChatEnabled={splitChatEnabled}
+              chatTheme={chatTheme}
               hideViewerCount={shouldHideViewerCount}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />

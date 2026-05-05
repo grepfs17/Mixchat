@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { FaStar, FaRegStar, FaUsers, FaEye, FaYoutube, FaCog } from 'react-icons/fa';
 import EmbedConfigModal from './EmbedConfigModal';
-import type { ChatFont } from '../lib/types';
+import type { ChatFont, ChatTheme } from '../lib/types';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
 
 interface TwitchChannel {
@@ -55,6 +55,8 @@ interface LoginPanelProps {
   onCompactActionsChange?: (value: boolean) => void;
   splitChatEnabled?: boolean;
   onSplitChatEnabledChange?: (value: boolean) => void;
+  chatTheme?: ChatTheme;
+  onChatThemeChange?: (value: ChatTheme) => void;
   hideViewerCount?: boolean;
   onHideViewerCountChange?: (value: boolean) => void;
   hasYoutubeSession?: boolean;
@@ -104,6 +106,8 @@ function LoginPanel({
   onCompactActionsChange,
   splitChatEnabled = false,
   onSplitChatEnabledChange,
+  chatTheme = 'default' as ChatTheme,
+  onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
   hasYoutubeSession = false,
@@ -369,6 +373,8 @@ function LoginPanel({
           onCompactActionsChange={(value) => { if (onCompactActionsChange) onCompactActionsChange(value); }}
           splitChatEnabled={splitChatEnabled}
           onSplitChatEnabledChange={(value) => { if (onSplitChatEnabledChange) onSplitChatEnabledChange(value); }}
+          chatTheme={chatTheme}
+          onChatThemeChange={(value) => { if (onChatThemeChange) onChatThemeChange(value); }}
           hideViewerCount={hideViewerCount}
           onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
           hasYoutubeSession={hasYoutubeSession}
