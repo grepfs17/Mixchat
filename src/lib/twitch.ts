@@ -544,6 +544,7 @@ export const getStreamStatus = async (
 ): Promise<{
   isLive: boolean;
   title?: string;
+  gameName?: string;
   viewerCount?: number;
   startedAt?: Date;
 } | null> => {
@@ -574,6 +575,7 @@ export const getStreamStatus = async (
     return {
       isLive: true,
       title: stream.title,
+      gameName: stream.game_name,
       viewerCount: stream.viewer_count,
       startedAt: new Date(stream.started_at),
     };
@@ -854,6 +856,97 @@ export const getRecentMessages = async (
     return messages;
   } catch (error) {
     console.error("Failed to fetch recent messages:", error);
+    return [];
+  }
+};
+
+export const getChannelInfo = async (
+  accessToken: string,
+  clientId: string,
+  broadcasterId: string,
+): Promise<{ title: string; gameName: string; gameId: string } | null> => {
+  try {
+    const response = await fetch(
+      `${TWITCH_API_BASE}/channels?broadcaster_id=${broadcasterId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+    if (!response.ok) {
+      console.error("getChannelInfo failed:", response.status);
+      return null;
+    }
+    const data = await response.json();
+    const channel = data.data?.[0];
+    if (!channel) return null;
+    return {
+      title: channel.title || "",
+      gameName: channel.game_name || "",
+      gameId: channel.game_id || "",
+    };
+  } catch (error) {
+    console.error("Failed to get channel info:", error);
+    return null;
+  }
+};
+
+export const updateChannelInfo = async (
+  accessToken: string,
+  clientId: string,
+  broadcasterId: string,
+  updates: { title?: string; gameId?: string },
+): Promise<boolean> => {
+  try {
+    const body: Record<string, string> = {};
+    if (updates.title !== undefined) body.title = updates.title;
+    if (updates.gameId !== undefined) body.game_id = updates.gameId;
+
+    const response = await fetch(
+      `${TWITCH_API_BASE}/channels?broadcaster_id=${broadcasterId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return response.ok;
+  } catch (error) {
+    console.error("Failed to update channel info:", error);
+    return false;
+  }
+};
+
+export const searchCategories = async (
+  accessToken: string,
+  clientId: string,
+  query: string,
+): Promise<Array<{ id: string; name: string }>> => {
+  if (!query.trim()) return [];
+  try {
+    const response = await fetch(
+      `${TWITCH_API_BASE}/search/categories?query=${encodeURIComponent(query)}&first=10`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+    if (!response.ok) return [];
+    const data = await response.json();
+    return (data.data || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+    }));
+  } catch (error) {
+    console.error("Failed to search categories:", error);
     return [];
   }
 };

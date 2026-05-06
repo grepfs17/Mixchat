@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
-import { FaTimes, FaDownload, FaUpload, FaChevronDown, FaCloudUploadAlt, FaCloudDownloadAlt, FaLink, FaCheck } from 'react-icons/fa';
+import { FaTimes, FaDownload, FaUpload, FaChevronDown, FaCloudUploadAlt, FaCloudDownloadAlt, FaLink, FaCheck, FaTrash, FaPlay } from 'react-icons/fa';
 import type { ChatFont, ChatTheme } from '../lib/types';
 import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS, THEME_OPTIONS } from '../lib/types';
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
@@ -36,6 +36,8 @@ interface EmbedConfigModalProps {
   onChatThemeChange: (value: ChatTheme) => void;
   hideViewerCount: boolean;
   onHideViewerCountChange: (value: boolean) => void;
+  eventSounds: Record<string, string>;
+  onEventSoundChange: (eventType: string, soundData: string | null) => void;
   hasYoutubeSession: boolean;
   onReauthYoutube: () => void;
   onClose: () => void;
@@ -68,6 +70,8 @@ export default function EmbedConfigModal({
   onChatThemeChange,
   hideViewerCount,
   onHideViewerCountChange,
+  eventSounds,
+  onEventSoundChange,
   hasYoutubeSession,
   onReauthYoutube,
   onClose,
@@ -83,6 +87,7 @@ export default function EmbedConfigModal({
     for (const g of GROUPS) init[g] = false;
     return init as Record<GroupKey, boolean>;
   });
+  const [eventSoundsCollapsed, setEventSoundsCollapsed] = useState(true);
 
   const toggle = (key: GroupKey) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -118,7 +123,7 @@ export default function EmbedConfigModal({
             'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
             'mixchat_mention_volume', 'mixchat_mention_sound_type',
             'mixchat_show_deleted_messages', 'mixchat_compact_actions',
-            'mixchat_hide_viewer_count',
+            'mixchat_hide_viewer_count', 'mixchat_event_sounds',
             'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
             'mixchat_youtube_links', 'disabled_emotes_v1',
           ].flatMap(k => {
@@ -176,6 +181,56 @@ export default function EmbedConfigModal({
       });
     }
   }, [shareLink]);
+
+  const EVENT_SOUND_TYPES = [
+    { key: 'subscription', label: 'New Subscription' },
+    { key: 'resub', label: 'Resubscription' },
+    { key: 'subgift', label: 'Gift Subscription' },
+    { key: 'redemption', label: 'Channel Points Redemption' },
+    { key: 'raid', label: 'Raid' },
+    { key: 'watch-streak', label: 'Watch Streak' },
+    { key: 'announcement', label: 'Announcement' },
+    { key: 'reward-gift', label: 'Reward Gift' },
+  ];
+
+  const soundFileInputRef = useRef<HTMLInputElement>(null);
+  const [currentEventType, setCurrentEventType] = useState<string>('');
+
+  const handleSoundFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentEventType) return;
+
+    if (!file.type.startsWith('audio/')) {
+      alert('Please select a valid audio file.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Audio file must be less than 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      onEventSoundChange(currentEventType, dataUrl);
+      setCurrentEventType('');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }, [currentEventType, onEventSoundChange]);
+
+  const playEventSound = useCallback((eventType: string) => {
+    const soundData = eventSounds[eventType];
+    if (!soundData) return;
+
+    const audio = new Audio(soundData);
+    audio.play().catch(() => {});
+  }, [eventSounds]);
+
+  const removeEventSound = useCallback((eventType: string) => {
+    onEventSoundChange(eventType, null);
+  }, [onEventSoundChange]);
 
   return (
     <div className="embed-config-overlay" onClick={onClose}>
@@ -388,6 +443,72 @@ export default function EmbedConfigModal({
                 <p className="embed-config-description embed-config-description--indented">
                   When enabled, the viewer count is hidden while viewing your own channel.
                 </p>
+              </div>
+
+              <div className="embed-config-section">
+                <button className="embed-config-event-sounds-header" onClick={() => setEventSoundsCollapsed(v => !v)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label className="embed-config-label embed-config-label--clickable">Event Sounds</label>
+                    {Object.keys(eventSounds).length > 0 && (
+                      <span className="embed-config-event-sounds-count">{Object.keys(eventSounds).length}</span>
+                    )}
+                  </div>
+                  <FaChevronDown size={12} className={`embed-config-group-chevron${eventSoundsCollapsed ? ' embed-config-group-chevron--collapsed' : ''}`} />
+                </button>
+                <p className="embed-config-description">
+                  Upload custom sounds for different chat events. Sounds play automatically when these events occur.
+                </p>
+
+                {!eventSoundsCollapsed && (
+                  <div className="embed-config-event-sounds">
+                    {EVENT_SOUND_TYPES.map(({ key, label }) => {
+                      const hasSound = !!eventSounds[key];
+                      return (
+                        <div key={key} className="embed-config-event-sound-item">
+                          <span className="embed-config-event-sound-label">{label}</span>
+                          <div className="embed-config-event-sound-actions">
+                            {hasSound ? (
+                              <>
+                                <button
+                                  onClick={() => playEventSound(key)}
+                                  className="embed-config-event-sound-btn embed-config-event-sound-btn--play"
+                                  title="Play sound"
+                                >
+                                  <FaPlay size={10} />
+                                </button>
+                                <button
+                                  onClick={() => removeEventSound(key)}
+                                  className="embed-config-event-sound-btn embed-config-event-sound-btn--remove"
+                                  title="Remove sound"
+                                >
+                                  <FaTrash size={10} />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setCurrentEventType(key);
+                                  soundFileInputRef.current?.click();
+                                }}
+                                className="embed-config-event-sound-btn embed-config-event-sound-btn--upload"
+                              >
+                                <FaUpload size={10} /> Upload
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <input
+                  ref={soundFileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleSoundFileUpload}
+                  style={{ display: 'none' }}
+                />
               </div>
             </div>
           )}

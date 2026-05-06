@@ -6,7 +6,6 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import YTMessageParts from './YTMessageParts';
 import { useScrollToBottomOnKeyboard } from '../hooks/useScrollToBottomOnKeyboard';
 
-
 interface YouTubeChatProps {
   videoId: string;
   /** Called whenever the message list updates (for unified chat mode) */
@@ -49,19 +48,38 @@ interface ChatMessage {
   };
 }
 
+interface SSEMessageEvent {
+  messages: ChatMessage[];
+  count: number;
+}
+
+interface SSEDeleteEvent {
+  messageId: string;
+}
+
+interface SSEErrorEvent {
+  error: string;
+}
+
+interface SSEEndEvent {
+  reason: string;
+}
+
 export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false }: YouTubeChatProps) {
-  /** Merge polled messages with any optimistic ones not yet confirmed by the server */
   const getTextContent = (m: ChatMessage) =>
     m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
+
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const isConnectedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastMessageCountRef = useRef(0);
+  const errorRef = useRef<string | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
     const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
@@ -82,92 +100,137 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     return unmatched.length ? [...messages, ...unmatched] : messages;
   }, [messages, optimisticMessages]);
 
-  // Keep messages fresh by polling our backend
+  // Connect to SSE stream
   useEffect(() => {
     if (!videoId) return;
 
     let isMounted = true;
-    const abortController = new AbortController();
+    retryCountRef.current = 0;
+    errorRef.current = null;
+    setIsLoading(true);
+    setIsConnected(false);
+    setError(null);
+    setMessages([]);
 
-    const fetchChatMessages = async () => {
-      if (document.hidden) return;
+    const connect = () => {
+      if (!isMounted) return;
 
-      try {
-        setError(null);
-
-        const params = new URLSearchParams();
-        params.append('videoId', videoId);
-
-        const res = await fetch(`/api/youtube-stream-chat?${params.toString()}`, { signal: abortController.signal });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          if (res.status === 404) {
-            setError(errorData.error || 'Live chat not available');
-            return;
-          }
-          console.error('Chat API error:', errorData);
-          throw new Error(errorData.error || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-
-        if (!isMounted) return;
-
-        console.log(`[YouTubeChat] Received response: ${data.messageCount} messages, ${(data.emotes || []).length} emotes`);
-
-        if (data.success && data.messages) {
-          const fetchedMessages = (data.messages as any[]).map((msg: any) => ({
-            id: msg.id,
-            author: msg.author,
-            authorAvatar: msg.authorAvatar,
-            badges: msg.badges,
-            parts: (msg.parts || []) as MessagePart[],
-            timestamp: new Date(msg.timestamp),
-            authorChannelId: msg.authorChannelId,
-            superchat: msg.superchat,
-          }));
-
-          const uniqueMessagesMap = new Map();
-          fetchedMessages.forEach(m => uniqueMessagesMap.set(m.id, m));
-          const newMessages = Array.from(uniqueMessagesMap.values());
-
-          const lastNewId = newMessages.length > 0 ? newMessages[newMessages.length - 1].id : null;
-          const lastCurrentId = messages.length > 0 ? messages[messages.length - 1].id : null;
-
-          if (newMessages.length !== messages.length || lastNewId !== lastCurrentId) {
-            const limited = newMessages.length > MAX_DISPLAYED_MESSAGES
-              ? newMessages.slice(-MAX_DISPLAYED_MESSAGES)
-              : newMessages;
-            setMessages(limited);
-            lastMessageCountRef.current = limited.length;
-          }
-
-          if (!isConnectedRef.current) {
-            isConnectedRef.current = true;
-            setIsConnected(true);
-            setIsLoading(false);
-          }
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        if (isMounted) {
-          console.error('Error fetching YouTube chat:', err);
-          setError(err instanceof Error ? err.message : 'Failed to fetch messages');
-          setIsLoading(false);
-        }
+      // Close existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
+
+      const es = new EventSource(`/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`);
+      eventSourceRef.current = es;
+
+      es.addEventListener('connected', (e: Event) => {
+        if (!isMounted) return;
+        const data = JSON.parse((e as MessageEvent).data) as SSEMessageEvent;
+        const fetchedMessages = (data.messages || []).map((msg: any) => ({
+          id: msg.id,
+          author: msg.author,
+          authorAvatar: msg.authorAvatar,
+          badges: msg.badges,
+          parts: (msg.parts || []) as MessagePart[],
+          timestamp: new Date(msg.timestamp),
+          authorChannelId: msg.authorChannelId,
+          superchat: msg.superchat,
+        }));
+
+        const uniqueMap = new Map();
+        fetchedMessages.forEach(m => uniqueMap.set(m.id, m));
+        const unique = Array.from(uniqueMap.values());
+        const limited = unique.length > MAX_DISPLAYED_MESSAGES
+          ? unique.slice(-MAX_DISPLAYED_MESSAGES)
+          : unique;
+
+        setMessages(limited);
+        setIsConnected(true);
+        setIsLoading(false);
+        setError(null);
+        errorRef.current = null;
+        retryCountRef.current = 0;
+      });
+
+      es.addEventListener('message', (e: Event) => {
+        if (!isMounted) return;
+        const msg = JSON.parse((e as MessageEvent).data) as ChatMessage;
+        const newMsg = {
+          id: msg.id,
+          author: msg.author,
+          authorAvatar: msg.authorAvatar,
+          badges: msg.badges,
+          parts: msg.parts as MessagePart[],
+          timestamp: new Date(msg.timestamp),
+          authorChannelId: msg.authorChannelId,
+          superchat: msg.superchat,
+        };
+
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          const next = [...prev, newMsg];
+          return next.length > MAX_DISPLAYED_MESSAGES
+            ? next.slice(-MAX_DISPLAYED_MESSAGES)
+            : next;
+        });
+      });
+
+      es.addEventListener('delete', (e: Event) => {
+        if (!isMounted) return;
+        const data = JSON.parse((e as MessageEvent).data) as SSEDeleteEvent;
+        setMessages(prev => prev.filter(m => m.id !== data.messageId));
+      });
+
+      es.addEventListener('error', (e: Event) => {
+        if (!isMounted) return;
+        const data = JSON.parse((e as MessageEvent).data) as SSEErrorEvent;
+        console.error('[YouTubeChat] SSE error event:', data.error);
+        setIsConnected(false);
+        setError(data.error);
+        errorRef.current = data.error;
+        es.close();
+        eventSourceRef.current = null;
+      });
+
+      es.addEventListener('end', (e: Event) => {
+        if (!isMounted) return;
+        const data = JSON.parse((e as MessageEvent).data) as SSEEndEvent;
+        console.log('[YouTubeChat] Stream ended:', data.reason);
+        setIsConnected(false);
+        setError('Live stream has ended');
+        es.close();
+        eventSourceRef.current = null;
+      });
+
+      es.onerror = () => {
+        // Connection-level error (network drop, server restart)
+        // EventSource auto-reconnects, but we track retries
+        retryCountRef.current++;
+        setIsConnected(false);
+
+        if (retryCountRef.current > 20) {
+          // After ~20 auto-reconnect failures (~100s), give up
+          if (isMounted) {
+            setError('Failed to connect to YouTube chat. Please refresh the page.');
+            es.close();
+            eventSourceRef.current = null;
+          }
+        }
+      };
     };
 
-    fetchChatMessages();
-    pollingIntervalRef.current = setInterval(fetchChatMessages, 8000);
+    connect();
 
     return () => {
       isMounted = false;
-      isConnectedRef.current = false;
-      abortController.abort();
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
       }
     };
   }, [videoId]);
@@ -214,7 +277,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       >
         {!isConnected && (
           <div className="yt-chat-placeholder">
-            Connecting to YouTube chat...
+            Reconnecting to YouTube chat...
           </div>
         )}
         {isConnected && mergedMessages.length === 0 && (

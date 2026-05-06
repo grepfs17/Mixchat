@@ -59,6 +59,8 @@ interface LoginPanelProps {
   onChatThemeChange?: (value: ChatTheme) => void;
   hideViewerCount?: boolean;
   onHideViewerCountChange?: (value: boolean) => void;
+  eventSounds?: Record<string, string>;
+  onEventSoundChange?: (eventType: string, soundData: string | null) => void;
   hasYoutubeSession?: boolean;
   onReauthYoutube?: () => void;
   onGoHome?: () => void;
@@ -110,6 +112,8 @@ function LoginPanel({
   onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
+  eventSounds = {},
+  onEventSoundChange,
   hasYoutubeSession = false,
   onReauthYoutube,
   onGoHome,
@@ -377,6 +381,8 @@ function LoginPanel({
           onChatThemeChange={(value) => { if (onChatThemeChange) onChatThemeChange(value); }}
           hideViewerCount={hideViewerCount}
           onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
+          eventSounds={eventSounds}
+          onEventSoundChange={(eventType, soundData) => { if (onEventSoundChange) onEventSoundChange(eventType, soundData); }}
           hasYoutubeSession={hasYoutubeSession}
           onReauthYoutube={onReauthYoutube || (() => {})}
           onClose={() => setShowEmbedConfig(false)}

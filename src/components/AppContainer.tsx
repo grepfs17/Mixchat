@@ -92,6 +92,7 @@ export default function AppContainer() {
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
   const [streamTransition, setStreamTransition] = useState<StreamTransitionInfo | null>(null);
+  const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -657,6 +658,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
   }, [hideViewerCount]);
 
+  // Load event sounds from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_event_sounds');
+    if (saved !== null) {
+      try { setEventSounds(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save event sounds to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_event_sounds', JSON.stringify(eventSounds));
+  }, [eventSounds]);
+
   // Load chat theme setting from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('mixchat_chat_theme');
@@ -728,7 +742,7 @@ export default function AppContainer() {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions moderator:manage:chat_messages moderator:manage:banned_users user:read:moderated_channels user:write:chat',
+      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions moderator:manage:chat_messages moderator:manage:banned_users user:read:moderated_channels user:write:chat channel:manage:broadcast',
       state,
     });
 
@@ -916,6 +930,18 @@ export default function AppContainer() {
     });
   }, []);
 
+  const handleEventSoundChange = useCallback((eventType: string, soundData: string | null) => {
+    setEventSounds((prev) => {
+      const updated = { ...prev };
+      if (soundData === null) {
+        delete updated[eventType];
+      } else {
+        updated[eventType] = soundData;
+      }
+      return updated;
+    });
+  }, []);
+
   const sortedChannels = useMemo(
     () => [...twitchChannels].sort((a, b) => {
       const aIsFavorite = favoriteChannels.includes(a.id);
@@ -1016,6 +1042,8 @@ export default function AppContainer() {
             onChatThemeChange={setChatTheme}
             hideViewerCount={hideViewerCount}
             onHideViewerCountChange={setHideViewerCount}
+            eventSounds={eventSounds}
+            onEventSoundChange={handleEventSoundChange}
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
@@ -1194,6 +1222,7 @@ export default function AppContainer() {
               splitChatEnabled={splitChatEnabled}
               chatTheme={chatTheme}
               hideViewerCount={shouldHideViewerCount}
+              eventSounds={eventSounds}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>
