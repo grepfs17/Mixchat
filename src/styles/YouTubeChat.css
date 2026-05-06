@@ -216,6 +216,20 @@
   object-fit: contain;
 }
 
+/* Gift Purchase & Redemption Styles */
+.yt-gift-purchase {
+  border-left: 3px solid #9c27b0;
+}
+
+.yt-gift-redemption {
+  border-left: 3px solid #4caf50;
+}
+
+.gift-icon {
+  margin-right: 4px;
+  font-size: 16px;
+}
+
 /* Split Chat styling for YouTube chat container */
 .yt-chat-container.split-chat {
   /* keep default spacing to avoid introducing visible gaps between messages */

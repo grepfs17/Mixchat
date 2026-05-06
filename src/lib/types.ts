@@ -17,6 +17,8 @@ export const MESSAGE_TYPES = [
   "ban",
   "announcement",
   "reward-gift",
+  "gift-purchase",
+  "gift-redemption",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 

@@ -20,6 +20,9 @@ interface ChatMessage {
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
+  messageType?: string;
+  giftCount?: number;
+  recipientName?: string;
   superchat?: {
     amount: string;
     color: string;
@@ -159,6 +162,12 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
           }
           if (item.is(YTNodes.LiveChatMembershipItem)) {
             return parseMembershipItem(item);
+          }
+          if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) {
+            return parseGiftPurchaseAnnouncement(item);
+          }
+          if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) {
+            return parseGiftRedemptionAnnouncement(item);
           }
           return null;
         };
@@ -425,6 +434,37 @@ function parseMembershipItem(msg: any): ChatMessage {
       amount,
       color: '#0f9d58', // YouTube Green for memberships
     }
+  };
+}
+
+function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
+  const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
+  const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
+
+  return {
+    ...base,
+    messageType: 'gift-purchase',
+    superchat: {
+      amount,
+      color: '#9c27b0', // Purple for gift purchases
+    },
+    giftCount,
+  };
+}
+
+function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
+  const recipientName = msg.recipient?.name?.toString() || msg.header_subtext?.toString() || '';
+
+  return {
+    ...base,
+    messageType: 'gift-redemption',
+    recipientName,
+    superchat: {
+      amount: 'Gift received',
+      color: '#4caf50', // Green for gift redemptions
+    },
   };
 }
 

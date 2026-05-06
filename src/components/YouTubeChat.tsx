@@ -36,6 +36,9 @@ interface ChatMessage {
   timestamp: Date;
   authorChannelId?: string;
   optimistic?: boolean;
+  messageType?: string;
+  giftCount?: number;
+  recipientName?: string;
   superchat?: {
     amount: string;
     color: string;
@@ -221,6 +224,44 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         )}
         {(() => {
           return mergedMessages.map((msg, index) => {
+            if (msg.messageType === 'gift-purchase' && msg.superchat) {
+              return (
+                <div key={msg.id} className="yt-superchat yt-gift-purchase" style={{ backgroundColor: msg.superchat.color }}>
+                  <div className="yt-superchat-header">
+                    {msg.authorAvatar && (
+                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                    )}
+                    <div className="yt-superchat-info">
+                      <div className="yt-superchat-author">{msg.author}</div>
+                      <div className="yt-superchat-amount">
+                        <span className="gift-icon">🎁</span>
+                        Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (msg.messageType === 'gift-redemption' && msg.superchat) {
+              return (
+                <div key={msg.id} className="yt-superchat yt-gift-redemption" style={{ backgroundColor: msg.superchat.color }}>
+                  <div className="yt-superchat-header">
+                    {msg.authorAvatar && (
+                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                    )}
+                    <div className="yt-superchat-info">
+                      <div className="yt-superchat-author">{msg.author}</div>
+                      <div className="yt-superchat-amount">
+                        <span className="gift-icon">🎉</span>
+                        Received a gift membership
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             if (msg.superchat) {
               return (
                 <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
