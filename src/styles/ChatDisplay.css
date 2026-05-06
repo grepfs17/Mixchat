@@ -306,7 +306,7 @@
 }
 
 .message:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-message-hover);
   border-left-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -957,17 +957,68 @@
 }
 
 .messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
-  background-color: rgba(255,255,255,0.07);
+  background-color: var(--color-bg-hover);
 }
 
 .messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
-  background-color: rgba(255,255,255,0.00);
+  background-color: transparent;
 }
 
 .messages-container.split-chat .message:hover {
-  background-color: rgba(255,255,255,0.1);
+  background-color: var(--color-bg-message-hover);
 }
 
 .unified-messages-container.split-chat {
   /* no extra padding or gap */
+}
+
+/* Mushu theme floating mascot */
+.mushu-theme-mascot {
+  position: absolute;
+  top: 15px;
+  right: -12px;
+  width: 124px;
+  height: auto;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.mushu-theme-knife {
+  position: absolute;
+  bottom: 55px;
+  right: 8px;
+  width: 110px;
+  height: auto;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.75;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  transform: scale(-1, 1);
+}
+
+/* Lunita theme floating images */
+.lunita-theme-drama {
+  position: absolute;
+  top: 18px;
+  right: 0px;
+  width: 110px;
+  height: auto;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.lunita-theme-lurk {
+  position: absolute;
+  bottom: 55px;
+  right: 8px;
+  width: 110px;
+  height: auto;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.75;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
 }

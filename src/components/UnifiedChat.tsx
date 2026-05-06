@@ -33,6 +33,9 @@ export interface YTMessage {
     timestamp: Date;
     authorChannelId?: string;
     optimistic?: boolean;
+    messageType?: string;
+    giftCount?: number;
+    recipientName?: string;
     superchat?: {
         amount: string;
         color: string;
@@ -455,6 +458,58 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
 
                     // YouTube message
                     const msg = entry.msg as YTMessage;
+                    if (msg.messageType === 'gift-purchase' && msg.superchat) {
+                        return (
+                            <div key={getKey(entry)} className="yt-superchat yt-gift-purchase" style={{ backgroundColor: msg.superchat.color }}
+                                onTouchStart={() => handleTouchStart(entry)}
+                                onTouchEnd={() => handleTouchEnd(entry)}
+                                onTouchMove={handleTouchMove}
+                            >
+                                <div className="yt-superchat-header">
+                                    {msg.authorAvatar && (
+                                        <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                                    )}
+                                    <div className="yt-superchat-info">
+                                        <div className="yt-superchat-author">
+                                            <PlatformTag source="youtube" />
+                                            {msg.author}
+                                        </div>
+                                        <div className="yt-superchat-amount">
+                                            <span className="gift-icon">🎁</span>
+                                            Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    if (msg.messageType === 'gift-redemption' && msg.superchat) {
+                        return (
+                            <div key={getKey(entry)} className="yt-superchat yt-gift-redemption" style={{ backgroundColor: msg.superchat.color }}
+                                onTouchStart={() => handleTouchStart(entry)}
+                                onTouchEnd={() => handleTouchEnd(entry)}
+                                onTouchMove={handleTouchMove}
+                            >
+                                <div className="yt-superchat-header">
+                                    {msg.authorAvatar && (
+                                        <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+                                    )}
+                                    <div className="yt-superchat-info">
+                                        <div className="yt-superchat-author">
+                                            <PlatformTag source="youtube" />
+                                            {msg.author}
+                                        </div>
+                                        <div className="yt-superchat-amount">
+                                            <span className="gift-icon">🎉</span>
+                                            Received a gift membership
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+
                     if (msg.superchat) {
                         return (
                             <div key={getKey(entry)} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}

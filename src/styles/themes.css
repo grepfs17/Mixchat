@@ -1,0 +1,127 @@
+[data-theme="one-dark"],
+html[data-theme="one-dark"] {
+  --color-bg-primary: #282c34;
+  --color-bg-secondary: #21252b;
+  --color-bg-tertiary: #181a1f;
+  --color-bg-hover: #3e4452;
+  --color-bg-message-hover: #3e4452;
+  --color-bg-bot: #1e2227;
+  --color-border-dark: #181a1f;
+  --color-border-medium: #3e4452;
+  --color-border-light: #5c6370;
+  --color-border-lighter: #6b7280;
+  --color-text-primary: #abb2bf;
+  --color-text-secondary: #828997;
+  --color-text-muted: #5c6370;
+  --color-text-chat: #abb2bf;
+  --color-text-timestamp: #828997;
+  --color-autocomplete-bg: #21252b;
+  --color-autocomplete-border: #3e4452;
+  --color-autocomplete-selected: #3e4452;
+  --color-autocomplete-hover: #4b5263;
+  --color-bg-mention: rgba(97, 175, 239, 0.2);
+  --color-border-mention: #61afef;
+  --color-bg-twitch-event: rgba(198, 120, 221, 0.3);
+  --color-border-twitch-event: #c678dd;
+  --color-bg-cheer-event: rgba(229, 192, 123, 0.3);
+  --color-border-cheer-event: #e5c07b;
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #e5c07b;
+  --color-warning-text: #e5c07b;
+}
+
+[data-theme="catppuccin"],
+html[data-theme="catppuccin"] {
+  --color-bg-primary: #1e1e2e;
+  --color-bg-secondary: #181825;
+  --color-bg-tertiary: #11111b;
+  --color-bg-hover: #313244;
+  --color-bg-message-hover: #313244;
+  --color-bg-bot: #181825;
+  --color-border-dark: #181825;
+  --color-border-medium: #313244;
+  --color-border-light: #45475a;
+  --color-border-lighter: #585b70;
+  --color-text-primary: #cdd6f4;
+  --color-text-secondary: #a6adc8;
+  --color-text-muted: #6c7086;
+  --color-text-chat: #cdd6f4;
+  --color-text-timestamp: #a6adc8;
+  --color-autocomplete-bg: #181825;
+  --color-autocomplete-border: #45475a;
+  --color-autocomplete-selected: #313244;
+  --color-autocomplete-hover: #45475a;
+  --color-bg-mention: rgba(137, 180, 250, 0.2);
+  --color-border-mention: #89b4fa;
+  --color-bg-twitch-event: rgba(203, 166, 247, 0.3);
+  --color-border-twitch-event: #cba6f7;
+  --color-bg-cheer-event: rgba(249, 226, 175, 0.3);
+  --color-border-cheer-event: #f9e2af;
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #f9e2af;
+  --color-warning-text: #f9e2af;
+}
+
+[data-theme="night-owl"],
+html[data-theme="night-owl"] {
+  --color-bg-primary: #011627;
+  --color-bg-secondary: #00131f;
+  --color-bg-tertiary: #000f18;
+  --color-bg-hover: #0b2942;
+  --color-bg-message-hover: #0b2942;
+  --color-bg-bot: #00131f;
+  --color-border-dark: #000f18;
+  --color-border-medium: #0b2942;
+  --color-border-light: #1d3b53;
+  --color-border-lighter: #2a4a63;
+  --color-text-primary: #d6deeb;
+  --color-text-secondary: #8892b0;
+  --color-text-muted: #4a5568;
+  --color-text-chat: #d6deeb;
+  --color-text-timestamp: #8892b0;
+  --color-autocomplete-bg: #00131f;
+  --color-autocomplete-border: #1d3b53;
+  --color-autocomplete-selected: #0b2942;
+  --color-autocomplete-hover: #1d3b53;
+  --color-bg-mention: rgba(130, 170, 255, 0.2);
+  --color-border-mention: #82aaff;
+  --color-bg-twitch-event: rgba(199, 146, 234, 0.3);
+  --color-border-twitch-event: #c792ea;
+  --color-bg-cheer-event: rgba(255, 203, 107, 0.3);
+  --color-border-cheer-event: #ffcb6b;
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #ffcb6b;
+  --color-warning-text: #ffcb6b;
+}
+
+[data-theme="monokai"],
+html[data-theme="monokai"] {
+  --color-bg-primary: #272822;
+  --color-bg-secondary: #1e1f1c;
+  --color-bg-tertiary: #181916;
+  --color-bg-hover: #3e3d32;
+  --color-bg-message-hover: #3e3d32;
+  --color-bg-bot: #1e1f1c;
+  --color-border-dark: #181916;
+  --color-border-medium: #3e3d32;
+  --color-border-light: #575647;
+  --color-border-lighter: #75715e;
+  --color-text-primary: #f8f8f2;
+  --color-text-secondary: #a1a094;
+  --color-text-muted: #75715e;
+  --color-text-chat: #f8f8f2;
+  --color-text-timestamp: #a1a094;
+  --color-autocomplete-bg: #1e1f1c;
+  --color-autocomplete-border: #575647;
+  --color-autocomplete-selected: #3e3d32;
+  --color-autocomplete-hover: #49483e;
+  --color-bg-mention: rgba(102, 217, 239, 0.2);
+  --color-border-mention: #66d9ef;
+  --color-bg-twitch-event: rgba(174, 129, 255, 0.3);
+  --color-border-twitch-event: #ae81ff;
+  --color-bg-cheer-event: rgba(230, 219, 116, 0.3);
+  --color-border-cheer-event: #e6db74;
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #e6db74;
+  --color-warning-text: #e6db74;
+}

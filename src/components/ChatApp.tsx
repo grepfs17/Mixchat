@@ -15,7 +15,7 @@ import RaidNotification from './RaidNotification';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import { getStreamStatus, getRecentMessages, deleteChatMessage, createBan, checkUserModStatus, sendHelixMessage, resolveBroadcasterId, removeBan, clearChat, getChannelInfo, updateChannelInfo, searchCategories } from '../lib/twitch';
-import type { ChatMessage, Platform, PlatformSession, ChatFont, MessageType } from '../lib/types';
+import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
@@ -60,6 +60,7 @@ interface ChatAppProps {
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
   splitChatEnabled?: boolean;
+  chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
   eventSounds?: Record<string, string>;
   /** Called when the viewer clicks "Follow Raid" on the raid banner */
@@ -89,6 +90,7 @@ export default function ChatApp({
   showDeletedMessages = true,
   compactActions = false,
   splitChatEnabled = false,
+  chatTheme = 'default' as ChatTheme,
   hideViewerCount = false,
   eventSounds = {},
   onFollowRaid,
@@ -1438,6 +1440,34 @@ export default function ChatApp({
       )}
       <NewFeaturesModal />
       <MobileTouchHintModal twitchConnected={twitchConnected} />
+      {chatTheme === 'mushu' && (
+        <>
+          <img
+            src="/themes/Mushu/mushu.webp"
+            alt="Mushu"
+            className="mushu-theme-mascot"
+          />
+          <img
+            src="/themes/Mushu/mushuKnife.webp"
+            alt="Mushu Knife"
+            className="mushu-theme-knife"
+          />
+        </>
+      )}
+      {chatTheme === 'lunita' && (
+        <>
+          <img
+            src="/themes/Lunita/lunateDrama.webp"
+            alt="Lunita Drama"
+            className="lunita-theme-drama"
+          />
+          <img
+            src="/themes/Lunita/lunateLurk.webp"
+            alt="Lunita Lurk"
+            className="lunita-theme-lurk"
+          />
+        </>
+      )}
     </div>
   );
 }

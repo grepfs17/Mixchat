@@ -20,6 +20,9 @@ interface ChatMessage {
   badges?: Record<string, string>;
   parts: MessagePart[];
   timestamp: Date;
+  messageType?: string;
+  giftCount?: number;
+  recipientName?: string;
   superchat?: {
     amount: string;
     color: string;
@@ -313,6 +316,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     if (item.is(YTNodes.LiveChatPaidMessage)) return parseChatItem(item);
     if (item.is(YTNodes.LiveChatPaidSticker)) return parseChatItem(item);
     if (item.is(YTNodes.LiveChatMembershipItem)) return parseChatItem(item);
+    if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) return parseGiftPurchaseAnnouncement(item);
+    if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) return parseGiftRedemptionAnnouncement(item);
     return null;
   };
 
@@ -570,3 +575,95 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     },
   });
 };
+
+// Gift announcement parsers (from main branch)
+function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
+  const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
+  const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
+
+  return {
+    ...base,
+    messageType: 'gift-purchase',
+    superchat: {
+      amount,
+      color: '#9c27b0', // Purple for gift purchases
+    },
+    giftCount,
+  };
+}
+
+function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
+  const base = parseLiveChatMessage(msg);
+  const recipientName = msg.recipient?.name?.toString() || msg.header_subtext?.toString() || '';
+
+  return {
+    ...base,
+    messageType: 'gift-redemption',
+    recipientName,
+    superchat: {
+      amount: 'Gift received',
+      color: '#4caf50', // Green for gift redemptions
+    },
+  };
+}
+
+function parseLiveChatMessage(msg: any): ChatMessage {
+  const parts: MessagePart[] = [];
+  const message = msg.message || msg.header_subtext;
+
+  if (message && message.runs) {
+    for (const run of message.runs) {
+      if (run.emoji) {
+        const emoji = run.emoji;
+        const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
+        const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
+        const isCustom = !!emoji.is_custom;
+
+        if (!isCustom) {
+          if (emoji.emoji_id) parts.push({ type: 'text', text: emoji.emoji_id });
+          continue;
+        }
+
+        if (!url) continue;
+
+        parts.push({
+          type: 'emoji',
+          url,
+          alt: name,
+          emojiText: name,
+          isCustomEmoji: true,
+        });
+      } else {
+        parts.push({ type: 'text', text: run.text || '' });
+      }
+    }
+  }
+
+  const badges: Record<string, string> = {};
+  if (msg.author?.badges) {
+    for (const badge of msg.author.badges) {
+      if (badge.thumbnails && badge.thumbnails[0]) {
+        badges[badge.label || 'badge'] = badge.thumbnails[0].url;
+      }
+    }
+  }
+
+  const rawTimestamp = parseInt(msg.timestamp || msg.timestamp_usec || '0');
+  const asMillisecondsDirectly = new Date(rawTimestamp);
+  const asUsToMs = new Date(rawTimestamp / 1000);
+  const now = new Date();
+  const msTimeDiff = Math.abs(now.getTime() - asMillisecondsDirectly.getTime());
+  const usTimeDiff = Math.abs(now.getTime() - asUsToMs.getTime());
+  const timestamp = msTimeDiff < usTimeDiff ? asMillisecondsDirectly : asUsToMs;
+
+  return {
+    id: msg.id,
+    author: msg.author?.name?.toString() || 'Unknown',
+    authorChannelId: msg.author?.id,
+    authorAvatar: Array.isArray(msg.author?.thumbnails) ? msg.author.thumbnails[0]?.url : undefined,
+    badges,
+    parts,
+    timestamp,
+  };
+}
