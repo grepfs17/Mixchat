@@ -79,12 +79,15 @@ export function useRaidDetection({
     /** Resets the watchdog timer. If no message arrives within the window, reconnect. */
     const resetKeepalive = (timeoutSeconds: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
+      const raw = Number(timeoutSeconds);
+      const fallback = (Number.isFinite(raw) && raw > 0) ? raw : 10;
+      const ms = (fallback + KEEPALIVE_GRACE_S) * 1000;
       keepaliveTimer = setTimeout(
         () => {
           console.warn("[useRaidDetection] Keepalive timeout — reconnecting");
           ws?.close();
         },
-        (timeoutSeconds + KEEPALIVE_GRACE_S) * 1000,
+        ms,
       );
     };
 
