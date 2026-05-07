@@ -16,6 +16,7 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
     "style",
     "loading",
     "data-emote-name",
+    "data-emote-source",
     "data-tooltip-url",
     // <a>
     "href",
@@ -834,7 +835,7 @@ function replaceSize(url: string): string {
   }
   return parts.join("/");
 }
-function createEmoteImg(emoteUrl: string, emoteName: string): string {
+function createEmoteImg(emoteUrl: string, emoteName: string, source: string = "Twitch"): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   // Convert any quality URL to 4x quality for tooltip (highest resolution)
   let highQualityUrl = emoteUrl;
@@ -845,14 +846,14 @@ function createEmoteImg(emoteUrl: string, emoteName: string): string {
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" class="chat-emote" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" loading="lazy" />`;
+  return `<img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" loading="lazy" />`;
 }
 
 /**
  * Create an overlay (zero-width) emote wrapped in a positioning span.
  * The span is absolutely centred over the base emote by CSS.
  */
-function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
+function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string, source: string = "7TV"): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
@@ -862,7 +863,7 @@ function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string): string {
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" class="chat-emote" style="height: 2em; cursor: pointer;" loading="lazy" /></span>`;
+  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; cursor: pointer;" loading="lazy" /></span>`;
 }
 
 const parseCache = new Map<string, string>();
@@ -897,7 +898,7 @@ export function parseMessageWithEmotes(
         replacements.push({
           start,
           end: end + 1,
-          html: createEmoteImg(emoteUrl, emoteName),
+          html: createEmoteImg(emoteUrl, emoteName, "Twitch"),
         });
       });
     });
@@ -1008,7 +1009,7 @@ function parseThirdPartyEmotes(text: string): string {
 
       // Check Twitch native emotes (from cache map, manually typed)
       if (emotesTwitch[word]) {
-        output.push(createEmoteImg(emotesTwitch[word], word));
+        output.push(createEmoteImg(emotesTwitch[word], word, "Twitch"));
         i++;
         continue;
       }
@@ -1018,11 +1019,11 @@ function parseThirdPartyEmotes(text: string): string {
         const url = emotes7tv[word];
         if (isZeroWidthUrl(url)) {
           // Orphan zero-width emote (no preceding base) — render normally
-          output.push(createEmoteImg(getEmoteUrl(url), word));
+          output.push(createEmoteImg(getEmoteUrl(url), word, "7TV"));
           i++;
         } else {
           // Regular 7TV emote: look ahead for consecutive zero-width emotes
-          const baseHtml = createEmoteImg(url, word);
+          const baseHtml = createEmoteImg(url, word, "7TV");
           const overlays: string[] = [];
           let j = i + 1;
           while (j < words.length) {
@@ -1052,14 +1053,14 @@ function parseThirdPartyEmotes(text: string): string {
 
       // Check BTTV
       if (emotesBttv[word]) {
-        output.push(createEmoteImg(emotesBttv[word], word));
+        output.push(createEmoteImg(emotesBttv[word], word, "BTTV"));
         i++;
         continue;
       }
 
       // Check FFZ
       if (emotesFfz[word]) {
-        output.push(createEmoteImg(emotesFfz[word], word));
+        output.push(createEmoteImg(emotesFfz[word], word, "FFZ"));
         i++;
         continue;
       }

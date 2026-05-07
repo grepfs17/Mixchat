@@ -5,9 +5,10 @@ import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
 import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
 import ChatHeader from './ChatHeader';
 import ChatMessageItem from './ChatMessageItem';
-import EmoteTooltip from './EmoteTooltip';
-import TimeoutMenu from './TimeoutMenu';
+import EmoteTooltip from '../shared/EmoteTooltip';
+import TimeoutMenu from '../shared/TimeoutMenu';
 import MessageMenu from './MessageMenu';
+import ScrollToBottomButton from '../shared/ScrollToBottomButton';
 import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './types';
 
 interface ChatDisplayProps {
@@ -210,9 +211,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
     if (e.type === 'mouseenter') {
       const tooltipUrl = target.getAttribute('data-tooltip-url');
       const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+      const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
       if (tooltipUrl) {
         const rect = target.getBoundingClientRect();
-        setEmoteTooltip({ url: tooltipUrl, name: emoteName, x: rect.left, y: rect.top });
+        setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
       }
     } else if (e.type === 'mouseleave') {
       setEmoteTooltip(null);
@@ -324,7 +326,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       )}
 
       {!isAtBottom && !unifiedChatSlot && (
-        <button
+        <ScrollToBottomButton
+          count={newMessagesCount}
           onClick={() => {
             if (messagesContainerRef.current) {
               messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -333,17 +336,14 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
               setPreviousMessageCount(filteredMessages.length);
             }
           }}
-          className="go-to-bottom-button"
-          title="Go to latest messages"
-        >
-          {newMessagesCount > 0 ? `New Messages (${newMessagesCount})` : 'New Messages'}
-        </button>
+        />
       )}
 
       {emoteTooltip && (
         <EmoteTooltip
           url={emoteTooltip.url}
           name={emoteTooltip.name}
+          source={emoteTooltip.source}
           x={emoteTooltip.x}
           y={emoteTooltip.y}
         />

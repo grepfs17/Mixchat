@@ -446,6 +446,16 @@
   word-break: break-word;
 }
 
+.chat-emote-tooltip-source {
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  text-align: center;
+  word-break: break-word;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
 .sidebar-toggle-button {
   padding: 6px 12px;
   background-color: rgba(255, 255, 255, 0.05);

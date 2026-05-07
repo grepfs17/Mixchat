@@ -6,9 +6,9 @@ import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnK
 import { TwitchMessageItem } from './TwitchMessageItem';
 import { YouTubeMessageItem } from './YouTubeMessageItem';
 import { MessageContextMenu } from './MessageContextMenu';
-import { TimeoutContextMenu } from './TimeoutContextMenu';
-import { EmoteTooltip } from './EmoteTooltip';
-import { ScrollToBottomButton } from './ScrollToBottomButton';
+import TimeoutMenu from '../shared/TimeoutMenu';
+import EmoteTooltip from '../shared/EmoteTooltip';
+import ScrollToBottomButton from '../shared/ScrollToBottomButton';
 import type { UnifiedEntry, YTMessage, MessagePart } from './types';
 import { getKey, getTime } from './types';
 
@@ -60,7 +60,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     const [isAtBottom, setIsAtBottom] = useState(true);
     const [newMessagesCount, setNewMessagesCount] = useState(0);
     const prevCountRef = useRef(0);
-    const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
+    const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
     const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
 
@@ -136,9 +136,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             if (e.type === 'mouseenter') {
                 const tooltipUrl = target.getAttribute('data-tooltip-url');
                 const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+                const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
                 if (tooltipUrl) {
                     const rect = target.getBoundingClientRect();
-                    setEmoteTooltip({ url: tooltipUrl, name: emoteName, x: rect.left, y: rect.top });
+                    setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
                 }
             } else if (e.type === 'mouseleave') {
                 setEmoteTooltip(null);
@@ -254,11 +255,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             )}
 
             {timeoutMenu && (
-                <TimeoutContextMenu
-                    x={timeoutMenu.x}
-                    y={timeoutMenu.y}
+                <TimeoutMenu
                     userId={timeoutMenu.userId}
                     username={timeoutMenu.username}
+                    x={timeoutMenu.x}
+                    y={timeoutMenu.y}
                     onTimeout={(userId, seconds, username) => onTimeoutUser?.(userId, seconds, username)}
                     onClose={() => setTimeoutMenu(null)}
                 />

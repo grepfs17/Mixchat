@@ -36,6 +36,7 @@ export default function YTMessageParts({ parts, variant = 'standalone' }: YTMess
                             className="chat-emote"
                             data-tooltip-url={part.url}
                             data-emote-name={part.alt || part.emojiText || 'Emoji'}
+                            data-emote-source="YouTube"
                             style={{
                                 width: part.isCustomEmoji ? '28px' : '18px',
                                 height: part.isCustomEmoji ? '28px' : '18px',

@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 interface EmoteTooltipProps {
   url: string;
   name: string;
+  source: string;
   x: number;
   y: number;
 }
 
-export default function EmoteTooltip({ url, name, x, y }: EmoteTooltipProps) {
+export default function EmoteTooltip({ url, name, source, x, y }: EmoteTooltipProps) {
   return createPortal(
     <div
       className="chat-emote-tooltip"
@@ -22,6 +23,7 @@ export default function EmoteTooltip({ url, name, x, y }: EmoteTooltipProps) {
     >
       <img src={url} alt={name} />
       <div className="chat-emote-tooltip-name">{name}</div>
+      <div className="chat-emote-tooltip-source">{source}</div>
     </div>,
     document.body
   );

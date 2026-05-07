@@ -16,6 +16,7 @@ export interface TimeoutMenuState {
 export interface EmoteTooltipState {
   url: string;
   name: string;
+  source: string;
   x: number;
   y: number;
 }
