@@ -108,6 +108,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         <RaidNotification
           raid={pendingRaid}
           isInitiator={isRaidInitiator}
+          broadcasterChannel={selectedTwitchChannelName}
           onRaidNow={() => {
             onFollowRaid?.(pendingRaid.targetLogin);
             setPendingRaid(null);

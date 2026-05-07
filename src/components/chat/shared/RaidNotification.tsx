@@ -10,6 +10,7 @@ const RAID_COOLDOWN_SECONDS = 10;
 interface RaidNotificationProps {
   raid: RaidOutEvent;
   isInitiator?: boolean;
+  broadcasterChannel?: string;
   onFollowRaid?: () => void;
   onRaidNow?: () => void;
   onCancelRaid?: () => void;
@@ -19,6 +20,7 @@ interface RaidNotificationProps {
 export default function RaidNotification({
   raid,
   isInitiator = false,
+  broadcasterChannel,
   onFollowRaid,
   onRaidNow,
   onCancelRaid,
@@ -103,11 +105,25 @@ export default function RaidNotification({
                 Cancel
               </button>
             </div>
-            <span className="raid-countdown">
-              {isCooldown
-                ? `Preparing… ${cooldownLeft}s`
-                : `Twitch auto-raids in ${secondsLeft}s`}
-            </span>
+            <div className="raid-initiator-meta">
+              <span className="raid-countdown">
+                {isCooldown
+                  ? `Preparing… ${cooldownLeft}s`
+                  : `Twitch auto-raids in ${secondsLeft}s`}
+              </span>
+              {broadcasterChannel && (
+                <a
+                  href={`https://www.twitch.tv/${encodeURIComponent(broadcasterChannel)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="raid-open-twitch-link"
+                  title="Open your Twitch channel to see the raid popup"
+                >
+                  <FaTwitch size={12} />
+                  Open on Twitch
+                </a>
+              )}
+            </div>
           </div>
         ) : (
           <>

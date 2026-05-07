@@ -198,6 +198,31 @@
   background: rgba(255, 107, 107, 0.08);
 }
 
+.raid-initiator-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.raid-open-twitch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-twitch);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.raid-open-twitch-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
 .raid-countdown {
   color: var(--color-text-muted);
   font-size: 11px;
