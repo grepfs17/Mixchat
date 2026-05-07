@@ -2,7 +2,7 @@ import { MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning 
 import type { ChatMessage } from '../../../lib/types';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
 import MessageBadges from '../../MessageBadges';
-import TwitchEventIcon from '../../TwitchEventIcon';
+import TwitchEventIcon, { EVENT_CONFIG } from '../../TwitchEventIcon';
 import { PlatformTag } from './PlatformTag';
 import type { UnifiedEntry } from './types';
 
@@ -70,7 +70,7 @@ export function TwitchMessageItem({
     const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
 
     const eventStyle = (() => {
-        const cfg = (msg.messageType && (TwitchEventIcon as any).EVENT_CONFIG?.[msg.messageType]) || undefined;
+        const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
         return cfg ? { '--event-color': cfg.color, '--event-bg': cfg.bg } as React.CSSProperties : undefined;
     })();
 
