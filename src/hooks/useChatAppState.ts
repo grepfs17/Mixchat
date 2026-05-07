@@ -331,8 +331,9 @@ export function useChatAppState({
   // ── Moderator status effects ──
   useEffect(() => {
     if (twitchSession && selectedTwitchChannelName) {
-      const isOwner = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
-      if (isOwner) {
+      const isOwnerByName = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      const isOwnerById = twitchSession.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+      if (isOwnerByName || isOwnerById) {
         setIsModerator(true);
         setModModeActive(true);
       } else {
@@ -341,7 +342,7 @@ export function useChatAppState({
     } else {
       setModModeActive(false);
     }
-  }, [twitchSession, selectedTwitchChannelName]);
+  }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel]);
 
   useEffect(() => {
     const checkModViaApi = async () => {
@@ -370,11 +371,13 @@ export function useChatAppState({
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
         currentUserBadgesRef.current = { badges, badgeDetails };
       }
-      const isOwner = (twitchSession?.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      const isOwnerByName = (twitchSession?.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
+      const isOwnerById = twitchSession?.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+      const isOwner = isOwnerByName || isOwnerById;
       const isMod = Boolean(badges && (badges['moderator'] || badges['broadcaster']));
       setIsModerator(isMod || isOwner);
     },
-    [twitchSession?.username, selectedTwitchChannelName]
+    [twitchSession?.username, twitchSession?.userId, selectedTwitchChannelName, selectedTwitchChannel]
   );
 
   // ── Message deleted handler ──
@@ -427,8 +430,6 @@ export function useChatAppState({
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
-    setIsModerator(false);
-    setModModeActive(false);
     setStreamTitle('');
     setStreamGameName('');
     if (selectedTwitchChannelName && selectedTwitchChannel) {
