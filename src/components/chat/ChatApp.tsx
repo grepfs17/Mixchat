@@ -16,6 +16,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     isLoading,
     pendingRaid,
     setPendingRaid,
+    isRaidInitiator,
+    setIsRaidInitiator,
     isRefreshingEmotes,
     selectedPlatforms,
     replyingTo,
@@ -51,6 +53,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleCancelRaid,
     handleUpdateTitle,
     handleUpdateCategory,
     handleSearchCategories,
@@ -104,6 +107,13 @@ export default function ChatApp(props: ChatAppStateProps) {
       {pendingRaid && (
         <RaidNotification
           raid={pendingRaid}
+          isInitiator={isRaidInitiator}
+          onRaidNow={() => {
+            onFollowRaid?.(pendingRaid.targetLogin);
+            setPendingRaid(null);
+            setIsRaidInitiator(false);
+          }}
+          onCancelRaid={handleCancelRaid}
           onFollowRaid={() => {
             onFollowRaid?.(pendingRaid.targetLogin);
             setPendingRaid(null);

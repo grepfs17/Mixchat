@@ -230,6 +230,69 @@ export const clearChat = async (broadcasterId: string, moderatorId: string) => {
   }
 };
 
+/**
+ * Start a raid to another channel.
+ */
+export const startRaid = async (
+  fromBroadcasterId: string,
+  toBroadcasterId: string,
+) => {
+  try {
+    const resolvedFromId = await resolveBroadcasterId(fromBroadcasterId);
+    const resolvedToId = await resolveBroadcasterId(toBroadcasterId);
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/raids&from_broadcaster_id=${encodeURIComponent(
+        resolvedFromId,
+      )}&to_broadcaster_id=${encodeURIComponent(resolvedToId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to start raid: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("startRaid failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel a pending raid.
+ */
+export const cancelRaid = async (broadcasterId: string) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/raids&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to cancel raid: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("cancelRaid failed:", error);
+    throw error;
+  }
+};
+
 export const refreshTwitchAccessToken = async (
   refreshToken: string,
   clientId: string,

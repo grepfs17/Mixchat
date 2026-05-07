@@ -18,6 +18,8 @@ import {
   getChannelInfo,
   updateChannelInfo,
   searchCategories,
+  startRaid,
+  cancelRaid,
 } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
@@ -90,6 +92,7 @@ export function useChatAppState({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
+  const [isRaidInitiator, setIsRaidInitiator] = useState(false);
   const [isRefreshingEmotes, setIsRefreshingEmotes] = useState(false);
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
@@ -399,6 +402,7 @@ export function useChatAppState({
     enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
     onRaidOut: (raid) => {
       setPendingRaid(raid);
+      setIsRaidInitiator(false);
     },
     onScopeError: () => {
       notificationIdRef.current += 1;
@@ -696,6 +700,50 @@ export function useChatAppState({
                 }
               }
 
+              if (cmd === '/raid' || cmd === '/unraid') {
+                const isOwnerByName = (twitchSession?.username || '').toLowerCase() === (selectedTwitchChannelName || '').toLowerCase();
+                const isOwnerById = twitchSession?.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+                if (!isOwnerByName && !isOwnerById) {
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Only the broadcaster can start or cancel a raid', type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+
+                try {
+                  if (cmd === '/unraid') {
+                    await cancelRaid(selectedTwitchChannel);
+                    setPendingRaid(null);
+                    setIsRaidInitiator(false);
+                    notificationIdRef.current += 1;
+                    setNotification({ message: 'Raid cancelled', type: 'success', id: notificationIdRef.current });
+                  } else {
+                    const targetUser = parts[1];
+                    if (!targetUser) throw new Error('/raid requires a username');
+
+                    const resolvedTargetId = await resolveBroadcasterId(targetUser);
+                    if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                      throw new Error(`Could not find user ${targetUser}`);
+                    }
+
+                    await startRaid(selectedTwitchChannel, resolvedTargetId);
+                    setPendingRaid({
+                      targetLogin: targetUser,
+                      targetDisplayName: targetUser,
+                      viewerCount: 0,
+                    });
+                    setIsRaidInitiator(true);
+                    notificationIdRef.current += 1;
+                    setNotification({ message: `Raiding ${targetUser}`, type: 'success', id: notificationIdRef.current });
+                  }
+                  return;
+                } catch (err: any) {
+                  console.error(`Raid command ${cmd} failed:`, err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || `Failed to execute ${cmd}`, type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+              }
+
               await sendTwitchMessage(message, replyingTo?.id);
             } else {
               const serverMessageId = await sendHelixMessage(
@@ -890,6 +938,21 @@ export function useChatAppState({
     }
   }, [sendTwitchMessage]);
 
+  const handleCancelRaid = useCallback(async () => {
+    if (!selectedTwitchChannel) return;
+    try {
+      await cancelRaid(selectedTwitchChannel);
+      setPendingRaid(null);
+      setIsRaidInitiator(false);
+      notificationIdRef.current += 1;
+      setNotification({ message: 'Raid cancelled', type: 'success', id: notificationIdRef.current });
+    } catch (err: any) {
+      console.error('Failed to cancel raid:', err);
+      notificationIdRef.current += 1;
+      setNotification({ message: err.message || 'Failed to cancel raid', type: 'error', id: notificationIdRef.current });
+    }
+  }, [selectedTwitchChannel]);
+
   const handleUpdateTitle = useCallback(async (title: string) => {
     if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
     try {
@@ -1003,6 +1066,7 @@ export function useChatAppState({
     messages,
     isLoading,
     pendingRaid,
+    isRaidInitiator,
     isRefreshingEmotes,
     selectedPlatforms,
     replyingTo,
@@ -1039,6 +1103,7 @@ export function useChatAppState({
     setAutoVideoId,
     setNotification,
     setPendingRaid,
+    setIsRaidInitiator,
 
     // Handlers
     handleSendMessage,
@@ -1049,6 +1114,7 @@ export function useChatAppState({
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleCancelRaid,
     handleUpdateTitle,
     handleUpdateCategory,
     handleSearchCategories,
