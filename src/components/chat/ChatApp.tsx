@@ -1,6 +1,5 @@
 import ChatDisplay from './display';
 import MobileTouchHintModal from './shared/MobileTouchHintModal';
-import NewFeaturesModal from './shared/NewFeaturesModal';
 import MessageInput from './shared/MessageInput';
 import Notification from './shared/Notification';
 import YouTubeChat from './shared/YouTubeChat';
@@ -312,7 +311,6 @@ export default function ChatApp(props: ChatAppStateProps) {
           isFollowing={isFollowingChannelState}
         />
       )}
-      <NewFeaturesModal />
       <MobileTouchHintModal twitchConnected={twitchConnected} />
       {chatTheme === 'mushu' && (
         <>
