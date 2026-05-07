@@ -107,7 +107,7 @@ export default function ChatMessageItem({
             title="Jump to original message"
           >
             <span>response to{' '}
-              <span style={{ color: authorColorById.get(msg.replyTo.id) || '#94a3b8' }}>
+              <span style={{ color: getReadableUsernameColor(authorColorById.get(msg.replyTo.id)) || '#94a3b8' }}>
                 @{msg.replyTo.author}
               </span>
               {msg.replyTo.content && (
