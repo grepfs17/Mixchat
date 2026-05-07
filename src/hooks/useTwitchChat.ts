@@ -264,6 +264,21 @@ function buildUserChatMessage(
   };
 }
 
+/** Shift Twitch emote offsets by a prefix length so they align with prefixed content. */
+function shiftEmoteOffsets(
+  emoteOffsets: Map<string, string[]>,
+  shift: number,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  emoteOffsets.forEach((offsets, emoteId) => {
+    result[emoteId] = offsets.map((pos) => {
+      const [start, end] = pos.split("-").map(Number);
+      return `${start + shift}-${end + shift}`;
+    });
+  });
+  return result;
+}
+
 // Single shared AudioContext — reusing it avoids the browser suspending a
 // freshly-created context that has no prior user-gesture association.
 let sharedAudioCtx: AudioContext | null = null;
@@ -723,9 +738,13 @@ export function useTwitchChat(
 
     newClient.onAnnouncement((_channel, _user, _announcementInfo, msg) => {
       if (!active) return;
+      const emotes = msg.emoteOffsets.size > 0
+        ? Object.fromEntries(msg.emoteOffsets)
+        : undefined;
       const chatMessage = buildUserChatMessage(msg, msg.text ?? "", username, {
         messageType: "announcement",
         isBot: false,
+        ...(emotes ? { emotes } : {}),
       });
       const userId = msg.userInfo.userId;
       if (!getCachedAvatar(userId) && userId) {
@@ -810,9 +829,14 @@ export function useTwitchChat(
             : subInfo.plan === "2000"
               ? "2"
               : "1";
-      const content = `subscribed with ${subInfo.plan === "Prime" ? "Prime Gaming" : `a Tier ${tier} subscription`}${subInfo.message ? ` - ${subInfo.message}` : ""}`;
+      const prefix = `subscribed with ${subInfo.plan === "Prime" ? "Prime Gaming" : `a Tier ${tier} subscription`}`;
+      const content = subInfo.message ? `${prefix} - ${subInfo.message}` : prefix;
+      const overrides: Partial<ChatMessage> = { messageType: "subscription" };
+      if (subInfo.message && msg.emoteOffsets.size > 0) {
+        overrides.emotes = shiftEmoteOffsets(msg.emoteOffsets, prefix.length + 3);
+      }
 
-      onMessage(buildUserChatMessage(msg, content, username, { messageType: "subscription" }));
+      onMessage(buildUserChatMessage(msg, content, username, overrides));
 
       const soundData = eventSoundsRef.current["subscription"];
       if (soundData) {
@@ -824,9 +848,14 @@ export function useTwitchChat(
       if (!active) return;
       const monthsCount = subInfo.months;
       const monthLabel = monthsCount === 1 ? "month" : "months";
-      const content = `resubscribed for ${monthsCount} ${monthLabel}${subInfo.message ? ` - ${subInfo.message}` : ""}`;
+      const prefix = `resubscribed for ${monthsCount} ${monthLabel}`;
+      const content = subInfo.message ? `${prefix} - ${subInfo.message}` : prefix;
+      const overrides: Partial<ChatMessage> = { messageType: "resub" };
+      if (subInfo.message && msg.emoteOffsets.size > 0) {
+        overrides.emotes = shiftEmoteOffsets(msg.emoteOffsets, prefix.length + 3);
+      }
 
-      onMessage(buildUserChatMessage(msg, content, username, { messageType: "resub" }));
+      onMessage(buildUserChatMessage(msg, content, username, overrides));
 
       const soundData = eventSoundsRef.current["resub"];
       if (soundData) {
@@ -890,6 +919,13 @@ export function useTwitchChat(
       const userId = msg.tags.get("user-id") || undefined;
       const msgId = msg.tags.get("id") || crypto.randomUUID();
       const userMessage = msg.text ?? "";
+      const prefix = userMessage ? `[${streakCount} streak] - ` : `[${streakCount} streak]`;
+      const content = userMessage ? `${prefix}${userMessage}` : prefix;
+
+      let emotes: Record<string, string[]> | undefined;
+      if (userMessage && msg.emoteOffsets.size > 0) {
+        emotes = shiftEmoteOffsets(msg.emoteOffsets, prefix.length);
+      }
 
       const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
 
@@ -897,15 +933,13 @@ export function useTwitchChat(
         id: msgId,
         platform: "twitch",
         author: displayName,
-        content: userMessage
-          ? `[${streakCount} streak] - ${userMessage}`
-          : `[${streakCount} streak]`,
+        content,
         timestamp: new Date(),
         userId,
         authorColor: color,
         authorAvatar: cachedUserInfo?.profileImageUrl || undefined,
         mentionsUser: false,
-        emotes: {},
+        emotes: emotes || {},
         isBot: false,
         badges: {},
         badgeDetails: {},
