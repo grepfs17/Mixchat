@@ -1038,6 +1038,7 @@ export function useChatAppState({
     setManualVideoId,
     setAutoVideoId,
     setNotification,
+    setPendingRaid,
 
     // Handlers
     handleSendMessage,

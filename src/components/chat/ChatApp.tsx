@@ -16,6 +16,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     messages,
     isLoading,
     pendingRaid,
+    setPendingRaid,
     isRefreshingEmotes,
     selectedPlatforms,
     replyingTo,
@@ -106,9 +107,9 @@ export default function ChatApp(props: ChatAppStateProps) {
           raid={pendingRaid}
           onFollowRaid={() => {
             onFollowRaid?.(pendingRaid.targetLogin);
-            setNotification(null);
+            setPendingRaid(null);
           }}
-          onDismiss={() => setNotification(null)}
+          onDismiss={() => setPendingRaid(null)}
         />
       )}
 
