@@ -307,18 +307,34 @@ export const getTwitchUserById = async (
   clientId: string,
   userId: string,
 ) => {
+  if (!userId || !userId.trim()) {
+    console.warn("[getTwitchUserById] called with empty userId");
+    return null;
+  }
+  if (!clientId) {
+    console.warn("[getTwitchUserById] called with empty clientId");
+    return null;
+  }
+
   try {
-    const response = await fetch(`${TWITCH_API_BASE}/users?id=${userId}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Client-ID": clientId,
+    const response = await fetch(
+      `${TWITCH_API_BASE}/users?id=${encodeURIComponent(userId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      throw new Error(
-        `Twitch API error: ${response.status} ${response.statusText}`,
+      // Log the actual body for 400s to help diagnose malformed params
+      const body = await response.text().catch(() => "(unreadable)");
+      console.warn(
+        `[getTwitchUserById] Twitch API ${response.status} for userId=${userId}:`,
+        body,
       );
+      return null;
     }
 
     const data = await response.json();

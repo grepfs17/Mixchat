@@ -12,23 +12,39 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
 
   const userId = url.searchParams.get("userId");
 
-  if (!userId) {
-    return new Response("User ID is required", { status: 400 });
+  if (!userId || !userId.trim()) {
+    return new Response(
+      JSON.stringify({ error: "User ID is required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   // Read the access token from the httpOnly cookie — never from client input.
   const accessToken = cookies.get("twitch_token")?.value;
   if (!accessToken) {
-    return new Response("Not authenticated", { status: 401 });
+    return new Response(
+      JSON.stringify({ error: "Not authenticated" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+  if (!clientId) {
+    console.error("[user-info] PUBLIC_TWITCH_CLIENT_ID is not set");
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   try {
     const user = await getTwitchUserById(accessToken, clientId, userId);
 
     if (!user) {
-      return new Response("User not found", { status: 404 });
+      return new Response(
+        JSON.stringify({ error: "User not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify(user), {
@@ -37,6 +53,9 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     });
   } catch (error) {
     console.error("Failed to fetch user info:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    return new Response(
+      JSON.stringify({ error: "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
 };
