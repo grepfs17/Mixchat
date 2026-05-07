@@ -1,6 +1,7 @@
 import { MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import type { ChatMessage } from '../../../lib/types';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
+import { getReadableUsernameColor } from '../../../lib/chatColors';
 import MessageBadges from '../../MessageBadges';
 import TwitchEventIcon, { EVENT_CONFIG } from '../../TwitchEventIcon';
 import { PlatformTag } from './PlatformTag';
@@ -121,7 +122,7 @@ export function TwitchMessageItem({
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
-                        style={{ color: msg.isCurrentUser ? '#ffffff' : (msg.authorColor || '#e2e8f0') }}
+                        style={{ color: msg.isCurrentUser ? '#ffffff' : getReadableUsernameColor(msg.authorColor) }}
                     >
                         {msg.author}
                     </a>

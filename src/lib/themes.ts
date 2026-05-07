@@ -1,4 +1,5 @@
 import type { ChatTheme } from '../lib/types';
+import { setThemeBackgroundColor } from './chatColors';
 
 export interface ThemeColors {
   '--color-bg-primary': string;
@@ -258,4 +259,7 @@ export function applyTheme(theme: ChatTheme) {
     }
     root.setAttribute('data-theme', theme);
   }
+  // Keep the username-contrast helper in sync with the new background
+  const bg = getComputedStyle(root).getPropertyValue('--color-bg-primary').trim();
+  if (bg) setThemeBackgroundColor(bg);
 }

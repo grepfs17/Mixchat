@@ -1,4 +1,4 @@
-import { getColorFromName } from '../../../lib/chatColors';
+import { getColorFromName, getReadableUsernameColor } from '../../../lib/chatColors';
 import MessageBadges from '../../MessageBadges';
 import YTMessageParts from '../../YTMessageParts';
 import { PlatformTag } from './PlatformTag';
@@ -130,7 +130,7 @@ export function YouTubeMessageItem({
                 <PlatformTag source="youtube" />
                 {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
                 <MessageBadges badges={msg.badges} style={{ marginRight: '4px' }} lazy />
-                <span className="author" style={{ color: getColorFromName(msg.author) }}>
+                <span className="author" style={{ color: getReadableUsernameColor(getColorFromName(msg.author)) }}>
                     {msg.author}
                 </span>
                 <span className="message-separator">:</span>
