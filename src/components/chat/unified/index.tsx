@@ -1,0 +1,270 @@
+import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
+import type { ChatMessage, ChatFont } from '../../../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
+import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
+import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
+import { TwitchMessageItem } from './TwitchMessageItem';
+import { YouTubeMessageItem } from './YouTubeMessageItem';
+import { MessageContextMenu } from './MessageContextMenu';
+import { TimeoutContextMenu } from './TimeoutContextMenu';
+import { EmoteTooltip } from './EmoteTooltip';
+import { ScrollToBottomButton } from './ScrollToBottomButton';
+import type { UnifiedEntry, YTMessage, MessagePart } from './types';
+import { getKey, getTime } from './types';
+
+export type { YTMessage } from './types';
+
+interface UnifiedChatProps {
+    twitchMessages: ChatMessage[];
+    ytMessages: YTMessage[];
+    onReply?: (message: ChatMessage) => void;
+    onCopyMessage?: () => void;
+    currentUserDisplayName?: string;
+    fontSize?: number;
+    chatFont?: ChatFont;
+    isModerator?: boolean;
+    modModeActive?: boolean;
+    onToggleModMode?: () => void;
+    onDeleteMessage?: (messageId: string) => void;
+    onBanUser?: (userId: string, displayName?: string) => void;
+    onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+    onUntimeoutUser?: (userName: string) => void;
+    onWarnUser?: (userName: string) => void;
+    compactActions?: boolean;
+    splitChatEnabled?: boolean;
+}
+
+export interface UnifiedChatHandle {
+    scrollToBottom: () => void;
+}
+
+const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function UnifiedChat({
+    twitchMessages,
+    ytMessages,
+    onReply,
+    onCopyMessage,
+    currentUserDisplayName,
+    fontSize = 14,
+    chatFont = 'inter' as ChatFont,
+    isModerator = false,
+    modModeActive = false,
+    onDeleteMessage,
+    onBanUser,
+    onTimeoutUser,
+    onUntimeoutUser,
+    onWarnUser,
+    compactActions = false,
+    splitChatEnabled = false,
+}: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const [newMessagesCount, setNewMessagesCount] = useState(0);
+    const prevCountRef = useRef(0);
+    const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; x: number; y: number } | null>(null);
+    const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
+    const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
+
+    // Close menus when clicking elsewhere
+    useEffect(() => {
+        const handleClick = () => { setTimeoutMenu(null); setMessageMenu(null); };
+        if (timeoutMenu || messageMenu) {
+            window.addEventListener('click', handleClick);
+            window.addEventListener('contextmenu', handleClick);
+        }
+        return () => {
+            window.removeEventListener('click', handleClick);
+            window.removeEventListener('contextmenu', handleClick);
+        };
+    }, [timeoutMenu, messageMenu]);
+
+    useImperativeHandle(ref, () => ({
+        scrollToBottom: () => {
+            if (containerRef.current) {
+                containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                setIsAtBottom(true);
+                setNewMessagesCount(0);
+            }
+        },
+    }));
+
+    // Merge and sort messages
+    const entries: UnifiedEntry[] = (() => {
+        const tw: UnifiedEntry[] = twitchMessages.map((m) => ({ source: 'twitch' as const, msg: m }));
+        const yt: UnifiedEntry[] = ytMessages.map((m) => ({ source: 'youtube' as const, msg: m }));
+        const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
+        return merged.length > MAX_DISPLAYED_MESSAGES ? merged.slice(-MAX_DISPLAYED_MESSAGES) : merged;
+    })();
+
+    // Auto-scroll when at bottom
+    useEffect(() => {
+        if (containerRef.current && isAtBottom) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+    }, [entries, isAtBottom]);
+
+    // Mobile keyboard handling
+    useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
+
+    // Track scroll position
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handleScroll = () => {
+            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+            setIsAtBottom(atBottom);
+            if (atBottom) { setNewMessagesCount(0); prevCountRef.current = entries.length; }
+        };
+        el.addEventListener('scroll', handleScroll);
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, [entries.length]);
+
+    // New messages badge
+    useEffect(() => {
+        if (!isAtBottom) {
+            const diff = entries.length - prevCountRef.current;
+            if (diff > 0) setNewMessagesCount((p) => p + diff);
+        } else {
+            prevCountRef.current = entries.length;
+        }
+    }, [entries.length, isAtBottom]);
+
+    // Emote tooltip
+    useEffect(() => {
+        const handleEmoteHover = (e: Event) => {
+            const target = e.target as HTMLImageElement;
+            if (!target.classList.contains('chat-emote')) return;
+            if (e.type === 'mouseenter') {
+                const tooltipUrl = target.getAttribute('data-tooltip-url');
+                const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+                if (tooltipUrl) {
+                    const rect = target.getBoundingClientRect();
+                    setEmoteTooltip({ url: tooltipUrl, name: emoteName, x: rect.left, y: rect.top });
+                }
+            } else if (e.type === 'mouseleave') {
+                setEmoteTooltip(null);
+            }
+        };
+        const el = containerRef.current;
+        if (el) {
+            el.addEventListener('mouseenter', handleEmoteHover, true);
+            el.addEventListener('mouseleave', handleEmoteHover, true);
+        }
+        return () => {
+            if (el) {
+                el.removeEventListener('mouseenter', handleEmoteHover, true);
+                el.removeEventListener('mouseleave', handleEmoteHover, true);
+            }
+        };
+    }, []);
+
+    // Touch gestures
+    const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures<UnifiedEntry>({
+        onReply: onReply ? (entry) => { if (entry.source === 'twitch') onReply(entry.msg as ChatMessage); } : undefined,
+        onLongPress: (entry) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, entry }),
+        onCopyMessage,
+        getContent: (entry) => {
+            if (entry.source === 'twitch') return (entry.msg as ChatMessage).content;
+            return (entry.msg as YTMessage).parts.map((p: MessagePart) => (p.type === 'text' ? (p.text ?? '') : (p.emojiText ?? p.alt ?? ''))).join('');
+        },
+        canReply: (entry) => entry.source === 'twitch',
+    });
+
+    return (
+        <div className="unified-chat-wrapper">
+            <div
+                ref={containerRef}
+                className={`messages-container unified-messages-container${splitChatEnabled ? ' split-chat' : ''}`}
+                style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
+            >
+                {entries.length === 0 && (
+                    <div className="no-messages"><p>No messages yet. Start chatting!</p></div>
+                )}
+                {entries.map((entry, index) => {
+                    if (entry.source === 'twitch') {
+                        return (
+                            <TwitchMessageItem
+                                key={getKey(entry)}
+                                entry={entry}
+                                index={index}
+                                entries={entries}
+                                isModerator={isModerator}
+                                modModeActive={modModeActive}
+                                compactActions={compactActions}
+                                currentUserDisplayName={currentUserDisplayName}
+                                onReply={onReply}
+                                onCopyMessage={onCopyMessage}
+                                onDeleteMessage={onDeleteMessage}
+                                onBanUser={onBanUser}
+                                onTimeoutUser={onTimeoutUser}
+                                onUntimeoutUser={onUntimeoutUser}
+                                onWarnUser={onWarnUser}
+                                onTimeoutMenu={(x, y, userId, username) => setTimeoutMenu({ x, y, userId, username })}
+                                onMessageMenu={(x, y, e) => setMessageMenu({ x, y, entry: e })}
+                                onTouchStart={handleTouchStart}
+                                onTouchEnd={handleTouchEnd}
+                                onTouchMove={handleTouchMove}
+                            />
+                        );
+                    }
+                    return (
+                        <YouTubeMessageItem
+                            key={getKey(entry)}
+                            entry={entry}
+                            index={index}
+                            onTouchStart={handleTouchStart}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchMove={handleTouchMove}
+                        />
+                    );
+                })}
+            </div>
+
+            {!isAtBottom && (
+                <ScrollToBottomButton
+                    count={newMessagesCount}
+                    onClick={() => {
+                        if (containerRef.current) {
+                            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+                            setIsAtBottom(true);
+                            setNewMessagesCount(0);
+                            prevCountRef.current = entries.length;
+                        }
+                    }}
+                />
+            )}
+
+            {emoteTooltip && <EmoteTooltip {...emoteTooltip} />}
+
+            {messageMenu && (
+                <MessageContextMenu
+                    x={messageMenu.x}
+                    y={messageMenu.y}
+                    entry={messageMenu.entry}
+                    isModerator={isModerator}
+                    modModeActive={modModeActive}
+                    compactActions={compactActions}
+                    onReply={onReply}
+                    onCopyMessage={onCopyMessage}
+                    onDeleteMessage={onDeleteMessage}
+                    onTimeoutUser={onTimeoutUser}
+                    onBanUser={onBanUser}
+                    onWarnUser={onWarnUser}
+                    onClose={() => setMessageMenu(null)}
+                />
+            )}
+
+            {timeoutMenu && (
+                <TimeoutContextMenu
+                    x={timeoutMenu.x}
+                    y={timeoutMenu.y}
+                    userId={timeoutMenu.userId}
+                    username={timeoutMenu.username}
+                    onTimeout={(userId, seconds, username) => onTimeoutUser?.(userId, seconds, username)}
+                    onClose={() => setTimeoutMenu(null)}
+                />
+            )}
+        </div>
+    );
+});
+
+export default memo(UnifiedChat);

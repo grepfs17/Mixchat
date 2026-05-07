@@ -64,7 +64,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       badge: "Twitch + YouTube",
     },
     {
-      title: "Separated Views",
+      title: "Split Views",
       description: "Prefer them apart? Split Twitch and YouTube chats side by side for a clean, organized experience.",
       images: [{ src: "/demo/separated-chats.webp", alt: "Separated chat view with Twitch and YouTube side by side" }],
       badge: "Flexible Layout",

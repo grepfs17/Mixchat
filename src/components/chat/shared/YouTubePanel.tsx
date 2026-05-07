@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import YouTubeChat from './YouTubeChat';
 import YouTubeMessageInput from './YouTubeMessageInput';
-import type { PlatformSession, ChatFont } from '../lib/types';
-import type { YTMessage } from './UnifiedChat';
+import type { PlatformSession, ChatFont } from '../../../lib/types';
+import type { YTMessage } from '../unified/types';
 
 interface YouTubePanelProps {
   linkedYoutubeUrl: string;

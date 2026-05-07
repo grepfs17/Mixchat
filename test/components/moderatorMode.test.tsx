@@ -1,9 +1,9 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import ChatDisplay from '../../src/components/ChatDisplay';
-import UnifiedChat from '../../src/components/UnifiedChat';
-import MessageInput from '../../src/components/MessageInput';
+import ChatDisplay from '../../src/components/chat/display';
+import UnifiedChat from '../../src/components/chat/unified';
+import MessageInput from '../../src/components/chat/shared/MessageInput';
 import type { ChatMessage, Platform } from '../../src/lib/types';
 
 vi.mock('react-dom', async () => {

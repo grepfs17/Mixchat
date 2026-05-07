@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import LoginPanel from './LoginPanel';
-import ChatApp from './ChatApp';
+import ChatApp from './chat/ChatApp';
 import StreamEmbed from './StreamEmbed';
 import LiveNotification from './LiveNotification';
 import WatchlistManager from './WatchlistManager';

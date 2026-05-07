@@ -1,0 +1,384 @@
+import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHandle, forwardRef, useRef } from 'react';
+import type { ChatMessage, Platform, ChatFont } from '../../../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
+import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
+import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
+import ChatHeader from './ChatHeader';
+import ChatMessageItem from './ChatMessageItem';
+import EmoteTooltip from './EmoteTooltip';
+import TimeoutMenu from './TimeoutMenu';
+import MessageMenu from './MessageMenu';
+import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './types';
+
+interface ChatDisplayProps {
+  messages: ChatMessage[];
+  isLoading: boolean;
+  selectedPlatforms: Platform[];
+  onReply?: (message: ChatMessage) => void;
+  channelName?: string;
+  channelDisplayName?: string;
+  streamTitle?: string;
+  streamGameName?: string;
+  isStreamLive?: boolean;
+  streamUptime?: string;
+  viewerCount?: number | null;
+  onRefreshEmotes?: () => void;
+  isRefreshingEmotes?: boolean;
+  onToggleSidebar?: () => void;
+  sidebarVisible?: boolean;
+  onCopyMessage?: () => void;
+  showStreamEmbed?: boolean;
+  onToggleStreamEmbed?: () => void;
+  currentUserDisplayName?: string;
+  fontSize?: number;
+  chatFont?: ChatFont;
+  unifiedChatSlot?: React.ReactNode;
+  isModerator?: boolean;
+  modModeActive?: boolean;
+  onToggleModMode?: () => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onBanUser?: (userId: string, displayName?: string) => void;
+  onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+  onUntimeoutUser?: (userName: string) => void;
+  onWarnUser?: (userName: string) => void;
+  compactActions?: boolean;
+  splitChatEnabled?: boolean;
+  hideViewerCount?: boolean;
+  onUpdateTitle?: (title: string) => Promise<void>;
+  onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
+  onSearchCategories?: (query: string) => Promise<Array<{ id: string; name: string }>>;
+}
+
+export interface ChatDisplayHandle {
+  scrollToBottom: () => void;
+}
+
+const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function ChatDisplay({
+  messages,
+  isLoading,
+  selectedPlatforms,
+  onReply,
+  channelName,
+  channelDisplayName,
+  streamTitle,
+  streamGameName,
+  isStreamLive,
+  streamUptime,
+  viewerCount,
+  onRefreshEmotes,
+  isRefreshingEmotes = false,
+  onToggleSidebar,
+  sidebarVisible = true,
+  onCopyMessage,
+  showStreamEmbed = true,
+  onToggleStreamEmbed,
+  currentUserDisplayName,
+  fontSize = 14,
+  chatFont = 'inter' as ChatFont,
+  unifiedChatSlot,
+  isModerator = false,
+  modModeActive = false,
+  onToggleModMode,
+  onDeleteMessage,
+  onBanUser,
+  onTimeoutUser,
+  onUntimeoutUser,
+  onWarnUser,
+  compactActions = false,
+  splitChatEnabled = false,
+  hideViewerCount = false,
+  onUpdateTitle,
+  onUpdateCategory,
+  onSearchCategories,
+}: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [previousMessageCount, setPreviousMessageCount] = useState(0);
+  const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(null);
+  const [timeoutMenu, setTimeoutMenu] = useState<TimeoutMenuState | null>(null);
+  const [messageMenu, setMessageMenu] = useState<MessageMenuState | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = () => setTimeoutMenu(null);
+    if (timeoutMenu) {
+      window.addEventListener('click', handleClick);
+      window.addEventListener('contextmenu', handleClick);
+    }
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('contextmenu', handleClick);
+    };
+  }, [timeoutMenu]);
+
+  useEffect(() => {
+    const handleClick = () => setMessageMenu(null);
+    if (messageMenu) {
+      window.addEventListener('click', handleClick);
+      window.addEventListener('contextmenu', handleClick);
+    }
+    return () => {
+      window.removeEventListener('click', handleClick);
+      window.removeEventListener('contextmenu', handleClick);
+    };
+  }, [messageMenu]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        setIsAtBottom(true);
+        setNewMessagesCount(0);
+      }
+    },
+  }));
+
+  const authorColorById = useMemo(() => {
+    const map = new Map<string, string>();
+    messages.forEach((message) => {
+      if (message.authorColor) {
+        map.set(message.id, message.authorColor);
+      }
+    });
+    return map;
+  }, [messages]);
+
+  const filteredMessages = useMemo(() => {
+    let filtered = messages;
+
+    filtered = filtered.filter((msg, _, arr) => {
+      if (!msg.optimistic) return true;
+      const hasReal = arr.some((other) =>
+        other !== msg &&
+        !other.optimistic &&
+        other.isCurrentUser &&
+        other.userId === msg.userId &&
+        other.content === msg.content &&
+        ((other.replyTo?.id || '') === (msg.replyTo?.id || ''))
+      );
+      return !hasReal;
+    });
+
+    if (selectedPlatforms.length > 0) {
+      filtered = filtered.filter((msg) => selectedPlatforms.includes(msg.platform));
+    }
+
+    return filtered.length > MAX_DISPLAYED_MESSAGES
+      ? filtered.slice(-MAX_DISPLAYED_MESSAGES)
+      : filtered;
+  }, [messages, selectedPlatforms]);
+
+  useEffect(() => {
+    if (!isAtBottom) {
+      const newCount = filteredMessages.length - previousMessageCount;
+      if (newCount > 0) {
+        setNewMessagesCount(newCount);
+      }
+    }
+  }, [filteredMessages.length, isAtBottom, previousMessageCount]);
+
+  useEffect(() => {
+    if (messagesContainerRef.current && isAtBottom) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [filteredMessages, isAtBottom]);
+
+  useScrollToBottomOnKeyboard(messagesContainerRef, setIsAtBottom);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (messagesContainerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+        const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+        setIsAtBottom(atBottom);
+        if (atBottom) {
+          setNewMessagesCount(0);
+          setPreviousMessageCount(filteredMessages.length);
+        }
+      }
+    };
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [filteredMessages.length]);
+
+  const handleEmoteHover = useCallback((e: Event) => {
+    const target = e.target as HTMLImageElement;
+    if (!target.classList.contains('chat-emote')) return;
+    if (e.type === 'mouseenter') {
+      const tooltipUrl = target.getAttribute('data-tooltip-url');
+      const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+      if (tooltipUrl) {
+        const rect = target.getBoundingClientRect();
+        setEmoteTooltip({ url: tooltipUrl, name: emoteName, x: rect.left, y: rect.top });
+      }
+    } else if (e.type === 'mouseleave') {
+      setEmoteTooltip(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    const messagesContainer = messagesContainerRef.current;
+    if (messagesContainer) {
+      messagesContainer.addEventListener('mouseenter', handleEmoteHover, true);
+      messagesContainer.addEventListener('mouseleave', handleEmoteHover, true);
+    }
+    return () => {
+      if (messagesContainer) {
+        messagesContainer.removeEventListener('mouseenter', handleEmoteHover, true);
+        messagesContainer.removeEventListener('mouseleave', handleEmoteHover, true);
+      }
+    };
+  }, [handleEmoteHover]);
+
+  const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } = useChatTouchGestures<ChatMessage>({
+    onReply,
+    onLongPress: (msg) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, message: msg }),
+    onCopyMessage,
+    getContent: (msg) => msg.content,
+  });
+
+  const scrollToMessage = useCallback((targetId: string) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const el = container.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(targetId)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.add('message-highlight');
+    setTimeout(() => el.classList.remove('message-highlight'), 2000);
+  }, []);
+
+  return (
+    <div className="chat-display">
+      <ChatHeader
+        channelName={channelName}
+        channelDisplayName={channelDisplayName}
+        isStreamLive={isStreamLive}
+        streamUptime={streamUptime}
+        streamTitle={streamTitle}
+        streamGameName={streamGameName}
+        viewerCount={viewerCount}
+        hideViewerCount={hideViewerCount}
+        isLoading={isLoading}
+        isRefreshingEmotes={isRefreshingEmotes}
+        showStreamEmbed={showStreamEmbed}
+        sidebarVisible={sidebarVisible}
+        isModerator={isModerator}
+        modModeActive={modModeActive}
+        onToggleSidebar={onToggleSidebar}
+        onToggleStreamEmbed={onToggleStreamEmbed}
+        onRefreshEmotes={onRefreshEmotes}
+        onToggleModMode={onToggleModMode}
+        onUpdateTitle={onUpdateTitle}
+        onUpdateCategory={onUpdateCategory}
+        onSearchCategories={onSearchCategories}
+      />
+
+      {unifiedChatSlot ? (
+        unifiedChatSlot
+      ) : (
+        <div
+          className={`messages-container${splitChatEnabled ? ' split-chat' : ''}`}
+          ref={messagesContainerRef}
+          style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
+        >
+          {filteredMessages.length === 0 ? (
+            <div className="no-messages">
+              <p>No messages yet. Start chatting!</p>
+            </div>
+          ) : (
+            filteredMessages.map((msg, index) => (
+              <ChatMessageItem
+                key={msg.id}
+                msg={msg}
+                index={index}
+                filteredMessages={filteredMessages}
+                authorColorById={authorColorById}
+                currentUserDisplayName={currentUserDisplayName}
+                isModerator={isModerator}
+                modModeActive={modModeActive}
+                compactActions={compactActions}
+                onReply={onReply}
+                onCopy={handleCopy}
+                onDeleteMessage={onDeleteMessage}
+                onBanUser={onBanUser}
+                onTimeoutUser={onTimeoutUser}
+                onUntimeoutUser={onUntimeoutUser}
+                onWarnUser={onWarnUser}
+                onTimeoutMenu={setTimeoutMenu}
+                onScrollToMessage={scrollToMessage}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchMove}
+                onContextMenu={(e, msg) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMessageMenu({ x: e.clientX, y: e.clientY, message: msg });
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {!isAtBottom && !unifiedChatSlot && (
+        <button
+          onClick={() => {
+            if (messagesContainerRef.current) {
+              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+              setIsAtBottom(true);
+              setNewMessagesCount(0);
+              setPreviousMessageCount(filteredMessages.length);
+            }
+          }}
+          className="go-to-bottom-button"
+          title="Go to latest messages"
+        >
+          {newMessagesCount > 0 ? `New Messages (${newMessagesCount})` : 'New Messages'}
+        </button>
+      )}
+
+      {emoteTooltip && (
+        <EmoteTooltip
+          url={emoteTooltip.url}
+          name={emoteTooltip.name}
+          x={emoteTooltip.x}
+          y={emoteTooltip.y}
+        />
+      )}
+
+      {timeoutMenu && (
+        <TimeoutMenu
+          userId={timeoutMenu.userId}
+          username={timeoutMenu.username}
+          x={timeoutMenu.x}
+          y={timeoutMenu.y}
+          onTimeout={onTimeoutUser || (() => {})}
+          onClose={() => setTimeoutMenu(null)}
+        />
+      )}
+
+      {messageMenu && (
+        <MessageMenu
+          message={messageMenu.message}
+          x={messageMenu.x}
+          y={messageMenu.y}
+          isModerator={isModerator}
+          modModeActive={modModeActive}
+          compactActions={compactActions}
+          onReply={onReply}
+          onCopy={handleCopy}
+          onDeleteMessage={onDeleteMessage}
+          onTimeoutUser={onTimeoutUser}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+          onClose={() => setMessageMenu(null)}
+        />
+      )}
+    </div>
+  );
+});
+
+export default memo(ChatDisplay);

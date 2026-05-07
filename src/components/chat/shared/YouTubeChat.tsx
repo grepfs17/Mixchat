@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { getColorFromName } from '../lib/chatColors';
-import type { ChatFont } from '../lib/types';
-import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../lib/types';
-import YTMessageParts from './YTMessageParts';
-import { useScrollToBottomOnKeyboard } from '../hooks/useScrollToBottomOnKeyboard';
+import { getColorFromName } from '../../../lib/chatColors';
+import type { ChatFont } from '../../../lib/types';
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
+import YTMessageParts from '../../YTMessageParts';
+import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
 
 interface YouTubeChatProps {
   videoId: string;
