@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import UnifiedChat from '../../src/components/UnifiedChat';
+import UnifiedChat from '../../src/components/chat/unified';
 import type { ChatMessage } from '../../src/lib/types';
 
 describe('UnifiedChat component', () => {

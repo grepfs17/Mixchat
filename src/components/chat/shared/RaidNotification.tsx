@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { FaTwitch } from 'react-icons/fa';
-import type { RaidOutEvent } from '../hooks/useRaidDetection';
-import '../styles/RaidNotification.css';
+import type { RaidOutEvent } from '../../../hooks/useRaidDetection';
+import '../../../styles/RaidNotification.css';
 
 const AUTO_DISMISS_SECONDS = 90;
 

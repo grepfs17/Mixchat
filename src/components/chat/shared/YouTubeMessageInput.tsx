@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { FaYoutube } from 'react-icons/fa';
 import { FaRegSmile } from 'react-icons/fa';
-import { searchEmojis, EMOJI_LIST, type EmojiEntry } from '../lib/emojiShortcodes';
+import { searchEmojis, EMOJI_LIST, type EmojiEntry } from '../../../lib/emojiShortcodes';
 
 // YouTube message shape — mirrors what YouTubeChat.tsx uses internally
 interface YTMessage {

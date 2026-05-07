@@ -21,9 +21,9 @@ import {
 } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
-import type { YTMessage } from '../components/UnifiedChat';
-import type { ChatDisplayHandle } from '../components/ChatDisplay';
-import type { UnifiedChatHandle } from '../components/UnifiedChat';
+import type { YTMessage } from '../components/chat/unified/types';
+import type { ChatDisplayHandle } from '../components/chat/display';
+import type { UnifiedChatHandle } from '../components/chat/unified';
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;

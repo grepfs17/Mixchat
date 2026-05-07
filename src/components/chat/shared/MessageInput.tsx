@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { FaTimes, FaSmile, FaTwitch } from 'react-icons/fa';
-import type { Platform, ChatMessage } from '../lib/types';
-import { searchEmotes, getAllEmotesOrganized, type EmotesBySource } from '../lib/emotes';
-import { isMobileDevice } from '../lib/device';
-import EmoteMenu from './EmoteMenu';
+import type { Platform, ChatMessage } from '../../../lib/types';
+import { searchEmotes, getAllEmotesOrganized, type EmotesBySource } from '../../../lib/emotes';
+import { isMobileDevice } from '../../../lib/device';
+import EmoteMenu from '../../EmoteMenu';
 
 interface MessageInputProps {
   onSendMessage: (message: string, platforms: Platform[], replyToId?: string) => Promise<void>;

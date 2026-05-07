@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MdContentCopy, MdMoreVert } from 'react-icons/md';
-import { isMobileDevice } from '../lib/device';
+import { isMobileDevice } from '../../../lib/device';
 
 const STORAGE_KEY = 'mixchat_mobile_hint_seen';
 
