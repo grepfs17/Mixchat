@@ -243,6 +243,7 @@ export default function SplitChat({
           followerModeMinutes={safeFollowerMode}
           isFollowing={safeIsFollowing}
           isModerator={isModerator}
+          channelName={channelName}
         />
       </div>
 

@@ -229,6 +229,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             followerModeMinutes={followerModeMinutes}
             isFollowing={isFollowingChannelState}
             isModerator={isModerator}
+            channelName={selectedTwitchChannelName}
           />
 
           {/* YouTube message input (when we have a live video). Hidden when using the official embed. */}

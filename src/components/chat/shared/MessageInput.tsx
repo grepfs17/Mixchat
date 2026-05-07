@@ -19,6 +19,7 @@ interface MessageInputProps {
   followerModeMinutes?: number | null;
   isFollowing?: boolean | null;
   isModerator?: boolean;
+  channelName?: string;
 }
 
 const COMMANDS = [
@@ -47,6 +48,7 @@ function MessageInput({
   followerModeMinutes = null,
   isFollowing = null,
   isModerator = false,
+  channelName = '',
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [placeholder, _setPlaceholder] = useState('Type your message');
@@ -532,7 +534,7 @@ function MessageInput({
 
       <EmoteMenu emotes={emotesOrganized} onSelectEmote={insertEmote} isOpen={showEmotePickerMenu} onClose={() => setShowEmotePickerMenu(false)} />
 
-      {followerModeMinutes !== null && isFollowing === false && (
+      {followerModeMinutes !== null && isFollowing === false && !(channelName && currentUsername.toLowerCase() === channelName.toLowerCase()) && (
         <div className="warning" style={{ color: '#9ca3af', fontSize: '0.8rem', padding: '4px 12px', borderTop: '1px solid #1e293b' }}>
           {followerModeMinutes === 0
             ? '⚠ Follower-only chat — follow this channel to send messages'
