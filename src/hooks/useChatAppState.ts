@@ -638,6 +638,27 @@ export function useChatAppState({
 
                   if (cmd === '/unban' || cmd === '/untimeout') {
                     await removeBan(selectedTwitchChannel, twitchSession.userId, resolvedTargetId);
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: `untimeout-${targetUser}-${Date.now()}`,
+                        platform: 'twitch' as Platform,
+                        author: 'System',
+                        content: `${targetUser} timeout/ban was removed.`,
+                        timestamp: new Date(),
+                        userId: 'system',
+                        authorColor: '#22c55e',
+                        mentionsUser: false,
+                        emotes: {},
+                        isBot: true,
+                        badges: {},
+                        badgeDetails: {},
+                        messageType: 'untimeout' as MessageType,
+                        targetUsername: targetUser,
+                      },
+                    ]);
+                    notificationIdRef.current += 1;
+                    setNotification({ message: `Removed timeout/ban for ${targetUser}`, type: 'success', id: notificationIdRef.current });
                   } else {
                     let duration: number | undefined = undefined;
                     let reasonIndex = 2;
