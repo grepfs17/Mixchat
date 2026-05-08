@@ -916,10 +916,87 @@ export function useTwitchChat(
       }
     });
 
-    // Handle watch streaks (viewermilestone USERNOTICE — no dedicated Twurple event)
-    newClient.irc.onTypedMessage(UserNotice, (msg) => {
+    // Handle watch streaks & channel-point redemptions without user text
+    // (USERNOTICE events — no dedicated Twurple event for these)
+    newClient.irc.onTypedMessage(UserNotice, async (msg) => {
       if (!active) return;
-      if (msg.tags.get("msg-id") !== "viewermilestone") return;
+      const msgId = msg.tags.get("msg-id");
+
+      // ── Channel Points Redemption (no user message) ──
+      // Twitch sends USERNOTICE with msg-id=channel_points_reward for rewards
+      // that don't require user input. Rewards WITH input come as regular PRIVMSG
+      // (handled above via msg.isRedemption).
+      if (msgId === "channel_points_reward") {
+        const rewardTitle =
+          msg.tags.get("msg-param-reward-title") || "Channel Points Redemption";
+        const rewardId = msg.tags.get("msg-param-reward-id") || undefined;
+        const cost = msg.tags.get("msg-param-cost");
+        const displayName =
+          msg.tags.get("display-name") || msg.tags.get("login") || "Someone";
+        const color = msg.tags.get("color") || "#c9a2ff";
+        const userId = msg.tags.get("user-id") || undefined;
+        const redemptionMsgId = msg.tags.get("id") || crypto.randomUUID();
+        const userMessage = msg.text ?? "";
+        const prefix = cost ? `${rewardTitle} (${cost} points)` : rewardTitle;
+        const content = userMessage
+          ? `${prefix} — ${userMessage}`
+          : prefix;
+        const { badges: badgeImages, badgeDetails } = parseBadgeString(
+          msg.tags.get("badges") || "",
+        );
+        const cachedAvatar = getCachedAvatar(userId);
+
+        // Resolve reward title from cache if msg-param-reward-title is absent
+        let resolvedRewardTitle: string | undefined = rewardTitle;
+        if (!msg.tags.get("msg-param-reward-title") && rewardId) {
+          const broadcasterId = broadcasterIdRef.current;
+          if (broadcasterId) {
+            resolvedRewardTitle =
+              (await getRewardTitle(rewardId, broadcasterId, accessTokenRef.current)) || undefined;
+          }
+        }
+
+        const chatMessage: ChatMessage = {
+          id: redemptionMsgId,
+          platform: "twitch",
+          author: displayName,
+          content,
+          timestamp: new Date(),
+          userId,
+          authorColor: color,
+          authorAvatar: cachedAvatar || undefined,
+          mentionsUser: false,
+          emotes: {},
+          isBot: false,
+          badges: badgeImages,
+          badgeDetails,
+          messageType: "redemption",
+          rewardId,
+          rewardTitle: resolvedRewardTitle || rewardTitle,
+        };
+
+        const avatarPromise =
+          !cachedAvatar && userId
+            ? getUserInfo(userId, accessTokenRef.current)
+            : Promise.resolve(null);
+
+        const result = await avatarPromise;
+        onMessageRef.current({
+          ...chatMessage,
+          authorAvatar:
+            (result as { profileImageUrl?: string | null } | null)
+              ?.profileImageUrl || chatMessage.authorAvatar,
+        });
+
+        const soundData = eventSoundsRef.current["redemption"];
+        if (soundData) {
+          playEventSound("redemption", soundData);
+        }
+        return;
+      }
+
+      // ── Watch Streak ──
+      if (msgId !== "viewermilestone") return;
       if (msg.tags.get("msg-param-category") !== "watch-streak") return;
 
       const streakCount = msg.tags.get("msg-param-value") ?? "?";
@@ -927,7 +1004,7 @@ export function useTwitchChat(
         msg.tags.get("display-name") || msg.tags.get("login") || "Someone";
       const color = msg.tags.get("color") || "#FFFFFF";
       const userId = msg.tags.get("user-id") || undefined;
-      const msgId = msg.tags.get("id") || crypto.randomUUID();
+      const streakMsgId = msg.tags.get("id") || crypto.randomUUID();
       const userMessage = msg.text ?? "";
       const prefix = userMessage ? `[${streakCount} streak] - ` : `[${streakCount} streak]`;
       const content = userMessage ? `${prefix}${userMessage}` : prefix;
@@ -940,7 +1017,7 @@ export function useTwitchChat(
       const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
 
       const chatMessage: ChatMessage = {
-        id: msgId,
+        id: streakMsgId,
         platform: "twitch",
         author: displayName,
         content,
