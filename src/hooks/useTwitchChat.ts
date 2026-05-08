@@ -564,16 +564,6 @@ export function useTwitchChat(
     newClient.onMessage((_channel, _user, message, msg) => {
       if (!active) return;
 
-      if (msg.isRedemption) {
-        console.log("[useTwitchChat] Redemption PRIVMSG received:", {
-          id: msg.id,
-          isRedemption: msg.isRedemption,
-          rewardId: msg.rewardId,
-          text: message,
-          tags: Object.fromEntries(msg.tags),
-        });
-      }
-
       const replyInfo = msg.parentMessageId
         ? {
             id: msg.parentMessageId,
@@ -746,15 +736,6 @@ export function useTwitchChat(
         return;
       }
 
-      console.log("[useTwitchChat] Emitting message:", {
-        id: chatMessage.id,
-        type: chatMessage.messageType,
-        isRedemption: chatMessage.messageType === "redemption",
-        rewardId: chatMessage.rewardId,
-        rewardTitle: chatMessage.rewardTitle,
-        author: chatMessage.author,
-        content: chatMessage.content,
-      });
       onMessageRef.current(chatMessage);
 
       if (chatMessage.messageType === "redemption") {
@@ -956,7 +937,6 @@ export function useTwitchChat(
     newClient.irc.onTypedMessage(UserNotice, async (msg) => {
       if (!active) return;
       const msgId = msg.tags.get("msg-id");
-      console.log("[useTwitchChat] USERNOTICE received, msg-id:", msgId, "tags:", Object.fromEntries(msg.tags));
 
       // ── Channel Points Redemption (no user message) ──
       // Twitch sends USERNOTICE with msg-id=channel_points_reward for rewards
