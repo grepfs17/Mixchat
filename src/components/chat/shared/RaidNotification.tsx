@@ -5,7 +5,6 @@ import type { RaidOutEvent } from '../../../hooks/useRaidDetection';
 import '../../../styles/chat/RaidNotification.css';
 
 const RAID_TOTAL_SECONDS = 90;
-const RAID_COOLDOWN_SECONDS = 10;
 
 interface RaidNotificationProps {
   raid: RaidOutEvent;
@@ -41,8 +40,6 @@ export default function RaidNotification({
     return () => clearTimeout(timer);
   }, [secondsLeft, isInitiator, onRaidNow, onDismiss]);
 
-  const isCooldown = isInitiator && secondsLeft > RAID_TOTAL_SECONDS - RAID_COOLDOWN_SECONDS;
-  const cooldownLeft = isCooldown ? secondsLeft - (RAID_TOTAL_SECONDS - RAID_COOLDOWN_SECONDS) : 0;
   const progressPct = (secondsLeft / RAID_TOTAL_SECONDS) * 100;
 
   return (
@@ -74,7 +71,8 @@ export default function RaidNotification({
         {isInitiator ? (
           <>
             Raid to <strong>{raid.targetDisplayName}</strong> is pending on Twitch.
-            Viewers will transfer automatically when the countdown ends.
+            Viewers will transfer automatically when the countdown ends. If you want to launch the raid immediately, 
+            you must do it from Twitch, so please click "Open on Twitch".
           </>
         ) : (
           <>
@@ -89,40 +87,37 @@ export default function RaidNotification({
         {isInitiator ? (
           <div className="raid-initiator-controls">
             <div className="raid-initiator-buttons">
-              <button
-                className="raid-now-btn"
-                onClick={onRaidNow}
-                disabled={isCooldown}
-                title={
-                  isCooldown
-                    ? `Available in ${cooldownLeft}s`
-                    : 'Go to target channel'
-                }
-              >
-                {isCooldown ? `Go to Channel (${cooldownLeft}s)` : 'Go to Channel →'}
-              </button>
               <button className="raid-cancel-btn" onClick={onCancelRaid}>
                 Cancel
               </button>
-            </div>
-            <div className="raid-initiator-meta">
-              <span className="raid-countdown">
-                {isCooldown
-                  ? `Preparing… ${cooldownLeft}s`
-                  : `Twitch auto-raids in ${secondsLeft}s`}
-              </span>
               {broadcasterChannel && (
                 <a
                   href={`https://www.twitch.tv/${encodeURIComponent(broadcasterChannel)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="raid-open-twitch-link"
+                  className="raid-open-twitch-btn"
                   title="Open your Twitch channel to see the raid popup"
                 >
                   <FaTwitch size={12} />
                   Open on Twitch
                 </a>
               )}
+            </div>
+            <div className="raid-initiator-meta">
+              <span className="raid-countdown">
+                Twitch auto-raids in {secondsLeft}s
+              </span>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onRaidNow?.();
+                }}
+                className="raid-open-channel-link"
+                title="Go to target channel"
+              >
+                Go to channel →
+              </a>
             </div>
           </div>
         ) : (
