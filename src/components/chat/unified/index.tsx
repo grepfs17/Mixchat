@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } fr
 import type { ChatMessage, ChatFont } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
-import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
+import { useChatAutoScroll } from '../../../hooks/useChatAutoScroll';
 import { TwitchMessageItem } from './TwitchMessageItem';
 import { YouTubeMessageItem } from './YouTubeMessageItem';
 import { MessageContextMenu } from './MessageContextMenu';
@@ -57,9 +57,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     splitChatEnabled = false,
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [isAtBottom, setIsAtBottom] = useState(true);
-    const [newMessagesCount, setNewMessagesCount] = useState(0);
-    const prevCountRef = useRef(0);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
     const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
@@ -77,16 +74,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         };
     }, [timeoutMenu, messageMenu]);
 
-    useImperativeHandle(ref, () => ({
-        scrollToBottom: () => {
-            if (containerRef.current) {
-                containerRef.current.scrollTop = containerRef.current.scrollHeight;
-                setIsAtBottom(true);
-                setNewMessagesCount(0);
-            }
-        },
-    }));
-
     // Merge and sort messages
     const entries: UnifiedEntry[] = (() => {
         const tw: UnifiedEntry[] = twitchMessages.map((m) => ({ source: 'twitch' as const, msg: m }));
@@ -95,38 +82,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         return merged.length > MAX_DISPLAYED_MESSAGES ? merged.slice(-MAX_DISPLAYED_MESSAGES) : merged;
     })();
 
-    // Auto-scroll when at bottom
-    useEffect(() => {
-        if (containerRef.current && isAtBottom) {
-            containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }
-    }, [entries, isAtBottom]);
+    const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
+        containerRef,
+        messages: entries,
+    });
 
-    // Mobile keyboard handling
-    useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
-
-    // Track scroll position
-    useEffect(() => {
-        const el = containerRef.current;
-        if (!el) return;
-        const handleScroll = () => {
-            const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-            setIsAtBottom(atBottom);
-            if (atBottom) { setNewMessagesCount(0); prevCountRef.current = entries.length; }
-        };
-        el.addEventListener('scroll', handleScroll);
-        return () => el.removeEventListener('scroll', handleScroll);
-    }, [entries.length]);
-
-    // New messages badge
-    useEffect(() => {
-        if (!isAtBottom) {
-            const diff = entries.length - prevCountRef.current;
-            if (diff > 0) setNewMessagesCount((p) => p + diff);
-        } else {
-            prevCountRef.current = entries.length;
-        }
-    }, [entries.length, isAtBottom]);
+    useImperativeHandle(ref, () => ({ scrollToBottom }));
 
     // Emote tooltip
     useEffect(() => {
@@ -223,14 +184,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             {!isAtBottom && (
                 <ScrollToBottomButton
                     count={newMessagesCount}
-                    onClick={() => {
-                        if (containerRef.current) {
-                            containerRef.current.scrollTop = containerRef.current.scrollHeight;
-                            setIsAtBottom(true);
-                            setNewMessagesCount(0);
-                            prevCountRef.current = entries.length;
-                        }
-                    }}
+                    onClick={scrollToBottom}
                 />
             )}
 

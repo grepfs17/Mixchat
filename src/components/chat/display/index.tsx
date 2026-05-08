@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, memo, useCallback, useImperativeHa
 import type { ChatMessage, Platform, ChatFont } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
-import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
+import { useChatAutoScroll } from '../../../hooks/useChatAutoScroll';
 import ChatHeader from './ChatHeader';
 import ChatMessageItem from './ChatMessageItem';
 import EmoteTooltip from '../shared/EmoteTooltip';
@@ -92,13 +92,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   onUpdateCategory,
   onSearchCategories,
 }: ChatDisplayProps, ref: React.ForwardedRef<ChatDisplayHandle>) {
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [newMessagesCount, setNewMessagesCount] = useState(0);
-  const [previousMessageCount, setPreviousMessageCount] = useState(0);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(null);
   const [timeoutMenu, setTimeoutMenu] = useState<TimeoutMenuState | null>(null);
   const [messageMenu, setMessageMenu] = useState<MessageMenuState | null>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClick = () => setTimeoutMenu(null);
@@ -123,26 +120,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       window.removeEventListener('contextmenu', handleClick);
     };
   }, [messageMenu]);
-
-  useImperativeHandle(ref, () => ({
-    scrollToBottom: () => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        setIsAtBottom(true);
-        setNewMessagesCount(0);
-      }
-    },
-  }));
-
-  const authorColorById = useMemo(() => {
-    const map = new Map<string, string>();
-    messages.forEach((message) => {
-      if (message.authorColor) {
-        map.set(message.id, message.authorColor);
-      }
-    });
-    return map;
-  }, [messages]);
 
   const filteredMessages = useMemo(() => {
     let filtered = messages;
@@ -169,41 +146,22 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       : filtered;
   }, [messages, selectedPlatforms]);
 
-  useEffect(() => {
-    if (!isAtBottom) {
-      const newCount = filteredMessages.length - previousMessageCount;
-      if (newCount > 0) {
-        setNewMessagesCount(newCount);
+  const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
+      containerRef: messagesContainerRef,
+      messages: filteredMessages,
+  });
+
+  useImperativeHandle(ref, () => ({ scrollToBottom }));
+
+  const authorColorById = useMemo(() => {
+    const map = new Map<string, string>();
+    messages.forEach((message) => {
+      if (message.authorColor) {
+        map.set(message.id, message.authorColor);
       }
-    }
-  }, [filteredMessages.length, isAtBottom, previousMessageCount]);
-
-  useEffect(() => {
-    if (messagesContainerRef.current && isAtBottom) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [filteredMessages, isAtBottom]);
-
-  useScrollToBottomOnKeyboard(messagesContainerRef, setIsAtBottom);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (messagesContainerRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-        const atBottom = scrollHeight - scrollTop - clientHeight < 50;
-        setIsAtBottom(atBottom);
-        if (atBottom) {
-          setNewMessagesCount(0);
-          setPreviousMessageCount(filteredMessages.length);
-        }
-      }
-    };
-    const container = messagesContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
-    }
-  }, [filteredMessages.length]);
+    });
+    return map;
+  }, [messages]);
 
   const handleEmoteHover = useCallback((e: Event) => {
     const target = e.target as HTMLImageElement;
@@ -328,14 +286,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       {!isAtBottom && !unifiedChatSlot && (
         <ScrollToBottomButton
           count={newMessagesCount}
-          onClick={() => {
-            if (messagesContainerRef.current) {
-              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-              setIsAtBottom(true);
-              setNewMessagesCount(0);
-              setPreviousMessageCount(filteredMessages.length);
-            }
-          }}
+          onClick={scrollToBottom}
         />
       )}
 
