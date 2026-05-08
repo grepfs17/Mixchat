@@ -430,119 +430,105 @@ export function useChatAppState({
       handleMessageDeleted
     );
 
-  // ── Initialize assets on channel change ──
+  // ── Reset chat state on channel change ──
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
     setStreamTitle('');
     setStreamGameName('');
-    if (selectedTwitchChannelName && selectedTwitchChannel) {
-      setMessages([]);
-      preloadedMessagesRef.current.clear();
+    setIsFollowingChannelState(null);
+    setMessages([]);
+    preloadedMessagesRef.current.clear();
 
-      const loadRecentMessages = async (): Promise<ChatMessage[]> => {
+    if (selectedTwitchChannelName && selectedTwitchChannel) {
+      const loadRecentMessages = async () => {
         try {
           const recentMessages = await getRecentMessages(selectedTwitchChannelName);
           recentMessages.forEach(msg => preloadedMessagesRef.current.add(msg.id));
-          if (showPreloadedMessages) {
-            const uniqueRecent = recentMessages.filter((msg, index, self) =>
-              index === self.findIndex((t) => t.id === msg.id)
-            );
-            setMessages(uniqueRecent);
-          }
-          return recentMessages;
+          const uniqueRecent = recentMessages.filter((msg, index, self) =>
+            index === self.findIndex((t) => t.id === msg.id)
+          );
+          setMessages(uniqueRecent);
         } catch (error) {
           console.error('Failed to load recent messages:', error);
-          return [];
         }
       };
+      loadRecentMessages();
+    }
+  }, [selectedTwitchChannelName, selectedTwitchChannel]);
 
-      let subscribe7tv: (() => void) | undefined;
+  // ── Initialize emotes/badges and check follow status ──
+  // This re-runs when the access token refreshes, but it intentionally does NOT
+  // touch messages so a background token refresh won't wipe chat history.
+  useEffect(() => {
+    if (!selectedTwitchChannelName || !selectedTwitchChannel) return;
 
-      const initializeAssets = async () => {
-        if (!twitchSession?.accessToken) {
-          return;
-        }
-        try {
-          await Promise.all([
-            initializeEmotes(
-              selectedTwitchChannel,
-              selectedTwitchChannelName,
-              twitchSession?.userId
-            ),
-            initializeBadges(
-              selectedTwitchChannel,
-              twitchSession?.accessToken || '',
-              import.meta.env.PUBLIC_TWITCH_CLIENT_ID
-            ),
-          ]);
-          setBadgesReady(true);
+    let subscribe7tv: (() => void) | undefined;
 
-          subscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
+    const initializeAssets = async () => {
+      if (!twitchSession?.accessToken) {
+        return;
+      }
+      try {
+        await Promise.all([
+          initializeEmotes(
+            selectedTwitchChannel,
+            selectedTwitchChannelName,
+            twitchSession?.userId
+          ),
+          initializeBadges(
+            selectedTwitchChannel,
+            twitchSession?.accessToken || '',
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID
+          ),
+        ]);
+        setBadgesReady(true);
 
-          const recentMessages = await loadRecentMessages();
-
-          if (twitchSession?.userId && recentMessages.length > 0) {
-            const ownMessage = [...recentMessages].reverse().find(
-              (msg) => msg.userId === twitchSession!.userId
-            );
-            if (ownMessage) {
-              const hasBadges =
-                (ownMessage.badgeDetails && Object.keys(ownMessage.badgeDetails).length > 0) ||
-                (ownMessage.badges && Object.keys(ownMessage.badges).length > 0);
-              if (hasBadges) {
-                currentUserBadgesRef.current = {
-                  badges: ownMessage.badges || {},
-                  badgeDetails: ownMessage.badgeDetails || {},
-                };
-              }
+        subscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
+      } catch (err) {
+        console.error('Failed to initialize chat assets:', err);
+      }
+      try {
+        if (twitchSession?.accessToken && twitchSession?.userId && selectedTwitchChannelName) {
+          const twitchLib = await import('../lib/twitch');
+          let follows = await twitchLib.isFollowingChannel(
+            twitchSession.accessToken,
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+            twitchSession.userId,
+            selectedTwitchChannelName,
+          );
+          if (!follows) {
+            try {
+              const all = await twitchLib.getAllFollowedChannels(
+                twitchSession.accessToken,
+                import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+                twitchSession.userId,
+              );
+              const match = all.some((ch: any) => {
+                const login = (ch.name || '').toLowerCase();
+                const display = (ch.displayName || '').toLowerCase();
+                return login === selectedTwitchChannelName.toLowerCase() || display === selectedTwitchChannelName.toLowerCase();
+              });
+              if (match) follows = true;
+            } catch (fallbackErr) {
+              console.warn('Fallback follow-list check failed:', fallbackErr);
             }
           }
-        } catch (err) {
-          console.error('Failed to initialize chat assets:', err);
-        }
-        try {
-          if (twitchSession?.accessToken && twitchSession?.userId && selectedTwitchChannelName) {
-            const twitchLib = await import('../lib/twitch');
-            let follows = await twitchLib.isFollowingChannel(
-              twitchSession.accessToken,
-              import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-              twitchSession.userId,
-              selectedTwitchChannelName,
-            );
-            if (!follows) {
-              try {
-                const all = await twitchLib.getAllFollowedChannels(
-                  twitchSession.accessToken,
-                  import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-                  twitchSession.userId,
-                );
-                const match = all.some((ch: any) => {
-                  const login = (ch.name || '').toLowerCase();
-                  const display = (ch.displayName || '').toLowerCase();
-                  return login === selectedTwitchChannelName.toLowerCase() || display === selectedTwitchChannelName.toLowerCase();
-                });
-                if (match) follows = true;
-              } catch (fallbackErr) {
-                console.warn('Fallback follow-list check failed:', fallbackErr);
-              }
-            }
-            setIsFollowingChannelState(follows);
-          } else {
-            setIsFollowingChannelState(null);
-          }
-        } catch (err) {
-          console.error('Failed to check follow status:', err);
+          setIsFollowingChannelState(follows);
+        } else {
           setIsFollowingChannelState(null);
         }
-      };
+      } catch (err) {
+        console.error('Failed to check follow status:', err);
+        setIsFollowingChannelState(null);
+      }
+    };
 
-      initializeAssets();
+    initializeAssets();
 
-      return () => {
-        if (subscribe7tv) subscribe7tv();
-      };
-    }
+    return () => {
+      if (subscribe7tv) subscribe7tv();
+    };
   }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
 
   // ── Stream status polling ──

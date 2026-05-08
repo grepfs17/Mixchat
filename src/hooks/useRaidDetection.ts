@@ -68,6 +68,11 @@ export function useRaidDetection({
     onScopeErrorRef.current = onScopeError;
   }, [onScopeError]);
 
+  const accessTokenRef = useRef(accessToken);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
+
   useEffect(() => {
     // Guard: only run when we have valid credentials and a numeric channel ID
     if (!enabled || !channelId || !accessToken || !clientId) return;
@@ -156,7 +161,7 @@ export function useRaidDetection({
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${accessTokenRef.current}`,
                     "Client-Id": clientId,
                   },
                   body: JSON.stringify({
@@ -252,5 +257,5 @@ export function useRaidDetection({
       ws?.close(1000, "hook unmounting");
     };
     // Re-run only when the channel/credentials change
-  }, [channelId, accessToken, clientId, enabled]);
+  }, [channelId, clientId, enabled]);
 }
