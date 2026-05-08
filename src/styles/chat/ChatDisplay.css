@@ -716,6 +716,7 @@
 }
 
 .message.redemption,
+.message.highlight,
 .message.subscription,
 .message.resub,
 .message.subgift,
@@ -967,11 +968,11 @@
   /* intentionally keep default container padding/gap to avoid extra spacing */
 }
 
-.messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+.messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
   background-color: var(--color-bg-hover);
 }
 
-.messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+.messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
   background-color: transparent;
 }
 

@@ -10,6 +10,7 @@ export const MESSAGE_TYPES = [
   "resub",
   "subgift",
   "redemption",
+  "highlight",
   "raid",
   "watch-streak",
   "notice",

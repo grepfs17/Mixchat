@@ -187,6 +187,7 @@ export default function EmbedConfigModal({
     { key: 'resub', label: 'Resubscription' },
     { key: 'subgift', label: 'Gift Subscription' },
     { key: 'redemption', label: 'Channel Points Redemption' },
+    { key: 'highlight', label: 'Highlighted Message' },
     { key: 'raid', label: 'Raid' },
     { key: 'watch-streak', label: 'Watch Streak' },
     { key: 'announcement', label: 'Announcement' },

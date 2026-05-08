@@ -6,6 +6,7 @@ export const EVENT_CONFIG: Record<string, { title: string; color: string; bg: st
     resub: { title: 'Resubscription', color: '#bf94ff', bg: 'rgba(145, 71, 255, 0.15)' },
     subgift: { title: 'Gift Subscription', color: '#bf94ff', bg: 'rgba(145, 71, 255, 0.15)' },
     redemption: { title: 'Channel Points Redemption', color: '#c9a2ff', bg: 'rgba(145, 71, 255, 0.15)' },
+    highlight: { title: 'Highlighted Message', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)' },
     raid: { title: 'Raid', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.10)' },
     'watch-streak': { title: 'Watch Streak', color: '#f472b6', bg: 'rgba(244, 114, 182, 0.12)' },
     notice: { title: 'Info', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' },

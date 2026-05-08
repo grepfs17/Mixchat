@@ -642,9 +642,11 @@ export function useTwitchChat(
           msg.userInfo.userName.toLowerCase() === usernameRef.current.toLowerCase(),
         messageType: msg.isRedemption
           ? "redemption"
-          : msg.isCheer
-            ? "cheer"
-            : "chat",
+          : msg.isHighlight
+            ? "highlight"
+            : msg.isCheer
+              ? "cheer"
+              : "chat",
         rewardId: msg.isRedemption ? msg.rewardId || undefined : undefined,
         rewardTitle: cachedRewardTitle,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
@@ -728,6 +730,13 @@ export function useTwitchChat(
           }
         }
 
+        if (chatMessage.messageType === "highlight") {
+          const soundData = eventSoundsRef.current["highlight"];
+          if (soundData) {
+            playEventSound("highlight", soundData);
+          }
+        }
+
         if (mentionsUser && mentionSoundEnabledRef.current) {
           playMentionSound(
             mentionVolumeRef.current,
@@ -752,6 +761,13 @@ export function useTwitchChat(
         const soundData = eventSoundsRef.current["redemption"];
         if (soundData) {
           playEventSound("redemption", soundData);
+        }
+      }
+
+      if (chatMessage.messageType === "highlight") {
+        const soundData = eventSoundsRef.current["highlight"];
+        if (soundData) {
+          playEventSound("highlight", soundData);
         }
       }
 
