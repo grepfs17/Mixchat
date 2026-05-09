@@ -88,7 +88,7 @@ export function useChatAppState({
   showDeletedMessages = true,
   eventSounds = {},
 }: ChatAppStateProps) {
-  // ── State ──
+  // State 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
@@ -129,11 +129,11 @@ export function useChatAppState({
   const [modModeActive, setModModeActive] = useState(false);
   const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
 
-  // ── Refs synced with props ──
+  // Refs synced with props 
   const showDeletedMessagesRef = useRef(showDeletedMessages);
   useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
 
-  // ── Drag split handler ──
+  // Drag split handler 
   useEffect(() => {
     if (!isDraggingChatSplit) return;
 
@@ -160,7 +160,7 @@ export function useChatAppState({
     };
   }, [isDraggingChatSplit, chatSplitRatio]);
 
-  // ── YouTube video ID memo ──
+  // YouTube video ID memo 
   const youtubeVideoId = useMemo(() => {
     if (manualVideoId) return manualVideoId;
     if (autoVideoId) return autoVideoId;
@@ -180,7 +180,7 @@ export function useChatAppState({
     return videoId;
   }, [linkedYoutubeUrl, manualVideoId, autoVideoId]);
 
-  // ── Auto-fetch live video ID ──
+  // Auto-fetch live video ID 
   useEffect(() => {
     if (!linkedYoutubeUrl) {
       setAutoVideoId(null);
@@ -234,7 +234,7 @@ export function useChatAppState({
     };
   }, [linkedYoutubeUrl]);
 
-  // ── Reset YouTube state on channel change ──
+  // Reset YouTube state on channel change 
   useEffect(() => {
     setManualVideoId('');
     setAutoVideoId(null);
@@ -243,7 +243,7 @@ export function useChatAppState({
     setYtMessages([]);
   }, [selectedTwitchChannel]);
 
-  // ── Update document title ──
+  // Update document title 
   useEffect(() => {
     if (selectedTwitchChannelDisplayName) {
       document.title = `Mixchat - ${selectedTwitchChannelDisplayName}`;
@@ -252,7 +252,7 @@ export function useChatAppState({
     }
   }, [selectedTwitchChannelDisplayName]);
 
-  // ── Twitch message handler ──
+  // Twitch message handler 
   const handleTwitchMessage = useCallback((message: ChatMessage) => {
     if (message.isCurrentUser && !message.optimistic) {
       const hasBadges =
@@ -331,7 +331,7 @@ export function useChatAppState({
     });
   }, [twitchSession]);
 
-  // ── Moderator status effects ──
+  // Moderator status effects 
   useEffect(() => {
     if (twitchSession && selectedTwitchChannelName) {
       const isOwnerByName = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
@@ -368,7 +368,7 @@ export function useChatAppState({
     checkModViaApi();
   }, [twitchSession?.accessToken, selectedTwitchChannel, twitchSession?.userId]);
 
-  // ── Own badges loaded handler ──
+  // Own badges loaded handler 
   const handleOwnBadgesLoaded = useCallback(
     (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
       if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
@@ -383,7 +383,7 @@ export function useChatAppState({
     [twitchSession?.username, twitchSession?.userId, selectedTwitchChannelName, selectedTwitchChannel]
   );
 
-  // ── Message deleted handler ──
+  // Message deleted handler 
   const handleMessageDeleted = useCallback((messageId: string) => {
     setMessages((prev) => {
       if (showDeletedMessagesRef.current) {
@@ -394,7 +394,7 @@ export function useChatAppState({
     });
   }, []);
 
-  // ── Raid detection ──
+  // Raid detection 
   useRaidDetection({
     channelId: selectedTwitchChannel,
     accessToken: twitchSession?.accessToken || '',
@@ -414,7 +414,7 @@ export function useChatAppState({
     },
   });
 
-  // ── Twitch chat connection ──
+  // Twitch chat connection 
   const { sendMessage: sendTwitchMessage, slowModeWaitTime, followerModeMinutes } =
     useTwitchChat(
       selectedTwitchChannelName,
@@ -430,7 +430,7 @@ export function useChatAppState({
       handleMessageDeleted
     );
 
-  // ── Reset chat state on channel change ──
+  // Reset chat state on channel change
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
@@ -440,24 +440,28 @@ export function useChatAppState({
     setMessages([]);
     preloadedMessagesRef.current.clear();
 
-    if (selectedTwitchChannelName && selectedTwitchChannel) {
-      const loadRecentMessages = async () => {
-        try {
-          const recentMessages = await getRecentMessages(selectedTwitchChannelName);
-          recentMessages.forEach(msg => preloadedMessagesRef.current.add(msg.id));
-          const uniqueRecent = recentMessages.filter((msg, index, self) =>
-            index === self.findIndex((t) => t.id === msg.id)
-          );
-          setMessages(uniqueRecent);
-        } catch (error) {
-          console.error('Failed to load recent messages:', error);
-        }
-      };
-      loadRecentMessages();
-    }
-  }, [selectedTwitchChannelName, selectedTwitchChannel]);
+    }, [selectedTwitchChannelName, selectedTwitchChannel]);
 
-  // ── Initialize emotes/badges and check follow status ──
+  // Load preloaded messages after badges are ready
+  useEffect(() => {
+    if (!badgesReady || !selectedTwitchChannelName) return;
+
+    const loadRecentMessages = async () => {
+      try {
+        const recentMessages = await getRecentMessages(selectedTwitchChannelName);
+        recentMessages.forEach(msg => preloadedMessagesRef.current.add(msg.id));
+        const uniqueRecent = recentMessages.filter((msg, index, self) =>
+          index === self.findIndex((t) => t.id === msg.id)
+        );
+        setMessages(uniqueRecent);
+      } catch (error) {
+        console.error('Failed to load recent messages:', error);
+      }
+    };
+    loadRecentMessages();
+  }, [badgesReady, selectedTwitchChannelName]);
+
+  // Initialize emotes/badges and check follow status 
   // This re-runs when the access token refreshes, but it intentionally does NOT
   // touch messages so a background token refresh won't wipe chat history.
   useEffect(() => {
@@ -531,7 +535,7 @@ export function useChatAppState({
     };
   }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
 
-  // ── Stream status polling ──
+  // Stream status polling 
   useEffect(() => {
     const fetchStreamStatus = async () => {
       if (selectedTwitchChannel && twitchSession?.accessToken) {
@@ -573,7 +577,7 @@ export function useChatAppState({
     };
   }, [selectedTwitchChannel, twitchSession?.accessToken]);
 
-  // ── Channel info polling ──
+  // Channel info polling 
   useEffect(() => {
     const fetchChannelInfo = async () => {
       if (selectedTwitchChannel && twitchSession?.accessToken) {
@@ -599,7 +603,7 @@ export function useChatAppState({
     return () => clearInterval(interval);
   }, [selectedTwitchChannel, twitchSession?.accessToken]);
 
-  // ── Send message handler ──
+  // Send message handler 
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], _replyToId?: string) => {
       if (!message.trim() || platforms.length === 0) return;
@@ -809,7 +813,7 @@ export function useChatAppState({
     [selectedTwitchChannel, sendTwitchMessage, twitchSession, replyingTo, unifyChatEnabled]
   );
 
-  // ── Refresh emotes ──
+  // Refresh emotes 
   const handleRefreshEmotes = useCallback(async () => {
     console.log('User initiated emote reload');
     setIsRefreshingEmotes(true);
@@ -831,7 +835,7 @@ export function useChatAppState({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
-  // ── Moderation actions ──
+  // Moderation actions 
   const handleToggleModMode = useCallback(() => {
     if (!isModerator) return;
     setModModeActive((v) => !v);
@@ -999,7 +1003,7 @@ export function useChatAppState({
     }
   }, [twitchSession]);
 
-  // ── YouTube helpers ──
+  // YouTube helpers 
   const getYtMessageText = useCallback((m: YTMessage) =>
     m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join(''),
   []);
@@ -1048,7 +1052,7 @@ export function useChatAppState({
   }, []);
 
   return {
-    // State
+    //State
     messages,
     isLoading,
     pendingRaid,
@@ -1081,7 +1085,7 @@ export function useChatAppState({
     isFollowingChannelState,
     notificationIdRef,
 
-    // Setters
+    //Setters
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
