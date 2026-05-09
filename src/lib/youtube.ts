@@ -195,7 +195,7 @@ export async function getInnertube() {
                   console.error(`[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`, errBody.slice(0, 500));
                   markProxyFailed(proxy);
                   lastError = new Error(errBody || '503');
-                  lastStatus = 403;
+                  lastStatus = 503;
                   continue;
                 }
 
@@ -204,6 +204,13 @@ export async function getInnertube() {
                   markProxyFailed(proxy);
                   lastError = new Error(`Server error ${proxyRes.status}`);
                   lastStatus = proxyRes.status;
+                  continue;
+                }
+
+                if (proxyRes.status === 403) {
+                  markProxyFailed(proxy);
+                  lastError = new Error(`Forbidden (403)`);
+                  lastStatus = 403;
                   continue;
                 }
 
