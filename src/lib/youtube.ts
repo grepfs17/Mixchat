@@ -11,7 +11,7 @@ Parser.setParserErrorHandler(({ error_type }) => {
 
 export function invalidateInnertube(): void {
   yt = null;
-  if (!YT_PROXY) {
+  if (!YT_PROXIES.length) {
     invalidatePoToken();
   }
 }
@@ -19,8 +19,50 @@ export function invalidateInnertube(): void {
 let last403Time = 0;
 const COOLDOWN_AFTER_403_MS = 30_000;
 
-const YT_PROXY = process.env.YT_PROXY;
+const YT_PROXIES: string[] = process.env.YT_PROXY
+  ? process.env.YT_PROXY.split(',').map((u: string) => u.trim().replace(/\/+$/, '')).filter(Boolean)
+  : [];
 const YT_PROXY_TOKEN = process.env.YT_PROXY_TOKEN;
+
+let proxyFailCounts: Record<string, number> = {};
+let proxyCooldownUntil: Record<string, number> = {};
+const PROXY_MAX_FAILS = 3;
+const PROXY_COOLDOWN_MS = 30_000;
+
+function selectProxy(proxies: string[] = YT_PROXIES): string | undefined {
+  if (!proxies.length) return undefined;
+  const now = Date.now();
+  for (const proxy of proxies) {
+    if (proxyCooldownUntil[proxy] && now < proxyCooldownUntil[proxy]) continue;
+    return proxy;
+  }
+  return proxies[0];
+}
+
+function markProxyFailed(proxy: string): void {
+  proxyFailCounts[proxy] = (proxyFailCounts[proxy] || 0) + 1;
+  if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS) {
+    proxyCooldownUntil[proxy] = Date.now() + PROXY_COOLDOWN_MS;
+    console.warn(`[YouTube Proxy] ${proxy} failed ${PROXY_MAX_FAILS} times — cooling down for ${PROXY_COOLDOWN_MS / 1000}s`);
+    proxyFailCounts[proxy] = 0;
+  }
+}
+
+function markProxyOk(proxy: string): void {
+  delete proxyFailCounts[proxy];
+  delete proxyCooldownUntil[proxy];
+}
+
+export function _resetProxyState(): void {
+  proxyFailCounts = {};
+  proxyCooldownUntil = {};
+}
+
+export function _getProxyState() {
+  return { failCounts: proxyFailCounts, cooldownUntil: proxyCooldownUntil };
+}
+
+export { selectProxy, markProxyFailed, markProxyOk, YT_PROXIES, PROXY_MAX_FAILS, PROXY_COOLDOWN_MS };
 
 export async function getInnertube() {
   if (yt) return yt;
@@ -60,7 +102,7 @@ export async function getInnertube() {
 
     // When using a proxy, PoToken and visitor data are handled by the proxy.
     // Otherwise, auto-generate or use env vars.
-    if (YT_PROXY) {
+    if (YT_PROXIES.length) {
       // PoToken handled by proxy — skip local generation
     } else {
       const envPoToken = process.env.YT_POTOKEN;
@@ -92,7 +134,7 @@ export async function getInnertube() {
         hasPoToken: !!innertubeOptions.po_token,
         hasCookie: !!innertubeOptions.cookie,
         hasVisitorData: !!innertubeOptions.visitor_data,
-        useProxy: !!YT_PROXY,
+        useProxy: !!YT_PROXIES.length,
       });
     }
 
@@ -111,12 +153,11 @@ export async function getInnertube() {
 
       // Route InnerTube API requests through the proxy when YT_PROXY is set.
       // Other URLs (thumbnails, player assets) are fetched directly.
-      if (YT_PROXY) {
+      if (YT_PROXIES.length) {
         try {
           const targetUrl = new URL(urlStr);
           if (targetUrl.hostname === 'www.youtube.com' && targetUrl.pathname.startsWith('/youtubei/')) {
             const proxyPath = targetUrl.pathname + targetUrl.search;
-            const proxyUrl = `${YT_PROXY.replace(/\/+$/, '')}/api/youtube${proxyPath}`;
 
             const proxyHeaders: Record<string, string> = {
               'Content-Type': init?.headers ? 'application/json' : 'application/x-www-form-urlencoded',
@@ -126,24 +167,62 @@ export async function getInnertube() {
             }
 
             const body = typeof init?.body === 'string' ? init.body : undefined;
+            const method = init?.method || (body ? 'POST' : 'GET');
 
-            if (process.env.YT_DEBUG === '1') {
-              console.debug('[YouTube Proxy] Routing through proxy:', proxyUrl);
+            const startIndex = YT_PROXIES.indexOf(selectProxy()!);
+            const order = startIndex >= 0
+              ? [...YT_PROXIES.slice(startIndex), ...YT_PROXIES.slice(0, startIndex)]
+              : YT_PROXIES;
+
+            const now = Date.now();
+            const available = order.filter(p => !proxyCooldownUntil[p] || now >= proxyCooldownUntil[p]);
+            const tryOrder = available.length ? available : order;
+            let lastError: Error | null = null;
+            let lastStatus = 0;
+
+            for (const proxy of tryOrder) {
+              const proxyUrl = `${proxy}/api/youtube${proxyPath}`;
+
+              if (process.env.YT_DEBUG === '1') {
+                console.debug('[YouTube Proxy] Trying:', proxyUrl);
+              }
+
+              try {
+                const proxyRes = await fetch(proxyUrl, { method, headers: proxyHeaders, body });
+
+                if (proxyRes.status === 503) {
+                  const errBody = await proxyRes.text().catch(() => '');
+                  console.error(`[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`, errBody.slice(0, 500));
+                  markProxyFailed(proxy);
+                  lastError = new Error(errBody || '503');
+                  lastStatus = 403;
+                  continue;
+                }
+
+                if (proxyRes.status >= 500) {
+                  console.error(`[YouTube Proxy] ${proxy} server error ${proxyRes.status}`);
+                  markProxyFailed(proxy);
+                  lastError = new Error(`Server error ${proxyRes.status}`);
+                  lastStatus = proxyRes.status;
+                  continue;
+                }
+
+                markProxyOk(proxy);
+                return proxyRes;
+              } catch (fetchErr: any) {
+                console.error(`[YouTube Proxy] ${proxy} request failed:`, fetchErr instanceof Error ? fetchErr.message : String(fetchErr));
+                markProxyFailed(proxy);
+                lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+                continue;
+              }
             }
 
-            const method = init?.method || (body ? 'POST' : 'GET');
-            const proxyRes = await fetch(proxyUrl, { method, headers: proxyHeaders, body });
-
-            // Proxy returns 503 when YouTube blocked the request — treat as 403
-            if (proxyRes.status === 503) {
-              const errBody = await proxyRes.text().catch(() => '');
-              console.error('[YouTube Proxy] Proxy returned 503 (YouTube blocked):', errBody.slice(0, 500));
+            console.error('[YouTube Proxy] All proxies failed');
+            if (lastStatus === 403) {
               invalidateInnertube();
               last403Time = Date.now();
-              return new Response(errBody, { status: 403, headers: { 'Content-Type': 'application/json' } });
             }
-
-            return proxyRes;
+            return new Response(lastError?.message || 'All proxies failed', { status: lastStatus || 502, headers: { 'Content-Type': 'application/json' } });
           }
         } catch (parseErr) {
           if (process.env.YT_DEBUG === '1') console.debug('[YouTube Proxy] URL parse failed, falling back to direct fetch', parseErr);
