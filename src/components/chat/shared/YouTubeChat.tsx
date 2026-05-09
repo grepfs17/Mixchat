@@ -184,11 +184,17 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
       es.addEventListener('error', (e: Event) => {
         if (!isMounted) return;
-        const data = JSON.parse((e as MessageEvent).data) as SSEErrorEvent;
-        console.error('[YouTubeChat] SSE error event:', data.error);
-        setIsConnected(false);
-        setError(data.error);
-        errorRef.current = data.error;
+        try {
+          const data = JSON.parse((e as MessageEvent).data) as SSEErrorEvent;
+          console.error('[YouTubeChat] SSE error event:', data.error);
+          setIsConnected(false);
+          setError(data.error);
+          errorRef.current = data.error;
+        } catch {
+          setIsConnected(false);
+          setError('Connection lost');
+          errorRef.current = 'Connection lost';
+        }
         es.close();
         eventSourceRef.current = null;
       });
