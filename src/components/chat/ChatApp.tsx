@@ -127,7 +127,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       {unifyChatEnabled ? (
         <>
           {/* Hidden YouTubeChat to keep polling YouTube messages */}
-          {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && (
+          {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && !useYoutubeEmbed && (
             <div style={{ display: 'none' }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}

@@ -1019,9 +1019,9 @@ export default function AppContainer() {
             embedDefaultOpen={embedDefaultOpen}
             onEmbedDefaultOpenChange={setEmbedDefaultOpen}
             unifyChatEnabled={unifyChatEnabled}
-            onUnifyChatEnabledChange={setUnifyChatEnabled}
+            onUnifyChatEnabledChange={(v: boolean) => { setUnifyChatEnabled(v); if (v) setUseYoutubeEmbed(false); }}
             useYoutubeEmbed={useYoutubeEmbed}
-            onUseYoutubeEmbedChange={setUseYoutubeEmbed}
+            onUseYoutubeEmbedChange={(v: boolean) => { setUseYoutubeEmbed(v); if (v) setUnifyChatEnabled(false); }}
             fontSize={fontSize}
             onFontSizeChange={setFontSize}
             chatFont={chatFont}
