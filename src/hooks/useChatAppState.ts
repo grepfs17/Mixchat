@@ -182,7 +182,7 @@ export function useChatAppState({
 
   // Auto-fetch live video ID 
   useEffect(() => {
-    if (!linkedYoutubeUrl) {
+    if (!linkedYoutubeUrl || !showYoutubeSection) {
       setAutoVideoId(null);
       setYtError(null);
       return;
@@ -232,14 +232,13 @@ export function useChatAppState({
       abortController.abort();
       clearInterval(interval);
     };
-  }, [linkedYoutubeUrl]);
+  }, [linkedYoutubeUrl, showYoutubeSection]);
 
   // Reset YouTube state on channel change 
   useEffect(() => {
     setManualVideoId('');
     setAutoVideoId(null);
     setYtError(null);
-    setShowYoutubeSection(true);
     setYtMessages([]);
   }, [selectedTwitchChannel]);
 
