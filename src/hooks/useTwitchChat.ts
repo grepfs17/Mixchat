@@ -115,27 +115,28 @@ async function getSourceChannelInfo(
   return fallback;
 }
 
-// Twitch IRC does NOT send the reward title in the message tags (only
-// the reward ID is present). We fetch the title from the Helix API once and
+// Twitch IRC does NOT send the reward title/cost in the message tags (only
+// the reward ID is present). We fetch the info from the Helix API once and
 // cache it so subsequent redemptions of the same reward are instant.
-const rewardTitleCache = new Map<string, string>();
+const rewardInfoCache = new Map<string, { title: string; cost: number }>();
 const MAX_REWARD_CACHE = 200;
 
-function cacheRewardTitle(rewardId: string, title: string) {
-  if (rewardTitleCache.size >= MAX_REWARD_CACHE) {
-    const firstKey = rewardTitleCache.keys().next().value;
-    if (firstKey !== undefined) rewardTitleCache.delete(firstKey);
+function cacheRewardInfo(rewardId: string, title: string, cost: number) {
+  if (rewardInfoCache.size >= MAX_REWARD_CACHE) {
+    const firstKey = rewardInfoCache.keys().next().value;
+    if (firstKey !== undefined) rewardInfoCache.delete(firstKey);
   }
-  rewardTitleCache.set(rewardId, title);
+  rewardInfoCache.set(rewardId, { title, cost });
 }
 
-async function getRewardTitle(
+async function getRewardInfo(
   rewardId: string,
   broadcasterId: string,
   accessToken: string,
-): Promise<string | null> {
-  if (rewardTitleCache.has(rewardId)) {
-    return rewardTitleCache.get(rewardId)!;
+): Promise<{ title: string | null; cost: number | null }> {
+  const cached = rewardInfoCache.get(rewardId);
+  if (cached) {
+    return { title: cached.title, cost: cached.cost };
   }
 
   try {
@@ -144,28 +145,33 @@ async function getRewardTitle(
     );
     if (response.ok) {
       const data = await response.json();
-      const title: string | undefined = data?.data?.[0]?.title;
-      if (title) {
-        cacheRewardTitle(rewardId, title);
-        return title;
+      const item = data?.data?.[0];
+      const title: string | undefined = item?.title;
+      const cost: number | undefined = item?.cost;
+      if (title && cost != null) {
+        cacheRewardInfo(rewardId, title, cost);
+        return { title, cost };
+      } else if (title) {
+        cacheRewardInfo(rewardId, title, cost ?? 0);
+        return { title, cost: cost ?? 0 };
       } else {
         console.warn(
-          "[getRewardTitle] API returned ok but no title found. Response:",
+          "[getRewardInfo] API returned ok but no title found. Response:",
           data,
         );
       }
     } else {
       const body = await response.text().catch(() => "(unreadable)");
       console.warn(
-        `[getRewardTitle] API returned ${response.status} for rewardId=${rewardId} broadcasterId=${broadcasterId}. Body:`,
+        `[getRewardInfo] API returned ${response.status} for rewardId=${rewardId} broadcasterId=${broadcasterId}. Body:`,
         body,
       );
     }
   } catch (error) {
-    console.error("Failed to fetch reward title:", error);
+    console.error("Failed to fetch reward info:", error);
   }
 
-  return null;
+  return { title: null, cost: null };
 }
 
 // ── Shared Helpers ──
@@ -514,21 +520,21 @@ export function useTwitchChat(
             setFollowerModeMinutes(followerMinutes);
           }
 
-          // Step 3: pre-fetch ALL custom rewards and cache their titles so that
-          // when a redemption IRC message arrives, the title is already in cache.
-          // This only succeeds when the logged-in user is the broadcaster of this
-          // channel (Twitch requires channel:read:redemptions AND the token user
-          // must match the broadcaster). For viewers it returns 403 — that's fine.
+          // Step 3: pre-fetch ALL custom rewards and cache their titles/costs so
+          // that when a redemption IRC message arrives, the info is already in
+          // cache. This only succeeds when the logged-in user is the broadcaster
+          // of this channel (Twitch requires channel:read:redemptions AND the
+          // token user must match the broadcaster). For viewers it returns 403.
           try {
             const rewardsRes = await fetch(
               `/api/twitch-proxy?path=/helix/channel_points/custom_rewards&broadcaster_id=${broadcasterId}`,
             );
             if (rewardsRes.ok) {
               const rewardsData = await rewardsRes.json();
-              const rewards: { id: string; title: string }[] =
+              const rewards: { id: string; title: string; cost: number }[] =
                 rewardsData?.data ?? [];
               rewards.forEach((r) => {
-                if (r.id && r.title) rewardTitleCache.set(r.id, r.title);
+                if (r.id && r.title) cacheRewardInfo(r.id, r.title, r.cost ?? 0);
               });
               console.log(
                 `[useTwitchChat] Pre-cached ${rewards.length} custom reward title(s) for channel "${channelName}"`,
@@ -596,11 +602,11 @@ export function useTwitchChat(
       const rawTags = (msg as any).tags as Map<string, string> | undefined;
       const sourceRoomId: string | undefined =
         rawTags?.get("source-room-id") || undefined;
-      // NOTE: Twitch IRC does NOT send a reward title tag — only the reward ID
-      // is present. We resolve the title from the cache populated by getRewardTitle.
-      const cachedRewardTitle =
+      // NOTE: Twitch IRC does NOT send a reward title/cost tag — only the reward
+      // ID is present. We resolve the info from the cache populated by getRewardInfo.
+      const cachedRewardInfo =
         msg.isRedemption && msg.rewardId
-          ? rewardTitleCache.get(msg.rewardId)
+          ? rewardInfoCache.get(msg.rewardId)
           : undefined;
       // Only treat as shared-chat if the source room differs from the current channel
       const isSharedChat = Boolean(
@@ -638,7 +644,8 @@ export function useTwitchChat(
               ? "cheer"
               : "chat",
         rewardId: msg.isRedemption ? msg.rewardId || undefined : undefined,
-        rewardTitle: cachedRewardTitle,
+        rewardTitle: cachedRewardInfo?.title,
+        rewardCost: cachedRewardInfo?.cost,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
@@ -653,13 +660,17 @@ export function useTwitchChat(
         isSharedChat &&
         !!sourceRoomId &&
         !sourceChannelInfoCache.has(sourceRoomId);
-      // Fetch reward title when there is a rewardId and no cached title yet.
-      // Even if broadcasterIdRef is not populated yet, we still need to fetch;
-      // in that case we await the broadcasterIdPromise so we don't miss it.
-      const needsRewardTitle =
-        !!chatMessage.rewardId && !chatMessage.rewardTitle;
+      // Fetch reward info when there is a rewardId, no cached title yet, and
+      // the broadcaster ID is already known. We intentionally skip the fetch
+      // if broadcasterIdRef is not ready to avoid hanging on an unresolved
+      // promise — the message is emitted immediately and will miss the title
+      // for this redemption, but subsequent ones will have it.
+      const needsRewardInfo =
+        !!chatMessage.rewardId &&
+        !chatMessage.rewardTitle &&
+        !!broadcasterIdRef.current;
 
-      if (needsUserInfo || needsSourceAvatar || needsRewardTitle) {
+      if (needsUserInfo || needsSourceAvatar || needsRewardInfo) {
         const userInfoPromise =
           needsUserInfo && msg.userInfo.userId
             ? getUserInfo(msg.userInfo.userId, accessTokenRef.current)
@@ -668,31 +679,27 @@ export function useTwitchChat(
           needsSourceAvatar && sourceRoomId
             ? getSourceChannelInfo(sourceRoomId, accessTokenRef.current)
             : Promise.resolve(null);
-        const rewardTitlePromise =
-          needsRewardTitle && chatMessage.rewardId
-            ? broadcasterIdRef.current
-              ? getRewardTitle(
-                  chatMessage.rewardId,
-                  broadcasterIdRef.current,
-                  accessTokenRef.current,
-                )
-              : broadcasterIdPromiseRef.current.then((broadcasterId) =>
-                  getRewardTitle(
-                    chatMessage.rewardId!,
-                    broadcasterId,
-                    accessTokenRef.current,
-                  ),
-                )
+        const rewardInfoPromise =
+          needsRewardInfo && chatMessage.rewardId && broadcasterIdRef.current
+            ? getRewardInfo(
+                chatMessage.rewardId,
+                broadcasterIdRef.current,
+                accessTokenRef.current,
+              )
             : Promise.resolve(null);
 
-        Promise.all([userInfoPromise, sourceInfoPromise, rewardTitlePromise])
-          .then(([userInfoResult, sourceInfoResult, rewardTitleResult]) => {
+        Promise.all([userInfoPromise, sourceInfoPromise, rewardInfoPromise])
+          .then(([userInfoResult, sourceInfoResult, rewardInfoResult]) => {
             const resolvedAvatar = (
               userInfoResult as { profileImageUrl?: string | null } | null
             )?.profileImageUrl;
             const resolvedSource = sourceInfoResult as {
               login: string | null;
               avatar: string | null;
+            } | null;
+            const resolvedReward = rewardInfoResult as {
+              title: string | null;
+              cost: number | null;
             } | null;
             onMessageRef.current({
               ...chatMessage,
@@ -706,7 +713,9 @@ export function useTwitchChat(
                 chatMessage.sourceChannelAvatar ||
                 undefined,
               rewardTitle:
-                (rewardTitleResult as string | null) || chatMessage.rewardTitle,
+                resolvedReward?.title || chatMessage.rewardTitle,
+              rewardCost:
+                resolvedReward?.cost ?? chatMessage.rewardCost,
             });
           })
           .catch(() => {
@@ -939,21 +948,23 @@ export function useTwitchChat(
       const msgId = msg.tags.get("msg-id");
 
       // ── Channel Points Redemption (no user message) ──
-      // Twitch sends USERNOTICE with msg-id=channel_points_reward for rewards
-      // that don't require user input. Rewards WITH input come as regular PRIVMSG
-      // (handled above via msg.isRedemption).
+      // NOTE: Twitch does NOT currently send channel-point redemptions without
+      // user text through IRC. Only redemptions that require text input appear
+      // as PRIVMSG (handled above via msg.isRedemption). The code below is kept
+      // for completeness in case Twitch adds this in the future.
       if (msgId === "channel_points_reward") {
         const rewardTitle =
           msg.tags.get("msg-param-reward-title") || "Channel Points Redemption";
         const rewardId = msg.tags.get("msg-param-reward-id") || undefined;
-        const cost = msg.tags.get("msg-param-cost");
+        const costTag = msg.tags.get("msg-param-cost");
+        const costNum = costTag ? parseInt(costTag, 10) : undefined;
         const displayName =
           msg.tags.get("display-name") || msg.tags.get("login") || "Someone";
         const color = msg.tags.get("color") || "#c9a2ff";
         const userId = msg.tags.get("user-id") || undefined;
         const redemptionMsgId = msg.tags.get("id") || crypto.randomUUID();
         const userMessage = msg.text ?? "";
-        const prefix = cost ? `${rewardTitle} (${cost} points)` : rewardTitle;
+        const prefix = costNum ? `${rewardTitle} (${costNum} points)` : rewardTitle;
         const content = userMessage
           ? `${prefix} — ${userMessage}`
           : prefix;
@@ -962,13 +973,15 @@ export function useTwitchChat(
         );
         const cachedAvatar = getCachedAvatar(userId);
 
-        // Resolve reward title from cache if msg-param-reward-title is absent
+        // Resolve reward title from cache/API if msg-param-reward-title is absent
         let resolvedRewardTitle: string | undefined = rewardTitle;
+        let resolvedRewardCost: number | undefined = costNum;
         if (!msg.tags.get("msg-param-reward-title") && rewardId) {
           const broadcasterId = broadcasterIdRef.current;
           if (broadcasterId) {
-            resolvedRewardTitle =
-              (await getRewardTitle(rewardId, broadcasterId, accessTokenRef.current)) || undefined;
+            const info = await getRewardInfo(rewardId, broadcasterId, accessTokenRef.current);
+            resolvedRewardTitle = info.title || undefined;
+            resolvedRewardCost = info.cost ?? undefined;
           }
         }
 
@@ -989,6 +1002,7 @@ export function useTwitchChat(
           messageType: "redemption",
           rewardId,
           rewardTitle: resolvedRewardTitle || rewardTitle,
+          rewardCost: resolvedRewardCost,
         };
 
         const avatarPromise =
