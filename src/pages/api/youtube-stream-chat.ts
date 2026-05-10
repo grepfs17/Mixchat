@@ -523,6 +523,8 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 
   const clientId = `${videoId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
 
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       const client: SSEClient = {
@@ -551,11 +553,28 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         );
       }
 
+      // Heartbeat every 15s to keep proxies/CDN from closing idle HTTP/2 streams
+      heartbeatInterval = setInterval(() => {
+        try {
+          controller.enqueue(sseEvent(JSON.stringify({ ping: true }), "heartbeat"));
+        } catch {
+          // Stream already closed
+          if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+          }
+        }
+      }, 15000);
+
       console.log(
         `[YouTube Chat] SSE client connected: ${clientId} (${session.clients.size} total for ${videoId})`,
       );
     },
     cancel() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
       session.clients.delete(clientId);
       session.lastUpdate = Date.now();
       console.log(
@@ -569,7 +588,7 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       "X-Accel-Buffering": "no", // Disable nginx buffering
     },
   });
