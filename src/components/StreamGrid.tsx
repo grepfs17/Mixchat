@@ -43,6 +43,13 @@ export default function StreamGrid({
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<SortOption>('favorites');
     const [thumbErrors, setThumbErrors] = useState<Set<string>>(new Set());
+    const [kofiClosed, setKofiClosed] = useState(() => {
+        try {
+            return localStorage.getItem('mixchat:kofi-closed') === '1';
+        } catch {
+            return false;
+        }
+    });
 
     const filtered = useMemo(() => {
         let result = channels;
@@ -244,12 +251,25 @@ export default function StreamGrid({
                 )}
             </div>
 
-            <div className="stream-grid-kofi">
-                <span className="stream-grid-kofi-text">If you'd like to support the project :</span>
-                <a href="https://ko-fi.com/masterofhollows" target="_blank" rel="noopener noreferrer" className="stream-grid-kofi-link">
-                    <img width="80" src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a02fad2b4c413af6d15_support_me_on_kofi_badge_beige.png" alt="Support me on Ko-fi" />
-                </a>
-            </div>
+            {!kofiClosed && (
+                <div className="stream-grid-kofi">
+                    <span className="stream-grid-kofi-text">If you'd like to support the project :</span>
+                    <a href="https://ko-fi.com/masterofhollows" target="_blank" rel="noopener noreferrer" className="stream-grid-kofi-link">
+                        <img width="80" src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a02fad2b4c413af6d15_support_me_on_kofi_badge_beige.png" alt="Support me on Ko-fi" />
+                    </a>
+                    <button
+                        className="stream-grid-kofi-close"
+                        onClick={() => {
+                            setKofiClosed(true);
+                            try { localStorage.setItem('mixchat:kofi-closed', '1'); } catch { /* ignore */ }
+                        }}
+                        title="Dismiss"
+                        aria-label="Dismiss support banner"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
