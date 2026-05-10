@@ -66,6 +66,7 @@ export interface ChatAppStateProps {
   chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
   eventSounds?: Record<string, string>;
+  eventSoundVolume?: number;
   onFollowRaid?: (channelLogin: string) => void;
   viewerCount?: number | null;
   onToggleSidebar?: () => void;
@@ -87,6 +88,7 @@ export function useChatAppState({
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
   eventSounds = {},
+  eventSoundVolume = 1,
 }: ChatAppStateProps) {
   // State 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -425,6 +427,7 @@ export function useChatAppState({
       mentionVolume,
       mentionSoundType,
       eventSounds,
+      eventSoundVolume,
       handleOwnBadgesLoaded,
       handleMessageDeleted
     );

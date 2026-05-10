@@ -35,7 +35,7 @@ describe('settingsBackup lib', () => {
       URL.revokeObjectURL = origRevokeObjectURL;
     });
 
-    it('creates a download link and clicks it', () => {
+    it('creates a download link and clicks it', async () => {
       const clickSpy = vi.fn();
       const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any);
       const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any);
@@ -43,7 +43,7 @@ describe('settingsBackup lib', () => {
         return { click: clickSpy, href: '', download: '' } as any;
       });
 
-      exportSettings();
+      await exportSettings();
 
       expect(createElSpy).toHaveBeenCalledWith('a');
       expect(clickSpy).toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe('settingsBackup lib', () => {
       removeChildSpy.mockRestore();
     });
 
-    it('writes current localStorage values into the exported blob', () => {
+    it('writes current localStorage values into the exported blob', async () => {
       localStorage.setItem('mixchat_font_size', '20');
       localStorage.setItem('mixchat_unify_chat', 'true');
 
@@ -74,7 +74,7 @@ describe('settingsBackup lib', () => {
       vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any);
       vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any);
 
-      exportSettings();
+      await exportSettings();
 
       expect(capturedHref).toBe('blob:mock-url');
       expect(capturedDownload).toMatch(/^mixchat-settings-\d{4}-\d{2}-\d{2}\.json$/);
@@ -151,6 +151,84 @@ describe('settingsBackup lib', () => {
       expect(localStorage.getItem('mixchat_sessions')).toBe('{"twitch":{}}');
       expect(localStorage.getItem('emotes_7tv_global_v2')).toBe('cached');
       expect(localStorage.getItem('mixchat_font_size')).toBe('16');
+    });
+
+    it('restores event sounds from backup into localStorage fallback', async () => {
+      const file = makeBackupFile({
+        mixchat_event_sounds: JSON.stringify({ subscription: 'data:audio/mp3;base64,abc123' }),
+      });
+
+      const count = await importSettings(file);
+
+      expect(count).toBe(1);
+      // In jsdom IndexedDB is unavailable, so the fallback writes to localStorage
+      expect(localStorage.getItem('mixchat_event_sounds')).toBe(
+        JSON.stringify({ subscription: 'data:audio/mp3;base64,abc123' }),
+      );
+    });
+
+    it('ignores malformed event sounds in backup', async () => {
+      const file = makeBackupFile({
+        mixchat_event_sounds: 'not-valid-json',
+      });
+
+      const count = await importSettings(file);
+
+      expect(count).toBe(0);
+      expect(localStorage.getItem('mixchat_event_sounds')).toBeNull();
+    });
+  });
+
+  describe('exportSettings with event sounds fallback', () => {
+    const origCreateObjectURL = URL.createObjectURL;
+    const origRevokeObjectURL = URL.revokeObjectURL;
+
+    beforeEach(() => {
+      URL.createObjectURL = vi.fn(() => 'blob:mock-url') as any;
+      URL.revokeObjectURL = vi.fn() as any;
+    });
+
+    afterEach(() => {
+      URL.createObjectURL = origCreateObjectURL;
+      URL.revokeObjectURL = origRevokeObjectURL;
+    });
+
+    it('includes event sounds in the exported JSON when present in localStorage fallback', async () => {
+      localStorage.setItem(
+        'mixchat_event_sounds',
+        JSON.stringify({ subscription: 'data:audio/mp3;base64,abc123' }),
+      );
+
+      let capturedBlob: Blob | null = null;
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'a') {
+          return {
+            click: vi.fn(),
+            href: '',
+            download: '',
+          } as any;
+        }
+        return document.createElement(tag);
+      });
+      vi.spyOn(document.body, 'appendChild').mockImplementation(() => null as any);
+      vi.spyOn(document.body, 'removeChild').mockImplementation(() => null as any);
+
+      // Mock URL.createObjectURL to capture the blob
+      URL.createObjectURL = vi.fn((blob: Blob) => {
+        capturedBlob = blob;
+        return 'blob:mock-url';
+      }) as any;
+
+      await exportSettings();
+
+      expect(capturedBlob).not.toBeNull();
+      const text = await (capturedBlob as Blob).text();
+      const parsed = JSON.parse(text);
+      expect(parsed.settings['mixchat_event_sounds']).toBe(
+        JSON.stringify({ subscription: 'data:audio/mp3;base64,abc123' }),
+      );
+
+      vi.restoreAllMocks();
     });
   });
 });

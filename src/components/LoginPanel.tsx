@@ -61,6 +61,8 @@ interface LoginPanelProps {
   onHideViewerCountChange?: (value: boolean) => void;
   eventSounds?: Record<string, string>;
   onEventSoundChange?: (eventType: string, soundData: string | null) => void;
+  eventSoundVolume?: number;
+  onEventSoundVolumeChange?: (value: number) => void;
   hasYoutubeSession?: boolean;
   onReauthYoutube?: () => void;
   onGoHome?: () => void;
@@ -114,6 +116,8 @@ function LoginPanel({
   onHideViewerCountChange,
   eventSounds = {},
   onEventSoundChange,
+  eventSoundVolume = 1,
+  onEventSoundVolumeChange,
   hasYoutubeSession = false,
   onReauthYoutube,
   onGoHome,
@@ -383,6 +387,8 @@ function LoginPanel({
           onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
           eventSounds={eventSounds}
           onEventSoundChange={(eventType, soundData) => { if (onEventSoundChange) onEventSoundChange(eventType, soundData); }}
+          eventSoundVolume={eventSoundVolume}
+          onEventSoundVolumeChange={(value) => { if (onEventSoundVolumeChange) onEventSoundVolumeChange(value); }}
           hasYoutubeSession={hasYoutubeSession}
           onReauthYoutube={onReauthYoutube || (() => {})}
           onClose={() => setShowEmbedConfig(false)}

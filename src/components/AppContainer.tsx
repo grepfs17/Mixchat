@@ -16,6 +16,7 @@ import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { markStreamerNotified } from '../lib/streamMonitor';
 import { primeAudioContext } from '../hooks/useTwitchChat';
 import type { MentionSoundType } from '../hooks/useTwitchChat';
+import { loadEventSounds, saveEventSounds } from '../lib/eventSoundStorage';
 import StreamGrid from './StreamGrid';
 import type { StreamTransitionInfo } from './StreamGrid';
 import StreamTransitionOverlay from './StreamTransitionOverlay';
@@ -93,6 +94,7 @@ export default function AppContainer() {
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
   const [streamTransition, setStreamTransition] = useState<StreamTransitionInfo | null>(null);
   const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
+  const [eventSoundVolume, setEventSoundVolume] = useState(1);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -106,6 +108,8 @@ export default function AppContainer() {
   const hasLoadedSessionsRef = useRef(false);
   // Track if the save-effect has run to avoid saving on first mount 
   const isFirstSaveRef = useRef(true);
+  // Prevent saving event sounds until the initial IndexedDB load completes
+  const eventSoundsLoadedRef = useRef(false);
 
   // Stream monitoring
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -658,18 +662,38 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
   }, [hideViewerCount]);
 
-  // Load event sounds from localStorage
+  // Load event sounds from IndexedDB (migrates legacy localStorage on first run)
   useEffect(() => {
-    const saved = localStorage.getItem('mixchat_event_sounds');
+    let cancelled = false;
+    loadEventSounds().then((sounds) => {
+      if (!cancelled) {
+        setEventSounds(sounds || {});
+        eventSoundsLoadedRef.current = true;
+      }
+    }).catch(() => {
+      eventSoundsLoadedRef.current = true;
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Save event sounds to IndexedDB
+  useEffect(() => {
+    if (!eventSoundsLoadedRef.current) return;
+    saveEventSounds(eventSounds).catch(() => {});
+  }, [eventSounds]);
+
+  // Load event sound volume from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_event_sound_volume');
     if (saved !== null) {
-      try { setEventSounds(JSON.parse(saved)); } catch { /* ignore */ }
+      try { setEventSoundVolume(JSON.parse(saved)); } catch { /* ignore */ }
     }
   }, []);
 
-  // Save event sounds to localStorage
+  // Save event sound volume to localStorage
   useEffect(() => {
-    localStorage.setItem('mixchat_event_sounds', JSON.stringify(eventSounds));
-  }, [eventSounds]);
+    localStorage.setItem('mixchat_event_sound_volume', JSON.stringify(eventSoundVolume));
+  }, [eventSoundVolume]);
 
   // Load chat theme setting from localStorage
   useEffect(() => {
@@ -1044,6 +1068,8 @@ export default function AppContainer() {
             onHideViewerCountChange={setHideViewerCount}
             eventSounds={eventSounds}
             onEventSoundChange={handleEventSoundChange}
+            eventSoundVolume={eventSoundVolume}
+            onEventSoundVolumeChange={setEventSoundVolume}
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
@@ -1223,6 +1249,7 @@ export default function AppContainer() {
               chatTheme={chatTheme}
               hideViewerCount={shouldHideViewerCount}
               eventSounds={eventSounds}
+              eventSoundVolume={eventSoundVolume}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>
