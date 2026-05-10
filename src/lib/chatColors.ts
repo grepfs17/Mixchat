@@ -82,11 +82,13 @@ function getRgbDistance(
 }
 
 // Initialise cached background from the active CSS variable
-if (typeof document !== 'undefined') {
-  const bg = getComputedStyle(document.documentElement)
-    .getPropertyValue('--color-bg-primary')
-    .trim();
-  if (bg) cachedBgRgb = parseColor(bg);
+if (typeof document !== 'undefined' && typeof getComputedStyle === 'function') {
+  try {
+    const bg = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-bg-primary')
+      .trim();
+    if (bg) cachedBgRgb = parseColor(bg);
+  } catch {}
 }
 
 /** Call this when the theme changes so we re-evaluate the background colour. */

@@ -5,6 +5,7 @@ import type { Platform, ChatMessage } from '../../../lib/types';
 import { searchEmotes, getAllEmotesOrganized, type EmotesBySource } from '../../../lib/emotes';
 import { isMobileDevice } from '../../../lib/device';
 import EmoteMenu from '../../EmoteMenu';
+import PresetMessages from './PresetMessages';
 
 interface MessageInputProps {
   onSendMessage: (message: string, platforms: Platform[], replyToId?: string) => Promise<void>;
@@ -464,6 +465,7 @@ function MessageInput({
         <button onClick={handleToggleEmotePicker} disabled={selectedPlatforms.length === 0 || isLoading} className="emote-picker-button" title="Browse emotes">
           <FaSmile size={18} />
         </button>
+        <PresetMessages onSendMessage={onSendMessage} isLoading={isLoading} selectedPlatforms={selectedPlatforms} replyingTo={replyingTo} onCancelReply={onCancelReply} />
         <textarea
           ref={textareaRef}
           value={message}
