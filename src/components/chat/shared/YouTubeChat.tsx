@@ -79,6 +79,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
@@ -184,19 +185,30 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
       es.addEventListener('error', (e: Event) => {
         if (!isMounted) return;
+        let errorMsg: string;
         try {
           const data = JSON.parse((e as MessageEvent).data) as SSEErrorEvent;
           console.error('[YouTubeChat] SSE error event:', data.error);
-          setIsConnected(false);
-          setError(data.error);
-          errorRef.current = data.error;
+          errorMsg = data.error;
         } catch {
-          setIsConnected(false);
-          setError('Connection lost');
-          errorRef.current = 'Connection lost';
+          errorMsg = 'Connection lost';
         }
+        setIsConnected(false);
+        setError(errorMsg);
+        errorRef.current = errorMsg;
         es.close();
         eventSourceRef.current = null;
+
+        // Auto-reload chat after a delay with exponential backoff
+        const delay = Math.min(3000 + retryCountRef.current * 2000, 30000);
+        retryCountRef.current++;
+        reconnectTimerRef.current = setTimeout(() => {
+          if (isMounted) {
+            setError(null);
+            errorRef.current = null;
+            connect();
+          }
+        }, delay);
       });
 
       es.addEventListener('end', (e: Event) => {
@@ -216,11 +228,19 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         setIsConnected(false);
 
         if (retryCountRef.current > 20) {
-          // After ~20 auto-reconnect failures (~100s), give up
+          // After ~20 auto-reconnect failures (~100s), stop EventSource auto-reconnect
+          // and schedule our own manual reconnect
           if (isMounted) {
-            setError('Failed to connect to YouTube chat. Please refresh the page.');
             es.close();
             eventSourceRef.current = null;
+            const delay = Math.min(3000 + retryCountRef.current * 2000, 30000);
+            reconnectTimerRef.current = setTimeout(() => {
+              if (isMounted) {
+                setError(null);
+                errorRef.current = null;
+                connect();
+              }
+            }, delay);
           }
         }
       };
@@ -239,7 +259,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         reconnectTimerRef.current = null;
       }
     };
-  }, [videoId]);
+  }, [videoId, reloadKey]);
 
   // Keep the view pinned to the newest message
   useEffect(() => {
@@ -270,6 +290,16 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
+        {error !== 'Live stream has ended' && (
+          <button
+            className="yt-chat-reload-btn"
+            onClick={() => {
+              setReloadKey(k => k + 1);
+            }}
+          >
+            Reload chat
+          </button>
+        )}
       </div>
     );
   }
