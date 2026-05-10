@@ -57,7 +57,8 @@ function buildCSP(nonce?: string): string {
     " https://yt3.googleusercontent.com" + // YouTube avatars (alt)
     " https://i.ytimg.com" + // YouTube thumbnails
     " https://lh3.googleusercontent.com" + // Google profile images
-    " https://fonts.gstatic.com", // Google Noto Emoji images (YouTube chat standard emoji)
+    " https://fonts.gstatic.com" + // Google Noto Emoji images (YouTube chat standard emoji)
+    " https://cdn.prod.website-files.com", // Ko-fi badge images
     // API / XHR calls the client makes directly
     "connect-src 'self'" +
     " https://api.twitch.tv" + // Twitch Helix API (Twurple)

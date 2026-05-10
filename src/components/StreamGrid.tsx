@@ -243,6 +243,13 @@ export default function StreamGrid({
                     </div>
                 )}
             </div>
+
+            <div className="stream-grid-kofi">
+                <span className="stream-grid-kofi-text">If you'd like to support the project :</span>
+                <a href="https://ko-fi.com/masterofhollows" target="_blank" rel="noopener noreferrer" className="stream-grid-kofi-link">
+                    <img width="80" src="https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a02fad2b4c413af6d15_support_me_on_kofi_badge_beige.png" alt="Support me on Ko-fi" />
+                </a>
+            </div>
         </div>
     );
 }

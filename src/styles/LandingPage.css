@@ -126,6 +126,23 @@ html:has(.landing-page) {
   font-size: 17px;
 }
 
+.landing-kofi-hint {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 12px;
+  opacity: 0.8;
+}
+
+.landing-kofi-hint a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.landing-kofi-hint a:hover {
+  opacity: 0.7;
+}
+
 .landing-hero-meta {
   display: flex;
   gap: 24px;

@@ -99,6 +99,11 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           </svg>
           Login with Twitch
         </button>
+        <p className="landing-kofi-hint">
+          <a href="https://ko-fi.com/masterofhollows" target="_blank" rel="noopener noreferrer">
+            If you'd like to support the project ☕
+          </a>
+        </p>
         <div className="landing-hero-meta">
           <span className="landing-meta-item">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
