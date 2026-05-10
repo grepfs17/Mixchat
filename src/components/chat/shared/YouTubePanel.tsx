@@ -79,6 +79,8 @@ export default function YouTubePanel({
                 src={`https://www.youtube.com/live_chat?v=${youtubeVideoId}&embed_domain=${window.location.hostname}&dark_theme=1`}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="YouTube Live Chat"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="origin"
               />
             ) : (
               <YouTubeChat
