@@ -1090,11 +1090,20 @@ export function searchEmotes(
 
   // Debug: Show first 5 Twitch emote names
 
-  // Search Twitch emotes (includes global, channel, and user's subscriptions)
-  Object.entries(emotesTwitch).forEach(([name, url]) => {
+  // Search Twitch global emotes
+  Object.entries(emotesTwitchGlobal).forEach(([name, url]) => {
     if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "Twitch" });
     }
+  });
+
+  // Search user's subscription emotes (only emotes they can actually use)
+  emotesTwitchByChannel.forEach((group) => {
+    Object.entries(group.emotes).forEach(([name, url]) => {
+      if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+        results.push({ name, url, source: "Twitch" });
+      }
+    });
   });
 
   // Search 7TV emotes
