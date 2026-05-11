@@ -53,6 +53,10 @@ setInterval(() => {
   }
 }, 120_000);
 
+setInterval(() => {
+  reapIdleSessions();
+}, 60_000);
+
 // SSE client waiting for messages
 interface SSEClient {
   id: string;
@@ -581,7 +585,13 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         `[YouTube Chat] SSE client disconnected: ${clientId} (${session.clients.size} remaining for ${videoId})`,
       );
 
-      // If no clients left, keep session alive for MAX_IDLE_MS (reaped by cleanup)
+      if (session.clients.size === 0) {
+        console.log(`[YouTube Chat] No clients left for ${videoId} — stopping chat session`);
+        try {
+          session.chat?.stop();
+        } catch {}
+        activeLiveChats.delete(videoId);
+      }
     },
   });
 
