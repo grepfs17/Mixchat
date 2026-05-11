@@ -5,6 +5,7 @@ import { FONT_FAMILY_MAP, CHAT_FONT_OPTIONS, THEME_OPTIONS } from '../lib/types'
 import { playMentionSoundPreview, MENTION_SOUND_OPTIONS, type MentionSoundType } from '../hooks/useTwitchChat';
 import { exportSettings, importSettings } from '../lib/settingsBackup';
 import { saveSettingsToDrive, loadSettingsFromDrive } from '../lib/googleDrive';
+import { loadEventSounds, saveEventSounds } from '../lib/eventSoundStorage';
 
 const GROUPS = ['appearance', 'chat', 'layout', 'streamer', 'notifications', 'backup'] as const;
 type GroupKey = typeof GROUPS[number];
@@ -38,6 +39,8 @@ interface EmbedConfigModalProps {
   onHideViewerCountChange: (value: boolean) => void;
   eventSounds: Record<string, string>;
   onEventSoundChange: (eventType: string, soundData: string | null) => void;
+  eventSoundVolume: number;
+  onEventSoundVolumeChange: (value: number) => void;
   hasYoutubeSession: boolean;
   onReauthYoutube: () => void;
   onClose: () => void;
@@ -72,6 +75,8 @@ export default function EmbedConfigModal({
   onHideViewerCountChange,
   eventSounds,
   onEventSoundChange,
+  eventSoundVolume,
+  onEventSoundVolumeChange,
   hasYoutubeSession,
   onReauthYoutube,
   onClose,
@@ -112,25 +117,32 @@ export default function EmbedConfigModal({
     setShareLink(null);
     setLinkCopied(false);
     try {
+      const eventSoundsData = await loadEventSounds();
+      const settings: Record<string, string> = {};
+
+      for (const k of [
+        'mixchat_video_ratio', 'mixchat_favorite_channels', 'mixchat_embed_default_open',
+        'mixchat_unify_chat', 'mixchat_split_chat', 'mixchat_use_youtube_embed',
+        'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
+        'mixchat_mention_volume', 'mixchat_mention_sound_type',
+        'mixchat_show_deleted_messages', 'mixchat_compact_actions',
+        'mixchat_hide_viewer_count', 'mixchat_event_sound_volume',
+        'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
+        'mixchat_youtube_links', 'disabled_emotes_v1',
+      ]) {
+        const v = localStorage.getItem(k);
+        if (v !== null) settings[k] = v;
+      }
+
+      if (eventSoundsData && Object.keys(eventSoundsData).length > 0) {
+        settings['mixchat_event_sounds'] = JSON.stringify(eventSoundsData);
+      }
+
       const backup = {
         _version: 1,
         _app: 'mixchat',
         _exportedAt: new Date().toISOString(),
-        settings: Object.fromEntries(
-          [
-            'mixchat_video_ratio', 'mixchat_favorite_channels', 'mixchat_embed_default_open',
-            'mixchat_unify_chat', 'mixchat_split_chat', 'mixchat_use_youtube_embed',
-            'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
-            'mixchat_mention_volume', 'mixchat_mention_sound_type',
-            'mixchat_show_deleted_messages', 'mixchat_compact_actions',
-            'mixchat_hide_viewer_count', 'mixchat_event_sounds',
-            'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
-            'mixchat_youtube_links', 'disabled_emotes_v1',
-          ].flatMap(k => {
-            const v = localStorage.getItem(k);
-            return v !== null ? [[k, v]] as [string, string][] : [] as [string, string][];
-          })
-        ),
+        settings,
       };
 
       const result = await saveSettingsToDrive(JSON.stringify(backup, null, 2));
@@ -157,8 +169,16 @@ export default function EmbedConfigModal({
       const result = await loadSettingsFromDrive();
       let count = 0;
       for (const [key, value] of Object.entries(result.settings)) {
-        localStorage.setItem(key, value);
-        count++;
+        if (key === 'mixchat_event_sounds') {
+          try {
+            const sounds = JSON.parse(value);
+            await saveEventSounds(sounds);
+            count++;
+          } catch { /* ignore */ }
+        } else {
+          localStorage.setItem(key, value);
+          count++;
+        }
       }
       setDriveMessage(`Loaded ${count} settings from Drive. Reloading...`);
       setTimeout(() => window.location.reload(), 1200);
@@ -226,8 +246,9 @@ export default function EmbedConfigModal({
     if (!soundData) return;
 
     const audio = new Audio(soundData);
-    audio.play().catch(() => {});
-  }, [eventSounds]);
+    audio.volume = Math.max(0, Math.min(1, eventSoundVolume));
+    audio.play().catch(() => { });
+  }, [eventSounds, eventSoundVolume]);
 
   const removeEventSound = useCallback((eventType: string) => {
     onEventSoundChange(eventType, null);
@@ -462,6 +483,24 @@ export default function EmbedConfigModal({
 
                 {!eventSoundsCollapsed && (
                   <div className="embed-config-event-sounds">
+                    <div className="embed-config-section" style={{ padding: '0 0 8px' }}>
+                      <label className="embed-config-volume-label">
+                        Volume: <span className="embed-config-volume-value">{Math.round(eventSoundVolume * 100)}%</span>
+                      </label>
+                      <div className="embed-config-volume-row">
+                        <span className="embed-config-volume-bound">0%</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.05"
+                          value={eventSoundVolume}
+                          onChange={(e) => onEventSoundVolumeChange(parseFloat(e.target.value))}
+                          className="embed-config-range"
+                        />
+                        <span className="embed-config-volume-bound">100%</span>
+                      </div>
+                    </div>
                     {EVENT_SOUND_TYPES.map(({ key, label }) => {
                       const hasSound = !!eventSounds[key];
                       return (

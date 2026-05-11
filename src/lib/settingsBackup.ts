@@ -4,6 +4,8 @@
  * No server-side storage — the user owns their data.
  */
 
+import { loadEventSounds, saveEventSounds } from './eventSoundStorage';
+
 const BACKUP_VERSION = 1;
 
 /** Keys that represent user preferences (not auth tokens, not caches). */
@@ -22,7 +24,7 @@ const SETTINGS_KEYS = [
   'mixchat_show_deleted_messages',
   'mixchat_compact_actions',
   'mixchat_hide_viewer_count',
-  'mixchat_event_sounds',
+  'mixchat_event_sound_volume',
   'mixchat_chat_split_ratio',
   'mixchat_watched_streamers',
   'mixchat_youtube_links',
@@ -60,13 +62,20 @@ function writeSettings(settings: Record<string, string>): number {
 
 /**
  * Export all user settings to a downloadable JSON file.
+ * Event sounds are read from IndexedDB and included in the backup.
  */
-export function exportSettings(): void {
+export async function exportSettings(): Promise<void> {
+  const settings = readSettings();
+  const eventSounds = await loadEventSounds();
+  if (eventSounds && Object.keys(eventSounds).length > 0) {
+    settings['mixchat_event_sounds'] = JSON.stringify(eventSounds);
+  }
+
   const backup: SettingsBackup = {
     _version: BACKUP_VERSION,
     _app: 'mixchat',
     _exportedAt: new Date().toISOString(),
-    settings: readSettings(),
+    settings,
   };
 
   const json = JSON.stringify(backup, null, 2);
@@ -85,11 +94,12 @@ export function exportSettings(): void {
 /**
  * Import settings from a JSON file.
  * Returns the number of settings restored, or -1 on error.
+ * Event sounds are written to IndexedDB.
  */
 export function importSettings(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(reader.result as string) as SettingsBackup;
 
@@ -103,7 +113,18 @@ export function importSettings(file: File): Promise<number> {
           return;
         }
 
-        const count = writeSettings(parsed.settings);
+        let count = writeSettings(parsed.settings);
+
+        if (parsed.settings['mixchat_event_sounds']) {
+          try {
+            const sounds = JSON.parse(parsed.settings['mixchat_event_sounds']);
+            await saveEventSounds(sounds);
+            count++;
+          } catch {
+            // ignore malformed event sounds
+          }
+        }
+
         resolve(count);
       } catch (e) {
         reject(new Error('Failed to parse settings file.'));

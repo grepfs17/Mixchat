@@ -388,6 +388,7 @@ export function useTwitchChat(
   mentionVolume: number = 0.5,
   mentionSoundType: MentionSoundType = "ding",
   eventSounds: Record<string, string> = {},
+  eventSoundVolume: number = 1,
   onOwnBadgesLoaded?: (
     badges: Record<string, string>,
     badgeDetails: Record<string, { url: string; title: string }>,
@@ -408,6 +409,7 @@ export function useTwitchChat(
   const mentionVolumeRef = useRef(mentionVolume);
   const mentionSoundTypeRef = useRef(mentionSoundType);
   const eventSoundsRef = useRef(eventSounds);
+  const eventSoundVolumeRef = useRef(eventSoundVolume);
   const onMessageDeletedRef = useRef(onMessageDeleted);
   // Broadcaster ID is resolved once in onConnect and reused by onMessage to
   // look up reward titles without re-fetching the users endpoint each time.
@@ -432,6 +434,9 @@ export function useTwitchChat(
   useEffect(() => {
     eventSoundsRef.current = eventSounds;
   }, [eventSounds]);
+  useEffect(() => {
+    eventSoundVolumeRef.current = eventSoundVolume;
+  }, [eventSoundVolume]);
   useEffect(() => {
     onMessageDeletedRef.current = onMessageDeleted;
   }, [onMessageDeleted]);
@@ -725,14 +730,14 @@ export function useTwitchChat(
         if (chatMessage.messageType === "redemption") {
           const soundData = eventSoundsRef.current["redemption"];
           if (soundData) {
-            playEventSound("redemption", soundData);
+            playEventSound("redemption", soundData, eventSoundVolumeRef.current);
           }
         }
 
         if (chatMessage.messageType === "highlight") {
           const soundData = eventSoundsRef.current["highlight"];
           if (soundData) {
-            playEventSound("highlight", soundData);
+            playEventSound("highlight", soundData, eventSoundVolumeRef.current);
           }
         }
 
@@ -750,14 +755,14 @@ export function useTwitchChat(
       if (chatMessage.messageType === "redemption") {
         const soundData = eventSoundsRef.current["redemption"];
         if (soundData) {
-          playEventSound("redemption", soundData);
+          playEventSound("redemption", soundData, eventSoundVolumeRef.current);
         }
       }
 
       if (chatMessage.messageType === "highlight") {
         const soundData = eventSoundsRef.current["highlight"];
         if (soundData) {
-          playEventSound("highlight", soundData);
+          playEventSound("highlight", soundData, eventSoundVolumeRef.current);
         }
       }
 
@@ -799,7 +804,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["announcement"];
       if (soundData) {
-        playEventSound("announcement", soundData);
+          playEventSound("announcement", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -810,7 +815,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["reward-gift"];
       if (soundData) {
-        playEventSound("reward-gift", soundData);
+        playEventSound("reward-gift", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -875,7 +880,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["subscription"];
       if (soundData) {
-        playEventSound("subscription", soundData);
+        playEventSound("subscription", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -894,7 +899,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["resub"];
       if (soundData) {
-        playEventSound("resub", soundData);
+        playEventSound("resub", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -908,7 +913,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["subgift"];
       if (soundData) {
-        playEventSound("subgift", soundData);
+        playEventSound("subgift", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -922,7 +927,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["subgift"];
       if (soundData) {
-        playEventSound("subgift", soundData);
+        playEventSound("subgift", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -937,7 +942,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["raid"];
       if (soundData) {
-        playEventSound("raid", soundData);
+        playEventSound("raid", soundData, eventSoundVolumeRef.current);
       }
     });
 
@@ -1020,7 +1025,7 @@ export function useTwitchChat(
 
         const soundData = eventSoundsRef.current["redemption"];
         if (soundData) {
-          playEventSound("redemption", soundData);
+          playEventSound("redemption", soundData, eventSoundVolumeRef.current);
         }
         return;
       }
@@ -1080,7 +1085,7 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["watch-streak"];
       if (soundData) {
-        playEventSound("watch-streak", soundData);
+        playEventSound("watch-streak", soundData, eventSoundVolumeRef.current);
       }
     });
 
