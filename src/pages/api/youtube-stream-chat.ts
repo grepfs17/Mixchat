@@ -71,6 +71,7 @@ const SESSION_GRACE_PERIOD_MS = 30_000;
 interface ChatSession {
   chat: any;
   messages: ChatMessage[];
+  seenIds: Set<string>;
   clients: Map<string, SSEClient>;
   lastUpdate: number;
   destroyTimer: ReturnType<typeof setTimeout> | null;
@@ -253,6 +254,12 @@ function parseChatItem(item: any): ChatMessage | null {
       },
     };
   }
+  if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) {
+    return parseGiftPurchaseAnnouncement(item);
+  }
+  if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) {
+    return parseGiftRedemptionAnnouncement(item);
+  }
   return null;
 }
 
@@ -319,16 +326,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const info = await yt.getInfo(videoId);
   const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
+  const seenIds = new Set<string>();
 
-  const parse = (item: any): ChatMessage | null => {
-    if (item.is(YTNodes.LiveChatTextMessage)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatPaidMessage)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatPaidSticker)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatMembershipItem)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) return parseGiftPurchaseAnnouncement(item);
-    if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) return parseGiftRedemptionAnnouncement(item);
-    return null;
-  };
+  const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
   chat.on("start", (initialData: any) => {
     console.log(
@@ -340,9 +340,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const item = action.as(YTNodes.AddChatItemAction)?.item;
         if (!item) continue;
         const msg = parse(item);
-        if (msg && !messages.some((m) => m.id === msg.id)) {
+        if (msg && !seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
           messages.push(msg);
-          if (messages.length > 200) messages.shift();
+          if (messages.length > 200) {
+            const removed = messages.shift()!;
+            seenIds.delete(removed.id);
+          }
         }
       }
     }
@@ -355,9 +359,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const item = action.as(YTNodes.AddChatItemAction)?.item;
         if (!item) return;
         const msg = parse(item);
-        if (msg && !messages.some((m) => m.id === msg.id)) {
+        if (msg && !seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
           messages.push(msg);
-          if (messages.length > 200) messages.shift();
+          if (messages.length > 200) {
+            const removed = messages.shift()!;
+            seenIds.delete(removed.id);
+          }
           broadcast(session!, "message", msg, msg.id);
         }
         return;
@@ -367,6 +375,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         if (targetId) {
           const idx = messages.findIndex((m) => m.id === targetId);
           if (idx !== -1) messages.splice(idx, 1);
+          seenIds.delete(targetId);
           broadcast(session!, "delete", { messageId: targetId });
         }
       }
@@ -462,7 +471,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
   chat.start();
 
-  session = { chat, messages, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null };
+  session = { chat, messages, seenIds, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null };
   activeLiveChats.set(videoId, session);
   return session;
 }
@@ -616,14 +625,14 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-store, no-transform",
+      "Connection": "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });
 };
 
-// Gift announcement parsers (from main branch)
 function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
-  const base = parseLiveChatMessage(msg);
+  const base = parseTextMessageBase(msg);
   const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
   const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
 
@@ -632,14 +641,14 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     messageType: 'gift-purchase',
     superchat: {
       amount,
-      color: '#9c27b0', // Purple for gift purchases
+      color: '#9c27b0',
     },
     giftCount,
   };
 }
 
 function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
-  const base = parseLiveChatMessage(msg);
+  const base = parseTextMessageBase(msg);
   const recipientName = msg.recipient?.name?.toString() || msg.header_subtext?.toString() || '';
 
   return {
@@ -648,7 +657,7 @@ function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
     recipientName,
     superchat: {
       amount: 'Gift received',
-      color: '#4caf50', // Green for gift redemptions
+      color: '#4caf50',
     },
   };
 }

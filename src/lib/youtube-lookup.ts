@@ -1,4 +1,5 @@
 import { getInnertube } from './youtube';
+import { YT_USER_AGENT } from './constants';
 
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
 const HANDLE_RE = /^@[\w.]{1,100}$/;
@@ -30,7 +31,7 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
   }
 }
 
-const USER_AGENT = process.env.YT_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const USER_AGENT = YT_USER_AGENT;
 const REFERER = 'https://www.youtube.com/';
 const ORIGIN = 'https://www.youtube.com';
 
@@ -44,7 +45,7 @@ function buildFetchHeaders(cookies?: string): HeadersInit {
   };
 }
 
-const VIDEO_ID_RE = /[\w-]{11}/;
+const VIDEO_ID_RE = /^[\w-]{11}$/;
 
 function extractVideoIdFromHtml(html: string): string | null {
   // 1. <link rel="canonical" href="...watch?v=VIDEO_ID">

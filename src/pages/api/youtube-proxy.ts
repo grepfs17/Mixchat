@@ -21,6 +21,8 @@ function getChannelParam(url: URL | URLSearchParams): string | null {
  * Usage: GET /api/youtube-proxy?action=getLiveVideo&channelUrl=https://youtube.com/@channel
  *        GET /api/youtube-proxy?action=getChatMessages&videoId=dQw4w9WgXcQ
  */
+const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
+
 export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   const headers = {
     "Content-Type": "application/json",
@@ -46,7 +48,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     }
 
     // Validate the action against an allowlist.
-    const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
     if (!ALLOWED_ACTIONS.has(action)) {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}` }),
@@ -62,8 +63,6 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     if (!accessToken) {
       console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
     }
-    // Initialize Innertube client with request-scoped diagnostics so failures
-
     // Initialize Innertube client with request-scoped diagnostics so failures
     // include the action and channel context in server logs.
     let yt: any;

@@ -158,7 +158,14 @@ export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) =
         const targetUrl = `${TWITCH_API_BASE}${path}${forwardParams.size > 0 ? `?${forwardParams}` : ""}`;
 
         const body = await request.text().catch(() => '');
-        const parsedBody = body ? JSON.parse(body) : undefined;
+        let parsedBody: any;
+        if (body) {
+          try {
+            parsedBody = JSON.parse(body);
+          } catch {
+            return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          }
+        }
 
         return await forwardRequest('POST', targetUrl, accessToken, clientId, parsedBody);
     } catch (error) {

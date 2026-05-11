@@ -1,5 +1,6 @@
 import { BG } from 'bgutils-js';
 import { JSDOM } from 'jsdom';
+import { YT_USER_AGENT } from './constants';
 
 interface PoTokenData {
   visitorData: string;
@@ -17,41 +18,67 @@ const DEFAULT_TTL_MS = 30 * 60 * 1000;
 
 const DEBUG = process.env.YT_DEBUG === '1';
 
-function domSetup(): void {
+function createDomGlobals(): { globals: Record<string, any>; restore: () => void } {
   const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>', {
     url: 'https://www.youtube.com/',
     referrer: 'https://www.youtube.com/',
-    userAgent:
-      process.env.YT_USER_AGENT ||
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    userAgent: YT_USER_AGENT,
   });
 
   const win = dom.window as any;
-  Object.assign(globalThis, {
+  const globals: Record<string, any> = {
     window: win,
     document: win.document,
     location: win.location,
     origin: win.origin,
-  });
+  };
 
+  const saved: Record<string, any> = {};
+  const keys = Object.keys(globals);
+  for (const key of keys) {
+    if (key in globalThis) saved[key] = (globalThis as any)[key];
+  }
+
+  let navigatorSaved = false;
+  let navigatorHadDescriptor = false;
+  let existingDescriptor: PropertyDescriptor | undefined;
+  if ('navigator' in globalThis) {
+    navigatorSaved = true;
+    existingDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    navigatorHadDescriptor = !!existingDescriptor;
+  }
+
+  Object.assign(globalThis, globals);
   if (!Reflect.has(globalThis, 'navigator')) {
     Object.defineProperty(globalThis, 'navigator', { value: win.navigator });
   }
-}
 
-let domInitialized = false;
-function ensureDomSetup(): void {
-  if (domInitialized) return;
-  domSetup();
-  domInitialized = true;
+  const restore = () => {
+    for (const key of keys) {
+      if (key in saved) {
+        (globalThis as any)[key] = saved[key];
+      } else {
+        delete (globalThis as any)[key];
+      }
+    }
+    if (navigatorSaved) {
+      if (navigatorHadDescriptor && existingDescriptor) {
+        Object.defineProperty(globalThis, 'navigator', existingDescriptor);
+      } else if (!navigatorHadDescriptor) {
+        delete (globalThis as any)['navigator'];
+      }
+    } else {
+      delete (globalThis as any)['navigator'];
+    }
+  };
+
+  return { globals, restore };
 }
 
 async function generatePotokenInner(): Promise<PoTokenData> {
   const { Innertube } = await import('youtubei.js');
 
-  const userAgent =
-    process.env.YT_USER_AGENT ||
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  const userAgent = YT_USER_AGENT;
 
   const tempInnertube = await Innertube.create({
     retrieve_player: false,
@@ -64,61 +91,65 @@ async function generatePotokenInner(): Promise<PoTokenData> {
     throw new Error('[PoToken] Could not obtain visitor_data from Innertube session');
   }
 
-  ensureDomSetup();
+  const { globals, restore } = createDomGlobals();
 
-  const bgConfig = {
-    fetch: (input: string | URL | Request, init?: RequestInit) => fetch(input, init),
-    globalObj: globalThis,
-    identifier: visitorData,
-    requestKey: REQUEST_KEY,
-  };
+  try {
+    const bgConfig = {
+      fetch: (input: string | URL | Request, init?: RequestInit) => fetch(input, init),
+      globalObj: globalThis,
+      identifier: visitorData,
+      requestKey: REQUEST_KEY,
+    };
 
-  if (DEBUG) console.debug('[PoToken] Fetching BotGuard challenge…');
-  const bgChallenge = await BG.Challenge.create(bgConfig as any);
-  if (!bgChallenge) {
-    throw new Error('[PoToken] Could not obtain BotGuard challenge');
-  }
+    if (DEBUG) console.debug('[PoToken] Fetching BotGuard challenge…');
+    const bgChallenge = await BG.Challenge.create(bgConfig as any);
+    if (!bgChallenge) {
+      throw new Error('[PoToken] Could not obtain BotGuard challenge');
+    }
 
-  const interpreterJavascript =
-    bgChallenge.interpreterJavascript?.privateDoNotAccessOrElseSafeScriptWrappedValue;
+    const interpreterJavascript =
+      bgChallenge.interpreterJavascript?.privateDoNotAccessOrElseSafeScriptWrappedValue;
 
-  if (interpreterJavascript) {
-    new Function(interpreterJavascript)();
-  } else {
-    throw new Error('[PoToken] Could not load BotGuard VM (no interpreter script)');
-  }
+    if (interpreterJavascript) {
+      new Function(interpreterJavascript)();
+    } else {
+      throw new Error('[PoToken] Could not load BotGuard VM (no interpreter script)');
+    }
 
-  if (DEBUG) console.debug('[PoToken] Running PoToken.generate…');
-  const poTokenResult = await BG.PoToken.generate({
-    program: bgChallenge.program,
-    globalName: bgChallenge.globalName,
-    bgConfig: bgConfig as any,
-  });
-
-  const poToken = poTokenResult.poToken;
-  if (!poToken) {
-    throw new Error('[PoToken] PoToken generation returned empty result');
-  }
-
-  if (DEBUG) {
-    console.debug('[PoToken] Generated PoToken successfully', {
-      visitorData: visitorData.slice(0, 20) + '…',
-      poToken: poToken.slice(0, 20) + '…',
-      hasIntegrityTokenData: !!poTokenResult.integrityTokenData,
+    if (DEBUG) console.debug('[PoToken] Running PoToken.generate…');
+    const poTokenResult = await BG.PoToken.generate({
+      program: bgChallenge.program,
+      globalName: bgChallenge.globalName,
+      bgConfig: bgConfig as any,
     });
+
+    const poToken = poTokenResult.poToken;
+    if (!poToken) {
+      throw new Error('[PoToken] PoToken generation returned empty result');
+    }
+
+    if (DEBUG) {
+      console.debug('[PoToken] Generated PoToken successfully', {
+        visitorData: visitorData.slice(0, 20) + '…',
+        poToken: poToken.slice(0, 20) + '…',
+        hasIntegrityTokenData: !!poTokenResult.integrityTokenData,
+      });
+    }
+
+    const ttlMs =
+      poTokenResult.integrityTokenData?.estimatedTtlSecs != null
+        ? Math.max(poTokenResult.integrityTokenData.estimatedTtlSecs * 1000 * 0.8, 60_000)
+        : DEFAULT_TTL_MS;
+
+    return {
+      visitorData,
+      poToken,
+      generatedAt: Date.now(),
+      ttlMs,
+    };
+  } finally {
+    restore();
   }
-
-  const ttlMs =
-    poTokenResult.integrityTokenData?.estimatedTtlSecs != null
-      ? Math.max(poTokenResult.integrityTokenData.estimatedTtlSecs * 1000 * 0.8, 60_000)
-      : DEFAULT_TTL_MS;
-
-  return {
-    visitorData,
-    poToken,
-    generatedAt: Date.now(),
-    ttlMs,
-  };
 }
 
 export async function getPoToken(): Promise<PoTokenData> {
@@ -150,7 +181,6 @@ export async function getPoToken(): Promise<PoTokenData> {
 export function invalidatePoToken(): void {
   cachedToken = null;
   generationPromise = null;
-  domInitialized = false;
 }
 
 export function hasValidPoToken(): boolean {

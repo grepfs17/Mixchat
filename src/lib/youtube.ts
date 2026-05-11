@@ -1,6 +1,7 @@
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
 import { getPoToken, invalidatePoToken } from "./potoken";
+import { YT_USER_AGENT } from "./constants";
 
 let yt: Innertube | null = null;
 let isInitializing = false;
@@ -113,7 +114,7 @@ export async function getInnertube() {
     if (process.env.YT_USER_AGENT) {
       innertubeOptions.user_agent = process.env.YT_USER_AGENT;
     } else if (clientType === 'WEB') {
-      innertubeOptions.user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+      innertubeOptions.user_agent = YT_USER_AGENT;
     }
 
     innertubeOptions.generate_session_locally =
