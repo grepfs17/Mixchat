@@ -182,24 +182,27 @@ function parseBadges(msg: any): Record<string, string> {
   return badges;
 }
 
+function parseTextMessageBase(item: any): ChatMessage {
+  return {
+    id: item.id,
+    author: item.author?.name?.toString() || "Unknown",
+    authorChannelId: item.author?.id,
+    authorAvatar: Array.isArray(item.author?.thumbnails)
+      ? item.author.thumbnails[0]?.url
+      : undefined,
+    badges: parseBadges(item),
+    parts: parseMessageRuns(item),
+    timestamp: parseTimestamp(item),
+  };
+}
+
 function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatTextMessage)) {
-    return {
-      id: item.id,
-      author: item.author?.name?.toString() || "Unknown",
-      authorChannelId: item.author?.id,
-      authorAvatar: Array.isArray(item.author?.thumbnails)
-        ? item.author.thumbnails[0]?.url
-        : undefined,
-      badges: parseBadges(item),
-      parts: parseMessageRuns(item),
-      timestamp: parseTimestamp(item),
-    };
+    return parseTextMessageBase(item);
   }
   if (item.is(YTNodes.LiveChatPaidMessage)) {
-    const base = parseChatItem(item)!;
     return {
-      ...base,
+      ...parseTextMessageBase(item),
       superchat: {
         amount: item.purchase_amount?.toString() || "Unknown",
         color: ARGBtoHex(
@@ -239,9 +242,8 @@ function parseChatItem(item: any): ChatMessage | null {
     };
   }
   if (item.is(YTNodes.LiveChatMembershipItem)) {
-    const base = parseChatItem(item)!;
     return {
-      ...base,
+      ...parseTextMessageBase(item),
       superchat: {
         amount: item.header_subtext?.toString() || "Member",
         color: "#0f9d58",
@@ -598,8 +600,8 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no", // Disable nginx buffering
+      "Cache-Control": "no-cache, no-store, no-transform",
+      "X-Accel-Buffering": "no",
     },
   });
 };
