@@ -101,7 +101,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         </button>
         <p className="landing-kofi-hint">
           <a href="https://ko-fi.com/masterofhollows" target="_blank" rel="noopener noreferrer">
-            If you'd like to support the project ☕
+            You can support the project on Ko-fi
           </a>
         </p>
         <div className="landing-hero-meta">
