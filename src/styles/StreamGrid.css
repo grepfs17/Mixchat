@@ -169,8 +169,8 @@ StreamGrid stream cards list
 
 .stream-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
 }
 
 .stream-card {
@@ -280,7 +280,7 @@ StreamGrid stream cards list
 }
 
 .stream-card-info {
-  padding: 10px 12px 12px;
+  padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -294,8 +294,8 @@ StreamGrid stream cards list
 }
 
 .stream-card-avatar {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   flex-shrink: 0;
   object-fit: cover;
@@ -309,7 +309,7 @@ StreamGrid stream cards list
 
 .stream-card-display-name {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
   font-family: var(--font-ui);
@@ -320,7 +320,7 @@ StreamGrid stream cards list
 }
 
 .stream-card-game {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-accent);
   font-family: var(--font-ui);
   font-weight: 500;
@@ -331,7 +331,7 @@ StreamGrid stream cards list
 }
 
 .stream-card-title {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   font-family: var(--font-ui);
   white-space: nowrap;
@@ -400,8 +400,8 @@ StreamGrid stream cards list
 }
 
 .skeleton-circle {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   flex-shrink: 0;
   background: linear-gradient(
@@ -427,12 +427,12 @@ StreamGrid stream cards list
 }
 
 .skeleton-bar--name {
-  height: 13px;
+  height: 14px;
   width: 65%;
 }
 
 .skeleton-bar--game {
-  height: 11px;
+  height: 12px;
   width: 45%;
   margin-top: 5px;
 }
@@ -445,7 +445,7 @@ StreamGrid stream cards list
 /* Responsive  */
 @media (max-width: 900px) {
   .stream-grid {
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 12px;
   }
 }
@@ -460,7 +460,7 @@ StreamGrid stream cards list
   }
 
   .stream-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
     gap: 10px;
   }
 
