@@ -21,6 +21,9 @@ import {
   searchCategories,
   startRaid,
   cancelRaid,
+  sendAnnouncement,
+  sendShoutout,
+  warnChatUser,
 } from '../lib/twitch';
 import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
@@ -807,6 +810,72 @@ export function useChatAppState({
                 }
               }
 
+              if (cmd === '/announce') {
+                const announcementText = parts.slice(1).join(' ');
+                if (!announcementText) {
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Usage: /announce <message>', type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+                try {
+                  await sendAnnouncement(selectedTwitchChannel, twitchSession.userId, announcementText);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Announcement sent!', type: 'success', id: notificationIdRef.current });
+                } catch (err: any) {
+                  console.error('Announcement command failed:', err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || 'Failed to send announcement', type: 'error', id: notificationIdRef.current });
+                }
+                return;
+              }
+
+              if (cmd === '/shoutout') {
+                const targetUser = parts[1];
+                if (!targetUser) {
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Usage: /shoutout <username>', type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+                try {
+                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
+                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                    throw new Error(`Could not find user ${targetUser}`);
+                  }
+                  await sendShoutout(selectedTwitchChannel, resolvedTargetId, twitchSession.userId);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: `Shoutout sent to ${targetUser}!`, type: 'success', id: notificationIdRef.current });
+                } catch (err: any) {
+                  console.error('Shoutout command failed:', err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || 'Failed to send shoutout', type: 'error', id: notificationIdRef.current });
+                }
+                return;
+              }
+
+              if (cmd === '/warn') {
+                const targetUser = parts[1];
+                if (!targetUser) {
+                  notificationIdRef.current += 1;
+                  setNotification({ message: 'Usage: /warn <username> [reason]', type: 'error', id: notificationIdRef.current });
+                  return;
+                }
+                try {
+                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
+                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                    throw new Error(`Could not find user ${targetUser}`);
+                  }
+                  const reason = parts.slice(2).join(' ') || undefined;
+                  await warnChatUser(selectedTwitchChannel, twitchSession.userId, resolvedTargetId, reason);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: `Warning sent to ${targetUser}`, type: 'success', id: notificationIdRef.current });
+                } catch (err: any) {
+                  console.error('Warn command failed:', err);
+                  notificationIdRef.current += 1;
+                  setNotification({ message: err.message || 'Failed to warn user', type: 'error', id: notificationIdRef.current });
+                }
+                return;
+              }
+
               await sendTwitchMessage(message, replyingTo?.id);
             } else {
               const serverMessageId = await sendHelixMessage(
@@ -987,19 +1056,25 @@ export function useChatAppState({
   }, [selectedTwitchChannel, twitchSession]);
 
   const handleWarn = useCallback(async (userName: string) => {
-    if (!sendTwitchMessage) return;
+    if (!selectedTwitchChannel || !twitchSession) return;
     const reason = prompt(`Enter a warning message for @${userName}:`, 'Please follow the chat rules');
     if (!reason) return;
     try {
-      await sendTwitchMessage(`@${userName} ${reason}`, undefined);
+      const resolvedUserId = await resolveBroadcasterId(userName);
+      if (resolvedUserId === userName && !/^\d+$/.test(resolvedUserId)) {
+        notificationIdRef.current += 1;
+        setNotification({ message: `Could not find user ${userName}`, type: 'error', id: notificationIdRef.current });
+        return;
+      }
+      await warnChatUser(selectedTwitchChannel, twitchSession.userId, resolvedUserId, reason);
       notificationIdRef.current += 1;
-      setNotification({ message: `Warned ${userName}`, type: 'success', id: notificationIdRef.current });
-    } catch (err) {
-      console.error('Failed to send warn message:', err);
+      setNotification({ message: `Warning sent to ${userName}`, type: 'success', id: notificationIdRef.current });
+    } catch (err: any) {
+      console.error('Failed to warn user:', err);
       notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to warn user', type: 'error', id: notificationIdRef.current });
+      setNotification({ message: err.message || 'Failed to warn user', type: 'error', id: notificationIdRef.current });
     }
-  }, [sendTwitchMessage]);
+  }, [selectedTwitchChannel, twitchSession]);
 
   const handleCancelRaid = useCallback(async () => {
     if (!selectedTwitchChannel) return;

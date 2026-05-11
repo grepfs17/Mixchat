@@ -13,6 +13,8 @@ const ALLOWED_PATH_PREFIXES = [
     "/helix/chat/badges/global",
     "/helix/chat/badges",       // covers /helix/chat/badges?broadcaster_id=...
     "/helix/chat/settings",     // used to check show_first_message_highlights
+    "/helix/chat/announcements", // send chat announcements
+    "/helix/chat/shoutouts",    // send shoutouts
     "/helix/users",             // used to resolve broadcaster IDs -> display names
     "/helix/channel_points/custom_rewards", // used to resolve reward titles by reward ID
     "/helix/moderation", // moderation endpoints (moderators only)

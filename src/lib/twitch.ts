@@ -231,6 +231,123 @@ export const clearChat = async (broadcasterId: string, moderatorId: string) => {
 };
 
 /**
+ * Send a chat announcement via Helix API.
+ * Requires moderator:manage:announcements scope.
+ */
+export const sendAnnouncement = async (
+  broadcasterId: string,
+  moderatorId: string,
+  message: string,
+  color?: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const body: any = { message };
+    if (color) body.color = color;
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/chat/announcements&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to send announcement: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("sendAnnouncement failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Send a shoutout via Helix API.
+ * Requires moderator:manage:shoutouts scope.
+ */
+export const sendShoutout = async (
+  fromBroadcasterId: string,
+  toBroadcasterId: string,
+  moderatorId: string,
+) => {
+  try {
+    const resolvedFromId = await resolveBroadcasterId(fromBroadcasterId);
+    const resolvedToId = await resolveBroadcasterId(toBroadcasterId);
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/chat/shoutouts&from_broadcaster_id=${encodeURIComponent(
+        resolvedFromId,
+      )}&to_broadcaster_id=${encodeURIComponent(resolvedToId)}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to send shoutout: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("sendShoutout failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Warn a user in chat via Helix API.
+ * Requires moderator:manage:warnings scope.
+ */
+export const warnChatUser = async (
+  broadcasterId: string,
+  moderatorId: string,
+  userId: string,
+  reason?: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const resolvedUserId = await resolveBroadcasterId(userId);
+
+    const body: any = { data: { user_id: resolvedUserId } };
+    if (reason) body.data.reason = reason;
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/warnings&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to warn user: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("warnChatUser failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Start a raid to another channel.
  */
 export const startRaid = async (
