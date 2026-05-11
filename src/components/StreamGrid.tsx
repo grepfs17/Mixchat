@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { FaYoutube } from 'react-icons/fa';
 import type { TwitchChannel } from './AppContainer';
 
 
@@ -13,6 +14,7 @@ export interface StreamTransitionInfo {
 interface StreamGridProps {
     channels: TwitchChannel[];
     favoriteChannels: string[];
+    linkedYoutubeChannelIds?: string[];
     onChannelSelect: (channelId: string, transitionInfo?: StreamTransitionInfo) => void;
     onToggleFavorite: (channelId: string) => void;
     loading?: boolean;
@@ -36,6 +38,7 @@ function getThumbnailSrc(channel: TwitchChannel, w = 320, h = 180): string {
 export default function StreamGrid({
     channels,
     favoriteChannels,
+    linkedYoutubeChannelIds = [],
     onChannelSelect,
     onToggleFavorite,
     loading,
@@ -235,6 +238,9 @@ export default function StreamGrid({
                                                     {channel.displayName}
                                                 </span>
                                             </div>
+                                            {linkedYoutubeChannelIds.includes(channel.id) && (
+                                                <FaYoutube size={18} className="stream-card-yt-badge" title="YouTube linked" />
+                                            )}
                                         </div>
 
                                         {game && (

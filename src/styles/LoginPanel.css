@@ -231,6 +231,22 @@
   transition: all 0.2s ease;
 }
 
+.channel-item-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.channel-item-yt-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  color: var(--color-text-muted);
+  background: var(--color-bg-primary);
+  border-radius: 50%;
+  line-height: 1;
+}
+
 .channel-item:not(.selected):hover {
   background-color: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.08);

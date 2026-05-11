@@ -280,6 +280,7 @@ StreamGrid stream cards list
 }
 
 .stream-card-info {
+  position: relative;
   padding: 12px 14px 14px;
   display: flex;
   flex-direction: column;
@@ -291,6 +292,14 @@ StreamGrid stream cards list
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.stream-card-yt-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: var(--color-text-muted);
+  line-height: 1;
 }
 
 .stream-card-avatar {

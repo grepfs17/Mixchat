@@ -233,23 +233,34 @@ function LoginPanel({
                       onClick={() => { onChannelChange?.(channel.id); onRequestClose?.(); }}
                       title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ''}`}
                     >
-                      {channel.profileImageUrl && (
-                        <img
-                          src={channel.profileImageUrl}
-                          alt={channel.displayName}
-                          className="channel-item-image"
-                        />
-                      )}
-                      <div className="channel-item-details">
-                        <span className="channel-item-name">
-                          {channel.displayName}
+{channel.profileImageUrl ? (
+                        <span className="channel-item-avatar-wrap">
+                          <img
+                            src={channel.profileImageUrl}
+                            alt={channel.displayName}
+                            className="channel-item-image"
+                          />
                           {linkedYoutubeChannelIds.includes(channel.id) && (
                             <FaYoutube
-                              size={11}
-                              style={{ color: 'var(--color-text-muted)', marginLeft: 4, verticalAlign: 'middle', flexShrink: 0 }}
+                              size={13}
+                              className="channel-item-yt-badge"
                               title="YouTube linked"
                             />
                           )}
+                        </span>
+                      ) : linkedYoutubeChannelIds.includes(channel.id) ? (
+                        <span className="channel-item-avatar-wrap">
+                          <span className="channel-item-image channel-item-image--placeholder" />
+                          <FaYoutube
+                            size={13}
+                            className="channel-item-yt-badge"
+                            title="YouTube linked"
+                          />
+                        </span>
+                      ) : null}
+                      <div className="channel-item-details">
+                        <span className="channel-item-name">
+                          {channel.displayName}
                         </span>
                         {channel.gameName && (
                           <span className="channel-game-name">

@@ -1093,6 +1093,7 @@ export default function AppContainer() {
           <StreamGrid
             channels={twitchChannels}
             favoriteChannels={favoriteChannels}
+            linkedYoutubeChannelIds={linkedYoutubeChannelIds}
             onChannelSelect={(id, transitionInfo) => setChannelData(id, transitionInfo)}
             onToggleFavorite={toggleFavorite}
             loading={channelsLoading}
