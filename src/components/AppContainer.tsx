@@ -9,7 +9,7 @@ import YouTubeLinker from './YouTubeLinker';
 
 import type { PlatformSession, ChatFont, ChatTheme } from '../lib/types';
 import { applyTheme } from '../lib/themes';
-import { getYoutubeLinkForChannel } from '../lib/youtubeLinks';
+import { getYoutubeLinkForChannel, getYoutubeLinks } from '../lib/youtubeLinks';
 import { getAllFollowedChannels, getStreamStatus } from '../lib/twitch';
 import { useStreamMonitor } from '../hooks/useStreamMonitor';
 import { useTokenRefresh } from '../hooks/useTokenRefresh';
@@ -977,6 +977,11 @@ export default function AppContainer() {
     [twitchChannels, favoriteChannels]
   );
 
+  const linkedYoutubeChannelIds = useMemo(
+    () => getYoutubeLinks().map((l) => l.twitchChannelId),
+    [ytLinksVersion]
+  );
+
   // While sessions are being restored from localStorage, render skeleton cards
   if (isLoading) {
     return (
@@ -1040,6 +1045,7 @@ export default function AppContainer() {
             onYoutubeLogout={handleYoutubeLogout}
             onManageWatchlist={() => setShowWatchlistManager(true)}
             onManageYoutubeLinks={() => setShowYoutubeLinker(true)}
+            linkedYoutubeChannelIds={linkedYoutubeChannelIds}
             embedDefaultOpen={embedDefaultOpen}
             onEmbedDefaultOpenChange={setEmbedDefaultOpen}
             unifyChatEnabled={unifyChatEnabled}

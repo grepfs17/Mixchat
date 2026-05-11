@@ -33,6 +33,7 @@ interface LoginPanelProps {
   onYoutubeLogout?: () => void;
   onManageWatchlist?: () => void;
   onManageYoutubeLinks?: () => void;
+  linkedYoutubeChannelIds?: string[];
   embedDefaultOpen?: boolean;
   onEmbedDefaultOpenChange?: (value: boolean) => void;
   unifyChatEnabled?: boolean;
@@ -88,6 +89,7 @@ function LoginPanel({
   onYoutubeLogout,
   onManageWatchlist,
   onManageYoutubeLinks,
+  linkedYoutubeChannelIds = [],
   embedDefaultOpen = true,
   onEmbedDefaultOpenChange,
   unifyChatEnabled = false,
@@ -241,6 +243,13 @@ function LoginPanel({
                       <div className="channel-item-details">
                         <span className="channel-item-name">
                           {channel.displayName}
+                          {linkedYoutubeChannelIds.includes(channel.id) && (
+                            <FaYoutube
+                              size={11}
+                              style={{ color: 'var(--color-text-muted)', marginLeft: 4, verticalAlign: 'middle', flexShrink: 0 }}
+                              title="YouTube linked"
+                            />
+                          )}
                         </span>
                         {channel.gameName && (
                           <span className="channel-game-name">
