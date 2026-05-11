@@ -26,6 +26,7 @@ export default function RaidNotification({
   onDismiss,
 }: RaidNotificationProps) {
   const [secondsLeft, setSecondsLeft] = useState(RAID_TOTAL_SECONDS);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   useEffect(() => {
     if (secondsLeft <= 0) {
@@ -56,15 +57,25 @@ export default function RaidNotification({
           <FaTwitch className="raid-twitch-icon" size={13} />
           <span className="raid-channel-name">{raid.targetDisplayName}</span>
         </div>
-        {!isInitiator && (
+        <div className="raid-notification-close-wrapper">
+          {confirmClose && (
+            <span className="raid-notification-close-tooltip">Press again to close</span>
+          )}
           <button
             className="raid-notification-close"
-            onClick={onDismiss}
+            onClick={() => {
+              if (confirmClose) {
+                onDismiss();
+              } else {
+                setConfirmClose(true);
+              }
+            }}
+            onBlur={() => setConfirmClose(false)}
             aria-label="Dismiss raid notification"
           >
             <FaTimes size={14} />
           </button>
-        )}
+        </div>
       </div>
 
       <p className="raid-notification-body">
