@@ -65,10 +65,26 @@ export function _getProxyState() {
 export { selectProxy, markProxyFailed, markProxyOk, YT_PROXIES, PROXY_MAX_FAILS, PROXY_COOLDOWN_MS };
 
 const LIVE_CHAT_POLL_MIN_MS = parseInt(process.env.YT_CHAT_POLL_MIN_MS || "2000", 10);
-let lastLiveChatPollAt = 0;
+const METADATA_POLL_MIN_MS = parseInt(process.env.YT_METADATA_POLL_MIN_MS || "5000", 10);
 
-export function _resetLiveChatThrottle(): void {
-  lastLiveChatPollAt = 0;
+const throttleTimestamps: Record<string, number> = {};
+
+function getThrottleKey(urlStr: string): string | null {
+  if (urlStr.includes('/live_chat/get_live_chat')) return 'live_chat';
+  if (urlStr.includes('/updated_metadata')) return 'metadata';
+  return null;
+}
+
+function getThrottleInterval(key: string): number {
+  return key === 'live_chat' ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
+}
+
+export function _resetThrottle(key?: string): void {
+  if (key) {
+    delete throttleTimestamps[key];
+  } else {
+    for (const k of Object.keys(throttleTimestamps)) delete throttleTimestamps[k];
+  }
 }
 
 export async function getInnertube() {
@@ -158,15 +174,16 @@ export async function getInnertube() {
         urlStr = String(input);
       }
 
-      // Throttle live chat polling to stay within proxy rate limits.
-      // Multiple concurrent streams share this throttle, so N streams
-      // each poll every N * LIVE_CHAT_POLL_MIN_MS on average.
-      const isLiveChatPoll = urlStr.includes('/live_chat/get_live_chat');
-      if (isLiveChatPoll && LIVE_CHAT_POLL_MIN_MS > 0) {
-        const now = Date.now();
-        const wait = LIVE_CHAT_POLL_MIN_MS - (now - lastLiveChatPollAt);
-        if (wait > 0) await new Promise(r => setTimeout(r, wait));
-        lastLiveChatPollAt = Date.now();
+      const throttleKey = getThrottleKey(urlStr);
+      if (throttleKey) {
+        const interval = getThrottleInterval(throttleKey);
+        if (interval > 0) {
+          const now = Date.now();
+          const elapsed = Math.max(0, now - (throttleTimestamps[throttleKey] || 0));
+          const wait = Math.max(0, interval - elapsed);
+          throttleTimestamps[throttleKey] = now + wait;
+          if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        }
       }
 
       // Route InnerTube API requests through the proxy when YT_PROXY is set.
