@@ -65,7 +65,7 @@ export function _getProxyState() {
 
 export { selectProxy, markProxyFailed, markProxyOk, YT_PROXIES, PROXY_MAX_FAILS, PROXY_COOLDOWN_MS };
 
-const LIVE_CHAT_POLL_MIN_MS = parseInt(process.env.YT_CHAT_POLL_MIN_MS || "2000", 10);
+const LIVE_CHAT_POLL_MIN_MS = parseInt(process.env.YT_CHAT_POLL_MIN_MS || "5000", 10);
 const METADATA_POLL_MIN_MS = parseInt(process.env.YT_METADATA_POLL_MIN_MS || "30000", 10);
 
 const throttleTimestamps: Record<string, number> = {};
