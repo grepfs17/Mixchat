@@ -285,7 +285,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     }
   }, [mergedMessages, onMessages]);
 
-  if (isLoading) {
+  const isEnded = error === 'Live stream has ended';
+
+  if (isLoading && mergedMessages.length === 0) {
     return (
       <div className="yt-chat-status">
         <AiOutlineLoading3Quarters className="animate-spin" />  Connecting to YouTube chat...
@@ -293,26 +295,34 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     );
   }
 
-  if (error) {
+  if (isEnded && mergedMessages.length === 0) {
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
-        {error !== 'Live stream has ended' && (
-          <button
-            className="yt-chat-reload-btn"
-            onClick={() => {
-              setReloadKey(k => k + 1);
-            }}
-          >
-            Reload chat
-          </button>
-        )}
       </div>
     );
   }
 
   return (
     <div ref={containerRef} className="yt-chat-outer">
+      {error && !isEnded && (
+        <div className="yt-chat-error-banner">
+          <span>⚠️ {error}</span>
+          <button
+            className="yt-chat-reload-btn"
+            onClick={() => {
+              setReloadKey(k => k + 1);
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      )}
+      {isEnded && (
+        <div className="yt-chat-error-banner">
+          <span>⚠️ {error}</span>
+        </div>
+      )}
       <div
         ref={messagesContainerRef}
         className={`yt-chat-container${splitChatEnabled ? ' split-chat' : ''}`}
