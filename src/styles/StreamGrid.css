@@ -229,21 +229,6 @@ StreamGrid stream cards list
   font-size: 28px;
 }
 
-.stream-card-live-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: var(--color-live);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 3px;
-  letter-spacing: 0.08em;
-  font-family: var(--font-ui);
-  pointer-events: none;
-}
-
 .stream-card-viewers {
   position: absolute;
   bottom: 8px;

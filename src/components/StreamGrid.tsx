@@ -201,7 +201,6 @@ export default function StreamGrid({
                                                 }
                                             />
                                         )}
-                                        <span className="stream-card-live-badge">LIVE</span>
                                         {channel.viewerCount !== undefined && channel.viewerCount > 0 && (
                                             <span className="stream-card-viewers">
                                                 <EyeIcon />
