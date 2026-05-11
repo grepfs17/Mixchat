@@ -3,6 +3,7 @@ import { useTwitchChat } from './useTwitchChat';
 import type { MentionSoundType } from './useTwitchChat';
 import { useRaidDetection } from './useRaidDetection';
 import type { RaidOutEvent } from './useRaidDetection';
+import { useChannelPointRedemptions } from './useChannelPointRedemptions';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import {
@@ -130,6 +131,10 @@ export function useChatAppState({
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
   const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
+
+  // Track recent EventSub redemptions to avoid duplicates when an empty-text
+  // IRC PRIVMSG also arrives for the same redemption.
+  const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
 
   // Refs synced with props 
   const showDeletedMessagesRef = useRef(showDeletedMessages);
@@ -270,9 +275,23 @@ export function useChatAppState({
     setMessages((prev) => {
       const existingIdx = prev.findIndex((m) => m.id === message.id || m.id === `optimistic_${message.id}`);
       if (existingIdx !== -1) {
-        if (prev[existingIdx].optimistic || prev[existingIdx].id.startsWith('optimistic_')) {
+        const existing = prev[existingIdx];
+        if (existing.optimistic || existing.id.startsWith('optimistic_')) {
           const copy = [...prev];
           copy[existingIdx] = message;
+          return copy;
+        }
+        // Merge async enrichment fields (reward title/cost, avatar, shared-chat source)
+        const enrichments: Partial<ChatMessage> = {};
+        if (!existing.rewardTitle && message.rewardTitle) enrichments.rewardTitle = message.rewardTitle;
+        if (existing.rewardCost == null && message.rewardCost != null) enrichments.rewardCost = message.rewardCost;
+        if (!existing.authorAvatar && message.authorAvatar) enrichments.authorAvatar = message.authorAvatar;
+        if (!existing.sourceChannelLogin && message.sourceChannelLogin) enrichments.sourceChannelLogin = message.sourceChannelLogin;
+        if (!existing.sourceChannelAvatar && message.sourceChannelAvatar) enrichments.sourceChannelAvatar = message.sourceChannelAvatar;
+
+        if (Object.keys(enrichments).length > 0) {
+          const copy = [...prev];
+          copy[existingIdx] = { ...existing, ...enrichments };
           return copy;
         }
         return prev;
@@ -324,6 +343,22 @@ export function useChatAppState({
           const copy = [...prev];
           copy[matchIndex] = message;
           return copy.length > MAX_DISPLAYED_MESSAGES ? copy.slice(-MAX_DISPLAYED_MESSAGES) : copy;
+        }
+      }
+
+      // Deduplicate IRC redemptions against recent EventSub redemptions.
+      // Twitch sometimes sends an empty PRIVMSG for non-text redemptions;
+      // EventSub already handles those, so skip the IRC duplicate.
+      if (
+        message.messageType === 'redemption' &&
+        message.rewardId &&
+        message.userId &&
+        (!message.content || message.content.trim().length === 0)
+      ) {
+        const dedupKey = `${message.rewardId}-${message.userId}`;
+        const recentTime = recentRedemptionsRef.current.get(dedupKey);
+        if (recentTime && Math.abs(Date.now() - recentTime) < 5000) {
+          return prev;
         }
       }
 
@@ -415,6 +450,42 @@ export function useChatAppState({
     },
   });
 
+  // Channel point redemption (EventSub) — catches non-text redemptions that
+  // Twitch does not send through IRC.
+  const handleRedemptionEvent = useCallback((message: ChatMessage) => {
+    // Track for IRC deduplication
+    if (message.rewardId && message.userId) {
+      recentRedemptionsRef.current.set(
+        `${message.rewardId}-${message.userId}`,
+        Date.now(),
+      );
+      // Clean up entries older than 10s
+      const now = Date.now();
+      for (const [key, ts] of recentRedemptionsRef.current) {
+        if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
+      }
+    }
+
+    setMessages((prev) => {
+      const updated = [...prev, message];
+      return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
+    });
+  }, []);
+
+  useChannelPointRedemptions({
+    channelId: selectedTwitchChannel,
+    accessToken: twitchSession?.accessToken || '',
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    onRedemption: handleRedemptionEvent,
+    onScopeError: () => {
+      // Silent — most viewers won't have channel:read:redemptions for the
+      // broadcaster's channel, which is expected.
+      console.info(
+        '[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster\'s channel.',
+      );
+    },
+  });
   // Twitch chat connection 
   const { sendMessage: sendTwitchMessage, slowModeWaitTime, followerModeMinutes } =
     useTwitchChat(

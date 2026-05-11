@@ -102,15 +102,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const response = await next();
 
-  const allHeaders: Record<string, string> = {
-    ...STATIC_HEADERS,
-    "Content-Security-Policy": buildCSP(nonce),
-  };
+  // Skip security headers on SSE streams — they are unnecessary for event-stream
+  // responses and long CSP values can cause HTTP/2 framing issues on some proxies.
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/event-stream")) {
+    const allHeaders: Record<string, string> = {
+      ...STATIC_HEADERS,
+      "Content-Security-Policy": buildCSP(nonce),
+    };
 
-  for (const [key, value] of Object.entries(allHeaders)) {
-    // Don't overwrite headers already set by a specific route handler
-    if (!response.headers.has(key)) {
-      response.headers.set(key, value);
+    for (const [key, value] of Object.entries(allHeaders)) {
+      // Don't overwrite headers already set by a specific route handler
+      if (!response.headers.has(key)) {
+        response.headers.set(key, value);
+      }
     }
   }
   return response;

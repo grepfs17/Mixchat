@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { YT_USER_AGENT } from "../../lib/constants";
 
 // Only allow proxying from trusted Twitch CDN domains.
 // Variant playlists live on *.ttvnw.net; segments live on *.twitchsvc.net.
@@ -57,9 +58,7 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
   try {
     const upstream = await fetch(targetUrl, {
       headers: {
-        // Mimic a browser request so CDN edge servers don't reject us.
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "User-Agent": YT_USER_AGENT,
       },
     });
 

@@ -1,6 +1,7 @@
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
 import { getPoToken, invalidatePoToken } from "./potoken";
+import { YT_USER_AGENT } from "./constants";
 
 let yt: Innertube | null = null;
 let isInitializing = false;
@@ -64,6 +65,29 @@ export function _getProxyState() {
 
 export { selectProxy, markProxyFailed, markProxyOk, YT_PROXIES, PROXY_MAX_FAILS, PROXY_COOLDOWN_MS };
 
+const LIVE_CHAT_POLL_MIN_MS = parseInt(process.env.YT_CHAT_POLL_MIN_MS || "2000", 10);
+const METADATA_POLL_MIN_MS = parseInt(process.env.YT_METADATA_POLL_MIN_MS || "5000", 10);
+
+const throttleTimestamps: Record<string, number> = {};
+
+function getThrottleKey(urlStr: string): string | null {
+  if (urlStr.includes('/live_chat/get_live_chat')) return 'live_chat';
+  if (urlStr.includes('/updated_metadata')) return 'metadata';
+  return null;
+}
+
+function getThrottleInterval(key: string): number {
+  return key === 'live_chat' ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
+}
+
+export function _resetThrottle(key?: string): void {
+  if (key) {
+    delete throttleTimestamps[key];
+  } else {
+    for (const k of Object.keys(throttleTimestamps)) delete throttleTimestamps[k];
+  }
+}
+
 export async function getInnertube() {
   if (yt) return yt;
 
@@ -90,7 +114,7 @@ export async function getInnertube() {
     if (process.env.YT_USER_AGENT) {
       innertubeOptions.user_agent = process.env.YT_USER_AGENT;
     } else if (clientType === 'WEB') {
-      innertubeOptions.user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+      innertubeOptions.user_agent = YT_USER_AGENT;
     }
 
     innertubeOptions.generate_session_locally =
@@ -149,6 +173,18 @@ export async function getInnertube() {
         else urlStr = String(input);
       } catch {
         urlStr = String(input);
+      }
+
+      const throttleKey = getThrottleKey(urlStr);
+      if (throttleKey) {
+        const interval = getThrottleInterval(throttleKey);
+        if (interval > 0) {
+          const now = Date.now();
+          const elapsed = Math.max(0, now - (throttleTimestamps[throttleKey] || 0));
+          const wait = Math.max(0, interval - elapsed);
+          throttleTimestamps[throttleKey] = now + wait;
+          if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        }
       }
 
       // Route InnerTube API requests through the proxy when YT_PROXY is set.

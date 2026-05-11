@@ -114,7 +114,10 @@ export function TwitchMessageItem({
                     <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
                     <PlatformTag source="twitch" />
                     {msg.messageType === 'redemption' && msg.rewardTitle && (
-                        <span className="reward-title-badge">{msg.rewardTitle}</span>
+                        <span className="reward-title-badge">
+                            {msg.rewardTitle}
+                            {typeof msg.rewardCost === 'number' ? ` (${msg.rewardCost})` : ''}
+                        </span>
                     )}
                     <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
                     <a

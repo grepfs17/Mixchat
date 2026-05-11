@@ -79,6 +79,24 @@
   color: var(--color-text-muted);
 }
 
+.yt-chat-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: rgba(255, 60, 60, 0.15);
+  border-bottom: 1px solid rgba(255, 60, 60, 0.3);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.yt-chat-error-banner .yt-chat-reload-btn {
+  margin-top: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
 .yt-chat-placeholder {
   color: var(--color-text-muted);
   text-align: center;

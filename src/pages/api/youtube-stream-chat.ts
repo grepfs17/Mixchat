@@ -53,6 +53,10 @@ setInterval(() => {
   }
 }, 120_000);
 
+setInterval(() => {
+  reapIdleSessions();
+}, 60_000);
+
 // SSE client waiting for messages
 interface SSEClient {
   id: string;
@@ -61,12 +65,16 @@ interface SSEClient {
   connectedAt: number;
 }
 
+const SESSION_GRACE_PERIOD_MS = 30_000;
+
 // Shared session for a videoId
 interface ChatSession {
   chat: any;
   messages: ChatMessage[];
+  seenIds: Set<string>;
   clients: Map<string, SSEClient>;
   lastUpdate: number;
+  destroyTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const activeLiveChats = new Map<string, ChatSession>();
@@ -178,24 +186,27 @@ function parseBadges(msg: any): Record<string, string> {
   return badges;
 }
 
+function parseTextMessageBase(item: any): ChatMessage {
+  return {
+    id: item.id,
+    author: item.author?.name?.toString() || "Unknown",
+    authorChannelId: item.author?.id,
+    authorAvatar: Array.isArray(item.author?.thumbnails)
+      ? item.author.thumbnails[0]?.url
+      : undefined,
+    badges: parseBadges(item),
+    parts: parseMessageRuns(item),
+    timestamp: parseTimestamp(item),
+  };
+}
+
 function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatTextMessage)) {
-    return {
-      id: item.id,
-      author: item.author?.name?.toString() || "Unknown",
-      authorChannelId: item.author?.id,
-      authorAvatar: Array.isArray(item.author?.thumbnails)
-        ? item.author.thumbnails[0]?.url
-        : undefined,
-      badges: parseBadges(item),
-      parts: parseMessageRuns(item),
-      timestamp: parseTimestamp(item),
-    };
+    return parseTextMessageBase(item);
   }
   if (item.is(YTNodes.LiveChatPaidMessage)) {
-    const base = parseChatItem(item)!;
     return {
-      ...base,
+      ...parseTextMessageBase(item),
       superchat: {
         amount: item.purchase_amount?.toString() || "Unknown",
         color: ARGBtoHex(
@@ -235,14 +246,19 @@ function parseChatItem(item: any): ChatMessage | null {
     };
   }
   if (item.is(YTNodes.LiveChatMembershipItem)) {
-    const base = parseChatItem(item)!;
     return {
-      ...base,
+      ...parseTextMessageBase(item),
       superchat: {
         amount: item.header_subtext?.toString() || "Member",
         color: "#0f9d58",
       },
     };
+  }
+  if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) {
+    return parseGiftPurchaseAnnouncement(item);
+  }
+  if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) {
+    return parseGiftRedemptionAnnouncement(item);
   }
   return null;
 }
@@ -310,16 +326,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const info = await yt.getInfo(videoId);
   const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
+  const seenIds = new Set<string>();
 
-  const parse = (item: any): ChatMessage | null => {
-    if (item.is(YTNodes.LiveChatTextMessage)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatPaidMessage)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatPaidSticker)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatMembershipItem)) return parseChatItem(item);
-    if (item.is(YTNodes.LiveChatSponsorshipsGiftPurchaseAnnouncement)) return parseGiftPurchaseAnnouncement(item);
-    if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) return parseGiftRedemptionAnnouncement(item);
-    return null;
-  };
+  const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
   chat.on("start", (initialData: any) => {
     console.log(
@@ -331,9 +340,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const item = action.as(YTNodes.AddChatItemAction)?.item;
         if (!item) continue;
         const msg = parse(item);
-        if (msg && !messages.some((m) => m.id === msg.id)) {
+        if (msg && !seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
           messages.push(msg);
-          if (messages.length > 200) messages.shift();
+          if (messages.length > 200) {
+            const removed = messages.shift()!;
+            seenIds.delete(removed.id);
+          }
         }
       }
     }
@@ -346,9 +359,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const item = action.as(YTNodes.AddChatItemAction)?.item;
         if (!item) return;
         const msg = parse(item);
-        if (msg && !messages.some((m) => m.id === msg.id)) {
+        if (msg && !seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
           messages.push(msg);
-          if (messages.length > 200) messages.shift();
+          if (messages.length > 200) {
+            const removed = messages.shift()!;
+            seenIds.delete(removed.id);
+          }
           broadcast(session!, "message", msg, msg.id);
         }
         return;
@@ -358,6 +375,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         if (targetId) {
           const idx = messages.findIndex((m) => m.id === targetId);
           if (idx !== -1) messages.splice(idx, 1);
+          seenIds.delete(targetId);
           broadcast(session!, "delete", { messageId: targetId });
         }
       }
@@ -453,7 +471,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
   chat.start();
 
-  session = { chat, messages, clients: new Map(), lastUpdate: Date.now() };
+  session = { chat, messages, seenIds, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null };
   activeLiveChats.set(videoId, session);
   return session;
 }
@@ -523,6 +541,8 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 
   const clientId = `${videoId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
 
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       const client: SSEClient = {
@@ -533,6 +553,12 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
       };
       session.clients.set(clientId, client);
       session.lastUpdate = Date.now();
+
+      // Cancel pending destroy if a new client arrived during grace period
+      if (session.destroyTimer) {
+        clearTimeout(session.destroyTimer);
+        session.destroyTimer = null;
+      }
 
       // Send initial batch
       if (session.messages.length > 0) {
@@ -551,34 +577,62 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         );
       }
 
+      // Heartbeat every 15s to keep proxies/CDN from closing idle HTTP/2 streams
+      heartbeatInterval = setInterval(() => {
+        try {
+          controller.enqueue(sseEvent(JSON.stringify({ ping: true }), "heartbeat"));
+        } catch {
+          // Stream already closed
+          if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+          }
+        }
+      }, 15000);
+
       console.log(
         `[YouTube Chat] SSE client connected: ${clientId} (${session.clients.size} total for ${videoId})`,
       );
     },
     cancel() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
       session.clients.delete(clientId);
       session.lastUpdate = Date.now();
       console.log(
         `[YouTube Chat] SSE client disconnected: ${clientId} (${session.clients.size} remaining for ${videoId})`,
       );
 
-      // If no clients left, keep session alive for MAX_IDLE_MS (reaped by cleanup)
+      if (session.clients.size === 0) {
+        console.log(`[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`);
+        session.destroyTimer = setTimeout(() => {
+          const s = activeLiveChats.get(videoId);
+          if (s && s.clients.size === 0) {
+            console.log(`[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`);
+            try {
+              s.chat?.stop();
+            } catch {}
+            activeLiveChats.delete(videoId);
+          }
+        }, SESSION_GRACE_PERIOD_MS);
+      }
     },
   });
 
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no", // Disable nginx buffering
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-store, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 };
 
-// Gift announcement parsers (from main branch)
 function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
-  const base = parseLiveChatMessage(msg);
+  const base = parseTextMessageBase(msg);
   const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
   const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
 
@@ -587,14 +641,14 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     messageType: 'gift-purchase',
     superchat: {
       amount,
-      color: '#9c27b0', // Purple for gift purchases
+      color: '#9c27b0',
     },
     giftCount,
   };
 }
 
 function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
-  const base = parseLiveChatMessage(msg);
+  const base = parseTextMessageBase(msg);
   const recipientName = msg.recipient?.name?.toString() || msg.header_subtext?.toString() || '';
 
   return {
@@ -603,7 +657,7 @@ function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
     recipientName,
     superchat: {
       amount: 'Gift received',
-      color: '#4caf50', // Green for gift redemptions
+      color: '#4caf50',
     },
   };
 }
