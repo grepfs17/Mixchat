@@ -111,6 +111,7 @@ async function generatePotokenInner(): Promise<PoTokenData> {
       bgChallenge.interpreterJavascript?.privateDoNotAccessOrElseSafeScriptWrappedValue;
 
     if (interpreterJavascript) {
+      // eslint-disable-next-line react-doctor/no-eval
       new Function(interpreterJavascript)();
     } else {
       throw new Error('[PoToken] Could not load BotGuard VM (no interpreter script)');

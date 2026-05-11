@@ -49,5 +49,3 @@ export async function googleFetch(url: string, init?: RequestInit, context?: { a
     throw e;
   }
 }
-
-export default googleFetch;

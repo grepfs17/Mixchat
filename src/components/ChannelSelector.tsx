@@ -23,6 +23,8 @@ export default function ChannelSelector({
   platform,
 }: ChannelSelectorProps) {
   const [manualChannel, setManualChannel] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; channel: TwitchChannel } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (channels.length === 0) return null;
 
@@ -77,9 +79,6 @@ export default function ChannelSelector({
       whiteSpace: 'nowrap' as const,
     },
   };
-
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; channel: TwitchChannel } | null>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const onAnyClick = () => setContextMenu(null);

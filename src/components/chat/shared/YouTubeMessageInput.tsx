@@ -165,7 +165,8 @@ export default function YouTubeMessageInput({
         if (showPicker) {
             setPickerRect(pickerBtnRef.current?.getBoundingClientRect() ?? null);
             setPickerSearch('');
-            setTimeout(() => pickerSearchRef.current?.focus(), 30);
+            const timer = setTimeout(() => pickerSearchRef.current?.focus(), 30);
+            return () => clearTimeout(timer);
         }
     }, [showPicker]);
 

@@ -414,7 +414,8 @@ function MessageInput({
   useEffect(() => {
     if (!isLoading && shouldRefocusRef.current) {
       shouldRefocusRef.current = false;
-      setTimeout(() => textareaRef.current?.focus(), 0);
+      const timer = setTimeout(() => textareaRef.current?.focus(), 0);
+      return () => clearTimeout(timer);
     }
   }, [isLoading]);
 
