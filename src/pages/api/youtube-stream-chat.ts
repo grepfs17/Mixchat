@@ -75,6 +75,7 @@ interface ChatSession {
   clients: Map<string, SSEClient>;
   lastUpdate: number;
   destroyTimer: ReturnType<typeof setTimeout> | null;
+  ready: Promise<void>;
 }
 
 const activeLiveChats = new Map<string, ChatSession>();
@@ -328,6 +329,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
 
+  let resolveReady: () => void;
+  const ready = new Promise<void>((resolve) => { resolveReady = resolve; });
+
   const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
   chat.on("start", (initialData: any) => {
@@ -350,6 +354,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         }
       }
     }
+    resolveReady();
   });
 
   chat.on("chat-update", (action: any) => {
@@ -471,7 +476,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
   chat.start();
 
-  session = { chat, messages, seenIds, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null };
+  session = { chat, messages, seenIds, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null, ready };
   activeLiveChats.set(videoId, session);
   return session;
 }
@@ -544,7 +549,7 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
   let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const client: SSEClient = {
         id: clientId,
         controller,
@@ -560,7 +565,16 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
         session.destroyTimer = null;
       }
 
-      // Send initial batch
+      // Send initial batch after chat session is ready
+      try {
+        await Promise.race([
+          session.ready,
+          new Promise<void>((_, reject) => setTimeout(() => reject(new Error("start timeout")), 10000)),
+        ]);
+      } catch {
+        // If start event never fires or times out, proceed with whatever messages we have
+      }
+
       if (session.messages.length > 0) {
         controller.enqueue(
           sseEvent(
