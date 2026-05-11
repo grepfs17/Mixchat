@@ -365,5 +365,3 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
   return lookup;
 }
 
-export default findLiveForChannel;
-

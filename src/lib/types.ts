@@ -1,5 +1,4 @@
-export const PLATFORMS = ["twitch", "youtube"] as const;
-export type Platform = (typeof PLATFORMS)[number];
+export type Platform = 'twitch' | 'youtube';
 
 export const MAX_DISPLAYED_MESSAGES = 100;
 

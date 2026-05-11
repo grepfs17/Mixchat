@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
-import findLiveForChannel, { isValidYouTubeParam, resolveChannelId } from "../../lib/youtube-lookup";
+import { findLiveForChannel, isValidYouTubeParam, resolveChannelId } from "../../lib/youtube-lookup";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 // Set debug mode when `YT_DEBUG=1` is present or running in dev mode.

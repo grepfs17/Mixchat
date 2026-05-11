@@ -9,10 +9,8 @@ import { MessageContextMenu } from './MessageContextMenu';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import EmoteTooltip from '../shared/EmoteTooltip';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
-import type { UnifiedEntry, YTMessage, MessagePart } from './types';
+import type { UnifiedEntry, MessagePart, YTMessage } from './types';
 import { getKey, getTime } from './types';
-
-export type { YTMessage } from './types';
 
 interface UnifiedChatProps {
     twitchMessages: ChatMessage[];
