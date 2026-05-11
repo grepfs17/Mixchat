@@ -101,17 +101,21 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     return unmatched.length ? [...messages, ...unmatched] : messages;
   }, [messages, optimisticMessages]);
 
+  const prevVideoIdRef = useRef<string | null>(null);
+
   // Connect to SSE stream
   useEffect(() => {
     if (!videoId) return;
 
     let isMounted = true;
+    const isInitialConnect = prevVideoIdRef.current !== videoId;
+    prevVideoIdRef.current = videoId;
     retryCountRef.current = 0;
     errorRef.current = null;
     setIsLoading(true);
     setIsConnected(false);
     setError(null);
-    setMessages([]);
+    if (isInitialConnect) setMessages([]);
 
     const connect = () => {
       if (!isMounted) return;
@@ -139,14 +143,17 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           superchat: msg.superchat,
         }));
 
-        const uniqueMap = new Map();
-        fetchedMessages.forEach(m => uniqueMap.set(m.id, m));
-        const unique = Array.from(uniqueMap.values());
-        const limited = unique.length > MAX_DISPLAYED_MESSAGES
-          ? unique.slice(-MAX_DISPLAYED_MESSAGES)
-          : unique;
-
-        setMessages(limited);
+        const uniqueMap = new Map<string, ChatMessage>();
+        for (const m of fetchedMessages) uniqueMap.set(m.id, m);
+        setMessages(prev => {
+          for (const m of prev) {
+            if (!uniqueMap.has(m.id)) uniqueMap.set(m.id, m);
+          }
+          const merged = Array.from(uniqueMap.values());
+          return merged.length > MAX_DISPLAYED_MESSAGES
+            ? merged.slice(-MAX_DISPLAYED_MESSAGES)
+            : merged;
+        });
         setIsConnected(true);
         setIsLoading(false);
         setError(null);

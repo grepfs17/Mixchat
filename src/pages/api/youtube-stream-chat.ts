@@ -65,12 +65,15 @@ interface SSEClient {
   connectedAt: number;
 }
 
+const SESSION_GRACE_PERIOD_MS = 30_000;
+
 // Shared session for a videoId
 interface ChatSession {
   chat: any;
   messages: ChatMessage[];
   clients: Map<string, SSEClient>;
   lastUpdate: number;
+  destroyTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const activeLiveChats = new Map<string, ChatSession>();
@@ -459,7 +462,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
   chat.start();
 
-  session = { chat, messages, clients: new Map(), lastUpdate: Date.now() };
+  session = { chat, messages, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null };
   activeLiveChats.set(videoId, session);
   return session;
 }
@@ -542,6 +545,12 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
       session.clients.set(clientId, client);
       session.lastUpdate = Date.now();
 
+      // Cancel pending destroy if a new client arrived during grace period
+      if (session.destroyTimer) {
+        clearTimeout(session.destroyTimer);
+        session.destroyTimer = null;
+      }
+
       // Send initial batch
       if (session.messages.length > 0) {
         controller.enqueue(
@@ -588,11 +597,17 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
       );
 
       if (session.clients.size === 0) {
-        console.log(`[YouTube Chat] No clients left for ${videoId} — stopping chat session`);
-        try {
-          session.chat?.stop();
-        } catch {}
-        activeLiveChats.delete(videoId);
+        console.log(`[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`);
+        session.destroyTimer = setTimeout(() => {
+          const s = activeLiveChats.get(videoId);
+          if (s && s.clients.size === 0) {
+            console.log(`[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`);
+            try {
+              s.chat?.stop();
+            } catch {}
+            activeLiveChats.delete(videoId);
+          }
+        }, SESSION_GRACE_PERIOD_MS);
       }
     },
   });
