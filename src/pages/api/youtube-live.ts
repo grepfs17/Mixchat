@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
-import findLiveForChannel, { isValidYouTubeParam } from "../../lib/youtube-lookup";
+import { findLiveForChannel, isValidYouTubeParam } from "../../lib/youtube-lookup";
 
 // Simple in-memory cache to save on Innertube calls
 const liveVideoCache = new Map<string, { videoId: string | null; channelId?: string; expires: number }>();
