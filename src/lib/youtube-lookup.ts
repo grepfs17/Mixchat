@@ -287,7 +287,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
         }
       }
 
-      if (!videoId) {
+      if (!videoId && (channel as any).hasHome) {
         try {
           const home = await (channel as any).getHome();
 
