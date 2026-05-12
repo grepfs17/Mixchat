@@ -15,6 +15,8 @@ interface YouTubeChatProps {
   fontSize?: number;
   chatFont?: ChatFont;
   splitChatEnabled?: boolean;
+  /** Called when YouTube chat connection state changes */
+  onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
 }
 
 interface MessagePart {
@@ -65,7 +67,7 @@ interface SSEEndEvent {
   reason: string;
 }
 
-export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange }: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
     m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
 
@@ -284,6 +286,13 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       onMessages(mergedMessages);
     }
   }, [mergedMessages, onMessages]);
+
+  // Notify parent of connection state changes
+  useEffect(() => {
+    if (onConnectionChange) {
+      onConnectionChange({ connected: isConnected, loading: isLoading, error });
+    }
+  }, [isConnected, isLoading, error, onConnectionChange]);
 
   const isEnded = error === 'Live stream has ended';
 

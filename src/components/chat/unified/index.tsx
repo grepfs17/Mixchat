@@ -15,6 +15,7 @@ import { getKey, getTime } from './types';
 interface UnifiedChatProps {
     twitchMessages: ChatMessage[];
     ytMessages: YTMessage[];
+    ytConnectionState?: { connected: boolean; loading: boolean; error: string | null };
     onReply?: (message: ChatMessage) => void;
     onCopyMessage?: () => void;
     currentUserDisplayName?: string;
@@ -39,6 +40,7 @@ export interface UnifiedChatHandle {
 const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function UnifiedChat({
     twitchMessages,
     ytMessages,
+    ytConnectionState,
     onReply,
     onCopyMessage,
     currentUserDisplayName,
@@ -129,8 +131,18 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         canReply: (entry) => entry.source === 'twitch',
     });
 
+    const ytState = ytConnectionState;
+
     return (
         <div className="unified-chat-wrapper">
+            {ytState && (
+                <div className={`yt-status-bar${ytState.connected ? ' yt-status-bar--connected' : ytState.loading ? ' yt-status-bar--connecting' : ' yt-status-bar--disconnected'}`}>
+                    <span className={`yt-status-dot${ytState.loading ? ' yt-status-dot--loading' : ''}`}></span>
+                    <span className="yt-status-text">
+                        {ytState.connected ? 'YouTube' : ytState.loading ? 'Connecting to YouTube...' : ytState.error || 'YouTube disconnected'}
+                    </span>
+                </div>
+            )}
             <div
                 ref={containerRef}
                 className={`messages-container unified-messages-container${splitChatEnabled ? ' split-chat' : ''}`}

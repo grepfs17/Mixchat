@@ -9,6 +9,13 @@ import RaidNotification from './shared/RaidNotification';
 import SplitLayout from './SplitLayout';
 import { useChatAppState, type ChatAppStateProps } from '../../hooks/useChatAppState';
 import type { ChatFont, ChatTheme } from '../../lib/types';
+import { useState, useCallback } from 'react';
+
+interface YtConnectionState {
+  connected: boolean;
+  loading: boolean;
+  error: string | null;
+}
 
 export default function ChatApp(props: ChatAppStateProps) {
   const {
@@ -64,6 +71,11 @@ export default function ChatApp(props: ChatAppStateProps) {
     slowModeWaitTime,
     followerModeMinutes,
   } = useChatAppState(props);
+
+  const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>({ connected: false, loading: false, error: null });
+  const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
+    setYtConnectionState(state);
+  }, []);
 
   const {
     twitchConnected,
@@ -132,6 +144,7 @@ export default function ChatApp(props: ChatAppStateProps) {
               <YouTubeChat
                 videoId={youtubeVideoId}
                 onMessages={handleYtMessages}
+                onConnectionChange={handleYtConnectionChange}
                 fontSize={fontSize}
                 chatFont={chatFont}
                 splitChatEnabled={splitChatEnabled}
@@ -194,6 +207,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                       });
                     }),
                   ]}
+                  ytConnectionState={ytConnectionState}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
                     showNotification('Message copied!', 'success');
