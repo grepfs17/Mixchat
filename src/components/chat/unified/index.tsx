@@ -16,6 +16,7 @@ interface UnifiedChatProps {
     twitchMessages: ChatMessage[];
     ytMessages: YTMessage[];
     ytConnectionState?: { connected: boolean; loading: boolean; error: string | null };
+    twitchConnected?: boolean;
     onReply?: (message: ChatMessage) => void;
     onCopyMessage?: () => void;
     currentUserDisplayName?: string;
@@ -41,6 +42,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     twitchMessages,
     ytMessages,
     ytConnectionState,
+    twitchConnected,
     onReply,
     onCopyMessage,
     currentUserDisplayName,
@@ -132,15 +134,24 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     });
 
     const ytState = ytConnectionState;
+    const showStatusBar = ytState !== undefined || twitchConnected !== undefined;
 
     return (
         <div className="unified-chat-wrapper">
-            {ytState && (
-                <div className={`yt-status-bar${ytState.connected ? ' yt-status-bar--connected' : ytState.loading ? ' yt-status-bar--connecting' : ' yt-status-bar--disconnected'}`}>
-                    <span className={`yt-status-dot${ytState.loading ? ' yt-status-dot--loading' : ''}`}></span>
-                    <span className="yt-status-text">
-                        {ytState.connected ? 'YouTube' : ytState.loading ? 'Connecting to YouTube...' : ytState.error || 'YouTube disconnected'}
+            {showStatusBar && (
+                <div className="chat-status-bar">
+                    <span className={`platform-status${twitchConnected ? ' platform-status--connected' : ' platform-status--disconnected'}`}>
+                        <span className="platform-status-dot" />
+                        <span className="platform-status-text">Twitch</span>
                     </span>
+                    {ytState && (
+                        <span className={`platform-status${ytState.connected ? ' platform-status--connected' : ytState.loading ? ' platform-status--loading' : ' platform-status--disconnected'}`}>
+                            <span className={`platform-status-dot${ytState.loading ? ' platform-status-dot--loading' : ''}`} />
+                            <span className="platform-status-text">
+                                {ytState.connected ? 'YouTube' : ytState.loading ? 'YouTube...' : 'YouTube'}
+                            </span>
+                        </span>
+                    )}
                 </div>
             )}
             <div

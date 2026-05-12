@@ -47,11 +47,11 @@
     text-decoration: underline;
 }
 
-/* YouTube connection status indicator in unified chat */
-.yt-status-bar {
+/* Chat status bar in unified chat - holds both Twitch and YouTube indicators */
+.chat-status-bar {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
     padding: 3px 10px;
     font-size: 0.72rem;
     font-weight: 500;
@@ -59,22 +59,13 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.yt-status-bar--connected {
-    color: #22c55e;
-    background: rgba(34, 197, 94, 0.06);
+.platform-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.yt-status-bar--connecting {
-    color: var(--color-youtube, #ff0000);
-    background: rgba(255, 0, 0, 0.06);
-}
-
-.yt-status-bar--disconnected {
-    color: var(--color-offline, #6b7280);
-    background: rgba(107, 114, 128, 0.08);
-}
-
-.yt-status-dot {
+.platform-status-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -82,22 +73,32 @@
     background-color: var(--color-offline, #6b7280);
 }
 
-.yt-status-bar--connected .yt-status-dot {
+.platform-status--connected .platform-status-dot {
     background-color: #22c55e;
 }
 
-.yt-status-bar--connecting .yt-status-dot {
+.platform-status--loading .platform-status-dot {
     background-color: var(--color-youtube, #ff0000);
 }
 
-.yt-status-dot--loading {
+.platform-status--loading .platform-status-text {
+    color: var(--color-youtube, #ff0000);
+}
+
+.platform-status--disconnected .platform-status-dot {
+    background-color: var(--color-offline, #6b7280);
+}
+
+.platform-status--disconnected .platform-status-text {
+    color: var(--color-text-muted);
+}
+
+.platform-status-dot--loading {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
-.yt-status-text {
+.platform-status-text {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 

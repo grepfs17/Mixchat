@@ -208,6 +208,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     }),
                   ]}
                   ytConnectionState={ytConnectionState}
+                  twitchConnected={twitchConnected}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
                     showNotification('Message copied!', 'success');
