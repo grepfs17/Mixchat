@@ -9,7 +9,7 @@ import RaidNotification from './shared/RaidNotification';
 import SplitLayout from './SplitLayout';
 import { useChatAppState, type ChatAppStateProps } from '../../hooks/useChatAppState';
 import type { ChatFont, ChatTheme } from '../../lib/types';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface YtConnectionState {
   connected: boolean;
@@ -76,6 +76,12 @@ export default function ChatApp(props: ChatAppStateProps) {
   const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
     setYtConnectionState(state);
   }, []);
+
+  useEffect(() => {
+    if (!linkedYoutubeUrl || !youtubeVideoId) {
+      setYtConnectionState({ connected: false, loading: false, error: null });
+    }
+  }, [linkedYoutubeUrl, youtubeVideoId]);
 
   const {
     twitchConnected,
@@ -207,7 +213,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                       });
                     }),
                   ]}
-                  ytConnectionState={ytConnectionState}
+                  ytConnectionState={linkedYoutubeUrl ? ytConnectionState : undefined}
                   twitchConnected={twitchConnected}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
