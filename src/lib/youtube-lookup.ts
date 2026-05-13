@@ -47,14 +47,25 @@ function buildFetchHeaders(cookies?: string): HeadersInit {
 
 const VIDEO_ID_RE = /^[\w-]{11}$/;
 
-function extractVideoIdFromHtml(html: string): string | null {
+function extractVideoIdFromHtml(html: string, requireLive = false): string | null {
   // 1. <link rel="canonical" href="...watch?v=VIDEO_ID">
   const canonicalMatch = html.match(/<link\s+rel="canonical"\s+href="[^"]*watch\?v=([\w-]{11})/);
-  if (canonicalMatch) return canonicalMatch[1];
+  if (canonicalMatch) {
+    if (!requireLive) return canonicalMatch[1];
+    // Only accept if page explicitly indicates this is a live stream
+    if (/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(html)) {
+      return canonicalMatch[1];
+    }
+  }
 
   // 2. og:video:url meta tag
   const ogMatch = html.match(/property="og:video:url"\s+content="[^"]*watch\?v=([\w-]{11})/);
-  if (ogMatch) return ogMatch[1];
+  if (ogMatch) {
+    if (!requireLive) return ogMatch[1];
+    if (/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(html)) {
+      return ogMatch[1];
+    }
+  }
 
   // 3. ytInitialPlayerResponse embedded JSON
   const ytiprMatch = html.match(/ytInitialPlayerResponse\s*=\s*\{/);
@@ -69,7 +80,14 @@ function extractVideoIdFromHtml(html: string): string | null {
           try {
             const json = JSON.parse(html.slice(start, i + 1));
             const vid = json?.videoDetails?.videoId;
-            if (vid && VIDEO_ID_RE.test(vid)) return vid;
+            if (vid && VIDEO_ID_RE.test(vid)) {
+              if (!requireLive) return vid;
+              // Check if videoDetails marks this as live
+              const isLive = json?.videoDetails?.isLive === true ||
+                json?.videoDetails?.isLiveContent === true ||
+                json?.videoDetails?.liveBroadcastDetails?.isLiveNow === true;
+              if (isLive) return vid;
+            }
           } catch { }
           break;
         }
@@ -77,17 +95,15 @@ function extractVideoIdFromHtml(html: string): string | null {
     }
   }
 
-  // 4. "videoId":"VIDEO_ID" in ytInitialData or other embedded configs
+  // 4. "videoId":"VIDEO_ID" in ytInitialData — prefer videoIds near live indicators
   const vidMatches = html.matchAll(/"videoId"\s*:\s*"([\w-]{11})"/g);
   const seen = new Set<string>();
-  // Also look for live broadcast indicators near videoId
-  const liveIndicators = html.matchAll(/"isLivecontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi);
+  const liveIndicators = html.matchAll(/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi);
   const livePositions = [...liveIndicators].map(m => m.index ?? 0);
   for (const m of vidMatches) {
     if (!seen.has(m[1])) {
       seen.add(m[1]);
       if (livePositions.length > 0) {
-        // If we found live indicators, prefer videoIds nearby
         const pos = m.index ?? 0;
         const nearby = livePositions.some(lp => Math.abs(lp - pos) < 5000);
         if (nearby) return m[1];
@@ -95,9 +111,11 @@ function extractVideoIdFromHtml(html: string): string | null {
     }
   }
 
-  // 5. watch?v=VIDEO_ID in URL patterns (fallback, no live requirement)
-  const urlVidMatch = html.match(/watch\?v=([\w-]{11})/);
-  if (urlVidMatch) return urlVidMatch[1];
+  // 5. watch?v=VIDEO_ID — only if not requiring live or if live indicators exist
+  if (!requireLive) {
+    const urlVidMatch = html.match(/watch\?v=([\w-]{11})/);
+    if (urlVidMatch) return urlVidMatch[1];
+  }
 
   return null;
 }
@@ -128,13 +146,18 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
         if (finalUrl.includes('watch?v=')) {
           const parsed = new URL(finalUrl);
           const vid = parsed.searchParams.get('v');
-          if (vid) return vid;
+          // Only accept if the page indicates this is currently live
+          if (vid && res.ok) {
+            const html = await res.text();
+            const liveVid = extractVideoIdFromHtml(html, true);
+            if (liveVid) return liveVid;
+          }
         }
 
-        // If no redirect detected, parse the HTML body for a video ID
+        // If no redirect detected, parse the HTML body for a live video ID
         if (res.ok) {
           const html = await res.text();
-          const vid = extractVideoIdFromHtml(html);
+          const vid = extractVideoIdFromHtml(html, true);
           if (vid) return vid;
         }
       } catch (err) {
@@ -266,9 +289,6 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
         if (liveVideo) {
           videoId = liveVideo.id ?? liveVideo.videoId ?? null;
           if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${videoId}`);
-        } else if (videos.length > 0) {
-          videoId = videos[0].id ?? videos[0].videoId ?? null;
-          if (debug) console.log(`[YouTube Lookup] No live video in liveStreams, using first: ${videoId}`);
         }
       } catch (lsErr) {
         if (debug) console.warn('[YouTube Lookup] getLiveStreams failed:', lsErr);

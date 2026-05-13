@@ -139,7 +139,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       {unifyChatEnabled ? (
         <>
           {/* Hidden YouTubeChat to keep polling YouTube messages */}
-          {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && !useYoutubeEmbed && (
+          {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && (
             <div style={{ display: 'none' }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}
@@ -294,6 +294,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           onOptimisticMessage={handleYtOptimisticMessage}
           onOptimisticFailed={handleYtOptimisticFailed}
           onShowError={(msg) => showNotification(msg, 'error')}
+          onYtConnectionChange={handleYtConnectionChange}
           chatDisplayRef={chatDisplayRef}
           messages={messages}
           isLoading={isLoading}

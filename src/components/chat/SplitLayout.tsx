@@ -31,6 +31,7 @@ interface SplitChatProps {
   onOptimisticMessage: (id: string, text: string) => void;
   onOptimisticFailed: (id: string) => void;
   onShowError: (message: string) => void;
+  onYtConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
 
   // Twitch ChatDisplay
   chatDisplayRef: RefObject<ChatDisplayHandle>;
@@ -101,6 +102,7 @@ export default function SplitChat({
   onOptimisticMessage,
   onOptimisticFailed,
   onShowError,
+  onYtConnectionChange,
   chatDisplayRef,
   messages,
   isLoading,
@@ -169,6 +171,7 @@ export default function SplitChat({
           onOptimisticMessage={onOptimisticMessage}
           onOptimisticFailed={onOptimisticFailed}
           onError={onShowError}
+          onConnectionChange={onYtConnectionChange}
         />
       )}
 

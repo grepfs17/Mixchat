@@ -119,7 +119,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     setError(null);
     if (isInitialConnect) setMessages([]);
 
-    const connect = () => {
+    const connect = async () => {
       if (!isMounted) return;
 
       // Close existing connection
@@ -128,7 +128,41 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         eventSourceRef.current = null;
       }
 
-      const es = new EventSource(`/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`);
+      const sseUrl = `/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`;
+
+      try {
+        const probeRes = await fetch(sseUrl, { method: 'GET' });
+        if (!probeRes.ok) {
+          let errorMsg = `Connection failed (${probeRes.status})`;
+          try {
+            const errData = await probeRes.json();
+            if (errData.error) errorMsg = errData.error;
+          } catch {}
+          if (!isMounted) return;
+          setIsConnected(false);
+          setIsLoading(false);
+          setError(errorMsg);
+          errorRef.current = errorMsg;
+          const delay = Math.min(5000 + retryCountRef.current * 5000, 60000);
+          retryCountRef.current++;
+          reconnectTimerRef.current = setTimeout(() => {
+            if (isMounted) {
+              setError(null);
+              errorRef.current = null;
+              setIsLoading(true);
+              connect();
+            }
+          }, delay);
+          return;
+        }
+        probeRes.body?.cancel();
+      } catch {
+        // fetch probe failed (network error, etc.) — fall through to EventSource
+      }
+
+      if (!isMounted) return;
+
+      const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
 
       es.addEventListener('connected', (e: Event) => {
@@ -203,6 +237,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           errorMsg = 'Connection lost';
         }
         setIsConnected(false);
+        setIsLoading(false);
         setError(errorMsg);
         errorRef.current = errorMsg;
         es.close();
@@ -225,32 +260,35 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         const data = JSON.parse((e as MessageEvent).data) as SSEEndEvent;
         console.log('[YouTubeChat] Stream ended:', data.reason);
         setIsConnected(false);
+        setIsLoading(false);
         setError('Live stream has ended');
         es.close();
         eventSourceRef.current = null;
       });
 
       es.onerror = () => {
-        // Connection-level error (network drop, server restart)
-        // EventSource auto-reconnects, but we track retries
+        if (!isMounted) return;
         retryCountRef.current++;
         setIsConnected(false);
 
-        if (retryCountRef.current > 20) {
-          // After ~20 auto-reconnect failures (~100s), stop EventSource auto-reconnect
-          // and schedule our own manual reconnect
-          if (isMounted) {
-            es.close();
-            eventSourceRef.current = null;
-            const delay = Math.min(3000 + retryCountRef.current * 2000, 30000);
-            reconnectTimerRef.current = setTimeout(() => {
-              if (isMounted) {
-                setError(null);
-                errorRef.current = null;
-                connect();
-              }
-            }, delay);
-          }
+        if (!errorRef.current) {
+          setError('Connection lost');
+          errorRef.current = 'Connection lost';
+        }
+        setIsLoading(false);
+
+        if (retryCountRef.current > 5) {
+          es.close();
+          eventSourceRef.current = null;
+          const delay = Math.min(3000 + retryCountRef.current * 2000, 30000);
+          reconnectTimerRef.current = setTimeout(() => {
+            if (isMounted) {
+              setError(null);
+              errorRef.current = null;
+              setIsLoading(true);
+              connect();
+            }
+          }, delay);
         }
       };
     };

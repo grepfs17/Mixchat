@@ -22,6 +22,7 @@ interface YouTubePanelProps {
   onOptimisticMessage: (id: string, text: string) => void;
   onOptimisticFailed: (id: string) => void;
   onError: (msg: string) => void;
+  onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
   style?: CSSProperties;
 }
 
@@ -43,6 +44,7 @@ export default function YouTubePanel({
   onOptimisticMessage,
   onOptimisticFailed,
   onError,
+  onConnectionChange,
   style,
 }: YouTubePanelProps) {
   const extractVideoId = (val: string): string => {
@@ -90,6 +92,7 @@ export default function YouTubePanel({
                 fontSize={fontSize}
                 chatFont={chatFont}
                 splitChatEnabled={splitChatEnabled}
+                onConnectionChange={onConnectionChange}
               />
             )}
             <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>
