@@ -77,12 +77,6 @@ export default function ChatApp(props: ChatAppStateProps) {
     setYtConnectionState(state);
   }, []);
 
-  useEffect(() => {
-    if (!linkedYoutubeUrl || !youtubeVideoId) {
-      setYtConnectionState({ connected: false, loading: false, error: null });
-    }
-  }, [linkedYoutubeUrl, youtubeVideoId]);
-
   const {
     twitchConnected,
     selectedTwitchChannelName,
@@ -105,6 +99,12 @@ export default function ChatApp(props: ChatAppStateProps) {
     onToggleStreamEmbed,
     onFollowRaid,
   } = props;
+
+  useEffect(() => {
+    if (!linkedYoutubeUrl || !youtubeVideoId) {
+      setYtConnectionState({ connected: false, loading: false, error: null });
+    }
+  }, [linkedYoutubeUrl, youtubeVideoId]);
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
     // This is handled internally by the hook; exposed here for any direct UI needs
