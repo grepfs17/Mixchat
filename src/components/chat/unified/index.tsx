@@ -145,10 +145,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                         <span className="platform-status-text">Twitch</span>
                     </span>
                     {ytState && (
-                        <span className={`platform-status${ytState.connected ? ' platform-status--connected' : ytState.loading ? ' platform-status--loading' : ' platform-status--disconnected'}`}>
+                        <span className={`platform-status${ytState.connected ? ' platform-status--connected' : ytState.loading ? ' platform-status--loading' : ytState.error ? ' platform-status--error' : ' platform-status--disconnected'}`}>
                             <span className={`platform-status-dot${ytState.loading ? ' platform-status-dot--loading' : ''}`} />
                             <span className="platform-status-text">
-                                {ytState.connected ? 'YouTube' : ytState.loading ? 'YouTube...' : 'YouTube'}
+                                {ytState.connected ? 'YouTube' : ytState.loading ? 'YouTube...' : ytState.error ? `YouTube: ${ytState.error}` : 'YouTube'}
                             </span>
                         </span>
                     )}

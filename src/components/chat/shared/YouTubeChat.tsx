@@ -342,10 +342,17 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
     );
   }
 
-  if (isEnded && mergedMessages.length === 0) {
+  if (error && mergedMessages.length === 0) {
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
+        <button
+          className="yt-chat-reload-btn"
+          onClick={() => { setReloadKey(k => k + 1); }}
+          style={{ marginTop: '8px' }}
+        >
+          Retry
+        </button>
       </div>
     );
   }

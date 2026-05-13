@@ -89,6 +89,14 @@
     background-color: var(--color-offline, #6b7280);
 }
 
+.platform-status--error .platform-status-dot {
+    background-color: var(--color-offline, #6b7280);
+}
+
+.platform-status--error .platform-status-text {
+    color: #f87171;
+}
+
 .platform-status--disconnected .platform-status-text {
     color: var(--color-text-muted);
 }
