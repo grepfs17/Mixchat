@@ -968,11 +968,11 @@
   /* intentionally keep default container padding/gap to avoid extra spacing */
 }
 
-.messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+.messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice):not(.yt-event) {
   background-color: var(--color-bg-hover);
 }
 
-.messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice) {
+.messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice):not(.yt-event) {
   background-color: transparent;
 }
 
@@ -982,6 +982,14 @@
 
 .unified-messages-container.split-chat {
   /* no extra padding or gap */
+}
+
+.unified-messages-container.split-chat .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice):not(.yt-event) {
+  background-color: var(--color-bg-hover);
+}
+
+.unified-messages-container.split-chat .message.even:not(.deleted):not(.bot):not(.mention):not(.redemption):not(.highlight):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(.watch-streak):not(.raid):not(.notice):not(.yt-event) {
+  background-color: transparent;
 }
 
 /* Mushu theme floating mascot */

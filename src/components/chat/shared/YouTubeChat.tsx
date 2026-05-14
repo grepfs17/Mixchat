@@ -176,6 +176,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           parts: (msg.parts || []) as MessagePart[],
           timestamp: new Date(msg.timestamp),
           authorChannelId: msg.authorChannelId,
+          messageType: msg.messageType,
+          giftCount: msg.giftCount,
+          recipientName: msg.recipientName,
           superchat: msg.superchat,
         }));
 
@@ -208,6 +211,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           parts: msg.parts as MessagePart[],
           timestamp: new Date(msg.timestamp),
           authorChannelId: msg.authorChannelId,
+          messageType: msg.messageType,
+          giftCount: msg.giftCount,
+          recipientName: msg.recipientName,
           superchat: msg.superchat,
         };
 
@@ -394,21 +400,38 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           </div>
         )}
         {(() => {
+          const getYtEventStyle = (msg: ChatMessage): React.CSSProperties | undefined => {
+            if (msg.messageType === 'gift-purchase') return { '--event-color': '#9c27b0', '--event-bg': 'rgba(156, 39, 176, 0.15)' } as React.CSSProperties;
+            if (msg.messageType === 'gift-redemption') return { '--event-color': '#4caf50', '--event-bg': 'rgba(76, 175, 80, 0.15)' } as React.CSSProperties;
+            if (msg.superchat && !msg.messageType) return { '--event-color': msg.superchat.color, '--event-bg': `${msg.superchat.color}26` } as React.CSSProperties;
+            return undefined;
+          };
+
+          const getYtEventLabel = (msg: ChatMessage): string | null => {
+            if (msg.messageType === 'gift-purchase') return 'GIFT';
+            if (msg.messageType === 'gift-redemption') return 'GIFT RECEIVED';
+            if (msg.superchat && !msg.messageType) return 'SUPER CHAT';
+            return null;
+          };
+
           return mergedMessages.map((msg, index) => {
+            const eventStyle = getYtEventStyle(msg);
+            const eventLabel = getYtEventLabel(msg);
+
             if (msg.messageType === 'gift-purchase' && msg.superchat) {
               return (
-                <div key={msg.id} className="yt-superchat yt-gift-purchase" style={{ backgroundColor: msg.superchat.color }}>
-                  <div className="yt-superchat-header">
-                    {msg.authorAvatar && (
-                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
-                    )}
-                    <div className="yt-superchat-info">
-                      <div className="yt-superchat-author">{msg.author}</div>
-                      <div className="yt-superchat-amount">
-                        <span className="gift-icon">🎁</span>
-                        Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
-                      </div>
-                    </div>
+                <div key={msg.id} className="message yt-event" style={eventStyle}>
+                  {eventLabel && <div className="yt-event-label" style={{ color: '#9c27b0', background: 'rgba(156, 39, 176, 0.15)', borderColor: '#9c27b0' }}>{eventLabel}</div>}
+                  <div className="message-single-line">
+                    <span className="timestamp">
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
+                    <span className="author" style={{ color: '#9c27b0' }}>{msg.author}</span>
+                    <span className="message-separator">:</span>
+                    <span className="message-text">
+                      Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
               );
@@ -416,18 +439,18 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
             if (msg.messageType === 'gift-redemption' && msg.superchat) {
               return (
-                <div key={msg.id} className="yt-superchat yt-gift-redemption" style={{ backgroundColor: msg.superchat.color }}>
-                  <div className="yt-superchat-header">
-                    {msg.authorAvatar && (
-                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
-                    )}
-                    <div className="yt-superchat-info">
-                      <div className="yt-superchat-author">{msg.author}</div>
-                      <div className="yt-superchat-amount">
-                        <span className="gift-icon">🎉</span>
-                        Received a gift membership
-                      </div>
-                    </div>
+                <div key={msg.id} className="message yt-event" style={eventStyle}>
+                  {eventLabel && <div className="yt-event-label" style={{ color: '#4caf50', background: 'rgba(76, 175, 80, 0.15)', borderColor: '#4caf50' }}>{eventLabel}</div>}
+                  <div className="message-single-line">
+                    <span className="timestamp">
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
+                    <span className="author" style={{ color: '#4caf50' }}>{msg.author}</span>
+                    <span className="message-separator">:</span>
+                    <span className="message-text">
+                      Received a gift membership
+                    </span>
                   </div>
                 </div>
               );
@@ -435,27 +458,23 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
             if (msg.superchat) {
               return (
-                <div key={msg.id} className="yt-superchat" style={{ backgroundColor: msg.superchat.color }}>
-                  <div className="yt-superchat-header">
-                    {msg.authorAvatar && (
-                      <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
-                    )}
-                    <div className="yt-superchat-info">
-                      <div className="yt-superchat-author">{msg.author}</div>
-                      <div className="yt-superchat-amount">{msg.superchat.amount}</div>
-                    </div>
+                <div key={msg.id} className="message yt-event" style={eventStyle}>
+                  {eventLabel && <div className="yt-event-label" style={{ color: msg.superchat.color, background: `${msg.superchat.color}26`, borderColor: msg.superchat.color }}>{eventLabel}</div>}
+                  <div className="message-single-line">
+                    <span className="timestamp">
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
+                    <span className="author" style={{ color: msg.superchat.color }}>{msg.author}</span>
+                    <span className="message-separator">:</span>
+                    <span className="message-text">
+                      <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
+                      {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} />}
+                    </span>
                   </div>
-                  {(msg.parts.length > 0 || msg.superchat.sticker) && (
-                    <div className="yt-superchat-body">
-                      <YTMessageParts parts={msg.parts} />
-                      {msg.superchat.sticker && (
-                        <img
-                          src={msg.superchat.sticker.url}
-                          alt={msg.superchat.sticker.alt}
-                          className="yt-superchat-sticker"
-                          loading="lazy"
-                        />
-                      )}
+                  {msg.superchat.sticker && (
+                    <div className="yt-superchat-sticker-row">
+                      <img src={msg.superchat.sticker.url} alt={msg.superchat.sticker.alt} className="yt-superchat-sticker" loading="lazy" />
                     </div>
                   )}
                 </div>

@@ -196,73 +196,42 @@
   text-align: center;
 }
 
-/* Super Chat Styles */
-.yt-superchat {
-  margin: 4px 0;
+/* YouTube Event Messages (Super Chat, Membership, Gifts) — matches Twitch event style */
+.message.yt-event {
+  background-color: var(--event-bg);
+  border-left: 2px solid var(--event-color);
+}
+
+.yt-event-label {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid;
   border-radius: 4px;
+  padding: 1px 6px;
+  margin-bottom: 3px;
+  opacity: 0.9;
+  max-width: 100%;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.yt-superchat-header {
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
+.yt-superchat-amount-inline {
+  font-weight: 700;
 }
 
-.yt-superchat-header .avatar {
-  width: 40px !important;
-  height: 40px !important;
-  border-radius: 50%;
-}
-
-.yt-superchat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.yt-superchat-author {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-}
-
-.yt-superchat-amount {
-  color: #fff;
-  font-size: 14px;
-}
-
-.yt-superchat-body {
-  padding: 8px 12px;
-  background-color: rgba(0, 0, 0, 0.1);
-  color: #fff;
-  word-break: break-word;
-  line-height: 1.4;
+.yt-superchat-sticker-row {
+  padding-left: 8px;
+  padding-bottom: 4px;
 }
 
 .yt-superchat-sticker {
   width: 72px;
   height: 72px;
-  margin-top: 4px;
   object-fit: contain;
-}
-
-/* Gift Purchase & Redemption Styles */
-.yt-gift-purchase {
-  border-left: 3px solid #9c27b0;
-}
-
-.yt-gift-redemption {
-  border-left: 3px solid #4caf50;
-}
-
-.gift-icon {
-  margin-right: 4px;
-  font-size: 16px;
 }
 
 /* Split Chat styling for YouTube chat container */
@@ -270,11 +239,11 @@
   /* keep default spacing to avoid introducing visible gaps between messages */
 }
 
-.yt-chat-container.split-chat .message.odd {
+.yt-chat-container.split-chat .message.odd:not(.yt-event) {
   background-color: rgba(255,255,255,0.07);
 }
 
-.yt-chat-container.split-chat .message.even {
+.yt-chat-container.split-chat .message.even:not(.yt-event) {
   background-color: rgba(255,255,255,0.00);
 }
 
