@@ -30,6 +30,15 @@ export interface ThemeColors {
   '--color-warning-bg': string;
   '--color-warning-border': string;
   '--color-warning-text': string;
+  '--color-accent': string;
+  '--color-accent-hover': string;
+  '--color-indigo': string;
+  '--color-indigo-hover': string;
+  '--shadow-accent-sm': string;
+  '--shadow-accent-md': string;
+  '--shadow-accent-lg': string;
+  '--shadow-glow-accent': string;
+  '--shadow-glow-indigo': string;
 }
 
 export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = {
@@ -62,6 +71,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d2817',
     '--color-warning-border': '#e5c07b',
     '--color-warning-text': '#e5c07b',
+    '--color-accent': '#56b6c2',
+    '--color-accent-hover': '#47a3b0',
+    '--color-indigo': '#61afef',
+    '--color-indigo-hover': '#4e9cdd',
+    '--shadow-accent-sm': '0 0 0 3px rgba(86, 182, 194, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(86, 182, 194, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(86, 182, 194, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(86, 182, 194, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(97, 175, 239, 0.35)',
   },
   'catppuccin': {
     '--color-bg-primary': '#1e1e2e',
@@ -92,6 +110,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d2817',
     '--color-warning-border': '#f9e2af',
     '--color-warning-text': '#f9e2af',
+    '--color-accent': '#74c7ec',
+    '--color-accent-hover': '#5fb3d8',
+    '--color-indigo': '#89b4fa',
+    '--color-indigo-hover': '#6fa1f0',
+    '--shadow-accent-sm': '0 0 0 3px rgba(116, 199, 236, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(116, 199, 236, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(116, 199, 236, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(116, 199, 236, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(137, 180, 250, 0.35)',
   },
   'night-owl': {
     '--color-bg-primary': '#011627',
@@ -122,6 +149,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d2817',
     '--color-warning-border': '#ffcb6b',
     '--color-warning-text': '#ffcb6b',
+    '--color-accent': '#21c7a8',
+    '--color-accent-hover': '#1bae92',
+    '--color-indigo': '#82aaff',
+    '--color-indigo-hover': '#6b94eb',
+    '--shadow-accent-sm': '0 0 0 3px rgba(33, 199, 168, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(33, 199, 168, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(33, 199, 168, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(33, 199, 168, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(130, 170, 255, 0.35)',
   },
   'monokai': {
     '--color-bg-primary': '#272822',
@@ -152,6 +188,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d2817',
     '--color-warning-border': '#e6db74',
     '--color-warning-text': '#e6db74',
+    '--color-accent': '#f92672',
+    '--color-accent-hover': '#d91f63',
+    '--color-indigo': '#ae81ff',
+    '--color-indigo-hover': '#966be6',
+    '--shadow-accent-sm': '0 0 0 3px rgba(249, 38, 114, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(249, 38, 114, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(249, 38, 114, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(249, 38, 114, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(174, 129, 255, 0.35)',
   },
   'sublime-material': {
     '--color-bg-primary': '#263238',
@@ -182,6 +227,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d2817',
     '--color-warning-border': '#ffcb6b',
     '--color-warning-text': '#ffcb6b',
+    '--color-accent': '#ff5370',
+    '--color-accent-hover': '#e04058',
+    '--color-indigo': '#82aaff',
+    '--color-indigo-hover': '#6b94eb',
+    '--shadow-accent-sm': '0 0 0 3px rgba(255, 83, 112, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(255, 83, 112, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(255, 83, 112, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(255, 83, 112, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(130, 170, 255, 0.35)',
   },
   'mushu': {
     '--color-bg-primary': '#1a1111',
@@ -212,6 +266,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#3d1a11',
     '--color-warning-border': '#c86428',
     '--color-warning-text': '#ff9050',
+    '--color-accent': '#e83333',
+    '--color-accent-hover': '#c22828',
+    '--color-indigo': '#c97070',
+    '--color-indigo-hover': '#b05a5a',
+    '--shadow-accent-sm': '0 0 0 3px rgba(232, 51, 51, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(232, 51, 51, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(232, 51, 51, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(232, 51, 51, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(201, 112, 112, 0.35)',
   },
   'lunita': {
     '--color-bg-primary': '#1e2a1e',
@@ -242,6 +305,15 @@ export const THEME_COLORS: Record<Exclude<ChatTheme, 'default'>, ThemeColors> = 
     '--color-warning-bg': '#2d2218',
     '--color-warning-border': '#c8aa64',
     '--color-warning-text': '#e8d490',
+    '--color-accent': '#d4a54a',
+    '--color-accent-hover': '#b8903e',
+    '--color-indigo': '#8aba6a',
+    '--color-indigo-hover': '#72a152',
+    '--shadow-accent-sm': '0 0 0 3px rgba(212, 165, 74, 0.15)',
+    '--shadow-accent-md': '0 4px 16px rgba(212, 165, 74, 0.25)',
+    '--shadow-accent-lg': '0 10px 40px rgba(212, 165, 74, 0.2)',
+    '--shadow-glow-accent': '0 0 20px rgba(212, 165, 74, 0.4)',
+    '--shadow-glow-indigo': '0 0 12px rgba(138, 186, 106, 0.35)',
   },
 };
 
