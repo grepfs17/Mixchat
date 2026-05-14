@@ -319,11 +319,12 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
   useScrollToBottomOnKeyboard(messagesContainerRef);
 
   // Pass the current message list up so the parent can use it in unified chat
+  // Only report real (non-optimistic) messages so the parent's dedup logic works correctly
   useEffect(() => {
     if (onMessages) {
-      onMessages(mergedMessages);
+      onMessages(messages);
     }
-  }, [mergedMessages, onMessages]);
+  }, [messages, onMessages]);
 
   // Notify parent of connection state changes
   useEffect(() => {
