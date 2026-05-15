@@ -79,6 +79,7 @@ interface ChannelGroupCache {
 let emotesTwitchGlobal: EmoteMap = {};
 let emotesTwitchByChannel: ChannelEmoteGroup[] = [];
 let activeEmoteSetId: string | null = null;
+let lastUserId: string | undefined;
 let eventSource7tv: EventSource | null = null;
 let reconnect7tvTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnect7tvDelay = 5000;
@@ -159,6 +160,7 @@ export function clearEmoteCache(): void {
   emotesTwitch = {};
   emotesTwitchGlobal = {};
   emotesTwitchByChannel = [];
+  lastUserId = undefined;
 }
 
 /**
@@ -687,8 +689,10 @@ export async function initializeEmotes(
   // Merge global + current channel into the flat map used for message parsing
   emotesTwitch = { ...twitchGlobal, ...twitchChannel };
 
-  if (userId) {
-    const channelGroups = await fetchUserEmotesByChannel(userId);
+  const effectiveUserId = userId || lastUserId;
+  if (effectiveUserId) {
+    lastUserId = effectiveUserId;
+    const channelGroups = await fetchUserEmotesByChannel(effectiveUserId);
     emotesTwitchByChannel = channelGroups;
     // Merge all subscription channel emotes into the parsing map
     for (const group of channelGroups) {

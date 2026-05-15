@@ -249,6 +249,7 @@ function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatMembershipItem)) {
     return {
       ...parseTextMessageBase(item),
+      messageType: 'membership',
       superchat: {
         amount: item.header_subtext?.toString() || "Member",
         color: "#0f9d58",

@@ -13,6 +13,7 @@ interface YouTubeMessageItemProps {
 }
 
 const YT_EVENT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+    'membership': { label: 'MEMBER', color: '#0f9d58', bg: 'rgba(15, 157, 88, 0.15)' },
     'gift-purchase': { label: 'GIFT', color: '#9c27b0', bg: 'rgba(156, 39, 176, 0.15)' },
     'gift-redemption': { label: 'GIFT RECEIVED', color: '#4caf50', bg: 'rgba(76, 175, 80, 0.15)' },
 };
@@ -59,6 +60,12 @@ export function YouTubeMessageItem({
                     <span className="author" style={{ color: config.color }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
+                        {msg.messageType === 'membership' && (
+                            <>
+                                <span className="yt-superchat-amount-inline">{msg.superchat!.amount}</span>
+                                {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} variant="unified" />}
+                            </>
+                        )}
                         {msg.messageType === 'gift-purchase' && (
                             <>Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}</>
                         )}
@@ -68,7 +75,7 @@ export function YouTubeMessageItem({
                         {msg.superchat && !msg.messageType && (
                             <>
                                 <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
-                                {msg.parts.length > 0 && <> {<YTMessageParts parts={msg.parts} variant="unified" />}</>}
+                                {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} variant="unified" />}
                             </>
                         )}
                     </span>

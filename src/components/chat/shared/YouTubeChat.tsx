@@ -401,6 +401,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
         )}
         {(() => {
           const getYtEventStyle = (msg: ChatMessage): React.CSSProperties | undefined => {
+            if (msg.messageType === 'membership') return { '--event-color': '#0f9d58', '--event-bg': 'rgba(15, 157, 88, 0.15)' } as React.CSSProperties;
             if (msg.messageType === 'gift-purchase') return { '--event-color': '#9c27b0', '--event-bg': 'rgba(156, 39, 176, 0.15)' } as React.CSSProperties;
             if (msg.messageType === 'gift-redemption') return { '--event-color': '#4caf50', '--event-bg': 'rgba(76, 175, 80, 0.15)' } as React.CSSProperties;
             if (msg.superchat && !msg.messageType) return { '--event-color': msg.superchat.color, '--event-bg': `${msg.superchat.color}26` } as React.CSSProperties;
@@ -408,15 +409,46 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           };
 
           const getYtEventLabel = (msg: ChatMessage): string | null => {
+            if (msg.messageType === 'membership') return 'MEMBER';
             if (msg.messageType === 'gift-purchase') return 'GIFT';
             if (msg.messageType === 'gift-redemption') return 'GIFT RECEIVED';
             if (msg.superchat && !msg.messageType) return 'SUPER CHAT';
             return null;
           };
 
+          const getYtEventColor = (msg: ChatMessage): string => {
+            if (msg.messageType === 'membership') return '#0f9d58';
+            if (msg.messageType === 'gift-purchase') return '#9c27b0';
+            if (msg.messageType === 'gift-redemption') return '#4caf50';
+            if (msg.superchat) return msg.superchat.color;
+            return '#fff';
+          };
+
           return mergedMessages.map((msg, index) => {
             const eventStyle = getYtEventStyle(msg);
             const eventLabel = getYtEventLabel(msg);
+            const eventColor = getYtEventColor(msg);
+            const isEvent = !!eventLabel;
+
+            if (msg.messageType === 'membership' && msg.superchat) {
+              return (
+                <div key={msg.id} className="message yt-event" style={eventStyle}>
+                  {eventLabel && <div className="yt-event-label" style={{ color: '#0f9d58', background: 'rgba(15, 157, 88, 0.15)', borderColor: '#0f9d58' }}>{eventLabel}</div>}
+                  <div className="message-single-line">
+                    <span className="timestamp">
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
+                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
+                    <span className="author" style={{ color: '#0f9d58' }}>{msg.author}</span>
+                    <span className="message-separator">:</span>
+                    <span className="message-text">
+                      <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
+                      {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} />}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
 
             if (msg.messageType === 'gift-purchase' && msg.superchat) {
               return (
@@ -459,13 +491,13 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
             if (msg.superchat) {
               return (
                 <div key={msg.id} className="message yt-event" style={eventStyle}>
-                  {eventLabel && <div className="yt-event-label" style={{ color: msg.superchat.color, background: `${msg.superchat.color}26`, borderColor: msg.superchat.color }}>{eventLabel}</div>}
+                  {eventLabel && <div className="yt-event-label" style={{ color: eventColor, background: `${eventColor}26`, borderColor: eventColor }}>{eventLabel}</div>}
                   <div className="message-single-line">
                     <span className="timestamp">
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: msg.superchat.color }}>{msg.author}</span>
+                    <span className="author" style={{ color: eventColor }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
