@@ -89,6 +89,7 @@ export default function AppContainer() {
   const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
   const [chatTheme, setChatTheme] = useState<ChatTheme>('default'); // Chat theme
   const [hideViewerCount, setHideViewerCount] = useState(false);
+  const [hideChatTimestamps, setHideChatTimestamps] = useState(false);
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
@@ -662,6 +663,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
   }, [hideViewerCount]);
 
+  // Load hide chat timestamps setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_hide_chat_timestamps');
+    if (saved !== null) {
+      try { setHideChatTimestamps(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save hide chat timestamps setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_hide_chat_timestamps', JSON.stringify(hideChatTimestamps));
+  }, [hideChatTimestamps]);
+
   // Load event sounds from IndexedDB (migrates legacy localStorage on first run)
   useEffect(() => {
     let cancelled = false;
@@ -1000,6 +1014,7 @@ export default function AppContainer() {
   return (
     <div
       style={{ display: 'grid', gridTemplateColumns: leftColumnVisible ? '280px 1fr' : '1fr', gap: '0', height: '100%' }}
+      data-hide-timestamps={hideChatTimestamps}
       onClick={primeAudioContext}
       onKeyDown={primeAudioContext}
     >
@@ -1072,6 +1087,8 @@ export default function AppContainer() {
             onChatThemeChange={setChatTheme}
             hideViewerCount={hideViewerCount}
             onHideViewerCountChange={setHideViewerCount}
+            hideChatTimestamps={hideChatTimestamps}
+            onHideChatTimestampsChange={setHideChatTimestamps}
             eventSounds={eventSounds}
             onEventSoundChange={handleEventSoundChange}
             eventSoundVolume={eventSoundVolume}

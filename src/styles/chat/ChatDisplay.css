@@ -384,6 +384,10 @@
   flex-shrink: 0;
 }
 
+[data-hide-timestamps="true"] .timestamp {
+  display: none !important;
+}
+
 
 .go-to-bottom-button {
   position: absolute;

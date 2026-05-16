@@ -60,6 +60,8 @@ interface LoginPanelProps {
   onChatThemeChange?: (value: ChatTheme) => void;
   hideViewerCount?: boolean;
   onHideViewerCountChange?: (value: boolean) => void;
+  hideChatTimestamps?: boolean;
+  onHideChatTimestampsChange?: (value: boolean) => void;
   eventSounds?: Record<string, string>;
   onEventSoundChange?: (eventType: string, soundData: string | null) => void;
   eventSoundVolume?: number;
@@ -116,6 +118,8 @@ function LoginPanel({
   onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
+  hideChatTimestamps = false,
+  onHideChatTimestampsChange,
   eventSounds = {},
   onEventSoundChange,
   eventSoundVolume = 1,
@@ -233,7 +237,7 @@ function LoginPanel({
                       onClick={() => { onChannelChange?.(channel.id); onRequestClose?.(); }}
                       title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ''}`}
                     >
-{channel.profileImageUrl ? (
+                      {channel.profileImageUrl ? (
                         <span className="channel-item-avatar-wrap">
                           <img
                             src={channel.profileImageUrl}
@@ -405,12 +409,14 @@ function LoginPanel({
           onChatThemeChange={(value) => { if (onChatThemeChange) onChatThemeChange(value); }}
           hideViewerCount={hideViewerCount}
           onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
+          hideChatTimestamps={hideChatTimestamps}
+          onHideChatTimestampsChange={(value) => { if (onHideChatTimestampsChange) onHideChatTimestampsChange(value); }}
           eventSounds={eventSounds}
           onEventSoundChange={(eventType, soundData) => { if (onEventSoundChange) onEventSoundChange(eventType, soundData); }}
           eventSoundVolume={eventSoundVolume}
           onEventSoundVolumeChange={(value) => { if (onEventSoundVolumeChange) onEventSoundVolumeChange(value); }}
           hasYoutubeSession={hasYoutubeSession}
-          onReauthYoutube={onReauthYoutube || (() => {})}
+          onReauthYoutube={onReauthYoutube || (() => { })}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}

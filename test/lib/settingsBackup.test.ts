@@ -222,7 +222,7 @@ describe('settingsBackup lib', () => {
       await exportSettings();
 
       expect(capturedBlob).not.toBeNull();
-      const text = await (capturedBlob as Blob).text();
+      const text = await capturedBlob!.text();
       const parsed = JSON.parse(text);
       expect(parsed.settings['mixchat_event_sounds']).toBe(
         JSON.stringify({ subscription: 'data:audio/mp3;base64,abc123' }),

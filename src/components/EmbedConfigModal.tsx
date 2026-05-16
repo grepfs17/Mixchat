@@ -37,6 +37,8 @@ interface EmbedConfigModalProps {
   onChatThemeChange: (value: ChatTheme) => void;
   hideViewerCount: boolean;
   onHideViewerCountChange: (value: boolean) => void;
+  hideChatTimestamps: boolean;
+  onHideChatTimestampsChange: (value: boolean) => void;
   eventSounds: Record<string, string>;
   onEventSoundChange: (eventType: string, soundData: string | null) => void;
   eventSoundVolume: number;
@@ -73,6 +75,8 @@ export default function EmbedConfigModal({
   onChatThemeChange,
   hideViewerCount,
   onHideViewerCountChange,
+  hideChatTimestamps,
+  onHideChatTimestampsChange,
   eventSounds,
   onEventSoundChange,
   eventSoundVolume,
@@ -126,7 +130,7 @@ export default function EmbedConfigModal({
         'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
         'mixchat_mention_volume', 'mixchat_mention_sound_type',
         'mixchat_show_deleted_messages', 'mixchat_compact_actions',
-        'mixchat_hide_viewer_count', 'mixchat_event_sound_volume',
+        'mixchat_hide_viewer_count', 'mixchat_hide_chat_timestamps', 'mixchat_event_sound_volume',
         'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
         'mixchat_youtube_links', 'disabled_emotes_v1',
       ]) {
@@ -347,6 +351,20 @@ export default function EmbedConfigModal({
                 </label>
                 <p className="embed-config-description embed-config-description--indented">
                   When enabled, messages show a subtle darker background to visually separate each message.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={hideChatTimestamps}
+                    onChange={(e) => onHideChatTimestampsChange(e.target.checked)}
+                  />
+                  <span>Hide chat timestamps</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, the time a message was sent will be hidden.
                 </p>
               </div>
             </div>
