@@ -137,7 +137,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           try {
             const errData = await probeRes.json();
             if (errData.error) errorMsg = errData.error;
-          } catch {}
+          } catch { }
           if (!isMounted) return;
           setIsConnected(false);
           setIsLoading(false);
@@ -182,13 +182,15 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           superchat: msg.superchat,
         }));
 
-        const uniqueMap = new Map<string, ChatMessage>();
-        for (const m of fetchedMessages) uniqueMap.set(m.id, m);
         setMessages(prev => {
-          for (const m of prev) {
-            if (!uniqueMap.has(m.id)) uniqueMap.set(m.id, m);
-          }
-          const merged = Array.from(uniqueMap.values());
+          const uniqueMap = new Map<string, ChatMessage>();
+          for (const m of prev) uniqueMap.set(m.id, m);
+          for (const m of fetchedMessages) uniqueMap.set(m.id, m);
+
+          const merged = Array.from(uniqueMap.values()).sort(
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+          );
+
           return merged.length > MAX_DISPLAYED_MESSAGES
             ? merged.slice(-MAX_DISPLAYED_MESSAGES)
             : merged;
