@@ -48,6 +48,121 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 16px;
+}
+
+.embed-config-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Search */
+.embed-config-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 280px;
+}
+
+.embed-config-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.embed-config-search-input {
+  width: 100%;
+  padding: 7px 32px 7px 32px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.embed-config-search-input:focus {
+  border-color: var(--color-indigo);
+}
+
+.embed-config-search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.embed-config-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+  transition: color 0.15s;
+}
+
+.embed-config-search-clear:hover {
+  color: var(--color-text-primary);
+}
+
+/* Search results */
+.embed-config-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.embed-config-search-result-item {
+  padding: 12px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-sm);
+}
+
+.embed-config-search-result-group {
+  background: none;
+  border: none;
+  color: var(--color-indigo);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 8px;
+  transition: opacity 0.15s;
+}
+
+.embed-config-search-result-group:hover {
+  opacity: 0.75;
+}
+
+.embed-config-search-result-content {
+  animation: embed-config-slide-in 0.15s ease-out;
+}
+
+/* Empty search state */
+.embed-config-search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  gap: 12px;
+}
+
+.embed-config-search-empty-icon {
+  color: var(--color-text-muted);
 }
 
 .embed-config-title {
