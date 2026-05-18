@@ -99,7 +99,7 @@ export function YouTubeMessageItem({
     return (
         <div
             key={entry.source + ':' + msg.id}
-            className={`message${msg.optimistic ? ' yt-optimistic' : ''} ${parityClass}`}
+            className={`message${msg.optimistic ? ' yt-optimistic' : ''}${msg.isDeleted ? ' deleted' : ''} ${parityClass}`}
             onTouchStart={() => onTouchStart(entry)}
             onTouchEnd={() => onTouchEnd(entry)}
             onTouchMove={onTouchMove}
@@ -120,6 +120,9 @@ export function YouTubeMessageItem({
                     <YTMessageParts parts={msg.parts} variant="unified" />
                 </span>
             </div>
+            {msg.isDeleted && (
+                <div className="deleted-notice">Deleted by a moderator</div>
+            )}
         </div>
     );
 }

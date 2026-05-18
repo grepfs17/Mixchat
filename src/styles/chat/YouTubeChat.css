@@ -247,3 +247,17 @@
   background-color: rgba(255,255,255,0.00);
 }
 
+/* Deleted message styling */
+.yt-chat-container .message.deleted {
+  opacity: 0.45;
+}
+
+.deleted-notice {
+  font-size: 0.68rem;
+  color: #e57373;
+  font-style: italic;
+  margin-top: 2px;
+  padding-left: 2px;
+  letter-spacing: 0.01em;
+}
+

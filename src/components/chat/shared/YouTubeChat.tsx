@@ -17,6 +17,8 @@ interface YouTubeChatProps {
   splitChatEnabled?: boolean;
   /** Called when YouTube chat connection state changes */
   onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
+  /** When true, deleted messages are dimmed instead of removed */
+  showDeletedMessages?: boolean;
 }
 
 interface MessagePart {
@@ -67,7 +69,7 @@ interface SSEEndEvent {
   reason: string;
 }
 
-export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange, showDeletedMessages = false }: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
     m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
 
@@ -231,7 +233,12 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
       es.addEventListener('delete', (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEDeleteEvent;
-        setMessages(prev => prev.filter(m => m.id !== data.messageId));
+        setMessages(prev => {
+          if (showDeletedMessages) {
+            return prev.map(m => m.id === data.messageId ? { ...m, isDeleted: true } : m);
+          }
+          return prev.filter(m => m.id !== data.messageId);
+        });
       });
 
       es.addEventListener('error', (e: Event) => {
@@ -517,7 +524,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
 
             const parityClass = (index % 2 === 0) ? 'even' : 'odd';
             return (
-              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''} ${parityClass}`}>
+              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}${msg.isDeleted ? ' deleted' : ''} ${parityClass}`}>
                 <div className="message-single-line">
                   <span className="timestamp">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -544,6 +551,9 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                     <YTMessageParts parts={msg.parts} />
                   </span>
                 </div>
+                {msg.isDeleted && (
+                  <div className="deleted-notice">Deleted by a moderator</div>
+                )}
               </div>
             );
           });
