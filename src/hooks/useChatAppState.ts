@@ -69,6 +69,7 @@ export interface ChatAppStateProps {
   splitChatEnabled?: boolean;
   chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
+  disableModModeByDefault?: boolean;
   eventSounds?: Record<string, string>;
   eventSoundVolume?: number;
   onFollowRaid?: (channelLogin: string) => void;
@@ -91,6 +92,7 @@ export function useChatAppState({
   mentionVolume = 0.2,
   mentionSoundType = 'ding' as MentionSoundType,
   showDeletedMessages = true,
+  disableModModeByDefault = false,
   eventSounds = {},
   eventSoundVolume = 1,
 }: ChatAppStateProps) {
@@ -375,16 +377,17 @@ export function useChatAppState({
     if (twitchSession && selectedTwitchChannelName) {
       const isOwnerByName = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
       const isOwnerById = twitchSession.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
-      if (isOwnerByName || isOwnerById) {
+      const isOwner = isOwnerByName || isOwnerById;
+      if (isOwner) {
         setIsModerator(true);
-        setModModeActive(true);
+        setModModeActive(!disableModModeByDefault);
       } else {
         setModModeActive(false);
       }
     } else {
       setModModeActive(false);
     }
-  }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel]);
+  }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel, disableModModeByDefault]);
 
   useEffect(() => {
     const checkModViaApi = async () => {

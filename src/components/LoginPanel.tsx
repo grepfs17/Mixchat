@@ -60,6 +60,8 @@ interface LoginPanelProps {
   onChatThemeChange?: (value: ChatTheme) => void;
   hideViewerCount?: boolean;
   onHideViewerCountChange?: (value: boolean) => void;
+  disableModModeByDefault?: boolean;
+  onDisableModModeByDefaultChange?: (value: boolean) => void;
   hideChatTimestamps?: boolean;
   onHideChatTimestampsChange?: (value: boolean) => void;
   eventSounds?: Record<string, string>;
@@ -118,6 +120,8 @@ function LoginPanel({
   onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
+  disableModModeByDefault = false,
+  onDisableModModeByDefaultChange,
   hideChatTimestamps = false,
   onHideChatTimestampsChange,
   eventSounds = {},
@@ -409,6 +413,8 @@ function LoginPanel({
           onChatThemeChange={(value) => { if (onChatThemeChange) onChatThemeChange(value); }}
           hideViewerCount={hideViewerCount}
           onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
+          disableModModeByDefault={disableModModeByDefault}
+          onDisableModModeByDefaultChange={(value) => { if (onDisableModModeByDefaultChange) onDisableModModeByDefaultChange(value); }}
           hideChatTimestamps={hideChatTimestamps}
           onHideChatTimestampsChange={(value) => { if (onHideChatTimestampsChange) onHideChatTimestampsChange(value); }}
           eventSounds={eventSounds}

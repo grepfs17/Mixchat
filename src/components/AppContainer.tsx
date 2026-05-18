@@ -89,6 +89,7 @@ export default function AppContainer() {
   const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
   const [chatTheme, setChatTheme] = useState<ChatTheme>('default'); // Chat theme
   const [hideViewerCount, setHideViewerCount] = useState(false);
+  const [disableModModeByDefault, setDisableModModeByDefault] = useState(false);
   const [hideChatTimestamps, setHideChatTimestamps] = useState(false);
   const [hlsQualities, setHlsQualities] = useState<Array<{ label: string; url: string }>>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
@@ -663,6 +664,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_hide_viewer_count', JSON.stringify(hideViewerCount));
   }, [hideViewerCount]);
 
+  // Load disable mod mode by default setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_disable_mod_mode_by_default');
+    if (saved !== null) {
+      try { setDisableModModeByDefault(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save disable mod mode by default setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_disable_mod_mode_by_default', JSON.stringify(disableModModeByDefault));
+  }, [disableModModeByDefault]);
+
   // Load hide chat timestamps setting from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('mixchat_hide_chat_timestamps');
@@ -1087,6 +1101,8 @@ export default function AppContainer() {
             onChatThemeChange={setChatTheme}
             hideViewerCount={hideViewerCount}
             onHideViewerCountChange={setHideViewerCount}
+            disableModModeByDefault={disableModModeByDefault}
+            onDisableModModeByDefaultChange={setDisableModModeByDefault}
             hideChatTimestamps={hideChatTimestamps}
             onHideChatTimestampsChange={setHideChatTimestamps}
             eventSounds={eventSounds}
@@ -1272,6 +1288,7 @@ export default function AppContainer() {
               splitChatEnabled={splitChatEnabled}
               chatTheme={chatTheme}
               hideViewerCount={shouldHideViewerCount}
+              disableModModeByDefault={disableModModeByDefault}
               eventSounds={eventSounds}
               eventSoundVolume={eventSoundVolume}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}

@@ -39,6 +39,8 @@ interface EmbedConfigModalProps {
   onHideViewerCountChange: (value: boolean) => void;
   hideChatTimestamps: boolean;
   onHideChatTimestampsChange: (value: boolean) => void;
+  disableModModeByDefault: boolean;
+  onDisableModModeByDefaultChange: (value: boolean) => void;
   eventSounds: Record<string, string>;
   onEventSoundChange: (eventType: string, soundData: string | null) => void;
   eventSoundVolume: number;
@@ -75,8 +77,10 @@ export default function EmbedConfigModal({
   onChatThemeChange,
   hideViewerCount,
   onHideViewerCountChange,
-  hideChatTimestamps,
+hideChatTimestamps,
   onHideChatTimestampsChange,
+  disableModModeByDefault,
+  onDisableModModeByDefaultChange,
   eventSounds,
   onEventSoundChange,
   eventSoundVolume,
@@ -130,7 +134,7 @@ export default function EmbedConfigModal({
         'mixchat_font_size', 'mixchat_chat_font', 'mixchat_chat_theme', 'mixchat_mention_sound',
         'mixchat_mention_volume', 'mixchat_mention_sound_type',
         'mixchat_show_deleted_messages', 'mixchat_compact_actions',
-        'mixchat_hide_viewer_count', 'mixchat_hide_chat_timestamps', 'mixchat_event_sound_volume',
+        'mixchat_hide_viewer_count', 'mixchat_disable_mod_mode_by_default', 'mixchat_hide_chat_timestamps', 'mixchat_event_sound_volume',
         'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
         'mixchat_youtube_links', 'disabled_emotes_v1',
       ]) {
@@ -482,6 +486,20 @@ export default function EmbedConfigModal({
                 </label>
                 <p className="embed-config-description embed-config-description--indented">
                   When enabled, the viewer count is hidden while viewing your own channel.
+                </p>
+              </div>
+
+              <div className="embed-config-section">
+                <label className="embed-config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={disableModModeByDefault}
+                    onChange={(e) => onDisableModModeByDefaultChange(e.target.checked)}
+                  />
+                  <span>Disable Mod mode by default on own channel</span>
+                </label>
+                <p className="embed-config-description embed-config-description--indented">
+                  When enabled, Mod mode will be disabled by default when you enter your own channel.
                 </p>
               </div>
 
