@@ -15,29 +15,30 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-medium);
   padding: 24px;
-  max-width: 500px;
+  max-width: 750px;
   width: 90%;
   max-height: 90svh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
 }
 
 /* Scrollbar style for Embed Config Modal (match chat messages scrollbar) */
-.embed-config-modal-content {
+.embed-config-panel {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
 }
-.embed-config-modal-content::-webkit-scrollbar {
+.embed-config-panel::-webkit-scrollbar {
   width: 8px;
 }
-.embed-config-modal-content::-webkit-scrollbar-track {
+.embed-config-panel::-webkit-scrollbar-track {
   background: var(--color-bg-primary);
 }
-.embed-config-modal-content::-webkit-scrollbar-thumb {
+.embed-config-panel::-webkit-scrollbar-thumb {
   background: var(--color-border-medium);
   border-radius: var(--radius-md);
 }
-.embed-config-modal-content::-webkit-scrollbar-thumb:hover {
+.embed-config-panel::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-lighter);
 }
 
@@ -77,6 +78,64 @@
 .embed-config-group:first-of-type {
   border-top: none;
   padding-top: 0;
+}
+
+/* Two-column layout */
+.embed-config-layout {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Sidebar navigation */
+.embed-config-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border-medium);
+  padding-right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.embed-config-sidebar-item {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.embed-config-sidebar-item:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.embed-config-sidebar-item--active {
+  background-color: var(--color-indigo);
+  color: #fff;
+}
+
+.embed-config-sidebar-item--active:hover {
+  background-color: var(--color-indigo);
+  opacity: 0.9;
+}
+
+/* Content panel */
+.embed-config-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-left: 16px;
 }
 
 .embed-config-group-header {
