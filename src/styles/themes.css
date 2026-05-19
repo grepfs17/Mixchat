@@ -211,3 +211,44 @@ html[data-theme="lunita"] {
   --shadow-glow-accent: 0 0 20px rgba(212, 165, 74, 0.4);
   --shadow-glow-indigo: 0 0 12px rgba(138, 186, 106, 0.35);
 }
+
+[data-theme="twitch"],
+html[data-theme="twitch"] {
+  --color-bg-primary: #18181b;
+  --color-bg-secondary: #18181b;
+  --color-bg-tertiary: #1f1f23;
+  --color-bg-hover: #26262c;
+  --color-bg-message-hover: #1f1f23;
+  --color-bg-bot: #18181b;
+  --color-border-dark: #0e0e10;
+  --color-border-medium: #26262c;
+  --color-border-light: #35353b;
+  --color-border-lighter: #45454b;
+  --color-text-primary: #efeff1;
+  --color-text-secondary: #adadb8;
+  --color-text-muted: #70707c;
+  --color-text-chat: #efeff1;
+  --color-text-timestamp: #adadb8;
+  --color-autocomplete-bg: #18181b;
+  --color-autocomplete-border: #35353b;
+  --color-autocomplete-selected: #26262c;
+  --color-autocomplete-hover: #35353b;
+  --color-bg-mention: rgba(145, 70, 255, 0.15);
+  --color-border-mention: #9146ff;
+  --color-bg-twitch-event: rgba(145, 70, 255, 0.2);
+  --color-border-twitch-event: #9146ff;
+  --color-bg-cheer-event: rgba(255, 128, 0, 0.2);
+  --color-border-cheer-event: #ff8000;
+  --color-warning-bg: #3d2817;
+  --color-warning-border: #ff8000;
+  --color-warning-text: #ff8000;
+  --color-accent: #9146ff;
+  --color-accent-hover: #a970ff;
+  --color-indigo: #9146ff;
+  --color-indigo-hover: #a970ff;
+  --shadow-accent-sm: 0 0 0 3px rgba(145, 70, 255, 0.15);
+  --shadow-accent-md: 0 4px 16px rgba(145, 70, 255, 0.25);
+  --shadow-accent-lg: 0 10px 40px rgba(145, 70, 255, 0.2);
+  --shadow-glow-accent: 0 0 20px rgba(145, 70, 255, 0.4);
+  --shadow-glow-indigo: 0 0 12px rgba(145, 70, 255, 0.35);
+}
