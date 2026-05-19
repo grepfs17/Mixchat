@@ -20,6 +20,7 @@ const ALLOWED_PATH_PREFIXES = [
     "/helix/moderation", // moderation endpoints (moderators only)
     "/helix/chat/messages",      // used to send messages via Helix
     "/helix/raids",              // raid start/cancel endpoints
+    "/helix/hypetrain/status",      // used to check active hype trains (replaces deprecated /events)
 ] as const;
 
 const TWITCH_API_BASE = "https://api.twitch.tv";
@@ -74,7 +75,8 @@ async function forwardRequest(method: string, targetUrl: string, accessToken: st
     }
 }
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ url, cookies, request }) => {
+    const clientAddress = request.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`${clientAddress}:twitch-proxy`, 120, 60_000)) {
         return new Response(
             JSON.stringify({ error: "Too many requests" }),
@@ -134,7 +136,8 @@ export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
     }
 };
 
-export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) => {
+export const POST: APIRoute = async ({ request, url, cookies }) => {
+    const clientAddress = request.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`${clientAddress}:twitch-proxy-post`, 60, 60_000)) {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } });
     }
@@ -176,7 +179,8 @@ export const POST: APIRoute = async ({ request, url, cookies, clientAddress }) =
     }
 };
 
-export const DELETE: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const DELETE: APIRoute = async ({ url, cookies, request }) => {
+    const clientAddress = request.headers.get('x-forwarded-for') || 'unknown';
     if (!checkRateLimit(`${clientAddress}:twitch-proxy-delete`, 60, 60_000)) {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } });
     }

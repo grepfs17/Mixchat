@@ -6,6 +6,7 @@ import YouTubeChat from './shared/YouTubeChat';
 import YouTubeMessageInput from './shared/YouTubeMessageInput';
 import UnifiedChat from './unified';
 import RaidNotification from './shared/RaidNotification';
+import HypeTrainBanner from './shared/HypeTrainBanner';
 import SplitLayout from './SplitLayout';
 import { useChatAppState, type ChatAppStateProps } from '../../hooks/useChatAppState';
 import type { ChatFont, ChatTheme } from '../../lib/types';
@@ -47,6 +48,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     isModerator,
     modModeActive,
     isFollowingChannelState,
+    hypeTrain,
+    setHypeTrain,
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
@@ -106,6 +109,38 @@ export default function ChatApp(props: ChatAppStateProps) {
     }
   }, [linkedYoutubeUrl, youtubeVideoId]);
 
+  // DEV ONLY: expose a manual test helper so you can call
+  // window.__testHypeTrain() from the browser console
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__testHypeTrain = () => {
+        console.log('[DEV] Triggering mock Hype Train');
+        setHypeTrain({
+          level: 5,
+          progress: 3500,
+          goal: 5000,
+          totalPoints: 3500,
+          topContributors: [
+            { displayName: 'TestUser1', points: 1500 },
+            { displayName: 'TestUser2', points: 1200 },
+            { displayName: 'TestUser3', points: 800 },
+          ],
+          endsAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
+        });
+      };
+      (window as any).__endHypeTrain = () => {
+        console.log('[DEV] Ending mock Hype Train');
+        setHypeTrain(null);
+      };
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as any).__testHypeTrain;
+        delete (window as any).__endHypeTrain;
+      }
+    };
+  }, [setHypeTrain]);
+
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
     // This is handled internally by the hook; exposed here for any direct UI needs
     setNotification({ message, type });
@@ -138,6 +173,14 @@ export default function ChatApp(props: ChatAppStateProps) {
             setPendingRaid(null);
           }}
           onDismiss={() => setPendingRaid(null)}
+        />
+      )}
+
+      {/* Hype Train notification */}
+      {hypeTrain && (
+        <HypeTrainBanner
+          hypeTrain={hypeTrain}
+          onDismiss={() => setHypeTrain(null)}
         />
       )}
 

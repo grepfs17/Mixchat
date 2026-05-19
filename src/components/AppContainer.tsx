@@ -794,7 +794,7 @@ export default function AppContainer() {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids',
+      scope: 'chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions channel:read:hype_train moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids',
       state,
     });
 

@@ -4,6 +4,7 @@ import type { MentionSoundType } from './useTwitchChat';
 import { useRaidDetection } from './useRaidDetection';
 import type { RaidOutEvent } from './useRaidDetection';
 import { useChannelPointRedemptions } from './useChannelPointRedemptions';
+import { useHypeTrainEventSub } from './useHypeTrainEventSub';
 import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
 import { initializeBadges, clearBadgeCache } from '../lib/badges';
 import {
@@ -30,6 +31,7 @@ import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import type { YTMessage } from '../components/chat/unified/types';
 import type { ChatDisplayHandle } from '../components/chat/display';
 import type { UnifiedChatHandle } from '../components/chat/unified';
+import type { HypeTrainState } from '../components/chat/shared/HypeTrainBanner';
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
@@ -136,6 +138,7 @@ export function useChatAppState({
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
   const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
+  const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
 
   // Track recent EventSub redemptions to avoid duplicates when an empty-text
   // IRC PRIVMSG also arrives for the same redemption.
@@ -681,6 +684,48 @@ export function useChatAppState({
     const interval = setInterval(fetchChannelInfo, 30000);
     return () => clearInterval(interval);
   }, [selectedTwitchChannel, twitchSession?.accessToken]);
+
+  // Hype Train EventSub
+  useHypeTrainEventSub({
+    channelId: selectedTwitchChannel,
+    accessToken: twitchSession?.accessToken || '',
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    onHypeTrainBegin: (event) => {
+      setHypeTrain({
+        level: event.level,
+        progress: event.progress,
+        goal: event.goal,
+        totalPoints: event.total,
+        topContributors: event.topContributions.slice(0, 3).map(c => ({
+          displayName: c.displayName,
+          points: c.total,
+        })),
+        endsAt: new Date(event.expiresAt),
+      });
+    },
+    onHypeTrainProgress: (event) => {
+      setHypeTrain({
+        level: event.level,
+        progress: event.progress,
+        goal: event.goal,
+        totalPoints: event.total,
+        topContributors: event.topContributions.slice(0, 3).map(c => ({
+          displayName: c.displayName,
+          points: c.total,
+        })),
+        endsAt: new Date(event.expiresAt),
+      });
+    },
+    onHypeTrainEnd: () => {
+      setHypeTrain(null);
+    },
+    onScopeError: () => {
+      console.info(
+        '[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster\'s channel.',
+      );
+    },
+  });
 
   // Send message handler 
   const handleSendMessage = useCallback(
@@ -1234,6 +1279,7 @@ export function useChatAppState({
     isModerator,
     modModeActive,
     isFollowingChannelState,
+    hypeTrain,
     notificationIdRef,
 
     //Setters
@@ -1245,6 +1291,7 @@ export function useChatAppState({
     setNotification,
     setPendingRaid,
     setIsRaidInitiator,
+    setHypeTrain,
 
     // Handlers
     handleSendMessage,
