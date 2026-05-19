@@ -10,3 +10,7 @@ ignoredBuiltDependencies:
 onlyBuiltDependencies:
   - '@parcel/watcher'
   - esbuild
+overrides:
+  tar: 7.5.9
+  esbuild: 0.25.0
+  ajv: 8.18.0
