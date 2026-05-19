@@ -435,6 +435,16 @@
   height: 40%;
 }
 
+.embed-config-theme-preview-accent {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
 .embed-config-theme-label {
   font-size: 11px;
   color: var(--color-text-primary);

@@ -253,8 +253,8 @@
 }
 
 .channel-item.selected {
-  background: linear-gradient(135deg, rgba(158, 64, 115, 0.15) 0%, rgba(158, 64, 115, 0.05) 100%);
-  border-color: rgba(158, 64, 115, 0.3);
+  background: var(--color-bg-mention);
+  border-color: var(--color-border-mention);
   box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-accent-sm);
 }
 

@@ -86,7 +86,7 @@ export default function EmbedConfigModal({
   onChatThemeChange,
   hideViewerCount,
   onHideViewerCountChange,
-hideChatTimestamps,
+  hideChatTimestamps,
   onHideChatTimestampsChange,
   disableModModeByDefault,
   onDisableModModeByDefaultChange,
@@ -325,6 +325,7 @@ hideChatTimestamps,
                 <div className="embed-config-theme-preview">
                   <div className="embed-config-theme-preview-bg" style={{ backgroundColor: preview.bg }} />
                   <div className="embed-config-theme-preview-hover" style={{ backgroundColor: preview.hover }} />
+                  <div className="embed-config-theme-preview-accent" style={{ backgroundColor: preview.accent }} />
                 </div>
                 <span className="embed-config-theme-label">{label}</span>
                 {chatTheme === value && <span className="embed-config-theme-check">✓</span>}
@@ -485,7 +486,7 @@ hideChatTimestamps,
               )}
             </div>
             <svg className={`embed-config-group-chevron${eventSoundsCollapsed ? ' embed-config-group-chevron--collapsed' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
           <p className="embed-config-description">Upload custom sounds for different chat events. Sounds play automatically when these events occur.</p>
@@ -732,6 +733,7 @@ hideChatTimestamps,
                             <div className="embed-config-theme-preview">
                               <div className="embed-config-theme-preview-bg" style={{ backgroundColor: preview.bg }} />
                               <div className="embed-config-theme-preview-hover" style={{ backgroundColor: preview.hover }} />
+                              <div className="embed-config-theme-preview-accent" style={{ backgroundColor: preview.accent }} />
                             </div>
                             <span className="embed-config-theme-label">{label}</span>
                             {chatTheme === value && <span className="embed-config-theme-check">✓</span>}
@@ -834,7 +836,7 @@ hideChatTimestamps,
                           )}
                         </div>
                         <svg className={`embed-config-group-chevron${eventSoundsCollapsed ? ' embed-config-group-chevron--collapsed' : ''}`} width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </button>
                       <p className="embed-config-description">Upload custom sounds for different chat events. Sounds play automatically when these events occur.</p>
