@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { MdClose, MdHistory, MdOpenInNew, MdBlock, MdWarning } from 'react-icons/md';
+import { FaYoutube, FaTwitch } from 'react-icons/fa';
 import type { ChatMessage, Platform } from '../../../lib/types';
 import { getUserHistory } from '../../../lib/chatHistoryStorage';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
@@ -12,6 +13,7 @@ interface ChatterHistoryOverlayProps {
     author: string;
     channel: string;
     platform: Platform;
+    authorAvatar?: string;
     isModerator?: boolean;
     onClose: () => void;
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
@@ -23,6 +25,7 @@ export default function ChatterHistoryOverlay({
     author,
     channel,
     platform,
+    authorAvatar,
     isModerator,
     onClose,
     onTimeoutUser,
@@ -152,17 +155,23 @@ export default function ChatterHistoryOverlay({
         <div ref={overlayRef} className="chatter-history-overlay">
             {/* Header */}
             <div className="history-header">
-                <div className="history-header-info">
+            <div className="history-header-info">
+                {authorAvatar ? (
+                    <img src={authorAvatar} alt={author} className="history-header-avatar" />
+                ) : (
                     <MdHistory size={20} color="#9146ff" />
-                    <div>
-                        <h2 className="history-header-title">
-                            <MessageBadges {...mostRecentBadges} />
-                            @{author}
-                        </h2>
-                        <span className="history-header-subtitle">
-                            {platform === 'twitch' ? 'Twitch Chatter' : 'YouTube Chatter'}
-                        </span>
-                    </div>
+                )}
+                <div>
+                    <h2 className="history-header-title">
+                        <MessageBadges {...mostRecentBadges} />
+                        @{author}
+                        {platform === 'youtube' && <FaYoutube size={14} className="history-platform-icon history-platform-icon--youtube" />}
+                        {platform === 'twitch' && <FaTwitch size={14} className="history-platform-icon history-platform-icon--twitch" />}
+                    </h2>
+                    <span className="history-header-subtitle">
+                        {platform === 'twitch' ? 'Twitch Chatter' : 'YouTube Chatter'}
+                    </span>
+                </div>
                 </div>
                 <div className="history-header-actions">
                     <a

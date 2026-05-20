@@ -27,8 +27,8 @@ interface ChatHeaderProps {
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
-  ignoredUserCounts?: Map<string, { count: number; displayName: string }>;
-  onOpenIgnoredUserOverlay?: (author: string) => void;
+  ignoredUserCounts?: Map<string, { count: number; displayName: string; authorAvatar?: string }>;
+  onOpenIgnoredUserOverlay?: (author: string, authorAvatar?: string) => void;
 }
 
 export default function ChatHeader({
@@ -156,12 +156,12 @@ export default function ChatHeader({
           </h2>
         </div>
         <div className="chat-header-actions">
-          {Array.from(ignoredUserCounts.entries()).map(([key, { count, displayName }]) => (
+          {Array.from(ignoredUserCounts.entries()).map(([key, { count, displayName, authorAvatar }]) => (
             <button
               key={key}
               className="header-button ignored-messages-badge"
               title={`${count} hidden message(s) from ${displayName}`}
-              onClick={() => onOpenIgnoredUserOverlay?.(displayName)}
+              onClick={() => onOpenIgnoredUserOverlay?.(displayName, authorAvatar)}
             >
               <MdVisibilityOff size={12} className="ignored-badge-icon" />
               <span className="ignored-badge-user">{displayName}</span>

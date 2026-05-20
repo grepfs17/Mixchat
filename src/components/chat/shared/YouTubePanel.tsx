@@ -1,12 +1,15 @@
 import type { CSSProperties } from 'react';
+import { useState } from 'react';
 import YouTubeChat from './YouTubeChat';
 import YouTubeMessageInput from './YouTubeMessageInput';
-import type { PlatformSession, ChatFont } from '../../../lib/types';
+import ChatterHistoryOverlay from './ChatterHistoryOverlay';
+import type { PlatformSession, ChatFont, Platform } from '../../../lib/types';
 import type { YTMessage } from '../unified/types';
 
 interface YouTubePanelProps {
   linkedYoutubeUrl: string;
   youtubeVideoId: string | null;
+  channel?: string;
   useYoutubeEmbed: boolean;
   ytMessages: YTMessage[];
   ytOptimisticMessages: YTMessage[];
@@ -23,12 +26,14 @@ interface YouTubePanelProps {
   onOptimisticFailed: (id: string) => void;
   onError: (msg: string) => void;
   onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
+  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
   style?: CSSProperties;
 }
 
 export default function YouTubePanel({
   linkedYoutubeUrl,
   youtubeVideoId,
+  channel,
   useYoutubeEmbed,
   ytMessages,
   ytOptimisticMessages,
@@ -45,8 +50,16 @@ export default function YouTubePanel({
   onOptimisticFailed,
   onError,
   onConnectionChange,
+  onUsernameClick,
   style,
 }: YouTubePanelProps) {
+  const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform; authorAvatar?: string } | null>(null);
+
+  const handleUsernameClick = (e: React.MouseEvent, author: string, avatar?: string) => {
+    setChatterHistory({ author, platform: 'youtube', authorAvatar: avatar });
+    onUsernameClick?.(e, author, avatar);
+  };
+
   const extractVideoId = (val: string): string => {
     let vid = val;
     try {
@@ -87,12 +100,23 @@ export default function YouTubePanel({
             ) : (
               <YouTubeChat
                 videoId={youtubeVideoId}
+                channel={channel}
                 onMessages={onYtMessages}
                 optimisticMessages={ytOptimisticMessages}
                 fontSize={fontSize}
                 chatFont={chatFont}
                 splitChatEnabled={splitChatEnabled}
                 onConnectionChange={onConnectionChange}
+                onUsernameClick={handleUsernameClick}
+              />
+            )}
+            {chatterHistory && (
+              <ChatterHistoryOverlay
+                author={chatterHistory.author}
+                platform={chatterHistory.platform}
+                authorAvatar={chatterHistory.authorAvatar}
+                channel={channel || ''}
+                onClose={() => setChatterHistory(null)}
               />
             )}
             <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '4px' }}>

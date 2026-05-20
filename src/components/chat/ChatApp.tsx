@@ -193,6 +193,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             <div style={{ display: 'none' }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}
+                channel={selectedTwitchChannelName}
                 onMessages={handleYtMessages}
                 onConnectionChange={handleYtConnectionChange}
                 fontSize={fontSize}
@@ -393,6 +394,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           isFollowing={isFollowingChannelState}
         />
       )}
+
       <MobileTouchHintModal twitchConnected={twitchConnected} />
       {chatTheme === 'mushu' && (
         <>

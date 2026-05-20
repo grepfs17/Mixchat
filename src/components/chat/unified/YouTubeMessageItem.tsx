@@ -10,6 +10,7 @@ interface YouTubeMessageItemProps {
     onTouchStart: (entry: UnifiedEntry) => void;
     onTouchEnd: (entry: UnifiedEntry) => void;
     onTouchMove: (e: React.TouchEvent) => void;
+    onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
 }
 
 const YT_EVENT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -24,6 +25,7 @@ export function YouTubeMessageItem({
     onTouchStart,
     onTouchEnd,
     onTouchMove,
+    onUsernameClick,
 }: YouTubeMessageItemProps) {
     const msg = entry.msg as YTMessage;
 
@@ -57,7 +59,7 @@ export function YouTubeMessageItem({
                     <PlatformTag source="youtube" />
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
                     <MessageBadges badges={msg.badges} style={{ marginRight: '4px' }} lazy />
-                    <span className="author" style={{ color: config.color }}>{msg.author}</span>
+                    <span className="author" style={{ color: config.color }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                         {msg.messageType === 'membership' && (
@@ -112,7 +114,7 @@ export function YouTubeMessageItem({
                 <PlatformTag source="youtube" />
                 {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
                 <MessageBadges badges={msg.badges} style={{ marginRight: '4px' }} lazy />
-                <span className="author" style={{ color: getReadableUsernameColor(getColorFromName(msg.author)) }}>
+                <span className="author" style={{ color: getReadableUsernameColor(getColorFromName(msg.author)) }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>
                     {msg.author}
                 </span>
                 <span className="message-separator">:</span>

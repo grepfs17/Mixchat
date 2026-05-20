@@ -261,3 +261,14 @@
   letter-spacing: 0.01em;
 }
 
+
+/* Clickable author names */
+.yt-chat-container .message .author {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.yt-chat-container .message .author:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}

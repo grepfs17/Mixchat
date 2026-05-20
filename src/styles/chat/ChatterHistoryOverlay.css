@@ -216,3 +216,26 @@
     background: #333;
     border-radius: 3px;
 }
+
+.history-header-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #9146ff;
+    flex-shrink: 0;
+}
+
+.history-platform-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.history-platform-icon--twitch {
+    color: #9146ff;
+}
+
+.history-platform-icon--youtube {
+    color: #ff0000;
+}

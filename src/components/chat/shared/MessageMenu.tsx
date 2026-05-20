@@ -15,7 +15,7 @@ interface MessageMenuProps {
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
     onBanUser?: (userId: string, displayName?: string) => void;
     onWarnUser?: (userName: string) => void;
-    onViewHistory?: (author: string) => void;
+    onViewHistory?: (author: string, avatar?: string) => void;
     onClose: () => void;
 }
 
@@ -47,6 +47,7 @@ export default function MessageMenu({
 
     const isSystemMessage = chatMsg?.messageType && chatMsg.messageType !== 'chat';
     const author = chatMsg ? chatMsg.author : (ytMsg?.author || 'Unknown');
+    const authorAvatar = chatMsg?.authorAvatar || ytMsg?.authorAvatar;
 
     const items: Array<{ key: string; label: string; onClick: () => void }> = [];
 
@@ -71,7 +72,7 @@ export default function MessageMenu({
         items.push({
             key: 'history',
             label: 'View History',
-            onClick: () => { onViewHistory(author); onClose(); }
+            onClick: () => { onViewHistory(author, authorAvatar); onClose(); }
         });
     }
 

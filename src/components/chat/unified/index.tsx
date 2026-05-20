@@ -67,16 +67,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
     const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
-    const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform } | null>(null);
+    const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform; authorAvatar?: string } | null>(null);
 
-    const handleViewHistory = (author: string, platform: Platform = 'twitch') => {
-        setChatterHistory({ author, platform });
+    const handleViewHistory = (author: string, platform: Platform = 'twitch', authorAvatar?: string) => {
+        setChatterHistory({ author, platform, authorAvatar });
     };
 
-    const handleUsernameClick = (e: React.MouseEvent, author: string, platform: Platform) => {
+    const handleUsernameClick = (e: React.MouseEvent, author: string, platform: Platform, authorAvatar?: string) => {
         e.preventDefault();
         e.stopPropagation();
-        handleViewHistory(author, platform);
+        handleViewHistory(author, platform, authorAvatar);
     };
 
     // Close menus when clicking elsewhere
@@ -215,8 +215,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                 onWarnUser={onWarnUser}
                                 onTimeoutMenu={(x, y, userId, username) => setTimeoutMenu({ x, y, userId, username })}
                                 onMessageMenu={(x, y, e) => setMessageMenu({ x, y, entry: e })}
-                                onViewHistory={(author) => handleViewHistory(author, 'twitch')}
-                                onUsernameClick={(e, author) => handleUsernameClick(e, author, 'twitch')}
+                                onViewHistory={(author, avatar) => handleViewHistory(author, 'twitch', avatar)}
+                                onUsernameClick={(e, author, avatar) => handleUsernameClick(e, author, 'twitch', avatar)}
                                 onTouchStart={handleTouchStart}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchMove={handleTouchMove}
@@ -232,6 +232,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                             onTouchStart={handleTouchStart}
                             onTouchEnd={handleTouchEnd}
                             onTouchMove={handleTouchMove}
+                            onUsernameClick={(e, author, avatar) => handleUsernameClick(e, author, 'youtube', avatar)}
                         />
                     );
                 })}
@@ -260,7 +261,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     onTimeoutUser={onTimeoutUser}
                     onBanUser={onBanUser}
                     onWarnUser={onWarnUser}
-                    onViewHistory={(author) => handleViewHistory(author, messageMenu.entry.source)}
+                    onViewHistory={(author, avatar) => handleViewHistory(author, messageMenu.entry.source, avatar)}
                     onClose={() => setMessageMenu(null)}
                 />
             )}
@@ -269,6 +270,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                 <ChatterHistoryOverlay
                     author={chatterHistory.author}
                     platform={chatterHistory.platform}
+                    authorAvatar={chatterHistory.authorAvatar}
                     channel={channelName}
                     isModerator={isModerator}
                     onTimeoutUser={onTimeoutUser}
