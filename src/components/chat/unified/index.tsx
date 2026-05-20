@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef, useCallback } from 'react';
 import type { ChatMessage, ChatFont, Platform } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
@@ -103,6 +103,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         messages: entries,
     });
 
+    const scrollToMessage = useCallback((targetId: string) => {
+        const container = containerRef.current;
+        if (!container) return;
+        const el = container.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(targetId)}"]`);
+        if (!el) return;
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('message-highlight');
+        setTimeout(() => el.classList.remove('message-highlight'), 2000);
+    }, []);
+
     useImperativeHandle(ref, () => ({ scrollToBottom }));
 
     // Emote tooltip
@@ -202,6 +212,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                 onTouchStart={handleTouchStart}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchMove={handleTouchMove}
+                                onScrollToMessage={scrollToMessage}
                             />
                         );
                     }

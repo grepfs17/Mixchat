@@ -29,6 +29,7 @@ interface TwitchMessageItemProps {
     onTouchStart: (entry: UnifiedEntry) => void;
     onTouchEnd: (entry: UnifiedEntry) => void;
     onTouchMove: (e: React.TouchEvent) => void;
+    onScrollToMessage?: (id: string) => void;
 }
 
 export function TwitchMessageItem({
@@ -53,6 +54,7 @@ export function TwitchMessageItem({
     onTouchStart,
     onTouchEnd,
     onTouchMove,
+    onScrollToMessage,
 }: TwitchMessageItemProps) {
     const msg = entry.msg as ChatMessage;
     const isMentioned = currentUserDisplayName && msg.content.includes(currentUserDisplayName);
@@ -84,6 +86,7 @@ export function TwitchMessageItem({
             {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
             <div
                 className={messageClasses}
+                data-message-id={msg.id}
                 style={eventStyle}
                 onTouchStart={() => onTouchStart(entry)}
                 onTouchEnd={() => onTouchEnd(entry)}
@@ -95,7 +98,11 @@ export function TwitchMessageItem({
                 }}
             >
                 {msg.replyTo && (
-                    <div className="reply-info">
+                    <div
+                        className="reply-info reply-info-clickable"
+                        onClick={() => onScrollToMessage?.(msg.replyTo!.id)}
+                        title="Jump to original message"
+                    >
                         <span>
                             response to{' '}
                             <span style={{ color: '#94a3b8' }}>@{msg.replyTo.author}</span>
