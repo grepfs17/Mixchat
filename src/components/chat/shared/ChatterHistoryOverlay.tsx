@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { MdClose, MdHistory, MdOpenInNew, MdTimer, MdBlock, MdWarning } from 'react-icons/md';
+import { MdClose, MdHistory, MdOpenInNew, MdBlock, MdWarning } from 'react-icons/md';
 import type { ChatMessage, Platform } from '../../../lib/types';
 import { getUserHistory } from '../../../lib/chatHistoryStorage';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
 import { getReadableUsernameColor } from '../../../lib/chatColors';
+import MessageBadges from '../../MessageBadges';
+import { useMemo } from 'react';
+import '../../../styles/chat/ChatterHistoryOverlay.css';
 
 interface ChatterHistoryOverlayProps {
     author: string;
@@ -85,6 +88,18 @@ export default function ChatterHistoryOverlay({
         }
     }, [loading, history, author, platform]);
 
+    const mostRecentBadges = useMemo(() => {
+        for (let i = history.length - 1; i >= 0; i--) {
+            if (history[i].badgeDetails || history[i].badges) {
+                return {
+                    badgeDetails: history[i].badgeDetails,
+                    badges: history[i].badges
+                };
+            }
+        }
+        return null;
+    }, [history]);
+
     const userId = resolvedUserId;
 
     const handleTimeout = (sec: number) => {
@@ -123,69 +138,34 @@ export default function ChatterHistoryOverlay({
     };
 
     return (
-        <div
-            className="chatter-history-overlay"
-            style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundColor: '#0e0e10',
-                zIndex: 100,
-                display: 'flex',
-                flexDirection: 'column',
-                animation: 'slideIn 0.2s ease-out',
-            }}
-        >
+        <div className="chatter-history-overlay">
             {/* Header */}
-            <div style={{
-                padding: '12px 16px',
-                borderBottom: '1px solid #1f1f23',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: '#18181b',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="history-header">
+                <div className="history-header-info">
                     <MdHistory size={20} color="#9146ff" />
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#efeff1' }}>
+                        <h2 className="history-header-title">
+                            <MessageBadges {...mostRecentBadges} />
                             @{author}
                         </h2>
-                        <span style={{ fontSize: '11px', color: '#adadb8' }}>
+                        <span className="history-header-subtitle">
                             {platform === 'twitch' ? 'Twitch Chatter' : 'YouTube Chatter'}
                         </span>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="history-header-actions">
                     <a
                         href={`https://twitch.tv/${author}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="overlay-btn-icon"
                         title="View Channel"
-                        style={{
-                            color: '#adadb8',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '6px',
-                            borderRadius: '4px',
-                            transition: 'all 0.2s',
-                        }}
                     >
                         <MdOpenInNew size={20} />
                     </a>
                     <button
                         onClick={onClose}
                         className="overlay-btn-icon"
-                        style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#adadb8',
-                            cursor: 'pointer',
-                            padding: '6px',
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                        }}
                     >
                         <MdClose size={24} />
                     </button>
@@ -194,18 +174,10 @@ export default function ChatterHistoryOverlay({
 
             {/* Moderation Toolbar */}
             {isModerator && platform === 'twitch' && (
-                <div style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#1f1f23',
-                    borderBottom: '1px solid #333',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                    alignItems: 'center'
-                }}>
-                    <span style={{ fontSize: '11px', color: '#adadb8', fontWeight: 600, marginRight: '4px' }}>MOD:</span>
+                <div className="moderation-toolbar">
+                    <span className="mod-label">MOD:</span>
 
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div className="mod-buttons-group">
                         {[
                             { label: '10m', sec: 600 },
                             { label: '1h', sec: 3600 },
@@ -215,16 +187,7 @@ export default function ChatterHistoryOverlay({
                                 key={t.label}
                                 onClick={() => handleTimeout(t.sec)}
                                 disabled={!userId}
-                                style={{
-                                    fontSize: '11px',
-                                    background: '#35353b',
-                                    color: '#efeff1',
-                                    border: 'none',
-                                    padding: '4px 8px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    opacity: userId ? 1 : 0.5
-                                }}
+                                className="mod-btn"
                             >
                                 {t.label}
                             </button>
@@ -234,37 +197,14 @@ export default function ChatterHistoryOverlay({
                     <button
                         onClick={handleBan}
                         disabled={!userId}
-                        style={{
-                            fontSize: '11px',
-                            background: '#e91916',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            opacity: userId ? 1 : 0.5
-                        }}
+                        className="mod-btn mod-btn-ban"
                     >
                         <MdBlock size={14} /> Ban
                     </button>
 
                     <button
                         onClick={handleWarn}
-                        style={{
-                            fontSize: '11px',
-                            background: '#f1c40f',
-                            color: '#000',
-                            border: 'none',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
+                        className="mod-btn mod-btn-warn"
                     >
                         <MdWarning size={14} /> Warn
                     </button>
@@ -274,44 +214,34 @@ export default function ChatterHistoryOverlay({
             {/* History List */}
             <div
                 ref={scrollRef}
-                style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '10px 0',
-                }}
-                className="custom-scrollbar"
+                className="history-list custom-scrollbar"
             >
                 {loading ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#adadb8', fontSize: '13px' }}>
+                    <div className="history-empty-state">
                         Loading session log...
                     </div>
                 ) : history.length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: '#adadb8', fontSize: '13px' }}>
+                    <div className="history-empty-state">
                         No messages captured in this session.
                     </div>
                 ) : (
                     history.map((msg, idx) => (
                         <div
                             key={msg.id}
-                            style={{
-                                padding: '6px 16px',
-                                fontSize: '13px',
-                                backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-                                borderLeft: msg.isDeleted ? '2px solid #e91916' : 'none',
-                            }}
+                            className={`history-item ${idx % 2 !== 0 ? 'history-item-alt' : ''} ${msg.isDeleted ? 'history-item-deleted' : ''}`}
                         >
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                <span style={{ fontSize: '10px', color: '#666', marginTop: '3px', whiteSpace: 'nowrap' }}>
+                            <div className="history-item-content">
+                                <span className="history-item-timestamp">
                                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
-                                <div style={{ flex: 1 }}>
+                                <div className="history-item-text-container">
+                                    {(msg.badgeDetails || msg.badges) && (
+                                        <div className="history-item-badges">
+                                            <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
+                                        </div>
+                                    )}
                                     <div
-                                        style={{
-                                            color: msg.isDeleted ? '#adadb8' : '#efeff1',
-                                            lineHeight: '1.5',
-                                            textDecoration: msg.isDeleted ? 'line-through' : 'none',
-                                            wordBreak: 'break-word'
-                                        }}
+                                        className={`history-item-text ${msg.isDeleted ? 'deleted' : ''}`}
                                         dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
                                     />
                                 </div>
@@ -322,39 +252,10 @@ export default function ChatterHistoryOverlay({
             </div>
 
             {/* Footer */}
-            <div style={{
-                padding: '10px 16px',
-                backgroundColor: '#18181b',
-                borderTop: '1px solid #1f1f23',
-                fontSize: '11px',
-                color: '#adadb8',
-                display: 'flex',
-                justifyContent: 'space-between'
-            }}>
+            <div className="history-footer">
                 <span>Session logs (24h)</span>
                 <span>{history.length} messages</span>
             </div>
-
-            <style>{`
-                @keyframes slideIn {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(0); }
-                }
-                .overlay-btn-icon:hover {
-                    background-color: rgba(255,255,255,0.1);
-                    color: #fff !important;
-                }
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #333;
-                    border-radius: 3px;
-                }
-            `}</style>
         </div>
     );
 }
