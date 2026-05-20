@@ -18,19 +18,25 @@ declare global {
           oauth_token?: string;
         }
       ) => TwitchPlayer;
-      Embed: new (
-        elementId: string,
-        options: {
-          width: string | number;
-          height: string | number;
-          channel: string;
-          parent: string[];
-          autoplay?: boolean;
-          layout?: 'video-with-chat' | 'video';
-          muted?: boolean;
-          theme?: 'light' | 'dark';
-        }
-      ) => TwitchEmbed;
+      Embed: {
+        new(
+          elementId: string,
+          options: {
+            width: string | number;
+            height: string | number;
+            channel: string;
+            parent: string[];
+            autoplay?: boolean;
+            layout?: 'video-with-chat' | 'video';
+            muted?: boolean;
+            theme?: 'light' | 'dark';
+          }
+        ): TwitchEmbed;
+        AUTHENTICATE: string;
+        VIDEO_PLAY: string;
+        VIDEO_PAUSE: string;
+        VIDEO_READY: string;
+      };
     };
   }
 }
@@ -41,11 +47,15 @@ interface TwitchPlayer {
   play(): void;
   pause(): void;
   getPaused(): boolean;
+  addEventListener(event: string, callback: () => void): void;
+  removeEventListener(event: string, callback: () => void): void;
 }
 
 interface TwitchEmbed {
   getPlayer(): TwitchPlayer;
   destroy(): void;
+  addEventListener(event: string, callback: () => void): void;
+  removeEventListener(event: string, callback: () => void): void;
 }
 
 interface StreamEmbedProps {
@@ -106,6 +116,13 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
         });
 
         playerRef.current = embedInstance.getPlayer();
+
+        // If the player pauses while the tab is visible (e.g. modal overlay), force resume.
+        embedInstance.addEventListener(window.Twitch.Embed.VIDEO_PAUSE, () => {
+          if (!document.hidden && playerRef.current?.getPaused()) {
+            playerRef.current.play();
+          }
+        });
       });
     };
 
@@ -139,7 +156,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]);
 
-  // Use visibility API to auto-resume the player
+  // Use visibility API and Silent Audio trick to keep the player alive and auto-resume
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -154,9 +171,30 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       }
     };
 
+    // Chrome/Chromium workaround: Active (even silent) AudioContext prevents aggressive tab suspension.
+    // This helps when modals open or when the tab is in the background.
+    let audioCtx: AudioContext | null = null;
+    try {
+      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0;
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start();
+      }
+    } catch (e) {
+      console.warn('Keep-alive AudioContext failed:', e);
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        audioCtx.close().catch(() => { });
+      }
     };
   }, []);
 
