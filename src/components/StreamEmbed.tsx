@@ -156,23 +156,30 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]);
 
-  // Use visibility API and Silent Audio trick to keep the player alive and auto-resume
+  // Heartbeat and visibility workaround
   useEffect(() => {
+    let heartbeatId: ReturnType<typeof setInterval> | null = null;
+
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // Auto-resume when coming back to the tab
         if (playerRef.current && playerRef.current.getPaused()) {
-          try {
-            playerRef.current.play();
-          } catch (e) {
-            console.warn('Twitch auto-resume failed:', e);
-          }
+          setTimeout(() => {
+            playerRef.current?.play();
+          }, 100);
         }
       }
     };
 
+    // Periodic heartbeat to prevent stagnation/pausing while visible
+    heartbeatId = setInterval(() => {
+      if (!document.hidden && playerRef.current && playerRef.current.getPaused()) {
+        // If we are visible but paused, try to kick it back to life
+        playerRef.current.play();
+      }
+    }, 2000);
+
     // Chrome/Chromium workaround: Active (even silent) AudioContext prevents aggressive tab suspension.
-    // This helps when modals open or when the tab is in the background.
     let audioCtx: AudioContext | null = null;
     try {
       const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
@@ -180,10 +187,19 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
         audioCtx = new AudioContextClass();
         const oscillator = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        gain.gain.value = 0;
+        gain.gain.value = 0.0001; // Extremely low but non-zero
         oscillator.connect(gain);
         gain.connect(audioCtx.destination);
         oscillator.start();
+
+        // Ensure the context doesn't get suspended
+        if (audioCtx.state === 'suspended') {
+          const resume = () => {
+            audioCtx?.resume();
+            document.removeEventListener('click', resume);
+          };
+          document.addEventListener('click', resume);
+        }
       }
     } catch (e) {
       console.warn('Keep-alive AudioContext failed:', e);
@@ -191,6 +207,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      if (heartbeatId) clearInterval(heartbeatId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (audioCtx && audioCtx.state !== 'closed') {
         audioCtx.close().catch(() => { });
