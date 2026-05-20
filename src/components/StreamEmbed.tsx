@@ -119,7 +119,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
 
         // If the player pauses while the tab is visible (e.g. modal overlay), force resume.
         embedInstance.addEventListener(window.Twitch.Embed.VIDEO_PAUSE, () => {
-          if (!document.hidden && playerRef.current?.getPaused()) {
+          if (!document.hidden && playerRef.current?.getPaused?.()) {
             playerRef.current.play();
           }
         });
@@ -163,7 +163,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // Auto-resume when coming back to the tab
-        if (playerRef.current && playerRef.current.getPaused()) {
+        if (playerRef.current?.getPaused?.()) {
           setTimeout(() => {
             playerRef.current?.play();
           }, 100);
@@ -173,7 +173,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
 
     // Periodic heartbeat to prevent stagnation/pausing while visible
     heartbeatId = setInterval(() => {
-      if (!document.hidden && playerRef.current && playerRef.current.getPaused()) {
+      if (!document.hidden && playerRef.current?.getPaused?.()) {
         // If we are visible but paused, try to kick it back to life
         playerRef.current.play();
       }
