@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
 import type { ChatMessage, ChatFont, Platform } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
@@ -34,6 +34,7 @@ interface UnifiedChatProps {
     onWarnUser?: (userName: string) => void;
     compactActions?: boolean;
     splitChatEnabled?: boolean;
+    ignoredUsers?: string[];
 }
 
 export interface UnifiedChatHandle {
@@ -60,6 +61,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     onWarnUser,
     compactActions = false,
     splitChatEnabled = false,
+    ignoredUsers = [],
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
@@ -90,10 +92,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         };
     }, [timeoutMenu, messageMenu]);
 
+    const ignoredSet = useMemo(() => new Set(ignoredUsers.map((u) => u.toLowerCase())), [ignoredUsers]);
+
     // Merge and sort messages
     const entries: UnifiedEntry[] = (() => {
-        const tw: UnifiedEntry[] = twitchMessages.map((m) => ({ source: 'twitch' as const, msg: m }));
-        const yt: UnifiedEntry[] = ytMessages.map((m) => ({ source: 'youtube' as const, msg: m }));
+        const tw: UnifiedEntry[] = twitchMessages
+            .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
+            .map((m) => ({ source: 'twitch' as const, msg: m }));
+        const yt: UnifiedEntry[] = ytMessages
+            .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
+            .map((m) => ({ source: 'youtube' as const, msg: m }));
         const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
         return merged.length > MAX_DISPLAYED_MESSAGES ? merged.slice(-MAX_DISPLAYED_MESSAGES) : merged;
     })();

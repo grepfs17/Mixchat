@@ -67,6 +67,7 @@ interface SplitChatProps {
   onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
+  ignoredUsers?: string[];
 
   // MessageInput
   onSendMessage: (message: string, platforms: Platform[], replyToId?: string) => Promise<void>;
@@ -136,6 +137,7 @@ export default function SplitChat({
   onTimeoutUser,
   onUntimeoutUser,
   onWarnUser,
+  ignoredUsers = [],
   onSendMessage,
   twitchConnected,
   replyingTo,
@@ -149,6 +151,7 @@ export default function SplitChat({
   const safeSlowMode = slowModeWaitTime ?? 0;
   const safeFollowerMode = followerModeMinutes ?? 0;
   const safeIsFollowing = isFollowing ?? false;
+
   return (
     <>
       {linkedYoutubeUrl && showYoutubeSection && (
@@ -230,6 +233,7 @@ export default function SplitChat({
             onTimeoutUser={onTimeoutUser}
             onUntimeoutUser={onUntimeoutUser}
             onWarnUser={onWarnUser}
+            ignoredUsers={ignoredUsers}
           />
         </div>
 

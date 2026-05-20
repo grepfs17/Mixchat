@@ -800,3 +800,91 @@
 .embed-config-event-sound-btn--upload:hover {
   background-color: rgba(34, 197, 94, 0.1);
 }
+
+/* Ignored Users */
+.embed-config-ignored-users-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.embed-config-ignored-users-input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--color-bg-secondary, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm, 3px);
+  color: var(--color-text-primary, #fff);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.embed-config-ignored-users-input:focus {
+  border-color: var(--color-indigo, #6366f1);
+}
+
+.embed-config-ignored-users-input::placeholder {
+  color: var(--color-text-muted, #6b7280);
+}
+
+.embed-config-ignored-users-add-btn {
+  padding: 6px 14px;
+  background: var(--color-indigo, #6366f1);
+  border: none;
+  border-radius: var(--radius-sm, 3px);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.embed-config-ignored-users-add-btn:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.embed-config-ignored-users-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.embed-config-ignored-users-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.embed-config-ignored-user-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm, 3px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.embed-config-ignored-user-name {
+  font-size: 0.85rem;
+  color: var(--color-text-primary, #fff);
+  font-weight: 500;
+}
+
+.embed-config-ignored-user-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 3px);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.embed-config-ignored-user-remove:hover {
+  color: var(--color-notification-error, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}

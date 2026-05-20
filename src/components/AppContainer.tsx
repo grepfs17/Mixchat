@@ -97,6 +97,7 @@ export default function AppContainer() {
   const [streamTransition, setStreamTransition] = useState<StreamTransitionInfo | null>(null);
   const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
   const [eventSoundVolume, setEventSoundVolume] = useState(1);
+  const [ignoredUsers, setIgnoredUsers] = useState<string[]>([]);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -736,6 +737,19 @@ export default function AppContainer() {
     localStorage.setItem('mixchat_chat_theme', JSON.stringify(chatTheme));
   }, [chatTheme]);
 
+  // Load ignored users setting from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('mixchat_ignored_users');
+    if (saved !== null) {
+      try { setIgnoredUsers(JSON.parse(saved)); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Save ignored users setting to localStorage
+  useEffect(() => {
+    localStorage.setItem('mixchat_ignored_users', JSON.stringify(ignoredUsers));
+  }, [ignoredUsers]);
+
   // Apply theme to document
   useEffect(() => {
     applyTheme(chatTheme);
@@ -1109,6 +1123,8 @@ export default function AppContainer() {
             onEventSoundChange={handleEventSoundChange}
             eventSoundVolume={eventSoundVolume}
             onEventSoundVolumeChange={setEventSoundVolume}
+            ignoredUsers={ignoredUsers}
+            onIgnoredUsersChange={setIgnoredUsers}
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
@@ -1291,6 +1307,7 @@ export default function AppContainer() {
               disableModModeByDefault={disableModModeByDefault}
               eventSounds={eventSounds}
               eventSoundVolume={eventSoundVolume}
+              ignoredUsers={ignoredUsers}
               onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
             />
           </div>

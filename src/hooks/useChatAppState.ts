@@ -75,6 +75,7 @@ export interface ChatAppStateProps {
   disableModModeByDefault?: boolean;
   eventSounds?: Record<string, string>;
   eventSoundVolume?: number;
+  ignoredUsers?: string[];
   onFollowRaid?: (channelLogin: string) => void;
   viewerCount?: number | null;
   onToggleSidebar?: () => void;
@@ -98,6 +99,7 @@ export function useChatAppState({
   disableModModeByDefault = false,
   eventSounds = {},
   eventSoundVolume = 1,
+  ignoredUsers = [],
 }: ChatAppStateProps) {
   // State 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1333,5 +1335,8 @@ export function useChatAppState({
     sendTwitchMessage,
     slowModeWaitTime,
     followerModeMinutes,
+
+    // Ignored users
+    ignoredUsers,
   };
 }

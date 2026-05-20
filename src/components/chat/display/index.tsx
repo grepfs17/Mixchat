@@ -46,6 +46,7 @@ interface ChatDisplayProps {
   compactActions?: boolean;
   splitChatEnabled?: boolean;
   hideViewerCount?: boolean;
+  ignoredUsers?: string[];
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<Array<{ id: string; name: string }>>;
@@ -89,6 +90,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   compactActions = false,
   splitChatEnabled = false,
   hideViewerCount = false,
+  ignoredUsers = [],
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
@@ -153,10 +155,35 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       filtered = filtered.filter((msg) => selectedPlatforms.includes(msg.platform));
     }
 
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    filtered = filtered.filter((msg) => !ignoredSet.has(msg.author.toLowerCase()));
+
     return filtered.length > MAX_DISPLAYED_MESSAGES
       ? filtered.slice(-MAX_DISPLAYED_MESSAGES)
       : filtered;
-  }, [messages, selectedPlatforms]);
+  }, [messages, selectedPlatforms, ignoredUsers]);
+
+  const ignoredCount = useMemo(() => {
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    return messages.filter((msg) => ignoredSet.has(msg.author.toLowerCase())).length;
+  }, [messages, ignoredUsers]);
+
+  const ignoredUserCounts = useMemo(() => {
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    const counts = new Map<string, { count: number; displayName: string }>();
+    for (const msg of messages) {
+      const lower = msg.author.toLowerCase();
+      if (ignoredSet.has(lower)) {
+        const existing = counts.get(lower);
+        if (existing) {
+          existing.count++;
+        } else {
+          counts.set(lower, { count: 1, displayName: msg.author });
+        }
+      }
+    }
+    return counts;
+  }, [messages, ignoredUsers]);
 
   const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
     containerRef: messagesContainerRef,
@@ -246,6 +273,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
+        ignoredUserCounts={ignoredUserCounts}
+        onOpenIgnoredUserOverlay={(author) => setChatterHistory({ author, platform: 'twitch' })}
       />
 
       {unifiedChatSlot ? (

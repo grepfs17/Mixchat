@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MdRefresh, MdEdit, MdCheck, MdClose } from 'react-icons/md';
+import { MdRefresh, MdEdit, MdCheck, MdClose, MdVisibilityOff } from 'react-icons/md';
 import { FaUsers, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import CategoryDropdown from './CategoryDropdown';
@@ -27,6 +27,8 @@ interface ChatHeaderProps {
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
+  ignoredUserCounts?: Map<string, { count: number; displayName: string }>;
+  onOpenIgnoredUserOverlay?: (author: string) => void;
 }
 
 export default function ChatHeader({
@@ -51,6 +53,8 @@ export default function ChatHeader({
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
+  ignoredUserCounts = new Map(),
+  onOpenIgnoredUserOverlay,
 }: ChatHeaderProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState('');
@@ -152,6 +156,18 @@ export default function ChatHeader({
           </h2>
         </div>
         <div className="chat-header-actions">
+          {Array.from(ignoredUserCounts.entries()).map(([key, { count, displayName }]) => (
+            <button
+              key={key}
+              className="header-button ignored-messages-badge"
+              title={`${count} hidden message(s) from ${displayName}`}
+              onClick={() => onOpenIgnoredUserOverlay?.(displayName)}
+            >
+              <MdVisibilityOff size={12} className="ignored-badge-icon" />
+              <span className="ignored-badge-user">{displayName}</span>
+              <span className="ignored-badge-count">{count}</span>
+            </button>
+          ))}
           {onRefreshEmotes && (
             <button
               onClick={onRefreshEmotes}

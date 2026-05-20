@@ -72,6 +72,8 @@ interface LoginPanelProps {
   onReauthYoutube?: () => void;
   onGoHome?: () => void;
   onRequestClose?: () => void;
+  ignoredUsers?: string[];
+  onIgnoredUsersChange?: (users: string[]) => void;
 }
 
 function LoginPanel({
@@ -132,6 +134,8 @@ function LoginPanel({
   onReauthYoutube,
   onGoHome,
   onRequestClose,
+  ignoredUsers = [],
+  onIgnoredUsersChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -421,6 +425,8 @@ function LoginPanel({
           onEventSoundChange={(eventType, soundData) => { if (onEventSoundChange) onEventSoundChange(eventType, soundData); }}
           eventSoundVolume={eventSoundVolume}
           onEventSoundVolumeChange={(value) => { if (onEventSoundVolumeChange) onEventSoundVolumeChange(value); }}
+          ignoredUsers={ignoredUsers}
+          onIgnoredUsersChange={(users) => { if (onIgnoredUsersChange) onIgnoredUsersChange(users); }}
           hasYoutubeSession={hasYoutubeSession}
           onReauthYoutube={onReauthYoutube || (() => { })}
           onClose={() => setShowEmbedConfig(false)}

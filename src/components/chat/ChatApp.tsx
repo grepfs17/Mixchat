@@ -73,6 +73,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     getYtMessageText,
     slowModeWaitTime,
     followerModeMinutes,
+    ignoredUsers,
   } = useChatAppState(props);
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>({ connected: false, loading: false, error: null });
@@ -235,6 +236,7 @@ export default function ChatApp(props: ChatAppStateProps) {
               onUpdateTitle={handleUpdateTitle}
               onUpdateCategory={handleUpdateCategory}
               onSearchCategories={handleSearchCategories}
+              ignoredUsers={ignoredUsers}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
@@ -275,6 +277,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   onTimeoutUser={handleTimeout}
                   onUntimeoutUser={handleUntimeout}
                   onWarnUser={handleWarn}
+                  ignoredUsers={ignoredUsers}
                 />
               }
             />
@@ -378,6 +381,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           onTimeoutUser={handleTimeout}
           onUntimeoutUser={handleUntimeout}
           onWarnUser={handleWarn}
+          ignoredUsers={ignoredUsers}
           onSendMessage={handleSendMessage}
           twitchConnected={twitchConnected}
           replyingTo={replyingTo}
