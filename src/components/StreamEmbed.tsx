@@ -25,6 +25,9 @@ declare global {
 interface TwitchPlayer {
   setChannel(channel: string): void;
   destroy(): void;
+  play(): void;
+  pause(): void;
+  getPaused(): boolean;
 }
 
 interface StreamEmbedProps {
@@ -123,6 +126,54 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]); // Re-init when domain changes OR token becomes available
+
+  // Keep-alive workaround for tab freezing (Visibility API + Silent Audio)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Poke the iframe to help keep it active
+        const iframe = containerRef.current?.querySelector('iframe');
+        if (iframe) {
+          iframe.contentWindow?.postMessage({ type: 'keep-alive' }, '*');
+        }
+      } else {
+        // Auto-resume when coming back to the tab
+        if (playerRef.current && playerRef.current.getPaused()) {
+          try {
+            playerRef.current.play();
+          } catch (e) {
+            console.warn('Twitch auto-resume failed:', e);
+          }
+        }
+      }
+    };
+
+    // Chrome/Chromium workaround: Active (even silent) AudioContext prevents tab suspension.
+    let audioCtx: AudioContext | null = null;
+    try {
+      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+        // Create a silent oscillator
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0;
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
+        oscillator.start();
+      }
+    } catch (e) {
+      console.warn('Keep-alive AudioContext failed:', e);
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        audioCtx.close().catch(() => { });
+      }
+    };
+  }, []);
 
   // Channel switch: call setChannel() instead of remounting → session preserved
   useEffect(() => {
