@@ -562,6 +562,7 @@ describe('Moderator Mode', () => {
     it('shows mod action buttons on Twitch messages when isModerator and modModeActive', () => {
       render(
         <UnifiedChat
+          channelName="testchannel"
           twitchMessages={[baseMessage]}
           ytMessages={[baseYtMessage]}
           isModerator={true}
@@ -581,6 +582,7 @@ describe('Moderator Mode', () => {
     it('does not show mod action buttons when modModeActive is false', () => {
       render(
         <UnifiedChat
+          channelName="testchannel"
           twitchMessages={[baseMessage]}
           ytMessages={[baseYtMessage]}
           isModerator={true}
@@ -598,6 +600,7 @@ describe('Moderator Mode', () => {
     it('shows delete but not timeout/ban/warn for broadcaster messages', () => {
       render(
         <UnifiedChat
+          channelName="testchannel"
           twitchMessages={[broadcasterMessage]}
           ytMessages={[]}
           isModerator={true}
@@ -616,6 +619,7 @@ describe('Moderator Mode', () => {
     it('shows Undo button for timeout messages when isModerator', () => {
       render(
         <UnifiedChat
+          channelName="testchannel"
           twitchMessages={[timeoutMessage]}
           ytMessages={[]}
           isModerator={true}
@@ -629,6 +633,7 @@ describe('Moderator Mode', () => {
       const onDelete = vi.fn();
       render(
         <UnifiedChat
+          channelName="testchannel"
           twitchMessages={[baseMessage]}
           ytMessages={[]}
           isModerator={true}

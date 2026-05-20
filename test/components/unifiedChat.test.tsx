@@ -28,6 +28,7 @@ describe('UnifiedChat component', () => {
 
     render(
       <UnifiedChat 
+        channelName="testchannel"
         twitchMessages={twitchMessages} 
         ytMessages={ytMessages} 
       />
@@ -68,6 +69,7 @@ describe('UnifiedChat component', () => {
 
     const { container } = render(
       <UnifiedChat 
+        channelName="testchannel"
         twitchMessages={twitchMessages} 
         ytMessages={ytMessages} 
       />

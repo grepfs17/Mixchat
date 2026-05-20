@@ -9,6 +9,7 @@ import EmoteTooltip from '../shared/EmoteTooltip';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import MessageMenu from '../shared/MessageMenu';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
+import ChatterHistoryOverlay from '../shared/ChatterHistoryOverlay';
 import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './types';
 
 interface ChatDisplayProps {
@@ -45,6 +46,7 @@ interface ChatDisplayProps {
   compactActions?: boolean;
   splitChatEnabled?: boolean;
   hideViewerCount?: boolean;
+  ignoredUsers?: string[];
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<Array<{ id: string; name: string }>>;
@@ -88,6 +90,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   compactActions = false,
   splitChatEnabled = false,
   hideViewerCount = false,
+  ignoredUsers = [],
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
@@ -96,6 +99,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(null);
   const [timeoutMenu, setTimeoutMenu] = useState<TimeoutMenuState | null>(null);
   const [messageMenu, setMessageMenu] = useState<MessageMenuState | null>(null);
+  const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform; authorAvatar?: string } | null>(null);
+
+  const handleViewHistory = useCallback((author: string, platform: Platform = 'twitch', authorAvatar?: string) => {
+    setChatterHistory({ author, platform, authorAvatar });
+  }, []);
+
+  const handleUsernameClick = useCallback((e: React.MouseEvent, author: string, platform: Platform, authorAvatar?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleViewHistory(author, platform, authorAvatar);
+  }, [handleViewHistory]);
 
   useEffect(() => {
     const handleClick = () => setTimeoutMenu(null);
@@ -141,10 +155,35 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
       filtered = filtered.filter((msg) => selectedPlatforms.includes(msg.platform));
     }
 
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    filtered = filtered.filter((msg) => !ignoredSet.has(msg.author.toLowerCase()));
+
     return filtered.length > MAX_DISPLAYED_MESSAGES
       ? filtered.slice(-MAX_DISPLAYED_MESSAGES)
       : filtered;
-  }, [messages, selectedPlatforms]);
+  }, [messages, selectedPlatforms, ignoredUsers]);
+
+  const ignoredCount = useMemo(() => {
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    return messages.filter((msg) => ignoredSet.has(msg.author.toLowerCase())).length;
+  }, [messages, ignoredUsers]);
+
+  const ignoredUserCounts = useMemo(() => {
+    const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+    const counts = new Map<string, { count: number; displayName: string; authorAvatar?: string }>();
+    for (const msg of messages) {
+      const lower = msg.author.toLowerCase();
+      if (ignoredSet.has(lower)) {
+        const existing = counts.get(lower);
+        if (existing) {
+          existing.count++;
+        } else {
+          counts.set(lower, { count: 1, displayName: msg.author, authorAvatar: msg.authorAvatar });
+        }
+      }
+    }
+    return counts;
+  }, [messages, ignoredUsers]);
 
   const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
     containerRef: messagesContainerRef,
@@ -234,6 +273,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
+        ignoredUserCounts={ignoredUserCounts}
+        onOpenIgnoredUserOverlay={(author, authorAvatar) => setChatterHistory({ author, platform: 'twitch', authorAvatar })}
       />
 
       {unifiedChatSlot ? (
@@ -267,6 +308,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                 onTimeoutUser={onTimeoutUser}
                 onUntimeoutUser={onUntimeoutUser}
                 onWarnUser={onWarnUser}
+                onUsernameClick={(e, author) => handleUsernameClick(e, author, msg.platform, msg.authorAvatar)}
+                fontSize={fontSize}
                 onTimeoutMenu={setTimeoutMenu}
                 onScrollToMessage={scrollToMessage}
                 onTouchStart={handleTouchStart}
@@ -325,7 +368,22 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           onTimeoutUser={onTimeoutUser}
           onBanUser={onBanUser}
           onWarnUser={onWarnUser}
+          onViewHistory={(author) => handleViewHistory(author, messageMenu.message.platform)}
           onClose={() => setMessageMenu(null)}
+        />
+      )}
+
+      {chatterHistory && (
+        <ChatterHistoryOverlay
+          author={chatterHistory.author}
+          platform={chatterHistory.platform}
+          authorAvatar={chatterHistory.authorAvatar}
+          channel={channelName || ''}
+          isModerator={isModerator}
+          onTimeoutUser={onTimeoutUser}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+          onClose={() => setChatterHistory(null)}
         />
       )}
     </div>

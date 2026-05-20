@@ -32,6 +32,7 @@ interface SplitChatProps {
   onOptimisticFailed: (id: string) => void;
   onShowError: (message: string) => void;
   onYtConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
+  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
 
   // Twitch ChatDisplay
   chatDisplayRef: RefObject<ChatDisplayHandle>;
@@ -67,6 +68,7 @@ interface SplitChatProps {
   onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
+  ignoredUsers?: string[];
 
   // MessageInput
   onSendMessage: (message: string, platforms: Platform[], replyToId?: string) => Promise<void>;
@@ -103,6 +105,7 @@ export default function SplitChat({
   onOptimisticFailed,
   onShowError,
   onYtConnectionChange,
+  onUsernameClick,
   chatDisplayRef,
   messages,
   isLoading,
@@ -136,6 +139,7 @@ export default function SplitChat({
   onTimeoutUser,
   onUntimeoutUser,
   onWarnUser,
+  ignoredUsers = [],
   onSendMessage,
   twitchConnected,
   replyingTo,
@@ -149,14 +153,16 @@ export default function SplitChat({
   const safeSlowMode = slowModeWaitTime ?? 0;
   const safeFollowerMode = followerModeMinutes ?? 0;
   const safeIsFollowing = isFollowing ?? false;
+
   return (
     <>
       {linkedYoutubeUrl && showYoutubeSection && (
-        <YouTubePanel
-          style={{ height: `${chatSplitRatio}%`, minHeight: 0 }}
-          linkedYoutubeUrl={linkedYoutubeUrl}
-          youtubeVideoId={youtubeVideoId ?? null}
-          useYoutubeEmbed={useYoutubeEmbed}
+          <YouTubePanel
+            style={{ height: `${chatSplitRatio}%`, minHeight: 0 }}
+            linkedYoutubeUrl={linkedYoutubeUrl}
+            youtubeVideoId={youtubeVideoId ?? null}
+            channel={channelName}
+            useYoutubeEmbed={useYoutubeEmbed}
           ytMessages={ytMessages}
           ytOptimisticMessages={ytOptimisticMessages}
           ytLoading={ytLoading}
@@ -171,8 +177,9 @@ export default function SplitChat({
           onOptimisticMessage={onOptimisticMessage}
           onOptimisticFailed={onOptimisticFailed}
           onError={onShowError}
-          onConnectionChange={onYtConnectionChange}
-        />
+            onConnectionChange={onYtConnectionChange}
+            onUsernameClick={onUsernameClick}
+          />
       )}
 
       {linkedYoutubeUrl && showYoutubeSection && (
@@ -230,6 +237,7 @@ export default function SplitChat({
             onTimeoutUser={onTimeoutUser}
             onUntimeoutUser={onUntimeoutUser}
             onWarnUser={onWarnUser}
+            ignoredUsers={ignoredUsers}
           />
         </div>
 

@@ -5,9 +5,11 @@ import type { ChatFont } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import YTMessageParts from '../../YTMessageParts';
 import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
+import { saveMessage } from '../../../lib/chatHistoryStorage';
 
 interface YouTubeChatProps {
   videoId: string;
+  channel?: string;
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
   /** Optimistic messages injected by the parent (shown immediately after send) */
@@ -19,6 +21,7 @@ interface YouTubeChatProps {
   onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
   /** When true, deleted messages are dimmed instead of removed */
   showDeletedMessages?: boolean;
+  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
 }
 
 interface MessagePart {
@@ -70,7 +73,7 @@ interface SSEEndEvent {
   reason: string;
 }
 
-export default function YouTubeChat({ videoId, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange, showDeletedMessages = false }: YouTubeChatProps) {
+export default function YouTubeChat({ videoId, channel, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange, showDeletedMessages = false, onUsernameClick }: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
     m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
 
@@ -183,12 +186,30 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           giftCount: msg.giftCount,
           recipientName: msg.recipientName,
           superchat: msg.superchat,
+          isDeleted: msg.isDeleted,
         }));
 
         setMessages(prev => {
           const uniqueMap = new Map<string, ChatMessage>();
           for (const m of prev) uniqueMap.set(m.id, m);
           for (const m of fetchedMessages) uniqueMap.set(m.id, m);
+
+          if (channel) {
+            for (const m of fetchedMessages) {
+              saveMessage({
+                id: m.id,
+                platform: 'youtube',
+                author: m.author,
+                content: m.parts.map(p => p.text || p.emojiText || p.alt || '').join(''),
+                timestamp: m.timestamp,
+                authorAvatar: m.authorAvatar,
+                authorChannelId: m.authorChannelId,
+                messageType: m.messageType,
+                badges: m.badges,
+                isDeleted: m.isDeleted,
+              } as any, channel);
+            }
+          }
 
           const merged = Array.from(uniqueMap.values()).sort(
             (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
@@ -220,10 +241,27 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
           giftCount: msg.giftCount,
           recipientName: msg.recipientName,
           superchat: msg.superchat,
+          isDeleted: msg.isDeleted,
         };
 
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev;
+
+          if (channel) {
+            saveMessage({
+              id: newMsg.id,
+              platform: 'youtube',
+              author: newMsg.author,
+              content: newMsg.parts.map(p => p.text || p.emojiText || p.alt || '').join(''),
+              timestamp: newMsg.timestamp,
+              authorAvatar: newMsg.authorAvatar,
+              authorChannelId: newMsg.authorChannelId,
+              messageType: newMsg.messageType,
+              badges: newMsg.badges,
+              isDeleted: newMsg.isDeleted,
+            } as any, channel);
+          }
+
           const next = [...prev, newMsg];
           return next.length > MAX_DISPLAYED_MESSAGES
             ? next.slice(-MAX_DISPLAYED_MESSAGES)
@@ -449,7 +487,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#0f9d58' }}>{msg.author}</span>
+                    <span className="author" style={{ color: '#0f9d58' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
@@ -469,7 +507,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#9c27b0' }}>{msg.author}</span>
+                    <span className="author" style={{ color: '#9c27b0' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
@@ -488,7 +526,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#4caf50' }}>{msg.author}</span>
+                    <span className="author" style={{ color: '#4caf50' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       Received a gift membership
@@ -507,7 +545,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                     {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: eventColor }}>{msg.author}</span>
+                    <span className="author" style={{ color: eventColor }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
@@ -544,7 +582,7 @@ export default function YouTubeChat({ videoId, onMessages, optimisticMessages, f
                       ))}
                     </div>
                   )}
-                  <span className="author" style={{ color: getColorFromName(msg.author) }}>
+                  <span className="author" style={{ color: getColorFromName(msg.author) }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>
                     {msg.author}
                   </span>
                   <span className="message-separator">:</span>

@@ -1,6 +1,6 @@
 {
   "name": "mixchat",
-  "version": "0.9.6.5-beta",
+  "version": "0.9.7.0-beta",
   "description": "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.",
   "type": "module",
   "scripts": {
@@ -17,16 +17,16 @@
     "@twurple/auth": "^8.0.3",
     "@twurple/chat": "^8.0.3",
     "astro": "^6.1.1",
+    "bgutils-js": "^3.2.0",
     "dompurify": "^3.3.1",
     "dotenv": "^16.3.1",
     "hls.js": "^1.6.15",
+    "jsdom": "^28.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-icons": "^5.5.0",
     "twitch-m3u8": "^1.1.5",
-    "youtubei.js": "^17.0.1",
-    "bgutils-js": "^3.2.0",
-    "jsdom": "^28.1.0"
+    "youtubei.js": "^17.0.1"
   },
   "devDependencies": {
     "@astrojs/node": "^10.0.3",
@@ -38,6 +38,7 @@
     "@types/node": "^22.12.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "fake-indexeddb": "^6.2.5",
     "pm2": "^6.0.14",
     "tslib": "^2.8.1",
     "typescript": "^5.7.3",

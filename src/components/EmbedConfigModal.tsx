@@ -54,6 +54,8 @@ interface EmbedConfigModalProps {
   onEventSoundChange: (eventType: string, soundData: string | null) => void;
   eventSoundVolume: number;
   onEventSoundVolumeChange: (value: number) => void;
+  ignoredUsers: string[];
+  onIgnoredUsersChange: (users: string[]) => void;
   hasYoutubeSession: boolean;
   onReauthYoutube: () => void;
   onClose: () => void;
@@ -94,6 +96,8 @@ export default function EmbedConfigModal({
   onEventSoundChange,
   eventSoundVolume,
   onEventSoundVolumeChange,
+  ignoredUsers,
+  onIgnoredUsersChange,
   hasYoutubeSession,
   onReauthYoutube,
   onClose,
@@ -108,6 +112,7 @@ export default function EmbedConfigModal({
   const [eventSoundsCollapsed, setEventSoundsCollapsed] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [ignoredUserInput, setIgnoredUserInput] = useState('');
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,7 +145,7 @@ export default function EmbedConfigModal({
         'mixchat_show_deleted_messages', 'mixchat_compact_actions',
         'mixchat_hide_viewer_count', 'mixchat_disable_mod_mode_by_default', 'mixchat_hide_chat_timestamps', 'mixchat_event_sound_volume',
         'mixchat_chat_split_ratio', 'mixchat_watched_streamers',
-        'mixchat_youtube_links', 'disabled_emotes_v1',
+        'mixchat_youtube_links', 'disabled_emotes_v1', 'mixchat_ignored_users',
       ]) {
         const v = localStorage.getItem(k);
         if (v !== null) settings[k] = v;
@@ -472,6 +477,65 @@ export default function EmbedConfigModal({
       ),
     },
     {
+      id: 'ignored-users',
+      group: 'streamer',
+      label: 'Ignored Users',
+      description: 'Hide messages from specific users and show a badge counter instead',
+      render: () => (
+        <div className="embed-config-section">
+          <label className="embed-config-label">Ignored Users</label>
+          <div className="embed-config-ignored-users-input-row">
+            <input
+              type="text"
+              className="embed-config-ignored-users-input"
+              placeholder="Enter username..."
+              value={ignoredUserInput}
+              onChange={(e) => setIgnoredUserInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && ignoredUserInput.trim()) {
+                  const username = ignoredUserInput.trim().toLowerCase();
+                  if (!ignoredUsers.includes(username)) {
+                    onIgnoredUsersChange([...ignoredUsers, username]);
+                  }
+                  setIgnoredUserInput('');
+                }
+              }}
+            />
+            <button
+              className="embed-config-ignored-users-add-btn"
+              disabled={!ignoredUserInput.trim()}
+              onClick={() => {
+                const username = ignoredUserInput.trim().toLowerCase();
+                if (username && !ignoredUsers.includes(username)) {
+                  onIgnoredUsersChange([...ignoredUsers, username]);
+                  setIgnoredUserInput('');
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+          <p className="embed-config-description embed-config-description--indented">Messages from ignored users will be hidden from chat. A badge counter will show how many messages were ignored. This is meant to avoid seeing your own bots messages and let you center more in actual messages.</p>
+          {ignoredUsers.length > 0 && (
+            <div className="embed-config-ignored-users-list">
+              {ignoredUsers.map((user) => (
+                <div key={user} className="embed-config-ignored-user-item">
+                  <span className="embed-config-ignored-user-name">{user}</span>
+                  <button
+                    className="embed-config-ignored-user-remove"
+                    onClick={() => onIgnoredUsersChange(ignoredUsers.filter((u) => u !== user))}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
       id: 'event-sounds',
       group: 'streamer',
       label: 'Event Sounds',
@@ -618,7 +682,7 @@ export default function EmbedConfigModal({
         </div>
       ),
     },
-  ], [fontSize, chatFont, chatTheme, splitChatEnabled, hideChatTimestamps, unifyChatEnabled, useYoutubeEmbed, showDeletedMessages, compactActions, embedDefaultOpen, hideViewerCount, disableModModeByDefault, eventSounds, eventSoundVolume, mentionSoundEnabled, mentionVolume, mentionSoundType, hasYoutubeSession, driveLoading, shareLink, linkCopied, exportSettings, handleDriveSave, handleDriveLoad, handleCopyLink, onReauthYoutube, onFontSizeChange, onChatFontChange, onChatThemeChange, onSplitChatEnabledChange, onHideChatTimestampsChange, onUnifyChatEnabledChange, onUseYoutubeEmbedChange, onShowDeletedMessagesChange, onCompactActionsChange, onEmbedDefaultOpenChange, onHideViewerCountChange, onDisableModModeByDefaultChange, onEventSoundVolumeChange, onEventSoundChange, onMentionSoundEnabledChange, onMentionVolumeChange, onMentionSoundTypeChange, playEventSound, removeEventSound, handleSoundFileUpload, handleImport]);
+  ], [fontSize, chatFont, chatTheme, splitChatEnabled, hideChatTimestamps, unifyChatEnabled, useYoutubeEmbed, showDeletedMessages, compactActions, embedDefaultOpen, hideViewerCount, disableModModeByDefault, ignoredUsers, eventSounds, eventSoundVolume, mentionSoundEnabled, mentionVolume, mentionSoundType, hasYoutubeSession, driveLoading, shareLink, linkCopied, exportSettings, handleDriveSave, handleDriveLoad, handleCopyLink, onReauthYoutube, onFontSizeChange, onChatFontChange, onChatThemeChange, onSplitChatEnabledChange, onHideChatTimestampsChange, onUnifyChatEnabledChange, onUseYoutubeEmbedChange, onShowDeletedMessagesChange, onCompactActionsChange, onEmbedDefaultOpenChange, onHideViewerCountChange, onDisableModModeByDefaultChange, onIgnoredUsersChange, onEventSoundVolumeChange, onEventSoundChange, onMentionSoundEnabledChange, onMentionVolumeChange, onMentionSoundTypeChange, playEventSound, removeEventSound, handleSoundFileUpload, handleImport, ignoredUserInput]);
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -825,6 +889,58 @@ export default function EmbedConfigModal({
                         <span>Disable Mod mode by default on own channel</span>
                       </label>
                       <p className="embed-config-description embed-config-description--indented">When enabled, Mod mode will be disabled by default when you enter your own channel.</p>
+                    </div>
+
+                    <div className="embed-config-section">
+                      <label className="embed-config-label">Ignored Users</label>
+                      <div className="embed-config-ignored-users-input-row">
+                        <input
+                          type="text"
+                          className="embed-config-ignored-users-input"
+                          placeholder="Enter username..."
+                          value={ignoredUserInput}
+                          onChange={(e) => setIgnoredUserInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && ignoredUserInput.trim()) {
+                              const username = ignoredUserInput.trim().toLowerCase();
+                              if (!ignoredUsers.includes(username)) {
+                                onIgnoredUsersChange([...ignoredUsers, username]);
+                              }
+                              setIgnoredUserInput('');
+                            }
+                          }}
+                        />
+                        <button
+                          className="embed-config-ignored-users-add-btn"
+                          disabled={!ignoredUserInput.trim()}
+                          onClick={() => {
+                            const username = ignoredUserInput.trim().toLowerCase();
+                            if (username && !ignoredUsers.includes(username)) {
+                              onIgnoredUsersChange([...ignoredUsers, username]);
+                              setIgnoredUserInput('');
+                            }
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <p className="embed-config-description embed-config-description--indented">Messages from ignored users will be hidden from chat. A badge counter will show how many messages were ignored. Click it to view the ignored messages overlay. This is meant to avoid seeing your own bots messages and let you center more in actual messages.</p>
+                      {ignoredUsers.length > 0 && (
+                        <div className="embed-config-ignored-users-list">
+                          {ignoredUsers.map((user) => (
+                            <div key={user} className="embed-config-ignored-user-item">
+                              <span className="embed-config-ignored-user-name">{user}</span>
+                              <button
+                                className="embed-config-ignored-user-remove"
+                                onClick={() => onIgnoredUsersChange(ignoredUsers.filter((u) => u !== user))}
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="embed-config-section">

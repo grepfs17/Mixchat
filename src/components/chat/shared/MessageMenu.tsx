@@ -15,6 +15,7 @@ interface MessageMenuProps {
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
     onBanUser?: (userId: string, displayName?: string) => void;
     onWarnUser?: (userName: string) => void;
+    onViewHistory?: (author: string, avatar?: string) => void;
     onClose: () => void;
 }
 
@@ -31,6 +32,7 @@ export default function MessageMenu({
     onTimeoutUser,
     onBanUser,
     onWarnUser,
+    onViewHistory,
     onClose,
 }: MessageMenuProps) {
     // Normalize entry to a common format for logic
@@ -45,6 +47,7 @@ export default function MessageMenu({
 
     const isSystemMessage = chatMsg?.messageType && chatMsg.messageType !== 'chat';
     const author = chatMsg ? chatMsg.author : (ytMsg?.author || 'Unknown');
+    const authorAvatar = chatMsg?.authorAvatar || ytMsg?.authorAvatar;
 
     const items: Array<{ key: string; label: string; onClick: () => void }> = [];
 
@@ -63,6 +66,15 @@ export default function MessageMenu({
         label: 'Copy message',
         onClick: () => { onCopy(msg as ChatMessage | YTMessage); onClose(); }
     });
+
+    // View History
+    if (onViewHistory) {
+        items.push({
+            key: 'history',
+            label: 'View History',
+            onClick: () => { onViewHistory(author, authorAvatar); onClose(); }
+        });
+    }
 
     // Moderation (Twitch only for now)
     if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {

@@ -22,11 +22,14 @@ interface TwitchMessageItemProps {
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
     onUntimeoutUser?: (userName: string) => void;
     onWarnUser?: (userName: string) => void;
+    onViewHistory?: (author: string, avatar?: string) => void;
+    onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
     onTimeoutMenu: (x: number, y: number, userId: string, username: string) => void;
     onMessageMenu: (x: number, y: number, entry: UnifiedEntry) => void;
     onTouchStart: (entry: UnifiedEntry) => void;
     onTouchEnd: (entry: UnifiedEntry) => void;
     onTouchMove: (e: React.TouchEvent) => void;
+    onScrollToMessage?: (id: string) => void;
 }
 
 export function TwitchMessageItem({
@@ -44,11 +47,14 @@ export function TwitchMessageItem({
     onTimeoutUser,
     onUntimeoutUser,
     onWarnUser,
+    onViewHistory,
+    onUsernameClick,
     onTimeoutMenu,
     onMessageMenu,
     onTouchStart,
     onTouchEnd,
     onTouchMove,
+    onScrollToMessage,
 }: TwitchMessageItemProps) {
     const msg = entry.msg as ChatMessage;
     const isMentioned = currentUserDisplayName && msg.content.includes(currentUserDisplayName);
@@ -80,6 +86,7 @@ export function TwitchMessageItem({
             {isFirstLive && <div className="live-start-marker"><span>Live</span></div>}
             <div
                 className={messageClasses}
+                data-message-id={msg.id}
                 style={eventStyle}
                 onTouchStart={() => onTouchStart(entry)}
                 onTouchEnd={() => onTouchEnd(entry)}
@@ -91,7 +98,11 @@ export function TwitchMessageItem({
                 }}
             >
                 {msg.replyTo && (
-                    <div className="reply-info">
+                    <div
+                        className="reply-info reply-info-clickable"
+                        onClick={() => onScrollToMessage?.(msg.replyTo!.id)}
+                        title="Jump to original message"
+                    >
                         <span>
                             response to{' '}
                             <span style={{ color: '#94a3b8' }}>@{msg.replyTo.author}</span>
@@ -126,6 +137,7 @@ export function TwitchMessageItem({
                         rel="noopener noreferrer"
                         className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
                         style={{ color: msg.isCurrentUser ? '#ffffff' : getReadableUsernameColor(msg.authorColor) }}
+                        onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
                     >
                         {msg.author}
                     </a>

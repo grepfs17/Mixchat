@@ -26,6 +26,7 @@ import {
   sendShoutout,
   warnChatUser,
 } from '../lib/twitch';
+import { saveMessage, pruneMessages } from '../lib/chatHistoryStorage';
 import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
 import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
 import type { YTMessage } from '../components/chat/unified/types';
@@ -74,6 +75,7 @@ export interface ChatAppStateProps {
   disableModModeByDefault?: boolean;
   eventSounds?: Record<string, string>;
   eventSoundVolume?: number;
+  ignoredUsers?: string[];
   onFollowRaid?: (channelLogin: string) => void;
   viewerCount?: number | null;
   onToggleSidebar?: () => void;
@@ -97,6 +99,7 @@ export function useChatAppState({
   disableModModeByDefault = false,
   eventSounds = {},
   eventSoundVolume = 1,
+  ignoredUsers = [],
 }: ChatAppStateProps) {
   // State 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -139,6 +142,16 @@ export function useChatAppState({
   const [modModeActive, setModModeActive] = useState(false);
   const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
+
+  // Periodic pruning of old IndexedDB messages
+  useEffect(() => {
+    // Initial prune
+    pruneMessages(24);
+
+    // Prune every hour
+    const interval = setInterval(() => pruneMessages(24), 3600000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Track recent EventSub redemptions to avoid duplicates when an empty-text
   // IRC PRIVMSG also arrives for the same redemption.
@@ -371,9 +384,13 @@ export function useChatAppState({
       }
 
       const updated = [...prev, message];
+
+      // Persist to IndexedDB for Chatter History
+      saveMessage(message, selectedTwitchChannelName);
+
       return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
     });
-  }, [twitchSession]);
+  }, [twitchSession, selectedTwitchChannelName]);
 
   // Moderator status effects 
   useEffect(() => {
@@ -476,10 +493,13 @@ export function useChatAppState({
     }
 
     setMessages((prev) => {
+      // Persist to IndexedDB for Chatter History
+      saveMessage(message, selectedTwitchChannelName);
+
       const updated = [...prev, message];
       return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
     });
-  }, []);
+  }, [selectedTwitchChannelName]);
 
   useChannelPointRedemptions({
     channelId: selectedTwitchChannel,
@@ -522,7 +542,7 @@ export function useChatAppState({
     setMessages([]);
     preloadedMessagesRef.current.clear();
 
-    }, [selectedTwitchChannelName, selectedTwitchChannel]);
+  }, [selectedTwitchChannelName, selectedTwitchChannel]);
 
   // Load preloaded messages after badges are ready
   useEffect(() => {
@@ -1202,7 +1222,7 @@ export function useChatAppState({
   // YouTube helpers 
   const getYtMessageText = useCallback((m: YTMessage) =>
     m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join(''),
-  []);
+    []);
 
   const handleYtMessages = useCallback((msgs: YTMessage[]) => {
     setYtOptimisticMessages((prev) => {
@@ -1315,5 +1335,8 @@ export function useChatAppState({
     sendTwitchMessage,
     slowModeWaitTime,
     followerModeMinutes,
+
+    // Ignored users
+    ignoredUsers,
   };
 }

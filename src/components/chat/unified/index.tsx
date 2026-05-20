@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
-import type { ChatMessage, ChatFont } from '../../../lib/types';
+import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
+import type { ChatMessage, ChatFont, Platform } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
 import { useChatAutoScroll } from '../../../hooks/useChatAutoScroll';
@@ -8,6 +8,7 @@ import { YouTubeMessageItem } from './YouTubeMessageItem';
 import MessageMenu from '../shared/MessageMenu';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import EmoteTooltip from '../shared/EmoteTooltip';
+import ChatterHistoryOverlay from '../shared/ChatterHistoryOverlay';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
 import type { UnifiedEntry, MessagePart, YTMessage } from './types';
 import { getKey, getTime } from './types';
@@ -15,6 +16,7 @@ import { getKey, getTime } from './types';
 interface UnifiedChatProps {
     twitchMessages: ChatMessage[];
     ytMessages: YTMessage[];
+    channelName: string;
     ytConnectionState?: { connected: boolean; loading: boolean; error: string | null };
     twitchConnected?: boolean;
     onReply?: (message: ChatMessage) => void;
@@ -32,6 +34,7 @@ interface UnifiedChatProps {
     onWarnUser?: (userName: string) => void;
     compactActions?: boolean;
     splitChatEnabled?: boolean;
+    ignoredUsers?: string[];
 }
 
 export interface UnifiedChatHandle {
@@ -41,6 +44,7 @@ export interface UnifiedChatHandle {
 const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function UnifiedChat({
     twitchMessages,
     ytMessages,
+    channelName,
     ytConnectionState,
     twitchConnected,
     onReply,
@@ -57,11 +61,23 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     onWarnUser,
     compactActions = false,
     splitChatEnabled = false,
+    ignoredUsers = [],
 }: UnifiedChatProps, ref: React.ForwardedRef<UnifiedChatHandle>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
     const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
+    const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform; authorAvatar?: string } | null>(null);
+
+    const handleViewHistory = (author: string, platform: Platform = 'twitch', authorAvatar?: string) => {
+        setChatterHistory({ author, platform, authorAvatar });
+    };
+
+    const handleUsernameClick = (e: React.MouseEvent, author: string, platform: Platform, authorAvatar?: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViewHistory(author, platform, authorAvatar);
+    };
 
     // Close menus when clicking elsewhere
     useEffect(() => {
@@ -76,10 +92,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         };
     }, [timeoutMenu, messageMenu]);
 
+    const ignoredSet = useMemo(() => new Set(ignoredUsers.map((u) => u.toLowerCase())), [ignoredUsers]);
+
     // Merge and sort messages
     const entries: UnifiedEntry[] = (() => {
-        const tw: UnifiedEntry[] = twitchMessages.map((m) => ({ source: 'twitch' as const, msg: m }));
-        const yt: UnifiedEntry[] = ytMessages.map((m) => ({ source: 'youtube' as const, msg: m }));
+        const tw: UnifiedEntry[] = twitchMessages
+            .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
+            .map((m) => ({ source: 'twitch' as const, msg: m }));
+        const yt: UnifiedEntry[] = ytMessages
+            .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
+            .map((m) => ({ source: 'youtube' as const, msg: m }));
         const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
         return merged.length > MAX_DISPLAYED_MESSAGES ? merged.slice(-MAX_DISPLAYED_MESSAGES) : merged;
     })();
@@ -88,6 +110,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
         containerRef,
         messages: entries,
     });
+
+    const scrollToMessage = useCallback((targetId: string) => {
+        const container = containerRef.current;
+        if (!container) return;
+        const el = container.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(targetId)}"]`);
+        if (!el) return;
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        el.classList.add('message-highlight');
+        setTimeout(() => el.classList.remove('message-highlight'), 2000);
+    }, []);
 
     useImperativeHandle(ref, () => ({ scrollToBottom }));
 
@@ -183,9 +215,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                 onWarnUser={onWarnUser}
                                 onTimeoutMenu={(x, y, userId, username) => setTimeoutMenu({ x, y, userId, username })}
                                 onMessageMenu={(x, y, e) => setMessageMenu({ x, y, entry: e })}
+                                onViewHistory={(author, avatar) => handleViewHistory(author, 'twitch', avatar)}
+                                onUsernameClick={(e, author, avatar) => handleUsernameClick(e, author, 'twitch', avatar)}
                                 onTouchStart={handleTouchStart}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchMove={handleTouchMove}
+                                onScrollToMessage={scrollToMessage}
                             />
                         );
                     }
@@ -197,6 +232,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                             onTouchStart={handleTouchStart}
                             onTouchEnd={handleTouchEnd}
                             onTouchMove={handleTouchMove}
+                            onUsernameClick={(e, author, avatar) => handleUsernameClick(e, author, 'youtube', avatar)}
                         />
                     );
                 })}
@@ -225,7 +261,22 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     onTimeoutUser={onTimeoutUser}
                     onBanUser={onBanUser}
                     onWarnUser={onWarnUser}
+                    onViewHistory={(author, avatar) => handleViewHistory(author, messageMenu.entry.source, avatar)}
                     onClose={() => setMessageMenu(null)}
+                />
+            )}
+
+            {chatterHistory && (
+                <ChatterHistoryOverlay
+                    author={chatterHistory.author}
+                    platform={chatterHistory.platform}
+                    authorAvatar={chatterHistory.authorAvatar}
+                    channel={channelName}
+                    isModerator={isModerator}
+                    onTimeoutUser={onTimeoutUser}
+                    onBanUser={onBanUser}
+                    onWarnUser={onWarnUser}
+                    onClose={() => setChatterHistory(null)}
                 />
             )}
 

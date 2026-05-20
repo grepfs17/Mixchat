@@ -33,11 +33,13 @@ interface ChatMessageItemProps {
   onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
+  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
   onTimeoutMenu: (state: { x: number; y: number; userId: string; username: string }) => void;
   onScrollToMessage: (id: string) => void;
   onTouchStart: (msg: ChatMessage) => void;
   onTouchEnd: (msg: ChatMessage) => void;
   onTouchMove: (e: React.TouchEvent) => void;
+  fontSize?: number;
   onContextMenu: (e: React.MouseEvent, msg: ChatMessage) => void;
 }
 
@@ -57,6 +59,7 @@ export default function ChatMessageItem({
   onTimeoutUser,
   onUntimeoutUser,
   onWarnUser,
+  onUsernameClick,
   onTimeoutMenu,
   onScrollToMessage,
   onTouchStart,
@@ -171,6 +174,7 @@ export default function ChatMessageItem({
             rel="noopener noreferrer"
             className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
             style={{ color: msg.isCurrentUser ? '#ffffff' : getReadableUsernameColor(msg.authorColor) }}
+            onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
           >
             {msg.author}
           </a>
