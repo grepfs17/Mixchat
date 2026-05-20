@@ -1,6 +1,6 @@
-import { createPortal } from 'react-dom';
 import type { ChatMessage } from '../../../lib/types';
 import type { UnifiedEntry, YTMessage } from './types';
+import { ContextMenuShell } from '../shared/ContextMenuShell';
 
 interface MessageContextMenuProps {
     x: number;
@@ -50,10 +50,9 @@ export function MessageContextMenu({
 
     if (isModerator && modModeActive && entry.source === 'twitch') {
         const msg = entry.msg as ChatMessage;
-        const isBroadcaster = Boolean(msg.badges && msg.badges['broadcaster']);
-        const isModeratorMsg = Boolean(msg.badges && msg.badges['moderator']);
-        const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
-        if (!isUnmoderatable) {
+        const isBroadcaster = Boolean(msg.badges?.['broadcaster']);
+        const isModeratorMsg = Boolean(msg.badges?.['moderator']);
+        if (!isBroadcaster && !isModeratorMsg && !msg.isCurrentUser) {
             items.push({ key: 'delete', label: 'Delete', onClick: () => { onDeleteMessage?.(msg.id); onClose(); } });
             items.push({ key: 'timeout', label: 'Timeout (10m)', onClick: () => { onTimeoutUser?.(msg.userId || '', 600, msg.author); onClose(); } });
             items.push({ key: 'ban', label: 'Ban', onClick: () => { onBanUser?.(msg.userId || '', msg.author); onClose(); } });
@@ -67,18 +66,12 @@ export function MessageContextMenu({
         ? `@${(entry.msg as ChatMessage).author}`
         : `${(entry.msg as YTMessage).author}`;
 
-    return createPortal(
-        <div
-            className="context-menu message-context-menu"
-            onContextMenu={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}
-        >
+    return (
+        <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
             <div className="context-menu-header">{author}</div>
             {items.map((it) => (
                 <button key={it.key} onClick={it.onClick} className="context-menu-item">{it.label}</button>
             ))}
-        </div>,
-        document.body
+        </ContextMenuShell>
     );
 }
