@@ -306,6 +306,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                 onDeleteMessage={onDeleteMessage}
                 onBanUser={onBanUser}
                 onTimeoutUser={onTimeoutUser}
+                onUntimeoutUser={onUntimeoutUser}
                 onWarnUser={onWarnUser}
                 onUsernameClick={(e, author) => handleUsernameClick(e, author, msg.platform, msg.authorAvatar)}
                 fontSize={fontSize}
