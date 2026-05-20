@@ -18,6 +18,19 @@ declare global {
           oauth_token?: string;
         }
       ) => TwitchPlayer;
+      Embed: new (
+        elementId: string,
+        options: {
+          width: string | number;
+          height: string | number;
+          channel: string;
+          parent: string[];
+          autoplay?: boolean;
+          layout?: 'video-with-chat' | 'video';
+          muted?: boolean;
+          theme?: 'light' | 'dark';
+        }
+      ) => TwitchEmbed;
     };
   }
 }
@@ -28,6 +41,11 @@ interface TwitchPlayer {
   play(): void;
   pause(): void;
   getPaused(): boolean;
+}
+
+interface TwitchEmbed {
+  getPlayer(): TwitchPlayer;
+  destroy(): void;
 }
 
 interface StreamEmbedProps {
@@ -64,42 +82,35 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
 
   useEffect(() => {
     let cancelled = false;
+    let embedInstance: TwitchEmbed | null = null;
 
     const initPlayer = () => {
-      if (cancelled || !containerRef.current || !window.Twitch?.Player) return;
+      if (cancelled || !containerRef.current || !window.Twitch?.Embed) return;
 
-      // Give the container a stable, unique ID required by the Twitch Player API
       const playerId = 'twitch-js-player';
       containerRef.current.id = playerId;
-
-      // Clear any leftover DOM from a previous player instance so the SDK
-      // doesn't conflict with stale iframes when recreating.
       containerRef.current.innerHTML = '';
 
-      /* 
-      Defer to the next animation frame so the browser has finished layout
-      before the Twitch SDK reads element dimensions for its visibility check.
-      Without this deferral the SDK can see a zero-sized container and disable
-      autoplay with "style visibility" even though the element is truly visible.
-      */
       requestAnimationFrame(() => {
-        if (cancelled || !window.Twitch?.Player) return;
-        playerRef.current = new window.Twitch.Player(playerId, {
+        if (cancelled || !window.Twitch?.Embed) return;
+
+        embedInstance = new window.Twitch.Embed(playerId, {
           width: '100%',
           height: '100%',
           channel: channelRef.current,
           parent: [parentDomain],
           autoplay: true,
           layout: 'video',
+          // @ts-ignore - The Embed API supports oauth_token despite some type definitions
           ...(oauthTokenRef.current ? { oauth_token: oauthTokenRef.current } : {}),
         });
+
+        playerRef.current = embedInstance.getPlayer();
       });
     };
 
     const scriptId = 'twitch-embed-script';
-
-    if (window.Twitch?.Player) {
-      // Script already loaded from a previous mount
+    if (window.Twitch?.Embed) {
       initPlayer();
     } else if (!document.getElementById(scriptId)) {
       const script = document.createElement('script');
@@ -109,7 +120,7 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       document.head.appendChild(script);
     } else {
       const poll = setInterval(() => {
-        if (window.Twitch?.Player) {
+        if (window.Twitch?.Embed) {
           clearInterval(poll);
           initPlayer();
         }
@@ -119,24 +130,19 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
 
     return () => {
       cancelled = true;
-      if (playerRef.current) {
-        try { playerRef.current.destroy(); } catch { /* ignore */ }
-        playerRef.current = null;
+      if (embedInstance) {
+        try { embedInstance.destroy(); } catch { /* ignore */ }
+        embedInstance = null;
       }
+      playerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parentDomain, hasOauthToken]); // Re-init when domain changes OR token becomes available
+  }, [parentDomain, hasOauthToken]);
 
-  // Keep-alive workaround for tab freezing (Visibility API + Silent Audio)
+  // Use visibility API to auto-resume the player
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        // Poke the iframe to help keep it active
-        const iframe = containerRef.current?.querySelector('iframe');
-        if (iframe) {
-          iframe.contentWindow?.postMessage({ type: 'keep-alive' }, '*');
-        }
-      } else {
+      if (!document.hidden) {
         // Auto-resume when coming back to the tab
         if (playerRef.current && playerRef.current.getPaused()) {
           try {
@@ -148,30 +154,9 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       }
     };
 
-    // Chrome/Chromium workaround: Active (even silent) AudioContext prevents tab suspension.
-    let audioCtx: AudioContext | null = null;
-    try {
-      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
-      if (AudioContextClass) {
-        audioCtx = new AudioContextClass();
-        // Create a silent oscillator
-        const oscillator = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0;
-        oscillator.connect(gain);
-        gain.connect(audioCtx.destination);
-        oscillator.start();
-      }
-    } catch (e) {
-      console.warn('Keep-alive AudioContext failed:', e);
-    }
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => { });
-      }
     };
   }, []);
 
