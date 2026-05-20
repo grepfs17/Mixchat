@@ -32,6 +32,17 @@ export default function ChatterHistoryOverlay({
     const [history, setHistory] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (overlayRef.current && !overlayRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
 
     useEffect(() => {
         let mounted = true;
@@ -138,7 +149,7 @@ export default function ChatterHistoryOverlay({
     };
 
     return (
-        <div className="chatter-history-overlay">
+        <div ref={overlayRef} className="chatter-history-overlay">
             {/* Header */}
             <div className="history-header">
                 <div className="history-header-info">
