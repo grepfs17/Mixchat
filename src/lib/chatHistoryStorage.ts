@@ -16,13 +16,12 @@ function openDB(): Promise<IDBDatabase> {
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-                store.createIndex("author", "author", { unique: false });
+                const store = db.createObjectStore(STORE_NAME, { keyPath: "messageKey" });
+                store.createIndex("author", "authorLower", { unique: false });
                 store.createIndex("platform", "platform", { unique: false });
                 store.createIndex("channel", "channel", { unique: false });
                 store.createIndex("timestamp", "timestamp", { unique: false });
-                // Composite index for efficient filtering by user + channel
-                store.createIndex("author_channel", ["author", "channel"], { unique: false });
+                store.createIndex("author_channel", ["authorLower", "channel"], { unique: false });
             }
         };
     });
@@ -39,9 +38,13 @@ export async function saveMessage(msg: ChatMessage, channel: string): Promise<vo
         const tx = db.transaction(STORE_NAME, "readwrite");
         const store = tx.objectStore(STORE_NAME);
 
-        // Normalize timestamp to number for storage if it's a Date
+        const authorLower = msg.author.toLowerCase();
+        const messageKey = `${msg.platform || 'twitch'}:${msg.id}`;
+
         const messageToStore = {
             ...msg,
+            messageKey,
+            authorLower,
             channel,
             timestamp: msg.timestamp instanceof Date ? msg.timestamp.getTime() : msg.timestamp,
         };
@@ -73,8 +76,8 @@ export async function getUserHistory(
         const store = tx.objectStore(STORE_NAME);
         const index = store.index("author_channel");
 
-        // We query by the composite index
-        const range = IDBKeyRange.only([author, channel]);
+        const authorLower = author.toLowerCase();
+        const range = IDBKeyRange.only([authorLower, channel]);
         const request = index.getAll(range);
 
         return new Promise((resolve, reject) => {

@@ -4,7 +4,6 @@ import { FaYoutube, FaTwitch } from 'react-icons/fa';
 import type { ChatMessage, Platform } from '../../../lib/types';
 import { getUserHistory } from '../../../lib/chatHistoryStorage';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
-import { getReadableUsernameColor } from '../../../lib/chatColors';
 import MessageBadges from '../../MessageBadges';
 import { useMemo } from 'react';
 import '../../../styles/chat/ChatterHistoryOverlay.css';
@@ -164,7 +163,7 @@ export default function ChatterHistoryOverlay({
                 <div>
                     <h2 className="history-header-title">
                         <MessageBadges {...mostRecentBadges} />
-                        @{author}
+                        @{author.replace(/^@+/, '')}
                         {platform === 'youtube' && <FaYoutube size={14} className="history-platform-icon history-platform-icon--youtube" />}
                         {platform === 'twitch' && <FaTwitch size={14} className="history-platform-icon history-platform-icon--twitch" />}
                     </h2>
@@ -174,15 +173,17 @@ export default function ChatterHistoryOverlay({
                 </div>
                 </div>
                 <div className="history-header-actions">
-                    <a
-                        href={`https://twitch.tv/${author}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="overlay-btn-icon"
-                        title="View Channel"
-                    >
-                        <MdOpenInNew size={20} />
-                    </a>
+                    {platform === 'twitch' && (
+                        <a
+                            href={`https://twitch.tv/${author}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="overlay-btn-icon"
+                            title="View Channel"
+                        >
+                            <MdOpenInNew size={20} />
+                        </a>
+                    )}
                     <button
                         onClick={onClose}
                         className="overlay-btn-icon"

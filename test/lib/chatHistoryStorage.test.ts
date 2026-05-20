@@ -169,6 +169,36 @@ describe('chatHistoryStorage', () => {
       expect(history.some(m => m.platform === 'twitch')).toBe(true);
       expect(history.some(m => m.platform === 'youtube')).toBe(true);
     });
+
+    it('matches authors case-insensitively', async () => {
+      const msg = makeMessage('t1', 'Alice', 'Hello', 'twitch');
+      await saveMessage(msg, 'testchannel');
+
+      const history1 = await getUserHistory('alice', 'testchannel');
+      const history2 = await getUserHistory('ALICE', 'testchannel');
+      const history3 = await getUserHistory('Alice', 'testchannel');
+
+      expect(history1).toHaveLength(1);
+      expect(history2).toHaveLength(1);
+      expect(history3).toHaveLength(1);
+      expect(history1[0].author).toBe('Alice');
+    });
+
+    it('does not collide IDs across platforms', async () => {
+      const twitchMsg = makeMessage('same-id', 'User1', 'Twitch msg', 'twitch');
+      const ytMsg = makeMessage('same-id', 'User2', 'YouTube msg', 'youtube');
+
+      await saveMessage(twitchMsg, 'testchannel');
+      await saveMessage(ytMsg, 'testchannel');
+
+      const twitchHistory = await getUserHistory('User1', 'testchannel');
+      const ytHistory = await getUserHistory('User2', 'testchannel');
+
+      expect(twitchHistory).toHaveLength(1);
+      expect(twitchHistory[0].content).toBe('Twitch msg');
+      expect(ytHistory).toHaveLength(1);
+      expect(ytHistory[0].content).toBe('YouTube msg');
+    });
   });
 
   describe('pruneMessages', () => {
