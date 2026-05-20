@@ -5,7 +5,7 @@ import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
 import { useChatAutoScroll } from '../../../hooks/useChatAutoScroll';
 import { TwitchMessageItem } from './TwitchMessageItem';
 import { YouTubeMessageItem } from './YouTubeMessageItem';
-import { MessageContextMenu } from './MessageContextMenu';
+import MessageMenu from '../shared/MessageMenu';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import EmoteTooltip from '../shared/EmoteTooltip';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
@@ -212,7 +212,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
             {emoteTooltip && <EmoteTooltip {...emoteTooltip} />}
 
             {messageMenu && (
-                <MessageContextMenu
+                <MessageMenu
                     x={messageMenu.x}
                     y={messageMenu.y}
                     entry={messageMenu.entry}
@@ -220,7 +220,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     modModeActive={modModeActive}
                     compactActions={compactActions}
                     onReply={onReply}
-                    onCopyMessage={onCopyMessage}
+                    onCopy={() => onCopyMessage?.()}
                     onDeleteMessage={onDeleteMessage}
                     onTimeoutUser={onTimeoutUser}
                     onBanUser={onBanUser}

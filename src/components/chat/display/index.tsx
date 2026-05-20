@@ -7,7 +7,7 @@ import ChatHeader from './ChatHeader';
 import ChatMessageItem from './ChatMessageItem';
 import EmoteTooltip from '../shared/EmoteTooltip';
 import TimeoutMenu from '../shared/TimeoutMenu';
-import MessageMenu from './MessageMenu';
+import MessageMenu from '../shared/MessageMenu';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
 import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './types';
 
@@ -147,8 +147,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   }, [messages, selectedPlatforms]);
 
   const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
-      containerRef: messagesContainerRef,
-      messages: filteredMessages,
+    containerRef: messagesContainerRef,
+    messages: filteredMessages,
   });
 
   useImperativeHandle(ref, () => ({ scrollToBottom }));
@@ -306,14 +306,14 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           username={timeoutMenu.username}
           x={timeoutMenu.x}
           y={timeoutMenu.y}
-          onTimeout={onTimeoutUser || (() => {})}
+          onTimeout={onTimeoutUser || (() => { })}
           onClose={() => setTimeoutMenu(null)}
         />
       )}
 
       {messageMenu && (
         <MessageMenu
-          message={messageMenu.message}
+          entry={messageMenu.message}
           x={messageMenu.x}
           y={messageMenu.y}
           isModerator={isModerator}
