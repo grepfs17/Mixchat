@@ -22,6 +22,8 @@ interface TwitchMessageItemProps {
     onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
     onUntimeoutUser?: (userName: string) => void;
     onWarnUser?: (userName: string) => void;
+    onViewHistory?: (author: string) => void;
+    onUsernameClick?: (e: React.MouseEvent, author: string) => void;
     onTimeoutMenu: (x: number, y: number, userId: string, username: string) => void;
     onMessageMenu: (x: number, y: number, entry: UnifiedEntry) => void;
     onTouchStart: (entry: UnifiedEntry) => void;
@@ -44,6 +46,8 @@ export function TwitchMessageItem({
     onTimeoutUser,
     onUntimeoutUser,
     onWarnUser,
+    onViewHistory,
+    onUsernameClick,
     onTimeoutMenu,
     onMessageMenu,
     onTouchStart,
@@ -126,6 +130,7 @@ export function TwitchMessageItem({
                         rel="noopener noreferrer"
                         className={`author author-link ${msg.isCurrentUser ? 'self' : ''}`}
                         style={{ color: msg.isCurrentUser ? '#ffffff' : getReadableUsernameColor(msg.authorColor) }}
+                        onClick={(e) => onUsernameClick?.(e, msg.author)}
                     >
                         {msg.author}
                     </a>

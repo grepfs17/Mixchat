@@ -9,6 +9,7 @@ import EmoteTooltip from '../shared/EmoteTooltip';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import MessageMenu from '../shared/MessageMenu';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
+import ChatterHistoryOverlay from '../shared/ChatterHistoryOverlay';
 import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './types';
 
 interface ChatDisplayProps {
@@ -96,6 +97,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(null);
   const [timeoutMenu, setTimeoutMenu] = useState<TimeoutMenuState | null>(null);
   const [messageMenu, setMessageMenu] = useState<MessageMenuState | null>(null);
+  const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform } | null>(null);
+
+  const handleViewHistory = useCallback((author: string, platform: Platform = 'twitch') => {
+    setChatterHistory({ author, platform });
+  }, []);
+
+  const handleUsernameClick = useCallback((e: React.MouseEvent, author: string, platform: Platform) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleViewHistory(author, platform);
+  }, [handleViewHistory]);
 
   useEffect(() => {
     const handleClick = () => setTimeoutMenu(null);
@@ -265,8 +277,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
                 onDeleteMessage={onDeleteMessage}
                 onBanUser={onBanUser}
                 onTimeoutUser={onTimeoutUser}
-                onUntimeoutUser={onUntimeoutUser}
                 onWarnUser={onWarnUser}
+                onUsernameClick={(e, author) => handleUsernameClick(e, author, msg.platform)}
+                fontSize={fontSize}
                 onTimeoutMenu={setTimeoutMenu}
                 onScrollToMessage={scrollToMessage}
                 onTouchStart={handleTouchStart}
@@ -325,7 +338,21 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
           onTimeoutUser={onTimeoutUser}
           onBanUser={onBanUser}
           onWarnUser={onWarnUser}
+          onViewHistory={(author) => handleViewHistory(author, messageMenu.message.platform)}
           onClose={() => setMessageMenu(null)}
+        />
+      )}
+
+      {chatterHistory && (
+        <ChatterHistoryOverlay
+          author={chatterHistory.author}
+          platform={chatterHistory.platform}
+          channel={channelName || ''}
+          isModerator={isModerator}
+          onTimeoutUser={onTimeoutUser}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+          onClose={() => setChatterHistory(null)}
         />
       )}
     </div>

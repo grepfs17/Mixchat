@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, memo, useImperativeHandle, forwardRef } from 'react';
-import type { ChatMessage, ChatFont } from '../../../lib/types';
+import type { ChatMessage, ChatFont, Platform } from '../../../lib/types';
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
 import { useChatTouchGestures } from '../../../hooks/useChatTouchGestures';
 import { useChatAutoScroll } from '../../../hooks/useChatAutoScroll';
@@ -8,6 +8,7 @@ import { YouTubeMessageItem } from './YouTubeMessageItem';
 import MessageMenu from '../shared/MessageMenu';
 import TimeoutMenu from '../shared/TimeoutMenu';
 import EmoteTooltip from '../shared/EmoteTooltip';
+import ChatterHistoryOverlay from '../shared/ChatterHistoryOverlay';
 import ScrollToBottomButton from '../shared/ScrollToBottomButton';
 import type { UnifiedEntry, MessagePart, YTMessage } from './types';
 import { getKey, getTime } from './types';
@@ -15,6 +16,7 @@ import { getKey, getTime } from './types';
 interface UnifiedChatProps {
     twitchMessages: ChatMessage[];
     ytMessages: YTMessage[];
+    channelName: string;
     ytConnectionState?: { connected: boolean; loading: boolean; error: string | null };
     twitchConnected?: boolean;
     onReply?: (message: ChatMessage) => void;
@@ -41,6 +43,7 @@ export interface UnifiedChatHandle {
 const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function UnifiedChat({
     twitchMessages,
     ytMessages,
+    channelName,
     ytConnectionState,
     twitchConnected,
     onReply,
@@ -62,6 +65,17 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     const [emoteTooltip, setEmoteTooltip] = useState<{ url: string; name: string; source: string; x: number; y: number } | null>(null);
     const [timeoutMenu, setTimeoutMenu] = useState<{ x: number; y: number; userId: string; username: string } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{ x: number; y: number; entry: UnifiedEntry } | null>(null);
+    const [chatterHistory, setChatterHistory] = useState<{ author: string; platform: Platform } | null>(null);
+
+    const handleViewHistory = (author: string, platform: Platform = 'twitch') => {
+        setChatterHistory({ author, platform });
+    };
+
+    const handleUsernameClick = (e: React.MouseEvent, author: string, platform: Platform) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViewHistory(author, platform);
+    };
 
     // Close menus when clicking elsewhere
     useEffect(() => {
@@ -183,6 +197,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                                 onWarnUser={onWarnUser}
                                 onTimeoutMenu={(x, y, userId, username) => setTimeoutMenu({ x, y, userId, username })}
                                 onMessageMenu={(x, y, e) => setMessageMenu({ x, y, entry: e })}
+                                onViewHistory={(author) => handleViewHistory(author, 'twitch')}
+                                onUsernameClick={(e, author) => handleUsernameClick(e, author, 'twitch')}
                                 onTouchStart={handleTouchStart}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchMove={handleTouchMove}
@@ -225,7 +241,21 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     onTimeoutUser={onTimeoutUser}
                     onBanUser={onBanUser}
                     onWarnUser={onWarnUser}
+                    onViewHistory={(author) => handleViewHistory(author, messageMenu.entry.source)}
                     onClose={() => setMessageMenu(null)}
+                />
+            )}
+
+            {chatterHistory && (
+                <ChatterHistoryOverlay
+                    author={chatterHistory.author}
+                    platform={chatterHistory.platform}
+                    channel={channelName}
+                    isModerator={isModerator}
+                    onTimeoutUser={onTimeoutUser}
+                    onBanUser={onBanUser}
+                    onWarnUser={onWarnUser}
+                    onClose={() => setChatterHistory(null)}
                 />
             )}
 

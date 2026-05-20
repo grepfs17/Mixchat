@@ -240,6 +240,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                 <UnifiedChat
                   ref={unifiedChatRef}
                   twitchMessages={messages}
+                  channelName={selectedTwitchChannelName || ''}
                   ytMessages={[
                     ...ytMessages,
                     ...ytOptimisticMessages.filter((opt) => {
