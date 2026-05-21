@@ -1,6 +1,5 @@
-import { createPortal } from 'react-dom';
-import { MdClose } from 'react-icons/md';
-import type { CategoryResult } from './types';
+import { createPortal } from "react-dom";
+import type { CategoryResult } from "./types";
 
 interface CategoryDropdownProps {
   results: CategoryResult[];
@@ -11,7 +10,14 @@ interface CategoryDropdownProps {
   onCancel: () => void;
 }
 
-export default function CategoryDropdown({ results, pos, saving, inputRef, onSelect, onCancel }: CategoryDropdownProps) {
+export default function CategoryDropdown({
+  results,
+  pos,
+  saving,
+  inputRef,
+  onSelect,
+  onCancel,
+}: CategoryDropdownProps) {
   if (!pos || results.length === 0) return null;
 
   return createPortal(
@@ -19,7 +25,7 @@ export default function CategoryDropdown({ results, pos, saving, inputRef, onSel
       id="category-dropdown-portal"
       className="stream-info-category-dropdown"
       style={{
-        position: 'fixed',
+        position: "fixed",
         left: pos.x,
         top: pos.y,
         zIndex: 9999,
@@ -35,6 +41,6 @@ export default function CategoryDropdown({ results, pos, saving, inputRef, onSel
         </button>
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }
