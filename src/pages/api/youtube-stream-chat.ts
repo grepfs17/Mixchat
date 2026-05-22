@@ -647,12 +647,22 @@ export const GET: APIRoute = async ({ url, clientAddress }) => {
 };
 
 function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
-  const base = parseTextMessageBase(msg);
   const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
   const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
+  const authorName = msg.header?.author_name?.toString() || msg.author?.name?.toString() || 'Unknown';
+  const authorChannelId = msg.author_external_channel_id || msg.author?.id;
+  const authorAvatar = Array.isArray(msg.header?.author_photo)
+    ? msg.header.author_photo[0]?.url
+    : undefined;
 
   return {
-    ...base,
+    id: msg.id,
+    author: authorName,
+    authorChannelId,
+    authorAvatar,
+    badges: parseBadges(msg),
+    parts: [],
+    timestamp: parseTimestamp(msg),
     messageType: 'gift-purchase',
     superchat: {
       amount,
