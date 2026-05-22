@@ -14,6 +14,7 @@ import type { EmoteTooltipState, TimeoutMenuState, MessageMenuState } from './ty
 
 interface ChatDisplayProps {
   messages: ChatMessage[];
+  ytMessages?: Array<{ author: string; authorAvatar?: string }>;
   isLoading: boolean;
   selectedPlatforms: Platform[];
   onReply?: (message: ChatMessage) => void;
@@ -58,6 +59,7 @@ export interface ChatDisplayHandle {
 
 const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function ChatDisplay({
   messages,
+  ytMessages,
   isLoading,
   selectedPlatforms,
   onReply,
@@ -171,19 +173,26 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
   const ignoredUserCounts = useMemo(() => {
     const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
     const counts = new Map<string, { count: number; displayName: string; authorAvatar?: string }>();
-    for (const msg of messages) {
-      const lower = msg.author.toLowerCase();
+
+    const tally = (author: string, authorAvatar?: string) => {
+      const lower = author.toLowerCase();
       if (ignoredSet.has(lower)) {
         const existing = counts.get(lower);
         if (existing) {
           existing.count++;
         } else {
-          counts.set(lower, { count: 1, displayName: msg.author, authorAvatar: msg.authorAvatar });
+          counts.set(lower, { count: 1, displayName: author, authorAvatar });
         }
       }
+    };
+
+    for (const msg of messages) tally(msg.author, msg.authorAvatar);
+    if (ytMessages) {
+      for (const msg of ytMessages) tally(msg.author, msg.authorAvatar);
     }
+
     return counts;
-  }, [messages, ignoredUsers]);
+  }, [messages, ytMessages, ignoredUsers]);
 
   const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
     containerRef: messagesContainerRef,

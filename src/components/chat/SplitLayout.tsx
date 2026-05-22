@@ -238,6 +238,7 @@ export default function SplitChat({
             onUntimeoutUser={onUntimeoutUser}
             onWarnUser={onWarnUser}
             ignoredUsers={ignoredUsers}
+            ytMessages={ytMessages}
           />
         </div>
 

@@ -238,6 +238,7 @@ export default function ChatApp(props: ChatAppStateProps) {
               onUpdateCategory={handleUpdateCategory}
               onSearchCategories={handleSearchCategories}
               ignoredUsers={ignoredUsers}
+              ytMessages={ytMessages}
               /* Override messages area with UnifiedChat */
               unifiedChatSlot={
                 <UnifiedChat
