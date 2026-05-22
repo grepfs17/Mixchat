@@ -1,7 +1,7 @@
 import type { ChatMessage, Platform } from './types';
 
 const DB_NAME = "mixchat_history";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "chatMessages";
 
 function isIDBAvailable(): boolean {
@@ -15,14 +15,15 @@ function openDB(): Promise<IDBDatabase> {
         request.onsuccess = () => resolve(request.result);
         request.onupgradeneeded = (event) => {
             const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const store = db.createObjectStore(STORE_NAME, { keyPath: "messageKey" });
-                store.createIndex("author", "authorLower", { unique: false });
-                store.createIndex("platform", "platform", { unique: false });
-                store.createIndex("channel", "channel", { unique: false });
-                store.createIndex("timestamp", "timestamp", { unique: false });
-                store.createIndex("author_channel", ["authorLower", "channel"], { unique: false });
+            if (db.objectStoreNames.contains(STORE_NAME)) {
+                db.deleteObjectStore(STORE_NAME);
             }
+            const store = db.createObjectStore(STORE_NAME, { keyPath: "messageKey" });
+            store.createIndex("author", "authorLower", { unique: false });
+            store.createIndex("platform", "platform", { unique: false });
+            store.createIndex("channel", "channel", { unique: false });
+            store.createIndex("timestamp", "timestamp", { unique: false });
+            store.createIndex("author_channel", ["authorLower", "channel"], { unique: false });
         };
     });
 }
@@ -66,7 +67,8 @@ export async function saveMessage(msg: ChatMessage, channel: string): Promise<vo
 export async function getUserHistory(
     author: string,
     channel: string,
-    maxAgeHours: number = 24
+    maxAgeHours: number = 24,
+    platform?: Platform
 ): Promise<ChatMessage[]> {
     if (!isIDBAvailable()) return [];
 
@@ -87,6 +89,7 @@ export async function getUserHistory(
 
                 const filtered = results
                     .filter(m => m.timestamp >= cutoff)
+                    .filter(m => !platform || m.platform === platform)
                     .map(m => ({
                         ...m,
                         timestamp: new Date(m.timestamp)

@@ -50,7 +50,7 @@ export default function ChatterHistoryOverlay({
         let mounted = true;
         setLoading(true);
 
-        getUserHistory(author, channel)
+        getUserHistory(author, channel, 24, platform)
             .then(data => {
                 if (mounted) {
                     setHistory(data);
@@ -63,7 +63,7 @@ export default function ChatterHistoryOverlay({
             });
 
         return () => { mounted = false; };
-    }, [author, channel]);
+    }, [author, channel, platform]);
 
     useEffect(() => {
         if (!loading && scrollRef.current) {

@@ -194,7 +194,7 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
           for (const m of prev) uniqueMap.set(m.id, m);
           for (const m of fetchedMessages) uniqueMap.set(m.id, m);
 
-          if (channel) {
+          if (channel !== undefined) {
             for (const m of fetchedMessages) {
               saveMessage({
                 id: m.id,
@@ -247,7 +247,7 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev;
 
-          if (channel) {
+          if (channel !== undefined) {
             saveMessage({
               id: newMsg.id,
               platform: 'youtube',
