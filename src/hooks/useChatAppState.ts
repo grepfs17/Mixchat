@@ -298,6 +298,7 @@ export function useChatAppState({
       if (existingIdx !== -1) {
         const existing = prev[existingIdx];
         if (existing.optimistic || existing.id.startsWith('optimistic_')) {
+          saveMessage(message, selectedTwitchChannelName);
           const copy = [...prev];
           copy[existingIdx] = message;
           return copy;
@@ -361,6 +362,7 @@ export function useChatAppState({
         }
 
         if (matchIndex !== -1) {
+          saveMessage(message, selectedTwitchChannelName);
           const copy = [...prev];
           copy[matchIndex] = message;
           return copy.length > MAX_DISPLAYED_MESSAGES ? copy.slice(-MAX_DISPLAYED_MESSAGES) : copy;
