@@ -1049,7 +1049,9 @@ export const getRecentMessages = async (
       })
       .filter((msg: ChatMessage | null): msg is ChatMessage => msg !== null);
 
-    return messages;
+    const RECENT_WINDOW_MS = 12 * 60 * 60 * 1000;
+    const cutoff = Date.now() - RECENT_WINDOW_MS;
+    return messages.filter((msg) => msg.timestamp.getTime() > cutoff);
   } catch (error) {
     console.error("Failed to fetch recent messages:", error);
     return [];

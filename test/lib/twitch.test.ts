@@ -42,7 +42,7 @@ describe("twitch lib mocked HTTP tests", () => {
 
   it("getRecentMessages parses raw IRC messages", async () => {
     const rawMsg =
-      "@badge-info=;badges=moderator/1;color=#1E90FF;display-name=Mod;emotes=;tmi-sent-ts=1620000000000;user-id=456 :mod!mod@mod.tmi.twitch.tv PRIVMSG #channel :Hello there";
+      `@badge-info=;badges=moderator/1;color=#1E90FF;display-name=Mod;emotes=;tmi-sent-ts=${Date.now()};user-id=456 :mod!mod@mod.tmi.twitch.tv PRIVMSG #channel :Hello there`;
 
     vi.stubGlobal(
       "fetch",
