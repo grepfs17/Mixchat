@@ -172,23 +172,23 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
 
   const ignoredUserCounts = useMemo(() => {
     const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
-    const counts = new Map<string, { count: number; displayName: string; authorAvatar?: string }>();
+    const counts = new Map<string, { count: number; displayName: string; authorAvatar?: string; platform: Platform }>();
 
-    const tally = (author: string, authorAvatar?: string) => {
+    const tally = (author: string, authorAvatar: string | undefined, platform: Platform) => {
       const lower = author.toLowerCase();
       if (ignoredSet.has(lower)) {
         const existing = counts.get(lower);
         if (existing) {
           existing.count++;
         } else {
-          counts.set(lower, { count: 1, displayName: author, authorAvatar });
+          counts.set(lower, { count: 1, displayName: author, authorAvatar, platform });
         }
       }
     };
 
-    for (const msg of messages) tally(msg.author, msg.authorAvatar);
+    for (const msg of messages) tally(msg.author, msg.authorAvatar, msg.platform);
     if (ytMessages) {
-      for (const msg of ytMessages) tally(msg.author, msg.authorAvatar);
+      for (const msg of ytMessages) tally(msg.author, msg.authorAvatar, 'youtube');
     }
 
     return counts;
@@ -283,7 +283,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
         ignoredUserCounts={ignoredUserCounts}
-        onOpenIgnoredUserOverlay={(author, authorAvatar) => setChatterHistory({ author, platform: 'twitch', authorAvatar })}
+        onOpenIgnoredUserOverlay={(author, authorAvatar, platform) => setChatterHistory({ author, platform: platform || 'twitch', authorAvatar })}
       />
 
       {unifiedChatSlot ? (

@@ -4,6 +4,7 @@ import { FaUsers, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import CategoryDropdown from './CategoryDropdown';
 import type { CategoryResult } from './types';
+import type { Platform } from '../../../lib/types';
 
 interface ChatHeaderProps {
   channelName?: string;
@@ -27,8 +28,8 @@ interface ChatHeaderProps {
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
-  ignoredUserCounts?: Map<string, { count: number; displayName: string; authorAvatar?: string }>;
-  onOpenIgnoredUserOverlay?: (author: string, authorAvatar?: string) => void;
+  ignoredUserCounts?: Map<string, { count: number; displayName: string; authorAvatar?: string; platform: Platform }>;
+  onOpenIgnoredUserOverlay?: (author: string, authorAvatar?: string, platform?: Platform) => void;
 }
 
 export default function ChatHeader({
@@ -156,12 +157,12 @@ export default function ChatHeader({
           </h2>
         </div>
         <div className="chat-header-actions">
-          {Array.from(ignoredUserCounts.entries()).map(([key, { count, displayName, authorAvatar }]) => (
+          {Array.from(ignoredUserCounts.entries()).map(([key, { count, displayName, authorAvatar, platform }]) => (
             <button
               key={key}
               className="header-button ignored-messages-badge"
               title={`${count} hidden message(s) from ${displayName}`}
-              onClick={() => onOpenIgnoredUserOverlay?.(displayName, authorAvatar)}
+              onClick={() => onOpenIgnoredUserOverlay?.(displayName, authorAvatar, platform)}
             >
               <MdVisibilityOff size={12} className="ignored-badge-icon" />
               <span className="ignored-badge-user">{displayName}</span>
