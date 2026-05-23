@@ -88,8 +88,6 @@ export default function MessageMenu({
         }
     }
 
-    if (compactActions) items.sort((a, b) => a.label.localeCompare(b.label));
-
     return (
         <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
             <div className="context-menu-header">@{author}</div>

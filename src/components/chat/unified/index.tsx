@@ -154,7 +154,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     }, []);
 
     // Touch gestures
-    const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures<UnifiedEntry>({
+    const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } = useChatTouchGestures<UnifiedEntry>({
         onReply: onReply ? (entry) => { if (entry.source === 'twitch') onReply(entry.msg as ChatMessage); } : undefined,
         onLongPress: (entry) => setMessageMenu({ x: window.innerWidth / 2, y: window.innerHeight / 2, entry }),
         onCopyMessage,
@@ -256,7 +256,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     modModeActive={modModeActive}
                     compactActions={compactActions}
                     onReply={onReply}
-                    onCopy={() => onCopyMessage?.()}
+                    onCopy={handleCopy}
                     onDeleteMessage={onDeleteMessage}
                     onTimeoutUser={onTimeoutUser}
                     onBanUser={onBanUser}
