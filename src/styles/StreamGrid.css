@@ -514,6 +514,13 @@ StreamGrid stream cards list
   opacity: 0.85;
 }
 
+.stream-grid-kofi-separator {
+  width: 1px;
+  height: 42px;
+  background: var(--color-border-light);
+  opacity: 0.5;
+}
+
 .stream-grid-kofi-close {
   position: absolute;
   right: 10px;

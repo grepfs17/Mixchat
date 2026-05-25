@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect x="4" y="8" width="92" height="84" rx="4" fill="none" stroke="#ffb000" stroke-width="3"/>
+  <rect x="4" y="8" width="92" height="12" rx="4" fill="#1f1400" stroke="none"/>
+  <circle cx="14" cy="14" r="2.5" fill="#ffb000"/>
+  <circle cx="21" cy="14" r="2.5" fill="#ffb000"/>
+  <circle cx="28" cy="14" r="2.5" fill="#ffb000"/>
+  <text x="6" y="72" font-family="monospace" font-size="48" font-weight="bold" fill="#ffb000">tce</text>
+</svg>
