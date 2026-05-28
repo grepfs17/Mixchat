@@ -37,8 +37,9 @@ describe("YouTube proxy - getChannel failure", () => {
 
     const url = new URL("http://localhost/?action=getLiveVideo&channelUrl=@testhandle");
     const cookies = { get: () => undefined } as any;
+    const request = { headers: new Headers({ "x-forwarded-for": "127.0.0.1" }) } as any;
 
-    const res: Response = await GET({ url, cookies, clientAddress: "127.0.0.1" } as any);
+    const res: Response = await GET({ request, url, cookies } as any);
 
     expect(res.status).toBe(200);
     const data = await res.json();
