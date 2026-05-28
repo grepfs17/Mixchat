@@ -126,29 +126,33 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
     // Emote tooltip
     useEffect(() => {
         const handleEmoteHover = (e: Event) => {
-            const target = e.target as HTMLImageElement;
-            if (!target.classList.contains('chat-emote')) return;
-            if (e.type === 'mouseenter') {
-                const tooltipUrl = target.getAttribute('data-tooltip-url');
-                const emoteName = target.getAttribute('data-emote-name') || 'Emote';
-                const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
-                if (tooltipUrl) {
-                    const rect = target.getBoundingClientRect();
-                    setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
+            const target = e.target as HTMLElement;
+            if (e.type === 'mouseover') {
+                if (target.tagName === 'IMG' && target.classList.contains('chat-emote')) {
+                    const tooltipUrl = target.getAttribute('data-tooltip-url');
+                    const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+                    const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
+                    if (tooltipUrl) {
+                        const rect = target.getBoundingClientRect();
+                        setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
+                    }
                 }
-            } else if (e.type === 'mouseleave') {
-                setEmoteTooltip(null);
+            } else if (e.type === 'mouseout') {
+                const relatedTarget = (e as MouseEvent).relatedTarget as Node | null;
+                if (!relatedTarget || !(relatedTarget as HTMLElement)?.closest?.('.chat-emote')) {
+                    setEmoteTooltip(null);
+                }
             }
         };
         const el = containerRef.current;
         if (el) {
-            el.addEventListener('mouseenter', handleEmoteHover, true);
-            el.addEventListener('mouseleave', handleEmoteHover, true);
+            el.addEventListener('mouseover', handleEmoteHover);
+            el.addEventListener('mouseout', handleEmoteHover);
         }
         return () => {
             if (el) {
-                el.removeEventListener('mouseenter', handleEmoteHover, true);
-                el.removeEventListener('mouseleave', handleEmoteHover, true);
+                el.removeEventListener('mouseover', handleEmoteHover);
+                el.removeEventListener('mouseout', handleEmoteHover);
             }
         };
     }, []);
