@@ -23,7 +23,8 @@ function getChannelParam(url: URL | URLSearchParams): string | null {
  */
 const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",

@@ -75,7 +75,8 @@ async function driveFetch(url: string, options: RequestInit, accessToken: string
   return res;
 }
 
-export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   const rateLimitKey = `${clientAddress}:gdrive`;
 
   // More generous rate limit for Drive operations (they're infrequent)

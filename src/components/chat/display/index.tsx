@@ -211,41 +211,35 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(function Cha
     return map;
   }, [messages]);
 
-  const handleEmoteHover = useCallback((e: Event) => {
+  const handlePointerMove = useCallback((e: PointerEvent) => {
     const target = e.target as HTMLElement;
-    if (e.type === 'mouseover') {
-      if (target.tagName === 'IMG' && target.classList.contains('chat-emote')) {
-        const tooltipUrl = target.getAttribute('data-tooltip-url');
-        const emoteName = target.getAttribute('data-emote-name') || 'Emote';
-        const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
-        if (tooltipUrl) {
-          const rect = target.getBoundingClientRect();
-          setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
-        }
+    if (target.tagName === 'IMG' && target.classList.contains('chat-emote')) {
+      const tooltipUrl = target.getAttribute('data-tooltip-url');
+      const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+      const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
+      if (tooltipUrl) {
+        const rect = target.getBoundingClientRect();
+        setEmoteTooltip(prev => {
+          if (prev && prev.url === tooltipUrl && prev.x === rect.left && prev.y === rect.top) return prev;
+          return { url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top };
+        });
       }
-    } else if (e.type === 'mouseout') {
-      if (target.classList.contains('chat-emote')) {
-        const relatedTarget = (e as MouseEvent).relatedTarget as Node | null;
-        if (!relatedTarget || !(relatedTarget as HTMLElement)?.closest?.('.chat-emote')) {
-          setEmoteTooltip(null);
-        }
-      }
+    } else {
+      setEmoteTooltip(null);
     }
   }, []);
 
   useEffect(() => {
     const messagesContainer = messagesContainerRef.current;
     if (messagesContainer) {
-      messagesContainer.addEventListener('mouseover', handleEmoteHover);
-      messagesContainer.addEventListener('mouseout', handleEmoteHover);
+      messagesContainer.addEventListener('pointermove', handlePointerMove);
     }
     return () => {
       if (messagesContainer) {
-        messagesContainer.removeEventListener('mouseover', handleEmoteHover);
-        messagesContainer.removeEventListener('mouseout', handleEmoteHover);
+        messagesContainer.removeEventListener('pointermove', handlePointerMove);
       }
     };
-  }, [handleEmoteHover]);
+  }, [handlePointerMove]);
 
   const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } = useChatTouchGestures<ChatMessage>({
     onReply,

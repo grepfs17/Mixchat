@@ -2,7 +2,8 @@ import type { APIRoute } from "astro";
 import { getTwitchUserById } from "../../lib/twitch";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   if (!checkRateLimit(`${clientAddress}:user-info`, 300, 60_000)) {
     return new Response(
       JSON.stringify({ error: "Too many requests" }),

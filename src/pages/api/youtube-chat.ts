@@ -20,7 +20,8 @@ setInterval(() => {
  * `session.signIn()` expects its own internal OAuth flow and it wouldn't let us use
  * the httpOnly cookie.
  */
-export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   if (!checkRateLimit(`${clientAddress}:youtube-chat`, 20, 60_000)) {
     return new Response(
       JSON.stringify({ error: "Too many requests" }),

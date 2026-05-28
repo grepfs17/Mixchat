@@ -125,36 +125,30 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
 
     // Emote tooltip
     useEffect(() => {
-        const handleEmoteHover = (e: Event) => {
+        const handlePointerMove = (e: PointerEvent) => {
             const target = e.target as HTMLElement;
-            if (e.type === 'mouseover') {
-                if (target.tagName === 'IMG' && target.classList.contains('chat-emote')) {
-                    const tooltipUrl = target.getAttribute('data-tooltip-url');
-                    const emoteName = target.getAttribute('data-emote-name') || 'Emote';
-                    const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
-                    if (tooltipUrl) {
-                        const rect = target.getBoundingClientRect();
-                        setEmoteTooltip({ url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top });
-                    }
+            if (target.tagName === 'IMG' && target.classList.contains('chat-emote')) {
+                const tooltipUrl = target.getAttribute('data-tooltip-url');
+                const emoteName = target.getAttribute('data-emote-name') || 'Emote';
+                const emoteSource = target.getAttribute('data-emote-source') || 'Twitch';
+                if (tooltipUrl) {
+                    const rect = target.getBoundingClientRect();
+                    setEmoteTooltip(prev => {
+                        if (prev && prev.url === tooltipUrl && prev.x === rect.left && prev.y === rect.top) return prev;
+                        return { url: tooltipUrl, name: emoteName, source: emoteSource, x: rect.left, y: rect.top };
+                    });
                 }
-            } else if (e.type === 'mouseout') {
-                if (target.classList.contains('chat-emote')) {
-                    const relatedTarget = (e as MouseEvent).relatedTarget as Node | null;
-                    if (!relatedTarget || !(relatedTarget as HTMLElement)?.closest?.('.chat-emote')) {
-                        setEmoteTooltip(null);
-                    }
-                }
+            } else {
+                setEmoteTooltip(null);
             }
         };
         const el = containerRef.current;
         if (el) {
-            el.addEventListener('mouseover', handleEmoteHover);
-            el.addEventListener('mouseout', handleEmoteHover);
+            el.addEventListener('pointermove', handlePointerMove);
         }
         return () => {
             if (el) {
-                el.removeEventListener('mouseover', handleEmoteHover);
-                el.removeEventListener('mouseout', handleEmoteHover);
+                el.removeEventListener('pointermove', handlePointerMove);
             }
         };
     }, []);

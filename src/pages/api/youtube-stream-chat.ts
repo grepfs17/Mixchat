@@ -483,7 +483,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
 }
 
 // SSE endpoint
-export const GET: APIRoute = async ({ url, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   if (!checkRateLimit(`${clientAddress}:youtube-stream-chat`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,

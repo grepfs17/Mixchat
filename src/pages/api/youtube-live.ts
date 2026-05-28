@@ -15,7 +15,8 @@ setInterval(() => {
 // Enable debug mode when `YT_DEBUG=1` or running in development
 const DEBUG_YT = process.env.YT_DEBUG === '1' || import.meta.env?.MODE === 'development';
 
-export const GET: APIRoute = async ({ url, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",

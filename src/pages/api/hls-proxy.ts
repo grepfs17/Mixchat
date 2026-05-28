@@ -7,7 +7,8 @@ import { YT_USER_AGENT } from "../../lib/constants";
 const ALLOWED_HOST_RE =
   /^(?:[a-z0-9-]+\.)*ttvnw\.net$|^(?:[a-z0-9-]+\.)*twitchsvc\.net$/;
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   // Require an active session — prevents open-proxy abuse.
   const twitchToken = cookies.get("twitch_token")?.value;
   const youtubeToken = cookies.get("youtube_token")?.value;

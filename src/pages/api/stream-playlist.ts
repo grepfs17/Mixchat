@@ -6,7 +6,8 @@ import { checkRateLimit } from "../../lib/rateLimit";
 // requests when no private client id is provided.
 const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
-export const GET: APIRoute = async ({ url, cookies, clientAddress }) => {
+export const GET: APIRoute = async ({ request, url, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
   // Require an active session — prevents open-proxy abuse of this endpoint.
   const twitchToken = cookies.get("twitch_token")?.value;
   const youtubeToken = cookies.get("youtube_token")?.value;
