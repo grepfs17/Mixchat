@@ -138,9 +138,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(function Uni
                     }
                 }
             } else if (e.type === 'mouseout') {
-                const relatedTarget = (e as MouseEvent).relatedTarget as Node | null;
-                if (!relatedTarget || !(relatedTarget as HTMLElement)?.closest?.('.chat-emote')) {
-                    setEmoteTooltip(null);
+                if (target.classList.contains('chat-emote')) {
+                    const relatedTarget = (e as MouseEvent).relatedTarget as Node | null;
+                    if (!relatedTarget || !(relatedTarget as HTMLElement)?.closest?.('.chat-emote')) {
+                        setEmoteTooltip(null);
+                    }
                 }
             }
         };
