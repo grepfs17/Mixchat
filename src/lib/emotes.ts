@@ -161,6 +161,7 @@ export function clearEmoteCache(): void {
   emotesTwitchGlobal = {};
   emotesTwitchByChannel = [];
   lastUserId = undefined;
+  parseCache.clear();
 }
 
 /**
@@ -850,7 +851,7 @@ function createEmoteImg(emoteUrl: string, emoteName: string, source: string = "T
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" loading="lazy" />`;
+  return `<img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
 }
 
 /**
@@ -867,7 +868,7 @@ function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string, source: st
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; cursor: pointer;" loading="lazy" /></span>`;
+  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; cursor: pointer;" /></span>`;
 }
 
 const parseCache = new Map<string, string>();

@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import type { ChatMessage } from '../../../lib/types';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
@@ -32,7 +33,7 @@ interface TwitchMessageItemProps {
     onScrollToMessage?: (id: string) => void;
 }
 
-export function TwitchMessageItem({
+function TwitchMessageItemBase({
     entry,
     index,
     entries,
@@ -238,3 +239,14 @@ export function TwitchMessageItem({
         </>
     );
 }
+
+export const TwitchMessageItem = memo(TwitchMessageItemBase, (prev, next) => {
+    return (
+        prev.entry === next.entry &&
+        prev.entry.msg.id === next.entry.msg.id &&
+        prev.isModerator === next.isModerator &&
+        prev.modModeActive === next.modModeActive &&
+        prev.compactActions === next.compactActions &&
+        prev.currentUserDisplayName === next.currentUserDisplayName
+    );
+});

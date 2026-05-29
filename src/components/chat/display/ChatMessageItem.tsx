@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { MdReply, MdContentCopy, MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from 'react-icons/md';
 import { parseMessageWithEmotes } from '../../../lib/emotes';
 import { getReadableUsernameColor } from '../../../lib/chatColors';
@@ -43,7 +43,7 @@ interface ChatMessageItemProps {
   onContextMenu: (e: React.MouseEvent, msg: ChatMessage) => void;
 }
 
-export default function ChatMessageItem({
+function ChatMessageItemBase({
   msg,
   index,
   filteredMessages,
@@ -280,3 +280,16 @@ export default function ChatMessageItem({
     </React.Fragment>
   );
 }
+
+const ChatMessageItem = memo(ChatMessageItemBase, (prev, next) => {
+  return (
+    prev.msg.id === next.msg.id &&
+    prev.msg === next.msg &&
+    prev.isModerator === next.isModerator &&
+    prev.modModeActive === next.modModeActive &&
+    prev.compactActions === next.compactActions &&
+    prev.currentUserDisplayName === next.currentUserDisplayName
+  );
+});
+
+export default ChatMessageItem;
