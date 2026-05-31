@@ -199,12 +199,12 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         </div>
         <h2 className="landing-beta-title">This app is in Beta</h2>
         <p className="landing-beta-description">
-          Mixchat is actively under development. You may encounter bugs, missing features, or breaking changes. Feedback and bug reports are welcome on the <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat/issues" target="_blank" rel="noopener noreferrer">issue tracker</a>.
+          Mixchat is actively under development. You may encounter bugs, missing features, or breaking changes. Feedback and bug reports are welcome on the <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat/issues" target="_blank" rel="noopener noreferrer">issue tracker</a>.
         </p>
       </section>
 
       <footer className="landing-footer">
-        <span>&copy; 2026 Mixchat by <a href="https://gitea.grepfs.xyz/grepfs17/Mixchat" target="_blank" rel="noopener noreferrer">grepfs17</a> &mdash; Licensed under <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a> &mdash; {DISPLAY_VERSION}</span>
+        <span>&copy; 2026 Mixchat by <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank" rel="noopener noreferrer">grepfs17</a> &mdash; Licensed under <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT</a> &mdash; {DISPLAY_VERSION}</span>
         <div className="landing-footer-links">
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
