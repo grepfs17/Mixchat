@@ -87,6 +87,24 @@ const RECONNECT_7TV_MIN = 5000;
 const RECONNECT_7TV_MAX = 300_000;
 
 /**
+ * Monotonic counter bumped every time one of the module-level emote maps is
+ * reassigned. It is mixed into the parseCache key so stale entries become
+ * unreachable as soon as a new source applies — no manual cache.clear() and
+ * no forced re-render are needed.
+ */
+let emoteMapVersion = 0;
+function bumpEmoteMapVersion(): void {
+  emoteMapVersion++;
+}
+
+/** Fire the 'emotes-reloaded' DOM event for UI listeners (EmoteMenu etc.). */
+function notifyEmotesReloaded(): void {
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    window.dispatchEvent(new Event("emotes-reloaded"));
+  }
+}
+
+/**
  * Get cached emotes if valid
  */
 function getCachedEmotes(cacheKey: string): EmoteMap | null {
@@ -165,6 +183,26 @@ export function clearEmoteCache(): void {
 }
 
 /**
+ * fetch() wrapper that aborts the request after `timeoutMs` so a hung upstream
+ * (e.g. 7TV/BTTV/FFZ returning a delayed 5xx) cannot stall callers. On abort
+ * the call rejects with a DOMException("aborted") which existing try/catch
+ * blocks already treat as a normal failure.
+ */
+async function fetchWithTimeout(
+  url: string,
+  timeoutMs: number = 8000,
+  init?: RequestInit,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Fetch 7TV global emotes
  */
 async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
@@ -180,7 +218,7 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
 
   try {
     console.log("Fetching 7TV global emotes from 7tv.io");
-    const response = await fetch("https://7tv.io/v3/emote-sets/global");
+    const response = await fetchWithTimeout("https://7tv.io/v3/emote-sets/global");
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -214,7 +252,7 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
 
   try {
     console.log(`[7TV] Fetching emotes for channelId: ${channelId}`);
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://7tv.io/v3/users/twitch/${channelId}?t=${Date.now()}`,
     );
     if (!response.ok) {
@@ -248,7 +286,7 @@ async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
         `[7TV] Emote set not embedded for ${channelId}, fetching set ${emoteSetIdToFetch} separately`,
       );
       try {
-        const setResponse = await fetch(
+        const setResponse = await fetchWithTimeout(
           `https://7tv.io/v3/emote-sets/${emoteSetIdToFetch}?t=${Date.now()}`,
         );
         if (setResponse.ok) {
@@ -302,7 +340,7 @@ async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
   if (cached) return cached;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       "https://api.betterttv.net/3/cached/emotes/global",
     );
     const data = await response.json();
@@ -330,7 +368,7 @@ async function fetchBTTVEmotes(channelId: string): Promise<EmoteMap> {
   if (cached) return cached;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://api.betterttv.net/3/cached/users/twitch/${channelId}`,
     );
     const data = await response.json();
@@ -367,7 +405,7 @@ async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   if (cached) return cached;
 
   try {
-    const response = await fetch("https://api.frankerfacez.com/v1/set/global");
+    const response = await fetchWithTimeout("https://api.frankerfacez.com/v1/set/global");
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -398,7 +436,7 @@ async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
   if (cached) return cached;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://api.frankerfacez.com/v1/room/${channelName}`,
     );
     const data = await response.json();
@@ -654,62 +692,72 @@ async function fetchUserEmotesByChannel(
 }
 
 /**
- * Initialize emotes for a given channel
+ * Initialize emotes for a given channel.
+ *
+ * Each provider (7TV, BTTV, FFZ, Twitch) is fetched and applied independently
+ * so a slow or failing API (e.g. 7TV returning 504s) cannot block the others.
+ * As soon as a source resolves, its module-level map is updated, the parseCache
+ * is invalidated via `bumpEmoteMapVersion`, and `emotes-reloaded` fires so the
+ * UI (EmoteMenu, MessageInput) refreshes. The returned promise still waits for
+ * every source to settle so callers (handleRefreshEmotes) can clear their
+ * loading indicator at the end.
  */
 export async function initializeEmotes(
   channelId: string,
   channelName: string,
   userId?: string,
 ): Promise<void> {
-  const [
-    stv7Global,
-    stv7Channel,
-    bttvGlobal,
-    bttvChannel,
-    ffzGlobal,
-    ffzChannel,
-    twitchGlobal,
-    twitchChannel,
-  ] = await Promise.all([
+  const stv7 = Promise.all([
     fetch7TVGlobalEmotes(),
     fetch7TVEmotes(channelId),
+  ]).then(([g, c]) => {
+    emotes7tv = { ...g, ...c };
+    bumpEmoteMapVersion();
+    notifyEmotesReloaded();
+  });
+
+  const bttv = Promise.all([
     fetchBTTVGlobalEmotes(),
     fetchBTTVEmotes(channelId),
+  ]).then(([g, c]) => {
+    emotesBttv = { ...g, ...c };
+    bumpEmoteMapVersion();
+    notifyEmotesReloaded();
+  });
+
+  const ffz = Promise.all([
     fetchFFZGlobalEmotes(),
     fetchFFZEmotes(channelName),
+  ]).then(([g, c]) => {
+    emotesFfz = { ...g, ...c };
+    bumpEmoteMapVersion();
+    notifyEmotesReloaded();
+  });
+
+  const twitch = Promise.all([
     fetchTwitchGlobalEmotes(),
     fetchTwitchChannelEmotes(channelId),
-  ]);
+  ]).then(async ([g, c]) => {
+    emotesTwitchGlobal = g;
+    emotesTwitch = { ...g, ...c };
 
-  emotes7tv = { ...stv7Global, ...stv7Channel };
-  emotesBttv = { ...bttvGlobal, ...bttvChannel };
-  emotesFfz = { ...ffzGlobal, ...ffzChannel };
-
-  emotesTwitchGlobal = twitchGlobal;
-
-  // Merge global + current channel into the flat map used for message parsing
-  emotesTwitch = { ...twitchGlobal, ...twitchChannel };
-
-  const effectiveUserId = userId || lastUserId;
-  if (effectiveUserId) {
-    lastUserId = effectiveUserId;
-    const channelGroups = await fetchUserEmotesByChannel(effectiveUserId);
-    emotesTwitchByChannel = channelGroups;
-    // Merge all subscription channel emotes into the parsing map
-    for (const group of channelGroups) {
-      Object.assign(emotesTwitch, group.emotes);
+    const effectiveUserId = userId || lastUserId;
+    if (effectiveUserId) {
+      lastUserId = effectiveUserId;
+      const channelGroups = await fetchUserEmotesByChannel(effectiveUserId);
+      emotesTwitchByChannel = channelGroups;
+      for (const group of channelGroups) {
+        Object.assign(emotesTwitch, group.emotes);
+      }
+    } else {
+      emotesTwitchByChannel = [];
     }
-  } else {
-    emotesTwitchByChannel = [];
-  }
 
-  // Dispatch a custom event to notify listeners that emotes have been reloaded
-  if (
-    typeof window !== "undefined" &&
-    typeof window.dispatchEvent === "function"
-  ) {
-    window.dispatchEvent(new Event("emotes-reloaded"));
-  }
+    bumpEmoteMapVersion();
+    notifyEmotesReloaded();
+  });
+
+  await Promise.allSettled([stv7, bttv, ffz, twitch]);
 }
 
 // Subscribe to real-time 7TV emote updates for the active channel.
@@ -884,8 +932,8 @@ export function parseMessageWithEmotes(
   twitchEmotes?: Record<string, string[]>,
 ): string {
   const cacheKey = twitchEmotes && Object.keys(twitchEmotes).length > 0
-    ? `${text}|${JSON.stringify(twitchEmotes)}`
-    : text;
+    ? `v${emoteMapVersion}|${text}|${JSON.stringify(twitchEmotes)}`
+    : `v${emoteMapVersion}|${text}`;
 
   const cached = parseCache.get(cacheKey);
   if (cached !== undefined) return cached;
