@@ -48,7 +48,7 @@ interface SplitChatProps {
   ) => void;
 
   // Twitch ChatDisplay
-  chatDisplayRef: RefObject<ChatDisplayHandle>;
+  chatDisplayRef: RefObject<ChatDisplayHandle | null>;
   messages: ChatMessage[];
   isLoading: boolean;
   selectedPlatforms: Platform[];

@@ -204,6 +204,7 @@ describe("Ignored Users", () => {
           twitchMessages={twitchMessages}
           ytMessages={ytMessages}
           ignoredUsers={["botuser"]}
+          channelName="test-channel"
         />,
       );
 

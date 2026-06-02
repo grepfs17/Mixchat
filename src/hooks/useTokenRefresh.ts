@@ -27,7 +27,7 @@ export const useTokenRefresh = (
     maxRetries = DEFAULT_MAX_RETRIES,
   } = options;
 
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const retryCountRef = useRef(0);
   const isRefreshingRef = useRef(false);
   const retryAfterRef = useRef(0); // epoch ms after which we may retry (429 backoff)
