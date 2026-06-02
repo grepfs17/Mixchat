@@ -888,7 +888,12 @@ function replaceSize(url: string): string {
   }
   return parts.join("/");
 }
-function createEmoteImg(emoteUrl: string, emoteName: string, source: string = "Twitch"): string {
+function createEmoteImg(
+  emoteUrl: string,
+  emoteName: string,
+  source: string = "Twitch",
+  gigantified: boolean = false,
+): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   // Convert any quality URL to 4x quality for tooltip (highest resolution)
   let highQualityUrl = emoteUrl;
@@ -899,7 +904,11 @@ function createEmoteImg(emoteUrl: string, emoteName: string, source: string = "T
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
+  // For the Gigantify power-up, render the highest-resolution source so the
+  // emote stays sharp at 7em; otherwise the 2x URL would look pixelated.
+  const src = gigantified ? highQualityUrl : emoteUrl;
+  const className = gigantified ? "chat-emote chat-emote--gigantified" : "chat-emote";
+  return `<img src="${src}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="${className}" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
 }
 
 /**
@@ -926,14 +935,19 @@ const MAX_PARSE_CACHE = 500;
  * Parse message text and replace emote codes with HTML image tags
  * @param text - The message text
  * @param twitchEmotes - Twitch emote data from message tags (emoteId -> positions array)
+ * @param opts - Render hints. `gigantified` true renders every emote in the
+ *   message at the "Gigantify an Emote" power-up size (Twitch, 100 bits).
  */
 export function parseMessageWithEmotes(
   text: string,
   twitchEmotes?: Record<string, string[]>,
+  opts?: { gigantified?: boolean },
 ): string {
-  const cacheKey = twitchEmotes && Object.keys(twitchEmotes).length > 0
-    ? `v${emoteMapVersion}|${text}|${JSON.stringify(twitchEmotes)}`
-    : `v${emoteMapVersion}|${text}`;
+  const gigantified = Boolean(opts?.gigantified);
+  const cacheKey =
+    twitchEmotes && Object.keys(twitchEmotes).length > 0
+      ? `v${emoteMapVersion}|g${gigantified ? 1 : 0}|${text}|${JSON.stringify(twitchEmotes)}`
+      : `v${emoteMapVersion}|g${gigantified ? 1 : 0}|${text}`;
 
   const cached = parseCache.get(cacheKey);
   if (cached !== undefined) return cached;
@@ -951,7 +965,7 @@ export function parseMessageWithEmotes(
         replacements.push({
           start,
           end: end + 1,
-          html: createEmoteImg(emoteUrl, emoteName, "Twitch"),
+          html: createEmoteImg(emoteUrl, emoteName, "Twitch", gigantified),
         });
       });
     });
@@ -1024,7 +1038,12 @@ function linkifyUrl(word: string): string {
 }
 
 /**
- * Parse third-party emotes and @mentions in text
+ * Parse third-party emotes and @mentions in text.
+ *
+ * NOTE: The Twitch "Gigantify an Emote" power-up only applies to Twitch
+ * emotes (those resolved through the IRC `emotes` tag in
+ * parseMessageWithEmotes). 7TV / BTTV / FFZ emotes and manually-typed
+ * Twitch emote names are always rendered at the standard 2em size here.
  */
 function parseThirdPartyEmotes(text: string): string {
   // Split by HTML tags to avoid breaking emote img tags

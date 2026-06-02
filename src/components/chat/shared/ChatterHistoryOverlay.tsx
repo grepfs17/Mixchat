@@ -263,7 +263,7 @@ export default function ChatterHistoryOverlay({
                                     )}
                                     <div
                                         className={`history-item-text ${msg.isDeleted ? 'deleted' : ''}`}
-                                        dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
+                                        dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes, { gigantified: msg.isGigantifiedEmote }) }}
                                     />
                                 </div>
                             </div>

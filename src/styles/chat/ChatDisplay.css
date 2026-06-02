@@ -457,6 +457,15 @@
   position: relative;
 }
 
+/* Twitch "Gigantify an Emote" power-up (100 bits). Renders the emote at the
+   same display size twitch.tv uses (~112px / 7em). The em keeps the rule
+   responsive to --chat-font-size; max-height caps it for large font users. */
+.chat-emote--gigantified {
+  height: 7em !important;
+  max-height: 112px;
+  width: auto;
+}
+
 .chat-emote-tooltip {
   position: fixed;
   background: rgba(0, 0, 0, 0.95);

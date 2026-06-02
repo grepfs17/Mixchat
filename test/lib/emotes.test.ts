@@ -105,4 +105,35 @@ describe('emotes lib', () => {
     expect(result).toContain('cdn.7tv.app/emote/zw');
     expect(result).toContain('cdn.7tv.app/emote/base');
   });
+
+  describe('Gigantify power-up (Twitch-only)', () => {
+    it('renders Twitch emotes with the gigantified class and 4x source when gigantified', () => {
+      const text = 'Kappa';
+      const twitchEmotes = { '25': ['0-4'] };
+      const result = parseMessageWithEmotes(text, twitchEmotes, { gigantified: true });
+      expect(result).toContain('class="chat-emote chat-emote--gigantified"');
+      // src is the 4x (highest) quality, not the default 2x
+      expect(result).toMatch(/src="https:\/\/static-cdn\.jtvnw\.net\/emoticons\/v2\/25\/default\/dark\/4\.0"/);
+    });
+
+    it('does not apply the gigantified class without the option', () => {
+      const text = 'Kappa';
+      const twitchEmotes = { '25': ['0-4'] };
+      const result = parseMessageWithEmotes(text, twitchEmotes);
+      expect(result).toContain('class="chat-emote"');
+      expect(result).not.toContain('chat-emote--gigantified');
+      // Default 2x source
+      expect(result).toContain('src="https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/2.0"');
+    });
+
+    it('cache key differentiates gigantified vs not (no stale HTML)', () => {
+      const text = 'Kappa';
+      const twitchEmotes = { '25': ['0-4'] };
+      const normal = parseMessageWithEmotes(text, twitchEmotes);
+      const giant = parseMessageWithEmotes(text, twitchEmotes, { gigantified: true });
+      expect(normal).not.toBe(giant);
+      expect(normal).not.toContain('chat-emote--gigantified');
+      expect(giant).toContain('chat-emote--gigantified');
+    });
+  });
 });

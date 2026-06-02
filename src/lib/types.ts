@@ -58,6 +58,8 @@ export interface ChatMessage {
   sourceChannelLogin?: string;
   /** Twitch Shared Chat: the originating channel's profile image URL */
   sourceChannelAvatar?: string;
+  /** True when Twitch's "Gigantify an Emote" power-up (100 bits) was used on this message. */
+  isGigantifiedEmote?: boolean;
 }
 
 export interface PlatformSession {

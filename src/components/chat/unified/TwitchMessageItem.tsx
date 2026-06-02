@@ -145,7 +145,7 @@ function TwitchMessageItemBase({
                     <span className="message-separator">:</span>
                     <span
                         className="message-text"
-                        dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes) }}
+                        dangerouslySetInnerHTML={{ __html: parseMessageWithEmotes(msg.content, msg.emotes, { gigantified: msg.isGigantifiedEmote }) }}
                     />
                     {!compactActions && (!msg.messageType || msg.messageType === 'chat' || ((msg.messageType === 'timeout' || msg.messageType === 'ban') && isModerator && msg.targetUsername)) && (
                         <div className="message-actions">

@@ -607,6 +607,11 @@ export function useTwitchChat(
       const rawTags = (msg as any).tags as Map<string, string> | undefined;
       const sourceRoomId: string | undefined =
         rawTags?.get("source-room-id") || undefined;
+      // Twitch Power-up: "Gigantify an Emote" (100 bits). The msg-id tag is
+      // "gigantified-emote-message" on a regular PRIVMSG. Twurple 8.1.4 does
+      // not expose a typed accessor for this, so we read the raw tag.
+      const isGigantifiedEmote =
+        rawTags?.get("msg-id") === "gigantified-emote-message";
       // NOTE: Twitch IRC does NOT send a reward title/cost tag — only the reward
       // ID is present. We resolve the info from the cache populated by getRewardInfo.
       const cachedRewardInfo =
@@ -654,6 +659,7 @@ export function useTwitchChat(
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
+        isGigantifiedEmote,
       };
 
       // Resolve author avatar + source channel info asynchronously.
