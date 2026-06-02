@@ -17,7 +17,7 @@ import { useEffect, useRef } from "react";
 import { resolveBroadcasterId } from "../lib/twitch";
 import type { ChatMessage } from "../lib/types";
 
-export interface RedemptionEvent {
+interface RedemptionEvent {
   /** EventSub redemption ID (unique per redemption) */
   id: string;
   userId: string;

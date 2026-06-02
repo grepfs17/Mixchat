@@ -69,7 +69,7 @@ export function getWatchedStreamers(): StreamerToWatch[] {
 /**
  * Save watched streamers to localStorage
  */
-export function saveWatchedStreamers(streamers: StreamerToWatch[]): void {
+function saveWatchedStreamers(streamers: StreamerToWatch[]): void {
   localStorage.setItem("mixchat_watched_streamers", JSON.stringify(streamers));
 }
 

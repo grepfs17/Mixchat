@@ -1,7 +1,7 @@
 import type { ChatTheme } from "../lib/types";
 import { setThemeBackgroundColor } from "./chatColors";
 
-export interface ThemeColors {
+interface ThemeColors {
   "--color-bg-primary": string;
   "--color-bg-secondary": string;
   "--color-bg-tertiary": string;
@@ -41,7 +41,7 @@ export interface ThemeColors {
   "--shadow-glow-indigo": string;
 }
 
-export const THEME_COLORS: Record<
+const THEME_COLORS: Record<
   Exclude<ChatTheme, "default">,
   ThemeColors
 > = {

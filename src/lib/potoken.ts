@@ -202,7 +202,7 @@ export function invalidatePoToken(): void {
   generationPromise = null;
 }
 
-export function hasValidPoToken(): boolean {
+function hasValidPoToken(): boolean {
   return (
     cachedToken != null &&
     Date.now() < cachedToken.generatedAt + cachedToken.ttlMs

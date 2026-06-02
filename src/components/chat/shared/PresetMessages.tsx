@@ -13,7 +13,7 @@ import { isMobileDevice } from "../../../lib/device";
 
 const STORAGE_KEY = "mixchat_preset_messages";
 
-export interface PresetMessage {
+interface PresetMessage {
   id: string;
   name: string;
   content: string;
@@ -23,7 +23,7 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-export function getPresetMessages(): PresetMessage[] {
+function getPresetMessages(): PresetMessage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];

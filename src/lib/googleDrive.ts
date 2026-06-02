@@ -7,13 +7,13 @@
 const DRIVE_FILE_NAME = "mixchat-settings.json";
 const MIME_TYPE = "application/json";
 
-export interface DriveSaveResult {
+interface DriveSaveResult {
   fileId: string;
   webViewLink?: string;
   webContentLink?: string;
 }
 
-export interface DriveLoadResult {
+interface DriveLoadResult {
   settings: Record<string, string>;
   exportedAt: string;
   version: number;
@@ -140,7 +140,7 @@ async function findSettingsFile(): Promise<string | null> {
  * Check if the user has Google Drive access (i.e., has a YouTube/Google session
  * with the drive.file scope).
  */
-export async function checkDriveAccess(): Promise<boolean> {
+async function checkDriveAccess(): Promise<boolean> {
   try {
     const res = await fetch("/api/gdrive", {
       method: "POST",

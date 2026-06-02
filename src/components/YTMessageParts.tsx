@@ -1,6 +1,6 @@
 import React from "react";
 
-export interface MessagePart {
+interface MessagePart {
   type: "text" | "emoji";
   text?: string;
   url?: string;

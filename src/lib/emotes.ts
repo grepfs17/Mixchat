@@ -1248,7 +1248,7 @@ export function getDisabledEmotes(): Set<string> {
   }
 }
 
-export function isEmoteDisabled(name: string): boolean {
+function isEmoteDisabled(name: string): boolean {
   return getDisabledEmotes().has(name);
 }
 

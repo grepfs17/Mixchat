@@ -73,7 +73,6 @@ export {
   markProxyOk,
   YT_PROXIES,
   PROXY_MAX_FAILS,
-  PROXY_COOLDOWN_MS,
 };
 
 const LIVE_CHAT_POLL_MIN_MS = parseInt(
@@ -95,15 +94,6 @@ function getThrottleKey(urlStr: string): string | null {
 
 function getThrottleInterval(key: string): number {
   return key === "live_chat" ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
-}
-
-export function _resetThrottle(key?: string): void {
-  if (key) {
-    delete throttleTimestamps[key];
-  } else {
-    for (const k of Object.keys(throttleTimestamps))
-      delete throttleTimestamps[k];
-  }
 }
 
 export async function getInnertube() {

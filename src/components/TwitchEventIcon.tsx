@@ -63,9 +63,6 @@ export const EVENT_CONFIG: Record<
 
 interface TwitchEventLabelProps {
   messageType?: string;
-  /** Optional: no longer used internally; kept for API compatibility */
-  rewardTitle?: string;
-  size?: number;
 }
 
 /**

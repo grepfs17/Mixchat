@@ -168,10 +168,7 @@ function ChatMessageItemBase({
             </span>
           </div>
         )}
-        <TwitchEventIcon
-          messageType={msg.messageType}
-          rewardTitle={msg.rewardTitle}
-        />
+        <TwitchEventIcon messageType={msg.messageType} />
         <div className="message-single-line">
           <span className="timestamp">
             {msg.timestamp.toLocaleTimeString()}

@@ -174,7 +174,7 @@ export async function loadEventSounds(): Promise<Record<
 }
 
 /** Remove all persisted event sounds. */
-export async function clearEventSounds(): Promise<void> {
+async function clearEventSounds(): Promise<void> {
   if (!isIDBAvailable()) {
     localStorage.removeItem("mixchat_event_sounds");
     return;
