@@ -200,9 +200,6 @@
     max-width: 280px;
 }
 
-.stream-info-category-edit {
-}
-
 .stream-info-category-dropdown {
     min-width: 200px;
     max-height: 200px;
@@ -1036,11 +1033,6 @@
     pointer-events: none;
 }
 
-/* Split Chat: alternate odd/even subtle background without adding spacing */
-.messages-container.split-chat {
-    /* intentionally keep default container padding/gap to avoid extra spacing */
-}
-
 .messages-container.split-chat
     .message.odd:not(.deleted):not(.bot):not(.mention):not(.redemption):not(
         .highlight
@@ -1061,10 +1053,6 @@
 
 .messages-container.split-chat .message:hover {
     background-color: var(--color-bg-message-hover);
-}
-
-.unified-messages-container.split-chat {
-    /* no extra padding or gap */
 }
 
 .unified-messages-container.split-chat
