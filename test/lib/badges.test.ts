@@ -26,37 +26,39 @@ const mockBadgeSet = (id: string, versions: any[]) => ({
 
 vi.mock("@twurple/api", () => {
   return {
-    ApiClient: vi.fn().mockImplementation(() => ({
-      chat: {
-        getGlobalBadges: vi
-          .fn()
-          .mockResolvedValue([
-            mockBadgeSet("moderator", [
-              { id: "1", title: "Mod", description: "Moderator" },
+    ApiClient: vi.fn().mockImplementation(function () {
+      return {
+        chat: {
+          getGlobalBadges: vi
+            .fn()
+            .mockResolvedValue([
+              mockBadgeSet("moderator", [
+                { id: "1", title: "Mod", description: "Moderator" },
+              ]),
+              mockBadgeSet("subscriber", [
+                { id: "0", title: "Sub", description: "Subscriber" },
+              ]),
             ]),
-            mockBadgeSet("subscriber", [
-              { id: "0", title: "Sub", description: "Subscriber" },
+          getChannelBadges: vi
+            .fn()
+            .mockResolvedValue([
+              mockBadgeSet("subscriber", [
+                {
+                  id: "12",
+                  title: "12-Month Sub",
+                  description: "1 Year Subscriber",
+                },
+              ]),
+              mockBadgeSet("custom-badge", [
+                { id: "1", title: "VIP+", description: "Special VIP" },
+              ]),
             ]),
-          ]),
-        getChannelBadges: vi
-          .fn()
-          .mockResolvedValue([
-            mockBadgeSet("subscriber", [
-              {
-                id: "12",
-                title: "12-Month Sub",
-                description: "1 Year Subscriber",
-              },
-            ]),
-            mockBadgeSet("custom-badge", [
-              { id: "1", title: "VIP+", description: "Special VIP" },
-            ]),
-          ]),
-      },
-      users: {
-        getUserByName: vi.fn().mockResolvedValue({ id: "123" }),
-      },
-    })),
+        },
+        users: {
+          getUserByName: vi.fn().mockResolvedValue({ id: "123" }),
+        },
+      };
+    }),
   };
 });
 

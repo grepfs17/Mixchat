@@ -36,8 +36,8 @@
     "@types/react-dom": "^19.2.3",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
-    "pm2": "^6.0.14",
-    "typescript": "^5.9.3",
-    "vitest": "^1.6.1"
+    "pm2": "^7.0.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
