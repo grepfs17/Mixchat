@@ -3,7 +3,10 @@ import { checkRateLimit } from "../../lib/rateLimit";
 import { googleFetch } from "../../lib/google";
 
 // Simple in-memory cache for videoId -> liveChatId to reduce repeated Data API calls.
-const liveChatIdCache = new Map<string, { liveChatId: string | null; expires: number }>();
+const liveChatIdCache = new Map<
+  string,
+  { liveChatId: string | null; expires: number }
+>();
 const inflightVideos = new Map<string, Promise<string | null>>();
 
 setInterval(() => {
@@ -21,12 +24,15 @@ setInterval(() => {
  * the httpOnly cookie.
  */
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const clientAddress =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   if (!checkRateLimit(`${clientAddress}:youtube-chat`, 20, 60_000)) {
-    return new Response(
-      JSON.stringify({ error: "Too many requests" }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
-    );
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    });
   }
 
   const headers = { "Content-Type": "application/json" };
@@ -48,10 +54,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Read the access token from the httpOnly cookie
     const accessToken = cookies.get("youtube_token")?.value;
     if (!accessToken) {
-      return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
-        { status: 401, headers },
-      );
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers,
+      });
     }
 
     // Step 1: Resolve the liveChatId for this video via the Data API.
@@ -60,7 +66,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const cached = liveChatIdCache.get(videoId);
     if (cached && cached.expires > now) {
       liveChatId = cached.liveChatId;
-      console.debug('[YouTube Chat] Using cached liveChatId for', videoId, liveChatId);
+      console.debug(
+        "[YouTube Chat] Using cached liveChatId for",
+        videoId,
+        liveChatId,
+      );
     } else {
       if (inflightVideos.has(videoId)) {
         const p = inflightVideos.get(videoId);
@@ -76,23 +86,32 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             const data = await googleFetch(
               `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${encodeURIComponent(videoId)}`,
               { headers: { Authorization: `Bearer ${accessToken}` } },
-              { action: 'videos.list', videoId },
+              { action: "videos.list", videoId },
             );
             const items = data?.items;
             if (items && items.length > 0) {
               const chatId = items[0]?.liveStreamingDetails?.activeLiveChatId;
               if (chatId) {
                 const ttl = 300_000;
-                liveChatIdCache.set(videoId, { liveChatId: chatId, expires: Date.now() + ttl });
+                liveChatIdCache.set(videoId, {
+                  liveChatId: chatId,
+                  expires: Date.now() + ttl,
+                });
                 return chatId;
               }
             }
-            console.warn('[YouTube Chat] No liveChatId via Data API for', videoId);
+            console.warn(
+              "[YouTube Chat] No liveChatId via Data API for",
+              videoId,
+            );
           } catch (e) {
-            console.error('[YouTube Chat] Data API videos.list failed:', e);
+            console.error("[YouTube Chat] Data API videos.list failed:", e);
           }
 
-          liveChatIdCache.set(videoId, { liveChatId: null, expires: Date.now() + 60_000 });
+          liveChatIdCache.set(videoId, {
+            liveChatId: null,
+            expires: Date.now() + 60_000,
+          });
           return null;
         })();
         inflightVideos.set(videoId, p);
@@ -106,7 +125,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (!liveChatId) {
       return new Response(
-        JSON.stringify({ error: "This video does not have an active live chat" }),
+        JSON.stringify({
+          error: "This video does not have an active live chat",
+        }),
         { status: 400, headers },
       );
     }
@@ -131,7 +152,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             },
           }),
         },
-        { action: 'liveChatMessages.insert', videoId, liveChatId },
+        { action: "liveChatMessages.insert", videoId, liveChatId },
       );
     } catch (e: any) {
       const status = e?.status || 500;
@@ -141,13 +162,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       // request resolves a fresh ID instead of retrying with a stale one.
       if (status === 404 || status === 400) {
         liveChatIdCache.delete(videoId);
-        console.warn(`[YouTube Chat] Invalidated liveChatId cache for ${videoId} due to ${status}`);
+        console.warn(
+          `[YouTube Chat] Invalidated liveChatId cache for ${videoId} due to ${status}`,
+        );
       }
 
       return new Response(
         JSON.stringify({
           error: `Failed to send message: ${status}`,
-          details: import.meta.env.MODE === "development" ? e?.body ?? String(e) : undefined,
+          details:
+            import.meta.env.MODE === "development"
+              ? (e?.body ?? String(e))
+              : undefined,
         }),
         { status, headers },
       );
@@ -158,8 +184,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error("youtube-chat API error:", {
       message: errorMessage,

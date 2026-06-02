@@ -1,5 +1,5 @@
-import { getInnertube } from './youtube';
-import { YT_USER_AGENT } from './constants';
+import { getInnertube } from "./youtube";
+import { YT_USER_AGENT } from "./constants";
 
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
 const HANDLE_RE = /^@[\w.]{1,100}$/;
@@ -9,7 +9,10 @@ const DEFAULT_TTL = 30_000;
 
 type LookupResult = { videoId: string | null; channelId: string };
 
-const channelLiveCache = new Map<string, { videoId: string | null; channelId: string; expires: number }>();
+const channelLiveCache = new Map<
+  string,
+  { videoId: string | null; channelId: string; expires: number }
+>();
 const inflightLiveLookup = new Map<string, Promise<LookupResult>>();
 
 setInterval(() => {
@@ -22,9 +25,11 @@ setInterval(() => {
 function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
   try {
     const parsed = new URL(channelUrlParam);
-    let candidate = (parsed.pathname || '').replace(/^\/+/, '');
-    if (candidate.startsWith('channel/')) candidate = candidate.split('/')[1] || candidate;
-    if (candidate.startsWith('user/')) candidate = candidate.split('/')[1] || candidate;
+    let candidate = (parsed.pathname || "").replace(/^\/+/, "");
+    if (candidate.startsWith("channel/"))
+      candidate = candidate.split("/")[1] || candidate;
+    if (candidate.startsWith("user/"))
+      candidate = candidate.split("/")[1] || candidate;
     return candidate || null;
   } catch {
     return null;
@@ -32,37 +37,52 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
 }
 
 const USER_AGENT = YT_USER_AGENT;
-const REFERER = 'https://www.youtube.com/';
-const ORIGIN = 'https://www.youtube.com';
+const REFERER = "https://www.youtube.com/";
+const ORIGIN = "https://www.youtube.com";
 
 function buildFetchHeaders(cookies?: string): HeadersInit {
   return {
-    'User-Agent': USER_AGENT,
-    'Referer': REFERER,
-    'Origin': ORIGIN,
-    'Accept-Language': 'en-US,en;q=0.9',
-    ...(cookies ? { 'Cookie': cookies } : {}),
+    "User-Agent": USER_AGENT,
+    Referer: REFERER,
+    Origin: ORIGIN,
+    "Accept-Language": "en-US,en;q=0.9",
+    ...(cookies ? { Cookie: cookies } : {}),
   };
 }
 
 const VIDEO_ID_RE = /^[\w-]{11}$/;
 
-function extractVideoIdFromHtml(html: string, requireLive = false): string | null {
+function extractVideoIdFromHtml(
+  html: string,
+  requireLive = false,
+): string | null {
   // 1. <link rel="canonical" href="...watch?v=VIDEO_ID">
-  const canonicalMatch = html.match(/<link\s+rel="canonical"\s+href="[^"]*watch\?v=([\w-]{11})/);
+  const canonicalMatch = html.match(
+    /<link\s+rel="canonical"\s+href="[^"]*watch\?v=([\w-]{11})/,
+  );
   if (canonicalMatch) {
     if (!requireLive) return canonicalMatch[1];
     // Only accept if page explicitly indicates this is a live stream
-    if (/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(html)) {
+    if (
+      /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(
+        html,
+      )
+    ) {
       return canonicalMatch[1];
     }
   }
 
   // 2. og:video:url meta tag
-  const ogMatch = html.match(/property="og:video:url"\s+content="[^"]*watch\?v=([\w-]{11})/);
+  const ogMatch = html.match(
+    /property="og:video:url"\s+content="[^"]*watch\?v=([\w-]{11})/,
+  );
   if (ogMatch) {
     if (!requireLive) return ogMatch[1];
-    if (/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(html)) {
+    if (
+      /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(
+        html,
+      )
+    ) {
       return ogMatch[1];
     }
   }
@@ -73,8 +93,8 @@ function extractVideoIdFromHtml(html: string, requireLive = false): string | nul
     const start = (ytiprMatch.index ?? 0) + ytiprMatch[0].length - 1;
     let depth = 0;
     for (let i = start; i < html.length; i++) {
-      if (html[i] === '{') depth++;
-      else if (html[i] === '}') {
+      if (html[i] === "{") depth++;
+      else if (html[i] === "}") {
         depth--;
         if (depth === 0) {
           try {
@@ -83,12 +103,13 @@ function extractVideoIdFromHtml(html: string, requireLive = false): string | nul
             if (vid && VIDEO_ID_RE.test(vid)) {
               if (!requireLive) return vid;
               // Check if videoDetails marks this as live
-              const isLive = json?.videoDetails?.isLive === true ||
+              const isLive =
+                json?.videoDetails?.isLive === true ||
                 json?.videoDetails?.isLiveContent === true ||
                 json?.videoDetails?.liveBroadcastDetails?.isLiveNow === true;
               if (isLive) return vid;
             }
-          } catch { }
+          } catch {}
           break;
         }
       }
@@ -98,14 +119,16 @@ function extractVideoIdFromHtml(html: string, requireLive = false): string | nul
   // 4. "videoId":"VIDEO_ID" in ytInitialData — prefer videoIds near live indicators
   const vidMatches = html.matchAll(/"videoId"\s*:\s*"([\w-]{11})"/g);
   const seen = new Set<string>();
-  const liveIndicators = html.matchAll(/"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi);
-  const livePositions = [...liveIndicators].map(m => m.index ?? 0);
+  const liveIndicators = html.matchAll(
+    /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi,
+  );
+  const livePositions = [...liveIndicators].map((m) => m.index ?? 0);
   for (const m of vidMatches) {
     if (!seen.has(m[1])) {
       seen.add(m[1]);
       if (livePositions.length > 0) {
         const pos = m.index ?? 0;
-        const nearby = livePositions.some(lp => Math.abs(lp - pos) < 5000);
+        const nearby = livePositions.some((lp) => Math.abs(lp - pos) < 5000);
         if (nearby) return m[1];
       }
     }
@@ -120,18 +143,24 @@ function extractVideoIdFromHtml(html: string, requireLive = false): string | nul
   return null;
 }
 
-async function redirectFallbackLive(channelParam: string): Promise<string | null> {
+async function redirectFallbackLive(
+  channelParam: string,
+): Promise<string | null> {
   try {
     const candidates: string[] = [];
     const isFullUrl = YT_URL_RE.test(channelParam);
     if (isFullUrl) {
-      candidates.push(channelParam.replace(/\/$/, '') + '/live');
-    } else if (channelParam.startsWith('@')) {
-      candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, '')}/live`);
+      candidates.push(channelParam.replace(/\/$/, "") + "/live");
+    } else if (channelParam.startsWith("@")) {
+      candidates.push(
+        `https://www.youtube.com/${channelParam.replace(/^\/+/, "")}/live`,
+      );
     } else if (CHANNEL_ID_RE.test(channelParam)) {
       candidates.push(`https://www.youtube.com/channel/${channelParam}/live`);
     } else {
-      candidates.push(`https://www.youtube.com/${channelParam.replace(/^\/+/, '')}/live`);
+      candidates.push(
+        `https://www.youtube.com/${channelParam.replace(/^\/+/, "")}/live`,
+      );
     }
 
     const doFetch = fetch;
@@ -139,13 +168,17 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
 
     for (const candidate of candidates) {
       try {
-        const res = await doFetch(candidate, { method: 'GET', redirect: 'follow', headers });
+        const res = await doFetch(candidate, {
+          method: "GET",
+          redirect: "follow",
+          headers,
+        });
 
         // Check redirect URL first (works if YouTube does a real HTTP redirect)
-        const finalUrl = res.url || '';
-        if (finalUrl.includes('watch?v=')) {
+        const finalUrl = res.url || "";
+        if (finalUrl.includes("watch?v=")) {
           const parsed = new URL(finalUrl);
-          const vid = parsed.searchParams.get('v');
+          const vid = parsed.searchParams.get("v");
           // Only accept if the page indicates this is currently live
           if (vid && res.ok) {
             const html = await res.text();
@@ -164,7 +197,7 @@ async function redirectFallbackLive(channelParam: string): Promise<string | null
         continue;
       }
     }
-  } catch (err) { }
+  } catch (err) {}
   return null;
 }
 
@@ -172,14 +205,28 @@ function isActuallyLive(video: any): boolean {
   if (!video) return false;
   if (video.is_live === true) return true;
   const badges: any[] = video.badges ?? [];
-  if (badges.some((b: any) => b?.metadataBadgeRenderer?.label === 'LIVE' || b?.liveBadge != null)) return true;
+  if (
+    badges.some(
+      (b: any) =>
+        b?.metadataBadgeRenderer?.label === "LIVE" || b?.liveBadge != null,
+    )
+  )
+    return true;
   const overlays: any[] = video.thumbnailOverlays ?? [];
-  if (overlays.some((o: any) => o?.thumbnailOverlayTimeStatusRenderer?.style === 'LIVE')) return true;
+  if (
+    overlays.some(
+      (o: any) => o?.thumbnailOverlayTimeStatusRenderer?.style === "LIVE",
+    )
+  )
+    return true;
   return false;
 }
 
-export async function resolveChannelId(channelParam: string, yt?: any): Promise<string | null> {
-  const trimmed = (channelParam || '').trim();
+export async function resolveChannelId(
+  channelParam: string,
+  yt?: any,
+): Promise<string | null> {
+  const trimmed = (channelParam || "").trim();
   if (!trimmed) return null;
 
   // If it's already a canonical channel ID, return it immediately
@@ -194,7 +241,7 @@ export async function resolveChannelId(channelParam: string, yt?: any): Promise<
       let url = trimmed;
       if (isHandle) {
         url = `https://www.youtube.com/${trimmed}`;
-      } else if (!isFullUrl && !trimmed.includes('/')) {
+      } else if (!isFullUrl && !trimmed.includes("/")) {
         // Might be a legacy /user/ path or just a custom name
         url = `https://www.youtube.com/${trimmed}`;
       }
@@ -219,14 +266,19 @@ export async function resolveChannelId(channelParam: string, yt?: any): Promise<
 
 export function isValidYouTubeParam(param: string | null | undefined): boolean {
   if (!param) return false;
-  return YT_URL_RE.test(param) || CHANNEL_ID_RE.test(param) || HANDLE_RE.test(param);
+  return (
+    YT_URL_RE.test(param) || CHANNEL_ID_RE.test(param) || HANDLE_RE.test(param)
+  );
 }
 
-export async function findLiveForChannel(channelParam: string, options?: { yt?: any; ttl?: number; debug?: boolean }): Promise<LookupResult> {
-  const trimmedParam = (channelParam || '').trim();
-  if (!trimmedParam) return { videoId: null, channelId: '' };
+export async function findLiveForChannel(
+  channelParam: string,
+  options?: { yt?: any; ttl?: number; debug?: boolean },
+): Promise<LookupResult> {
+  const trimmedParam = (channelParam || "").trim();
+  if (!trimmedParam) return { videoId: null, channelId: "" };
 
-  const debug = options?.debug ?? (process.env.YT_DEBUG === '1');
+  const debug = options?.debug ?? process.env.YT_DEBUG === "1";
   const ttl = options?.ttl ?? DEFAULT_TTL;
   const paramKey = `param:${trimmedParam}`;
   const now = Date.now();
@@ -237,7 +289,8 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     return { videoId: cached.videoId, channelId: cached.channelId };
   }
 
-  if (inflightLiveLookup.has(paramKey)) return inflightLiveLookup.get(paramKey)!;
+  if (inflightLiveLookup.has(paramKey))
+    return inflightLiveLookup.get(paramKey)!;
 
   const lookup = (async (): Promise<LookupResult> => {
     // Ensure we have an Innertube client for the richer lookups
@@ -245,7 +298,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     try {
       if (!ytClient) ytClient = await getInnertube();
     } catch (err) {
-      if (debug) console.warn('[YouTube Lookup] getInnertube failed', err);
+      if (debug) console.warn("[YouTube Lookup] getInnertube failed", err);
       ytClient = null;
     }
 
@@ -253,29 +306,40 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
     let resolvedChannelId: string | null = null;
     try {
       resolvedChannelId = await resolveChannelId(trimmedParam, ytClient);
-      if (debug) console.log(`[YouTube Lookup] resolveChannelId("${trimmedParam}") → "${resolvedChannelId}"`);
+      if (debug)
+        console.log(
+          `[YouTube Lookup] resolveChannelId("${trimmedParam}") → "${resolvedChannelId}"`,
+        );
     } catch (e) {
-      if (debug) console.warn('[YouTube Lookup] resolveChannelId failed', e);
+      if (debug) console.warn("[YouTube Lookup] resolveChannelId failed", e);
     }
 
     const idKey = resolvedChannelId ? `id:${resolvedChannelId}` : null;
     if (idKey) {
       const cachedById = channelLiveCache.get(idKey);
-      if (cachedById && cachedById.expires > Date.now()) return { videoId: cachedById.videoId, channelId: cachedById.channelId };
+      if (cachedById && cachedById.expires > Date.now())
+        return { videoId: cachedById.videoId, channelId: cachedById.channelId };
       if (inflightLiveLookup.has(idKey)) return inflightLiveLookup.get(idKey)!;
     }
 
     let channel: any = null;
     let videoId: string | null = null;
-    let finalChannelId = resolvedChannelId || '';
+    let finalChannelId = resolvedChannelId || "";
 
     if (ytClient && (resolvedChannelId || trimmedParam)) {
       const targetId = resolvedChannelId || trimmedParam;
       try {
         channel = await ytClient.getChannel(targetId);
-        if (debug) console.log(`[YouTube Lookup] getChannel("${targetId}") OK — id=${channel?.basic_info?.id ?? 'unknown'}`);
+        if (debug)
+          console.log(
+            `[YouTube Lookup] getChannel("${targetId}") OK — id=${channel?.basic_info?.id ?? "unknown"}`,
+          );
       } catch (chErr) {
-        if (debug) console.warn(`[YouTube Lookup] getChannel failed for "${targetId}" (source: "${trimmedParam}")`, chErr);
+        if (debug)
+          console.warn(
+            `[YouTube Lookup] getChannel failed for "${targetId}" (source: "${trimmedParam}")`,
+            chErr,
+          );
         channel = null;
       }
     }
@@ -284,14 +348,21 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
       try {
         const liveStreams = await (channel as any).getLiveStreams();
         const videos: any[] = liveStreams?.videos ?? [];
-        if (debug) console.log(`[YouTube Lookup] getLiveStreams() → ${videos.length} videos`);
+        if (debug)
+          console.log(
+            `[YouTube Lookup] getLiveStreams() → ${videos.length} videos`,
+          );
         const liveVideo = videos.find((v: any) => isActuallyLive(v));
         if (liveVideo) {
           videoId = liveVideo.id ?? liveVideo.videoId ?? null;
-          if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${videoId}`);
+          if (debug)
+            console.log(
+              `[YouTube Lookup] Found live video in liveStreams: ${videoId}`,
+            );
         }
       } catch (lsErr) {
-        if (debug) console.warn('[YouTube Lookup] getLiveStreams failed:', lsErr);
+        if (debug)
+          console.warn("[YouTube Lookup] getLiveStreams failed:", lsErr);
       }
 
       if (!videoId) {
@@ -303,7 +374,8 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
             videoId = liveVideo.id ?? liveVideo.videoId ?? null;
           }
         } catch (videosError) {
-          if (debug) console.warn('[YouTube Lookup] getVideos failed:', videosError);
+          if (debug)
+            console.warn("[YouTube Lookup] getVideos failed:", videosError);
         }
       }
 
@@ -312,7 +384,7 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
           const home = await (channel as any).getHome();
 
           function findLiveInTree(node: any, depth = 0): string | null {
-            if (!node || typeof node !== 'object' || depth > 8) return null;
+            if (!node || typeof node !== "object" || depth > 8) return null;
             if (Array.isArray(node)) {
               for (const item of node) {
                 const found = findLiveInTree(item, depth + 1);
@@ -323,11 +395,17 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
             const vr = node.videoRenderer;
             if (vr) {
               const vid = vr.videoId as string | undefined;
-              if (vid && (
-                vr.isLiveContent === true ||
-                (vr.badges ?? []).some((b: any) => b?.metadataBadgeRenderer?.label === 'LIVE') ||
-                (vr.thumbnailOverlays ?? []).some((o: any) => o?.thumbnailOverlayTimeStatusRenderer?.style === 'LIVE')
-              )) {
+              if (
+                vid &&
+                (vr.isLiveContent === true ||
+                  (vr.badges ?? []).some(
+                    (b: any) => b?.metadataBadgeRenderer?.label === "LIVE",
+                  ) ||
+                  (vr.thumbnailOverlays ?? []).some(
+                    (o: any) =>
+                      o?.thumbnailOverlayTimeStatusRenderer?.style === "LIVE",
+                  ))
+              ) {
                 return vid;
               }
             }
@@ -341,47 +419,76 @@ export async function findLiveForChannel(channelParam: string, options?: { yt?: 
           const found = findLiveInTree(home?.contents);
           if (found) videoId = found;
         } catch (homeError) {
-          if (debug) console.warn('[YouTube Lookup] Failed to check home feed:', homeError);
+          if (debug)
+            console.warn(
+              "[YouTube Lookup] Failed to check home feed:",
+              homeError,
+            );
         }
       }
 
-      finalChannelId = finalChannelId || ((channel as any).basic_info?.id || (channel as any).header?.author?.id || '');
+      finalChannelId =
+        finalChannelId ||
+        (channel as any).basic_info?.id ||
+        (channel as any).header?.author?.id ||
+        "";
     }
 
     // Redirect fallback — fetch the /live page directly (not through Innertube)
     // to extract the video ID from HTML/redirects.
     if (!videoId) {
       try {
-        if (debug) console.log(`[YouTube Lookup] Trying redirect fallback for "${trimmedParam}"`);
+        if (debug)
+          console.log(
+            `[YouTube Lookup] Trying redirect fallback for "${trimmedParam}"`,
+          );
         const redirectVid = await redirectFallbackLive(trimmedParam);
         if (redirectVid) {
           videoId = redirectVid;
-          if (debug) console.log(`[YouTube Lookup] Redirect fallback found: ${videoId}`);
+          if (debug)
+            console.log(`[YouTube Lookup] Redirect fallback found: ${videoId}`);
         } else {
-          if (debug) console.log('[YouTube Lookup] Redirect fallback found no live video');
+          if (debug)
+            console.log(
+              "[YouTube Lookup] Redirect fallback found no live video",
+            );
         }
       } catch (err) {
-        if (debug) console.warn('[YouTube Lookup] Redirect fallback error:', err);
+        if (debug)
+          console.warn("[YouTube Lookup] Redirect fallback error:", err);
       }
     }
 
-    if (debug) console.log(`[YouTube Lookup] Final result for "${trimmedParam}": videoId=${videoId}, channelId=${finalChannelId || ''}`);
+    if (debug)
+      console.log(
+        `[YouTube Lookup] Final result for "${trimmedParam}": videoId=${videoId}, channelId=${finalChannelId || ""}`,
+      );
 
-    const result: LookupResult = { videoId, channelId: finalChannelId || '' };
+    const result: LookupResult = { videoId, channelId: finalChannelId || "" };
     try {
-      channelLiveCache.set(paramKey, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + ttl });
-      if (result.channelId) channelLiveCache.set(`id:${result.channelId}`, { videoId: result.videoId, channelId: result.channelId, expires: Date.now() + ttl });
-    } catch { }
+      channelLiveCache.set(paramKey, {
+        videoId: result.videoId,
+        channelId: result.channelId,
+        expires: Date.now() + ttl,
+      });
+      if (result.channelId)
+        channelLiveCache.set(`id:${result.channelId}`, {
+          videoId: result.videoId,
+          channelId: result.channelId,
+          expires: Date.now() + ttl,
+        });
+    } catch {}
 
     return result;
   })();
 
   inflightLiveLookup.set(paramKey, lookup);
-  lookup.then((res) => {
-    inflightLiveLookup.delete(paramKey);
-    if (res.channelId) inflightLiveLookup.delete(`id:${res.channelId}`);
-  }).catch(() => inflightLiveLookup.delete(paramKey));
+  lookup
+    .then((res) => {
+      inflightLiveLookup.delete(paramKey);
+      if (res.channelId) inflightLiveLookup.delete(`id:${res.channelId}`);
+    })
+    .catch(() => inflightLiveLookup.delete(paramKey));
 
   return lookup;
 }
-

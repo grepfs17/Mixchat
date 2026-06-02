@@ -1,10 +1,15 @@
 import type { APIRoute } from "astro";
 import { getInnertube } from "../../lib/youtube";
-import { findLiveForChannel, isValidYouTubeParam, resolveChannelId } from "../../lib/youtube-lookup";
+import {
+  findLiveForChannel,
+  isValidYouTubeParam,
+  resolveChannelId,
+} from "../../lib/youtube-lookup";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 // Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
-const DEBUG_YT = process.env.YT_DEBUG === '1' || import.meta.env?.MODE === 'development';
+const DEBUG_YT =
+  process.env.YT_DEBUG === "1" || import.meta.env?.MODE === "development";
 
 function getChannelParam(url: URL | URLSearchParams): string | null {
   if (url instanceof URLSearchParams) return url.get("channelUrl");
@@ -24,17 +29,20 @@ function getChannelParam(url: URL | URLSearchParams): string | null {
 const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
-  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const clientAddress =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   const headers = {
     "Content-Type": "application/json",
     "Cache-Control": "public, max-age=60",
   };
 
   if (!checkRateLimit(`${clientAddress}:youtube-proxy`, 60, 60_000)) {
-    return new Response(
-      JSON.stringify({ error: "Too many requests" }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
-    );
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    });
   }
 
   try {
@@ -62,21 +70,28 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     // still resolve public channel/video info without having a cookie set.
     const accessToken = cookies.get("youtube_token")?.value;
     if (!accessToken) {
-      console.debug('[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated');
+      console.debug(
+        "[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated",
+      );
     }
     // Initialize Innertube client with request-scoped diagnostics so failures
     // include the action and channel context in server logs.
     let yt: any;
     try {
       yt = await getInnertube();
-      console.debug('[YouTube Proxy] Innertube initialized');
+      console.debug("[YouTube Proxy] Innertube initialized");
     } catch (ytErr) {
       const msg = ytErr instanceof Error ? ytErr.message : String(ytErr);
       const stack = ytErr instanceof Error ? ytErr.stack : undefined;
-      console.error('[YouTube Proxy] getInnertube() failed', { message: msg, stack, action, channelUrl });
+      console.error("[YouTube Proxy] getInnertube() failed", {
+        message: msg,
+        stack,
+        action,
+        channelUrl,
+      });
       return new Response(
         JSON.stringify({
-          error: DEBUG_YT ? msg : 'YouTube service unavailable',
+          error: DEBUG_YT ? msg : "YouTube service unavailable",
           details: DEBUG_YT ? stack : undefined,
         }),
         { status: 503, headers: { "Content-Type": "application/json" } },
@@ -117,39 +132,68 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
 async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
   const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
-    return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ error: "channelUrl parameter is required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   if (!isValidYouTubeParam(channelUrlParam)) {
-    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   console.log(`[YouTube Proxy] Looking up channel: ${channelUrlParam}`);
 
   try {
-    const result = await findLiveForChannel(channelUrlParam, { yt, debug: DEBUG_YT });
-    return new Response(JSON.stringify(result), { status: 200, headers: { "Content-Type": "application/json" } });
+    const result = await findLiveForChannel(channelUrlParam, {
+      yt,
+      debug: DEBUG_YT,
+    });
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error('[YouTube Proxy] Live lookup failed for', channelUrlParam, msg);
-    return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve live status' }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error(
+      "[YouTube Proxy] Live lookup failed for",
+      channelUrlParam,
+      msg,
+    );
+    return new Response(
+      JSON.stringify({
+        error: DEBUG_YT ? msg : "Failed to retrieve live status",
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
 }
-
 
 async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
   const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {
-    return new Response(JSON.stringify({ error: "channelUrl parameter is required" }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ error: "channelUrl parameter is required" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   if (!isValidYouTubeParam(channelUrlParam)) {
-    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Invalid channelUrl" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const resolved = await resolveChannelId(channelUrlParam, yt);
   if (!resolved) {
-    return new Response(JSON.stringify({ error: "Could not resolve YouTube URL" }), { status: 400, headers: { "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({ error: "Could not resolve YouTube URL" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
   }
   const channelId = resolved;
 
@@ -159,12 +203,28 @@ async function handleGetChannelInfo(url: URLSearchParams | URL, yt: any) {
   } catch (chErr) {
     const msg = chErr instanceof Error ? chErr.message : String(chErr);
     const stack = chErr instanceof Error ? chErr.stack : undefined;
-    console.error('[YouTube Proxy] getChannel failed', { message: msg, stack, channelId });
-    return new Response(JSON.stringify({ error: DEBUG_YT ? msg : 'Failed to retrieve channel info', details: DEBUG_YT ? stack : undefined }), { status: 500, headers: { "Content-Type": "application/json" } });
+    console.error("[YouTube Proxy] getChannel failed", {
+      message: msg,
+      stack,
+      channelId,
+    });
+    return new Response(
+      JSON.stringify({
+        error: DEBUG_YT ? msg : "Failed to retrieve channel info",
+        details: DEBUG_YT ? stack : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
   }
 
   const basicInfo = (channel as any).basic_info || {};
   const headerInfo = (channel as any).header?.author || {};
 
-  return new Response(JSON.stringify({ channelId: basicInfo.id || headerInfo.id || "", displayName: basicInfo.title || headerInfo.title || "" }), { status: 200, headers: { "Content-Type": "application/json" } });
+  return new Response(
+    JSON.stringify({
+      channelId: basicInfo.id || headerInfo.id || "",
+      displayName: basicInfo.title || headerInfo.title || "",
+    }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
 }

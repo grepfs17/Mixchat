@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { FaTimes, FaTrain } from 'react-icons/fa';
-import '../../../styles/chat/HypeTrainBanner.css';
+import { useEffect, useState } from "react";
+import { FaTimes, FaTrain } from "react-icons/fa";
+import "../../../styles/chat/HypeTrainBanner.css";
 
 export interface HypeTrainState {
   level: number;
@@ -16,7 +16,10 @@ interface HypeTrainBannerProps {
   onDismiss: () => void;
 }
 
-export default function HypeTrainBanner({ hypeTrain, onDismiss }: HypeTrainBannerProps) {
+export default function HypeTrainBanner({
+  hypeTrain,
+  onDismiss,
+}: HypeTrainBannerProps) {
   const [timeLeft, setTimeLeft] = useState<number>(() => {
     const diff = hypeTrain.endsAt.getTime() - Date.now();
     return Math.max(0, Math.floor(diff / 1000));
@@ -29,19 +32,26 @@ export default function HypeTrainBanner({ hypeTrain, onDismiss }: HypeTrainBanne
       onDismiss();
       return;
     }
-    const timer = setTimeout(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
+    const timer = setTimeout(
+      () => setTimeLeft((t) => Math.max(0, t - 1)),
+      1000,
+    );
     return () => clearTimeout(timer);
   }, [timeLeft, onDismiss]);
 
-  const progressPct = Math.min(100, (hypeTrain.progress / hypeTrain.goal) * 100);
+  const progressPct = Math.min(
+    100,
+    (hypeTrain.progress / hypeTrain.goal) * 100,
+  );
   const minutesLeft = Math.floor(timeLeft / 60);
   const secondsLeft = timeLeft % 60;
-  const timeDisplay = minutesLeft > 0 ? `${minutesLeft}m ${secondsLeft}s` : `${secondsLeft}s`;
+  const timeDisplay =
+    minutesLeft > 0 ? `${minutesLeft}m ${secondsLeft}s` : `${secondsLeft}s`;
 
   const formatTime = (date: Date) => {
     const now = Date.now();
     const diff = date.getTime() - now;
-    if (diff <= 0) return 'ended';
+    if (diff <= 0) return "ended";
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}m`;
     const hours = Math.floor(mins / 60);
@@ -67,7 +77,9 @@ export default function HypeTrainBanner({ hypeTrain, onDismiss }: HypeTrainBanne
         </div>
         <div className="hype-train-close-wrapper">
           {confirmClose && (
-            <span className="hype-train-close-tooltip">Press again to close</span>
+            <span className="hype-train-close-tooltip">
+              Press again to close
+            </span>
           )}
           <button
             className="hype-train-close"
@@ -101,7 +113,8 @@ export default function HypeTrainBanner({ hypeTrain, onDismiss }: HypeTrainBanne
             <span className="hype-train-contributors-label">Top:</span>
             {hypeTrain.topContributors.slice(0, 3).map((contributor, idx) => (
               <span key={idx} className="hype-train-contributor">
-                {contributor.displayName} ({contributor.points.toLocaleString()})
+                {contributor.displayName} ({contributor.points.toLocaleString()}
+                )
               </span>
             ))}
           </div>

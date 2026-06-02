@@ -1,12 +1,16 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useTwitchChat } from './useTwitchChat';
-import type { MentionSoundType } from './useTwitchChat';
-import { useRaidDetection } from './useRaidDetection';
-import type { RaidOutEvent } from './useRaidDetection';
-import { useChannelPointRedemptions } from './useChannelPointRedemptions';
-import { useHypeTrainEventSub } from './useHypeTrainEventSub';
-import { initializeEmotes, clearEmoteCache, subscribeTo7TVUpdates } from '../lib/emotes';
-import { initializeBadges, clearBadgeCache } from '../lib/badges';
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useTwitchChat } from "./useTwitchChat";
+import type { MentionSoundType } from "./useTwitchChat";
+import { useRaidDetection } from "./useRaidDetection";
+import type { RaidOutEvent } from "./useRaidDetection";
+import { useChannelPointRedemptions } from "./useChannelPointRedemptions";
+import { useHypeTrainEventSub } from "./useHypeTrainEventSub";
+import {
+  initializeEmotes,
+  clearEmoteCache,
+  subscribeTo7TVUpdates,
+} from "../lib/emotes";
+import { initializeBadges, clearBadgeCache } from "../lib/badges";
 import {
   getStreamStatus,
   getRecentMessages,
@@ -25,14 +29,21 @@ import {
   sendAnnouncement,
   sendShoutout,
   warnChatUser,
-} from '../lib/twitch';
-import { saveMessage, pruneMessages } from '../lib/chatHistoryStorage';
-import type { ChatMessage, Platform, PlatformSession, ChatFont, ChatTheme, MessageType } from '../lib/types';
-import { MAX_DISPLAYED_MESSAGES } from '../lib/types';
-import type { YTMessage } from '../components/chat/unified/types';
-import type { ChatDisplayHandle } from '../components/chat/display';
-import type { UnifiedChatHandle } from '../components/chat/unified';
-import type { HypeTrainState } from '../components/chat/shared/HypeTrainBanner';
+} from "../lib/twitch";
+import { saveMessage, pruneMessages } from "../lib/chatHistoryStorage";
+import type {
+  ChatMessage,
+  Platform,
+  PlatformSession,
+  ChatFont,
+  ChatTheme,
+  MessageType,
+} from "../lib/types";
+import { MAX_DISPLAYED_MESSAGES } from "../lib/types";
+import type { YTMessage } from "../components/chat/unified/types";
+import type { ChatDisplayHandle } from "../components/chat/display";
+import type { UnifiedChatHandle } from "../components/chat/unified";
+import type { HypeTrainState } from "../components/chat/shared/HypeTrainBanner";
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
@@ -85,23 +96,23 @@ export interface ChatAppStateProps {
 }
 
 export function useChatAppState({
-  selectedTwitchChannel = '',
-  selectedTwitchChannelName = '',
-  selectedTwitchChannelDisplayName = '',
+  selectedTwitchChannel = "",
+  selectedTwitchChannelName = "",
+  selectedTwitchChannelDisplayName = "",
   twitchSession,
   linkedYoutubeUrl,
   youtubeSession,
   unifyChatEnabled = false,
   mentionSoundEnabled = true,
   mentionVolume = 0.2,
-  mentionSoundType = 'ding' as MentionSoundType,
+  mentionSoundType = "ding" as MentionSoundType,
   showDeletedMessages = true,
   disableModModeByDefault = false,
   eventSounds = {},
   eventSoundVolume = 1,
   ignoredUsers = [],
 }: ChatAppStateProps) {
-  // State 
+  // State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
@@ -110,37 +121,48 @@ export function useChatAppState({
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
   const [streamIsLive, setStreamIsLive] = useState(false);
-  const [streamUptime, setStreamUptime] = useState<string>('');
-  const [streamTitle, setStreamTitle] = useState<string>('');
-  const [streamGameName, setStreamGameName] = useState<string>('');
-  const [streamGameId, setStreamGameId] = useState<string>('');
+  const [streamUptime, setStreamUptime] = useState<string>("");
+  const [streamTitle, setStreamTitle] = useState<string>("");
+  const [streamGameName, setStreamGameName] = useState<string>("");
+  const [streamGameId, setStreamGameId] = useState<string>("");
   const [showPreloadedMessages, _setShowPreloadedMessages] = useState(true);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info'; id?: number } | null>(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+    id?: number;
+  } | null>(null);
   const notificationIdRef = useRef(0);
   const chatDisplayRef = useRef<ChatDisplayHandle>(null);
   const unifiedChatRef = useRef<UnifiedChatHandle>(null);
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
-  const currentUserBadgesRef = useRef<{ badges: Record<string, string>; badgeDetails: Record<string, { url: string; title: string }> }>({ badges: {}, badgeDetails: {} });
+  const currentUserBadgesRef = useRef<{
+    badges: Record<string, string>;
+    badgeDetails: Record<string, { url: string; title: string }>;
+  }>({ badges: {}, badgeDetails: {} });
   const streamStartedAtRef = useRef<Date | null>(null);
-  const [manualVideoId, setManualVideoId] = useState<string>('');
+  const [manualVideoId, setManualVideoId] = useState<string>("");
   const [autoVideoId, setAutoVideoId] = useState<string | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [showYoutubeSection, setShowYoutubeSection] = useState(true);
   const [chatSplitRatio, setChatSplitRatio] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mixchat_chat_split_ratio');
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("mixchat_chat_split_ratio");
       return saved ? parseFloat(saved) : 50;
     }
     return 50;
   });
   const [isDraggingChatSplit, setIsDraggingChatSplit] = useState(false);
   const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
-  const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>([]);
+  const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>(
+    [],
+  );
   const [badgesReady, setBadgesReady] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
-  const [isFollowingChannelState, setIsFollowingChannelState] = useState<boolean | null>(null);
+  const [isFollowingChannelState, setIsFollowingChannelState] = useState<
+    boolean | null
+  >(null);
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
 
   // Periodic pruning of old IndexedDB messages
@@ -157,16 +179,18 @@ export function useChatAppState({
   // IRC PRIVMSG also arrives for the same redemption.
   const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
 
-  // Refs synced with props 
+  // Refs synced with props
   const showDeletedMessagesRef = useRef(showDeletedMessages);
-  useEffect(() => { showDeletedMessagesRef.current = showDeletedMessages; }, [showDeletedMessages]);
+  useEffect(() => {
+    showDeletedMessagesRef.current = showDeletedMessages;
+  }, [showDeletedMessages]);
 
-  // Drag split handler 
+  // Drag split handler
   useEffect(() => {
     if (!isDraggingChatSplit) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const container = document.querySelector('[data-chat-app-container]');
+      const container = document.querySelector("[data-chat-app-container]");
       if (!container) return;
       const rect = container.getBoundingClientRect();
       let percentage = ((e.clientY - rect.top) / rect.height) * 100;
@@ -177,45 +201,54 @@ export function useChatAppState({
 
     const handleMouseUp = () => {
       setIsDraggingChatSplit(false);
-      localStorage.setItem('mixchat_chat_split_ratio', chatSplitRatio.toString());
+      localStorage.setItem(
+        "mixchat_chat_split_ratio",
+        chatSplitRatio.toString(),
+      );
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDraggingChatSplit, chatSplitRatio]);
 
-  // YouTube video ID memo 
+  // YouTube video ID memo
   const youtubeVideoId = useMemo(() => {
     if (manualVideoId) return manualVideoId;
     if (autoVideoId) return autoVideoId;
     if (!linkedYoutubeUrl) return null;
     let videoId = null;
     try {
-      if (linkedYoutubeUrl.includes('v=')) {
-        videoId = new URLSearchParams(new URL(linkedYoutubeUrl).search).get('v');
-      } else if (linkedYoutubeUrl.includes('youtu.be/')) {
-        videoId = linkedYoutubeUrl.split('youtu.be/')[1].split('?')[0];
-      } else if (linkedYoutubeUrl.includes('/live/')) {
-        videoId = linkedYoutubeUrl.split('/live/')[1].split('?')[0];
+      if (linkedYoutubeUrl.includes("v=")) {
+        videoId = new URLSearchParams(new URL(linkedYoutubeUrl).search).get(
+          "v",
+        );
+      } else if (linkedYoutubeUrl.includes("youtu.be/")) {
+        videoId = linkedYoutubeUrl.split("youtu.be/")[1].split("?")[0];
+      } else if (linkedYoutubeUrl.includes("/live/")) {
+        videoId = linkedYoutubeUrl.split("/live/")[1].split("?")[0];
       }
     } catch (e) {
-      console.warn('Failed to parse YouTube URL:', e);
+      console.warn("Failed to parse YouTube URL:", e);
     }
     return videoId;
   }, [linkedYoutubeUrl, manualVideoId, autoVideoId]);
 
-  // Auto-fetch live video ID 
+  // Auto-fetch live video ID
   useEffect(() => {
     if (!linkedYoutubeUrl || !showYoutubeSection) {
       setAutoVideoId(null);
       setYtError(null);
       return;
     }
-    if (linkedYoutubeUrl.includes('v=') || linkedYoutubeUrl.includes('youtu.be/') || linkedYoutubeUrl.includes('/live/')) {
+    if (
+      linkedYoutubeUrl.includes("v=") ||
+      linkedYoutubeUrl.includes("youtu.be/") ||
+      linkedYoutubeUrl.includes("/live/")
+    ) {
       return;
     }
 
@@ -226,26 +259,30 @@ export function useChatAppState({
       setYtError(null);
       try {
         const params = new URLSearchParams();
-        params.append('channelUrl', linkedYoutubeUrl);
-        const res = await fetch(`/api/youtube-live?${params.toString()}`, { signal: abortController.signal });
+        params.append("channelUrl", linkedYoutubeUrl);
+        const res = await fetch(`/api/youtube-live?${params.toString()}`, {
+          signal: abortController.signal,
+        });
         const data = await res.json();
         if (cancelled) return;
         if (res.ok && data.videoId) {
-          setAutoVideoId((prev) => (prev !== data.videoId ? data.videoId : prev));
+          setAutoVideoId((prev) =>
+            prev !== data.videoId ? data.videoId : prev,
+          );
           setYtError(null);
         } else {
           if (!res.ok) {
-            setYtError(data.error || 'Failed to check for live stream');
+            setYtError(data.error || "Failed to check for live stream");
           } else {
-            setYtError('No live stream found');
+            setYtError("No live stream found");
             setAutoVideoId(null);
           }
         }
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
         if (!cancelled) {
-          setYtError('Failed to check for live stream');
-          console.error('YouTube live fetch error:', err);
+          setYtError("Failed to check for live stream");
+          console.error("YouTube live fetch error:", err);
         }
       } finally {
         if (!cancelled) setYtLoading(false);
@@ -262,143 +299,175 @@ export function useChatAppState({
     };
   }, [linkedYoutubeUrl, showYoutubeSection]);
 
-  // Reset YouTube state on channel change 
+  // Reset YouTube state on channel change
   useEffect(() => {
-    setManualVideoId('');
+    setManualVideoId("");
     setAutoVideoId(null);
     setYtError(null);
     setYtMessages([]);
   }, [selectedTwitchChannel]);
 
-  // Update document title 
+  // Update document title
   useEffect(() => {
     if (selectedTwitchChannelDisplayName) {
       document.title = `Mixchat - ${selectedTwitchChannelDisplayName}`;
     } else {
-      document.title = 'Mixchat - Multi-Platform Live Chat';
+      document.title = "Mixchat - Multi-Platform Live Chat";
     }
   }, [selectedTwitchChannelDisplayName]);
 
-  // Twitch message handler 
-  const handleTwitchMessage = useCallback((message: ChatMessage) => {
-    if (message.isCurrentUser && !message.optimistic) {
-      const hasBadges =
-        (message.badgeDetails && Object.keys(message.badgeDetails).length > 0) ||
-        (message.badges && Object.keys(message.badges).length > 0);
-      if (hasBadges) {
-        currentUserBadgesRef.current = {
-          badges: message.badges || {},
-          badgeDetails: message.badgeDetails || {},
-        };
-      }
-    }
-
-    setMessages((prev) => {
-      const existingIdx = prev.findIndex((m) => m.id === message.id || m.id === `optimistic_${message.id}`);
-      if (existingIdx !== -1) {
-        const existing = prev[existingIdx];
-        if (existing.optimistic || existing.id.startsWith('optimistic_')) {
-          saveMessage(message, selectedTwitchChannelName);
-          const copy = [...prev];
-          copy[existingIdx] = message;
-          return copy;
-        }
-        // Merge async enrichment fields (reward title/cost, avatar, shared-chat source)
-        const enrichments: Partial<ChatMessage> = {};
-        if (!existing.rewardTitle && message.rewardTitle) enrichments.rewardTitle = message.rewardTitle;
-        if (existing.rewardCost == null && message.rewardCost != null) enrichments.rewardCost = message.rewardCost;
-        if (!existing.authorAvatar && message.authorAvatar) enrichments.authorAvatar = message.authorAvatar;
-        if (!existing.sourceChannelLogin && message.sourceChannelLogin) enrichments.sourceChannelLogin = message.sourceChannelLogin;
-        if (!existing.sourceChannelAvatar && message.sourceChannelAvatar) enrichments.sourceChannelAvatar = message.sourceChannelAvatar;
-
-        if (Object.keys(enrichments).length > 0) {
-          const copy = [...prev];
-          copy[existingIdx] = { ...existing, ...enrichments };
-          return copy;
-        }
-        return prev;
-      }
-
-      const sessionName = (twitchSession?.displayName || twitchSession?.username || '').toLowerCase();
-      const isFromSession = Boolean(
-        message.isCurrentUser ||
-        (message.userId && message.userId === twitchSession?.userId) ||
-        (message.author && sessionName && message.author.toLowerCase() === sessionName)
-      );
-
-      const normalize = (s?: string) => (s || '').normalize('NFKC').trim().toLowerCase();
-      const serverNorm = normalize(message.content);
-
-      if (isFromSession) {
-        let matchIndex = -1;
-
-        if (message.userId) {
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            m.userId === message.userId &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        if (matchIndex === -1 && message.author) {
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            m.author &&
-            m.author.toLowerCase() === message.author.toLowerCase() &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        if (matchIndex === -1) {
-          const serverTs = message.timestamp ? new Date(message.timestamp).getTime() : Date.now();
-          matchIndex = prev.findIndex((m) =>
-            m.optimistic &&
-            Math.abs((m.timestamp?.getTime() || 0) - serverTs) < 10000 &&
-            normalize(m.content) === serverNorm &&
-            ((m.replyTo?.id || '') === (message.replyTo?.id || ''))
-          );
-        }
-
-        if (matchIndex !== -1) {
-          saveMessage(message, selectedTwitchChannelName);
-          const copy = [...prev];
-          copy[matchIndex] = message;
-          return copy.length > MAX_DISPLAYED_MESSAGES ? copy.slice(-MAX_DISPLAYED_MESSAGES) : copy;
+  // Twitch message handler
+  const handleTwitchMessage = useCallback(
+    (message: ChatMessage) => {
+      if (message.isCurrentUser && !message.optimistic) {
+        const hasBadges =
+          (message.badgeDetails &&
+            Object.keys(message.badgeDetails).length > 0) ||
+          (message.badges && Object.keys(message.badges).length > 0);
+        if (hasBadges) {
+          currentUserBadgesRef.current = {
+            badges: message.badges || {},
+            badgeDetails: message.badgeDetails || {},
+          };
         }
       }
 
-      // Deduplicate IRC redemptions against recent EventSub redemptions.
-      // Twitch sometimes sends an empty PRIVMSG for non-text redemptions;
-      // EventSub already handles those, so skip the IRC duplicate.
-      if (
-        message.messageType === 'redemption' &&
-        message.rewardId &&
-        message.userId &&
-        (!message.content || message.content.trim().length === 0)
-      ) {
-        const dedupKey = `${message.rewardId}-${message.userId}`;
-        const recentTime = recentRedemptionsRef.current.get(dedupKey);
-        if (recentTime && Math.abs(Date.now() - recentTime) < 5000) {
+      setMessages((prev) => {
+        const existingIdx = prev.findIndex(
+          (m) => m.id === message.id || m.id === `optimistic_${message.id}`,
+        );
+        if (existingIdx !== -1) {
+          const existing = prev[existingIdx];
+          if (existing.optimistic || existing.id.startsWith("optimistic_")) {
+            saveMessage(message, selectedTwitchChannelName);
+            const copy = [...prev];
+            copy[existingIdx] = message;
+            return copy;
+          }
+          // Merge async enrichment fields (reward title/cost, avatar, shared-chat source)
+          const enrichments: Partial<ChatMessage> = {};
+          if (!existing.rewardTitle && message.rewardTitle)
+            enrichments.rewardTitle = message.rewardTitle;
+          if (existing.rewardCost == null && message.rewardCost != null)
+            enrichments.rewardCost = message.rewardCost;
+          if (!existing.authorAvatar && message.authorAvatar)
+            enrichments.authorAvatar = message.authorAvatar;
+          if (!existing.sourceChannelLogin && message.sourceChannelLogin)
+            enrichments.sourceChannelLogin = message.sourceChannelLogin;
+          if (!existing.sourceChannelAvatar && message.sourceChannelAvatar)
+            enrichments.sourceChannelAvatar = message.sourceChannelAvatar;
+
+          if (Object.keys(enrichments).length > 0) {
+            const copy = [...prev];
+            copy[existingIdx] = { ...existing, ...enrichments };
+            return copy;
+          }
           return prev;
         }
-      }
 
-      const updated = [...prev, message];
+        const sessionName = (
+          twitchSession?.displayName ||
+          twitchSession?.username ||
+          ""
+        ).toLowerCase();
+        const isFromSession = Boolean(
+          message.isCurrentUser ||
+          (message.userId && message.userId === twitchSession?.userId) ||
+          (message.author &&
+            sessionName &&
+            message.author.toLowerCase() === sessionName),
+        );
 
-      // Persist to IndexedDB for Chatter History
-      saveMessage(message, selectedTwitchChannelName);
+        const normalize = (s?: string) =>
+          (s || "").normalize("NFKC").trim().toLowerCase();
+        const serverNorm = normalize(message.content);
 
-      return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
-    });
-  }, [twitchSession, selectedTwitchChannelName]);
+        if (isFromSession) {
+          let matchIndex = -1;
 
-  // Moderator status effects 
+          if (message.userId) {
+            matchIndex = prev.findIndex(
+              (m) =>
+                m.optimistic &&
+                m.userId === message.userId &&
+                normalize(m.content) === serverNorm &&
+                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
+            );
+          }
+
+          if (matchIndex === -1 && message.author) {
+            matchIndex = prev.findIndex(
+              (m) =>
+                m.optimistic &&
+                m.author &&
+                m.author.toLowerCase() === message.author.toLowerCase() &&
+                normalize(m.content) === serverNorm &&
+                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
+            );
+          }
+
+          if (matchIndex === -1) {
+            const serverTs = message.timestamp
+              ? new Date(message.timestamp).getTime()
+              : Date.now();
+            matchIndex = prev.findIndex(
+              (m) =>
+                m.optimistic &&
+                Math.abs((m.timestamp?.getTime() || 0) - serverTs) < 10000 &&
+                normalize(m.content) === serverNorm &&
+                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
+            );
+          }
+
+          if (matchIndex !== -1) {
+            saveMessage(message, selectedTwitchChannelName);
+            const copy = [...prev];
+            copy[matchIndex] = message;
+            return copy.length > MAX_DISPLAYED_MESSAGES
+              ? copy.slice(-MAX_DISPLAYED_MESSAGES)
+              : copy;
+          }
+        }
+
+        // Deduplicate IRC redemptions against recent EventSub redemptions.
+        // Twitch sometimes sends an empty PRIVMSG for non-text redemptions;
+        // EventSub already handles those, so skip the IRC duplicate.
+        if (
+          message.messageType === "redemption" &&
+          message.rewardId &&
+          message.userId &&
+          (!message.content || message.content.trim().length === 0)
+        ) {
+          const dedupKey = `${message.rewardId}-${message.userId}`;
+          const recentTime = recentRedemptionsRef.current.get(dedupKey);
+          if (recentTime && Math.abs(Date.now() - recentTime) < 5000) {
+            return prev;
+          }
+        }
+
+        const updated = [...prev, message];
+
+        // Persist to IndexedDB for Chatter History
+        saveMessage(message, selectedTwitchChannelName);
+
+        return updated.length > MAX_DISPLAYED_MESSAGES
+          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+          : updated;
+      });
+    },
+    [twitchSession, selectedTwitchChannelName],
+  );
+
+  // Moderator status effects
   useEffect(() => {
     if (twitchSession && selectedTwitchChannelName) {
-      const isOwnerByName = (twitchSession.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
-      const isOwnerById = twitchSession.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+      const isOwnerByName =
+        (twitchSession.username || "").toLowerCase() ===
+        selectedTwitchChannelName.toLowerCase();
+      const isOwnerById =
+        twitchSession.userId && selectedTwitchChannel
+          ? twitchSession.userId === selectedTwitchChannel
+          : false;
       const isOwner = isOwnerByName || isOwnerById;
       if (isOwner) {
         setIsModerator(true);
@@ -409,61 +478,98 @@ export function useChatAppState({
     } else {
       setModModeActive(false);
     }
-  }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel, disableModModeByDefault]);
+  }, [
+    twitchSession,
+    selectedTwitchChannelName,
+    selectedTwitchChannel,
+    disableModModeByDefault,
+  ]);
 
   useEffect(() => {
     const checkModViaApi = async () => {
-      if (twitchSession?.accessToken && selectedTwitchChannel && twitchSession.userId) {
+      if (
+        twitchSession?.accessToken &&
+        selectedTwitchChannel &&
+        twitchSession.userId
+      ) {
         try {
           const isMod = await checkUserModStatus(
             twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
             selectedTwitchChannel,
-            twitchSession.userId
+            twitchSession.userId,
           );
           if (isMod) {
             setIsModerator(true);
           }
         } catch (err) {
-          console.error('[ChatApp] API mod check failed:', err);
+          console.error("[ChatApp] API mod check failed:", err);
         }
       }
     };
     checkModViaApi();
-  }, [twitchSession?.accessToken, selectedTwitchChannel, twitchSession?.userId]);
+  }, [
+    twitchSession?.accessToken,
+    selectedTwitchChannel,
+    twitchSession?.userId,
+  ]);
 
-  // Own badges loaded handler 
+  // Own badges loaded handler
   const handleOwnBadgesLoaded = useCallback(
-    (badges: Record<string, string>, badgeDetails: Record<string, { url: string; title: string }>) => {
-      if (Object.keys(badges).length > 0 || Object.keys(badgeDetails).length > 0) {
+    (
+      badges: Record<string, string>,
+      badgeDetails: Record<string, { url: string; title: string }>,
+    ) => {
+      if (
+        Object.keys(badges).length > 0 ||
+        Object.keys(badgeDetails).length > 0
+      ) {
         currentUserBadgesRef.current = { badges, badgeDetails };
       }
-      const isOwnerByName = (twitchSession?.username || '').toLowerCase() === selectedTwitchChannelName.toLowerCase();
-      const isOwnerById = twitchSession?.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+      const isOwnerByName =
+        (twitchSession?.username || "").toLowerCase() ===
+        selectedTwitchChannelName.toLowerCase();
+      const isOwnerById =
+        twitchSession?.userId && selectedTwitchChannel
+          ? twitchSession.userId === selectedTwitchChannel
+          : false;
       const isOwner = isOwnerByName || isOwnerById;
-      const isMod = Boolean(badges && (badges['moderator'] || badges['broadcaster']));
+      const isMod = Boolean(
+        badges && (badges["moderator"] || badges["broadcaster"]),
+      );
       setIsModerator(isMod || isOwner);
     },
-    [twitchSession?.username, twitchSession?.userId, selectedTwitchChannelName, selectedTwitchChannel]
+    [
+      twitchSession?.username,
+      twitchSession?.userId,
+      selectedTwitchChannelName,
+      selectedTwitchChannel,
+    ],
   );
 
-  // Message deleted handler 
+  // Message deleted handler
   const handleMessageDeleted = useCallback((messageId: string) => {
     setMessages((prev) => {
       if (showDeletedMessagesRef.current) {
-        return prev.map((m) => m.id === messageId ? { ...m, isDeleted: true } : m);
+        return prev.map((m) =>
+          m.id === messageId ? { ...m, isDeleted: true } : m,
+        );
       } else {
         return prev.filter((m) => m.id !== messageId);
       }
     });
   }, []);
 
-  // Raid detection 
+  // Raid detection
   useRaidDetection({
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || '',
+    accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
     onRaidOut: (raid) => {
       setPendingRaid(raid);
       setIsRaidInitiator(false);
@@ -471,8 +577,9 @@ export function useChatAppState({
     onScopeError: () => {
       notificationIdRef.current += 1;
       setNotification({
-        message: 'Raid detection unavailable — please re-login to refresh your Twitch session',
-        type: 'info',
+        message:
+          "Raid detection unavailable — please re-login to refresh your Twitch session",
+        type: "info",
         id: notificationIdRef.current,
       });
     },
@@ -480,70 +587,81 @@ export function useChatAppState({
 
   // Channel point redemption (EventSub) — catches non-text redemptions that
   // Twitch does not send through IRC.
-  const handleRedemptionEvent = useCallback((message: ChatMessage) => {
-    // Track for IRC deduplication
-    if (message.rewardId && message.userId) {
-      recentRedemptionsRef.current.set(
-        `${message.rewardId}-${message.userId}`,
-        Date.now(),
-      );
-      // Clean up entries older than 10s
-      const now = Date.now();
-      for (const [key, ts] of recentRedemptionsRef.current) {
-        if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
+  const handleRedemptionEvent = useCallback(
+    (message: ChatMessage) => {
+      // Track for IRC deduplication
+      if (message.rewardId && message.userId) {
+        recentRedemptionsRef.current.set(
+          `${message.rewardId}-${message.userId}`,
+          Date.now(),
+        );
+        // Clean up entries older than 10s
+        const now = Date.now();
+        for (const [key, ts] of recentRedemptionsRef.current) {
+          if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
+        }
       }
-    }
 
-    setMessages((prev) => {
-      // Persist to IndexedDB for Chatter History
-      saveMessage(message, selectedTwitchChannelName);
+      setMessages((prev) => {
+        // Persist to IndexedDB for Chatter History
+        saveMessage(message, selectedTwitchChannelName);
 
-      const updated = [...prev, message];
-      return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
-    });
-  }, [selectedTwitchChannelName]);
+        const updated = [...prev, message];
+        return updated.length > MAX_DISPLAYED_MESSAGES
+          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+          : updated;
+      });
+    },
+    [selectedTwitchChannelName],
+  );
 
   useChannelPointRedemptions({
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || '',
+    accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
     onRedemption: handleRedemptionEvent,
     onScopeError: () => {
       // Silent — most viewers won't have channel:read:redemptions for the
       // broadcaster's channel, which is expected.
       console.info(
-        '[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster\'s channel.',
+        "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
       );
     },
   });
-  // Twitch chat connection 
-  const { sendMessage: sendTwitchMessage, slowModeWaitTime, followerModeMinutes } =
-    useTwitchChat(
-      selectedTwitchChannelName,
-      twitchSession?.accessToken || '',
-      twitchSession?.username || twitchSession?.displayName || '',
-      handleTwitchMessage,
-      badgesReady,
-      mentionSoundEnabled,
-      mentionVolume,
-      mentionSoundType,
-      eventSounds,
-      eventSoundVolume,
-      handleOwnBadgesLoaded,
-      handleMessageDeleted
-    );
+  // Twitch chat connection
+  const {
+    sendMessage: sendTwitchMessage,
+    slowModeWaitTime,
+    followerModeMinutes,
+  } = useTwitchChat(
+    selectedTwitchChannelName,
+    twitchSession?.accessToken || "",
+    twitchSession?.username || twitchSession?.displayName || "",
+    handleTwitchMessage,
+    badgesReady,
+    mentionSoundEnabled,
+    mentionVolume,
+    mentionSoundType,
+    eventSounds,
+    eventSoundVolume,
+    handleOwnBadgesLoaded,
+    handleMessageDeleted,
+  );
 
   // Reset chat state on channel change
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
-    setStreamTitle('');
-    setStreamGameName('');
+    setStreamTitle("");
+    setStreamGameName("");
     setIsFollowingChannelState(null);
     setMessages([]);
     preloadedMessagesRef.current.clear();
-
   }, [selectedTwitchChannelName, selectedTwitchChannel]);
 
   // Load preloaded messages after badges are ready
@@ -552,20 +670,25 @@ export function useChatAppState({
 
     const loadRecentMessages = async () => {
       try {
-        const recentMessages = await getRecentMessages(selectedTwitchChannelName);
-        recentMessages.forEach(msg => preloadedMessagesRef.current.add(msg.id));
-        const uniqueRecent = recentMessages.filter((msg, index, self) =>
-          index === self.findIndex((t) => t.id === msg.id)
+        const recentMessages = await getRecentMessages(
+          selectedTwitchChannelName,
+        );
+        recentMessages.forEach((msg) =>
+          preloadedMessagesRef.current.add(msg.id),
+        );
+        const uniqueRecent = recentMessages.filter(
+          (msg, index, self) =>
+            index === self.findIndex((t) => t.id === msg.id),
         );
         setMessages(uniqueRecent);
       } catch (error) {
-        console.error('Failed to load recent messages:', error);
+        console.error("Failed to load recent messages:", error);
       }
     };
     loadRecentMessages();
   }, [badgesReady, selectedTwitchChannelName]);
 
-  // Initialize emotes/badges and check follow status 
+  // Initialize emotes/badges and check follow status
   // This re-runs when the access token refreshes, but it intentionally does NOT
   // touch messages so a background token refresh won't wipe chat history.
   useEffect(() => {
@@ -582,23 +705,30 @@ export function useChatAppState({
           initializeEmotes(
             selectedTwitchChannel,
             selectedTwitchChannelName,
-            twitchSession?.userId
+            twitchSession?.userId,
           ),
           initializeBadges(
             selectedTwitchChannel,
-            twitchSession?.accessToken || '',
-            import.meta.env.PUBLIC_TWITCH_CLIENT_ID
+            twitchSession?.accessToken || "",
+            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
           ),
         ]);
         setBadgesReady(true);
 
-        subscribe7tv = subscribeTo7TVUpdates(selectedTwitchChannel, selectedTwitchChannelName);
+        subscribe7tv = subscribeTo7TVUpdates(
+          selectedTwitchChannel,
+          selectedTwitchChannelName,
+        );
       } catch (err) {
-        console.error('Failed to initialize chat assets:', err);
+        console.error("Failed to initialize chat assets:", err);
       }
       try {
-        if (twitchSession?.accessToken && twitchSession?.userId && selectedTwitchChannelName) {
-          const twitchLib = await import('../lib/twitch');
+        if (
+          twitchSession?.accessToken &&
+          twitchSession?.userId &&
+          selectedTwitchChannelName
+        ) {
+          const twitchLib = await import("../lib/twitch");
           let follows = await twitchLib.isFollowingChannel(
             twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
@@ -613,13 +743,16 @@ export function useChatAppState({
                 twitchSession.userId,
               );
               const match = all.some((ch: any) => {
-                const login = (ch.name || '').toLowerCase();
-                const display = (ch.displayName || '').toLowerCase();
-                return login === selectedTwitchChannelName.toLowerCase() || display === selectedTwitchChannelName.toLowerCase();
+                const login = (ch.name || "").toLowerCase();
+                const display = (ch.displayName || "").toLowerCase();
+                return (
+                  login === selectedTwitchChannelName.toLowerCase() ||
+                  display === selectedTwitchChannelName.toLowerCase()
+                );
               });
               if (match) follows = true;
             } catch (fallbackErr) {
-              console.warn('Fallback follow-list check failed:', fallbackErr);
+              console.warn("Fallback follow-list check failed:", fallbackErr);
             }
           }
           setIsFollowingChannelState(follows);
@@ -627,7 +760,7 @@ export function useChatAppState({
           setIsFollowingChannelState(null);
         }
       } catch (err) {
-        console.error('Failed to check follow status:', err);
+        console.error("Failed to check follow status:", err);
         setIsFollowingChannelState(null);
       }
     };
@@ -637,9 +770,14 @@ export function useChatAppState({
     return () => {
       if (subscribe7tv) subscribe7tv();
     };
-  }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId, twitchSession?.accessToken]);
+  }, [
+    selectedTwitchChannelName,
+    selectedTwitchChannel,
+    twitchSession?.userId,
+    twitchSession?.accessToken,
+  ]);
 
-  // Stream status polling 
+  // Stream status polling
   useEffect(() => {
     const fetchStreamStatus = async () => {
       if (selectedTwitchChannel && twitchSession?.accessToken) {
@@ -647,28 +785,31 @@ export function useChatAppState({
           const status = await getStreamStatus(
             twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            selectedTwitchChannel
+            selectedTwitchChannel,
           );
           if (status) {
             setStreamIsLive(status.isLive);
-            setStreamTitle(status.isLive ? (status.title || '') : '');
-            setStreamGameName(status.isLive ? (status.gameName || '') : '');
+            setStreamTitle(status.isLive ? status.title || "" : "");
+            setStreamGameName(status.isLive ? status.gameName || "" : "");
             if (status.isLive && status.startedAt) {
               streamStartedAtRef.current = status.startedAt;
               setStreamUptime(calculateUptime(status.startedAt));
             } else {
               streamStartedAtRef.current = null;
-              setStreamUptime('');
+              setStreamUptime("");
             }
           }
         } catch (error) {
-          console.error('Failed to fetch stream status:', error);
+          console.error("Failed to fetch stream status:", error);
         }
       }
     };
 
     fetchStreamStatus();
-    const statusInterval = setInterval(fetchStreamStatus, STREAM_STATUS_POLL_INTERVAL);
+    const statusInterval = setInterval(
+      fetchStreamStatus,
+      STREAM_STATUS_POLL_INTERVAL,
+    );
     const uptimeInterval = setInterval(() => {
       if (streamStartedAtRef.current) {
         setStreamUptime(calculateUptime(streamStartedAtRef.current));
@@ -681,7 +822,7 @@ export function useChatAppState({
     };
   }, [selectedTwitchChannel, twitchSession?.accessToken]);
 
-  // Channel info polling 
+  // Channel info polling
   useEffect(() => {
     const fetchChannelInfo = async () => {
       if (selectedTwitchChannel && twitchSession?.accessToken) {
@@ -689,7 +830,7 @@ export function useChatAppState({
           const info = await getChannelInfo(
             twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            selectedTwitchChannel
+            selectedTwitchChannel,
           );
           if (info) {
             setStreamTitle(info.title);
@@ -697,7 +838,7 @@ export function useChatAppState({
             setStreamGameId(info.gameId);
           }
         } catch (error) {
-          console.error('Failed to fetch channel info:', error);
+          console.error("Failed to fetch channel info:", error);
         }
       }
     };
@@ -710,16 +851,20 @@ export function useChatAppState({
   // Hype Train EventSub
   useHypeTrainEventSub({
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || '',
+    accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel && badgesReady),
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
     onHypeTrainBegin: (event) => {
       setHypeTrain({
         level: event.level,
         progress: event.progress,
         goal: event.goal,
         totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map(c => ({
+        topContributors: event.topContributions.slice(0, 3).map((c) => ({
           displayName: c.displayName,
           points: c.total,
         })),
@@ -732,7 +877,7 @@ export function useChatAppState({
         progress: event.progress,
         goal: event.goal,
         totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map(c => ({
+        topContributors: event.topContributions.slice(0, 3).map((c) => ({
           displayName: c.displayName,
           points: c.total,
         })),
@@ -744,73 +889,104 @@ export function useChatAppState({
     },
     onScopeError: () => {
       console.info(
-        '[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster\'s channel.',
+        "[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster's channel.",
       );
     },
   });
 
-  // Send message handler 
+  // Send message handler
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], _replyToId?: string) => {
       if (!message.trim() || platforms.length === 0) return;
 
       setIsLoading(true);
       try {
-        if (platforms.includes('twitch') && selectedTwitchChannel && twitchSession) {
+        if (
+          platforms.includes("twitch") &&
+          selectedTwitchChannel &&
+          twitchSession
+        ) {
           try {
-            if (message.startsWith('/')) {
+            if (message.startsWith("/")) {
               const parts = message.split(/\s+/);
               const cmd = parts[0].toLowerCase();
 
-              if (cmd === '/timeout' || cmd === '/ban' || cmd === '/unban' || cmd === '/untimeout' || cmd === '/clear') {
+              if (
+                cmd === "/timeout" ||
+                cmd === "/ban" ||
+                cmd === "/unban" ||
+                cmd === "/untimeout" ||
+                cmd === "/clear"
+              ) {
                 try {
-                  if (cmd === '/clear') {
-                    await clearChat(selectedTwitchChannel, twitchSession.userId);
+                  if (cmd === "/clear") {
+                    await clearChat(
+                      selectedTwitchChannel,
+                      twitchSession.userId,
+                    );
                     return;
                   }
 
                   const targetUser = parts[1];
-                  if (!targetUser) throw new Error(`${cmd} requires a username`);
+                  if (!targetUser)
+                    throw new Error(`${cmd} requires a username`);
 
-                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
-                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                  const resolvedTargetId =
+                    await resolveBroadcasterId(targetUser);
+                  if (
+                    resolvedTargetId === targetUser &&
+                    !/^\d+$/.test(resolvedTargetId)
+                  ) {
                     throw new Error(`Could not find user ${targetUser}`);
                   }
 
-                  if (cmd === '/unban' || cmd === '/untimeout') {
-                    await removeBan(selectedTwitchChannel, twitchSession.userId, resolvedTargetId);
+                  if (cmd === "/unban" || cmd === "/untimeout") {
+                    await removeBan(
+                      selectedTwitchChannel,
+                      twitchSession.userId,
+                      resolvedTargetId,
+                    );
                     setMessages((prev) => [
                       ...prev,
                       {
                         id: `untimeout-${targetUser}-${Date.now()}`,
-                        platform: 'twitch' as Platform,
-                        author: 'System',
+                        platform: "twitch" as Platform,
+                        author: "System",
                         content: `${targetUser} timeout/ban was removed.`,
                         timestamp: new Date(),
-                        userId: 'system',
-                        authorColor: '#22c55e',
+                        userId: "system",
+                        authorColor: "#22c55e",
                         mentionsUser: false,
                         emotes: {},
                         isBot: true,
                         badges: {},
                         badgeDetails: {},
-                        messageType: 'untimeout' as MessageType,
+                        messageType: "untimeout" as MessageType,
                         targetUsername: targetUser,
                       },
                     ]);
                     notificationIdRef.current += 1;
-                    setNotification({ message: `Removed timeout/ban for ${targetUser}`, type: 'success', id: notificationIdRef.current });
+                    setNotification({
+                      message: `Removed timeout/ban for ${targetUser}`,
+                      type: "success",
+                      id: notificationIdRef.current,
+                    });
                   } else {
                     let duration: number | undefined = undefined;
                     let reasonIndex = 2;
 
-                    if (cmd === '/timeout') {
-                      const durationStr = parts[2] || '600';
+                    if (cmd === "/timeout") {
+                      const durationStr = parts[2] || "600";
                       const match = durationStr.match(/^(\d+)([smhd])?$/i);
                       if (match) {
                         const val = parseInt(match[1]);
-                        const unit = (match[2] || 's').toLowerCase();
-                        const multipliers: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 };
+                        const unit = (match[2] || "s").toLowerCase();
+                        const multipliers: Record<string, number> = {
+                          s: 1,
+                          m: 60,
+                          h: 3600,
+                          d: 86400,
+                        };
                         duration = val * (multipliers[unit] || 1);
                         reasonIndex = 3;
                       } else {
@@ -818,46 +994,68 @@ export function useChatAppState({
                       }
                     }
 
-                    const reason = parts.slice(reasonIndex).join(' ') || null;
+                    const reason = parts.slice(reasonIndex).join(" ") || null;
                     await createBan(
                       selectedTwitchChannel,
                       twitchSession.userId,
                       resolvedTargetId,
                       duration,
-                      reason
+                      reason,
                     );
                   }
                   return;
                 } catch (err: any) {
                   console.error(`Moderation command ${cmd} failed:`, err);
                   notificationIdRef.current += 1;
-                  setNotification({ message: err.message || `Failed to execute ${cmd}`, type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: err.message || `Failed to execute ${cmd}`,
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
               }
 
-              if (cmd === '/raid' || cmd === '/unraid') {
-                const isOwnerByName = (twitchSession?.username || '').toLowerCase() === (selectedTwitchChannelName || '').toLowerCase();
-                const isOwnerById = twitchSession?.userId && selectedTwitchChannel ? twitchSession.userId === selectedTwitchChannel : false;
+              if (cmd === "/raid" || cmd === "/unraid") {
+                const isOwnerByName =
+                  (twitchSession?.username || "").toLowerCase() ===
+                  (selectedTwitchChannelName || "").toLowerCase();
+                const isOwnerById =
+                  twitchSession?.userId && selectedTwitchChannel
+                    ? twitchSession.userId === selectedTwitchChannel
+                    : false;
                 if (!isOwnerByName && !isOwnerById) {
                   notificationIdRef.current += 1;
-                  setNotification({ message: 'Only the broadcaster can start or cancel a raid', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: "Only the broadcaster can start or cancel a raid",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
 
                 try {
-                  if (cmd === '/unraid') {
+                  if (cmd === "/unraid") {
                     await cancelRaid(selectedTwitchChannel);
                     setPendingRaid(null);
                     setIsRaidInitiator(false);
                     notificationIdRef.current += 1;
-                    setNotification({ message: 'Raid cancelled', type: 'success', id: notificationIdRef.current });
+                    setNotification({
+                      message: "Raid cancelled",
+                      type: "success",
+                      id: notificationIdRef.current,
+                    });
                   } else {
                     const targetUser = parts[1];
-                    if (!targetUser) throw new Error('/raid requires a username');
+                    if (!targetUser)
+                      throw new Error("/raid requires a username");
 
-                    const resolvedTargetId = await resolveBroadcasterId(targetUser);
-                    if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                    const resolvedTargetId =
+                      await resolveBroadcasterId(targetUser);
+                    if (
+                      resolvedTargetId === targetUser &&
+                      !/^\d+$/.test(resolvedTargetId)
+                    ) {
                       throw new Error(`Could not find user ${targetUser}`);
                     }
 
@@ -869,79 +1067,144 @@ export function useChatAppState({
                     });
                     setIsRaidInitiator(true);
                     notificationIdRef.current += 1;
-                    setNotification({ message: `Raiding ${targetUser}`, type: 'success', id: notificationIdRef.current });
+                    setNotification({
+                      message: `Raiding ${targetUser}`,
+                      type: "success",
+                      id: notificationIdRef.current,
+                    });
                   }
                   return;
                 } catch (err: any) {
                   console.error(`Raid command ${cmd} failed:`, err);
                   notificationIdRef.current += 1;
-                  setNotification({ message: err.message || `Failed to execute ${cmd}`, type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: err.message || `Failed to execute ${cmd}`,
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
               }
 
-              if (cmd === '/announce') {
-                const announcementText = parts.slice(1).join(' ');
+              if (cmd === "/announce") {
+                const announcementText = parts.slice(1).join(" ");
                 if (!announcementText) {
                   notificationIdRef.current += 1;
-                  setNotification({ message: 'Usage: /announce <message>', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: "Usage: /announce <message>",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
                 try {
-                  await sendAnnouncement(selectedTwitchChannel, twitchSession.userId, announcementText);
+                  await sendAnnouncement(
+                    selectedTwitchChannel,
+                    twitchSession.userId,
+                    announcementText,
+                  );
                   notificationIdRef.current += 1;
-                  setNotification({ message: 'Announcement sent!', type: 'success', id: notificationIdRef.current });
+                  setNotification({
+                    message: "Announcement sent!",
+                    type: "success",
+                    id: notificationIdRef.current,
+                  });
                 } catch (err: any) {
-                  console.error('Announcement command failed:', err);
+                  console.error("Announcement command failed:", err);
                   notificationIdRef.current += 1;
-                  setNotification({ message: err.message || 'Failed to send announcement', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: err.message || "Failed to send announcement",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                 }
                 return;
               }
 
-              if (cmd === '/shoutout') {
+              if (cmd === "/shoutout") {
                 const targetUser = parts[1];
                 if (!targetUser) {
                   notificationIdRef.current += 1;
-                  setNotification({ message: 'Usage: /shoutout <username>', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: "Usage: /shoutout <username>",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
                 try {
-                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
-                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                  const resolvedTargetId =
+                    await resolveBroadcasterId(targetUser);
+                  if (
+                    resolvedTargetId === targetUser &&
+                    !/^\d+$/.test(resolvedTargetId)
+                  ) {
                     throw new Error(`Could not find user ${targetUser}`);
                   }
-                  await sendShoutout(selectedTwitchChannel, resolvedTargetId, twitchSession.userId);
+                  await sendShoutout(
+                    selectedTwitchChannel,
+                    resolvedTargetId,
+                    twitchSession.userId,
+                  );
                   notificationIdRef.current += 1;
-                  setNotification({ message: `Shoutout sent to ${targetUser}!`, type: 'success', id: notificationIdRef.current });
+                  setNotification({
+                    message: `Shoutout sent to ${targetUser}!`,
+                    type: "success",
+                    id: notificationIdRef.current,
+                  });
                 } catch (err: any) {
-                  console.error('Shoutout command failed:', err);
+                  console.error("Shoutout command failed:", err);
                   notificationIdRef.current += 1;
-                  setNotification({ message: err.message || 'Failed to send shoutout', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: err.message || "Failed to send shoutout",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                 }
                 return;
               }
 
-              if (cmd === '/warn') {
+              if (cmd === "/warn") {
                 const targetUser = parts[1];
                 if (!targetUser) {
                   notificationIdRef.current += 1;
-                  setNotification({ message: 'Usage: /warn <username> [reason]', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: "Usage: /warn <username> [reason]",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                   return;
                 }
                 try {
-                  const resolvedTargetId = await resolveBroadcasterId(targetUser);
-                  if (resolvedTargetId === targetUser && !/^\d+$/.test(resolvedTargetId)) {
+                  const resolvedTargetId =
+                    await resolveBroadcasterId(targetUser);
+                  if (
+                    resolvedTargetId === targetUser &&
+                    !/^\d+$/.test(resolvedTargetId)
+                  ) {
                     throw new Error(`Could not find user ${targetUser}`);
                   }
-                  const reason = parts.slice(2).join(' ') || undefined;
-                  await warnChatUser(selectedTwitchChannel, twitchSession.userId, resolvedTargetId, reason);
+                  const reason = parts.slice(2).join(" ") || undefined;
+                  await warnChatUser(
+                    selectedTwitchChannel,
+                    twitchSession.userId,
+                    resolvedTargetId,
+                    reason,
+                  );
                   notificationIdRef.current += 1;
-                  setNotification({ message: `Warning sent to ${targetUser}`, type: 'success', id: notificationIdRef.current });
+                  setNotification({
+                    message: `Warning sent to ${targetUser}`,
+                    type: "success",
+                    id: notificationIdRef.current,
+                  });
                 } catch (err: any) {
-                  console.error('Warn command failed:', err);
+                  console.error("Warn command failed:", err);
                   notificationIdRef.current += 1;
-                  setNotification({ message: err.message || 'Failed to warn user', type: 'error', id: notificationIdRef.current });
+                  setNotification({
+                    message: err.message || "Failed to warn user",
+                    type: "error",
+                    id: notificationIdRef.current,
+                  });
                 }
                 return;
               }
@@ -952,25 +1215,30 @@ export function useChatAppState({
                 selectedTwitchChannel,
                 twitchSession.userId,
                 message,
-                replyingTo?.id
+                replyingTo?.id,
               );
 
               if (serverMessageId) {
                 const optimisticId = `optimistic_${serverMessageId}`;
                 const optimisticMessage: ChatMessage = {
                   id: optimisticId,
-                  platform: 'twitch',
-                  author: twitchSession.displayName || twitchSession.username || 'You',
+                  platform: "twitch",
+                  author:
+                    twitchSession.displayName ||
+                    twitchSession.username ||
+                    "You",
                   content: message,
                   timestamp: new Date(),
                   userId: twitchSession.userId,
-                  authorColor: '#FFFFFF',
+                  authorColor: "#FFFFFF",
                   authorAvatar: twitchSession.profileImageUrl,
-                  replyTo: replyingTo ? {
-                    id: replyingTo.id,
-                    author: replyingTo.author,
-                    content: replyingTo.content,
-                  } : undefined,
+                  replyTo: replyingTo
+                    ? {
+                        id: replyingTo.id,
+                        author: replyingTo.author,
+                        content: replyingTo.content,
+                      }
+                    : undefined,
                   mentionsUser: false,
                   emotes: {},
                   isBot: false,
@@ -981,38 +1249,49 @@ export function useChatAppState({
                 };
 
                 setMessages((prev) => {
-                  const hasRealById = prev.some((m) => m.id === serverMessageId && !m.optimistic);
+                  const hasRealById = prev.some(
+                    (m) => m.id === serverMessageId && !m.optimistic,
+                  );
                   if (hasRealById) return prev;
 
-                  const hasRealByContent = prev.some((m) =>
-                    !m.optimistic &&
-                    m.isCurrentUser &&
-                    m.userId === twitchSession?.userId &&
-                    m.content === message &&
-                    ((m.replyTo?.id || '') === (replyingTo?.id || ''))
+                  const hasRealByContent = prev.some(
+                    (m) =>
+                      !m.optimistic &&
+                      m.isCurrentUser &&
+                      m.userId === twitchSession?.userId &&
+                      m.content === message &&
+                      (m.replyTo?.id || "") === (replyingTo?.id || ""),
                   );
                   if (hasRealByContent) return prev;
 
-                  const optimisticIdExists = prev.some((m) => m.id === optimisticId);
+                  const optimisticIdExists = prev.some(
+                    (m) => m.id === optimisticId,
+                  );
                   if (optimisticIdExists) return prev;
 
                   const updated = [...prev, optimisticMessage];
-                  return updated.length > MAX_DISPLAYED_MESSAGES ? updated.slice(-MAX_DISPLAYED_MESSAGES) : updated;
+                  return updated.length > MAX_DISPLAYED_MESSAGES
+                    ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+                    : updated;
                 });
               } else {
                 await sendTwitchMessage(message, replyingTo?.id);
               }
             }
           } catch (error) {
-            console.error('Failed to send Twitch message:', error);
+            console.error("Failed to send Twitch message:", error);
             notificationIdRef.current += 1;
-            setNotification({ message: 'Failed to send message', type: 'error', id: notificationIdRef.current });
+            setNotification({
+              message: "Failed to send message",
+              type: "error",
+              id: notificationIdRef.current,
+            });
           }
 
           setReplyingTo(undefined);
         }
       } catch (error) {
-        console.error('Failed to send message:', error);
+        console.error("Failed to send message:", error);
       } finally {
         setIsLoading(false);
         if (unifyChatEnabled) {
@@ -1022,129 +1301,230 @@ export function useChatAppState({
         }
       }
     },
-    [selectedTwitchChannel, sendTwitchMessage, twitchSession, replyingTo, unifyChatEnabled]
+    [
+      selectedTwitchChannel,
+      sendTwitchMessage,
+      twitchSession,
+      replyingTo,
+      unifyChatEnabled,
+    ],
   );
 
-  // Refresh emotes 
+  // Refresh emotes
   const handleRefreshEmotes = useCallback(async () => {
-    console.log('User initiated emote reload');
+    console.log("User initiated emote reload");
     setIsRefreshingEmotes(true);
     try {
       clearEmoteCache();
       await initializeEmotes(
         selectedTwitchChannel,
         selectedTwitchChannelName,
-        twitchSession?.userId
+        twitchSession?.userId,
       );
       notificationIdRef.current += 1;
-      setNotification({ message: 'Emotes reloaded successfully!', type: 'success', id: notificationIdRef.current });
+      setNotification({
+        message: "Emotes reloaded successfully!",
+        type: "success",
+        id: notificationIdRef.current,
+      });
     } catch (err) {
-      console.error('Failed to reinitialize emotes:', err);
+      console.error("Failed to reinitialize emotes:", err);
       notificationIdRef.current += 1;
-      setNotification({ message: '❌ Failed to reload emotes', type: 'error', id: notificationIdRef.current });
+      setNotification({
+        message: "❌ Failed to reload emotes",
+        type: "error",
+        id: notificationIdRef.current,
+      });
     } finally {
       setIsRefreshingEmotes(false);
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
-  // Moderation actions 
+  // Moderation actions
   const handleToggleModMode = useCallback(() => {
     if (!isModerator) return;
     setModModeActive((v) => !v);
   }, [isModerator]);
 
-  const handleDelete = useCallback(async (messageId: string) => {
-    if (!twitchSession || !selectedTwitchChannel) return;
-    try {
-      await deleteChatMessage(selectedTwitchChannel, twitchSession.userId, messageId);
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Message deleted', type: 'success', id: notificationIdRef.current });
-    } catch (err) {
-      console.error('Failed to delete message:', err);
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to delete message', type: 'error', id: notificationIdRef.current });
-    }
-  }, [selectedTwitchChannel, twitchSession]);
-
-  const handleBan = useCallback(async (userId: string, displayName?: string) => {
-    if (!twitchSession || !selectedTwitchChannel) return;
-    try {
-      await createBan(selectedTwitchChannel, twitchSession.userId, userId, undefined, 'Banned via Mixchat');
-      notificationIdRef.current += 1;
-      setNotification({ message: `${displayName || userId} banned`, type: 'success', id: notificationIdRef.current });
-    } catch (err) {
-      console.error('Failed to ban user:', err);
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to ban user', type: 'error', id: notificationIdRef.current });
-    }
-  }, [selectedTwitchChannel, twitchSession]);
-
-  const handleTimeout = useCallback(async (userId: string, seconds: number, displayName?: string) => {
-    if (!twitchSession || !selectedTwitchChannel) return;
-    try {
-      await createBan(selectedTwitchChannel, twitchSession.userId, userId, seconds, `Timeout ${seconds}s`);
-      notificationIdRef.current += 1;
-      setNotification({ message: `${displayName || userId} timed out for ${seconds}s`, type: 'success', id: notificationIdRef.current });
-    } catch (err) {
-      console.error('Failed to timeout user:', err);
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to timeout user', type: 'error', id: notificationIdRef.current });
-    }
-  }, [selectedTwitchChannel, twitchSession]);
-
-  const handleUntimeout = useCallback(async (userName: string) => {
-    if (!twitchSession || !selectedTwitchChannel) return;
-    try {
-      const targetUserId = await resolveBroadcasterId(userName);
-      await removeBan(selectedTwitchChannel, twitchSession.userId, targetUserId);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `untimeout-${userName}-${Date.now()}`,
-          platform: 'twitch' as Platform,
-          author: 'System',
-          content: `${userName} timeout/ban was removed.`,
-          timestamp: new Date(),
-          userId: 'system',
-          authorColor: '#22c55e',
-          mentionsUser: false,
-          emotes: {},
-          isBot: true,
-          badges: {},
-          badgeDetails: {},
-          messageType: 'untimeout' as MessageType,
-          targetUsername: userName,
-        },
-      ]);
-      notificationIdRef.current += 1;
-      setNotification({ message: `Removed timeout/ban for ${userName}`, type: 'success', id: notificationIdRef.current });
-    } catch (err) {
-      console.error('Failed to untimeout user:', err);
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to remove timeout', type: 'error', id: notificationIdRef.current });
-    }
-  }, [selectedTwitchChannel, twitchSession]);
-
-  const handleWarn = useCallback(async (userName: string) => {
-    if (!selectedTwitchChannel || !twitchSession) return;
-    const reason = prompt(`Enter a warning message for @${userName}:`, 'Please follow the chat rules');
-    if (!reason) return;
-    try {
-      const resolvedUserId = await resolveBroadcasterId(userName);
-      if (resolvedUserId === userName && !/^\d+$/.test(resolvedUserId)) {
+  const handleDelete = useCallback(
+    async (messageId: string) => {
+      if (!twitchSession || !selectedTwitchChannel) return;
+      try {
+        await deleteChatMessage(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          messageId,
+        );
         notificationIdRef.current += 1;
-        setNotification({ message: `Could not find user ${userName}`, type: 'error', id: notificationIdRef.current });
-        return;
+        setNotification({
+          message: "Message deleted",
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err) {
+        console.error("Failed to delete message:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Failed to delete message",
+          type: "error",
+          id: notificationIdRef.current,
+        });
       }
-      await warnChatUser(selectedTwitchChannel, twitchSession.userId, resolvedUserId, reason);
-      notificationIdRef.current += 1;
-      setNotification({ message: `Warning sent to ${userName}`, type: 'success', id: notificationIdRef.current });
-    } catch (err: any) {
-      console.error('Failed to warn user:', err);
-      notificationIdRef.current += 1;
-      setNotification({ message: err.message || 'Failed to warn user', type: 'error', id: notificationIdRef.current });
-    }
-  }, [selectedTwitchChannel, twitchSession]);
+    },
+    [selectedTwitchChannel, twitchSession],
+  );
+
+  const handleBan = useCallback(
+    async (userId: string, displayName?: string) => {
+      if (!twitchSession || !selectedTwitchChannel) return;
+      try {
+        await createBan(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          userId,
+          undefined,
+          "Banned via Mixchat",
+        );
+        notificationIdRef.current += 1;
+        setNotification({
+          message: `${displayName || userId} banned`,
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err) {
+        console.error("Failed to ban user:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Failed to ban user",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession],
+  );
+
+  const handleTimeout = useCallback(
+    async (userId: string, seconds: number, displayName?: string) => {
+      if (!twitchSession || !selectedTwitchChannel) return;
+      try {
+        await createBan(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          userId,
+          seconds,
+          `Timeout ${seconds}s`,
+        );
+        notificationIdRef.current += 1;
+        setNotification({
+          message: `${displayName || userId} timed out for ${seconds}s`,
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err) {
+        console.error("Failed to timeout user:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Failed to timeout user",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession],
+  );
+
+  const handleUntimeout = useCallback(
+    async (userName: string) => {
+      if (!twitchSession || !selectedTwitchChannel) return;
+      try {
+        const targetUserId = await resolveBroadcasterId(userName);
+        await removeBan(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          targetUserId,
+        );
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `untimeout-${userName}-${Date.now()}`,
+            platform: "twitch" as Platform,
+            author: "System",
+            content: `${userName} timeout/ban was removed.`,
+            timestamp: new Date(),
+            userId: "system",
+            authorColor: "#22c55e",
+            mentionsUser: false,
+            emotes: {},
+            isBot: true,
+            badges: {},
+            badgeDetails: {},
+            messageType: "untimeout" as MessageType,
+            targetUsername: userName,
+          },
+        ]);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: `Removed timeout/ban for ${userName}`,
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err) {
+        console.error("Failed to untimeout user:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Failed to remove timeout",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession],
+  );
+
+  const handleWarn = useCallback(
+    async (userName: string) => {
+      if (!selectedTwitchChannel || !twitchSession) return;
+      const reason = prompt(
+        `Enter a warning message for @${userName}:`,
+        "Please follow the chat rules",
+      );
+      if (!reason) return;
+      try {
+        const resolvedUserId = await resolveBroadcasterId(userName);
+        if (resolvedUserId === userName && !/^\d+$/.test(resolvedUserId)) {
+          notificationIdRef.current += 1;
+          setNotification({
+            message: `Could not find user ${userName}`,
+            type: "error",
+            id: notificationIdRef.current,
+          });
+          return;
+        }
+        await warnChatUser(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          resolvedUserId,
+          reason,
+        );
+        notificationIdRef.current += 1;
+        setNotification({
+          message: `Warning sent to ${userName}`,
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err: any) {
+        console.error("Failed to warn user:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: err.message || "Failed to warn user",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession],
+  );
 
   const handleCancelRaid = useCallback(async () => {
     if (!selectedTwitchChannel) return;
@@ -1153,117 +1533,175 @@ export function useChatAppState({
       setPendingRaid(null);
       setIsRaidInitiator(false);
       notificationIdRef.current += 1;
-      setNotification({ message: 'Raid cancelled', type: 'success', id: notificationIdRef.current });
+      setNotification({
+        message: "Raid cancelled",
+        type: "success",
+        id: notificationIdRef.current,
+      });
     } catch (err: any) {
-      console.error('Failed to cancel raid:', err);
+      console.error("Failed to cancel raid:", err);
       notificationIdRef.current += 1;
-      setNotification({ message: err.message || 'Failed to cancel raid', type: 'error', id: notificationIdRef.current });
+      setNotification({
+        message: err.message || "Failed to cancel raid",
+        type: "error",
+        id: notificationIdRef.current,
+      });
     }
   }, [selectedTwitchChannel]);
 
-  const handleUpdateTitle = useCallback(async (title: string) => {
-    if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
-    try {
-      const ok = await updateChannelInfo(
-        twitchSession.accessToken,
-        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-        selectedTwitchChannel,
-        { title }
-      );
-      if (ok) {
-        setStreamTitle(title);
+  const handleUpdateTitle = useCallback(
+    async (title: string) => {
+      if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
+      try {
+        const ok = await updateChannelInfo(
+          twitchSession.accessToken,
+          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+          selectedTwitchChannel,
+          { title },
+        );
+        if (ok) {
+          setStreamTitle(title);
+          notificationIdRef.current += 1;
+          setNotification({
+            message: "Title updated",
+            type: "success",
+            id: notificationIdRef.current,
+          });
+        } else {
+          notificationIdRef.current += 1;
+          setNotification({
+            message: "Failed to update title (missing permission?)",
+            type: "error",
+            id: notificationIdRef.current,
+          });
+        }
+      } catch {
         notificationIdRef.current += 1;
-        setNotification({ message: 'Title updated', type: 'success', id: notificationIdRef.current });
-      } else {
-        notificationIdRef.current += 1;
-        setNotification({ message: 'Failed to update title (missing permission?)', type: 'error', id: notificationIdRef.current });
+        setNotification({
+          message: "Failed to update title",
+          type: "error",
+          id: notificationIdRef.current,
+        });
       }
-    } catch {
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to update title', type: 'error', id: notificationIdRef.current });
-    }
-  }, [twitchSession, selectedTwitchChannel]);
+    },
+    [twitchSession, selectedTwitchChannel],
+  );
 
-  const handleUpdateCategory = useCallback(async (gameId: string, gameName: string) => {
-    if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
-    try {
-      const ok = await updateChannelInfo(
-        twitchSession.accessToken,
-        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-        selectedTwitchChannel,
-        { gameId }
-      );
-      if (ok) {
-        setStreamGameName(gameName);
-        setStreamGameId(gameId);
+  const handleUpdateCategory = useCallback(
+    async (gameId: string, gameName: string) => {
+      if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
+      try {
+        const ok = await updateChannelInfo(
+          twitchSession.accessToken,
+          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+          selectedTwitchChannel,
+          { gameId },
+        );
+        if (ok) {
+          setStreamGameName(gameName);
+          setStreamGameId(gameId);
+          notificationIdRef.current += 1;
+          setNotification({
+            message: "Category updated",
+            type: "success",
+            id: notificationIdRef.current,
+          });
+        } else {
+          notificationIdRef.current += 1;
+          setNotification({
+            message: "Failed to update category (missing permission?)",
+            type: "error",
+            id: notificationIdRef.current,
+          });
+        }
+      } catch {
         notificationIdRef.current += 1;
-        setNotification({ message: 'Category updated', type: 'success', id: notificationIdRef.current });
-      } else {
-        notificationIdRef.current += 1;
-        setNotification({ message: 'Failed to update category (missing permission?)', type: 'error', id: notificationIdRef.current });
+        setNotification({
+          message: "Failed to update category",
+          type: "error",
+          id: notificationIdRef.current,
+        });
       }
-    } catch {
-      notificationIdRef.current += 1;
-      setNotification({ message: 'Failed to update category', type: 'error', id: notificationIdRef.current });
-    }
-  }, [twitchSession, selectedTwitchChannel]);
+    },
+    [twitchSession, selectedTwitchChannel],
+  );
 
-  const handleSearchCategories = useCallback(async (query: string): Promise<Array<{ id: string; name: string }>> => {
-    if (!twitchSession?.accessToken) return [];
-    try {
-      return await searchCategories(
-        twitchSession.accessToken,
-        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-        query
-      );
-    } catch {
-      return [];
-    }
-  }, [twitchSession]);
+  const handleSearchCategories = useCallback(
+    async (query: string): Promise<Array<{ id: string; name: string }>> => {
+      if (!twitchSession?.accessToken) return [];
+      try {
+        return await searchCategories(
+          twitchSession.accessToken,
+          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+          query,
+        );
+      } catch {
+        return [];
+      }
+    },
+    [twitchSession],
+  );
 
-  // YouTube helpers 
-  const getYtMessageText = useCallback((m: YTMessage) =>
-    m.parts.map((p) => (p as any).text || (p as any).emojiText || (p as any).alt || '').join(''),
-    []);
+  // YouTube helpers
+  const getYtMessageText = useCallback(
+    (m: YTMessage) =>
+      m.parts
+        .map(
+          (p) =>
+            (p as any).text || (p as any).emojiText || (p as any).alt || "",
+        )
+        .join(""),
+    [],
+  );
 
-  const handleYtMessages = useCallback((msgs: YTMessage[]) => {
-    setYtOptimisticMessages((prev) => {
-      if (!prev.length) return prev;
-      const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+  const handleYtMessages = useCallback(
+    (msgs: YTMessage[]) => {
+      setYtOptimisticMessages((prev) => {
+        if (!prev.length) return prev;
+        const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase();
 
-      const realKeys = new Set(
-        msgs.map((m) => {
-          const textKey = norm(getYtMessageText(m));
-          return m.authorChannelId ? `${m.authorChannelId}|${textKey}` : `${norm(m.author)}|${textKey}`;
-        })
-      );
+        const realKeys = new Set(
+          msgs.map((m) => {
+            const textKey = norm(getYtMessageText(m));
+            return m.authorChannelId
+              ? `${m.authorChannelId}|${textKey}`
+              : `${norm(m.author)}|${textKey}`;
+          }),
+        );
 
-      const remaining = prev.filter((opt) => {
-        const textKey = norm(getYtMessageText(opt));
-        const key = opt.authorChannelId ? `${opt.authorChannelId}|${textKey}` : `${norm(opt.author)}|${textKey}`;
-        return !realKeys.has(key);
+        const remaining = prev.filter((opt) => {
+          const textKey = norm(getYtMessageText(opt));
+          const key = opt.authorChannelId
+            ? `${opt.authorChannelId}|${textKey}`
+            : `${norm(opt.author)}|${textKey}`;
+          return !realKeys.has(key);
+        });
+
+        return remaining.length === prev.length ? prev : remaining;
       });
+      setYtMessages(msgs);
+    },
+    [getYtMessageText],
+  );
 
-      return remaining.length === prev.length ? prev : remaining;
-    });
-    setYtMessages(msgs);
-  }, [getYtMessageText]);
-
-  const handleYtOptimisticMessage = useCallback((id: string, text: string) => {
-    const optimistic: YTMessage = {
-      id,
-      author: youtubeSession?.displayName || 'You',
-      authorChannelId: youtubeSession?.userId,
-      authorAvatar: youtubeSession?.profileImageUrl,
-      parts: [{ type: 'text', text }],
-      timestamp: new Date(),
-      optimistic: true,
-    };
-    setYtOptimisticMessages((prev) => [...prev, optimistic]);
-    if (unifyChatEnabled) {
-      unifiedChatRef.current?.scrollToBottom();
-    }
-  }, [youtubeSession, unifyChatEnabled]);
+  const handleYtOptimisticMessage = useCallback(
+    (id: string, text: string) => {
+      const optimistic: YTMessage = {
+        id,
+        author: youtubeSession?.displayName || "You",
+        authorChannelId: youtubeSession?.userId,
+        authorAvatar: youtubeSession?.profileImageUrl,
+        parts: [{ type: "text", text }],
+        timestamp: new Date(),
+        optimistic: true,
+      };
+      setYtOptimisticMessages((prev) => [...prev, optimistic]);
+      if (unifyChatEnabled) {
+        unifiedChatRef.current?.scrollToBottom();
+      }
+    },
+    [youtubeSession, unifyChatEnabled],
+  );
 
   const handleYtOptimisticFailed = useCallback((id: string) => {
     setYtOptimisticMessages((prev) => prev.filter((m) => m.id !== id));

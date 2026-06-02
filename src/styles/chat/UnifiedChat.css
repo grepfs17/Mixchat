@@ -1,4 +1,4 @@
-@import '../vars.css';
+@import "../vars.css";
 
 /* Optimistic placeholder — dimmed until the server confirms the message */
 .yt-optimistic {
@@ -109,6 +109,4 @@
     white-space: nowrap;
 }
 
-
 /* Ensure UnifiedChat specific overrides if needed */
-

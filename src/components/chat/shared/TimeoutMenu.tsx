@@ -1,4 +1,4 @@
-import { createPortal } from 'react-dom';
+import { createPortal } from "react-dom";
 
 interface TimeoutMenuProps {
   userId: string;
@@ -10,22 +10,29 @@ interface TimeoutMenuProps {
 }
 
 const TIMEOUT_OPTIONS = [
-  { label: '10 Seconds', seconds: 10 },
-  { label: '10 Minutes', seconds: 600 },
-  { label: '1 Day', seconds: 86400 },
+  { label: "10 Seconds", seconds: 10 },
+  { label: "10 Minutes", seconds: 600 },
+  { label: "1 Day", seconds: 86400 },
 ];
 
-export default function TimeoutMenu({ userId, username, x, y, onTimeout, onClose }: TimeoutMenuProps) {
+export default function TimeoutMenu({
+  userId,
+  username,
+  x,
+  y,
+  onTimeout,
+  onClose,
+}: TimeoutMenuProps) {
   return createPortal(
     <div
       className="mod-context-menu"
       onContextMenu={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: y,
         right: window.innerWidth - x,
-        left: 'auto',
+        left: "auto",
         zIndex: 9999,
       }}
     >
@@ -33,12 +40,15 @@ export default function TimeoutMenu({ userId, username, x, y, onTimeout, onClose
       {TIMEOUT_OPTIONS.map((opt) => (
         <button
           key={opt.seconds}
-          onClick={() => { onTimeout(userId, opt.seconds, username); onClose(); }}
+          onClick={() => {
+            onTimeout(userId, opt.seconds, username);
+            onClose();
+          }}
         >
           {opt.label}
         </button>
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }

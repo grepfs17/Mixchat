@@ -5,9 +5,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("../../../src/lib/youtube", () => {
   return {
     getInnertube: vi.fn().mockResolvedValue({
-      getChannel: vi.fn().mockRejectedValue(
-        new Error("Request to https://www.youtube.com/... failed with status code 403"),
-      ),
+      getChannel: vi
+        .fn()
+        .mockRejectedValue(
+          new Error(
+            "Request to https://www.youtube.com/... failed with status code 403",
+          ),
+        ),
     }),
   };
 });
@@ -29,15 +33,23 @@ describe("YouTube proxy - getChannel failure", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(async () => {
-        return { ok: true, url: "https://www.youtube.com/@testhandle/live", status: 200 } as any;
+        return {
+          ok: true,
+          url: "https://www.youtube.com/@testhandle/live",
+          status: 200,
+        } as any;
       }),
     );
 
     const { GET } = await import("../../../src/pages/api/youtube-proxy");
 
-    const url = new URL("http://localhost/?action=getLiveVideo&channelUrl=@testhandle");
+    const url = new URL(
+      "http://localhost/?action=getLiveVideo&channelUrl=@testhandle",
+    );
     const cookies = { get: () => undefined } as any;
-    const request = { headers: new Headers({ "x-forwarded-for": "127.0.0.1" }) } as any;
+    const request = {
+      headers: new Headers({ "x-forwarded-for": "127.0.0.1" }),
+    } as any;
 
     const res: Response = await GET({ request, url, cookies } as any);
 

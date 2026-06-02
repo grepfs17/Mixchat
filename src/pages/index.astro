@@ -3,25 +3,24 @@ import MainLayout from "../layouts/MainLayout.astro";
 
 const title = "Mixchat";
 const description =
-  "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.";
-
+    "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.";
 ---
 
 <MainLayout title={title} description={description}>
-  <Fragment slot="head">
-    <meta
-      name="keywords"
-      content="twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, youtube chat, youtube emotes, youtube chat client, mixchat"
-    />
-    <script
-      type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        name: "Mixchat",
-        url: "https://mixchat.grepfs.xyz/",
-        description: description,
-      })}
-    />
-  </Fragment>
+    <Fragment slot="head">
+        <meta
+            name="keywords"
+            content="twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, youtube chat, youtube emotes, youtube chat client, mixchat"
+        />
+        <script
+            type="application/ld+json"
+            set:html={JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                name: "Mixchat",
+                url: "https://mixchat.grepfs.xyz/",
+                description: description,
+            })}
+        />
+    </Fragment>
 </MainLayout>

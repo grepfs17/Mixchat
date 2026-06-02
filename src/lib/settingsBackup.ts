@@ -4,32 +4,32 @@
  * No server-side storage — the user owns their data.
  */
 
-import { loadEventSounds, saveEventSounds } from './eventSoundStorage';
+import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
 
 const BACKUP_VERSION = 1;
 
 /** Keys that represent user preferences (not auth tokens, not caches). */
 const SETTINGS_KEYS = [
-  'mixchat_video_ratio',
-  'mixchat_favorite_channels',
-  'mixchat_embed_default_open',
-  'mixchat_unify_chat',
-  'mixchat_split_chat',
-  'mixchat_use_youtube_embed',
-  'mixchat_font_size',
-  'mixchat_chat_font',
-  'mixchat_mention_sound',
-  'mixchat_mention_volume',
-  'mixchat_mention_sound_type',
-  'mixchat_show_deleted_messages',
-  'mixchat_compact_actions',
-  'mixchat_hide_viewer_count',
-  'mixchat_hide_chat_timestamps',
-  'mixchat_event_sound_volume',
-  'mixchat_chat_split_ratio',
-  'mixchat_watched_streamers',
-  'mixchat_youtube_links',
-  'disabled_emotes_v1',
+  "mixchat_video_ratio",
+  "mixchat_favorite_channels",
+  "mixchat_embed_default_open",
+  "mixchat_unify_chat",
+  "mixchat_split_chat",
+  "mixchat_use_youtube_embed",
+  "mixchat_font_size",
+  "mixchat_chat_font",
+  "mixchat_mention_sound",
+  "mixchat_mention_volume",
+  "mixchat_mention_sound_type",
+  "mixchat_show_deleted_messages",
+  "mixchat_compact_actions",
+  "mixchat_hide_viewer_count",
+  "mixchat_hide_chat_timestamps",
+  "mixchat_event_sound_volume",
+  "mixchat_chat_split_ratio",
+  "mixchat_watched_streamers",
+  "mixchat_youtube_links",
+  "disabled_emotes_v1",
 ] as const;
 
 interface SettingsBackup {
@@ -69,21 +69,21 @@ export async function exportSettings(): Promise<void> {
   const settings = readSettings();
   const eventSounds = await loadEventSounds();
   if (eventSounds && Object.keys(eventSounds).length > 0) {
-    settings['mixchat_event_sounds'] = JSON.stringify(eventSounds);
+    settings["mixchat_event_sounds"] = JSON.stringify(eventSounds);
   }
 
   const backup: SettingsBackup = {
     _version: BACKUP_VERSION,
-    _app: 'mixchat',
+    _app: "mixchat",
     _exportedAt: new Date().toISOString(),
     settings,
   };
 
   const json = JSON.stringify(backup, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
+  const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `mixchat-settings-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
@@ -104,21 +104,21 @@ export function importSettings(file: File): Promise<number> {
       try {
         const parsed = JSON.parse(reader.result as string) as SettingsBackup;
 
-        if (parsed._app !== 'mixchat') {
-          reject(new Error('This file is not a Mixchat settings backup.'));
+        if (parsed._app !== "mixchat") {
+          reject(new Error("This file is not a Mixchat settings backup."));
           return;
         }
 
-        if (!parsed.settings || typeof parsed.settings !== 'object') {
-          reject(new Error('Invalid backup file format.'));
+        if (!parsed.settings || typeof parsed.settings !== "object") {
+          reject(new Error("Invalid backup file format."));
           return;
         }
 
         let count = writeSettings(parsed.settings);
 
-        if (parsed.settings['mixchat_event_sounds']) {
+        if (parsed.settings["mixchat_event_sounds"]) {
           try {
-            const sounds = JSON.parse(parsed.settings['mixchat_event_sounds']);
+            const sounds = JSON.parse(parsed.settings["mixchat_event_sounds"]);
             await saveEventSounds(sounds);
             count++;
           } catch {
@@ -128,10 +128,10 @@ export function importSettings(file: File): Promise<number> {
 
         resolve(count);
       } catch (e) {
-        reject(new Error('Failed to parse settings file.'));
+        reject(new Error("Failed to parse settings file."));
       }
     };
-    reader.onerror = () => reject(new Error('Failed to read file.'));
+    reader.onerror = () => reject(new Error("Failed to read file."));
     reader.readAsText(file);
   });
 }

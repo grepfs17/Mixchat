@@ -1,9 +1,9 @@
-import { renderHook, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useChatAppState } from '../../src/hooks/useChatAppState';
-import type { PlatformSession } from '../../src/lib/types';
+import { renderHook, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useChatAppState } from "../../src/hooks/useChatAppState";
+import type { PlatformSession } from "../../src/lib/types";
 
-vi.mock('../../src/hooks/useTwitchChat', () => ({
+vi.mock("../../src/hooks/useTwitchChat", () => ({
   useTwitchChat: () => ({
     sendMessage: vi.fn(),
     slowModeWaitTime: null,
@@ -11,22 +11,22 @@ vi.mock('../../src/hooks/useTwitchChat', () => ({
   }),
 }));
 
-vi.mock('../../src/hooks/useRaidDetection', () => ({
+vi.mock("../../src/hooks/useRaidDetection", () => ({
   useRaidDetection: vi.fn(),
 }));
 
-vi.mock('../../src/lib/emotes', () => ({
+vi.mock("../../src/lib/emotes", () => ({
   initializeEmotes: vi.fn().mockResolvedValue(undefined),
   clearEmoteCache: vi.fn(),
   subscribeTo7TVUpdates: vi.fn().mockReturnValue(vi.fn()),
 }));
 
-vi.mock('../../src/lib/badges', () => ({
+vi.mock("../../src/lib/badges", () => ({
   initializeBadges: vi.fn().mockResolvedValue(undefined),
   clearBadgeCache: vi.fn(),
 }));
 
-vi.mock('../../src/lib/twitch', () => ({
+vi.mock("../../src/lib/twitch", () => ({
   getStreamStatus: vi.fn().mockResolvedValue(null),
   getRecentMessages: vi.fn().mockResolvedValue([]),
   deleteChatMessage: vi.fn(),
@@ -43,30 +43,32 @@ vi.mock('../../src/lib/twitch', () => ({
   getAllFollowedChannels: vi.fn().mockResolvedValue([]),
 }));
 
-const createTwitchSession = (overrides?: Partial<PlatformSession>): PlatformSession => ({
-  platform: 'twitch',
-  accessToken: 'test-token',
-  userId: 'user-123',
-  displayName: 'TestUser',
-  username: 'testuser',
-  profileImageUrl: 'https://example.com/avatar.png',
+const createTwitchSession = (
+  overrides?: Partial<PlatformSession>,
+): PlatformSession => ({
+  platform: "twitch",
+  accessToken: "test-token",
+  userId: "user-123",
+  displayName: "TestUser",
+  username: "testuser",
+  profileImageUrl: "https://example.com/avatar.png",
   ...overrides,
 });
 
-describe('useChatAppState - auto moderator mode', () => {
+describe("useChatAppState - auto moderator mode", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('auto-activates mod mode when user accesses their own channel by username', async () => {
+  it("auto-activates mod mode when user accesses their own channel by username", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: true,
-        selectedTwitchChannel: 'broadcaster-123',
-        selectedTwitchChannelName: 'testuser',
-        selectedTwitchChannelDisplayName: 'TestUser',
+        selectedTwitchChannel: "broadcaster-123",
+        selectedTwitchChannelName: "testuser",
+        selectedTwitchChannelDisplayName: "TestUser",
         twitchSession: createTwitchSession(),
-      })
+      }),
     );
 
     await waitFor(() => {
@@ -75,15 +77,15 @@ describe('useChatAppState - auto moderator mode', () => {
     });
   });
 
-  it('auto-activates mod mode when user accesses their own channel by userId', async () => {
+  it("auto-activates mod mode when user accesses their own channel by userId", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: true,
-        selectedTwitchChannel: 'user-123',
-        selectedTwitchChannelName: 'someothername',
-        selectedTwitchChannelDisplayName: 'SomeOtherName',
+        selectedTwitchChannel: "user-123",
+        selectedTwitchChannelName: "someothername",
+        selectedTwitchChannelDisplayName: "SomeOtherName",
         twitchSession: createTwitchSession(),
-      })
+      }),
     );
 
     await waitFor(() => {
@@ -92,15 +94,15 @@ describe('useChatAppState - auto moderator mode', () => {
     });
   });
 
-  it('does not auto-activate mod mode for another channel', async () => {
+  it("does not auto-activate mod mode for another channel", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: true,
-        selectedTwitchChannel: 'broadcaster-456',
-        selectedTwitchChannelName: 'anotheruser',
-        selectedTwitchChannelDisplayName: 'AnotherUser',
+        selectedTwitchChannel: "broadcaster-456",
+        selectedTwitchChannelName: "anotheruser",
+        selectedTwitchChannelDisplayName: "AnotherUser",
         twitchSession: createTwitchSession(),
-      })
+      }),
     );
 
     await waitFor(() => {
@@ -108,15 +110,15 @@ describe('useChatAppState - auto moderator mode', () => {
     });
   });
 
-  it('does not auto-activate mod mode when not logged in', async () => {
+  it("does not auto-activate mod mode when not logged in", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: false,
-        selectedTwitchChannel: 'broadcaster-123',
-        selectedTwitchChannelName: 'testuser',
-        selectedTwitchChannelDisplayName: 'TestUser',
+        selectedTwitchChannel: "broadcaster-123",
+        selectedTwitchChannelName: "testuser",
+        selectedTwitchChannelDisplayName: "TestUser",
         twitchSession: undefined,
-      })
+      }),
     );
 
     await waitFor(() => {

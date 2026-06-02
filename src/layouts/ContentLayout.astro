@@ -2,9 +2,9 @@
 import "../styles/global.css";
 
 interface Props {
-  title: string;
-  description: string;
-  ogUrl?: string;
+    title: string;
+    description: string;
+    ogUrl?: string;
 }
 
 const { title, description, ogUrl } = Astro.props;
@@ -14,38 +14,38 @@ const resolvedOgUrl = ogUrl ?? mainUrl;
 
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <meta name="theme-color" content="#0a0a0a" />
-    <title>{title}</title>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content={description} />
+        <meta name="theme-color" content="#0a0a0a" />
+        <title>{title}</title>
 
-    <link rel="icon" type="image/x-icon" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
+        <link rel="icon" type="image/x-icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content={resolvedOgUrl} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:site_name" content="Mixchat" />
-    <meta property="og:image" content={`${mainUrl}logo.webp`} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Mixchat logo" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={resolvedOgUrl} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:site_name" content="Mixchat" />
+        <meta property="og:image" content={`${mainUrl}logo.webp`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Mixchat logo" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={resolvedOgUrl} />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={`${mainUrl}logo.webp`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={resolvedOgUrl} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={`${mainUrl}logo.webp`} />
 
-    <meta name="author" content="Mixchat" />
-    <link rel="canonical" href={resolvedOgUrl} />
+        <meta name="author" content="Mixchat" />
+        <link rel="canonical" href={resolvedOgUrl} />
 
-    <slot name="head" />
-  </head>
-  <body>
-    <slot />
-  </body>
+        <slot name="head" />
+    </head>
+    <body>
+        <slot />
+    </body>
 </html>

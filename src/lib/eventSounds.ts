@@ -8,7 +8,11 @@ const eventSoundCache = new Map<string, HTMLAudioElement>();
  * Play a custom event sound from base64 data URL.
  * Uses caching to avoid re-creating Audio elements.
  */
-export function playEventSound(eventType: string, soundDataUrl: string, volume: number = 1): void {
+export function playEventSound(
+  eventType: string,
+  soundDataUrl: string,
+  volume: number = 1,
+): void {
   try {
     let audio = eventSoundCache.get(eventType);
 

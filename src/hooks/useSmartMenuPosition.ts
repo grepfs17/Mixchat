@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from "react";
 
 const MARGIN = 8;
 
@@ -9,29 +9,32 @@ const MARGIN = 8;
  * on the first paint; the corrected position is applied after the first layout.
  */
 export function useSmartMenuPosition(x: number, y: number) {
-    const menuRef = useRef<HTMLDivElement>(null);
-    const [pos, setPos] = useState<{ top: number; left: number }>({ top: y, left: x });
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number }>({
+    top: y,
+    left: x,
+  });
 
-    useEffect(() => {
-        const el = menuRef.current;
-        if (!el) return;
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!el) return;
 
-        const { offsetHeight, offsetWidth } = el;
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+    const { offsetHeight, offsetWidth } = el;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-        let top = y;
-        let left = x;
+    let top = y;
+    let left = x;
 
-        if (y + offsetHeight + MARGIN > vh) {
-            top = Math.max(MARGIN, y - offsetHeight);
-        }
-        if (x + offsetWidth + MARGIN > vw) {
-            left = Math.max(MARGIN, vw - offsetWidth - MARGIN);
-        }
+    if (y + offsetHeight + MARGIN > vh) {
+      top = Math.max(MARGIN, y - offsetHeight);
+    }
+    if (x + offsetWidth + MARGIN > vw) {
+      left = Math.max(MARGIN, vw - offsetWidth - MARGIN);
+    }
 
-        setPos({ top, left });
-    }, [x, y]);
+    setPos({ top, left });
+  }, [x, y]);
 
-    return { menuRef, pos };
+  return { menuRef, pos };
 }

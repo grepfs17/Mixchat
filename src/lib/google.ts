@@ -1,11 +1,15 @@
-export async function googleFetch(url: string, init?: RequestInit, context?: { action?: string;[k: string]: any }) {
+export async function googleFetch(
+  url: string,
+  init?: RequestInit,
+  context?: { action?: string; [k: string]: any },
+) {
   const start = Date.now();
 
   // Ensure we have a Referer header to avoid 403 errors with restricted API keys
-  const referrer = process.env.ORIGIN || 'https://www.youtube.com/';
+  const referrer = process.env.ORIGIN || "https://www.youtube.com/";
   const headers = new Headers(init?.headers);
-  if (!headers.has('Referer')) {
-    headers.set('Referer', referrer.endsWith('/') ? referrer : referrer + '/');
+  if (!headers.has("Referer")) {
+    headers.set("Referer", referrer.endsWith("/") ? referrer : referrer + "/");
   }
 
   const res = await fetch(url, { ...init, headers });
@@ -26,7 +30,7 @@ export async function googleFetch(url: string, init?: RequestInit, context?: { a
       parsed = undefined;
     }
 
-    console.error('[Google API] Request failed', {
+    console.error("[Google API] Request failed", {
       url,
       status: res.status,
       statusText: res.statusText,
@@ -35,7 +39,8 @@ export async function googleFetch(url: string, init?: RequestInit, context?: { a
       ...context,
     });
 
-    const message = parsed?.error?.message ?? bodyText ?? `${res.status} ${res.statusText}`;
+    const message =
+      parsed?.error?.message ?? bodyText ?? `${res.status} ${res.statusText}`;
     const err = new Error(`Google API error: ${message}`);
     (err as any).status = res.status;
     (err as any).body = parsed ?? bodyText;
@@ -45,7 +50,10 @@ export async function googleFetch(url: string, init?: RequestInit, context?: { a
   try {
     return await res.json();
   } catch (e) {
-    console.error('[Google API] Failed to parse JSON response', { url, err: e });
+    console.error("[Google API] Failed to parse JSON response", {
+      url,
+      err: e,
+    });
     throw e;
   }
 }

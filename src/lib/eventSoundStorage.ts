@@ -1,7 +1,7 @@
 /**
  * Event sound storage backed by IndexedDB.
  *
- * Audio files are stored as Blobs (efficient binary storage). 
+ * Audio files are stored as Blobs (efficient binary storage).
  * The React state still holds data URLs for playback,
  * but persistence uses IndexedDB to avoid localStorage's ~5-10 MB limit.
  *
@@ -106,7 +106,10 @@ export async function saveEventSounds(
  * Load event sounds from IndexedDB.
  * Automatically migrates legacy localStorage data on first run.
  */
-export async function loadEventSounds(): Promise<Record<string, string> | null> {
+export async function loadEventSounds(): Promise<Record<
+  string,
+  string
+> | null> {
   if (!isIDBAvailable()) {
     const saved = localStorage.getItem("mixchat_event_sounds");
     if (saved) {

@@ -4,59 +4,59 @@ import ContentLayout from "../layouts/ContentLayout.astro";
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const title = "Terms of Service - Mixchat";
 const description =
-  "Mixchat Terms of Service — unofficial Twitch and YouTube chat client provided as-is under the MIT License.";
+    "Mixchat Terms of Service — unofficial Twitch and YouTube chat client provided as-is under the MIT License.";
 ---
 
 <ContentLayout {title} {description} ogUrl={`${mainUrl}terms`}>
-  <Fragment slot="head">
-    <style>
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-          Cantarell, sans-serif;
-        line-height: 1.6;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 20px;
-        background: #0a0a0a;
-        color: #e0e0e0;
-      }
-      h1 {
-        color: #fff;
-        margin-bottom: 10px;
-      }
-      h2 {
-        color: var(--color-accent);
-        margin-top: 30px;
-      }
-      .meta {
-        color: #999;
-        font-size: 14px;
-        margin-bottom: 30px;
-      }
-      a {
-        color: var(--color-accent);
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      code {
-        background: #1a1a1a;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: "Courier New", monospace;
-      }
-    </style>
-  </Fragment>
+    <Fragment slot="head">
+        <style>
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #0a0a0a;
+                color: #e0e0e0;
+            }
+            h1 {
+                color: #fff;
+                margin-bottom: 10px;
+            }
+            h2 {
+                color: var(--color-accent);
+                margin-top: 30px;
+            }
+            .meta {
+                color: #999;
+                font-size: 14px;
+                margin-bottom: 30px;
+            }
+            a {
+                color: var(--color-accent);
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            code {
+                background: #1a1a1a;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: "Courier New", monospace;
+            }
+        </style>
+    </Fragment>
     <div style="text-align: center; margin-bottom: 30px;">
-      <img
-        src="/logo.webp"
-        alt="Mixchat Logo"
-        width="80"
-        height="80"
-        style="width: auto; height: 80px;"
-      />
+        <img
+            src="/logo.webp"
+            alt="Mixchat Logo"
+            width="80"
+            height="80"
+            style="width: auto; height: 80px;"
+        />
     </div>
     <h1>Terms of Service</h1>
     <p class="meta">Last updated: March 29, 2026</p>
@@ -64,62 +64,65 @@ const description =
     <h2>1. Disclaimer</h2>
     <p>Mixchat is an unofficial app with no connection to Twitch or YouTube.</p>
     <p>
-      The app is provided "as is." If it breaks, or if platforms change their
-      APIs, Mixchat is not liable for service interruptions or account impacts.
+        The app is provided "as is." If it breaks, or if platforms change their
+        APIs, Mixchat is not liable for service interruptions or account
+        impacts.
     </p>
 
     <h2>2. User Guidelines</h2>
     <p>By using Mixchat, you're promising to:</p>
     <ul>
-      <li>
-        Follow the official <a
-          href="https://www.twitch.tv/legal/terms-of-service"
-          target="_blank">Twitch Terms</a
-        > and <a
-          href="https://www.twitch.tv/legal/community-guidelines"
-          target="_blank">Community Guidelines</a
-        >.
-      </li>
-      <li>Don't use the app to spam, harass, or crawl data unfairly.</li>
-      <li>Don't try to break the app or its API endpoints.</li>
-      <li>
-        If you link your YouTube, follow <a
-          href="https://www.youtube.com/t/terms"
-          target="_blank">Google's rules</a
-        > too.
-      </li>
+        <li>
+            Follow the official <a
+                href="https://www.twitch.tv/legal/terms-of-service"
+                target="_blank">Twitch Terms</a
+            > and <a
+                href="https://www.twitch.tv/legal/community-guidelines"
+                target="_blank">Community Guidelines</a
+            >.
+        </li>
+        <li>Don't use the app to spam, harass, or crawl data unfairly.</li>
+        <li>Don't try to break the app or its API endpoints.</li>
+        <li>
+            If you link your YouTube, follow <a
+                href="https://www.youtube.com/t/terms"
+                target="_blank">Google's rules</a
+            > too.
+        </li>
     </ul>
 
     <h2>3. Limited Liability</h2>
     <p>
-      If data, followers, or other account assets are lost due to bugs or
-      downtime, Mixchat is not responsible. The project is maintained by the
-      community.
+        If data, followers, or other account assets are lost due to bugs or
+        downtime, Mixchat is not responsible. The project is maintained by the
+        community.
     </p>
 
     <h2>4. Open Source & License</h2>
     <p>
-      Mixchat is open source and licensed under the MIT License. Feel free to
-      peek at the code or contribute. Just respect the trademarks of Twitch,
-      Google, 7TV, etc.
+        Mixchat is open source and licensed under the MIT License. Feel free to
+        peek at the code or contribute. Just respect the trademarks of Twitch,
+        Google, 7TV, etc.
     </p>
 
     <h2>5. Termination</h2>
     <p>
-      Mixchat reserves the right to block access or change the application at
-      any time if usage violates these terms.
+        Mixchat reserves the right to block access or change the application at
+        any time if usage violates these terms.
     </p>
 
     <h2>6. Contact</h2>
     <p>
-      Questions? Reach out on
-      <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank">Gitea</a>.
+        Questions? Reach out on
+        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
+            >Gitea</a
+        >.
     </p>
 
     <hr style="margin-top: 50px; border: none; border-top: 1px solid #333;" />
     <p
-      style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
+        style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
     >
-      <a href="/">Back to Mixchat</a>
+        <a href="/">Back to Mixchat</a>
     </p>
 </ContentLayout>

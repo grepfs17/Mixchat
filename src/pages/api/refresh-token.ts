@@ -4,9 +4,10 @@ import { refreshYoutubeToken } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")
-    || "unknown";
+  const clientAddress =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   if (!checkRateLimit(`${clientAddress}:refresh-token`, 10, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
@@ -19,7 +20,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
-    const isDev = import.meta.env.MODE === 'development';
+    const isDev = import.meta.env.MODE === "development";
     const isSecure = !isDev;
 
     const body = await request.json().catch(() => ({}));

@@ -1,284 +1,300 @@
-@import '../vars.css';
+@import "../vars.css";
 
 .raid-notification {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: var(--color-bg-primary);
-  border: 2px solid var(--color-twitch);
-  border-radius: var(--radius-2xl);
-  padding: 18px 20px;
-  max-width: 320px;
-  width: calc(100vw - 40px);
-  box-shadow: 0 8px 32px rgba(145, 70, 255, 0.35);
-  z-index: 1001;
-  animation: raidSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-twitch);
+    border-radius: var(--radius-2xl);
+    padding: 18px 20px;
+    max-width: 320px;
+    width: calc(100vw - 40px);
+    box-shadow: 0 8px 32px rgba(145, 70, 255, 0.35);
+    z-index: 1001;
+    animation: raidSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes raidSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
-
 .raid-notification-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  gap: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 10px;
 }
 
 .raid-notification-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
 }
 
 .raid-badge {
-  background: var(--color-twitch);
-  color: #fff;
-  font-weight: 700;
-  font-size: 11px;
-  padding: 3px 7px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  letter-spacing: 0.06em;
-  animation: raidPulse 1.2s ease-in-out infinite;
-  flex-shrink: 0;
+    background: var(--color-twitch);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    animation: raidPulse 1.2s ease-in-out infinite;
+    flex-shrink: 0;
 }
 
 @keyframes raidPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.65; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.65;
+    }
 }
 
 .raid-twitch-icon {
-  color: var(--color-twitch);
-  flex-shrink: 0;
+    color: var(--color-twitch);
+    flex-shrink: 0;
 }
 
 .raid-channel-name {
-  color: var(--color-text-primary);
-  font-weight: 600;
-  font-size: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .raid-notification-close-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .raid-notification-close-tooltip {
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--color-text-primary);
-  color: var(--color-bg-primary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  margin-right: 6px;
-  pointer-events: none;
-  animation: raidTooltipIn 0.15s ease-out;
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    margin-right: 6px;
+    pointer-events: none;
+    animation: raidTooltipIn 0.15s ease-out;
 }
 
 @keyframes raidTooltipIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(4px); }
-  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
 }
 
 .raid-notification-close {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-md);
-  transition: color 0.15s;
-  flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-md);
+    transition: color 0.15s;
+    flex-shrink: 0;
 }
 
 .raid-notification-close:hover {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 }
 
-
 .raid-notification-body {
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  margin: 0 0 14px;
-  line-height: 1.55;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    margin: 0 0 14px;
+    line-height: 1.55;
 }
 
 .raid-notification-body strong {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 }
 
-
 .raid-notification-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .raid-follow-btn {
-  background: var(--color-twitch);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
-  white-space: nowrap;
+    background: var(--color-twitch);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        opacity 0.15s,
+        transform 0.1s;
+    white-space: nowrap;
 }
 
 .raid-follow-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
+    opacity: 0.85;
+    transform: translateY(-1px);
 }
 
 .raid-follow-btn:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .raid-initiator-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
 }
 
 .raid-initiator-buttons {
-  display: flex;
-  gap: 8px;
-  width: 100%;
+    display: flex;
+    gap: 8px;
+    width: 100%;
 }
 
 .raid-cancel-btn {
-  flex-shrink: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-  white-space: nowrap;
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        border-color 0.15s,
+        background 0.15s;
+    white-space: nowrap;
 }
 
 .raid-cancel-btn:hover {
-  color: #ff6b6b;
-  border-color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.08);
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
 }
 
 .raid-open-twitch-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: var(--color-twitch);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s, transform 0.1s, background 0.15s;
-  white-space: nowrap;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--color-twitch);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+        opacity 0.15s,
+        transform 0.1s,
+        background 0.15s;
+    white-space: nowrap;
 }
 
 .raid-open-twitch-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
+    opacity: 0.85;
+    transform: translateY(-1px);
 }
 
 .raid-open-twitch-btn:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .raid-initiator-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 4px;
 }
 
 .raid-open-channel-link {
-  display: inline-flex;
-  align-items: center;
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: opacity 0.15s;
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.15s;
 }
 
 .raid-open-channel-link:hover {
-  opacity: 0.8;
-  text-decoration: underline;
+    opacity: 0.8;
+    text-decoration: underline;
 }
 
 .raid-open-twitch-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--color-twitch);
-  font-size: 11px;
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: opacity 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--color-twitch);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.15s;
 }
 
 .raid-open-twitch-link:hover {
-  opacity: 0.8;
-  text-decoration: underline;
+    opacity: 0.8;
+    text-decoration: underline;
 }
 
 .raid-countdown {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    white-space: nowrap;
 }
 
 .raid-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: var(--color-twitch);
-  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
-  opacity: 0.6;
-  transition: width 1s linear;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--color-twitch);
+    border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+    opacity: 0.6;
+    transition: width 1s linear;
 }

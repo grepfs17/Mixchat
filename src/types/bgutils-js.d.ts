@@ -1,13 +1,23 @@
-declare module 'jsdom' {
+declare module "jsdom" {
   export class JSDOM {
-    constructor(html: string, options?: { url?: string; referrer?: string; userAgent?: string });
-    window: Window & { document: Document; location: Location; navigator: Navigator };
+    constructor(
+      html: string,
+      options?: { url?: string; referrer?: string; userAgent?: string },
+    );
+    window: Window & {
+      document: Document;
+      location: Location;
+      navigator: Navigator;
+    };
   }
 }
 
-declare module 'bgutils-js' {
+declare module "bgutils-js" {
   export interface BgConfig {
-    fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+    fetch?: (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => Promise<Response>;
     globalObj?: object;
     identifier?: string;
     requestKey?: string;
@@ -31,12 +41,21 @@ declare module 'bgutils-js' {
 
   export namespace BG {
     class BotGuardClient {
-      static create(options: { program: string; globalName: string; globalObj: object }): Promise<BotGuardClient>;
-      snapshot(options: { webPoSignalOutput: WebPoSignalOutput }): Promise<string>;
+      static create(options: {
+        program: string;
+        globalName: string;
+        globalObj: object;
+      }): Promise<BotGuardClient>;
+      snapshot(options: {
+        webPoSignalOutput: WebPoSignalOutput;
+      }): Promise<string>;
     }
 
     class WebPoMinter {
-      static create(options: { integrityToken: string }, webPoSignalOutput: WebPoSignalOutput): Promise<WebPoMinter>;
+      static create(
+        options: { integrityToken: string },
+        webPoSignalOutput: WebPoSignalOutput,
+      ): Promise<WebPoMinter>;
       mintAsWebsafeString(identifier: string): Promise<string>;
     }
 
@@ -46,7 +65,11 @@ declare module 'bgutils-js' {
     }
 
     namespace PoToken {
-      function generate(options: { program: string; globalName: string; bgConfig: BgConfig }): Promise<PoTokenResult>;
+      function generate(options: {
+        program: string;
+        globalName: string;
+        bgConfig: BgConfig;
+      }): Promise<PoTokenResult>;
       function generatePlaceholder(visitorData: string): string;
     }
   }

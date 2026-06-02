@@ -1,22 +1,26 @@
-import { useState } from 'react';
-import { FaPlus, FaTrash, FaEye } from 'react-icons/fa';
+import { useState } from "react";
+import { FaPlus, FaTrash, FaEye } from "react-icons/fa";
 import {
   getWatchedStreamers,
   addWatchedStreamer,
   removeWatchedStreamer,
-} from '../lib/streamMonitor';
-import type { TwitchChannel } from '../components/AppContainer';
-
+} from "../lib/streamMonitor";
+import type { TwitchChannel } from "../components/AppContainer";
 
 interface WatchlistManagerProps {
   availableChannels: TwitchChannel[];
   onClose: () => void;
 }
 
-export default function WatchlistManager({ availableChannels, onClose }: WatchlistManagerProps) {
-  const [watchedStreamers, setWatchedStreamers] = useState(getWatchedStreamers());
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+export default function WatchlistManager({
+  availableChannels,
+  onClose,
+}: WatchlistManagerProps) {
+  const [watchedStreamers, setWatchedStreamers] = useState(
+    getWatchedStreamers(),
+  );
+  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const handleAddStreamer = () => {
     if (!selectedChannelId) return;
@@ -30,8 +34,8 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
         profileImageUrl: channel.profileImageUrl,
       });
       setWatchedStreamers(getWatchedStreamers());
-      setSelectedChannelId('');
-      setSearchQuery('');
+      setSelectedChannelId("");
+      setSearchQuery("");
     }
   };
 
@@ -44,21 +48,25 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
     watchedStreamers.some((s) => s.id === channelId);
 
   const unwatchedChannels = availableChannels.filter(
-    (c) => !isAlreadyWatched(c.id)
+    (c) => !isAlreadyWatched(c.id),
   );
 
-  const filteredChannels = searchQuery.trim() === ''
-    ? unwatchedChannels
-    : unwatchedChannels.filter((c) =>
-      c.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const filteredChannels =
+    searchQuery.trim() === ""
+      ? unwatchedChannels
+      : unwatchedChannels.filter(
+          (c) =>
+            c.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
 
   return (
     <div className="watchlist-manager-overlay" onClick={onClose}>
       <div className="watchlist-manager" onClick={(e) => e.stopPropagation()}>
         <h2>Manage Notification Streams</h2>
-        <p className="subtitle">Get notifications when these streamers go live</p>
+        <p className="subtitle">
+          Get notifications when these streamers go live
+        </p>
 
         <div className="watchlist-add-section">
           <input
@@ -71,7 +79,9 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
           <div className="channel-list-dropdown">
             {filteredChannels.length === 0 ? (
               <div className="no-channels-message">
-                {searchQuery ? 'No channels match your search' : 'All followed channels are already being watched'}
+                {searchQuery
+                  ? "No channels match your search"
+                  : "All followed channels are already being watched"}
               </div>
             ) : (
               filteredChannels.map((channel) => (
@@ -80,14 +90,20 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
                   className="channel-list-item"
                   onClick={() => {
                     setSelectedChannelId(channel.id);
-                    setSearchQuery('');
+                    setSearchQuery("");
                   }}
                 >
                   {channel.profileImageUrl && (
-                    <img src={channel.profileImageUrl} alt="" className="channel-thumb" />
+                    <img
+                      src={channel.profileImageUrl}
+                      alt=""
+                      className="channel-thumb"
+                    />
                   )}
                   <div className="channel-info">
-                    <div className="channel-display-name">{channel.displayName}</div>
+                    <div className="channel-display-name">
+                      {channel.displayName}
+                    </div>
                     <div className="channel-username">@{channel.name}</div>
                   </div>
                 </button>
@@ -96,7 +112,10 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
           </div>
           {selectedChannelId && (
             <div className="selected-channel-display">
-              {unwatchedChannels.find((c) => c.id === selectedChannelId)?.displayName}
+              {
+                unwatchedChannels.find((c) => c.id === selectedChannelId)
+                  ?.displayName
+              }
             </div>
           )}
           <button
@@ -141,7 +160,7 @@ export default function WatchlistManager({ availableChannels, onClose }: Watchli
 
         <div className="watchlist-footer">
           <p className="info-text">
-            <FaEye style={{ marginRight: '6px' }} />
+            <FaEye style={{ marginRight: "6px" }} />
             You'll be notified once per session when each streamer goes live
           </p>
           <button className="close-button" onClick={onClose}>

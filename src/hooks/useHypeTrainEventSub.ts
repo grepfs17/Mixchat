@@ -65,19 +65,29 @@ export function useHypeTrainEventSub({
   const [wsSessionId, setWsSessionId] = useState<string | null>(null);
 
   const onHypeTrainBeginRef = useRef(onHypeTrainBegin);
-  useEffect(() => { onHypeTrainBeginRef.current = onHypeTrainBegin; }, [onHypeTrainBegin]);
+  useEffect(() => {
+    onHypeTrainBeginRef.current = onHypeTrainBegin;
+  }, [onHypeTrainBegin]);
 
   const onHypeTrainProgressRef = useRef(onHypeTrainProgress);
-  useEffect(() => { onHypeTrainProgressRef.current = onHypeTrainProgress; }, [onHypeTrainProgress]);
+  useEffect(() => {
+    onHypeTrainProgressRef.current = onHypeTrainProgress;
+  }, [onHypeTrainProgress]);
 
   const onHypeTrainEndRef = useRef(onHypeTrainEnd);
-  useEffect(() => { onHypeTrainEndRef.current = onHypeTrainEnd; }, [onHypeTrainEnd]);
+  useEffect(() => {
+    onHypeTrainEndRef.current = onHypeTrainEnd;
+  }, [onHypeTrainEnd]);
 
   const onScopeErrorRef = useRef(onScopeError);
-  useEffect(() => { onScopeErrorRef.current = onScopeError; }, [onScopeError]);
+  useEffect(() => {
+    onScopeErrorRef.current = onScopeError;
+  }, [onScopeError]);
 
   const accessTokenRef = useRef(accessToken);
-  useEffect(() => { accessTokenRef.current = accessToken; }, [accessToken]);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
 
   useEffect(() => {
     if (!enabled || !channelId || !accessToken || !clientId) return;
@@ -98,23 +108,31 @@ export function useHypeTrainEventSub({
       }, ms);
     };
 
-    const subscribe = async (sessionId: string, numericId: string, type: string, version: string) => {
+    const subscribe = async (
+      sessionId: string,
+      numericId: string,
+      type: string,
+      version: string,
+    ) => {
       if (!active) return;
       try {
-        const subRes = await fetch("https://api.twitch.tv/helix/eventsub/subscriptions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessTokenRef.current}`,
-            "Client-Id": clientId,
+        const subRes = await fetch(
+          "https://api.twitch.tv/helix/eventsub/subscriptions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessTokenRef.current}`,
+              "Client-Id": clientId,
+            },
+            body: JSON.stringify({
+              type,
+              version,
+              condition: { broadcaster_user_id: numericId },
+              transport: { method: "websocket", session_id: sessionId },
+            }),
           },
-          body: JSON.stringify({
-            type,
-            version,
-            condition: { broadcaster_user_id: numericId },
-            transport: { method: "websocket", session_id: sessionId },
-          }),
-        });
+        );
 
         if (!subRes.ok) {
           const errBody = await subRes.json().catch(() => ({}));
@@ -140,7 +158,10 @@ export function useHypeTrainEventSub({
           );
         }
       } catch (err) {
-        console.error(`[useHypeTrainEventSub] Subscription error for ${type}:`, err);
+        console.error(
+          `[useHypeTrainEventSub] Subscription error for ${type}:`,
+          err,
+        );
       }
     };
 
@@ -190,22 +211,40 @@ export function useHypeTrainEventSub({
           if (msgType === "session_welcome") {
             const session = data.payload?.session;
             const sessionId: string | undefined = session?.id;
-            const keepaliveTimeout: number = session?.keepalive_timeout_seconds ?? 10;
+            const keepaliveTimeout: number =
+              session?.keepalive_timeout_seconds ?? 10;
 
             if (!sessionId) return;
             setWsSessionId(sessionId);
             resetKeepalive(keepaliveTimeout);
 
             // Subscribe to all three Hype Train v2 events
-            await subscribe(sessionId, numericId, "channel.hype_train.begin", "2");
-            await subscribe(sessionId, numericId, "channel.hype_train.progress", "2");
-            await subscribe(sessionId, numericId, "channel.hype_train.end", "2");
+            await subscribe(
+              sessionId,
+              numericId,
+              "channel.hype_train.begin",
+              "2",
+            );
+            await subscribe(
+              sessionId,
+              numericId,
+              "channel.hype_train.progress",
+              "2",
+            );
+            await subscribe(
+              sessionId,
+              numericId,
+              "channel.hype_train.end",
+              "2",
+            );
           } else if (msgType === "session_keepalive") {
-            const keepaliveTimeout: number = data.payload?.session?.keepalive_timeout_seconds ?? 10;
+            const keepaliveTimeout: number =
+              data.payload?.session?.keepalive_timeout_seconds ?? 10;
             resetKeepalive(keepaliveTimeout);
           } else if (msgType === "notification") {
             resetKeepalive(10);
-            const subType: string | undefined = data?.payload?.subscription?.type;
+            const subType: string | undefined =
+              data?.payload?.subscription?.type;
             const event = data.payload.event;
 
             const hypeTrainEvent: HypeTrainEvent = {
@@ -216,13 +255,15 @@ export function useHypeTrainEventSub({
               total: event.total,
               progress: event.progress,
               goal: event.goal,
-              topContributions: (event.top_contributions || []).map((c: any) => ({
-                userId: c.user_id,
-                userName: c.user_name,
-                displayName: c.display_name || c.user_name,
-                type: c.type,
-                total: c.total,
-              })),
+              topContributions: (event.top_contributions || []).map(
+                (c: any) => ({
+                  userId: c.user_id,
+                  userName: c.user_name,
+                  displayName: c.display_name || c.user_name,
+                  type: c.type,
+                  total: c.total,
+                }),
+              ),
               startedAt: event.started_at,
               expiresAt: event.expires_at,
               cooldownEndsAt: event.cooldown_ends_at,
@@ -236,7 +277,8 @@ export function useHypeTrainEventSub({
               onHypeTrainEndRef.current(hypeTrainEvent);
             }
           } else if (msgType === "session_reconnect") {
-            const reconnectUrl: string | undefined = data.payload?.session?.reconnect_url;
+            const reconnectUrl: string | undefined =
+              data.payload?.session?.reconnect_url;
             ws?.close(1000, "reconnect requested by server");
             if (active) connect(reconnectUrl ?? EVENTSUB_WS_URL);
           } else if (msgType === "revocation") {

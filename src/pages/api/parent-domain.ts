@@ -6,9 +6,7 @@ export const GET: APIRoute = async ({ request }) => {
   //    present in production builds, requires no extra configuration.
   // 3. Host header — last resort for local/dev use only.
   const rawOrigin =
-    import.meta.env.PUBLIC_SITE_URL ||
-    import.meta.env.SITE ||
-    null;
+    import.meta.env.PUBLIC_SITE_URL || import.meta.env.SITE || null;
 
   if (rawOrigin) {
     try {

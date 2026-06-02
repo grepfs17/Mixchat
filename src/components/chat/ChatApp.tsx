@@ -1,16 +1,19 @@
-import ChatDisplay from './display';
-import MobileTouchHintModal from './shared/MobileTouchHintModal';
-import MessageInput from './shared/MessageInput';
-import Notification from './shared/Notification';
-import YouTubeChat from './shared/YouTubeChat';
-import YouTubeMessageInput from './shared/YouTubeMessageInput';
-import UnifiedChat from './unified';
-import RaidNotification from './shared/RaidNotification';
-import HypeTrainBanner from './shared/HypeTrainBanner';
-import SplitLayout from './SplitLayout';
-import { useChatAppState, type ChatAppStateProps } from '../../hooks/useChatAppState';
-import type { ChatFont, ChatTheme } from '../../lib/types';
-import { useState, useCallback, useEffect } from 'react';
+import ChatDisplay from "./display";
+import MobileTouchHintModal from "./shared/MobileTouchHintModal";
+import MessageInput from "./shared/MessageInput";
+import Notification from "./shared/Notification";
+import YouTubeChat from "./shared/YouTubeChat";
+import YouTubeMessageInput from "./shared/YouTubeMessageInput";
+import UnifiedChat from "./unified";
+import RaidNotification from "./shared/RaidNotification";
+import HypeTrainBanner from "./shared/HypeTrainBanner";
+import SplitLayout from "./SplitLayout";
+import {
+  useChatAppState,
+  type ChatAppStateProps,
+} from "../../hooks/useChatAppState";
+import type { ChatFont, ChatTheme } from "../../lib/types";
+import { useState, useCallback, useEffect } from "react";
 
 interface YtConnectionState {
   connected: boolean;
@@ -76,7 +79,9 @@ export default function ChatApp(props: ChatAppStateProps) {
     ignoredUsers,
   } = useChatAppState(props);
 
-  const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>({ connected: false, loading: false, error: null });
+  const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
+    { connected: false, loading: false, error: null },
+  );
   const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
     setYtConnectionState(state);
   }, []);
@@ -91,11 +96,11 @@ export default function ChatApp(props: ChatAppStateProps) {
     unifyChatEnabled,
     useYoutubeEmbed = true,
     fontSize = 14,
-    chatFont = 'inter' as ChatFont,
+    chatFont = "inter" as ChatFont,
     splitChatEnabled = false,
     hideViewerCount = false,
     compactActions = false,
-    chatTheme = 'default' as ChatTheme,
+    chatTheme = "default" as ChatTheme,
     viewerCount,
     onToggleSidebar,
     sidebarVisible = true,
@@ -113,42 +118,53 @@ export default function ChatApp(props: ChatAppStateProps) {
   // DEV ONLY: expose a manual test helper so you can call
   // window.__testHypeTrain() from the browser console
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       (window as any).__testHypeTrain = () => {
-        console.log('[DEV] Triggering mock Hype Train');
+        console.log("[DEV] Triggering mock Hype Train");
         setHypeTrain({
           level: 5,
           progress: 3500,
           goal: 5000,
           totalPoints: 3500,
           topContributors: [
-            { displayName: 'TestUser1', points: 1500 },
-            { displayName: 'TestUser2', points: 1200 },
-            { displayName: 'TestUser3', points: 800 },
+            { displayName: "TestUser1", points: 1500 },
+            { displayName: "TestUser2", points: 1200 },
+            { displayName: "TestUser3", points: 800 },
           ],
           endsAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
         });
       };
       (window as any).__endHypeTrain = () => {
-        console.log('[DEV] Ending mock Hype Train');
+        console.log("[DEV] Ending mock Hype Train");
         setHypeTrain(null);
       };
     }
     return () => {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         delete (window as any).__testHypeTrain;
         delete (window as any).__endHypeTrain;
       }
     };
   }, [setHypeTrain]);
 
-  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+  const showNotification = (
+    message: string,
+    type: "success" | "error" | "info",
+  ) => {
     // This is handled internally by the hook; exposed here for any direct UI needs
     setNotification({ message, type });
   };
 
   return (
-    <div data-chat-app-container style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div
+      data-chat-app-container
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        position: "relative",
+      }}
+    >
       {notification && (
         <Notification
           message={notification.message}
@@ -190,7 +206,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         <>
           {/* Hidden YouTubeChat to keep polling YouTube messages */}
           {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && (
-            <div style={{ display: 'none' }} aria-hidden="true">
+            <div style={{ display: "none" }} aria-hidden="true">
               <YouTubeChat
                 videoId={youtubeVideoId}
                 channel={selectedTwitchChannelName}
@@ -204,7 +220,14 @@ export default function ChatApp(props: ChatAppStateProps) {
           )}
 
           {/* Twitch ChatDisplay header + unified messages body */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+            }}
+          >
             <ChatDisplay
               messages={messages}
               isLoading={isLoading}
@@ -223,7 +246,7 @@ export default function ChatApp(props: ChatAppStateProps) {
               onToggleSidebar={onToggleSidebar}
               sidebarVisible={sidebarVisible}
               onCopyMessage={() => {
-                showNotification('Message copied!', 'success');
+                showNotification("Message copied!", "success");
               }}
               showStreamEmbed={showStreamEmbed}
               onToggleStreamEmbed={onToggleStreamEmbed}
@@ -244,28 +267,36 @@ export default function ChatApp(props: ChatAppStateProps) {
                 <UnifiedChat
                   ref={unifiedChatRef}
                   twitchMessages={messages}
-                  channelName={selectedTwitchChannelName || ''}
+                  channelName={selectedTwitchChannelName || ""}
                   ytMessages={[
                     ...ytMessages,
                     ...ytOptimisticMessages.filter((opt) => {
-                      const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+                      const norm = (s: string) =>
+                        s.normalize("NFKC").trim().toLowerCase();
                       const optText = norm(getYtMessageText(opt));
                       const optAuthor = norm(opt.author);
 
                       return !ytMessages.some((m) => {
                         const mText = norm(getYtMessageText(m));
                         if (opt.authorChannelId && m.authorChannelId) {
-                          return m.authorChannelId === opt.authorChannelId && mText === optText;
+                          return (
+                            m.authorChannelId === opt.authorChannelId &&
+                            mText === optText
+                          );
                         }
-                        return norm(m.author) === optAuthor && mText === optText;
+                        return (
+                          norm(m.author) === optAuthor && mText === optText
+                        );
                       });
                     }),
                   ]}
-                  ytConnectionState={linkedYoutubeUrl ? ytConnectionState : undefined}
+                  ytConnectionState={
+                    linkedYoutubeUrl ? ytConnectionState : undefined
+                  }
                   twitchConnected={twitchConnected}
                   onReply={setReplyingTo}
                   onCopyMessage={() => {
-                    showNotification('Message copied!', 'success');
+                    showNotification("Message copied!", "success");
                   }}
                   currentUserDisplayName={twitchSession?.displayName}
                   fontSize={fontSize}
@@ -293,7 +324,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             replyingTo={replyingTo}
             onCancelReply={() => setReplyingTo(undefined)}
             chatMessages={messages}
-            currentUsername={twitchSession?.username || ''}
+            currentUsername={twitchSession?.username || ""}
             onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
@@ -304,7 +335,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
           {/* YouTube message input (when we have a live video). Hidden when using the official embed. */}
           {linkedYoutubeUrl && youtubeVideoId && !useYoutubeEmbed && (
-            <div style={{ borderTop: '1px solid #333' }}>
+            <div style={{ borderTop: "1px solid #333" }}>
               {youtubeSession ? (
                 <YouTubeMessageInput
                   youtubeVideoId={youtubeVideoId}
@@ -312,15 +343,39 @@ export default function ChatApp(props: ChatAppStateProps) {
                   onOptimisticMessage={handleYtOptimisticMessage}
                   onOptimisticFailed={handleYtOptimisticFailed}
                   onError={(msg) => {
-                    showNotification(msg, 'error');
+                    showNotification(msg, "error");
                   }}
                 />
               ) : (
-                <div style={{ padding: '8px 12px', fontSize: '12px', color: '#aaa', textAlign: 'center', backgroundColor: '#0f0f0f' }}>
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                    color: "#aaa",
+                    textAlign: "center",
+                    backgroundColor: "#0f0f0f",
+                  }}
+                >
                   <button
-                    onClick={() => (document.querySelector<HTMLElement>('.login-btn.youtube-btn') as HTMLElement | null)?.click()}
-                    style={{ color: '#ff6b6b', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 'inherit' }}
-                  >Login with YouTube</button> to send messages
+                    onClick={() =>
+                      (
+                        document.querySelector<HTMLElement>(
+                          ".login-btn.youtube-btn",
+                        ) as HTMLElement | null
+                      )?.click()
+                    }
+                    style={{
+                      color: "#ff6b6b",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      fontSize: "inherit",
+                    }}
+                  >
+                    Login with YouTube
+                  </button>{" "}
+                  to send messages
                 </div>
               )}
             </div>
@@ -348,7 +403,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           youtubeSession={youtubeSession}
           onOptimisticMessage={handleYtOptimisticMessage}
           onOptimisticFailed={handleYtOptimisticFailed}
-          onShowError={(msg) => showNotification(msg, 'error')}
+          onShowError={(msg) => showNotification(msg, "error")}
           onYtConnectionChange={handleYtConnectionChange}
           chatDisplayRef={chatDisplayRef}
           messages={messages}
@@ -367,7 +422,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           isRefreshingEmotes={isRefreshingEmotes}
           onToggleSidebar={onToggleSidebar}
           sidebarVisible={sidebarVisible}
-          onCopyMessage={() => showNotification('Message copied!', 'success')}
+          onCopyMessage={() => showNotification("Message copied!", "success")}
           showStreamEmbed={showStreamEmbed}
           onToggleStreamEmbed={onToggleStreamEmbed}
           currentUserDisplayName={twitchSession?.displayName}
@@ -388,7 +443,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           twitchConnected={twitchConnected}
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(undefined)}
-          currentUsername={twitchSession?.username || ''}
+          currentUsername={twitchSession?.username || ""}
           onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
           slowModeWaitTime={slowModeWaitTime}
           followerModeMinutes={followerModeMinutes}
@@ -397,16 +452,32 @@ export default function ChatApp(props: ChatAppStateProps) {
       )}
 
       <MobileTouchHintModal twitchConnected={twitchConnected} />
-      {chatTheme === 'mushu' && (
+      {chatTheme === "mushu" && (
         <>
-          <img src="/themes/Mushu/mushu.webp" alt="Mushu" className="mushu-theme-mascot" />
-          <img src="/themes/Mushu/mushuKnife.webp" alt="Mushu Knife" className="mushu-theme-knife" />
+          <img
+            src="/themes/Mushu/mushu.webp"
+            alt="Mushu"
+            className="mushu-theme-mascot"
+          />
+          <img
+            src="/themes/Mushu/mushuKnife.webp"
+            alt="Mushu Knife"
+            className="mushu-theme-knife"
+          />
         </>
       )}
-      {chatTheme === 'lunita' && (
+      {chatTheme === "lunita" && (
         <>
-          <img src="/themes/Lunita/lunateDrama.webp" alt="Lunita Drama" className="lunita-theme-drama" />
-          <img src="/themes/Lunita/lunateLurk.webp" alt="Lunita Lurk" className="lunita-theme-lurk" />
+          <img
+            src="/themes/Lunita/lunateDrama.webp"
+            alt="Lunita Drama"
+            className="lunita-theme-drama"
+          />
+          <img
+            src="/themes/Lunita/lunateLurk.webp"
+            alt="Lunita Lurk"
+            className="lunita-theme-lurk"
+          />
         </>
       )}
     </div>

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { FaTimes } from 'react-icons/fa';
-import { FaTwitch } from 'react-icons/fa';
-import type { RaidOutEvent } from '../../../hooks/useRaidDetection';
-import '../../../styles/chat/RaidNotification.css';
+import { useEffect, useState } from "react";
+import { FaTimes } from "react-icons/fa";
+import { FaTwitch } from "react-icons/fa";
+import type { RaidOutEvent } from "../../../hooks/useRaidDetection";
+import "../../../styles/chat/RaidNotification.css";
 
 const RAID_TOTAL_SECONDS = 90;
 
@@ -59,7 +59,9 @@ export default function RaidNotification({
         </div>
         <div className="raid-notification-close-wrapper">
           {confirmClose && (
-            <span className="raid-notification-close-tooltip">Press again to close</span>
+            <span className="raid-notification-close-tooltip">
+              Press again to close
+            </span>
           )}
           <button
             className="raid-notification-close"
@@ -81,15 +83,16 @@ export default function RaidNotification({
       <p className="raid-notification-body">
         {isInitiator ? (
           <>
-            Raid to <strong>{raid.targetDisplayName}</strong> is pending on Twitch.
-            Viewers will transfer automatically when the countdown ends. If you want to launch the raid immediately, 
-            you must do it from Twitch, so please click "Open on Twitch".
+            Raid to <strong>{raid.targetDisplayName}</strong> is pending on
+            Twitch. Viewers will transfer automatically when the countdown ends.
+            If you want to launch the raid immediately, you must do it from
+            Twitch, so please click "Open on Twitch".
           </>
         ) : (
           <>
-            Raiding <strong>{raid.targetDisplayName}</strong> with{' '}
-            <strong>{raid.viewerCount.toLocaleString()}</strong>{' '}
-            {raid.viewerCount === 1 ? 'viewer' : 'viewers'}!
+            Raiding <strong>{raid.targetDisplayName}</strong> with{" "}
+            <strong>{raid.viewerCount.toLocaleString()}</strong>{" "}
+            {raid.viewerCount === 1 ? "viewer" : "viewers"}!
           </>
         )}
       </p>

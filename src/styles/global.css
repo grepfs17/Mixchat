@@ -1,104 +1,152 @@
-@import './vars.css';
+@import "./vars.css";
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 html {
-  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-family:
+        "Figtree",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        system-ui,
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
-  padding: 0;
-  background: var(--color-bg-primary);
-  min-height: 100vh;
-  color: var(--color-text-primary);
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg-primary);
+    min-height: 100vh;
+    color: var(--color-text-primary);
 }
 
 /* On mobile, lock html/body against scroll so the browser can't scroll the
    embed off-screen when the virtual keyboard opens. */
 @media (max-width: 768px) {
-  html, body {
-    overflow: hidden;
-    height: 100%;
-  }
+    html,
+    body {
+        overflow: hidden;
+        height: 100%;
+    }
 
-  /* Astro renders client islands as <astro-island> (display:inline by default). */
-  #app > astro-island {
-    display: block;
-    height: 100%;
-  }
+    /* Astro renders client islands as <astro-island> (display:inline by default). */
+    #app > astro-island {
+        display: block;
+        height: 100%;
+    }
 }
 
 #app {
-  min-height: 100vh;
+    min-height: 100vh;
 }
 
 /* Responsive layout - stack vertically on smaller screens */
 @media (max-width: 1024px) {
-  [data-app-grid] {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-  
-  [data-stream-embed] {
-    min-height: 50vh;
-  }
+    [data-app-grid] {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    [data-stream-embed] {
+        min-height: 50vh;
+    }
 }
 
 /* Shared Animations */
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 /* Used by notification toasts (LiveNotification, Notification) */
 @keyframes slideInFromRight {
-  from { transform: translateX(400px); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideOutToRight {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(400px); opacity: 0; }
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
 }
 
 /* Used by modal dialogs (EmoteMenu, WatchlistManager, YouTubeLinker) */
 @keyframes slideInModal {
-  from { transform: translateY(-20px); opacity: 0; }
-  to   { transform: translateY(0);     opacity: 1; }
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 /* Used by chat messages */
 @keyframes slideInMessage {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0);    }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes tooltipFade {
-  from { opacity: 0; transform: translateY(-5px); }
-  to   { opacity: 1; transform: translateY(0);    }
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Optimistic YouTube message placeholder — dimmed until the server confirms
 we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-optimistic {
-  opacity: 0.55;
-  font-style: italic;
-  transition: opacity 0.3s;
+    opacity: 0.55;
+    font-style: italic;
+    transition: opacity 0.3s;
 }
 
 /* Improve font rendering for chat and tooltip layers on mobile devices. */
@@ -108,120 +156,129 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .message-text,
 .chat-emote-tooltip,
 .chat-emote-tooltip * {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
 }
 
 /* Moderator Context Menu (Timeout Options) */
 .mod-context-menu {
-  background: rgba(20, 20, 24, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  padding: 6px;
-  min-width: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  animation: tooltipFade 0.12s ease-out;
+    background: rgba(20, 20, 24, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    padding: 6px;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: tooltipFade 0.12s ease-out;
 }
 
 .mod-context-menu-header {
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #888;
-  border-bottom: 1px solid #333;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    border-bottom: 1px solid #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .mod-context-menu button {
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  padding: 8px 12px;
-  text-align: left;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
 }
 
 .mod-context-menu button:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-white);
-  box-shadow: inset 3px 0 0 var(--color-accent);
+    background: var(--color-bg-hover);
+    color: var(--color-text-white);
+    box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 /* Generic context menu styles used across components */
 .context-menu {
-  background: rgba(20, 20, 24, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
-  padding: 8px;
-  min-width: 150px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  animation: tooltipFade 0.15s ease-out;
+    background: rgba(20, 20, 24, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    padding: 8px;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: tooltipFade 0.15s ease-out;
 }
 
 .context-menu-header {
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .context-menu button {
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  padding: 8px 12px;
-  text-align: left;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: background 0.15s, color 0.15s;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition:
+        background 0.15s,
+        color 0.15s;
 }
 
 .context-menu button:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-white);
-  box-shadow: inset 3px 0 0 var(--color-accent);
+    background: var(--color-bg-hover);
+    color: var(--color-text-white);
+    box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 /* Explicit class for context menu items to ensure consistent padding and
    allow components to avoid inline styles that block :hover rules. */
 .context-menu-item,
 .context-menu > button {
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-primary);
-  text-align: left;
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: background 0.15s, color 0.15s, box-shadow 0.12s;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition:
+        background 0.15s,
+        color 0.15s,
+        box-shadow 0.12s;
 }
 
-.channel-context-menu { min-width: 160px; }
-.message-context-menu { min-width: 180px; }
+.channel-context-menu {
+    min-width: 160px;
+}
+.message-context-menu {
+    min-width: 180px;
+}

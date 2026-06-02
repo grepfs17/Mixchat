@@ -3,286 +3,309 @@
 /* AppContainer responsive layout */
 
 @media (max-width: 1365px) {
-  /* Main grid layout */
-  [style*="gridTemplateColumns"][style*="280px"] {
-    grid-template-columns: 1fr !important;
-  }
+    /* Main grid layout */
+    [style*="gridTemplateColumns"][style*="280px"] {
+        grid-template-columns: 1fr !important;
+    }
 
-  /* Sidebar becomes floating/overlay.
+    /* Sidebar becomes floating/overlay.
      Use --initial-vh-px (captured once on mount, before the keyboard can
      open) so the sidebar height is immune to the virtual keyboard resizing
      the viewport.  Falls back to 100dvh for SSR / before JS runs. */
-  [data-sidebar-section] {
-    display: flex !important;
-    position: fixed !important;
-    left: 0 !important;
-    top: 0 !important;
-    height: var(--initial-vh-px, 100dvh) !important;
-    width: 280px !important;
-    z-index: 1000 !important;
-    box-shadow: var(--shadow-sm-dark) !important;
-    overflow: hidden !important;
-  }
+    [data-sidebar-section] {
+        display: flex !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        height: var(--initial-vh-px, 100dvh) !important;
+        width: 280px !important;
+        z-index: 1000 !important;
+        box-shadow: var(--shadow-sm-dark) !important;
+        overflow: hidden !important;
+    }
 
-  /* Show close button on mobile */
-  .sidebar-close-btn-container {
-    display: flex !important;
-  }
+    /* Show close button on mobile */
+    .sidebar-close-btn-container {
+        display: flex !important;
+    }
 
-  /* Switch to flex column so embed height is independent of dvh/keyboard height */
-  .app-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    height: 100% !important; /* must be definite so flex:1 children resolve correctly */
-  }
+    /* Switch to flex column so embed height is independent of dvh/keyboard height */
+    .app-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+        height: 100% !important; /* must be definite so flex:1 children resolve correctly */
+    }
 
-  /* When stream embed is hidden the chat fills all remaining space — no change needed */
+    /* When stream embed is hidden the chat fills all remaining space — no change needed */
 
-  /* Embed fixed at top: height is derived from --initial-vh-px (captured once on
+    /* Embed fixed at top: height is derived from --initial-vh-px (captured once on
      JS mount, before the keyboard can open) so it never shrinks when the virtual
      keyboard appears.  Falls back to 40svh for SSR / before JS runs. */
-  .app-grid > [data-stream-embed] {
-    flex-shrink: 0 !important;
-    height: min(66.25vw, calc(var(--initial-vh-px, 100svh) * 0.4)) !important;
-    max-height: min(
-      66.25vw,
-      calc(var(--initial-vh-px, 100svh) * 0.4)
-    ) !important;
-    overflow: hidden !important;
-  }
+    .app-grid > [data-stream-embed] {
+        flex-shrink: 0 !important;
+        height: min(
+            66.25vw,
+            calc(var(--initial-vh-px, 100svh) * 0.4)
+        ) !important;
+        max-height: min(
+            66.25vw,
+            calc(var(--initial-vh-px, 100svh) * 0.4)
+        ) !important;
+        overflow: hidden !important;
+    }
 
-  /* Hide resizer */
-  .app-grid > div:nth-child(2) {
-    display: none !important;
-  }
+    /* Hide resizer */
+    .app-grid > div:nth-child(2) {
+        display: none !important;
+    }
 
-  /* Chat takes all remaining space; inner messages-container scrolls */
-  .app-grid > [data-chat-section] {
-    flex: 1 !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-  }
+    /* Chat takes all remaining space; inner messages-container scrolls */
+    .app-grid > [data-chat-section] {
+        flex: 1 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
 
-  [data-resizer] {
-    display: none !important;
-  }
+    [data-resizer] {
+        display: none !important;
+    }
 
-  .sidebar-toggle-button--in-embed {
-    display: none !important;
-  }
+    .sidebar-toggle-button--in-embed {
+        display: none !important;
+    }
 }
 
 /* Stream Embed Header */
 .stream-embed-header {
-  display: flex;
-  align-items: center;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #0e0e0e 0%, #111111 100%);
-  border-bottom: 1px solid #1c1c1c;
-  font-size: 11px;
-  color: #777;
-  gap: 8px;
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, #0e0e0e 0%, #111111 100%);
+    border-bottom: 1px solid #1c1c1c;
+    font-size: 11px;
+    color: #777;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .stream-embed-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: #555;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .sidebar-toggle-button--in-embed {
-  padding: 4px 8px;
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #777;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 11px;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+    padding: 4px 8px;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #777;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .sidebar-toggle-button--in-embed:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #ccc;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #ccc;
 }
 
 .player-type-center {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .player-type-buttons {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  background: #0d0d0d;
-  padding: 2px;
-  border-radius: 8px;
-  border: 1px solid #1e1e1e;
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    background: #0d0d0d;
+    padding: 2px;
+    border-radius: 8px;
+    border: 1px solid #1e1e1e;
 }
 
 .player-type-btn {
-  background: transparent;
-  border: none;
-  color: #555;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 6px;
-  transition: all 0.18s ease;
-  letter-spacing: 0.3px;
-  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    transition: all 0.18s ease;
+    letter-spacing: 0.3px;
+    font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
 }
 
 .player-type-btn:hover {
-  color: #999;
-  background: rgba(255, 255, 255, 0.06);
+    color: #999;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .player-type-btn.active-twitch {
-  background: linear-gradient(135deg, #9146ff 0%, #6a24c9 100%);
-  color: #fff;
-  box-shadow: 0 1px 8px rgba(145, 70, 255, 0.38);
+    background: linear-gradient(135deg, #9146ff 0%, #6a24c9 100%);
+    color: #fff;
+    box-shadow: 0 1px 8px rgba(145, 70, 255, 0.38);
 }
 
 .player-type-btn.active-m3u8 {
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  color: #fff;
-  box-shadow: 0 1px 8px rgba(99, 102, 241, 0.38);
+    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+    color: #fff;
+    box-shadow: 0 1px 8px rgba(99, 102, 241, 0.38);
 }
 
 .player-type-btn.active-youtube {
-  background: linear-gradient(135deg, #ff2222 0%, #c80000 100%);
-  color: #fff;
-  box-shadow: 0 1px 8px rgba(255, 0, 0, 0.32);
+    background: linear-gradient(135deg, #ff2222 0%, #c80000 100%);
+    color: #fff;
+    box-shadow: 0 1px 8px rgba(255, 0, 0, 0.32);
 }
 
 .stream-embed-close {
-  background: none;
-  border: none;
-  color: #555;
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-  transition:
-    color 0.15s,
-    background 0.15s;
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition:
+        color 0.15s,
+        background 0.15s;
 }
 
 .stream-embed-close:hover {
-  color: #aaa;
-  background: rgba(255, 255, 255, 0.06);
+    color: #aaa;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 /* ── Stream transition overlay ────────────────────────────────────────────── */
 .stream-transition-overlay__gradient {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
-  pointer-events: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.7) 0%,
+        transparent 100%
+    );
+    pointer-events: none;
 }
 
 .stream-transition-overlay__channel-name {
-  position: absolute;
-  bottom: 16px;
-  left: 20px;
-  color: #fff;
-  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
-  font-size: 18px;
-  font-weight: 700;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  opacity: 0;
-  animation: transition-channel-name-in 0.3s ease 0.15s forwards;
+    position: absolute;
+    bottom: 16px;
+    left: 20px;
+    color: #fff;
+    font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
+    font-size: 18px;
+    font-weight: 700;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+    opacity: 0;
+    animation: transition-channel-name-in 0.3s ease 0.15s forwards;
 }
 
 @keyframes transition-channel-name-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ── Stream embed thumbnail placeholder ────────────────────────────────────── */
 .stream-embed-placeholder {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: #0a0a0a;
-  overflow: hidden;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: #0a0a0a;
+    overflow: hidden;
 }
 
 .stream-embed-placeholder__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: opacity 0.6s ease;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.6s ease;
 }
 
 .stream-embed-placeholder--fading .stream-embed-placeholder__img {
-  opacity: 0;
+    opacity: 0;
 }
 
 .stream-embed-placeholder__glass {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(145, 70, 255, 0.06) 100%);
-  backdrop-filter: blur(2px);
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.08) 0%,
+        rgba(145, 70, 255, 0.06) 100%
+    );
+    backdrop-filter: blur(2px);
 }
 
 .stream-embed-placeholder__spinner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  color: #ccc;
-  font-size: 13px;
-  font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #ccc;
+    font-size: 13px;
+    font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .stream-embed-placeholder__spinner-ring {
-  width: 32px;
-  height: 32px;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--color-indigo, #6366f1);
-  border-radius: 50%;
-  animation: stream-spin 0.8s linear infinite;
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: var(--color-indigo, #6366f1);
+    border-radius: 50%;
+    animation: stream-spin 0.8s linear infinite;
 }
 
 /* ── Stream grid fade-out during transition ──────────────────────────────── */
 .app-grid--transitioning .stream-grid-container {
-  opacity: 0;
-  transition: opacity 0.15s ease;
+    opacity: 0;
+    transition: opacity 0.15s ease;
 }
 
 .stream-grid-container--entering {
-  animation: stream-grid-enter 0.3s ease forwards;
+    animation: stream-grid-enter 0.3s ease forwards;
 }
 
 @keyframes stream-grid-enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

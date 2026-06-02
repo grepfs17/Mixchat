@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 interface NotificationProps {
   message: string;
-  type?: 'success' | 'error' | 'info';
+  type?: "success" | "error" | "info";
   duration?: number;
   onClose?: () => void;
 }
 
 export default function Notification({
   message,
-  type = 'info',
+  type = "info",
   duration = 3000,
   onClose,
 }: NotificationProps) {

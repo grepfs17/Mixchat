@@ -10,7 +10,7 @@
     flex-direction: column;
     animation: slideIn 0.2s ease-out;
     border-left: 1px solid #1f1f23;
-    box-shadow: -8px 0 24px rgba(0,0,0,0.6);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.6);
 }
 
 @media (max-width: 768px) {
@@ -21,8 +21,12 @@
 }
 
 @keyframes slideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
 }
 
 .history-header {
@@ -75,7 +79,7 @@
 }
 
 .overlay-btn-icon:hover {
-    background-color: rgba(255,255,255,0.1);
+    background-color: rgba(255, 255, 255, 0.1);
     color: #fff;
 }
 
@@ -150,7 +154,7 @@
 }
 
 .history-item-alt {
-    background-color: rgba(255,255,255,0.02);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 .history-item-deleted {

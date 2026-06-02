@@ -1,8 +1,15 @@
-import React, { memo } from 'react';
-import { FaStar, FaRegStar, FaUsers, FaEye, FaYoutube, FaCog } from 'react-icons/fa';
-import EmbedConfigModal from './EmbedConfigModal';
-import type { ChatFont, ChatTheme } from '../lib/types';
-import type { MentionSoundType } from '../hooks/useTwitchChat';
+import React, { memo } from "react";
+import {
+  FaStar,
+  FaRegStar,
+  FaUsers,
+  FaEye,
+  FaYoutube,
+  FaCog,
+} from "react-icons/fa";
+import EmbedConfigModal from "./EmbedConfigModal";
+import type { ChatFont, ChatTheme } from "../lib/types";
+import type { MentionSoundType } from "../hooks/useTwitchChat";
 
 interface TwitchChannel {
   id: string;
@@ -83,7 +90,7 @@ function LoginPanel({
   twitchUserName,
   twitchUserId,
   twitchChannels = [],
-  selectedTwitchChannel = '',
+  selectedTwitchChannel = "",
   favoriteChannels = [],
   onChannelChange,
   onToggleFavorite,
@@ -104,13 +111,13 @@ function LoginPanel({
   onUseYoutubeEmbedChange,
   fontSize = 14,
   onFontSizeChange,
-  chatFont = 'inter' as ChatFont,
+  chatFont = "inter" as ChatFont,
   onChatFontChange,
   mentionSoundEnabled = true,
   onMentionSoundEnabledChange,
   mentionVolume = 0.2,
   onMentionVolumeChange,
-  mentionSoundType = 'ding' as MentionSoundType,
+  mentionSoundType = "ding" as MentionSoundType,
   onMentionSoundTypeChange,
   showDeletedMessages = true,
   onShowDeletedMessagesChange,
@@ -118,7 +125,7 @@ function LoginPanel({
   onCompactActionsChange,
   splitChatEnabled = false,
   onSplitChatEnabledChange,
-  chatTheme = 'default' as ChatTheme,
+  chatTheme = "default" as ChatTheme,
   onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
@@ -137,8 +144,8 @@ function LoginPanel({
   ignoredUsers = [],
   onIgnoredUsersChange,
 }: LoginPanelProps) {
-  const [manualChannel, setManualChannel] = React.useState('');
-  const [searchQuery, setSearchQuery] = React.useState('');
+  const [manualChannel, setManualChannel] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState("");
   const [showEmbedConfig, setShowEmbedConfig] = React.useState(false);
 
   const filteredChannels = React.useMemo(() => {
@@ -147,7 +154,7 @@ function LoginPanel({
     return twitchChannels.filter(
       (channel) =>
         channel.displayName.toLowerCase().includes(query) ||
-        channel.name.toLowerCase().includes(query)
+        channel.name.toLowerCase().includes(query),
     );
   }, [searchQuery, twitchChannels]);
 
@@ -155,7 +162,7 @@ function LoginPanel({
     e.preventDefault();
     if (manualChannel.trim() && onChannelChange) {
       onChannelChange(manualChannel.trim().toLowerCase());
-      setManualChannel('');
+      setManualChannel("");
       onRequestClose?.();
     }
   };
@@ -165,10 +172,19 @@ function LoginPanel({
         <a
           href="/"
           title="Go to home page"
-          onClick={(e) => { if (onGoHome) { e.preventDefault(); onGoHome(); } }}
+          onClick={(e) => {
+            if (onGoHome) {
+              e.preventDefault();
+              onGoHome();
+            }
+          }}
           style={{ lineHeight: 0 }}
         >
-          <img src="/logo.webp" alt="Mixchat" style={{ height: 24, width: 'auto', opacity: 0.9 }} />
+          <img
+            src="/logo.webp"
+            alt="Mixchat"
+            style={{ height: 24, width: "auto", opacity: 0.9 }}
+          />
         </a>
         <button
           onClick={() => setShowEmbedConfig(true)}
@@ -189,11 +205,21 @@ function LoginPanel({
             <div className="user-profile-container">
               <div
                 className="user-profile-link"
-                onClick={() => { if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } }}
+                onClick={() => {
+                  if (twitchUserId || twitchUserName) {
+                    onChannelChange?.(twitchUserId || twitchUserName!);
+                    onRequestClose?.();
+                  }
+                }}
                 title={`Switch to ${twitchUser}'s channel`}
               >
                 {twitchProfileImage && (
-                  <img src={twitchProfileImage} alt={twitchUser} className="profile-image" loading="eager" />
+                  <img
+                    src={twitchProfileImage}
+                    alt={twitchUser}
+                    className="profile-image"
+                    loading="eager"
+                  />
                 )}
                 <div className="user-details">
                   <p className="user-name">{twitchUser}</p>
@@ -203,7 +229,10 @@ function LoginPanel({
               <div className="user-actions">
                 {onManageWatchlist && (
                   <button
-                    onClick={() => { onManageWatchlist(); onRequestClose?.(); }}
+                    onClick={() => {
+                      onManageWatchlist();
+                      onRequestClose?.();
+                    }}
                     className="icon-button"
                     title="Manage Notification Streams"
                   >
@@ -212,7 +241,10 @@ function LoginPanel({
                 )}
                 {onManageYoutubeLinks && (
                   <button
-                    onClick={() => { onManageYoutubeLinks(); onRequestClose?.(); }}
+                    onClick={() => {
+                      onManageYoutubeLinks();
+                      onRequestClose?.();
+                    }}
                     className="icon-button youtube-icon-btn"
                     title="Link YouTube channels"
                   >
@@ -241,9 +273,12 @@ function LoginPanel({
                   {filteredChannels.map((channel) => (
                     <div
                       key={channel.id}
-                      className={`channel-item ${selectedTwitchChannel === channel.id ? 'selected' : ''}`}
-                      onClick={() => { onChannelChange?.(channel.id); onRequestClose?.(); }}
-                      title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ''}`}
+                      className={`channel-item ${selectedTwitchChannel === channel.id ? "selected" : ""}`}
+                      onClick={() => {
+                        onChannelChange?.(channel.id);
+                        onRequestClose?.();
+                      }}
+                      title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
                     >
                       {channel.profileImageUrl ? (
                         <span className="channel-item-avatar-wrap">
@@ -280,29 +315,37 @@ function LoginPanel({
                           </span>
                         )}
                       </div>
-                      {channel.viewerCount !== undefined && channel.viewerCount !== null && (
-                        <span className="viewer-count">
-                          <FaUsers size={12} /> {channel.viewerCount.toLocaleString()}
-                        </span>
-                      )}
+                      {channel.viewerCount !== undefined &&
+                        channel.viewerCount !== null && (
+                          <span className="viewer-count">
+                            <FaUsers size={12} />{" "}
+                            {channel.viewerCount.toLocaleString()}
+                          </span>
+                        )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation(); // Don't also select the channel when toggling a favorite
                           onToggleFavorite?.(channel.id);
                         }}
-                        className={`favorite-button ${favoriteChannels.includes(channel.id) ? 'active' : ''}`}
-                        title={favoriteChannels.includes(channel.id) ? 'Remove from favorites' : 'Add to favorites'}
+                        className={`favorite-button ${favoriteChannels.includes(channel.id) ? "active" : ""}`}
+                        title={
+                          favoriteChannels.includes(channel.id)
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                        }
                       >
-                        {favoriteChannels.includes(channel.id) ? <FaStar size={16} /> : <FaRegStar size={16} />}
+                        {favoriteChannels.includes(channel.id) ? (
+                          <FaStar size={16} />
+                        ) : (
+                          <FaRegStar size={16} />
+                        )}
                       </button>
                     </div>
                   ))}
                 </div>
 
                 <div className="manual-join-section">
-                  <label className="section-label">
-                    Or join manually
-                  </label>
+                  <label className="section-label">Or join manually</label>
                   <form onSubmit={handleManualJoin} className="join-form">
                     <input
                       type="text"
@@ -316,8 +359,12 @@ function LoginPanel({
                       disabled={!manualChannel.trim()}
                       className="logout-btn"
                       style={{
-                        backgroundColor: manualChannel.trim() ? '#555555' : '#333333',
-                        cursor: manualChannel.trim() ? 'pointer' : 'not-allowed',
+                        backgroundColor: manualChannel.trim()
+                          ? "#555555"
+                          : "#333333",
+                        cursor: manualChannel.trim()
+                          ? "pointer"
+                          : "not-allowed",
                       }}
                     >
                       Join
@@ -338,15 +385,23 @@ function LoginPanel({
           {youtubeConnected ? (
             <div className="youtube-info-row">
               <div className="youtube-user-info">
-                <FaYoutube style={{ color: '#FF0000', fontSize: '18px', flexShrink: 0 }} />
-                <span className="youtube-user-name">{youtubeUser || 'YouTube'}</span>
+                <FaYoutube
+                  style={{ color: "#FF0000", fontSize: "18px", flexShrink: 0 }}
+                />
+                <span className="youtube-user-name">
+                  {youtubeUser || "YouTube"}
+                </span>
               </div>
               <button onClick={onYoutubeLogout} className="logout-btn small">
                 Logout
               </button>
             </div>
           ) : onYoutubeLogin ? (
-            <button onClick={onYoutubeLogin} className="login-btn youtube-btn" style={{ width: '100%' }}>
+            <button
+              onClick={onYoutubeLogin}
+              className="login-btn youtube-btn"
+              style={{ width: "100%" }}
+            >
               Login with YouTube
             </button>
           ) : null}
@@ -410,25 +465,44 @@ function LoginPanel({
             }
           }}
           compactActions={compactActions}
-          onCompactActionsChange={(value) => { if (onCompactActionsChange) onCompactActionsChange(value); }}
+          onCompactActionsChange={(value) => {
+            if (onCompactActionsChange) onCompactActionsChange(value);
+          }}
           splitChatEnabled={splitChatEnabled}
-          onSplitChatEnabledChange={(value) => { if (onSplitChatEnabledChange) onSplitChatEnabledChange(value); }}
+          onSplitChatEnabledChange={(value) => {
+            if (onSplitChatEnabledChange) onSplitChatEnabledChange(value);
+          }}
           chatTheme={chatTheme}
-          onChatThemeChange={(value) => { if (onChatThemeChange) onChatThemeChange(value); }}
+          onChatThemeChange={(value) => {
+            if (onChatThemeChange) onChatThemeChange(value);
+          }}
           hideViewerCount={hideViewerCount}
-          onHideViewerCountChange={(value) => { if (onHideViewerCountChange) onHideViewerCountChange(value); }}
+          onHideViewerCountChange={(value) => {
+            if (onHideViewerCountChange) onHideViewerCountChange(value);
+          }}
           disableModModeByDefault={disableModModeByDefault}
-          onDisableModModeByDefaultChange={(value) => { if (onDisableModModeByDefaultChange) onDisableModModeByDefaultChange(value); }}
+          onDisableModModeByDefaultChange={(value) => {
+            if (onDisableModModeByDefaultChange)
+              onDisableModModeByDefaultChange(value);
+          }}
           hideChatTimestamps={hideChatTimestamps}
-          onHideChatTimestampsChange={(value) => { if (onHideChatTimestampsChange) onHideChatTimestampsChange(value); }}
+          onHideChatTimestampsChange={(value) => {
+            if (onHideChatTimestampsChange) onHideChatTimestampsChange(value);
+          }}
           eventSounds={eventSounds}
-          onEventSoundChange={(eventType, soundData) => { if (onEventSoundChange) onEventSoundChange(eventType, soundData); }}
+          onEventSoundChange={(eventType, soundData) => {
+            if (onEventSoundChange) onEventSoundChange(eventType, soundData);
+          }}
           eventSoundVolume={eventSoundVolume}
-          onEventSoundVolumeChange={(value) => { if (onEventSoundVolumeChange) onEventSoundVolumeChange(value); }}
+          onEventSoundVolumeChange={(value) => {
+            if (onEventSoundVolumeChange) onEventSoundVolumeChange(value);
+          }}
           ignoredUsers={ignoredUsers}
-          onIgnoredUsersChange={(users) => { if (onIgnoredUsersChange) onIgnoredUsersChange(users); }}
+          onIgnoredUsersChange={(users) => {
+            if (onIgnoredUsersChange) onIgnoredUsersChange(users);
+          }}
           hasYoutubeSession={hasYoutubeSession}
-          onReauthYoutube={onReauthYoutube || (() => { })}
+          onReauthYoutube={onReauthYoutube || (() => {})}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}

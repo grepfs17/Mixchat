@@ -4,25 +4,29 @@ import { checkRateLimit } from "../../lib/rateLimit";
 // Use configured client id, or fall back to Streamlink's public client id.
 // The public client id is used by many clients and is safe for playback token
 // requests when no private client id is provided.
-const GQL_CLIENT_ID = import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
+const GQL_CLIENT_ID =
+  import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
-  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const clientAddress =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   // Require an active session — prevents open-proxy abuse of this endpoint.
   const twitchToken = cookies.get("twitch_token")?.value;
   const youtubeToken = cookies.get("youtube_token")?.value;
   if (!twitchToken && !youtubeToken) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Authentication required" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   if (!checkRateLimit(`${clientAddress}:stream-playlist`, 30, 60_000)) {
-    return new Response(
-      JSON.stringify({ error: "Too many requests" }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "60" } },
-    );
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    });
   }
 
   try {
@@ -46,7 +50,8 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
         persistedQuery: {
           version: 1,
           // SHA256 used by Streamlink for the PlaybackAccessToken persisted query
-          sha256Hash: "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
+          sha256Hash:
+            "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
         },
       },
       variables: {
@@ -62,7 +67,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     const baseGqlHeaders = {
       "Client-ID": GQL_CLIENT_ID,
       "Content-Type": "application/json",
-      "Accept": "application/json",
+      Accept: "application/json",
       "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
       ...(twitchToken ? { Authorization: `OAuth ${twitchToken}` } : {}),
     };
@@ -92,10 +97,12 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
           if (kpsdkCt) {
             // The integrity response typically sets KP_UIDz and KP_UIDz-ssn
             // to the same value as X-Kpsdk-Ct. Reuse that value for Cookie.
-            cookieHeader = { Cookie: `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}` };
+            cookieHeader = {
+              Cookie: `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}`,
+            };
           } else if (setCookie) {
             // Fallback: use raw Set-Cookie header(s) if available.
-            cookieHeader = { Cookie: setCookie.split(/\r?\n/).join('; ') };
+            cookieHeader = { Cookie: setCookie.split(/\r?\n/).join("; ") };
           }
           if (clientIntegrity) {
             const deviceId = Math.random().toString(36).slice(2, 34);
@@ -131,7 +138,9 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
 
     // Surface GQL-level errors before checking for token data.
     if (Array.isArray(gqlData?.errors) && gqlData.errors.length > 0) {
-      const msg = gqlData.errors.map((e: { message?: string }) => e.message).join("; ");
+      const msg = gqlData.errors
+        .map((e: { message?: string }) => e.message)
+        .join("; ");
       console.error("Twitch GQL errors:", gqlData.errors);
       throw new Error(`Twitch GQL returned errors: ${msg}`);
     }
@@ -194,7 +203,8 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
         const videoGroup = masterLines[i].match(/VIDEO="([^"]+)"/)?.[1];
         const variantUrl = masterLines[i + 1]?.trim();
         if (variantUrl?.startsWith("http")) {
-          const label = (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
+          const label =
+            (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
           // Route the variant playlist through our server-side proxy.
           // *.playlist.ttvnw.net URLs are IP-locked to the server that
           // requested the access token — fetching them from the browser
@@ -230,21 +240,18 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     // relative URLs to absolute CDN paths. Actual .ts segments on
     // video-weaver.*.hls.twitchsvc.net are not IP-locked, so HLS.js fetches
     // them directly from the CDN without going through the proxy.
-    return new Response(
-      JSON.stringify({ qualities }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ qualities }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Stream playlist proxy error:", error);
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd = process.env.NODE_ENV === "production";
     const body: any = { error: "Failed to get playlist" };
-    if (!isProd) body.details = String(error ?? '');
-    return new Response(
-      JSON.stringify(body),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+    if (!isProd) body.details = String(error ?? "");
+    return new Response(JSON.stringify(body), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 };

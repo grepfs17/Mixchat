@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import HLS from 'hls.js';
+import { useState, useEffect, useRef } from "react";
+import HLS from "hls.js";
 
 // Types for the Twitch Player JS API
 declare global {
@@ -16,10 +16,10 @@ declare global {
           layout?: string;
           muted?: boolean;
           oauth_token?: string;
-        }
+        },
       ) => TwitchPlayer;
       Embed: {
-        new(
+        new (
           elementId: string,
           options: {
             width: string | number;
@@ -27,10 +27,10 @@ declare global {
             channel: string;
             parent: string[];
             autoplay?: boolean;
-            layout?: 'video-with-chat' | 'video';
+            layout?: "video-with-chat" | "video";
             muted?: boolean;
-            theme?: 'light' | 'dark';
-          }
+            theme?: "light" | "dark";
+          },
         ): TwitchEmbed;
         AUTHENTICATE: string;
         VIDEO_PLAY: string;
@@ -60,13 +60,15 @@ interface TwitchEmbed {
 
 interface StreamEmbedProps {
   channelName: string;
-  playerType?: 'embed' | 'm3u8';
+  playerType?: "embed" | "m3u8";
   twitchConnected?: boolean;
   onTwitchLogin?: () => void;
   /** User's Twitch OAuth access token — passed to the embed player so it can
    *  authenticate without relying on cookies/localStorage (Brave Shields). */
   twitchAccessToken?: string;
-  onQualitiesLoaded?: (qualities: Array<{ label: string; url: string }>) => void;
+  onQualitiesLoaded?: (
+    qualities: Array<{ label: string; url: string }>,
+  ) => void;
   externalSelectedQualityIdx?: number;
   /** URL of the stream thumbnail to show as a placeholder while the stream loads. */
   placeholderThumbnailUrl?: string;
@@ -74,10 +76,17 @@ interface StreamEmbedProps {
   onPlaceholderFadeOut?: () => void;
 }
 
-
 // Renders a Twitch stream using the Twitch Player JS API
 
-function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName: string; parentDomain: string; oauthToken?: string }) {
+function TwitchJSEmbed({
+  channelName,
+  parentDomain,
+  oauthToken,
+}: {
+  channelName: string;
+  parentDomain: string;
+  oauthToken?: string;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<TwitchPlayer | null>(null);
   // Keep a ref so the script-load callback always sees the latest channel
@@ -97,22 +106,24 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     const initPlayer = () => {
       if (cancelled || !containerRef.current || !window.Twitch?.Embed) return;
 
-      const playerId = 'twitch-js-player';
+      const playerId = "twitch-js-player";
       containerRef.current.id = playerId;
-      containerRef.current.innerHTML = '';
+      containerRef.current.innerHTML = "";
 
       requestAnimationFrame(() => {
         if (cancelled || !window.Twitch?.Embed) return;
 
         embedInstance = new window.Twitch.Embed(playerId, {
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "100%",
           channel: channelRef.current,
           parent: [parentDomain],
           autoplay: true,
-          layout: 'video',
+          layout: "video",
           // @ts-ignore - The Embed API supports oauth_token despite some type definitions
-          ...(oauthTokenRef.current ? { oauth_token: oauthTokenRef.current } : {}),
+          ...(oauthTokenRef.current
+            ? { oauth_token: oauthTokenRef.current }
+            : {}),
         });
 
         playerRef.current = embedInstance.getPlayer();
@@ -126,13 +137,13 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
       });
     };
 
-    const scriptId = 'twitch-embed-script';
+    const scriptId = "twitch-embed-script";
     if (window.Twitch?.Embed) {
       initPlayer();
     } else if (!document.getElementById(scriptId)) {
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.id = scriptId;
-      script.src = 'https://embed.twitch.tv/embed/v1.js';
+      script.src = "https://embed.twitch.tv/embed/v1.js";
       script.onload = () => initPlayer();
       document.head.appendChild(script);
     } else {
@@ -148,7 +159,11 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     return () => {
       cancelled = true;
       if (embedInstance) {
-        try { embedInstance.destroy(); } catch { /* ignore */ }
+        try {
+          embedInstance.destroy();
+        } catch {
+          /* ignore */
+        }
         embedInstance = null;
       }
       playerRef.current = null;
@@ -182,7 +197,8 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
     // Chrome/Chromium workaround: Active (even silent) AudioContext prevents aggressive tab suspension.
     let audioCtx: AudioContext | null = null;
     try {
-      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
         audioCtx = new AudioContextClass();
         const oscillator = audioCtx.createOscillator();
@@ -193,24 +209,24 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
         oscillator.start();
 
         // Ensure the context doesn't get suspended
-        if (audioCtx.state === 'suspended') {
+        if (audioCtx.state === "suspended") {
           const resume = () => {
             audioCtx?.resume();
-            document.removeEventListener('click', resume);
+            document.removeEventListener("click", resume);
           };
-          document.addEventListener('click', resume);
+          document.addEventListener("click", resume);
         }
       }
     } catch (e) {
-      console.warn('Keep-alive AudioContext failed:', e);
+      console.warn("Keep-alive AudioContext failed:", e);
     }
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       if (heartbeatId) clearInterval(heartbeatId);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (audioCtx && audioCtx.state !== 'closed') {
-        audioCtx.close().catch(() => { });
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (audioCtx && audioCtx.state !== "closed") {
+        audioCtx.close().catch(() => {});
       }
     };
   }, []);
@@ -225,19 +241,33 @@ function TwitchJSEmbed({ channelName, parentDomain, oauthToken }: { channelName:
   return (
     <div
       ref={containerRef}
-      style={{ position: 'absolute', inset: 0, visibility: 'visible' }}
+      style={{ position: "absolute", inset: 0, visibility: "visible" }}
     />
   );
 }
 
-export default function StreamEmbed({ channelName, playerType = 'embed', twitchConnected, onTwitchLogin, twitchAccessToken, onQualitiesLoaded, externalSelectedQualityIdx, placeholderThumbnailUrl, onPlaceholderFadeOut }: StreamEmbedProps) {
+export default function StreamEmbed({
+  channelName,
+  playerType = "embed",
+  twitchConnected,
+  onTwitchLogin,
+  twitchAccessToken,
+  onQualitiesLoaded,
+  externalSelectedQualityIdx,
+  placeholderThumbnailUrl,
+  onPlaceholderFadeOut,
+}: StreamEmbedProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qualities, setQualities] = useState<Array<{ label: string; url: string }>>([]);
+  const [qualities, setQualities] = useState<
+    Array<{ label: string; url: string }>
+  >([]);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
-  const [showPlaceholder, setShowPlaceholder] = useState(!!placeholderThumbnailUrl);
+  const [showPlaceholder, setShowPlaceholder] = useState(
+    !!placeholderThumbnailUrl,
+  );
   const [placeholderFading, setPlaceholderFading] = useState(false);
   const [parentDomain, setParentDomain] = useState<string | null>(null);
 
@@ -277,10 +307,10 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
   }, [twitchConnected, twitchAccessToken]);
 
   useEffect(() => {
-    fetch('/api/parent-domain')
-      .then(res => res.json())
-      .then(data => setParentDomain(data.parentDomain ?? 'localhost'))
-      .catch(() => setParentDomain('localhost'));
+    fetch("/api/parent-domain")
+      .then((res) => res.json())
+      .then((data) => setParentDomain(data.parentDomain ?? "localhost"))
+      .catch(() => setParentDomain("localhost"));
   }, []);
 
   // Watch external quality index and switch the HLS source accordingly
@@ -292,7 +322,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     ) {
       hlsRef.current.loadSource(qualities[externalSelectedQualityIdx].url);
       setSelectedQualityIdx(externalSelectedQualityIdx);
-      videoRef.current?.play().catch(() => { });
+      videoRef.current?.play().catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalSelectedQualityIdx]);
@@ -301,7 +331,7 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
   // The browser will handle navigating the existing iframe to the new URL.
 
   useEffect(() => {
-    if (playerType === 'embed' || !channelName) {
+    if (playerType === "embed" || !channelName) {
       setLoading(false);
       return;
     }
@@ -333,28 +363,38 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
         // It returns all available quality variants on *.ttvnw.net CDN,
         // which DO support CORS — HLS.js fetches segments directly from
         // the CDN with zero server bandwidth involved.
-        const playlistRes = await fetch(`/api/stream-playlist?channel=${encodeURIComponent(channelName)}`);
+        const playlistRes = await fetch(
+          `/api/stream-playlist?channel=${encodeURIComponent(channelName)}`,
+        );
 
         // Surface actionable error messages by HTTP status before reading body
         if (!playlistRes.ok) {
           if (playlistRes.status === 401) {
             if (!isRetry && !cancelled) {
               // The session cookie may not have been refreshed yet — wait 3 s and retry once.
-              setError('Authenticating… retrying in 3 s');
+              setError("Authenticating… retrying in 3 s");
               retryTimer = setTimeout(() => loadStream(true), 3000);
               return;
             }
-            throw new Error('Authentication required. Please check your Twitch session.');
+            throw new Error(
+              "Authentication required. Please check your Twitch session.",
+            );
           }
           if (playlistRes.status === 404) {
-            throw new Error('Channel is offline or does not exist');
+            throw new Error("Channel is offline or does not exist");
           }
           if (playlistRes.status === 429) {
-            throw new Error('Too many requests — please wait a moment and try again');
+            throw new Error(
+              "Too many requests — please wait a moment and try again",
+            );
           }
           // Attempt to surface a server-side error message if available
-          let serverMsg = '';
-          try { serverMsg = (await playlistRes.json()).error ?? ''; } catch { /* ignore */ }
+          let serverMsg = "";
+          try {
+            serverMsg = (await playlistRes.json()).error ?? "";
+          } catch {
+            /* ignore */
+          }
           throw new Error(serverMsg || `Server error (${playlistRes.status})`);
         }
 
@@ -363,7 +403,8 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
 
         if (cancelled) return;
 
-        const fetchedQualities: Array<{ label: string; url: string }> = playlistData.qualities;
+        const fetchedQualities: Array<{ label: string; url: string }> =
+          playlistData.qualities;
         setQualities(fetchedQualities);
         onQualitiesLoaded?.(fetchedQualities);
         const playlistUrl = fetchedQualities[0].url;
@@ -379,7 +420,10 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
           });
 
           hls.on(HLS.Events.MANIFEST_PARSED, () => {
-            if (cancelled) { hls.destroy(); return; }
+            if (cancelled) {
+              hls.destroy();
+              return;
+            }
             setLoading(false);
             videoRef.current?.play().catch(() => {
               // Auto-play failed — user will need to click play
@@ -396,18 +440,20 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
           hls.loadSource(playlistUrl);
           hls.attachMedia(videoRef.current);
           hlsRef.current = hls;
-        } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        } else if (
+          videoRef.current.canPlayType("application/vnd.apple.mpegurl")
+        ) {
           // Safari supports HLS natively
           videoRef.current.src = playlistUrl;
           setLoading(false);
         } else {
-          setError('HLS not supported in this browser');
+          setError("HLS not supported in this browser");
           setLoading(false);
         }
       } catch (err) {
         if (cancelled) return;
-        console.error('Failed to load stream:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load stream');
+        console.error("Failed to load stream:", err);
+        setError(err instanceof Error ? err.message : "Failed to load stream");
         setLoading(false);
       }
     };
@@ -424,16 +470,29 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     };
   }, [channelName, playerType]);
 
-  if (playerType === 'embed') {
+  if (playerType === "embed") {
     // Wait for the parent domain to resolve before mounting the player.
     // Mounting with 'localhost' then immediately remounting with the real domain
     // fires two Kasada fingerprint requests in quick succession → 429.
     if (!parentDomain) {
       return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#0a0a0a' }}>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            backgroundColor: "#0a0a0a",
+          }}
+        >
           {showPlaceholder && placeholderThumbnailUrl && (
-            <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
-              <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+            <div
+              className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
+            >
+              <img
+                src={placeholderThumbnailUrl}
+                alt=""
+                className="stream-embed-placeholder__img"
+              />
               <div className="stream-embed-placeholder__glass" />
               <div className="stream-embed-placeholder__spinner">
                 <div className="stream-embed-placeholder__spinner-ring" />
@@ -452,20 +511,26 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       return (
         <div
           style={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#0a0a0a',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#999',
-            fontSize: '13px',
+            width: "100%",
+            height: "100%",
+            backgroundColor: "#0a0a0a",
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#999",
+            fontSize: "13px",
           }}
         >
           {showPlaceholder && placeholderThumbnailUrl && (
-            <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
-              <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+            <div
+              className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
+            >
+              <img
+                src={placeholderThumbnailUrl}
+                alt=""
+                className="stream-embed-placeholder__img"
+              />
               <div className="stream-embed-placeholder__glass" />
             </div>
           )}
@@ -474,13 +539,23 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
       );
     }
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <div style={{ position: 'absolute', inset: 0 }}>
-          <TwitchJSEmbed channelName={channelName} parentDomain={parentDomain} oauthToken={twitchAccessToken} />
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div style={{ position: "absolute", inset: 0 }}>
+          <TwitchJSEmbed
+            channelName={channelName}
+            parentDomain={parentDomain}
+            oauthToken={twitchAccessToken}
+          />
         </div>
         {showPlaceholder && placeholderThumbnailUrl && (
-          <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
-            <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+          <div
+            className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
+          >
+            <img
+              src={placeholderThumbnailUrl}
+              alt=""
+              className="stream-embed-placeholder__img"
+            />
             <div className="stream-embed-placeholder__glass" />
             <div className="stream-embed-placeholder__spinner">
               <div className="stream-embed-placeholder__spinner-ring" />
@@ -496,21 +571,23 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
     return (
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          backgroundColor: '#0a0a0a',
-          color: '#ff4444',
-          fontSize: '14px',
-          gap: '8px',
-          padding: '16px',
-          textAlign: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          backgroundColor: "#0a0a0a",
+          color: "#ff4444",
+          fontSize: "14px",
+          gap: "8px",
+          padding: "16px",
+          textAlign: "center",
         }}
       >
         <div>⚠️ {error}</div>
-        <div style={{ fontSize: '12px', color: '#666' }}>The stream may be offline or unavailable</div>
+        <div style={{ fontSize: "12px", color: "#666" }}>
+          The stream may be offline or unavailable
+        </div>
       </div>
     );
   }
@@ -518,14 +595,16 @@ export default function StreamEmbed({ channelName, playerType = 'embed', twitchC
   // M3U8 mode — video player
   return (
     <div className="stream-player">
-      <video
-        ref={videoRef}
-        controls
-        title={`${channelName} Twitch Stream`}
-      />
+      <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
       {showPlaceholder && placeholderThumbnailUrl && (
-        <div className={`stream-embed-placeholder${placeholderFading ? ' stream-embed-placeholder--fading' : ''}`}>
-          <img src={placeholderThumbnailUrl} alt="" className="stream-embed-placeholder__img" />
+        <div
+          className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
+        >
+          <img
+            src={placeholderThumbnailUrl}
+            alt=""
+            className="stream-embed-placeholder__img"
+          />
           <div className="stream-embed-placeholder__glass" />
           <div className="stream-embed-placeholder__spinner">
             <div className="stream-embed-placeholder__spinner-ring" />

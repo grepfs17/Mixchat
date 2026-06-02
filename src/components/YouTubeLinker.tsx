@@ -1,13 +1,12 @@
-import { useState } from 'react';
-import { FaPlus, FaTrash, FaYoutube } from 'react-icons/fa';
+import { useState } from "react";
+import { FaPlus, FaTrash, FaYoutube } from "react-icons/fa";
 import {
   getYoutubeLinks,
   addYoutubeLink,
   removeYoutubeLink,
-} from '../lib/youtubeLinks';
-import type { YouTubeLink } from '../lib/youtubeLinks';
-import type { TwitchChannel } from '../components/AppContainer';
-
+} from "../lib/youtubeLinks";
+import type { YouTubeLink } from "../lib/youtubeLinks";
+import type { TwitchChannel } from "../components/AppContainer";
 
 interface YouTubeLinkerProps {
   availableChannels: TwitchChannel[];
@@ -15,20 +14,32 @@ interface YouTubeLinkerProps {
   onLinksChanged?: () => void;
 }
 
-export default function YouTubeLinker({ availableChannels, onClose, onLinksChanged }: YouTubeLinkerProps) {
-  const [youtubeLinks, setYoutubeLinks] = useState<YouTubeLink[]>(getYoutubeLinks());
-  const [selectedChannelId, setSelectedChannelId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [youtubeUrl, setYoutubeUrl] = useState<string>('');
-  const [error, setError] = useState<string>('');
+export default function YouTubeLinker({
+  availableChannels,
+  onClose,
+  onLinksChanged,
+}: YouTubeLinkerProps) {
+  const [youtubeLinks, setYoutubeLinks] =
+    useState<YouTubeLink[]>(getYoutubeLinks());
+  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [youtubeUrl, setYoutubeUrl] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const handleAddLink = () => {
     if (!selectedChannelId || !youtubeUrl.trim()) return;
 
     // Validate URL format
     const trimmed = youtubeUrl.trim();
-    if (!trimmed.startsWith('https://www.youtube.com/') && !trimmed.startsWith('https://youtube.com/') && !trimmed.startsWith('http://www.youtube.com/') && !trimmed.startsWith('http://youtube.com/')) {
-      setError('Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)');
+    if (
+      !trimmed.startsWith("https://www.youtube.com/") &&
+      !trimmed.startsWith("https://youtube.com/") &&
+      !trimmed.startsWith("http://www.youtube.com/") &&
+      !trimmed.startsWith("http://youtube.com/")
+    ) {
+      setError(
+        "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
+      );
       return;
     }
 
@@ -40,10 +51,10 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
         youtubeUrl: trimmed,
       });
       setYoutubeLinks(getYoutubeLinks());
-      setSelectedChannelId('');
-      setSearchQuery('');
-      setYoutubeUrl('');
-      setError('');
+      setSelectedChannelId("");
+      setSearchQuery("");
+      setYoutubeUrl("");
+      setError("");
       onLinksChanged?.();
     }
   };
@@ -58,24 +69,35 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
     youtubeLinks.some((l) => l.twitchChannelId === channelId);
 
   const unlinkedChannels = availableChannels.filter(
-    (c) => !isAlreadyLinked(c.id)
+    (c) => !isAlreadyLinked(c.id),
   );
 
-  const filteredChannels = searchQuery.trim() === ''
-    ? unlinkedChannels
-    : unlinkedChannels.filter((c) =>
-      c.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const filteredChannels =
+    searchQuery.trim() === ""
+      ? unlinkedChannels
+      : unlinkedChannels.filter(
+          (c) =>
+            c.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
 
   return (
     <div className="ytlinker-overlay" onClick={onClose}>
       <div className="ytlinker-manager" onClick={(e) => e.stopPropagation()}>
         <h2>
-          <FaYoutube style={{ color: '#FF0000', marginRight: '8px', verticalAlign: 'middle' }} />
+          <FaYoutube
+            style={{
+              color: "#FF0000",
+              marginRight: "8px",
+              verticalAlign: "middle",
+            }}
+          />
           Link YouTube Channels
         </h2>
-        <p className="ytlinker-subtitle">Link a YouTube channel to a followed streamer to see their YouTube live chat</p>
+        <p className="ytlinker-subtitle">
+          Link a YouTube channel to a followed streamer to see their YouTube
+          live chat
+        </p>
 
         <div className="ytlinker-add-section">
           <div className="ytlinker-inputs">
@@ -87,14 +109,16 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setSelectedChannelId('');
+                  setSelectedChannelId("");
                 }}
                 className="ytlinker-search"
               />
               <div className="ytlinker-dropdown">
                 {filteredChannels.length === 0 ? (
                   <div className="ytlinker-no-channels">
-                    {searchQuery ? 'No channels match your search' : 'All followed channels already have a YouTube link'}
+                    {searchQuery
+                      ? "No channels match your search"
+                      : "All followed channels already have a YouTube link"}
                   </div>
                 ) : (
                   filteredChannels.map((channel) => (
@@ -107,11 +131,19 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
                       }}
                     >
                       {channel.profileImageUrl && (
-                        <img src={channel.profileImageUrl} alt="" className="item-avatar" />
+                        <img
+                          src={channel.profileImageUrl}
+                          alt=""
+                          className="item-avatar"
+                        />
                       )}
                       <div className="ytlinker-channel-info">
-                        <div className="ytlinker-channel-display-name">{channel.displayName}</div>
-                        <div className="ytlinker-channel-username">@{channel.name}</div>
+                        <div className="ytlinker-channel-display-name">
+                          {channel.displayName}
+                        </div>
+                        <div className="ytlinker-channel-username">
+                          @{channel.name}
+                        </div>
                       </div>
                     </button>
                   ))
@@ -119,7 +151,9 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
               </div>
               {selectedChannelId && (
                 <div className="ytlinker-selected-display">
-                  ✓ {unlinkedChannels.find((c) => c.id === selectedChannelId)?.displayName || searchQuery}
+                  ✓{" "}
+                  {unlinkedChannels.find((c) => c.id === selectedChannelId)
+                    ?.displayName || searchQuery}
                 </div>
               )}
             </div>
@@ -132,7 +166,7 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
                 value={youtubeUrl}
                 onChange={(e) => {
                   setYoutubeUrl(e.target.value);
-                  setError('');
+                  setError("");
                 }}
                 className="ytlinker-search"
               />
@@ -155,15 +189,23 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
             <p className="ytlinker-empty">No YouTube channels linked yet</p>
           ) : (
             youtubeLinks.map((link) => {
-              const channel = availableChannels.find((c) => c.id === link.twitchChannelId);
+              const channel = availableChannels.find(
+                (c) => c.id === link.twitchChannelId,
+              );
               return (
                 <div key={link.twitchChannelId} className="ytlinker-item">
                   <div className="ytlinker-item-info">
                     {channel?.profileImageUrl && (
-                      <img src={channel.profileImageUrl} alt="" className="item-avatar" />
+                      <img
+                        src={channel.profileImageUrl}
+                        alt=""
+                        className="item-avatar"
+                      />
                     )}
                     <div className="ytlinker-item-details">
-                      <div className="ytlinker-item-name">{link.twitchDisplayName}</div>
+                      <div className="ytlinker-item-name">
+                        {link.twitchDisplayName}
+                      </div>
                       <a
                         href={link.youtubeUrl}
                         target="_blank"
@@ -189,8 +231,9 @@ export default function YouTubeLinker({ availableChannels, onClose, onLinksChang
 
         <div className="ytlinker-footer">
           <p className="ytlinker-info-text">
-            <FaYoutube style={{ marginRight: '6px', color: '#FF0000' }} />
-            When viewing a linked channel, YouTube live chat will appear above the Twitch chat
+            <FaYoutube style={{ marginRight: "6px", color: "#FF0000" }} />
+            When viewing a linked channel, YouTube live chat will appear above
+            the Twitch chat
           </p>
           <button className="ytlinker-close-button" onClick={onClose}>
             Close

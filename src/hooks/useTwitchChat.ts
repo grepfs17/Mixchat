@@ -215,7 +215,9 @@ function parseBadgeString(badgesStr: string): {
 
 /** Get a cached avatar URL for a user ID, if available. */
 function getCachedAvatar(userId?: string): string | undefined {
-  return userId ? userInfoCache.get(userId)?.profileImageUrl || undefined : undefined;
+  return userId
+    ? userInfoCache.get(userId)?.profileImageUrl || undefined
+    : undefined;
 }
 
 /** Build a standard system ChatMessage (mod actions, mode changes, etc.). */
@@ -245,7 +247,17 @@ function createSystemMessage(
 
 /** Build a ChatMessage from a user-triggered IRC event (sub, raid, etc.). */
 function buildUserChatMessage(
-  msg: { id: string; date: Date; userInfo: { userId: string; userName: string; displayName: string; color?: string | null; badges: Map<string, string> } },
+  msg: {
+    id: string;
+    date: Date;
+    userInfo: {
+      userId: string;
+      userName: string;
+      displayName: string;
+      color?: string | null;
+      badges: Map<string, string>;
+    };
+  },
   content: string,
   username: string,
   overrides?: Partial<ChatMessage>,
@@ -265,7 +277,8 @@ function buildUserChatMessage(
     isBot: msg.userInfo.badges.has("bot"),
     badges,
     badgeDetails,
-    isCurrentUser: msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
+    isCurrentUser:
+      msg.userInfo.userName.toLowerCase() === username.toLowerCase(),
     ...overrides,
   };
 }
@@ -446,10 +459,18 @@ export function useTwitchChat(
   const onMessageRef = useRef(onMessage);
   const onOwnBadgesLoadedRef = useRef(onOwnBadgesLoaded);
 
-  useEffect(() => { accessTokenRef.current = accessToken; }, [accessToken]);
-  useEffect(() => { usernameRef.current = username; }, [username]);
-  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
-  useEffect(() => { onOwnBadgesLoadedRef.current = onOwnBadgesLoaded; }, [onOwnBadgesLoaded]);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+  useEffect(() => {
+    onOwnBadgesLoadedRef.current = onOwnBadgesLoaded;
+  }, [onOwnBadgesLoaded]);
 
   // Retrieve Client ID from env; it's required for twurple's AuthProvider
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -539,7 +560,8 @@ export function useTwitchChat(
               const rewards: { id: string; title: string; cost: number }[] =
                 rewardsData?.data ?? [];
               rewards.forEach((r) => {
-                if (r.id && r.title) cacheRewardInfo(r.id, r.title, r.cost ?? 0);
+                if (r.id && r.title)
+                  cacheRewardInfo(r.id, r.title, r.cost ?? 0);
               });
               console.log(
                 `[useTwitchChat] Pre-cached ${rewards.length} custom reward title(s) for channel "${channelName}"`,
@@ -568,7 +590,9 @@ export function useTwitchChat(
 
     newClient.irc.onTypedMessage(UserState, (msg) => {
       if (!active || !onOwnBadgesLoadedRef.current) return;
-      const { badges, badgeDetails } = parseBadgeString(msg.tags.get("badges") || "");
+      const { badges, badgeDetails } = parseBadgeString(
+        msg.tags.get("badges") || "",
+      );
       onOwnBadgesLoadedRef.current(badges, badgeDetails);
     });
 
@@ -587,7 +611,9 @@ export function useTwitchChat(
         : undefined;
 
       const mentionsUser =
-        message.toLowerCase().includes(`@${usernameRef.current.toLowerCase()}`) ||
+        message
+          .toLowerCase()
+          .includes(`@${usernameRef.current.toLowerCase()}`) ||
         replyInfo?.author.toLowerCase() === usernameRef.current.toLowerCase();
 
       // Map Twitch emotes - Twurple provides emote data in msg.emotes
@@ -645,7 +671,8 @@ export function useTwitchChat(
         badges: badgeImages,
         badgeDetails,
         isCurrentUser:
-          msg.userInfo.userName.toLowerCase() === usernameRef.current.toLowerCase(),
+          msg.userInfo.userName.toLowerCase() ===
+          usernameRef.current.toLowerCase(),
         messageType: msg.isRedemption
           ? "redemption"
           : msg.isHighlight
@@ -723,10 +750,8 @@ export function useTwitchChat(
                 resolvedSource?.avatar ||
                 chatMessage.sourceChannelAvatar ||
                 undefined,
-              rewardTitle:
-                resolvedReward?.title || chatMessage.rewardTitle,
-              rewardCost:
-                resolvedReward?.cost ?? chatMessage.rewardCost,
+              rewardTitle: resolvedReward?.title || chatMessage.rewardTitle,
+              rewardCost: resolvedReward?.cost ?? chatMessage.rewardCost,
             });
           })
           .catch(() => {
@@ -736,7 +761,11 @@ export function useTwitchChat(
         if (chatMessage.messageType === "redemption") {
           const soundData = eventSoundsRef.current["redemption"];
           if (soundData) {
-            playEventSound("redemption", soundData, eventSoundVolumeRef.current);
+            playEventSound(
+              "redemption",
+              soundData,
+              eventSoundVolumeRef.current,
+            );
           }
         }
 
@@ -779,19 +808,29 @@ export function useTwitchChat(
 
     newClient.onAction((_channel, _user, message, msg) => {
       if (!active) return;
-      onMessageRef.current(buildUserChatMessage(msg, message, usernameRef.current, { messageType: "chat" }));
+      onMessageRef.current(
+        buildUserChatMessage(msg, message, usernameRef.current, {
+          messageType: "chat",
+        }),
+      );
     });
 
     newClient.onAnnouncement((_channel, _user, _announcementInfo, msg) => {
       if (!active) return;
-      const emotes = msg.emoteOffsets.size > 0
-        ? Object.fromEntries(msg.emoteOffsets)
-        : undefined;
-      const chatMessage = buildUserChatMessage(msg, msg.text ?? "", usernameRef.current, {
-        messageType: "announcement",
-        isBot: false,
-        ...(emotes ? { emotes } : {}),
-      });
+      const emotes =
+        msg.emoteOffsets.size > 0
+          ? Object.fromEntries(msg.emoteOffsets)
+          : undefined;
+      const chatMessage = buildUserChatMessage(
+        msg,
+        msg.text ?? "",
+        usernameRef.current,
+        {
+          messageType: "announcement",
+          isBot: false,
+          ...(emotes ? { emotes } : {}),
+        },
+      );
       const userId = msg.userInfo.userId;
       if (!getCachedAvatar(userId) && userId) {
         getUserInfo(userId, accessTokenRef.current)
@@ -810,14 +849,19 @@ export function useTwitchChat(
 
       const soundData = eventSoundsRef.current["announcement"];
       if (soundData) {
-          playEventSound("announcement", soundData, eventSoundVolumeRef.current);
+        playEventSound("announcement", soundData, eventSoundVolumeRef.current);
       }
     });
 
     newClient.onRewardGift((_channel, _user, rewardGiftInfo, msg) => {
       if (!active) return;
       const content = `gifted ${rewardGiftInfo.count} reward${rewardGiftInfo.count > 1 ? "s" : ""} (${rewardGiftInfo.triggerType})`;
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, { messageType: "reward-gift", isBot: false }));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, {
+          messageType: "reward-gift",
+          isBot: false,
+        }),
+      );
 
       const soundData = eventSoundsRef.current["reward-gift"];
       if (soundData) {
@@ -827,42 +871,54 @@ export function useTwitchChat(
 
     newClient.onRaidCancel((_channel) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage("The raid was cancelled.", "notice"));
+      onMessageRef.current(
+        createSystemMessage("The raid was cancelled.", "notice"),
+      );
     });
 
     newClient.onSlow((_channel, enabled, duration) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage(
-        enabled ? `Slow mode enabled (${duration}s).` : "Slow mode disabled.",
-        "notice",
-      ));
+      onMessageRef.current(
+        createSystemMessage(
+          enabled ? `Slow mode enabled (${duration}s).` : "Slow mode disabled.",
+          "notice",
+        ),
+      );
     });
 
     newClient.onEmoteOnly((_channel, enabled) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage(
-        enabled ? "Emote-only mode enabled." : "Emote-only mode disabled.",
-        "notice",
-      ));
+      onMessageRef.current(
+        createSystemMessage(
+          enabled ? "Emote-only mode enabled." : "Emote-only mode disabled.",
+          "notice",
+        ),
+      );
     });
 
     newClient.onSubsOnly((_channel, enabled) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage(
-        enabled ? "Subscribers-only mode enabled." : "Subscribers-only mode disabled.",
-        "notice",
-      ));
+      onMessageRef.current(
+        createSystemMessage(
+          enabled
+            ? "Subscribers-only mode enabled."
+            : "Subscribers-only mode disabled.",
+          "notice",
+        ),
+      );
     });
 
     newClient.onFollowersOnly((_channel, enabled, duration) => {
       if (!active) return;
       const minutes = duration ?? 0;
-      onMessageRef.current(createSystemMessage(
-        enabled
-          ? `Followers-only mode enabled (${minutes === 0 ? "any follow age" : `${minutes} min follow age`}).`
-          : "Followers-only mode disabled.",
-        "notice",
-      ));
+      onMessageRef.current(
+        createSystemMessage(
+          enabled
+            ? `Followers-only mode enabled (${minutes === 0 ? "any follow age" : `${minutes} min follow age`}).`
+            : "Followers-only mode disabled.",
+          "notice",
+        ),
+      );
     });
 
     newClient.onSub((_channel, _user, subInfo, msg) => {
@@ -876,13 +932,20 @@ export function useTwitchChat(
               ? "2"
               : "1";
       const prefix = `subscribed with ${subInfo.plan === "Prime" ? "Prime Gaming" : `a Tier ${tier} subscription`}`;
-      const content = subInfo.message ? `${prefix} - ${subInfo.message}` : prefix;
+      const content = subInfo.message
+        ? `${prefix} - ${subInfo.message}`
+        : prefix;
       const overrides: Partial<ChatMessage> = { messageType: "subscription" };
       if (subInfo.message && msg.emoteOffsets.size > 0) {
-        overrides.emotes = shiftEmoteOffsets(msg.emoteOffsets, prefix.length + 3);
+        overrides.emotes = shiftEmoteOffsets(
+          msg.emoteOffsets,
+          prefix.length + 3,
+        );
       }
 
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, overrides));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, overrides),
+      );
 
       const soundData = eventSoundsRef.current["subscription"];
       if (soundData) {
@@ -895,13 +958,20 @@ export function useTwitchChat(
       const monthsCount = subInfo.months;
       const monthLabel = monthsCount === 1 ? "month" : "months";
       const prefix = `resubscribed for ${monthsCount} ${monthLabel}`;
-      const content = subInfo.message ? `${prefix} - ${subInfo.message}` : prefix;
+      const content = subInfo.message
+        ? `${prefix} - ${subInfo.message}`
+        : prefix;
       const overrides: Partial<ChatMessage> = { messageType: "resub" };
       if (subInfo.message && msg.emoteOffsets.size > 0) {
-        overrides.emotes = shiftEmoteOffsets(msg.emoteOffsets, prefix.length + 3);
+        overrides.emotes = shiftEmoteOffsets(
+          msg.emoteOffsets,
+          prefix.length + 3,
+        );
       }
 
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, overrides));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, overrides),
+      );
 
       const soundData = eventSoundsRef.current["resub"];
       if (soundData) {
@@ -915,7 +985,11 @@ export function useTwitchChat(
         subInfo.plan === "3000" ? "3" : subInfo.plan === "2000" ? "2" : "1";
       const content = `gifted a Tier ${tier} subscription to ${recipient}`;
 
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, { messageType: "subgift" }));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, {
+          messageType: "subgift",
+        }),
+      );
 
       const soundData = eventSoundsRef.current["subgift"];
       if (soundData) {
@@ -929,7 +1003,11 @@ export function useTwitchChat(
         giftInfo.plan === "3000" ? "3" : giftInfo.plan === "2000" ? "2" : "1";
       const content = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;
 
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, { messageType: "subgift" }));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, {
+          messageType: "subgift",
+        }),
+      );
 
       const soundData = eventSoundsRef.current["subgift"];
       if (soundData) {
@@ -941,10 +1019,16 @@ export function useTwitchChat(
       if (!active) return;
       const content = `is raiding with a party of ${raidInfo.viewerCount} viewers!`;
 
-      onMessageRef.current(buildUserChatMessage(msg, content, usernameRef.current, {
-        messageType: "raid",
-        author: raidInfo.displayName || msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
-      }));
+      onMessageRef.current(
+        buildUserChatMessage(msg, content, usernameRef.current, {
+          messageType: "raid",
+          author:
+            raidInfo.displayName ||
+            msg.userInfo.displayName ||
+            msg.userInfo.userName ||
+            "Anonymous",
+        }),
+      );
 
       const soundData = eventSoundsRef.current["raid"];
       if (soundData) {
@@ -975,10 +1059,10 @@ export function useTwitchChat(
         const userId = msg.tags.get("user-id") || undefined;
         const redemptionMsgId = msg.tags.get("id") || crypto.randomUUID();
         const userMessage = msg.text ?? "";
-        const prefix = costNum ? `${rewardTitle} (${costNum} points)` : rewardTitle;
-        const content = userMessage
-          ? `${prefix} — ${userMessage}`
-          : prefix;
+        const prefix = costNum
+          ? `${rewardTitle} (${costNum} points)`
+          : rewardTitle;
+        const content = userMessage ? `${prefix} — ${userMessage}` : prefix;
         const { badges: badgeImages, badgeDetails } = parseBadgeString(
           msg.tags.get("badges") || "",
         );
@@ -990,7 +1074,11 @@ export function useTwitchChat(
         if (!msg.tags.get("msg-param-reward-title") && rewardId) {
           const broadcasterId = broadcasterIdRef.current;
           if (broadcasterId) {
-            const info = await getRewardInfo(rewardId, broadcasterId, accessTokenRef.current);
+            const info = await getRewardInfo(
+              rewardId,
+              broadcasterId,
+              accessTokenRef.current,
+            );
             resolvedRewardTitle = info.title || undefined;
             resolvedRewardCost = info.cost ?? undefined;
           }
@@ -1047,7 +1135,9 @@ export function useTwitchChat(
       const userId = msg.tags.get("user-id") || undefined;
       const streakMsgId = msg.tags.get("id") || crypto.randomUUID();
       const userMessage = msg.text ?? "";
-      const prefix = userMessage ? `[${streakCount} streak] - ` : `[${streakCount} streak]`;
+      const prefix = userMessage
+        ? `[${streakCount} streak] - `
+        : `[${streakCount} streak]`;
       const content = userMessage ? `${prefix}${userMessage}` : prefix;
 
       let emotes: Record<string, string[]> | undefined;
@@ -1106,25 +1196,29 @@ export function useTwitchChat(
 
     newClient.onTimeout((_channel, user, duration) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage(
-        `${user} was timed out for ${duration} seconds.`,
-        "timeout",
-        { targetUsername: user },
-      ));
+      onMessageRef.current(
+        createSystemMessage(
+          `${user} was timed out for ${duration} seconds.`,
+          "timeout",
+          { targetUsername: user },
+        ),
+      );
     });
 
     newClient.onBan((_channel, user) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage(
-        `${user} was permanently banned.`,
-        "ban",
-        { targetUsername: user },
-      ));
+      onMessageRef.current(
+        createSystemMessage(`${user} was permanently banned.`, "ban", {
+          targetUsername: user,
+        }),
+      );
     });
 
     newClient.onChatClear((_channel) => {
       if (!active) return;
-      onMessageRef.current(createSystemMessage("Chat was cleared by a moderator.", "notice"));
+      onMessageRef.current(
+        createSystemMessage("Chat was cleared by a moderator.", "notice"),
+      );
     });
 
     newClient.onMessageRemove((_channel, messageId) => {
@@ -1143,11 +1237,7 @@ export function useTwitchChat(
         newClient.quit();
       }
     };
-  }, [
-    channelName,
-    enabled,
-    clientId,
-  ]);
+  }, [channelName, enabled, clientId]);
 
   // Handle real-time 7TV emote updates (system notices)
   useEffect(() => {

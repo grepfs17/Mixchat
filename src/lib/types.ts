@@ -1,4 +1,4 @@
-export type Platform = 'twitch' | 'youtube';
+export type Platform = "twitch" | "youtube";
 
 export const MAX_DISPLAYED_MESSAGES = 100;
 
@@ -115,14 +115,54 @@ export type ChatTheme =
   | "lunita"
   | "twitch";
 
-export const THEME_OPTIONS: { value: ChatTheme; label: string; preview: { bg: string; hover: string; accent: string } }[] = [
-  { value: "default", label: "Default", preview: { bg: "#0c0c0e", hover: "#292930", accent: "#9e4073" } },
-  { value: "one-dark", label: "One Dark", preview: { bg: "#282c34", hover: "#3e4452", accent: "#56b6c2" } },
-  { value: "catppuccin", label: "Catppuccin", preview: { bg: "#1e1e2e", hover: "#313244", accent: "#74c7ec" } },
-  { value: "night-owl", label: "Night Owl", preview: { bg: "#011627", hover: "#0b2942", accent: "#21c7a8" } },
-  { value: "monokai", label: "Monokai", preview: { bg: "#272822", hover: "#3e3d32", accent: "#f92672" } },
-  { value: "sublime-material", label: "Sublime Material", preview: { bg: "#263238", hover: "#37474f", accent: "#ff5370" } },
-  { value: "mushu", label: "Mushu", preview: { bg: "#1a1111", hover: "#3d1c1c", accent: "#e83333" } },
-  { value: "lunita", label: "Lunita", preview: { bg: "#1e2a1e", hover: "#2d4a2d", accent: "#d4a54a" } },
-  { value: "twitch", label: "Twitched", preview: { bg: "#18181B", hover: "#1f1f23", accent: "#9146ff" } },
+export const THEME_OPTIONS: {
+  value: ChatTheme;
+  label: string;
+  preview: { bg: string; hover: string; accent: string };
+}[] = [
+  {
+    value: "default",
+    label: "Default",
+    preview: { bg: "#0c0c0e", hover: "#292930", accent: "#9e4073" },
+  },
+  {
+    value: "one-dark",
+    label: "One Dark",
+    preview: { bg: "#282c34", hover: "#3e4452", accent: "#56b6c2" },
+  },
+  {
+    value: "catppuccin",
+    label: "Catppuccin",
+    preview: { bg: "#1e1e2e", hover: "#313244", accent: "#74c7ec" },
+  },
+  {
+    value: "night-owl",
+    label: "Night Owl",
+    preview: { bg: "#011627", hover: "#0b2942", accent: "#21c7a8" },
+  },
+  {
+    value: "monokai",
+    label: "Monokai",
+    preview: { bg: "#272822", hover: "#3e3d32", accent: "#f92672" },
+  },
+  {
+    value: "sublime-material",
+    label: "Sublime Material",
+    preview: { bg: "#263238", hover: "#37474f", accent: "#ff5370" },
+  },
+  {
+    value: "mushu",
+    label: "Mushu",
+    preview: { bg: "#1a1111", hover: "#3d1c1c", accent: "#e83333" },
+  },
+  {
+    value: "lunita",
+    label: "Lunita",
+    preview: { bg: "#1e2a1e", hover: "#2d4a2d", accent: "#d4a54a" },
+  },
+  {
+    value: "twitch",
+    label: "Twitched",
+    preview: { bg: "#18181B", hover: "#1f1f23", accent: "#9146ff" },
+  },
 ];

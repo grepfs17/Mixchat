@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import { getColorFromName } from '../../../lib/chatColors';
-import type { ChatFont } from '../../../lib/types';
-import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from '../../../lib/types';
-import YTMessageParts from '../../YTMessageParts';
-import { useScrollToBottomOnKeyboard } from '../../../hooks/useScrollToBottomOnKeyboard';
-import { saveMessage } from '../../../lib/chatHistoryStorage';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import { getColorFromName } from "../../../lib/chatColors";
+import type { ChatFont } from "../../../lib/types";
+import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
+import YTMessageParts from "../../YTMessageParts";
+import { useScrollToBottomOnKeyboard } from "../../../hooks/useScrollToBottomOnKeyboard";
+import { saveMessage } from "../../../lib/chatHistoryStorage";
 
 interface YouTubeChatProps {
   videoId: string;
@@ -18,14 +18,22 @@ interface YouTubeChatProps {
   chatFont?: ChatFont;
   splitChatEnabled?: boolean;
   /** Called when YouTube chat connection state changes */
-  onConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
+  onConnectionChange?: (state: {
+    connected: boolean;
+    loading: boolean;
+    error: string | null;
+  }) => void;
   /** When true, deleted messages are dimmed instead of removed */
   showDeletedMessages?: boolean;
-  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
+  onUsernameClick?: (
+    e: React.MouseEvent,
+    author: string,
+    avatar?: string,
+  ) => void;
 }
 
 interface MessagePart {
-  type: 'text' | 'emoji';
+  type: "text" | "emoji";
   text?: string;
   url?: string;
   alt?: string;
@@ -73,9 +81,20 @@ interface SSEEndEvent {
   reason: string;
 }
 
-export default function YouTubeChat({ videoId, channel, onMessages, optimisticMessages, fontSize = 14, chatFont = 'inter' as ChatFont, splitChatEnabled = false, onConnectionChange, showDeletedMessages = false, onUsernameClick }: YouTubeChatProps) {
+export default function YouTubeChat({
+  videoId,
+  channel,
+  onMessages,
+  optimisticMessages,
+  fontSize = 14,
+  chatFont = "inter" as ChatFont,
+  splitChatEnabled = false,
+  onConnectionChange,
+  showDeletedMessages = false,
+  onUsernameClick,
+}: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
-    m.parts.map(p => p.text || p.emojiText || p.alt || '').join('');
+    m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -91,18 +110,22 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
 
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
-    const norm = (s: string) => s.normalize('NFKC').trim().toLowerCase();
+    const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase();
 
     const realKeys = new Set(
       messages.map((m) => {
         const textKey = norm(getTextContent(m));
-        return m.authorChannelId ? `${m.authorChannelId}|${textKey}` : `${norm(m.author)}|${textKey}`;
-      })
+        return m.authorChannelId
+          ? `${m.authorChannelId}|${textKey}`
+          : `${norm(m.author)}|${textKey}`;
+      }),
     );
 
     const unmatched = optimisticMessages.filter((opt) => {
       const textKey = norm(getTextContent(opt));
-      const key = opt.authorChannelId ? `${opt.authorChannelId}|${textKey}` : `${norm(opt.author)}|${textKey}`;
+      const key = opt.authorChannelId
+        ? `${opt.authorChannelId}|${textKey}`
+        : `${norm(opt.author)}|${textKey}`;
       return !realKeys.has(key);
     });
 
@@ -137,13 +160,13 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
       const sseUrl = `/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`;
 
       try {
-        const probeRes = await fetch(sseUrl, { method: 'GET' });
+        const probeRes = await fetch(sseUrl, { method: "GET" });
         if (!probeRes.ok) {
           let errorMsg = `Connection failed (${probeRes.status})`;
           try {
             const errData = await probeRes.json();
             if (errData.error) errorMsg = errData.error;
-          } catch { }
+          } catch {}
           if (!isMounted) return;
           setIsConnected(false);
           setIsLoading(false);
@@ -171,7 +194,7 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
       const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
 
-      es.addEventListener('connected', (e: Event) => {
+      es.addEventListener("connected", (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEMessageEvent;
         const fetchedMessages = (data.messages || []).map((msg: any) => ({
@@ -189,30 +212,35 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
           isDeleted: msg.isDeleted,
         }));
 
-        setMessages(prev => {
+        setMessages((prev) => {
           const uniqueMap = new Map<string, ChatMessage>();
           for (const m of prev) uniqueMap.set(m.id, m);
           for (const m of fetchedMessages) uniqueMap.set(m.id, m);
 
           if (channel !== undefined) {
             for (const m of fetchedMessages) {
-              saveMessage({
-                id: m.id,
-                platform: 'youtube',
-                author: m.author,
-                content: m.parts.map(p => p.text || p.emojiText || p.alt || '').join(''),
-                timestamp: m.timestamp,
-                authorAvatar: m.authorAvatar,
-                authorChannelId: m.authorChannelId,
-                messageType: m.messageType,
-                badges: m.badges,
-                isDeleted: m.isDeleted,
-              } as any, channel);
+              saveMessage(
+                {
+                  id: m.id,
+                  platform: "youtube",
+                  author: m.author,
+                  content: m.parts
+                    .map((p) => p.text || p.emojiText || p.alt || "")
+                    .join(""),
+                  timestamp: m.timestamp,
+                  authorAvatar: m.authorAvatar,
+                  authorChannelId: m.authorChannelId,
+                  messageType: m.messageType,
+                  badges: m.badges,
+                  isDeleted: m.isDeleted,
+                } as any,
+                channel,
+              );
             }
           }
 
           const merged = Array.from(uniqueMap.values()).sort(
-            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
           );
 
           return merged.length > MAX_DISPLAYED_MESSAGES
@@ -226,7 +254,7 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         retryCountRef.current = 0;
       });
 
-      es.addEventListener('message', (e: Event) => {
+      es.addEventListener("message", (e: Event) => {
         if (!isMounted) return;
         const msg = JSON.parse((e as MessageEvent).data) as ChatMessage;
         const newMsg = {
@@ -244,22 +272,27 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
           isDeleted: msg.isDeleted,
         };
 
-        setMessages(prev => {
-          if (prev.some(m => m.id === newMsg.id)) return prev;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
 
           if (channel !== undefined) {
-            saveMessage({
-              id: newMsg.id,
-              platform: 'youtube',
-              author: newMsg.author,
-              content: newMsg.parts.map(p => p.text || p.emojiText || p.alt || '').join(''),
-              timestamp: newMsg.timestamp,
-              authorAvatar: newMsg.authorAvatar,
-              authorChannelId: newMsg.authorChannelId,
-              messageType: newMsg.messageType,
-              badges: newMsg.badges,
-              isDeleted: newMsg.isDeleted,
-            } as any, channel);
+            saveMessage(
+              {
+                id: newMsg.id,
+                platform: "youtube",
+                author: newMsg.author,
+                content: newMsg.parts
+                  .map((p) => p.text || p.emojiText || p.alt || "")
+                  .join(""),
+                timestamp: newMsg.timestamp,
+                authorAvatar: newMsg.authorAvatar,
+                authorChannelId: newMsg.authorChannelId,
+                messageType: newMsg.messageType,
+                badges: newMsg.badges,
+                isDeleted: newMsg.isDeleted,
+              } as any,
+              channel,
+            );
           }
 
           const next = [...prev, newMsg];
@@ -269,26 +302,28 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         });
       });
 
-      es.addEventListener('delete', (e: Event) => {
+      es.addEventListener("delete", (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEDeleteEvent;
-        setMessages(prev => {
+        setMessages((prev) => {
           if (showDeletedMessages) {
-            return prev.map(m => m.id === data.messageId ? { ...m, isDeleted: true } : m);
+            return prev.map((m) =>
+              m.id === data.messageId ? { ...m, isDeleted: true } : m,
+            );
           }
-          return prev.filter(m => m.id !== data.messageId);
+          return prev.filter((m) => m.id !== data.messageId);
         });
       });
 
-      es.addEventListener('error', (e: Event) => {
+      es.addEventListener("error", (e: Event) => {
         if (!isMounted) return;
         let errorMsg: string;
         try {
           const data = JSON.parse((e as MessageEvent).data) as SSEErrorEvent;
-          console.error('[YouTubeChat] SSE error event:', data.error);
+          console.error("[YouTubeChat] SSE error event:", data.error);
           errorMsg = data.error;
         } catch {
-          errorMsg = 'Connection lost';
+          errorMsg = "Connection lost";
         }
         setIsConnected(false);
         setIsLoading(false);
@@ -309,13 +344,13 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         }, delay);
       });
 
-      es.addEventListener('end', (e: Event) => {
+      es.addEventListener("end", (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEEndEvent;
-        console.log('[YouTubeChat] Stream ended:', data.reason);
+        console.log("[YouTubeChat] Stream ended:", data.reason);
         setIsConnected(false);
         setIsLoading(false);
-        setError('Live stream has ended');
+        setError("Live stream has ended");
         es.close();
         eventSourceRef.current = null;
       });
@@ -326,8 +361,8 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         setIsConnected(false);
 
         if (!errorRef.current) {
-          setError('Connection lost');
-          errorRef.current = 'Connection lost';
+          setError("Connection lost");
+          errorRef.current = "Connection lost";
         }
         setIsLoading(false);
 
@@ -365,7 +400,8 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
   // Keep the view pinned to the newest message
   useEffect(() => {
     if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
     }
   }, [mergedMessages]);
 
@@ -387,12 +423,13 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
     }
   }, [isConnected, isLoading, error, onConnectionChange]);
 
-  const isEnded = error === 'Live stream has ended';
+  const isEnded = error === "Live stream has ended";
 
   if (isLoading && mergedMessages.length === 0) {
     return (
       <div className="yt-chat-status">
-        <AiOutlineLoading3Quarters className="animate-spin" />  Connecting to YouTube chat...
+        <AiOutlineLoading3Quarters className="animate-spin" /> Connecting to
+        YouTube chat...
       </div>
     );
   }
@@ -403,8 +440,10 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
         <div>⚠️ {error}</div>
         <button
           className="yt-chat-reload-btn"
-          onClick={() => { setReloadKey(k => k + 1); }}
-          style={{ marginTop: '8px' }}
+          onClick={() => {
+            setReloadKey((k) => k + 1);
+          }}
+          style={{ marginTop: "8px" }}
         >
           Retry
         </button>
@@ -420,7 +459,7 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
           <button
             className="yt-chat-reload-btn"
             onClick={() => {
-              setReloadKey(k => k + 1);
+              setReloadKey((k) => k + 1);
             }}
           >
             Reload
@@ -434,8 +473,13 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
       )}
       <div
         ref={messagesContainerRef}
-        className={`yt-chat-container${splitChatEnabled ? ' split-chat' : ''}`}
-        style={{ '--chat-font-size': `${fontSize}px`, '--chat-font-family': FONT_FAMILY_MAP[chatFont] } as React.CSSProperties}
+        className={`yt-chat-container${splitChatEnabled ? " split-chat" : ""}`}
+        style={
+          {
+            "--chat-font-size": `${fontSize}px`,
+            "--chat-font-family": FONT_FAMILY_MAP[chatFont],
+          } as React.CSSProperties
+        }
       >
         {!isConnected && (
           <div className="yt-chat-placeholder">
@@ -443,33 +487,49 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
           </div>
         )}
         {isConnected && mergedMessages.length === 0 && (
-          <div className="yt-chat-placeholder">
-            Waiting for messages...
-          </div>
+          <div className="yt-chat-placeholder">Waiting for messages...</div>
         )}
         {(() => {
-          const getYtEventStyle = (msg: ChatMessage): React.CSSProperties | undefined => {
-            if (msg.messageType === 'membership') return { '--event-color': '#0f9d58', '--event-bg': 'rgba(15, 157, 88, 0.15)' } as React.CSSProperties;
-            if (msg.messageType === 'gift-purchase') return { '--event-color': '#9c27b0', '--event-bg': 'rgba(156, 39, 176, 0.15)' } as React.CSSProperties;
-            if (msg.messageType === 'gift-redemption') return { '--event-color': '#4caf50', '--event-bg': 'rgba(76, 175, 80, 0.15)' } as React.CSSProperties;
-            if (msg.superchat && !msg.messageType) return { '--event-color': msg.superchat.color, '--event-bg': `${msg.superchat.color}26` } as React.CSSProperties;
+          const getYtEventStyle = (
+            msg: ChatMessage,
+          ): React.CSSProperties | undefined => {
+            if (msg.messageType === "membership")
+              return {
+                "--event-color": "#0f9d58",
+                "--event-bg": "rgba(15, 157, 88, 0.15)",
+              } as React.CSSProperties;
+            if (msg.messageType === "gift-purchase")
+              return {
+                "--event-color": "#9c27b0",
+                "--event-bg": "rgba(156, 39, 176, 0.15)",
+              } as React.CSSProperties;
+            if (msg.messageType === "gift-redemption")
+              return {
+                "--event-color": "#4caf50",
+                "--event-bg": "rgba(76, 175, 80, 0.15)",
+              } as React.CSSProperties;
+            if (msg.superchat && !msg.messageType)
+              return {
+                "--event-color": msg.superchat.color,
+                "--event-bg": `${msg.superchat.color}26`,
+              } as React.CSSProperties;
             return undefined;
           };
 
           const getYtEventLabel = (msg: ChatMessage): string | null => {
-            if (msg.messageType === 'membership') return 'MEMBER';
-            if (msg.messageType === 'gift-purchase') return 'GIFT';
-            if (msg.messageType === 'gift-redemption') return 'GIFT RECEIVED';
-            if (msg.superchat && !msg.messageType) return 'SUPER CHAT';
+            if (msg.messageType === "membership") return "MEMBER";
+            if (msg.messageType === "gift-purchase") return "GIFT";
+            if (msg.messageType === "gift-redemption") return "GIFT RECEIVED";
+            if (msg.superchat && !msg.messageType) return "SUPER CHAT";
             return null;
           };
 
           const getYtEventColor = (msg: ChatMessage): string => {
-            if (msg.messageType === 'membership') return '#0f9d58';
-            if (msg.messageType === 'gift-purchase') return '#9c27b0';
-            if (msg.messageType === 'gift-redemption') return '#4caf50';
+            if (msg.messageType === "membership") return "#0f9d58";
+            if (msg.messageType === "gift-purchase") return "#9c27b0";
+            if (msg.messageType === "gift-redemption") return "#4caf50";
             if (msg.superchat) return msg.superchat.color;
-            return '#fff';
+            return "#fff";
           };
 
           return mergedMessages.map((msg, index) => {
@@ -478,55 +538,162 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
             const eventColor = getYtEventColor(msg);
             const isEvent = !!eventLabel;
 
-            if (msg.messageType === 'membership' && msg.superchat) {
+            if (msg.messageType === "membership" && msg.superchat) {
               return (
-                <div key={msg.id} className="message yt-event" style={eventStyle}>
-                  {eventLabel && <div className="yt-event-label" style={{ color: '#0f9d58', background: 'rgba(15, 157, 88, 0.15)', borderColor: '#0f9d58' }}>{eventLabel}</div>}
+                <div
+                  key={msg.id}
+                  className="message yt-event"
+                  style={eventStyle}
+                >
+                  {eventLabel && (
+                    <div
+                      className="yt-event-label"
+                      style={{
+                        color: "#0f9d58",
+                        background: "rgba(15, 157, 88, 0.15)",
+                        borderColor: "#0f9d58",
+                      }}
+                    >
+                      {eventLabel}
+                    </div>
+                  )}
                   <div className="message-single-line">
                     <span className="timestamp">
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </span>
-                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#0f9d58' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
+                    {msg.authorAvatar && (
+                      <img
+                        src={msg.authorAvatar}
+                        alt={msg.author}
+                        className="avatar"
+                      />
+                    )}
+                    <span
+                      className="author"
+                      style={{ color: "#0f9d58" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUsernameClick?.(e, msg.author, msg.authorAvatar);
+                      }}
+                    >
+                      {msg.author}
+                    </span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
-                      <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
-                      {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} />}
+                      <span className="yt-superchat-amount-inline">
+                        {msg.superchat.amount}
+                      </span>
+                      {msg.parts.length > 0 && (
+                        <YTMessageParts parts={msg.parts} />
+                      )}
                     </span>
                   </div>
                 </div>
               );
             }
 
-            if (msg.messageType === 'gift-purchase' && msg.superchat) {
+            if (msg.messageType === "gift-purchase" && msg.superchat) {
               return (
-                <div key={msg.id} className="message yt-event" style={eventStyle}>
-                  {eventLabel && <div className="yt-event-label" style={{ color: '#9c27b0', background: 'rgba(156, 39, 176, 0.15)', borderColor: '#9c27b0' }}>{eventLabel}</div>}
+                <div
+                  key={msg.id}
+                  className="message yt-event"
+                  style={eventStyle}
+                >
+                  {eventLabel && (
+                    <div
+                      className="yt-event-label"
+                      style={{
+                        color: "#9c27b0",
+                        background: "rgba(156, 39, 176, 0.15)",
+                        borderColor: "#9c27b0",
+                      }}
+                    >
+                      {eventLabel}
+                    </div>
+                  )}
                   <div className="message-single-line">
                     <span className="timestamp">
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </span>
-                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#9c27b0' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
+                    {msg.authorAvatar && (
+                      <img
+                        src={msg.authorAvatar}
+                        alt={msg.author}
+                        className="avatar"
+                      />
+                    )}
+                    <span
+                      className="author"
+                      style={{ color: "#9c27b0" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUsernameClick?.(e, msg.author, msg.authorAvatar);
+                      }}
+                    >
+                      {msg.author}
+                    </span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
-                      Bought {msg.giftCount || 1} gift{msg.giftCount !== 1 ? 's' : ''}
+                      Bought {msg.giftCount || 1} gift
+                      {msg.giftCount !== 1 ? "s" : ""}
                     </span>
                   </div>
                 </div>
               );
             }
 
-            if (msg.messageType === 'gift-redemption' && msg.superchat) {
+            if (msg.messageType === "gift-redemption" && msg.superchat) {
               return (
-                <div key={msg.id} className="message yt-event" style={eventStyle}>
-                  {eventLabel && <div className="yt-event-label" style={{ color: '#4caf50', background: 'rgba(76, 175, 80, 0.15)', borderColor: '#4caf50' }}>{eventLabel}</div>}
+                <div
+                  key={msg.id}
+                  className="message yt-event"
+                  style={eventStyle}
+                >
+                  {eventLabel && (
+                    <div
+                      className="yt-event-label"
+                      style={{
+                        color: "#4caf50",
+                        background: "rgba(76, 175, 80, 0.15)",
+                        borderColor: "#4caf50",
+                      }}
+                    >
+                      {eventLabel}
+                    </div>
+                  )}
                   <div className="message-single-line">
                     <span className="timestamp">
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </span>
-                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: '#4caf50' }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
+                    {msg.authorAvatar && (
+                      <img
+                        src={msg.authorAvatar}
+                        alt={msg.author}
+                        className="avatar"
+                      />
+                    )}
+                    <span
+                      className="author"
+                      style={{ color: "#4caf50" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUsernameClick?.(e, msg.author, msg.authorAvatar);
+                      }}
+                    >
+                      {msg.author}
+                    </span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
                       Received a gift membership
@@ -538,35 +705,85 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
 
             if (msg.superchat) {
               return (
-                <div key={msg.id} className="message yt-event" style={eventStyle}>
-                  {eventLabel && <div className="yt-event-label" style={{ color: eventColor, background: `${eventColor}26`, borderColor: eventColor }}>{eventLabel}</div>}
+                <div
+                  key={msg.id}
+                  className="message yt-event"
+                  style={eventStyle}
+                >
+                  {eventLabel && (
+                    <div
+                      className="yt-event-label"
+                      style={{
+                        color: eventColor,
+                        background: `${eventColor}26`,
+                        borderColor: eventColor,
+                      }}
+                    >
+                      {eventLabel}
+                    </div>
+                  )}
                   <div className="message-single-line">
                     <span className="timestamp">
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </span>
-                    {msg.authorAvatar && <img src={msg.authorAvatar} alt={msg.author} className="avatar" />}
-                    <span className="author" style={{ color: eventColor }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>{msg.author}</span>
+                    {msg.authorAvatar && (
+                      <img
+                        src={msg.authorAvatar}
+                        alt={msg.author}
+                        className="avatar"
+                      />
+                    )}
+                    <span
+                      className="author"
+                      style={{ color: eventColor }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUsernameClick?.(e, msg.author, msg.authorAvatar);
+                      }}
+                    >
+                      {msg.author}
+                    </span>
                     <span className="message-separator">:</span>
                     <span className="message-text">
-                      <span className="yt-superchat-amount-inline">{msg.superchat.amount}</span>
-                      {msg.parts.length > 0 && <YTMessageParts parts={msg.parts} />}
+                      <span className="yt-superchat-amount-inline">
+                        {msg.superchat.amount}
+                      </span>
+                      {msg.parts.length > 0 && (
+                        <YTMessageParts parts={msg.parts} />
+                      )}
                     </span>
                   </div>
                   {msg.superchat.sticker && (
                     <div className="yt-superchat-sticker-row">
-                      <img src={msg.superchat.sticker.url} alt={msg.superchat.sticker.alt} className="yt-superchat-sticker" loading="lazy" />
+                      <img
+                        src={msg.superchat.sticker.url}
+                        alt={msg.superchat.sticker.alt}
+                        className="yt-superchat-sticker"
+                        loading="lazy"
+                      />
                     </div>
                   )}
                 </div>
               );
             }
 
-            const parityClass = (index % 2 === 0) ? 'even' : 'odd';
+            const parityClass = index % 2 === 0 ? "even" : "odd";
             return (
-              <div key={msg.id} className={`message${msg.optimistic ? ' yt-optimistic' : ''}${msg.isDeleted ? ' deleted' : ''} ${parityClass}`}>
+              <div
+                key={msg.id}
+                className={`message${msg.optimistic ? " yt-optimistic" : ""}${msg.isDeleted ? " deleted" : ""} ${parityClass}`}
+              >
                 <div className="message-single-line">
                   <span className="timestamp">
-                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {msg.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })}
                   </span>
                   {msg.badges && Object.keys(msg.badges).length > 0 && (
                     <div className="yt-message-badges">
@@ -582,7 +799,14 @@ export default function YouTubeChat({ videoId, channel, onMessages, optimisticMe
                       ))}
                     </div>
                   )}
-                  <span className="author" style={{ color: getColorFromName(msg.author) }} onClick={(e) => { e.stopPropagation(); onUsernameClick?.(e, msg.author, msg.authorAvatar); }}>
+                  <span
+                    className="author"
+                    style={{ color: getColorFromName(msg.author) }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUsernameClick?.(e, msg.author, msg.authorAvatar);
+                    }}
+                  >
                     {msg.author}
                   </span>
                   <span className="message-separator">:</span>

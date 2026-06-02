@@ -4,161 +4,163 @@ import ContentLayout from "../layouts/ContentLayout.astro";
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const title = "Privacy Policy - Mixchat";
 const description =
-  "Mixchat Privacy Policy — no server-side database, no message storage, OAuth tokens stored in secure httpOnly cookies only.";
+    "Mixchat Privacy Policy — no server-side database, no message storage, OAuth tokens stored in secure httpOnly cookies only.";
 ---
 
 <ContentLayout {title} {description} ogUrl={`${mainUrl}privacy`}>
-  <Fragment slot="head">
-    <style>
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-          Cantarell, sans-serif;
-        line-height: 1.6;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 20px;
-        background: #0a0a0a;
-        color: #e0e0e0;
-      }
-      h1 {
-        color: #fff;
-        margin-bottom: 10px;
-      }
-      h2 {
-        color: var(--color-accent);
-        margin-top: 30px;
-      }
-      .meta {
-        color: #999;
-        font-size: 14px;
-        margin-bottom: 30px;
-      }
-      a {
-        color: var(--color-accent);
-        text-decoration: none;
-      }
-      a:hover {
-        text-decoration: underline;
-      }
-      code {
-        background: #1a1a1a;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: "Courier New", monospace;
-      }
-    </style>
-  </Fragment>
+    <Fragment slot="head">
+        <style>
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #0a0a0a;
+                color: #e0e0e0;
+            }
+            h1 {
+                color: #fff;
+                margin-bottom: 10px;
+            }
+            h2 {
+                color: var(--color-accent);
+                margin-top: 30px;
+            }
+            .meta {
+                color: #999;
+                font-size: 14px;
+                margin-bottom: 30px;
+            }
+            a {
+                color: var(--color-accent);
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            code {
+                background: #1a1a1a;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-family: "Courier New", monospace;
+            }
+        </style>
+    </Fragment>
     <div style="text-align: center; margin-bottom: 30px;">
-      <img
-        src="/logo.webp"
-        alt="Mixchat Logo"
-        width="80"
-        height="80"
-        style="width: auto; height: 80px;"
-      />
+        <img
+            src="/logo.webp"
+            alt="Mixchat Logo"
+            width="80"
+            height="80"
+            style="width: auto; height: 80px;"
+        />
     </div>
     <h1>Privacy Policy</h1>
     <p class="meta">Last updated: March 29, 2026</p>
 
     <h2>1. Overview</h2>
     <p>
-      Mixchat is designed to function without a server-side database. No
-      messages, emails, or account credentials are stored on any server. Data
-      processing occurs locally in the visitor's browser. Once the user logs out
-      or clears their cache, session data is removed.
+        Mixchat is designed to function without a server-side database. No
+        messages, emails, or account credentials are stored on any server. Data
+        processing occurs locally in the visitor's browser. Once the user logs
+        out or clears their cache, session data is removed.
     </p>
 
     <h2>2. Data Collection</h2>
 
     <h3>2.1 Logging In (Twitch & YouTube)</h3>
     <p>
-      When connecting a Twitch or YouTube account, the browser gets "keys"
-      (OAuth tokens) from those services.
+        When connecting a Twitch or YouTube account, the browser gets "keys"
+        (OAuth tokens) from those services.
     </p>
     <ul>
-      <li>
-        <strong>Secure Storage:</strong> Key tokens are stored as <code
-          >httpOnly</code
-        > cookies. This helps block outside scripts from seeing them.
-      </li>
-      <li>
-        <strong>UI Session:</strong> A little bit of info (like your username and
-        profile picture) is saved in <code>localStorage</code> so the app remembers
-        who you are on refresh.
-      </li>
+        <li>
+            <strong>Secure Storage:</strong> Key tokens are stored as <code
+                >httpOnly</code
+            > cookies. This helps block outside scripts from seeing them.
+        </li>
+        <li>
+            <strong>UI Session:</strong> A little bit of info (like your username
+            and profile picture) is saved in <code>localStorage</code> so the app
+            remembers who you are on refresh.
+        </li>
     </ul>
 
     <h3>2.2 Your Messages</h3>
     <p>
-      Mixchat is a real-time client. Chat messages flow from Twitch or YouTube
-      directly to the screen. They are kept in the browser's memory during a
-      session and are not archived.
+        Mixchat is a real-time client. Chat messages flow from Twitch or YouTube
+        directly to the screen. They are kept in the browser's memory during a
+        session and are not archived.
     </p>
 
     <h3>2.3 YouTube Integration</h3>
     <p>
-      By linking a YouTube channel, Mixchat uses the official YouTube Data API.
-      It only requests public info to show live status and stream metadata
-      properly.
+        By linking a YouTube channel, Mixchat uses the official YouTube Data
+        API. It only requests public info to show live status and stream
+        metadata properly.
     </p>
 
     <h2>3. Third-Party Services</h2>
     <p>
-      To make everything work smoothly, Mixchat talks to a few core services:
+        To make everything work smoothly, Mixchat talks to a few core services:
     </p>
     <ul>
-      <li><strong>Twitch & YouTube:</strong> For the chat and video feeds.</li>
-      <li>
-        <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those custom
-        emotes everyone loves. These services might see which channel you're watching
-        so they can serve the right emote pack.
-      </li>
+        <li>
+            <strong>Twitch & YouTube:</strong> For the chat and video feeds.
+        </li>
+        <li>
+            <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those custom
+            emotes everyone loves. These services might see which channel you're watching
+            so they can serve the right emote pack.
+        </li>
     </ul>
 
     <h2>4. Stateless and Database-Free</h2>
     <p>
-      Mixchat's server/API is "stateless." This means it doesn't remember
-      sessions from one second to the next without the browser sending its
-      security key. There's no backend database where history or personal info
-      could be stored.
+        Mixchat's server/API is "stateless." This means it doesn't remember
+        sessions from one second to the next without the browser sending its
+        security key. There's no backend database where history or personal info
+        could be stored.
     </p>
 
     <h2>5. Data Retention and Deletion</h2>
     <p>
-      Since no data is stored, "deleting an account" is straightforward.
-      Clicking
-      <strong>Logout</strong> wipes the cookies and session info from the browser.
-      Closing the tab clears the memory usage. For total assurance, clear the site
-      data in the browser settings.
+        Since no data is stored, "deleting an account" is straightforward.
+        Clicking
+        <strong>Logout</strong> wipes the cookies and session info from the browser.
+        Closing the tab clears the memory usage. For total assurance, clear the site
+        data in the browser settings.
     </p>
 
     <h2>6. Security</h2>
     <p>
-      Login tokens are managed using secure HTTP-only cookies. It is recommended
-      to use strong passwords and two-factor authentication (2FA) on Twitch and
-      YouTube accounts.
+        Login tokens are managed using secure HTTP-only cookies. It is
+        recommended to use strong passwords and two-factor authentication (2FA)
+        on Twitch and YouTube accounts.
     </p>
 
     <h2>7. Changes</h2>
     <p>
-      Mixchat changes fast. The date at the top will be updated if there are
-      ever changes to how info is handled (like adding a new feature that needs
-      a different API).
+        Mixchat changes fast. The date at the top will be updated if there are
+        ever changes to how info is handled (like adding a new feature that
+        needs a different API).
     </p>
 
     <h2>8. Contact</h2>
     <p>
-      If you have questions about any of this, open an issue on the
-      <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
-        >GitHub repository</a
-      >.
+        If you have questions about any of this, open an issue on the
+        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
+            >GitHub repository</a
+        >.
     </p>
 
     <hr style="margin-top: 50px; border: none; border-top: 1px solid #333;" />
     <p
-      style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
+        style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
     >
-      <a href="/">Back to Mixchat</a>
+        <a href="/">Back to Mixchat</a>
     </p>
 </ContentLayout>

@@ -249,7 +249,7 @@ function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatMembershipItem)) {
     return {
       ...parseTextMessageBase(item),
-      messageType: 'membership',
+      messageType: "membership",
       superchat: {
         amount: item.header_subtext?.toString() || "Member",
         color: "#0f9d58",
@@ -264,7 +264,6 @@ function parseChatItem(item: any): ChatMessage | null {
   }
   return null;
 }
-
 
 // Session management
 function reapIdleSessions() {
@@ -331,7 +330,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const seenIds = new Set<string>();
 
   let resolveReady: () => void;
-  const ready = new Promise<void>((resolve) => { resolveReady = resolve; });
+  const ready = new Promise<void>((resolve) => {
+    resolveReady = resolve;
+  });
 
   const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
@@ -477,14 +478,25 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
   chat.start();
 
-  session = { chat, messages, seenIds, clients: new Map(), lastUpdate: Date.now(), destroyTimer: null, ready };
+  session = {
+    chat,
+    messages,
+    seenIds,
+    clients: new Map(),
+    lastUpdate: Date.now(),
+    destroyTimer: null,
+    ready,
+  };
   activeLiveChats.set(videoId, session);
   return session;
 }
 
 // SSE endpoint
 export const GET: APIRoute = async ({ request, url }) => {
-  const clientAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  const clientAddress =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
   if (!checkRateLimit(`${clientAddress}:youtube-stream-chat`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
@@ -571,7 +583,9 @@ export const GET: APIRoute = async ({ request, url }) => {
       try {
         await Promise.race([
           session.ready,
-          new Promise<void>((_, reject) => setTimeout(() => reject(new Error("start timeout")), 10000)),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error("start timeout")), 10000),
+          ),
         ]);
       } catch {
         // If start event never fires or times out, proceed with whatever messages we have
@@ -596,7 +610,9 @@ export const GET: APIRoute = async ({ request, url }) => {
       // Heartbeat every 15s to keep proxies/CDN from closing idle HTTP/2 streams
       heartbeatInterval = setInterval(() => {
         try {
-          controller.enqueue(sseEvent(JSON.stringify({ ping: true }), "heartbeat"));
+          controller.enqueue(
+            sseEvent(JSON.stringify({ ping: true }), "heartbeat"),
+          );
         } catch {
           // Stream already closed
           if (heartbeatInterval) {
@@ -622,11 +638,15 @@ export const GET: APIRoute = async ({ request, url }) => {
       );
 
       if (session.clients.size === 0) {
-        console.log(`[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`);
+        console.log(
+          `[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`,
+        );
         session.destroyTimer = setTimeout(() => {
           const s = activeLiveChats.get(videoId);
           if (s && s.clients.size === 0) {
-            console.log(`[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`);
+            console.log(
+              `[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`,
+            );
             try {
               s.chat?.stop();
             } catch {}
@@ -641,7 +661,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     headers: {
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-store, no-transform",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });
@@ -649,8 +669,13 @@ export const GET: APIRoute = async ({ request, url }) => {
 
 function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
   const giftCount = msg.gift_memberships?.count || msg.gift_count || 1;
-  const amount = msg.purchase_amount?.toString() || `${giftCount} gift${giftCount > 1 ? 's' : ''}`;
-  const authorName = msg.header?.author_name?.toString() || msg.author?.name?.toString() || 'Unknown';
+  const amount =
+    msg.purchase_amount?.toString() ||
+    `${giftCount} gift${giftCount > 1 ? "s" : ""}`;
+  const authorName =
+    msg.header?.author_name?.toString() ||
+    msg.author?.name?.toString() ||
+    "Unknown";
   const authorChannelId = msg.author_external_channel_id || msg.author?.id;
   const authorAvatar = Array.isArray(msg.header?.author_photo)
     ? msg.header.author_photo[0]?.url
@@ -664,10 +689,10 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     badges: parseBadges(msg),
     parts: [],
     timestamp: parseTimestamp(msg),
-    messageType: 'gift-purchase',
+    messageType: "gift-purchase",
     superchat: {
       amount,
-      color: '#9c27b0',
+      color: "#9c27b0",
     },
     giftCount,
   };
@@ -675,15 +700,16 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
 
 function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
   const base = parseTextMessageBase(msg);
-  const recipientName = msg.recipient?.name?.toString() || msg.header_subtext?.toString() || '';
+  const recipientName =
+    msg.recipient?.name?.toString() || msg.header_subtext?.toString() || "";
 
   return {
     ...base,
-    messageType: 'gift-redemption',
+    messageType: "gift-redemption",
     recipientName,
     superchat: {
-      amount: 'Gift received',
-      color: '#4caf50',
+      amount: "Gift received",
+      color: "#4caf50",
     },
   };
 }
@@ -696,26 +722,29 @@ function parseLiveChatMessage(msg: any): ChatMessage {
     for (const run of message.runs) {
       if (run.emoji) {
         const emoji = run.emoji;
-        const name = emoji.shortcuts?.[0] || emoji.emoji_id || 'emoji';
-        const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
+        const name = emoji.shortcuts?.[0] || emoji.emoji_id || "emoji";
+        const url = Array.isArray(emoji.image)
+          ? emoji.image[0]?.url
+          : undefined;
         const isCustom = !!emoji.is_custom;
 
         if (!isCustom) {
-          if (emoji.emoji_id) parts.push({ type: 'text', text: emoji.emoji_id });
+          if (emoji.emoji_id)
+            parts.push({ type: "text", text: emoji.emoji_id });
           continue;
         }
 
         if (!url) continue;
 
         parts.push({
-          type: 'emoji',
+          type: "emoji",
           url,
           alt: name,
           emojiText: name,
           isCustomEmoji: true,
         });
       } else {
-        parts.push({ type: 'text', text: run.text || '' });
+        parts.push({ type: "text", text: run.text || "" });
       }
     }
   }
@@ -724,12 +753,12 @@ function parseLiveChatMessage(msg: any): ChatMessage {
   if (msg.author?.badges) {
     for (const badge of msg.author.badges) {
       if (badge.thumbnails && badge.thumbnails[0]) {
-        badges[badge.label || 'badge'] = badge.thumbnails[0].url;
+        badges[badge.label || "badge"] = badge.thumbnails[0].url;
       }
     }
   }
 
-  const rawTimestamp = parseInt(msg.timestamp || msg.timestamp_usec || '0');
+  const rawTimestamp = parseInt(msg.timestamp || msg.timestamp_usec || "0");
   const asMillisecondsDirectly = new Date(rawTimestamp);
   const asUsToMs = new Date(rawTimestamp / 1000);
   const now = new Date();
@@ -739,9 +768,11 @@ function parseLiveChatMessage(msg: any): ChatMessage {
 
   return {
     id: msg.id,
-    author: msg.author?.name?.toString() || 'Unknown',
+    author: msg.author?.name?.toString() || "Unknown",
     authorChannelId: msg.author?.id,
-    authorAvatar: Array.isArray(msg.author?.thumbnails) ? msg.author.thumbnails[0]?.url : undefined,
+    authorAvatar: Array.isArray(msg.author?.thumbnails)
+      ? msg.author.thumbnails[0]?.url
+      : undefined,
     badges,
     parts,
     timestamp,

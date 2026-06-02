@@ -233,7 +233,8 @@ export function useChannelPointRedemptions({
               const chatMessage: ChatMessage = {
                 id: `redemption-${redemptionEvent.id}`,
                 platform: "twitch",
-                author: redemptionEvent.userDisplayName || redemptionEvent.userName,
+                author:
+                  redemptionEvent.userDisplayName || redemptionEvent.userName,
                 content: `${redemptionEvent.userDisplayName || redemptionEvent.userName} redeemed ${redemptionEvent.rewardTitle}`,
                 timestamp: new Date(redemptionEvent.redeemedAt),
                 userId: redemptionEvent.userId,

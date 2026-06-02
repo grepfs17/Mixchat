@@ -1,10 +1,15 @@
-import type { RefObject } from 'react';
-import ChatDisplay from './display';
-import type { ChatDisplayHandle } from './display';
-import MessageInput from './shared/MessageInput';
-import YouTubePanel from './shared/YouTubePanel';
-import type { YTMessage } from './unified/types';
-import type { ChatFont, ChatMessage, Platform, PlatformSession } from '../../lib/types';
+import type { RefObject } from "react";
+import ChatDisplay from "./display";
+import type { ChatDisplayHandle } from "./display";
+import MessageInput from "./shared/MessageInput";
+import YouTubePanel from "./shared/YouTubePanel";
+import type { YTMessage } from "./unified/types";
+import type {
+  ChatFont,
+  ChatMessage,
+  Platform,
+  PlatformSession,
+} from "../../lib/types";
 
 interface SplitChatProps {
   // Layout
@@ -31,8 +36,16 @@ interface SplitChatProps {
   onOptimisticMessage: (id: string, text: string) => void;
   onOptimisticFailed: (id: string) => void;
   onShowError: (message: string) => void;
-  onYtConnectionChange?: (state: { connected: boolean; loading: boolean; error: string | null }) => void;
-  onUsernameClick?: (e: React.MouseEvent, author: string, avatar?: string) => void;
+  onYtConnectionChange?: (state: {
+    connected: boolean;
+    loading: boolean;
+    error: string | null;
+  }) => void;
+  onUsernameClick?: (
+    e: React.MouseEvent,
+    author: string,
+    avatar?: string,
+  ) => void;
 
   // Twitch ChatDisplay
   chatDisplayRef: RefObject<ChatDisplayHandle>;
@@ -61,17 +74,27 @@ interface SplitChatProps {
   onToggleModMode?: () => void;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
-  onSearchCategories?: (query: string) => Promise<Array<{ id: string; name: string }>>;
+  onSearchCategories?: (
+    query: string,
+  ) => Promise<Array<{ id: string; name: string }>>;
   compactActions?: boolean;
   onDeleteMessage?: (messageId: string) => void;
   onBanUser?: (userId: string, displayName?: string) => void;
-  onTimeoutUser?: (userId: string, seconds: number, displayName?: string) => void;
+  onTimeoutUser?: (
+    userId: string,
+    seconds: number,
+    displayName?: string,
+  ) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
   ignoredUsers?: string[];
 
   // MessageInput
-  onSendMessage: (message: string, platforms: Platform[], replyToId?: string) => Promise<void>;
+  onSendMessage: (
+    message: string,
+    platforms: Platform[],
+    replyToId?: string,
+  ) => Promise<void>;
   twitchConnected: boolean;
   replyingTo?: ChatMessage;
   onCancelReply: () => void;
@@ -157,12 +180,12 @@ export default function SplitChat({
   return (
     <>
       {linkedYoutubeUrl && showYoutubeSection && (
-          <YouTubePanel
-            style={{ height: `${chatSplitRatio}%`, minHeight: 0 }}
-            linkedYoutubeUrl={linkedYoutubeUrl}
-            youtubeVideoId={youtubeVideoId ?? null}
-            channel={channelName}
-            useYoutubeEmbed={useYoutubeEmbed}
+        <YouTubePanel
+          style={{ height: `${chatSplitRatio}%`, minHeight: 0 }}
+          linkedYoutubeUrl={linkedYoutubeUrl}
+          youtubeVideoId={youtubeVideoId ?? null}
+          channel={channelName}
+          useYoutubeEmbed={useYoutubeEmbed}
           ytMessages={ytMessages}
           ytOptimisticMessages={ytOptimisticMessages}
           ytLoading={ytLoading}
@@ -177,29 +200,49 @@ export default function SplitChat({
           onOptimisticMessage={onOptimisticMessage}
           onOptimisticFailed={onOptimisticFailed}
           onError={onShowError}
-            onConnectionChange={onYtConnectionChange}
-            onUsernameClick={onUsernameClick}
-          />
+          onConnectionChange={onYtConnectionChange}
+          onUsernameClick={onUsernameClick}
+        />
       )}
 
       {linkedYoutubeUrl && showYoutubeSection && (
         <div
           style={{
-            height: '4px',
-            backgroundColor: '#1a1a1a',
-            cursor: 'row-resize',
-            userSelect: 'none',
+            height: "4px",
+            backgroundColor: "#1a1a1a",
+            cursor: "row-resize",
+            userSelect: "none",
             zIndex: 10,
-            transition: isDraggingChatSplit ? 'none' : 'background-color 0.2s',
+            transition: isDraggingChatSplit ? "none" : "background-color 0.2s",
           }}
           onMouseDown={() => onSetIsDraggingChatSplit(true)}
-          onMouseEnter={(e) => !isDraggingChatSplit && (e.currentTarget.style.backgroundColor = '#6366f1')}
-          onMouseLeave={(e) => !isDraggingChatSplit && (e.currentTarget.style.backgroundColor = '#1a1a1a')}
+          onMouseEnter={(e) =>
+            !isDraggingChatSplit &&
+            (e.currentTarget.style.backgroundColor = "#6366f1")
+          }
+          onMouseLeave={(e) =>
+            !isDraggingChatSplit &&
+            (e.currentTarget.style.backgroundColor = "#1a1a1a")
+          }
         />
       )}
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+          }}
+        >
           <ChatDisplay
             ref={chatDisplayRef}
             messages={messages}
@@ -263,14 +306,14 @@ export default function SplitChat({
       {isDraggingChatSplit && (
         <div
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
             zIndex: 9999,
-            cursor: 'row-resize',
-            background: 'transparent',
+            cursor: "row-resize",
+            background: "transparent",
           }}
         />
       )}

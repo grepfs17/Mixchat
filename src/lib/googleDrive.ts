@@ -4,8 +4,8 @@
  * and keep access tokens off the client.
  */
 
-const DRIVE_FILE_NAME = 'mixchat-settings.json';
-const MIME_TYPE = 'application/json';
+const DRIVE_FILE_NAME = "mixchat-settings.json";
+const MIME_TYPE = "application/json";
 
 export interface DriveSaveResult {
   fileId: string;
@@ -32,14 +32,18 @@ export async function saveSettingsToDrive(
 
   if (existing) {
     // Update existing file
-    const res = await fetch('/api/gdrive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update', fileId: existing, content: settingsJson }),
+    const res = await fetch("/api/gdrive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update",
+        fileId: existing,
+        content: settingsJson,
+      }),
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+      const err = await res.json().catch(() => ({ error: "Upload failed" }));
       throw new Error(err.error || `Failed to update file (${res.status})`);
     }
 
@@ -52,14 +56,18 @@ export async function saveSettingsToDrive(
   }
 
   // Create new file
-  const res = await fetch('/api/gdrive', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'create', content: settingsJson, name: DRIVE_FILE_NAME }),
+  const res = await fetch("/api/gdrive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "create",
+      content: settingsJson,
+      name: DRIVE_FILE_NAME,
+    }),
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    const err = await res.json().catch(() => ({ error: "Upload failed" }));
     throw new Error(err.error || `Failed to create file (${res.status})`);
   }
 
@@ -79,25 +87,27 @@ export async function loadSettingsFromDrive(): Promise<DriveLoadResult> {
   const fileId = await findSettingsFile();
 
   if (!fileId) {
-    throw new Error('No Mixchat settings file found in your Google Drive. Save settings first.');
+    throw new Error(
+      "No Mixchat settings file found in your Google Drive. Save settings first.",
+    );
   }
 
-  const res = await fetch('/api/gdrive', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get', fileId }),
+  const res = await fetch("/api/gdrive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "get", fileId }),
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Download failed' }));
+    const err = await res.json().catch(() => ({ error: "Download failed" }));
     throw new Error(err.error || `Failed to download file (${res.status})`);
   }
 
   const data = await res.json();
   const parsed = JSON.parse(data.content);
 
-  if (parsed._app !== 'mixchat') {
-    throw new Error('This file is not a Mixchat settings backup.');
+  if (parsed._app !== "mixchat") {
+    throw new Error("This file is not a Mixchat settings backup.");
   }
 
   return {
@@ -112,10 +122,10 @@ export async function loadSettingsFromDrive(): Promise<DriveLoadResult> {
  * Returns null if no file found.
  */
 async function findSettingsFile(): Promise<string | null> {
-  const res = await fetch('/api/gdrive', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'find', name: DRIVE_FILE_NAME }),
+  const res = await fetch("/api/gdrive", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "find", name: DRIVE_FILE_NAME }),
   });
 
   if (!res.ok) {
@@ -132,10 +142,10 @@ async function findSettingsFile(): Promise<string | null> {
  */
 export async function checkDriveAccess(): Promise<boolean> {
   try {
-    const res = await fetch('/api/gdrive', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'check' }),
+    const res = await fetch("/api/gdrive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "check" }),
     });
     return res.ok;
   } catch {

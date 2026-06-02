@@ -1,205 +1,225 @@
-@import '../vars.css';
+@import "../vars.css";
 
 .hype-train-banner {
-  background: var(--color-bg-twitch-event);
-  border: 1px solid var(--color-border-twitch-event);
-  border-radius: var(--radius-lg);
-  padding: 10px 14px;
-  margin: 8px;
-  box-shadow: var(--shadow-glow-twitch);
-  animation: hypeTrainSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  flex-shrink: 0;
+    background: var(--color-bg-twitch-event);
+    border: 1px solid var(--color-border-twitch-event);
+    border-radius: var(--radius-lg);
+    padding: 10px 14px;
+    margin: 8px;
+    box-shadow: var(--shadow-glow-twitch);
+    animation: hypeTrainSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
 }
 
 @keyframes hypeTrainSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .hype-train-progress {
-  height: 3px;
-  background: var(--color-border-twitch-event);
-  border-radius: 2px;
-  transition: width 0.5s ease-out;
-  margin-bottom: 8px;
-  opacity: 0.5;
+    height: 3px;
+    background: var(--color-border-twitch-event);
+    border-radius: 2px;
+    transition: width 0.5s ease-out;
+    margin-bottom: 8px;
+    opacity: 0.5;
 }
 
 .hype-train-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
 }
 
 .hype-train-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
 }
 
 .hype-train-icon {
-  color: var(--color-twitch);
-  animation: hypeTrainPulse 1s ease-in-out infinite;
-  flex-shrink: 0;
+    color: var(--color-twitch);
+    animation: hypeTrainPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
 }
 
 .hype-train-badge {
-  background: var(--color-twitch);
-  color: #fff;
-  font-weight: 700;
-  font-size: 11px;
-  padding: 3px 7px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  letter-spacing: 0.06em;
-  animation: hypeTrainBadgePulse 1.2s ease-in-out infinite;
-  flex-shrink: 0;
+    background: var(--color-twitch);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    animation: hypeTrainBadgePulse 1.2s ease-in-out infinite;
+    flex-shrink: 0;
 }
 
 @keyframes hypeTrainBadgePulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.65; }
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.65;
+    }
 }
 
 @keyframes hypeTrainPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 .hype-train-level {
-  color: var(--color-text-primary);
-  font-weight: 700;
-  font-size: 14px;
-  white-space: nowrap;
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
 }
 
 .hype-train-points {
-  color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .hype-train-close-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
 }
 
 .hype-train-close-tooltip {
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--color-text-primary);
-  color: var(--color-bg-primary);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  margin-right: 6px;
-  pointer-events: none;
-  animation: hypeTrainTooltipIn 0.15s ease-out;
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    margin-right: 6px;
+    pointer-events: none;
+    animation: hypeTrainTooltipIn 0.15s ease-out;
 }
 
 @keyframes hypeTrainTooltipIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(4px); }
-  to { opacity: 1; transform: translateY(-50%) translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
 }
 
 .hype-train-close {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-md);
-  transition: color 0.15s;
-  flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-md);
+    transition: color 0.15s;
+    flex-shrink: 0;
 }
 
 .hype-train-close:hover {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 }
 
 .hype-train-body {
-  margin-bottom: 8px;
+    margin-bottom: 8px;
 }
 
 .hype-train-progress-bar {
-  position: relative;
-  height: 8px;
-  background: var(--color-bg-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 6px;
+    position: relative;
+    height: 8px;
+    background: var(--color-bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
 }
 
 .hype-train-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-twitch) 0%, var(--color-indigo) 100%);
-  border-radius: 4px;
-  transition: width 0.5s ease-out;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--color-twitch) 0%,
+        var(--color-indigo) 100%
+    );
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
 }
 
 .hype-train-progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--color-text-primary);
-  font-size: 10px;
-  font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--color-text-primary);
+    font-size: 10px;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .hype-train-contributors {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--color-text-secondary);
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    flex-wrap: wrap;
 }
 
 .hype-train-contributors-label {
-  font-weight: 600;
-  opacity: 0.7;
+    font-weight: 600;
+    opacity: 0.7;
 }
 
 .hype-train-contributor {
-  background: var(--color-bg-hover);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--color-text-primary);
 }
 
 .hype-train-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .hype-train-timer {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 600;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
 }

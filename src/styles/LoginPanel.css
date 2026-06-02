@@ -1,468 +1,481 @@
-@import './vars.css';
+@import "./vars.css";
 
 .login-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  height: 100%;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    height: 100%;
+    overflow: hidden;
 }
 
 .login-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .login-panel h3 {
-  margin: 0;
-  font-size: 0.68rem;
-  color: rgba(148, 163, 184, 0.75);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  font-weight: 700;
-  flex-shrink: 0;
+    margin: 0;
+    font-size: 0.68rem;
+    color: rgba(148, 163, 184, 0.75);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+    flex-shrink: 0;
 }
 
 .icon-button {
-  background: none;
-  border: 1px solid var(--color-border-medium);
-  color: var(--color-indigo);
-  cursor: pointer;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  transition: all 0.18s ease;
-  border-radius: var(--radius-lg);
-  flex-shrink: 0;
+    background: none;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-indigo);
+    cursor: pointer;
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.18s ease;
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
 }
 
 .icon-button:hover {
-  color: var(--color-indigo-hover);
-  border-color: var(--color-indigo);
-  background: rgba(99, 102, 241, 0.08);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+    color: var(--color-indigo-hover);
+    border-color: var(--color-indigo);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .icon-button.youtube-icon-btn {
-  color: var(--color-youtube);
+    color: var(--color-youtube);
 }
 
 .icon-button.youtube-icon-btn:hover {
-  color: var(--color-youtube-hover);
-  border-color: var(--color-youtube);
+    color: var(--color-youtube-hover);
+    border-color: var(--color-youtube);
 }
 
 .icon-button.small {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 .platform-login {
-  display: flex;
-  flex-direction: column;
-  padding: 14px;
-  border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(0, 0, 0, 0.18);
-  margin: 0;
-  flex: 1;
-  min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.18);
+    margin: 0;
+    flex: 1;
+    min-height: 0;
 }
 
 .platform-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
 .platform-name {
-  font-weight: 600;
-  font-size: 1rem;
+    font-weight: 600;
+    font-size: 1rem;
 }
 
 .platform-login.twitch .platform-name {
-  color: var(--color-twitch);
+    color: var(--color-twitch);
 }
 
 .platform-login.youtube .platform-name {
-  color: var(--color-youtube);
+    color: var(--color-youtube);
 }
 
 .connected-info {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  flex: 1;
-  min-height: 0;
-  overflow: visible;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
 }
 
 .user-profile-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .user-profile-link {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  padding: 4px;
-  border-radius: 6px;
-  transition: background-color 0.2s;
-  min-width: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    min-width: 0;
 }
 
 .user-profile-link:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .profile-image {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  transition: transform 0.2s, box-shadow 0.2s;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
 }
 
 .profile-image:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 0 3px var(--color-accent), var(--shadow-glow-accent);
+    transform: scale(1.05);
+    box-shadow:
+        0 0 0 3px var(--color-accent),
+        var(--shadow-glow-accent);
 }
 
 .user-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
 }
 
 .user-name {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--color-text-primary);
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .user-actions {
-  display: flex;
-  gap: 4px;
+    display: flex;
+    gap: 4px;
 }
 
 .channels-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
 }
 
 .section-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: rgba(148, 163, 184, 0.75);
-  margin-bottom: 8px;
-  display: block;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.75);
+    margin-bottom: 8px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    flex-shrink: 0;
 }
 
 .channel-search-input {
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-lg);
-  font-size: 0.9rem;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  box-sizing: border-box;
-  flex-shrink: 0;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
 .channel-search-input:focus {
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-accent-sm);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .channel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
 }
 
 .channel-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 10px 12px;
-  border-radius: var(--radius-lg);
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .channel-item-avatar-wrap {
-  position: relative;
-  flex-shrink: 0;
-  line-height: 0;
+    position: relative;
+    flex-shrink: 0;
+    line-height: 0;
 }
 
 .channel-item-yt-badge {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  color: var(--color-text-muted);
-  background: var(--color-bg-primary);
-  border-radius: 50%;
-  line-height: 1;
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    color: var(--color-text-muted);
+    background: var(--color-bg-primary);
+    border-radius: 50%;
+    line-height: 1;
 }
 
 .channel-item:not(.selected):hover {
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .channel-item.selected {
-  background: var(--color-bg-mention);
-  border-color: var(--color-border-mention);
-  box-shadow: inset 3px 0 0 var(--color-accent), var(--shadow-accent-sm);
+    background: var(--color-bg-mention);
+    border-color: var(--color-border-mention);
+    box-shadow:
+        inset 3px 0 0 var(--color-accent),
+        var(--shadow-accent-sm);
 }
 
 .channel-item-image {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
 }
 
 .channel-item-details {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .channel-item-name {
-  font-size: 0.9rem;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .channel-game-name {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.8;
-  margin-top: -1px;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.8;
+    margin-top: -1px;
 }
 
 .viewer-count {
-  font-size: 0.8rem;
-  color: #94a3b8;
-  flex-shrink: 0;
-  margin-left: 4px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-left: 4px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 
 .favorite-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0 4px;
-  flex-shrink: 0;
-  color: var(--color-icon-inactive);
-  transition: color 0.2s ease;
-  line-height: 1;
-  display: flex;
-  align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    flex-shrink: 0;
+    color: var(--color-icon-inactive);
+    transition: color 0.2s ease;
+    line-height: 1;
+    display: flex;
+    align-items: center;
 }
 
 .favorite-button.active {
-  color: var(--color-favorite);
+    color: var(--color-favorite);
 }
 
 .manual-join-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  flex-shrink: 0;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
 }
 
 .join-form {
-  display: flex;
-  gap: 4px;
+    display: flex;
+    gap: 4px;
 }
 
 .join-input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-lg);
-  font-size: 0.9rem;
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  min-width: 0;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    min-width: 0;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
 .join-input:focus {
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-accent-sm);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .login-btn,
 .logout-btn {
-  padding: 10px 16px;
-  border: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-  border-radius: var(--radius-lg);
+    padding: 10px 16px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        opacity 0.18s ease,
+        box-shadow 0.18s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border-radius: var(--radius-lg);
 }
 
 .login-btn:hover {
-  transform: translateY(-2px);
-  opacity: 0.95;
+    transform: translateY(-2px);
+    opacity: 0.95;
 }
 
 .login-btn:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .login-btn.twitch-btn {
-  background: linear-gradient(135deg, #9146ff 0%, #772ce8 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(145, 70, 255, 0.35);
+    background: linear-gradient(135deg, #9146ff 0%, #772ce8 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(145, 70, 255, 0.35);
 }
 
 .login-btn.twitch-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(145, 70, 255, 0.5);
-  opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(145, 70, 255, 0.5);
+    opacity: 1;
 }
 
 .login-btn.youtube-btn {
-  background: linear-gradient(135deg, #ff1a1a 0%, #cc0000 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+    background: linear-gradient(135deg, #ff1a1a 0%, #cc0000 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
 }
 
 .login-btn.youtube-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 0, 0, 0.45);
-  opacity: 1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.45);
+    opacity: 1;
 }
 
 .logout-btn {
-  background-color: rgba(255, 255, 255, 0.06);
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
 }
 
 .logout-btn:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-  color: var(--color-text-primary);
-  border-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.12);
+    color: var(--color-text-primary);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .logout-btn.small {
-  font-size: 12px;
-  padding: 4px 8px;
+    font-size: 12px;
+    padding: 4px 8px;
 }
 
 .youtube-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .youtube-info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .youtube-user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
 }
 
 .youtube-user-name {
-  font-size: 13px;
-  color: #e2e8f0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    font-size: 13px;
+    color: #e2e8f0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Channel list scrollbar styling */
 .channel-list {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
 }
 
 .channel-list::-webkit-scrollbar {
-  width: 8px;
+    width: 8px;
 }
 
 .channel-list::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+    background: var(--color-bg-primary);
 }
 
 .channel-list::-webkit-scrollbar-thumb {
-  background: var(--color-border-medium);
-  border-radius: var(--radius-md);
+    background: var(--color-border-medium);
+    border-radius: var(--radius-md);
 }
 
 .channel-list::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-lighter);
+    background: var(--color-border-lighter);
 }

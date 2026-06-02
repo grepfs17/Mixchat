@@ -1,120 +1,122 @@
 /* ── M3U8 video player wrapper ────────────────────────────────────────────── */
 .stream-player {
-  height: 100%;
-  width: 100%;
-  background-color: #0a0a0a;
-  position: relative;
+    height: 100%;
+    width: 100%;
+    background-color: #0a0a0a;
+    position: relative;
 }
 
 .stream-player video {
-  width: 100%;
-  height: 100%;
-  display: block;
-  background-color: #0a0a0a;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: #0a0a0a;
 }
 
 /* ── Quality selector ─────────────────────────────────────────────────────── */
 .quality-selector {
-  position: relative;
-  z-index: 10;
+    position: relative;
+    z-index: 10;
 }
 .quality-selector--header {
-  position: relative;
+    position: relative;
 }
 
 .quality-selector__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
 }
 
 .quality-selector__inner {
-  position: relative;
-  z-index: 1000;
+    position: relative;
+    z-index: 1000;
 }
 
 .quality-selector__toggle {
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .quality-selector__toggle:hover {
-  background: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.9);
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
 .quality-selector__menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: rgba(15, 15, 15, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  overflow: hidden;
-  min-width: 140px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 140px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
 }
 
 .quality-selector__option {
-  display: block;
-  width: 100%;
-  padding: 7px 12px;
-  background: transparent;
-  color: #ccc;
-  border: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 12px;
-  white-space: nowrap;
+    display: block;
+    width: 100%;
+    padding: 7px 12px;
+    background: transparent;
+    color: #ccc;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
 }
 
 .quality-selector__option:hover {
-  background: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.07);
 }
 
 .quality-selector__option--active {
-  background: rgba(99, 102, 241, 0.35);
-  color: #a5b4fc;
+    background: rgba(99, 102, 241, 0.35);
+    color: #a5b4fc;
 }
 
 @media (max-width: 600px) {
-  .quality-selector__label {
-    display: none;
-  }
+    .quality-selector__label {
+        display: none;
+    }
 }
 
 /* ── Loading overlay ──────────────────────────────────────────────────────── */
 .stream-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #999;
-  font-size: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #999;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
 .stream-loading__spinner {
-  width: 30px;
-  height: 30px;
-  border: 3px solid #333;
-  border-top-color: #6366f1;
-  border-radius: 50%;
-  animation: stream-spin 1s linear infinite;
+    width: 30px;
+    height: 30px;
+    border: 3px solid #333;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: stream-spin 1s linear infinite;
 }
 
 @keyframes stream-spin {
-  to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

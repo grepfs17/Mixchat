@@ -21,7 +21,9 @@ let last403Time = 0;
 const COOLDOWN_AFTER_403_MS = 30_000;
 
 const YT_PROXIES: string[] = process.env.YT_PROXY
-  ? process.env.YT_PROXY.split(',').map((u: string) => u.trim().replace(/\/+$/, '')).filter(Boolean)
+  ? process.env.YT_PROXY.split(",")
+      .map((u: string) => u.trim().replace(/\/+$/, ""))
+      .filter(Boolean)
   : [];
 const YT_PROXY_TOKEN = process.env.YT_PROXY_TOKEN;
 
@@ -44,7 +46,9 @@ function markProxyFailed(proxy: string): void {
   proxyFailCounts[proxy] = (proxyFailCounts[proxy] || 0) + 1;
   if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS) {
     proxyCooldownUntil[proxy] = Date.now() + PROXY_COOLDOWN_MS;
-    console.warn(`[YouTube Proxy] ${proxy} failed ${PROXY_MAX_FAILS} times — cooling down for ${PROXY_COOLDOWN_MS / 1000}s`);
+    console.warn(
+      `[YouTube Proxy] ${proxy} failed ${PROXY_MAX_FAILS} times — cooling down for ${PROXY_COOLDOWN_MS / 1000}s`,
+    );
     proxyFailCounts[proxy] = 0;
   }
 }
@@ -63,28 +67,42 @@ export function _getProxyState() {
   return { failCounts: proxyFailCounts, cooldownUntil: proxyCooldownUntil };
 }
 
-export { selectProxy, markProxyFailed, markProxyOk, YT_PROXIES, PROXY_MAX_FAILS, PROXY_COOLDOWN_MS };
+export {
+  selectProxy,
+  markProxyFailed,
+  markProxyOk,
+  YT_PROXIES,
+  PROXY_MAX_FAILS,
+  PROXY_COOLDOWN_MS,
+};
 
-const LIVE_CHAT_POLL_MIN_MS = parseInt(process.env.YT_CHAT_POLL_MIN_MS || "5000", 10);
-const METADATA_POLL_MIN_MS = parseInt(process.env.YT_METADATA_POLL_MIN_MS || "30000", 10);
+const LIVE_CHAT_POLL_MIN_MS = parseInt(
+  process.env.YT_CHAT_POLL_MIN_MS || "5000",
+  10,
+);
+const METADATA_POLL_MIN_MS = parseInt(
+  process.env.YT_METADATA_POLL_MIN_MS || "30000",
+  10,
+);
 
 const throttleTimestamps: Record<string, number> = {};
 
 function getThrottleKey(urlStr: string): string | null {
-  if (urlStr.includes('/live_chat/get_live_chat')) return 'live_chat';
-  if (urlStr.includes('/updated_metadata')) return 'metadata';
+  if (urlStr.includes("/live_chat/get_live_chat")) return "live_chat";
+  if (urlStr.includes("/updated_metadata")) return "metadata";
   return null;
 }
 
 function getThrottleInterval(key: string): number {
-  return key === 'live_chat' ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
+  return key === "live_chat" ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
 }
 
 export function _resetThrottle(key?: string): void {
   if (key) {
     delete throttleTimestamps[key];
   } else {
-    for (const k of Object.keys(throttleTimestamps)) delete throttleTimestamps[k];
+    for (const k of Object.keys(throttleTimestamps))
+      delete throttleTimestamps[k];
   }
 }
 
@@ -94,31 +112,34 @@ export async function getInnertube() {
   const timeSince403 = Date.now() - last403Time;
   if (timeSince403 < COOLDOWN_AFTER_403_MS) {
     const wait = COOLDOWN_AFTER_403_MS - timeSince403;
-    throw new Error(`[YouTube] Cooldown after 403 — retry in ${Math.ceil(wait / 1000)}s`);
+    throw new Error(
+      `[YouTube] Cooldown after 403 — retry in ${Math.ceil(wait / 1000)}s`,
+    );
   }
 
   if (isInitializing) {
-    throw new Error('[YouTube] Innertube initialization already in progress');
+    throw new Error("[YouTube] Innertube initialization already in progress");
   }
   isInitializing = true;
 
   try {
     const innertubeOptions: Record<string, any> = {};
-    let clientType = (process.env.YT_CLIENT || 'WEB').toUpperCase();
+    let clientType = (process.env.YT_CLIENT || "WEB").toUpperCase();
 
-    if (clientType === 'TV') clientType = 'TVHTML5';
-    if (clientType === 'TVHTML5_TV') clientType = 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
+    if (clientType === "TV") clientType = "TVHTML5";
+    if (clientType === "TVHTML5_TV")
+      clientType = "TVHTML5_SIMPLY_EMBEDDED_PLAYER";
 
     innertubeOptions.client_type = clientType;
 
     if (process.env.YT_USER_AGENT) {
       innertubeOptions.user_agent = process.env.YT_USER_AGENT;
-    } else if (clientType === 'WEB') {
+    } else if (clientType === "WEB") {
       innertubeOptions.user_agent = YT_USER_AGENT;
     }
 
     innertubeOptions.generate_session_locally =
-      process.env.YT_GENERATE_SESSION_LOCALLY === 'false' ? false : true;
+      process.env.YT_GENERATE_SESSION_LOCALLY === "false" ? false : true;
 
     if (process.env.YT_COOKIE) {
       innertubeOptions.cookie = process.env.YT_COOKIE;
@@ -139,7 +160,11 @@ export async function getInnertube() {
         innertubeOptions.visitor_data = envVisitorData;
       }
 
-      const autoPotoken = !envPoToken && !envVisitorData && clientType === 'WEB' && process.env.YT_POTOKEN !== 'off';
+      const autoPotoken =
+        !envPoToken &&
+        !envVisitorData &&
+        clientType === "WEB" &&
+        process.env.YT_POTOKEN !== "off";
 
       if (autoPotoken) {
         try {
@@ -148,12 +173,15 @@ export async function getInnertube() {
           innertubeOptions.visitor_data = tokenData.visitorData;
         } catch (poErr) {
           const msg = poErr instanceof Error ? poErr.message : String(poErr);
-          console.warn('[YouTube] Auto PoToken generation failed, continuing without it:', msg);
+          console.warn(
+            "[YouTube] Auto PoToken generation failed, continuing without it:",
+            msg,
+          );
         }
       }
     }
 
-    if (process.env.YT_DEBUG === '1') {
+    if (process.env.YT_DEBUG === "1") {
       console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, {
         hasPoToken: !!innertubeOptions.po_token,
         hasCookie: !!innertubeOptions.cookie,
@@ -163,13 +191,16 @@ export async function getInnertube() {
     }
 
     const baseUserAgent = innertubeOptions.user_agent;
-    const baseReferer = (process.env.ORIGIN || 'https://www.youtube.com/').replace(/\/?$/, '/');
+    const baseReferer = (
+      process.env.ORIGIN || "https://www.youtube.com/"
+    ).replace(/\/?$/, "/");
 
     innertubeOptions.fetch = async (input: any, init?: any) => {
-      let urlStr = '';
+      let urlStr = "";
       try {
-        if (typeof input === 'string') urlStr = input;
-        else if (input && typeof input === 'object' && 'url' in input) urlStr = String((input as any).url);
+        if (typeof input === "string") urlStr = input;
+        else if (input && typeof input === "object" && "url" in input)
+          urlStr = String((input as any).url);
         else urlStr = String(input);
       } catch {
         urlStr = String(input);
@@ -180,10 +211,13 @@ export async function getInnertube() {
         const interval = getThrottleInterval(throttleKey);
         if (interval > 0) {
           const now = Date.now();
-          const elapsed = Math.max(0, now - (throttleTimestamps[throttleKey] || 0));
+          const elapsed = Math.max(
+            0,
+            now - (throttleTimestamps[throttleKey] || 0),
+          );
           const wait = Math.max(0, interval - elapsed);
           throttleTimestamps[throttleKey] = now + wait;
-          if (wait > 0) await new Promise(r => setTimeout(r, wait));
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
         }
       }
 
@@ -192,26 +226,37 @@ export async function getInnertube() {
       if (YT_PROXIES.length) {
         try {
           const targetUrl = new URL(urlStr);
-          if (targetUrl.hostname === 'www.youtube.com' && targetUrl.pathname.startsWith('/youtubei/')) {
+          if (
+            targetUrl.hostname === "www.youtube.com" &&
+            targetUrl.pathname.startsWith("/youtubei/")
+          ) {
             const proxyPath = targetUrl.pathname + targetUrl.search;
 
             const proxyHeaders: Record<string, string> = {
-              'Content-Type': init?.headers ? 'application/json' : 'application/x-www-form-urlencoded',
+              "Content-Type": init?.headers
+                ? "application/json"
+                : "application/x-www-form-urlencoded",
             };
             if (YT_PROXY_TOKEN) {
-              proxyHeaders['Authorization'] = `Bearer ${YT_PROXY_TOKEN}`;
+              proxyHeaders["Authorization"] = `Bearer ${YT_PROXY_TOKEN}`;
             }
 
-            const body = typeof init?.body === 'string' ? init.body : undefined;
-            const method = init?.method || (body ? 'POST' : 'GET');
+            const body = typeof init?.body === "string" ? init.body : undefined;
+            const method = init?.method || (body ? "POST" : "GET");
 
             const startIndex = YT_PROXIES.indexOf(selectProxy()!);
-            const order = startIndex >= 0
-              ? [...YT_PROXIES.slice(startIndex), ...YT_PROXIES.slice(0, startIndex)]
-              : YT_PROXIES;
+            const order =
+              startIndex >= 0
+                ? [
+                    ...YT_PROXIES.slice(startIndex),
+                    ...YT_PROXIES.slice(0, startIndex),
+                  ]
+                : YT_PROXIES;
 
             const now = Date.now();
-            const available = order.filter(p => !proxyCooldownUntil[p] || now >= proxyCooldownUntil[p]);
+            const available = order.filter(
+              (p) => !proxyCooldownUntil[p] || now >= proxyCooldownUntil[p],
+            );
             const tryOrder = available.length ? available : order;
             let lastError: Error | null = null;
             let lastStatus = 0;
@@ -219,24 +264,33 @@ export async function getInnertube() {
             for (const proxy of tryOrder) {
               const proxyUrl = `${proxy}/api/youtube${proxyPath}`;
 
-              if (process.env.YT_DEBUG === '1') {
-                console.debug('[YouTube Proxy] Trying:', proxyUrl);
+              if (process.env.YT_DEBUG === "1") {
+                console.debug("[YouTube Proxy] Trying:", proxyUrl);
               }
 
               try {
-                const proxyRes = await fetch(proxyUrl, { method, headers: proxyHeaders, body });
+                const proxyRes = await fetch(proxyUrl, {
+                  method,
+                  headers: proxyHeaders,
+                  body,
+                });
 
                 if (proxyRes.status === 503) {
-                  const errBody = await proxyRes.text().catch(() => '');
-                  console.error(`[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`, errBody.slice(0, 500));
+                  const errBody = await proxyRes.text().catch(() => "");
+                  console.error(
+                    `[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`,
+                    errBody.slice(0, 500),
+                  );
                   markProxyFailed(proxy);
-                  lastError = new Error(errBody || '503');
+                  lastError = new Error(errBody || "503");
                   lastStatus = 503;
                   continue;
                 }
 
                 if (proxyRes.status >= 500) {
-                  console.error(`[YouTube Proxy] ${proxy} server error ${proxyRes.status}`);
+                  console.error(
+                    `[YouTube Proxy] ${proxy} server error ${proxyRes.status}`,
+                  );
                   markProxyFailed(proxy);
                   lastError = new Error(`Server error ${proxyRes.status}`);
                   lastStatus = proxyRes.status;
@@ -253,22 +307,37 @@ export async function getInnertube() {
                 markProxyOk(proxy);
                 return proxyRes;
               } catch (fetchErr: any) {
-                console.error(`[YouTube Proxy] ${proxy} request failed:`, fetchErr instanceof Error ? fetchErr.message : String(fetchErr));
+                console.error(
+                  `[YouTube Proxy] ${proxy} request failed:`,
+                  fetchErr instanceof Error
+                    ? fetchErr.message
+                    : String(fetchErr),
+                );
                 markProxyFailed(proxy);
-                lastError = fetchErr instanceof Error ? fetchErr : new Error(String(fetchErr));
+                lastError =
+                  fetchErr instanceof Error
+                    ? fetchErr
+                    : new Error(String(fetchErr));
                 continue;
               }
             }
 
-            console.error('[YouTube Proxy] All proxies failed');
+            console.error("[YouTube Proxy] All proxies failed");
             if (lastStatus === 403) {
               invalidateInnertube();
               last403Time = Date.now();
             }
-            return new Response(lastError?.message || 'All proxies failed', { status: lastStatus || 502, headers: { 'Content-Type': 'application/json' } });
+            return new Response(lastError?.message || "All proxies failed", {
+              status: lastStatus || 502,
+              headers: { "Content-Type": "application/json" },
+            });
           }
         } catch (parseErr) {
-          if (process.env.YT_DEBUG === '1') console.debug('[YouTube Proxy] URL parse failed, falling back to direct fetch', parseErr);
+          if (process.env.YT_DEBUG === "1")
+            console.debug(
+              "[YouTube Proxy] URL parse failed, falling back to direct fetch",
+              parseErr,
+            );
         }
       }
 
@@ -276,34 +345,47 @@ export async function getInnertube() {
       const headers: Record<string, string> = {};
       const orig = init?.headers;
       if (orig) {
-        if (typeof (orig as any).entries === 'function') {
+        if (typeof (orig as any).entries === "function") {
           for (const [k, v] of (orig as any).entries()) {
-            try { headers[k.toLowerCase()] = String(v); } catch { }
+            try {
+              headers[k.toLowerCase()] = String(v);
+            } catch {}
           }
-        } else if (typeof (orig as any).forEach === 'function') {
+        } else if (typeof (orig as any).forEach === "function") {
           try {
             (orig as any).forEach((v: any, k: string) => {
-              try { headers[k.toLowerCase()] = String(v); } catch { }
+              try {
+                headers[k.toLowerCase()] = String(v);
+              } catch {}
             });
-          } catch { }
-        } else if (typeof orig === 'object') {
+          } catch {}
+        } else if (typeof orig === "object") {
           for (const k of Object.keys(orig)) {
-            try { headers[k.toLowerCase()] = String((orig as any)[k]); } catch { }
+            try {
+              headers[k.toLowerCase()] = String((orig as any)[k]);
+            } catch {}
           }
         }
       }
 
-      if ('x-goog-visitor-id' in headers) {
-        if (!headers['x-goog-visitor-id']?.trim()) delete headers['x-goog-visitor-id'];
+      if ("x-goog-visitor-id" in headers) {
+        if (!headers["x-goog-visitor-id"]?.trim())
+          delete headers["x-goog-visitor-id"];
       }
 
-      if (!headers['user-agent'] && baseUserAgent) headers['user-agent'] = baseUserAgent;
-      if (!headers['referer']) headers['referer'] = baseReferer;
-      if (!headers['accept-language']) headers['accept-language'] = 'en-US,en;q=0.9';
+      if (!headers["user-agent"] && baseUserAgent)
+        headers["user-agent"] = baseUserAgent;
+      if (!headers["referer"]) headers["referer"] = baseReferer;
+      if (!headers["accept-language"])
+        headers["accept-language"] = "en-US,en;q=0.9";
 
-      if (process.env.YT_DEBUG === '1') {
+      if (process.env.YT_DEBUG === "1") {
         const keys = Object.keys(headers);
-        console.debug('[YouTube] direct fetch:', urlStr.slice(0, 100), keys.join(', '));
+        console.debug(
+          "[YouTube] direct fetch:",
+          urlStr.slice(0, 100),
+          keys.join(", "),
+        );
       }
 
       const merged = { ...(init || {}), headers };
@@ -311,10 +393,15 @@ export async function getInnertube() {
 
       if (res.status === 403) {
         last403Time = Date.now();
-        console.error('[YouTube] Direct fetch 403 — invalidating session.', { url: urlStr });
+        console.error("[YouTube] Direct fetch 403 — invalidating session.", {
+          url: urlStr,
+        });
         invalidateInnertube();
       } else if (res.status >= 400) {
-        console.error('[YouTube] Direct fetch non-OK', { url: urlStr, status: res.status });
+        console.error("[YouTube] Direct fetch non-OK", {
+          url: urlStr,
+          status: res.status,
+        });
       }
 
       return res;
@@ -371,7 +458,7 @@ export async function getYoutubeUser(accessToken: string) {
     );
   } catch (e: any) {
     const raw = e?.message ?? String(e);
-    const message = raw.replace(/^Google API error:\s*/i, '');
+    const message = raw.replace(/^Google API error:\s*/i, "");
     throw new Error(`Failed to get YouTube user: ${message}`);
   }
 

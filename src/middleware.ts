@@ -49,34 +49,34 @@ function buildCSP(nonce?: string): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Images: self, Twitch CDN, YouTube/Google CDNs, and third-party emote CDNs
     "img-src 'self' data: blob:" +
-    " https://static-cdn.jtvnw.net" + // Twitch emotes & badges
-    " https://cdn.7tv.app" + // 7TV emotes
-    " https://cdn.betterttv.net" + // BTTV emotes
-    " https://cdn.frankerfacez.com" + // FFZ emotes
-    " https://*.ggpht.com" + // YouTube avatars (yt1,ytN subdomains)
-    " https://yt3.googleusercontent.com" + // YouTube avatars (alt)
-    " https://i.ytimg.com" + // YouTube thumbnails
-    " https://lh3.googleusercontent.com" + // Google profile images
-    " https://fonts.gstatic.com" + // Google Noto Emoji images (YouTube chat standard emoji)
-    " https://cdn.prod.website-files.com", // Ko-fi badge images
+      " https://static-cdn.jtvnw.net" + // Twitch emotes & badges
+      " https://cdn.7tv.app" + // 7TV emotes
+      " https://cdn.betterttv.net" + // BTTV emotes
+      " https://cdn.frankerfacez.com" + // FFZ emotes
+      " https://*.ggpht.com" + // YouTube avatars (yt1,ytN subdomains)
+      " https://yt3.googleusercontent.com" + // YouTube avatars (alt)
+      " https://i.ytimg.com" + // YouTube thumbnails
+      " https://lh3.googleusercontent.com" + // Google profile images
+      " https://fonts.gstatic.com" + // Google Noto Emoji images (YouTube chat standard emoji)
+      " https://cdn.prod.website-files.com", // Ko-fi badge images
     // API / XHR calls the client makes directly
     "connect-src 'self'" +
-    " https://api.twitch.tv" + // Twitch Helix API (Twurple)
-    " https://id.twitch.tv" + // Twitch OAuth validate
-    " https://gql.twitch.tv" + // Twitch GQL (HLS token)
-    " https://usher.ttvnw.net" + // Twitch HLS master playlist
-    " https://*.ttvnw.net" + // Twitch HLS CDN segment subdomains
-    " https://video.twitch.tv" + // Twitch video CDN
-    " https://www.googleapis.com" + // YouTube Data API
-    " https://youtube.googleapis.com" + // YouTube API (alt)
-    " https://recent-messages.robotty.de" + // Recent Twitch chat messages
-    " https://7tv.io" + // 7TV emote API
-    " https://api.betterttv.net" + // BTTV emote API
-    " https://api.frankerfacez.com" + // FFZ emote API
-    " https://events.7tv.io" + // 7TV EventAPI
-    " wss://events.7tv.io" + // 7TV EventAPI (WebSocket alternate)
-    " wss://irc-ws.chat.twitch.tv" + // Twitch chat IRC WebSocket
-    " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket (raid detection)
+      " https://api.twitch.tv" + // Twitch Helix API (Twurple)
+      " https://id.twitch.tv" + // Twitch OAuth validate
+      " https://gql.twitch.tv" + // Twitch GQL (HLS token)
+      " https://usher.ttvnw.net" + // Twitch HLS master playlist
+      " https://*.ttvnw.net" + // Twitch HLS CDN segment subdomains
+      " https://video.twitch.tv" + // Twitch video CDN
+      " https://www.googleapis.com" + // YouTube Data API
+      " https://youtube.googleapis.com" + // YouTube API (alt)
+      " https://recent-messages.robotty.de" + // Recent Twitch chat messages
+      " https://7tv.io" + // 7TV emote API
+      " https://api.betterttv.net" + // BTTV emote API
+      " https://api.frankerfacez.com" + // FFZ emote API
+      " https://events.7tv.io" + // 7TV EventAPI
+      " wss://events.7tv.io" + // 7TV EventAPI (WebSocket alternate)
+      " wss://irc-ws.chat.twitch.tv" + // Twitch chat IRC WebSocket
+      " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket (raid detection)
     // Twitch and YouTube embedded players
     "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)

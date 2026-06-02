@@ -1,518 +1,540 @@
-@import '../vars.css';
+@import "../vars.css";
 
 .message-input {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 10px;
-  background: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border-dark);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 10px;
+    background: var(--color-bg-primary);
+    border-top: 1px solid var(--color-border-dark);
 }
 
 .reply-indicator {
-  order: -1;
-  margin-bottom: 8px;
+    order: -1;
+    margin-bottom: 8px;
 }
 
 .reply-indicator > div:first-child {
-  order: 1;
-  margin-right: auto;
+    order: 1;
+    margin-right: auto;
 }
 
 .platform-selector {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .platform-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
 }
 
 .platform-checkbox input {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
 }
 
 .platform-checkbox input:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .platform-label {
-  font-size: 0.95rem;
-  font-weight: 500;
-  padding: 4px 8px;
-  transition: background-color 0.2s;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    transition: background-color 0.2s;
 }
 
 .platform-label.twitch {
-  color: var(--color-twitch);
+    color: var(--color-twitch);
 }
 
 .platform-label.twitch:not(.disabled):hover {
-  background-color: rgba(145, 70, 255, 0.1);
+    background-color: rgba(145, 70, 255, 0.1);
 }
 
 .platform-label.youtube {
-  color: var(--color-youtube);
+    color: var(--color-youtube);
 }
 
 .platform-label.youtube:not(.disabled):hover {
-  background-color: rgba(255, 0, 0, 0.1);
+    background-color: rgba(255, 0, 0, 0.1);
 }
 
 .platform-label.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .input-group {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-  height: 36px;
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    height: 36px;
 }
 
 .message-textarea {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-medium);
-  font-family: inherit;
-  font-size: 0.95rem;
-  resize: none;
-  height: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  overflow: hidden;
-  border-radius: var(--radius-lg);
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border-medium);
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: none;
+    height: 100%;
+    box-sizing: border-box;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
 }
 
 .message-textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-accent-sm);
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .message-textarea.twitch {
-  border-color: #9146ff;
+    border-color: #9146ff;
 }
 
 .message-textarea.twitch:focus {
-  border-color: #a970ff;
-  box-shadow: 0 0 0 3px rgba(145, 70, 255, 0.2);
+    border-color: #a970ff;
+    box-shadow: 0 0 0 3px rgba(145, 70, 255, 0.2);
 }
 
 .message-textarea.youtube {
-  border-color: #ff0000;
+    border-color: #ff0000;
 }
 
 .message-textarea.youtube:focus {
-  border-color: #ff3333;
-  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.2);
+    border-color: #ff3333;
+    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.2);
 }
 
 .message-textarea:disabled {
-  background-color: var(--color-bg-secondary);
-  cursor: not-allowed;
-  opacity: 0.5;
+    background-color: var(--color-bg-secondary);
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .send-button {
-  padding: 8px 16px;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
-  color: white;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  height: 100%;
-  min-width: 36px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-accent-sm);
+    padding: 8px 16px;
+    background: linear-gradient(
+        135deg,
+        var(--color-accent) 0%,
+        var(--color-accent-hover) 100%
+    );
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+    height: 100%;
+    min-width: 36px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-accent-sm);
 }
 
 .send-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-accent-md);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-accent-md);
 }
 
 .send-button:active:not(:disabled) {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .send-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  background: var(--color-bg-tertiary);
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: var(--color-bg-tertiary);
 }
 
 .emote-picker-button {
-  padding: 0;
-  width: 40px;
-  min-width: 40px;
-  height: 100%;
-  background: var(--color-bg-secondary);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-medium);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  border-radius: var(--radius-lg);
+    padding: 0;
+    width: 40px;
+    min-width: 40px;
+    height: 100%;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-medium);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    border-radius: var(--radius-lg);
 }
 
 /* YouTube emoji picker popup */
 .yt-emoji-picker {
-  width: 300px;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-medium);
-  border-radius: 10px;
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.7);
-  z-index: 99999;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: fadeInUp 0.15s ease-out;
+    width: 300px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: 10px;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.7);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fadeInUp 0.15s ease-out;
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .yt-emoji-picker-search {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--color-border-medium);
-  background: var(--color-bg-primary);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-border-medium);
+    background: var(--color-bg-primary);
 }
 
 .yt-emoji-picker-search-input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-medium);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: var(--color-text-primary);
-  font-size: 0.9rem;
-  outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    outline: none;
 }
 
 .yt-emoji-picker-search-input:focus {
-  border-color: var(--color-youtube);
-  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
+    border-color: var(--color-youtube);
+    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.2);
 }
 
 .yt-emoji-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 2px;
-  padding: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-  overflow-x: hidden;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .yt-emoji-picker-grid::-webkit-scrollbar {
-  width: 4px;
+    width: 4px;
 }
 .yt-emoji-picker-grid::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 .yt-emoji-picker-grid::-webkit-scrollbar-thumb {
-  background: var(--color-border-medium);
-  border-radius: 2px;
+    background: var(--color-border-medium);
+    border-radius: 2px;
 }
 
 .yt-emoji-picker-item {
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  font-size: 20px;
-  line-height: 1;
-  padding: 4px 2px;
-  cursor: pointer;
-  transition: background 0.1s, transform 0.1s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 1;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 20px;
+    line-height: 1;
+    padding: 4px 2px;
+    cursor: pointer;
+    transition:
+        background 0.1s,
+        transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
 }
 
 .yt-emoji-picker-item:hover {
-  background: var(--color-bg-hover);
-  transform: scale(1.2);
+    background: var(--color-bg-hover);
+    transform: scale(1.2);
 }
 
 .emote-picker-button:hover:not(:disabled) {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-lighter);
-  color: var(--color-text-primary);
-  transform: scale(1.05);
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-lighter);
+    color: var(--color-text-primary);
+    transform: scale(1.05);
 }
 
 .emote-picker-button:active:not(:disabled) {
-  transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 .emote-picker-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .warning {
-  padding: 8px 12px;
-  background-color: var(--color-warning-bg);
-  border-left: 4px solid var(--color-warning-border);
-  color: var(--color-warning-text);
-  font-size: 0.9rem;
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 8px 12px;
+    background-color: var(--color-warning-bg);
+    border-left: 4px solid var(--color-warning-border);
+    color: var(--color-warning-text);
+    font-size: 0.9rem;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 /* ── Autocomplete dropdown menu ── */
 .autocomplete-menu {
-  background: var(--color-autocomplete-bg);
-  border: 1px solid var(--color-autocomplete-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border-light) transparent;
-  animation: autocompleteFadeIn 0.12s ease-out;
+    background: var(--color-autocomplete-bg);
+    border: 1px solid var(--color-autocomplete-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-light) transparent;
+    animation: autocompleteFadeIn 0.12s ease-out;
 }
 
 @keyframes autocompleteFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .autocomplete-menu::-webkit-scrollbar {
-  width: 6px;
+    width: 6px;
 }
 
 .autocomplete-menu::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 .autocomplete-menu::-webkit-scrollbar-thumb {
-  background: var(--color-border-light);
-  border-radius: var(--radius-sm);
+    background: var(--color-border-light);
+    border-radius: var(--radius-sm);
 }
 
 .autocomplete-menu::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-lighter);
+    background: var(--color-border-lighter);
 }
 
 /* ── Autocomplete items (shared) ── */
 .autocomplete-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  font-family: var(--font-ui);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: var(--font-ui);
 }
 
 .autocomplete-item:hover {
-  background: var(--color-autocomplete-hover);
+    background: var(--color-autocomplete-hover);
 }
 
 .autocomplete-item.selected {
-  background: var(--color-autocomplete-selected);
+    background: var(--color-autocomplete-selected);
 }
 
 .autocomplete-item img {
-  object-fit: contain;
-  flex-shrink: 0;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .autocomplete-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
 }
 
 .autocomplete-item-name {
-  color: var(--color-text-primary);
-  font-weight: 500;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: var(--color-text-primary);
+    font-weight: 500;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .autocomplete-item-type {
-  color: var(--color-text-secondary);
-  font-size: 11px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
 }
 
 /* ── Command items ── */
 .autocomplete-command-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  font-family: var(--font-ui);
-  border-bottom: 1px solid var(--color-border-medium);
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: var(--font-ui);
+    border-bottom: 1px solid var(--color-border-medium);
 }
 
 .autocomplete-command-item:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 .autocomplete-command-item:hover {
-  background: var(--color-autocomplete-hover);
+    background: var(--color-autocomplete-hover);
 }
 
 .autocomplete-command-item.selected {
-  background: var(--color-autocomplete-selected);
+    background: var(--color-autocomplete-selected);
 }
 
 .autocomplete-command-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
 }
 
 .autocomplete-command-name {
-  color: var(--color-accent);
-  font-weight: 600;
-  font-size: 14px;
+    color: var(--color-accent);
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .autocomplete-command-usage {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-style: italic;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-style: italic;
 }
 
 .autocomplete-command-desc {
-  color: var(--color-text-secondary);
-  font-size: 13px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
 }
 
 /* Hide scrollbar on the mobile emote autocomplete strip */
 .emote-autocomplete-mobile-strip::-webkit-scrollbar {
-  display: none;
+    display: none;
 }
 
 /* Responsive design for lower resolutions */
 @media (max-width: 768px) {
-  .message-input {
-    gap: 8px;
-    padding: 12px;
-    flex-shrink: 0;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    box-sizing: border-box;
-    z-index: 10;
-  }
-  
-  .platform-selector {
-    gap: 8px;
-  }
-  
-  .platform-checkbox input {
-    width: 16px;
-    height: 16px;
-  }
-  
-  .platform-label {
-    font-size: 0.9rem;
-    padding: 3px 6px;
-  }
-  
-  .input-group {
-    height: 40px;
-    gap: 6px;
-  }
-  
-  .message-textarea {
-    padding: 8px;
-    /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
-    font-size: 16px;
-  }
-  
-  .send-button {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    min-width: 80px;
-  }
+    .message-input {
+        gap: 8px;
+        padding: 12px;
+        flex-shrink: 0;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        box-sizing: border-box;
+        z-index: 10;
+    }
+
+    .platform-selector {
+        gap: 8px;
+    }
+
+    .platform-checkbox input {
+        width: 16px;
+        height: 16px;
+    }
+
+    .platform-label {
+        font-size: 0.9rem;
+        padding: 3px 6px;
+    }
+
+    .input-group {
+        height: 40px;
+        gap: 6px;
+    }
+
+    .message-textarea {
+        padding: 8px;
+        /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
+        font-size: 16px;
+    }
+
+    .send-button {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        min-width: 80px;
+    }
 }
 
 @media (max-width: 480px) {
-  .message-input {
-    gap: 6px;
-    padding: 8px;
-    flex-shrink: 0;
-  }
-  
-  .platform-selector {
-    gap: 6px;
-    flex-direction: column;
-  }
-  
-  .platform-checkbox {
-    gap: 4px;
-  }
-  
-  .platform-checkbox input {
-    width: 14px;
-    height: 14px;
-  }
-  
-  .platform-label {
-    font-size: 0.85rem;
-    padding: 2px 4px;
-  }
-  
-  .input-group {
-    height: 34px;
-    gap: 4px;
-    flex-direction: row;
-  }
-  
-  .message-textarea {
-    padding: 6px;
-    /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
-    font-size: 16px;
-    height: 100%;
-    min-height: auto;
-  }
-  
-  .emote-picker-button {
-    width: 44px;
-    min-width: 44px;
-    height: 100%;
-  }
-  
-  .send-button {
-    padding: 6px 12px;
-    font-size: 0.85rem;
-    min-width: 60px;
-    height: 100%;
-  }
-  
-  .warning {
-    padding: 6px 8px;
-    font-size: 0.8rem;
-  }
+    .message-input {
+        gap: 6px;
+        padding: 8px;
+        flex-shrink: 0;
+    }
+
+    .platform-selector {
+        gap: 6px;
+        flex-direction: column;
+    }
+
+    .platform-checkbox {
+        gap: 4px;
+    }
+
+    .platform-checkbox input {
+        width: 14px;
+        height: 14px;
+    }
+
+    .platform-label {
+        font-size: 0.85rem;
+        padding: 2px 4px;
+    }
+
+    .input-group {
+        height: 34px;
+        gap: 4px;
+        flex-direction: row;
+    }
+
+    .message-textarea {
+        padding: 6px;
+        /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
+        font-size: 16px;
+        height: 100%;
+        min-height: auto;
+    }
+
+    .emote-picker-button {
+        width: 44px;
+        min-width: 44px;
+        height: 100%;
+    }
+
+    .send-button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        min-width: 60px;
+        height: 100%;
+    }
+
+    .warning {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
 }

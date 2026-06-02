@@ -1,108 +1,110 @@
 /* Normalized Color Palette - Modern Dark Theme */
 :root {
-  /* Primary Background Colors - Slightly elevated dark */
-  --color-bg-primary: #0c0c0e;
-  --color-bg-secondary: #141417;
-  --color-bg-tertiary: #1e1e23;
-  --color-bg-hover: #292930;
+    /* Primary Background Colors - Slightly elevated dark */
+    --color-bg-primary: #0c0c0e;
+    --color-bg-secondary: #141417;
+    --color-bg-tertiary: #1e1e23;
+    --color-bg-hover: #292930;
 
-  /* Border & Divider Colors - Subtle, more refined */
-  --color-border-dark: #18181c;
-  --color-border-medium: #2a2a32;
-  --color-border-light: #3d3d47;
-  --color-border-lighter: #52525e;
+    /* Border & Divider Colors - Subtle, more refined */
+    --color-border-dark: #18181c;
+    --color-border-medium: #2a2a32;
+    --color-border-light: #3d3d47;
+    --color-border-lighter: #52525e;
 
-  /* Text Colors - Better contrast */
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-text-white: #ffffff;
+    /* Text Colors - Better contrast */
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted: #64748b;
+    --color-text-white: #ffffff;
 
-  /* Platform Colors */
-  --color-twitch: #9146ff;
-  --color-youtube: #ff0000;
+    /* Platform Colors */
+    --color-twitch: #9146ff;
+    --color-youtube: #ff0000;
 
-  /* Accent Color - Magenta (logo) */
-  --color-accent: #9e4073;
-  --color-accent-hover: #7a335a;
+    /* Accent Color - Magenta (logo) */
+    --color-accent: #9e4073;
+    --color-accent-hover: #7a335a;
 
-  /* Status Colors */
-  --color-status-success: #d1fae5;
-  --color-status-success-text: #065f46;
-  --color-status-error: #fee2e2;
-  --color-status-error-text: #7f1d1d;
+    /* Status Colors */
+    --color-status-success: #d1fae5;
+    --color-status-success-text: #065f46;
+    --color-status-error: #fee2e2;
+    --color-status-error-text: #7f1d1d;
 
-  /* Notification Colors */
-  --color-notification-success: #10b981;
-  --color-notification-success-border: #059669;
-  --color-notification-error: #ef4444;
-  --color-notification-error-border: #dc2626;
-  --color-notification-info: #3b82f6;
-  --color-notification-info-border: #2563eb;
+    /* Notification Colors */
+    --color-notification-success: #10b981;
+    --color-notification-success-border: #059669;
+    --color-notification-error: #ef4444;
+    --color-notification-error-border: #dc2626;
+    --color-notification-info: #3b82f6;
+    --color-notification-info-border: #2563eb;
 
-  /* Shadow - Softer with color tint */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-  --shadow-sm-dark: 2px 0 12px rgba(0, 0, 0, 0.6);
-  --shadow-accent-sm: 0 0 0 3px rgba(158, 64, 115, 0.15);
-  --shadow-accent-md: 0 4px 16px rgba(158, 64, 115, 0.25);
-  --shadow-accent-lg: 0 10px 40px rgba(158, 64, 115, 0.2);
+    /* Shadow - Softer with color tint */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-sm-dark: 2px 0 12px rgba(0, 0, 0, 0.6);
+    --shadow-accent-sm: 0 0 0 3px rgba(158, 64, 115, 0.15);
+    --shadow-accent-md: 0 4px 16px rgba(158, 64, 115, 0.25);
+    --shadow-accent-lg: 0 10px 40px rgba(158, 64, 115, 0.2);
 
-  /* Border Radius - More modern, rounded */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-full: 50%;
+    /* Border Radius - More modern, rounded */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-full: 50%;
 
-  /* Live / Stream UI */
-  --color-indigo: #6366f1;
-  --color-indigo-hover: #4f46e5;
-  --color-live: #dc2626;
-  --color-offline: #6b7280;
-  --color-cheer: #ffb700;
-  --color-favorite: #fbbf24;
-  --color-green: #4ade80;
-  --color-youtube-hover: #cc0000;
-  --color-self: #3b82f6;
-  --color-icon-inactive: #666666;
-  --color-bg-message-hover: #252525;
-  --color-bg-bot: #0f0f0f;
+    /* Live / Stream UI */
+    --color-indigo: #6366f1;
+    --color-indigo-hover: #4f46e5;
+    --color-live: #dc2626;
+    --color-offline: #6b7280;
+    --color-cheer: #ffb700;
+    --color-favorite: #fbbf24;
+    --color-green: #4ade80;
+    --color-youtube-hover: #cc0000;
+    --color-self: #3b82f6;
+    --color-icon-inactive: #666666;
+    --color-bg-message-hover: #252525;
+    --color-bg-bot: #0f0f0f;
 
-  /* Chat Message Colors */
-  --color-text-chat: #cbd5e1;
-  --color-text-timestamp: #94a3b8;
+    /* Chat Message Colors */
+    --color-text-chat: #cbd5e1;
+    --color-text-timestamp: #94a3b8;
 
-  /* Platform Event Backgrounds */
-  --color-bg-twitch-event: rgba(145, 71, 255, 0.4);
-  --color-bg-cheer-event: rgba(255, 183, 0, 0.4);
-  --color-bg-mention: rgba(99, 102, 241, 0.2);
-  --color-border-mention: #6366f1;
-  --color-border-twitch-event: #9147ff;
-  --color-border-cheer-event: #ffb700;
+    /* Platform Event Backgrounds */
+    --color-bg-twitch-event: rgba(145, 71, 255, 0.4);
+    --color-bg-cheer-event: rgba(255, 183, 0, 0.4);
+    --color-bg-mention: rgba(99, 102, 241, 0.2);
+    --color-border-mention: #6366f1;
+    --color-border-twitch-event: #9147ff;
+    --color-border-cheer-event: #ffb700;
 
-  /* Warning Colors */
-  --color-warning-bg: #3d2817;
-  --color-warning-border: #f59e0b;
-  --color-warning-text: #fde047;
+    /* Warning Colors */
+    --color-warning-bg: #3d2817;
+    --color-warning-border: #f59e0b;
+    --color-warning-text: #fde047;
 
-  /* Autocomplete / Dropdown */
-  --color-autocomplete-bg: #1e1e23;
-  --color-autocomplete-border: #3d3d47;
-  --color-autocomplete-selected: #292930;
-  --color-autocomplete-hover: #2d2d35;
+    /* Autocomplete / Dropdown */
+    --color-autocomplete-bg: #1e1e23;
+    --color-autocomplete-border: #3d3d47;
+    --color-autocomplete-selected: #292930;
+    --color-autocomplete-hover: #2d2d35;
 
-  /* Typography */
-  --font-ui: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    /* Typography */
+    --font-ui:
+        "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+        sans-serif;
 
-  /* Pill / capsule border radius */
-  --radius-pill: 999px;
+    /* Pill / capsule border radius */
+    --radius-pill: 999px;
 
-  /* Platform glow shadows */
-  --shadow-glow-accent: 0 0 20px rgba(158, 64, 115, 0.4);
-  --shadow-glow-twitch: 0 0 12px rgba(145, 71, 255, 0.35);
-  --shadow-glow-youtube: 0 0 12px rgba(255, 0, 0, 0.3);
-  --shadow-glow-indigo: 0 0 12px rgba(99, 102, 241, 0.35);
+    /* Platform glow shadows */
+    --shadow-glow-accent: 0 0 20px rgba(158, 64, 115, 0.4);
+    --shadow-glow-twitch: 0 0 12px rgba(145, 71, 255, 0.35);
+    --shadow-glow-youtube: 0 0 12px rgba(255, 0, 0, 0.3);
+    --shadow-glow-indigo: 0 0 12px rgba(99, 102, 241, 0.35);
 }

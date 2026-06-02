@@ -64,7 +64,11 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
       g = hue2rgb(p, q, h);
       b = hue2rgb(p, q, h - 1 / 3);
     }
-    return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+    return {
+      r: Math.round(r * 255),
+      g: Math.round(g * 255),
+      b: Math.round(b * 255),
+    };
   }
 
   return null;
@@ -72,20 +76,20 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
 
 function getRgbDistance(
   c1: { r: number; g: number; b: number },
-  c2: { r: number; g: number; b: number }
+  c2: { r: number; g: number; b: number },
 ): number {
   return Math.sqrt(
     Math.pow(c1.r - c2.r, 2) +
-    Math.pow(c1.g - c2.g, 2) +
-    Math.pow(c1.b - c2.b, 2)
+      Math.pow(c1.g - c2.g, 2) +
+      Math.pow(c1.b - c2.b, 2),
   );
 }
 
 // Initialise cached background from the active CSS variable
-if (typeof document !== 'undefined' && typeof getComputedStyle === 'function') {
+if (typeof document !== "undefined" && typeof getComputedStyle === "function") {
   try {
     const bg = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-bg-primary')
+      .getPropertyValue("--color-bg-primary")
       .trim();
     if (bg) cachedBgRgb = parseColor(bg);
   } catch {}
@@ -104,10 +108,10 @@ const COLOR_DISTANCE_THRESHOLD = 100;
  * username remains readable.
  */
 export function getReadableUsernameColor(color: string | undefined): string {
-  if (!color) return '#e2e8f0';
+  if (!color) return "#e2e8f0";
   const rgb = parseColor(color);
   if (!rgb || !cachedBgRgb) return color;
   const distance = getRgbDistance(rgb, cachedBgRgb);
-  if (distance < COLOR_DISTANCE_THRESHOLD) return '#ffffff';
+  if (distance < COLOR_DISTANCE_THRESHOLD) return "#ffffff";
   return color;
 }

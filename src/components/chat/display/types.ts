@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../../../lib/types';
+import type { ChatMessage } from "../../../lib/types";
 
 export interface MessageMenuState {
   x: number;

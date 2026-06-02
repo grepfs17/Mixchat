@@ -1,134 +1,134 @@
-@import './vars.css';
+@import "./vars.css";
 
 .live-notification {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: var(--color-bg-primary);
-  border: 2px solid var(--color-indigo);
-  border-radius: var(--radius-2xl);
-  padding: 20px;
-  max-width: 320px;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
-  z-index: 1000;
-  animation: slideInFromRight 0.3s ease-out;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-indigo);
+    border-radius: var(--radius-2xl);
+    padding: 20px;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2);
+    z-index: 1000;
+    animation: slideInFromRight 0.3s ease-out;
 }
 
 .live-notification-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  gap: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
 }
 
 .live-notification-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
 }
 
 .live-badge {
-  background: var(--color-indigo);
-  color: white;
-  font-weight: bold;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
-  white-space: nowrap;
-  animation: pulse 1s infinite;
+    background: var(--color-indigo);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    animation: pulse 1s infinite;
 }
 
 .streamer-name {
-  color: var(--color-text-primary);
-  font-weight: 600;
-  font-size: 16px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .live-notification-close {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 18px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+    flex-shrink: 0;
 }
 
 .live-notification-close:hover {
-  color: var(--color-text-primary);
+    color: var(--color-text-primary);
 }
 
 .streamer-avatar {
-  width: 100%;
-  max-width: 300px;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  display: block;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: block;
 }
 
 .stream-game {
-  color: var(--color-indigo);
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 4px;
+    color: var(--color-indigo);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
 }
 
 .stream-title {
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  margin-bottom: 8px;
-  line-height: 1.4;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .viewer-count {
-  color: var(--color-text-muted);
-  font-size: 13px;
+    color: var(--color-text-muted);
+    font-size: 13px;
 }
 
 .view-now-button {
-  width: 100%;
-  background: var(--color-indigo);
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
+    width: 100%;
+    background: var(--color-indigo);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .view-now-button:hover {
-  background: var(--color-indigo-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+    background: var(--color-indigo-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .view-now-button:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 @media (max-width: 480px) {
-  .live-notification {
-    bottom: 10px;
-    right: 10px;
-    left: 10px;
-    max-width: none;
-  }
+    .live-notification {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
 }

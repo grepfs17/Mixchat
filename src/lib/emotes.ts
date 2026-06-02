@@ -99,7 +99,10 @@ function bumpEmoteMapVersion(): void {
 
 /** Fire the 'emotes-reloaded' DOM event for UI listeners (EmoteMenu etc.). */
 function notifyEmotesReloaded(): void {
-  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+  if (
+    typeof window !== "undefined" &&
+    typeof window.dispatchEvent === "function"
+  ) {
     window.dispatchEvent(new Event("emotes-reloaded"));
   }
 }
@@ -218,7 +221,9 @@ async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
 
   try {
     console.log("Fetching 7TV global emotes from 7tv.io");
-    const response = await fetchWithTimeout("https://7tv.io/v3/emote-sets/global");
+    const response = await fetchWithTimeout(
+      "https://7tv.io/v3/emote-sets/global",
+    );
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -405,7 +410,9 @@ async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   if (cached) return cached;
 
   try {
-    const response = await fetchWithTimeout("https://api.frankerfacez.com/v1/set/global");
+    const response = await fetchWithTimeout(
+      "https://api.frankerfacez.com/v1/set/global",
+    );
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -907,7 +914,9 @@ function createEmoteImg(
   // For the Gigantify power-up, render the highest-resolution source so the
   // emote stays sharp at 7em; otherwise the 2x URL would look pixelated.
   const src = gigantified ? highQualityUrl : emoteUrl;
-  const className = gigantified ? "chat-emote chat-emote--gigantified" : "chat-emote";
+  const className = gigantified
+    ? "chat-emote chat-emote--gigantified"
+    : "chat-emote";
   return `<img src="${src}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="${className}" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
 }
 
@@ -915,7 +924,11 @@ function createEmoteImg(
  * Create an overlay (zero-width) emote wrapped in a positioning span.
  * The span is absolutely centred over the base emote by CSS.
  */
-function createZeroWidthEmoteImg(emoteUrl: string, emoteName: string, source: string = "7TV"): string {
+function createZeroWidthEmoteImg(
+  emoteUrl: string,
+  emoteName: string,
+  source: string = "7TV",
+): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   let highQualityUrl = emoteUrl;
   const splitedUrlSize = emoteUrl.split("/").pop();
