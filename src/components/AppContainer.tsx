@@ -8,16 +8,14 @@ import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
 import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
-import { applyTheme } from "../lib/themes";
 import { getYoutubeLinkForChannel, getYoutubeLinks } from "../lib/youtubeLinks";
 import { getStreamStatus } from "../lib/twitch";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
+import { useChatSettings } from "../hooks/app/useChatSettings";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
-import type { MentionSoundType } from "../hooks/chat/useTwitchChat";
-import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
@@ -66,11 +64,49 @@ export default function AppContainer() {
     onSessionInvalid: clearTwitchSession,
     onStreamTransition: setStreamTransition,
   });
+  const {
+    embedDefaultOpen,
+    setEmbedDefaultOpen,
+    showStreamEmbed,
+    setShowStreamEmbed,
+    unifyChatEnabled,
+    setUnifyChatEnabled,
+    useYoutubeEmbed,
+    setUseYoutubeEmbed,
+    fontSize,
+    setFontSize,
+    chatFont,
+    setChatFont,
+    mentionSoundEnabled,
+    setMentionSoundEnabled,
+    mentionVolume,
+    setMentionVolume,
+    mentionSoundType,
+    setMentionSoundType,
+    showDeletedMessages,
+    setShowDeletedMessages,
+    compactActions,
+    setCompactActions,
+    splitChatEnabled,
+    setSplitChatEnabled,
+    chatTheme,
+    setChatTheme,
+    hideViewerCount,
+    setHideViewerCount,
+    disableModModeByDefault,
+    setDisableModModeByDefault,
+    hideChatTimestamps,
+    setHideChatTimestamps,
+    eventSounds,
+    eventSoundVolume,
+    setEventSoundVolume,
+    ignoredUsers,
+    setIgnoredUsers,
+    handleEventSoundChange,
+  } = useChatSettings();
   const [leftColumnVisible, setLeftColumnVisible] = useState<
     boolean | undefined
   >(undefined);
-  const [embedDefaultOpen, setEmbedDefaultOpen] = useState(true); // Should the stream be expanded by default?
-  const [showStreamEmbed, setShowStreamEmbed] = useState(true);
   const [videoRatio, setVideoRatio] = useState(70); // Default 75% video
   const [isDragging, setIsDragging] = useState(false);
   const embedRef = useRef<HTMLDivElement>(null);
@@ -85,29 +121,11 @@ export default function AppContainer() {
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<
     string | null
   >(null);
-  const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
-  const [useYoutubeEmbed, setUseYoutubeEmbed] = useState(true);
-  const [fontSize, setFontSize] = useState(14); // Global chat font size setting
-  const [chatFont, setChatFont] = useState<ChatFont>("inter"); // Global chat font family
-  const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
-  const [mentionVolume, setMentionVolume] = useState(0.2); // Mention sound volume 0,1
-  const [mentionSoundType, setMentionSoundType] =
-    useState<MentionSoundType>("ding"); // Mention sound style
-  const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
-  const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
-  const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
-  const [chatTheme, setChatTheme] = useState<ChatTheme>("default"); // Chat theme
-  const [hideViewerCount, setHideViewerCount] = useState(false);
-  const [disableModModeByDefault, setDisableModModeByDefault] = useState(false);
-  const [hideChatTimestamps, setHideChatTimestamps] = useState(false);
   const [hlsQualities, setHlsQualities] = useState<
     Array<{ label: string; url: string }>
   >([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
-  const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
-  const [eventSoundVolume, setEventSoundVolume] = useState(1);
-  const [ignoredUsers, setIgnoredUsers] = useState<string[]>([]);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -118,9 +136,6 @@ export default function AppContainer() {
           sessions.twitch.username.toLowerCase()))
   );
   const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
-
-  // Prevent saving event sounds until the initial IndexedDB load completes
-  const eventSoundsLoadedRef = useRef(false);
 
   // Stream monitoring
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -322,365 +337,6 @@ export default function AppContainer() {
     sessions.twitch,
   ]);
 
-  // Load embed default open config from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_embed_default_open");
-    if (saved !== null) {
-      try {
-        const value = JSON.parse(saved);
-        setEmbedDefaultOpen(value);
-        setShowStreamEmbed(value);
-      } catch (error) {
-        console.error("Failed to load embed default open config:", error);
-      }
-    }
-  }, []);
-
-  // Save embed default open config to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_embed_default_open",
-      JSON.stringify(embedDefaultOpen),
-    );
-  }, [embedDefaultOpen]);
-
-  // Load unify chat setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_unify_chat");
-    if (saved !== null) {
-      try {
-        setUnifyChatEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save unify chat setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_unify_chat",
-      JSON.stringify(unifyChatEnabled),
-    );
-  }, [unifyChatEnabled]);
-
-  // Load split chat setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_split_chat");
-    if (saved !== null) {
-      try {
-        setSplitChatEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save split chat setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_split_chat",
-      JSON.stringify(splitChatEnabled),
-    );
-  }, [splitChatEnabled]);
-
-  // Load YouTube embed setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_use_youtube_embed");
-    if (saved !== null) {
-      try {
-        setUseYoutubeEmbed(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save YouTube embed setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_use_youtube_embed",
-      JSON.stringify(useYoutubeEmbed),
-    );
-  }, [useYoutubeEmbed]);
-
-  // Load font size setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_font_size");
-    if (saved !== null) {
-      try {
-        setFontSize(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save font size setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_font_size", JSON.stringify(fontSize));
-  }, [fontSize]);
-
-  // Load mention sound setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_sound");
-    if (saved !== null) {
-      try {
-        setMentionSoundEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention sound setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_sound",
-      JSON.stringify(mentionSoundEnabled),
-    );
-  }, [mentionSoundEnabled]);
-
-  // Load mention volume from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_volume");
-    if (saved !== null) {
-      try {
-        setMentionVolume(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention volume to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_volume",
-      JSON.stringify(mentionVolume),
-    );
-  }, [mentionVolume]);
-
-  // Load mention sound type from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_sound_type");
-    if (saved !== null) {
-      try {
-        setMentionSoundType(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention sound type to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_sound_type",
-      JSON.stringify(mentionSoundType),
-    );
-  }, [mentionSoundType]);
-
-  // Load show deleted messages setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_show_deleted_messages");
-    if (saved !== null) {
-      try {
-        setShowDeletedMessages(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Load compact actions setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_compact_actions");
-    if (saved !== null) {
-      try {
-        setCompactActions(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save show deleted messages setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_show_deleted_messages",
-      JSON.stringify(showDeletedMessages),
-    );
-  }, [showDeletedMessages]);
-
-  // Save compact actions setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_compact_actions",
-      JSON.stringify(compactActions),
-    );
-  }, [compactActions]);
-
-  // Load chat font setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_chat_font");
-    if (saved !== null) {
-      try {
-        setChatFont(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save chat font setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_chat_font", JSON.stringify(chatFont));
-  }, [chatFont]);
-
-  // Load hide viewer count setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_hide_viewer_count");
-    if (saved !== null) {
-      try {
-        setHideViewerCount(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save hide viewer count setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_hide_viewer_count",
-      JSON.stringify(hideViewerCount),
-    );
-  }, [hideViewerCount]);
-
-  // Load disable mod mode by default setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_disable_mod_mode_by_default");
-    if (saved !== null) {
-      try {
-        setDisableModModeByDefault(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save disable mod mode by default setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_disable_mod_mode_by_default",
-      JSON.stringify(disableModModeByDefault),
-    );
-  }, [disableModModeByDefault]);
-
-  // Load hide chat timestamps setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_hide_chat_timestamps");
-    if (saved !== null) {
-      try {
-        setHideChatTimestamps(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save hide chat timestamps setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_hide_chat_timestamps",
-      JSON.stringify(hideChatTimestamps),
-    );
-  }, [hideChatTimestamps]);
-
-  // Load event sounds from IndexedDB (migrates legacy localStorage on first run)
-  useEffect(() => {
-    let cancelled = false;
-    loadEventSounds()
-      .then((sounds) => {
-        if (!cancelled) {
-          setEventSounds(sounds || {});
-          eventSoundsLoadedRef.current = true;
-        }
-      })
-      .catch(() => {
-        eventSoundsLoadedRef.current = true;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Save event sounds to IndexedDB
-  useEffect(() => {
-    if (!eventSoundsLoadedRef.current) return;
-    saveEventSounds(eventSounds).catch(() => {});
-  }, [eventSounds]);
-
-  // Load event sound volume from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_event_sound_volume");
-    if (saved !== null) {
-      try {
-        setEventSoundVolume(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save event sound volume to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_event_sound_volume",
-      JSON.stringify(eventSoundVolume),
-    );
-  }, [eventSoundVolume]);
-
-  // Load chat theme setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_chat_theme");
-    if (saved !== null) {
-      try {
-        setChatTheme(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save chat theme setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_chat_theme", JSON.stringify(chatTheme));
-  }, [chatTheme]);
-
-  // Load ignored users setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_ignored_users");
-    if (saved !== null) {
-      try {
-        setIgnoredUsers(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save ignored users setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_ignored_users", JSON.stringify(ignoredUsers));
-  }, [ignoredUsers]);
-
-  // Apply theme to document
-  useEffect(() => {
-    applyTheme(chatTheme);
-  }, [chatTheme]);
-
   // Handle mouse events for resizing
   useEffect(() => {
     if (!isDragging) return;
@@ -716,21 +372,6 @@ export default function AppContainer() {
     twitchLogout();
     resetChannels();
   }, [twitchLogout, resetChannels]);
-
-  const handleEventSoundChange = useCallback(
-    (eventType: string, soundData: string | null) => {
-      setEventSounds((prev) => {
-        const updated = { ...prev };
-        if (soundData === null) {
-          delete updated[eventType];
-        } else {
-          updated[eventType] = soundData;
-        }
-        return updated;
-      });
-    },
-    [],
-  );
 
   const linkedYoutubeChannelIds = useMemo(
     () => getYoutubeLinks().map((l) => l.twitchChannelId),
