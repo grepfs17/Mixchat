@@ -19,11 +19,11 @@ vi.mock("../../src/lib/emotes", () => ({
   getAllEmotesOrganized: () => ({}),
 }));
 
-vi.mock("../../src/hooks/useChatTouchGestures", () => ({
+vi.mock("../../src/hooks/chat/useChatTouchGestures", () => ({
   useChatTouchGestures: () => ({}),
 }));
 
-vi.mock("../../src/hooks/useScrollToBottomOnKeyboard", () => ({
+vi.mock("../../src/hooks/chat/useScrollToBottomOnKeyboard", () => ({
   useScrollToBottomOnKeyboard: () => ({}),
 }));
 

@@ -11,7 +11,7 @@ import SplitLayout from "./SplitLayout";
 import {
   useChatAppState,
   type ChatAppStateProps,
-} from "../../hooks/useChatAppState";
+} from "../../hooks/chat/useChatAppState";
 import type { ChatFont, ChatTheme } from "../../lib/types";
 import { useState, useCallback, useEffect } from "react";
 

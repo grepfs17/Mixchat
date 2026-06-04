@@ -1,5 +1,5 @@
 import type { ChatFont, ChatTheme } from "../types";
-import type { MentionSoundType } from "../../hooks/useTwitchChat";
+import type { MentionSoundType } from "../../hooks/chat/useTwitchChat";
 
 export interface SettingsProps {
   embedDefaultOpen: boolean;

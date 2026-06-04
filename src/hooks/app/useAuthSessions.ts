@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PlatformSession } from "../lib/types";
-import { listenForOAuthSession } from "../lib/oauthSession";
+import type { PlatformSession } from "../../lib/types";
+import { listenForOAuthSession } from "../../lib/oauthSession";
 import { useTokenRefresh } from "./useTokenRefresh";
 
 const SESSIONS_KEY = "mixchat_sessions";

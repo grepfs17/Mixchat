@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
-import { useSmartMenuPosition } from "../../../hooks/useSmartMenuPosition";
+import { useSmartMenuPosition } from "../../../hooks/chat/useSmartMenuPosition";
 
 interface ContextMenuShellProps {
   x: number;

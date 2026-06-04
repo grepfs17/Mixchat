@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { resolveBroadcasterId } from "../lib/twitch";
+import { resolveBroadcasterId } from "../../lib/twitch";
 
 export interface RaidOutEvent {
   /** Login name (all-lowercase) of the raid target channel */

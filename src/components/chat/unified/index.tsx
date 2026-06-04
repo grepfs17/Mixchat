@@ -10,8 +10,8 @@ import {
 } from "react";
 import type { ChatMessage, ChatFont, Platform } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
-import { useChatTouchGestures } from "../../../hooks/useChatTouchGestures";
-import { useChatAutoScroll } from "../../../hooks/useChatAutoScroll";
+import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
+import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { TwitchMessageItem } from "./TwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";

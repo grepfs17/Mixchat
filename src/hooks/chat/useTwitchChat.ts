@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { StaticAuthProvider } from "@twurple/auth";
 import { ChatClient, UserState, UserNotice } from "@twurple/chat";
-import { getBadgeDetail } from "../lib/badges";
-import type { ChatMessage, MessageType } from "../lib/types";
-import { playEventSound } from "../lib/eventSounds";
+import { getBadgeDetail } from "../../lib/badges";
+import type { ChatMessage, MessageType } from "../../lib/types";
+import { playEventSound } from "../../lib/eventSounds";
 
 // Cache for user info - limit to 500 entries for memory efficiency
 const userInfoCache = new Map<

@@ -5,9 +5,9 @@ import {
   markStreamerNotified,
   markStreamerOffline,
   getNotifiedStreamers,
-} from "../lib/streamMonitor";
-import type { LiveStreamer } from "../lib/streamMonitor";
-import type { PlatformSession } from "../lib/types";
+} from "../../lib/streamMonitor";
+import type { LiveStreamer } from "../../lib/streamMonitor";
+import type { PlatformSession } from "../../lib/types";
 
 interface UseStreamMonitorOptions {
   session: PlatformSession | undefined;

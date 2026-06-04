@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { resolveBroadcasterId } from "../lib/twitch";
+import { resolveBroadcasterId } from "../../lib/twitch";
 
 interface HypeTrainEvent {
   id: string;

@@ -10,12 +10,13 @@ import YouTubeLinker from "./YouTubeLinker";
 import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
 import { applyTheme } from "../lib/themes";
 import { getYoutubeLinkForChannel, getYoutubeLinks } from "../lib/youtubeLinks";
-import { getAllFollowedChannels, getStreamStatus } from "../lib/twitch";
-import { useStreamMonitor } from "../hooks/useStreamMonitor";
-import { useAuthSessions } from "../hooks/useAuthSessions";
+import { getStreamStatus } from "../lib/twitch";
+import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
+import { useAuthSessions } from "../hooks/app/useAuthSessions";
+import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
 import { markStreamerNotified } from "../lib/streamMonitor";
-import { primeAudioContext } from "../hooks/useTwitchChat";
-import type { MentionSoundType } from "../hooks/useTwitchChat";
+import { primeAudioContext } from "../hooks/chat/useTwitchChat";
+import type { MentionSoundType } from "../hooks/chat/useTwitchChat";
 import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
@@ -45,20 +46,26 @@ export default function AppContainer() {
     youtubeLogout: handleYoutubeLogout,
     clearTwitchSession,
   } = useAuthSessions();
-  const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
-  const [allTwitchChannels, setAllTwitchChannels] = useState<TwitchChannel[]>(
-    [],
-  );
-  const [selectedTwitchChannel, setSelectedTwitchChannel] =
-    useState<string>("");
-  const [selectedTwitchChannelName, setSelectedTwitchChannelName] =
-    useState<string>("");
-  const [
+  const [streamTransition, setStreamTransition] =
+    useState<StreamTransitionInfo | null>(null);
+  const {
+    twitchChannels,
+    allTwitchChannels,
+    sortedChannels,
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
     selectedTwitchChannelDisplayName,
-    setSelectedTwitchChannelDisplayName,
-  ] = useState<string>("");
-  const [hasLoadedChannel, setHasLoadedChannel] = useState(false);
-  const [channelsLoading, setChannelsLoading] = useState(true);
+    channelsLoading,
+    favoriteChannels,
+    setChannelData,
+    toggleFavorite,
+    reset: resetChannels,
+  } = useTwitchChannels({
+    session: sessions.twitch,
+    isInitialAuthLoading: isLoading,
+    onSessionInvalid: clearTwitchSession,
+    onStreamTransition: setStreamTransition,
+  });
   const [leftColumnVisible, setLeftColumnVisible] = useState<
     boolean | undefined
   >(undefined);
@@ -71,7 +78,6 @@ export default function AppContainer() {
     "embed",
   );
   const [viewerCount, setViewerCount] = useState<number | null>(null);
-  const [favoriteChannels, setFavoriteChannels] = useState<string[]>([]); // Favorite channel IDs
   const [showWatchlistManager, setShowWatchlistManager] = useState(false);
   const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
   const [linkedYoutubeUrl, setLinkedYoutubeUrl] = useState<string | null>(null);
@@ -99,8 +105,6 @@ export default function AppContainer() {
   >([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
-  const [streamTransition, setStreamTransition] =
-    useState<StreamTransitionInfo | null>(null);
   const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
   const [eventSoundVolume, setEventSoundVolume] = useState(1);
   const [ignoredUsers, setIgnoredUsers] = useState<string[]>([]);
@@ -157,128 +161,17 @@ export default function AppContainer() {
 
   // Keep the stream embed visible when the mobile keyboard opens
 
-  // Fetch Twitch channels when user logs in
+  // Mark app-level loading complete once the initial channel fetch settles.
+  // Mirrors the pre-extraction behavior: if there's no session or the session
+  // already has a token, the channel fetch is the last gate before rendering.
   useEffect(() => {
-    const fetchChannels = async () => {
-      if (sessions.twitch && sessions.twitch.accessToken) {
-        try {
-          const accessToken = sessions.twitch.accessToken;
-
-          const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-
-          const allChannels = await getAllFollowedChannels(
-            accessToken,
-            clientId,
-            sessions.twitch.userId,
-          );
-
-          setAllTwitchChannels(allChannels);
-
-          const onlineChannels = allChannels.filter((ch) => ch.viewerCount > 0);
-          setTwitchChannels(onlineChannels);
-
-          setHasLoadedChannel(false);
-        } catch (error) {
-          console.error("Failed to fetch Twitch channels:", error);
-          const is401Error =
-            error instanceof Error && error.message.includes("401");
-          if (is401Error) {
-            console.log("Received 401 error, clearing session...");
-            clearTwitchSession();
-          }
-        } finally {
-          setChannelsLoading(false);
-        }
-      }
-    };
-
-    fetchChannels().finally(() => {
-      if (!sessions.twitch || sessions.twitch.accessToken) {
-        setIsLoading(false);
-      }
-    });
-
-    // Fetch channels every 2 minutes instead of 30s to avoid rate limiting
-    const interval = setInterval(fetchChannels, 120000);
-    return () => clearInterval(interval);
-  }, [sessions.twitch]);
-
-  const setChannelData = useCallback(
-    (channelId: string, transitionInfo?: StreamTransitionInfo) => {
-      // Search by numeric ID first, then by login name, across online and all channels
-      const channel =
-        twitchChannels.find((ch) => ch.id === channelId) ||
-        allTwitchChannels.find((ch) => ch.id === channelId) ||
-        twitchChannels.find((ch) => ch.name === channelId) ||
-        allTwitchChannels.find((ch) => ch.name === channelId);
-
-      // Use the resolved numeric ID so 7TV/BTTV/Twitch APIs receive the correct value
-      const resolvedId = channel?.id || channelId;
-
-      const ownSession = sessions.twitch;
-      const isOwnUserId = !channel && ownSession?.userId === channelId;
-
-      const isOwnLogin =
-        !channel &&
-        !!ownSession?.username &&
-        ownSession.username.toLowerCase() === channelId.toLowerCase();
-
-      const channelName =
-        channel?.name ||
-        (isOwnUserId || isOwnLogin
-          ? (ownSession!.username ?? channelId)
-          : channelId);
-      const channelDisplayName =
-        channel?.displayName ||
-        (isOwnUserId || isOwnLogin
-          ? (ownSession!.displayName ?? channelId)
-          : channel?.name || channelId);
-      const finalId =
-        isOwnUserId || isOwnLogin
-          ? ownSession!.userId || resolvedId
-          : resolvedId;
-
-      setSelectedTwitchChannel(finalId);
-      setSelectedTwitchChannelName(channelName);
-      setSelectedTwitchChannelDisplayName(channelDisplayName);
-
-      if (transitionInfo) {
-        setStreamTransition(transitionInfo);
-      }
-
-      // Update URL to /channel/<name>
-      window.history.pushState({}, "", `/channel/${channelName}`);
-    },
-    [twitchChannels, allTwitchChannels, sessions.twitch],
-  );
-
-  // Restore channel from URL path /channel/<name>
-  useEffect(() => {
-    const match = window.location.pathname.match(/^\/channel\/([^\/]+)$/);
-    const channelParam = match ? decodeURIComponent(match[1]) : null;
-
-    if (channelParam && !hasLoadedChannel) {
-      // Search online followed channels first, then all followed channels
-      const foundChannel =
-        twitchChannels.find((ch) => ch.name === channelParam) ||
-        allTwitchChannels.find((ch) => ch.name === channelParam);
-
-      if (foundChannel) {
-        setChannelData(foundChannel.id);
-        setHasLoadedChannel(true);
-      } else if (!isLoading) {
-        // Channels have finished loading and this channel isn't in the followed list
-        setChannelData(channelParam);
-        setHasLoadedChannel(true);
-      }
+    if (
+      !channelsLoading &&
+      (!sessions.twitch || sessions.twitch.accessToken)
+    ) {
+      setIsLoading(false);
     }
-  }, [
-    twitchChannels,
-    allTwitchChannels,
-    hasLoadedChannel,
-    isLoading,
-    setChannelData,
-  ]);
+  }, [channelsLoading, sessions.twitch, setIsLoading]);
 
   useEffect(() => {
     const saved = localStorage.getItem("mixchat_video_ratio");
@@ -428,25 +321,6 @@ export default function AppContainer() {
     sessions.youtube,
     sessions.twitch,
   ]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_favorite_channels");
-    if (saved) {
-      try {
-        setFavoriteChannels(JSON.parse(saved));
-      } catch (error) {
-        console.error("Failed to load favorite channels:", error);
-      }
-    }
-  }, []);
-
-  // Save favorite channels to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_favorite_channels",
-      JSON.stringify(favoriteChannels),
-    );
-  }, [favoriteChannels]);
 
   // Load embed default open config from localStorage
   useEffect(() => {
@@ -840,22 +714,8 @@ export default function AppContainer() {
   // to clear non-auth state (channel list, current selection, favorites).
   const handleTwitchLogout = useCallback(() => {
     twitchLogout();
-    setTwitchChannels([]);
-    setChannelsLoading(true);
-    setSelectedTwitchChannel("");
-    setSelectedTwitchChannelName("");
-    setFavoriteChannels([]);
-  }, [twitchLogout]);
-
-  const toggleFavorite = useCallback((channelId: string) => {
-    setFavoriteChannels((prev) => {
-      if (prev.includes(channelId)) {
-        return prev.filter((id) => id !== channelId);
-      } else {
-        return [...prev, channelId];
-      }
-    });
-  }, []);
+    resetChannels();
+  }, [twitchLogout, resetChannels]);
 
   const handleEventSoundChange = useCallback(
     (eventType: string, soundData: string | null) => {
@@ -870,18 +730,6 @@ export default function AppContainer() {
       });
     },
     [],
-  );
-
-  const sortedChannels = useMemo(
-    () =>
-      [...twitchChannels].sort((a, b) => {
-        const aIsFavorite = favoriteChannels.includes(a.id);
-        const bIsFavorite = favoriteChannels.includes(b.id);
-        if (aIsFavorite && !bIsFavorite) return -1;
-        if (!aIsFavorite && bIsFavorite) return 1;
-        return 0;
-      }),
-    [twitchChannels, favoriteChannels],
   );
 
   const linkedYoutubeChannelIds = useMemo(
@@ -1026,9 +874,7 @@ export default function AppContainer() {
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
-              setSelectedTwitchChannel("");
-              setSelectedTwitchChannelName("");
-              setSelectedTwitchChannelDisplayName("");
+              resetChannels();
               setStreamTransition(null);
               window.history.pushState({}, "", "/");
             }}

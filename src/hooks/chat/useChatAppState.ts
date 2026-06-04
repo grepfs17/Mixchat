@@ -9,8 +9,8 @@ import {
   initializeEmotes,
   clearEmoteCache,
   subscribeTo7TVUpdates,
-} from "../lib/emotes";
-import { initializeBadges, clearBadgeCache } from "../lib/badges";
+} from "../../lib/emotes";
+import { initializeBadges, clearBadgeCache } from "../../lib/badges";
 import {
   getStreamStatus,
   getRecentMessages,
@@ -29,8 +29,8 @@ import {
   sendAnnouncement,
   sendShoutout,
   warnChatUser,
-} from "../lib/twitch";
-import { saveMessage, pruneMessages } from "../lib/chatHistoryStorage";
+} from "../../lib/twitch";
+import { saveMessage, pruneMessages } from "../../lib/chatHistoryStorage";
 import type {
   ChatMessage,
   Platform,
@@ -38,12 +38,12 @@ import type {
   ChatFont,
   ChatTheme,
   MessageType,
-} from "../lib/types";
-import { MAX_DISPLAYED_MESSAGES } from "../lib/types";
-import type { YTMessage } from "../components/chat/unified/types";
-import type { ChatDisplayHandle } from "../components/chat/display";
-import type { UnifiedChatHandle } from "../components/chat/unified";
-import type { HypeTrainState } from "../components/chat/shared/HypeTrainBanner";
+} from "../../lib/types";
+import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
+import type { YTMessage } from "../../components/chat/unified/types";
+import type { ChatDisplayHandle } from "../../components/chat/display";
+import type { UnifiedChatHandle } from "../../components/chat/unified";
+import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
 
 const STREAM_STATUS_POLL_INTERVAL = 60000;
 const UPTIME_UPDATE_INTERVAL = 1000;
@@ -728,7 +728,7 @@ export function useChatAppState({
           twitchSession?.userId &&
           selectedTwitchChannelName
         ) {
-          const twitchLib = await import("../lib/twitch");
+          const twitchLib = await import("../../lib/twitch");
           let follows = await twitchLib.isFollowingChannel(
             twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,

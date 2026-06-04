@@ -10,8 +10,8 @@ import React, {
 } from "react";
 import type { ChatMessage, Platform, ChatFont } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
-import { useChatTouchGestures } from "../../../hooks/useChatTouchGestures";
-import { useChatAutoScroll } from "../../../hooks/useChatAutoScroll";
+import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
+import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import ChatHeader from "./ChatHeader";
 import ChatMessageItem from "./ChatMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";

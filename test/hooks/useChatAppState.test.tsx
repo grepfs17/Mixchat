@@ -1,9 +1,9 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useChatAppState } from "../../src/hooks/useChatAppState";
+import { useChatAppState } from "../../src/hooks/chat/useChatAppState";
 import type { PlatformSession } from "../../src/lib/types";
 
-vi.mock("../../src/hooks/useTwitchChat", () => ({
+vi.mock("../../src/hooks/chat/useTwitchChat", () => ({
   useTwitchChat: () => ({
     sendMessage: vi.fn(),
     slowModeWaitTime: null,
@@ -11,7 +11,7 @@ vi.mock("../../src/hooks/useTwitchChat", () => ({
   }),
 }));
 
-vi.mock("../../src/hooks/useRaidDetection", () => ({
+vi.mock("../../src/hooks/chat/useRaidDetection", () => ({
   useRaidDetection: vi.fn(),
 }));
 

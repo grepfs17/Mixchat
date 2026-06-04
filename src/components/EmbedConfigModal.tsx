@@ -20,7 +20,7 @@ import {
 import {
   playMentionSoundPreview,
   MENTION_SOUND_OPTIONS,
-} from "../hooks/useTwitchChat";
+} from "../hooks/chat/useTwitchChat";
 import { exportSettings, importSettings } from "../lib/settingsBackup";
 import {
   backupSettingsToDrive,

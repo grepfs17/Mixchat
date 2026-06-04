@@ -4,7 +4,7 @@ import { getColorFromName } from "../../../lib/chatColors";
 import type { ChatFont } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import YTMessageParts from "../../YTMessageParts";
-import { useScrollToBottomOnKeyboard } from "../../../hooks/useScrollToBottomOnKeyboard";
+import { useScrollToBottomOnKeyboard } from "../../../hooks/chat/useScrollToBottomOnKeyboard";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
 
 interface YouTubeChatProps {
