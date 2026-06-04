@@ -14,6 +14,7 @@ import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
 import { useChatSettings } from "../hooks/app/useChatSettings";
 import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
 import { useEmbedState } from "../hooks/app/useEmbedState";
+import { useUiState } from "../hooks/app/useUiState";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
@@ -135,11 +136,14 @@ export default function AppContainer() {
     twitchAccessToken: sessions.twitch?.accessToken,
     linkedYoutubeUrl,
   });
-  const [leftColumnVisible, setLeftColumnVisible] = useState<
-    boolean | undefined
-  >(undefined);
-  const [showWatchlistManager, setShowWatchlistManager] = useState(false);
-  const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
+  const {
+    leftColumnVisible,
+    setLeftColumnVisible,
+    showWatchlistManager,
+    setShowWatchlistManager,
+    showYoutubeLinker,
+    setShowYoutubeLinker,
+  } = useUiState();
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -160,35 +164,8 @@ export default function AppContainer() {
     checkInterval: 60000, // Check every minute
   });
 
-  useEffect(() => {
-    // Set initial value based on screen width
-    setLeftColumnVisible(window.innerWidth >= 1366);
-
-    const handleResize = () => {
-      // Auto-show sidebar when resizing to a wide screen, but don't
-      // force-close it on narrow screens — the user may have explicitly
-      // opened it on mobile (e.g. tapping the hamburger button).
-      // This also prevents the mobile virtual-keyboard resize from
-      // closing the sidebar when the user taps an input field.
-      if (window.innerWidth >= 1366) {
-        setLeftColumnVisible(true);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Pin the viewport height once on mount so the stream embed height is immune
-  // to the mobile virtual keyboard resizing the layout viewport.
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--initial-vh-px",
-      `${window.innerHeight}px`,
-    );
-  }, []);
-
-  // Keep the stream embed visible when the mobile keyboard opens
+  // Layout-side effects (resize listener, viewport height pin, modal flags)
+  // are owned by useUiState.
 
   // Mark app-level loading complete once the initial channel fetch settles.
   // Mirrors the pre-extraction behavior: if there's no session or the session

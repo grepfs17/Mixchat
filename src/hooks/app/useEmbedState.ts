@@ -37,7 +37,9 @@ export type UseEmbedStateResult = {
   viewerCount: number | null;
 };
 
-export function useEmbedState(options: UseEmbedStateOptions): UseEmbedStateResult {
+export function useEmbedState(
+  options: UseEmbedStateOptions,
+): UseEmbedStateResult {
   const {
     selectedTwitchChannel,
     selectedTwitchChannelName,
