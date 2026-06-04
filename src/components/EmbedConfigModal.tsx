@@ -143,7 +143,9 @@ export default function EmbedConfigModal({
     setShareLink(null);
     const result = await restoreSettingsFromDrive();
     if (result.ok) {
-      setDriveMessage(`Loaded ${result.count} settings from Drive. Reloading...`);
+      setDriveMessage(
+        `Loaded ${result.count} settings from Drive. Reloading...`,
+      );
       setTimeout(() => window.location.reload(), 1200);
     } else {
       setDriveMessage(result.message);
