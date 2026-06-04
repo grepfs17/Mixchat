@@ -12,34 +12,15 @@ import { applyTheme } from "../lib/themes";
 import { getYoutubeLinkForChannel, getYoutubeLinks } from "../lib/youtubeLinks";
 import { getAllFollowedChannels, getStreamStatus } from "../lib/twitch";
 import { useStreamMonitor } from "../hooks/useStreamMonitor";
-import { useTokenRefresh } from "../hooks/useTokenRefresh";
+import { useAuthSessions } from "../hooks/useAuthSessions";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/useTwitchChat";
 import type { MentionSoundType } from "../hooks/useTwitchChat";
 import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
-import { listenForOAuthSession } from "../lib/oauthSession";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
 import LandingPage from "./LandingPage";
-
-// Don't save access tokens to localStorage for security.
-// We keep them in memory and let useTokenRefresh handle re-populating them
-// when the page loads by hitting the secure refresh endpoint.
-function stripTokens<T extends Record<string, PlatformSession | undefined>>(
-  sessions: T,
-): T {
-  const stripped = {} as T;
-  for (const key of Object.keys(sessions) as Array<keyof T>) {
-    const session = sessions[key];
-    if (session) {
-      // Omit accessToken from persisted copy; keep everything else.
-      const { accessToken: _dropped, ...rest } = session;
-      stripped[key] = rest as T[typeof key];
-    }
-  }
-  return stripped;
-}
 
 export interface TwitchChannel {
   id: string;
@@ -53,10 +34,17 @@ export interface TwitchChannel {
 }
 
 export default function AppContainer() {
-  const [sessions, setSessions] = useState<{
-    twitch?: PlatformSession;
-    youtube?: PlatformSession;
-  }>({});
+  const {
+    sessions,
+    isLoggingIn,
+    isLoading,
+    setIsLoading,
+    twitchLogin: handleTwitchLogin,
+    twitchLogout,
+    youtubeLogin: handleYoutubeLogin,
+    youtubeLogout: handleYoutubeLogout,
+    clearTwitchSession,
+  } = useAuthSessions();
   const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
   const [allTwitchChannels, setAllTwitchChannels] = useState<TwitchChannel[]>(
     [],
@@ -70,8 +58,6 @@ export default function AppContainer() {
     setSelectedTwitchChannelDisplayName,
   ] = useState<string>("");
   const [hasLoadedChannel, setHasLoadedChannel] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [leftColumnVisible, setLeftColumnVisible] = useState<
     boolean | undefined
@@ -129,10 +115,6 @@ export default function AppContainer() {
   );
   const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
 
-  // Track if we've successfully loaded sessions yet to prevent overwriting stored data
-  const hasLoadedSessionsRef = useRef(false);
-  // Track if the save-effect has run to avoid saving on first mount
-  const isFirstSaveRef = useRef(true);
   // Prevent saving event sounds until the initial IndexedDB load completes
   const eventSoundsLoadedRef = useRef(false);
 
@@ -145,75 +127,6 @@ export default function AppContainer() {
     checkInterval: 60000, // Check every minute
   });
 
-  // Token refresh management
-  const handleTwitchSessionUpdate = useCallback(
-    (updatedSession: PlatformSession) => {
-      setSessions((prev) => {
-        const updatedSessions = { ...prev, twitch: updatedSession };
-        localStorage.setItem(
-          "mixchat_sessions",
-          JSON.stringify(stripTokens(updatedSessions)),
-        );
-        return updatedSessions;
-      });
-    },
-    [],
-  );
-
-  const handleTwitchRefreshError = useCallback((error: Error) => {
-    console.error("Token refresh permanently failed:", error);
-    setSessions({});
-    localStorage.removeItem("mixchat_sessions");
-  }, []);
-
-  const handleYoutubeSessionUpdate = useCallback(
-    (updatedSession: PlatformSession) => {
-      setSessions((prev) => {
-        const updatedSessions = { ...prev, youtube: updatedSession };
-        localStorage.setItem(
-          "mixchat_sessions",
-          JSON.stringify(stripTokens(updatedSessions)),
-        );
-        return updatedSessions;
-      });
-    },
-    [],
-  );
-
-  const handleYoutubeRefreshError = useCallback((error: Error) => {
-    console.error("YouTube token refresh permanently failed:", error);
-    setSessions((prev) => {
-      const updated = { ...prev };
-      delete updated.youtube;
-      localStorage.setItem(
-        "mixchat_sessions",
-        JSON.stringify(stripTokens(updated)),
-      );
-      return updated;
-    });
-  }, []);
-
-  useTokenRefresh(
-    sessions.twitch || null,
-    handleTwitchSessionUpdate,
-    handleTwitchRefreshError,
-    {
-      warningThreshold: 10 * 60 * 1000, // Start refresh 10 min before expiry
-      checkInterval: 120 * 1000, // Check every 2 minutes
-      maxRetries: 3, // Retry up to 3 times
-    },
-  );
-  // Also refresh YouTube tokens when necessary
-  useTokenRefresh(
-    sessions.youtube || null,
-    handleYoutubeSessionUpdate,
-    handleYoutubeRefreshError,
-    {
-      warningThreshold: 10 * 60 * 1000,
-      checkInterval: 120 * 1000,
-      maxRetries: 3,
-    },
-  );
   useEffect(() => {
     // Set initial value based on screen width
     setLeftColumnVisible(window.innerWidth >= 1366);
@@ -244,41 +157,6 @@ export default function AppContainer() {
 
   // Keep the stream embed visible when the mobile keyboard opens
 
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_sessions");
-    if (saved) {
-      try {
-        const parsedSessions = JSON.parse(saved);
-
-        // Ensure we have expiresAt set so useTokenRefresh triggers immediately.
-        // On page reload, the accessToken is missing (stripped for security),
-        // so we set expiresAt to current time to trigger an immediate refresh.
-        const sessionsWithExpiry = { ...parsedSessions };
-        if (sessionsWithExpiry.twitch && !sessionsWithExpiry.twitch.expiresAt) {
-          sessionsWithExpiry.twitch.expiresAt = new Date().getTime();
-        }
-        if (
-          sessionsWithExpiry.youtube &&
-          !sessionsWithExpiry.youtube.expiresAt
-        ) {
-          sessionsWithExpiry.youtube.expiresAt = new Date().getTime();
-        }
-
-        setSessions(sessionsWithExpiry);
-        if (!sessionsWithExpiry.twitch) {
-          setIsLoading(false);
-        }
-      } catch (e) {
-        console.error("Failed to load sessions:", e);
-        setIsLoading(false);
-      }
-    } else {
-      setIsLoading(false);
-    }
-    // Mark the restore as done so the save-effect knows it's safe to persist.
-    hasLoadedSessionsRef.current = true;
-  }, []);
-
   // Fetch Twitch channels when user logs in
   useEffect(() => {
     const fetchChannels = async () => {
@@ -306,8 +184,7 @@ export default function AppContainer() {
             error instanceof Error && error.message.includes("401");
           if (is401Error) {
             console.log("Received 401 error, clearing session...");
-            setSessions({});
-            localStorage.removeItem("mixchat_sessions");
+            clearTwitchSession();
           }
         } finally {
           setChannelsLoading(false);
@@ -402,22 +279,6 @@ export default function AppContainer() {
     isLoading,
     setChannelData,
   ]);
-
-  useEffect(() => {
-    // Skip the very first execution: sessions is still the initial `{}` from
-    // the mount render and the load-effect hasn't restored localStorage yet
-    // (even though both effects run in the same commit, the save effect closes
-    // over the stale initial value). We let the load-effect be the sole writer
-    // on first mount; after that every sessions change is persisted normally.
-    if (isFirstSaveRef.current) {
-      isFirstSaveRef.current = false;
-      return;
-    }
-    localStorage.setItem(
-      "mixchat_sessions",
-      JSON.stringify(stripTokens(sessions)),
-    );
-  }, [sessions]);
 
   useEffect(() => {
     const saved = localStorage.getItem("mixchat_video_ratio");
@@ -975,196 +836,16 @@ export default function AppContainer() {
     };
   }, [isDragging]);
 
-  const handleTwitchLogin = useCallback(() => {
-    const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-    const redirectUri = import.meta.env.PUBLIC_TWITCH_REDIRECT_URI;
-
-    if (!clientId) {
-      alert("Twitch Client ID not configured");
-      return;
-    }
-
-    // Generate a random CSRF state token and persist it for the callback to verify.
-    const state = crypto.randomUUID();
-    sessionStorage.setItem("twitch_oauth_state", state);
-    // Also persist to localStorage as a fallback for mobile browsers where window.open
-    // creates a new tab instead of a popup (new tabs do not inherit sessionStorage).
-    try {
-      localStorage.setItem(
-        "twitch_oauth_state_fb",
-        JSON.stringify({
-          state,
-          returnUrl: window.location.href,
-          exp: Date.now() + 5 * 60 * 1000, // 5-minute expiry
-        }),
-      );
-    } catch (_) {}
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope:
-        "chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions channel:read:hype_train moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids",
-      state,
-    });
-
-    const authUrl = `https://id.twitch.tv/oauth2/authorize?${params}`;
-
-    // On mobile, popups are not supported — navigate the current tab instead.
-    // The callback stores the session and redirects back to the app.
-    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(
-      navigator.userAgent,
-    );
-    if (isMobileDevice) {
-      window.location.href = authUrl;
-      return;
-    }
-
-    // Desktop: open OAuth in a popup so the main window's React state is preserved.
-    const width = 600;
-    const height = 700;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      authUrl,
-      "twitch_oauth",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
-
-    // If the popup was blocked by the browser, fall back to a same-tab redirect.
-    if (!popup || popup.closed) {
-      window.location.href = authUrl;
-      return;
-    }
-
-    setIsLoggingIn(true);
-
-    const removeMessageListener = listenForOAuthSession(
-      "twitch",
-      popup,
-      (session) =>
-        setSessions((prev) => ({ ...prev, twitch: session as PlatformSession })),
-      () => setIsLoggingIn(false),
-    );
-
-    // Also listen for storage events as a fallback for cross-origin popups
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "mixchat_youtube_auth" && e.newValue) {
-        try {
-          const { session } = JSON.parse(e.newValue);
-          if (session && session.platform === "youtube") {
-            setSessions((prev) => ({ ...prev, youtube: session }));
-            localStorage.removeItem("mixchat_youtube_auth");
-          }
-        } catch (err) {
-          console.error("Failed to parse youtube auth storage event", err);
-        }
-      }
-      // Twitch session written by the callback (new-tab/mobile flow).
-      if (e.key === "mixchat_sessions" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && parsed.twitch) {
-            setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
-            setIsLoggingIn(false);
-            if (popup && !popup.closed) popup.close();
-            removeMessageListener();
-            window.removeEventListener("storage", onStorage);
-          }
-        } catch (err) {
-          console.error("Failed to parse sessions storage event", err);
-        }
-      }
-    };
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      removeMessageListener();
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
+  // Auth login flows now live in useAuthSessions. The Twitch logout also has
+  // to clear non-auth state (channel list, current selection, favorites).
   const handleTwitchLogout = useCallback(() => {
-    setSessions((prev) => {
-      const next = { ...prev };
-      delete next.twitch;
-      return next;
-    });
+    twitchLogout();
     setTwitchChannels([]);
     setChannelsLoading(true);
     setSelectedTwitchChannel("");
     setSelectedTwitchChannelName("");
     setFavoriteChannels([]);
-  }, []);
-
-  const handleYoutubeLogin = useCallback(() => {
-    const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-    const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
-
-    if (!clientId) {
-      alert("YouTube Client ID not configured");
-      return;
-    }
-
-    // Generate a random CSRF state token and persist it for the callback to verify.
-    const state = crypto.randomUUID();
-    sessionStorage.setItem("youtube_oauth_state", state);
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope:
-        "https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/drive.file",
-      access_type: "offline",
-      prompt: "consent",
-      state,
-    });
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-
-    // Open OAuth in a popup so the main window's React state is preserved.
-    // The callback page posts the session back via postMessage.
-    const width = 600;
-    const height = 700;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      authUrl,
-      "youtube_oauth",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
-
-    setIsLoggingIn(true);
-
-    const removeMessageListener = listenForOAuthSession(
-      "youtube",
-      popup,
-      (session) =>
-        setSessions((prev) => ({ ...prev, youtube: session as PlatformSession })),
-      () => setIsLoggingIn(false),
-    );
-
-    // Clean up listener if popup is closed without completing auth
-    const pollClosed = setInterval(() => {
-      if (popup && popup.closed) {
-        clearInterval(pollClosed);
-        setIsLoggingIn(false);
-        removeMessageListener();
-      }
-    }, 500);
-  }, []);
-
-  const handleYoutubeLogout = useCallback(() => {
-    setSessions((prev) => {
-      const next = { ...prev };
-      delete next.youtube;
-      return next;
-    });
-  }, []);
+  }, [twitchLogout]);
 
   const toggleFavorite = useCallback((channelId: string) => {
     setFavoriteChannels((prev) => {
