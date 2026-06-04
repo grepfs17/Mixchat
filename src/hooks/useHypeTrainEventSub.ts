@@ -11,7 +11,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { resolveBroadcasterId } from "../lib/twitch";
 
-export interface HypeTrainEvent {
+interface HypeTrainEvent {
   id: string;
   broadcasterUserId: string;
   broadcasterUserName: string;

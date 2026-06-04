@@ -71,7 +71,6 @@ export {
   selectProxy,
   markProxyFailed,
   markProxyOk,
-  YT_PROXIES,
   PROXY_MAX_FAILS,
 };
 
