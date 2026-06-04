@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatFont, ChatTheme } from "../../lib/types";
 import { applyTheme } from "../../lib/themes";
-import {
-  loadEventSounds,
-  saveEventSounds,
-} from "../../lib/eventSoundStorage";
+import { loadEventSounds, saveEventSounds } from "../../lib/eventSoundStorage";
 import type { MentionSoundType } from "../chat/useTwitchChat";
 
 function useLocalStorageState<T>(
@@ -81,10 +78,8 @@ export function useChatSettings(): UseChatSettingsResult {
 
   const [unifyChatEnabled, setUnifyChatEnabledRaw] =
     useLocalStorageState<boolean>("mixchat_unify_chat", false);
-  const [useYoutubeEmbed, setUseYoutubeEmbedRaw] = useLocalStorageState<boolean>(
-    "mixchat_use_youtube_embed",
-    true,
-  );
+  const [useYoutubeEmbed, setUseYoutubeEmbedRaw] =
+    useLocalStorageState<boolean>("mixchat_use_youtube_embed", true);
   // unifyChat and youtubeEmbed are mutually exclusive — turning one on forces
   // the other off so the user can't end up with conflicting embed modes.
   const setUnifyChatEnabled = useCallback((value: boolean) => {
@@ -111,7 +106,10 @@ export function useChatSettings(): UseChatSettingsResult {
     0.2,
   );
   const [mentionSoundType, setMentionSoundType] =
-    useLocalStorageState<MentionSoundType>("mixchat_mention_sound_type", "ding");
+    useLocalStorageState<MentionSoundType>(
+      "mixchat_mention_sound_type",
+      "ding",
+    );
   const [showDeletedMessages, setShowDeletedMessages] =
     useLocalStorageState<boolean>("mixchat_show_deleted_messages", true);
   const [compactActions, setCompactActions] = useLocalStorageState<boolean>(

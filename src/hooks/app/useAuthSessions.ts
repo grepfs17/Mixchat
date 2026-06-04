@@ -207,7 +207,10 @@ export function useAuthSessions(): UseAuthSessionsResult {
       "twitch",
       popup,
       (session) =>
-        setSessions((prev) => ({ ...prev, twitch: session as PlatformSession })),
+        setSessions((prev) => ({
+          ...prev,
+          twitch: session as PlatformSession,
+        })),
       () => setIsLoggingIn(false),
     );
 
@@ -298,7 +301,10 @@ export function useAuthSessions(): UseAuthSessionsResult {
       "youtube",
       popup,
       (session) =>
-        setSessions((prev) => ({ ...prev, youtube: session as PlatformSession })),
+        setSessions((prev) => ({
+          ...prev,
+          youtube: session as PlatformSession,
+        })),
       () => setIsLoggingIn(false),
     );
 

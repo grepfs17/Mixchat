@@ -38,8 +38,12 @@ export type UseTwitchChannelsResult = {
 export function useTwitchChannels(
   options: UseTwitchChannelsOptions,
 ): UseTwitchChannelsResult {
-  const { session, isInitialAuthLoading, onSessionInvalid, onStreamTransition } =
-    options;
+  const {
+    session,
+    isInitialAuthLoading,
+    onSessionInvalid,
+    onStreamTransition,
+  } = options;
 
   const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
   const [allTwitchChannels, setAllTwitchChannels] = useState<TwitchChannel[]>(
@@ -49,8 +53,10 @@ export function useTwitchChannels(
     useState<string>("");
   const [selectedTwitchChannelName, setSelectedTwitchChannelName] =
     useState<string>("");
-  const [selectedTwitchChannelDisplayName, setSelectedTwitchChannelDisplayName] =
-    useState<string>("");
+  const [
+    selectedTwitchChannelDisplayName,
+    setSelectedTwitchChannelDisplayName,
+  ] = useState<string>("");
   const [hasLoadedChannel, setHasLoadedChannel] = useState(false);
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [favoriteChannels, setFavoriteChannels] = useState<string[]>([]);

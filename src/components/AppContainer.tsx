@@ -8,12 +8,12 @@ import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
 import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
-import { getYoutubeLinkForChannel, getYoutubeLinks } from "../lib/youtubeLinks";
 import { getStreamStatus } from "../lib/twitch";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
 import { useChatSettings } from "../hooks/app/useChatSettings";
+import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
@@ -104,6 +104,16 @@ export default function AppContainer() {
     setIgnoredUsers,
     handleEventSoundChange,
   } = useChatSettings();
+  const {
+    linkedYoutubeUrl,
+    youtubeStreamVideoId,
+    linkedYoutubeChannelIds,
+    notifyLinksChanged,
+  } = useYoutubeLink({
+    selectedTwitchChannel,
+    twitchSession: sessions.twitch,
+    youtubeSession: sessions.youtube,
+  });
   const [leftColumnVisible, setLeftColumnVisible] = useState<
     boolean | undefined
   >(undefined);
@@ -116,11 +126,6 @@ export default function AppContainer() {
   const [viewerCount, setViewerCount] = useState<number | null>(null);
   const [showWatchlistManager, setShowWatchlistManager] = useState(false);
   const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
-  const [linkedYoutubeUrl, setLinkedYoutubeUrl] = useState<string | null>(null);
-  const [ytLinksVersion, setYtLinksVersion] = useState(0);
-  const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<
-    string | null
-  >(null);
   const [hlsQualities, setHlsQualities] = useState<
     Array<{ label: string; url: string }>
   >([]);
@@ -180,10 +185,7 @@ export default function AppContainer() {
   // Mirrors the pre-extraction behavior: if there's no session or the session
   // already has a token, the channel fetch is the last gate before rendering.
   useEffect(() => {
-    if (
-      !channelsLoading &&
-      (!sessions.twitch || sessions.twitch.accessToken)
-    ) {
+    if (!channelsLoading && (!sessions.twitch || sessions.twitch.accessToken)) {
       setIsLoading(false);
     }
   }, [channelsLoading, sessions.twitch, setIsLoading]);
@@ -216,62 +218,7 @@ export default function AppContainer() {
     }
   }, [linkedYoutubeUrl, playerType]);
 
-  // Fetch YouTube live video ID for the stream embed
-  useEffect(() => {
-    if (!linkedYoutubeUrl) {
-      setYoutubeStreamVideoId(null);
-      return;
-    }
-
-    // If URL is a direct video link, extract the ID
-    try {
-      if (linkedYoutubeUrl.includes("v=")) {
-        setYoutubeStreamVideoId(
-          new URLSearchParams(new URL(linkedYoutubeUrl).search).get("v"),
-        );
-        return;
-      } else if (linkedYoutubeUrl.includes("youtu.be/")) {
-        setYoutubeStreamVideoId(
-          linkedYoutubeUrl.split("youtu.be/")[1].split("?")[0],
-        );
-        return;
-      } else if (linkedYoutubeUrl.includes("/live/")) {
-        setYoutubeStreamVideoId(
-          linkedYoutubeUrl.split("/live/")[1].split("?")[0],
-        );
-        return;
-      }
-    } catch {
-      /* not a direct video URL */
-    }
-
-    // Otherwise resolve via API
-    let cancelled = false;
-    const fetchId = async () => {
-      try {
-        const params = new URLSearchParams();
-        params.append("action", "getLiveVideo");
-        params.append("channelUrl", linkedYoutubeUrl);
-
-        const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
-        const data = await res.json();
-        if (!cancelled && res.ok && data.videoId) {
-          setYoutubeStreamVideoId(data.videoId);
-        } else if (!cancelled) {
-          setYoutubeStreamVideoId(null);
-        }
-      } catch {
-        if (!cancelled) setYoutubeStreamVideoId(null);
-      }
-    };
-
-    fetchId();
-    const interval = setInterval(fetchId, 600000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [linkedYoutubeUrl]);
+  // Fetch YouTube live video ID for the stream embed is handled by useYoutubeLink.
 
   useEffect(() => {
     if (
@@ -308,34 +255,7 @@ export default function AppContainer() {
     return () => clearInterval(interval);
   }, [selectedTwitchChannel, sessions.twitch]);
 
-  // Look up linked YouTube URL for the selected channel
-  useEffect(() => {
-    if (selectedTwitchChannel) {
-      const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
-      if (storedLink) {
-        setLinkedYoutubeUrl(storedLink);
-      } else if (
-        sessions.youtube &&
-        sessions.twitch &&
-        (selectedTwitchChannel === sessions.twitch.userId ||
-          selectedTwitchChannel === sessions.twitch.username)
-      ) {
-        // If viewing our own channel and logged into YouTube, use our own channel
-        setLinkedYoutubeUrl(
-          `https://www.youtube.com/channel/${sessions.youtube.userId}`,
-        );
-      } else {
-        setLinkedYoutubeUrl(null);
-      }
-    } else {
-      setLinkedYoutubeUrl(null);
-    }
-  }, [
-    selectedTwitchChannel,
-    ytLinksVersion,
-    sessions.youtube,
-    sessions.twitch,
-  ]);
+  // Linked YouTube URL lookup is handled by useYoutubeLink.
 
   // Handle mouse events for resizing
   useEffect(() => {
@@ -372,11 +292,6 @@ export default function AppContainer() {
     twitchLogout();
     resetChannels();
   }, [twitchLogout, resetChannels]);
-
-  const linkedYoutubeChannelIds = useMemo(
-    () => getYoutubeLinks().map((l) => l.twitchChannelId),
-    [ytLinksVersion],
-  );
 
   // While sessions are being restored from localStorage, render skeleton cards
   if (isLoading) {
@@ -810,7 +725,7 @@ export default function AppContainer() {
         <YouTubeLinker
           availableChannels={allTwitchChannels}
           onClose={() => setShowYoutubeLinker(false)}
-          onLinksChanged={() => setYtLinksVersion((v) => v + 1)}
+          onLinksChanged={notifyLinksChanged}
         />
       )}
 
