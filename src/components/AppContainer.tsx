@@ -8,12 +8,12 @@ import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
 import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
-import { getStreamStatus } from "../lib/twitch";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
 import { useChatSettings } from "../hooks/app/useChatSettings";
 import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
+import { useEmbedState } from "../hooks/app/useEmbedState";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
@@ -114,23 +114,32 @@ export default function AppContainer() {
     twitchSession: sessions.twitch,
     youtubeSession: sessions.youtube,
   });
+  const {
+    videoRatio,
+    setVideoRatio,
+    isDragging,
+    setIsDragging,
+    embedRef,
+    playerType,
+    setPlayerType,
+    hlsQualities,
+    setHlsQualities,
+    selectedHlsQualityIdx,
+    setSelectedHlsQualityIdx,
+    showHlsQualityMenu,
+    setShowHlsQualityMenu,
+    viewerCount,
+  } = useEmbedState({
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
+    twitchAccessToken: sessions.twitch?.accessToken,
+    linkedYoutubeUrl,
+  });
   const [leftColumnVisible, setLeftColumnVisible] = useState<
     boolean | undefined
   >(undefined);
-  const [videoRatio, setVideoRatio] = useState(70); // Default 75% video
-  const [isDragging, setIsDragging] = useState(false);
-  const embedRef = useRef<HTMLDivElement>(null);
-  const [playerType, setPlayerType] = useState<"embed" | "m3u8" | "youtube">(
-    "embed",
-  );
-  const [viewerCount, setViewerCount] = useState<number | null>(null);
   const [showWatchlistManager, setShowWatchlistManager] = useState(false);
   const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
-  const [hlsQualities, setHlsQualities] = useState<
-    Array<{ label: string; url: string }>
-  >([]);
-  const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
-  const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -190,101 +199,8 @@ export default function AppContainer() {
     }
   }, [channelsLoading, sessions.twitch, setIsLoading]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_video_ratio");
-    if (saved) {
-      setVideoRatio(Number(saved));
-    }
-  }, []);
-
-  // Save video ratio to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_video_ratio", String(videoRatio));
-  }, [videoRatio]);
-
-  // Player always defaults to Twitch embed on load — no localStorage restore
-
-  // Reset HLS quality state when channel or player type changes
-  useEffect(() => {
-    setHlsQualities([]);
-    setSelectedHlsQualityIdx(0);
-    setShowHlsQualityMenu(false);
-  }, [selectedTwitchChannelName, playerType]);
-
-  // If player is set to youtube but there's no linked URL, fall back to embed
-  useEffect(() => {
-    if (playerType === "youtube" && !linkedYoutubeUrl) {
-      setPlayerType("embed");
-    }
-  }, [linkedYoutubeUrl, playerType]);
-
-  // Fetch YouTube live video ID for the stream embed is handled by useYoutubeLink.
-
-  useEffect(() => {
-    if (
-      !selectedTwitchChannel ||
-      !sessions.twitch ||
-      !sessions.twitch.accessToken
-    ) {
-      setViewerCount(null);
-      return;
-    }
-
-    const fetchViewerCount = async () => {
-      try {
-        const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-        const status = await getStreamStatus(
-          sessions.twitch!.accessToken,
-          clientId,
-          selectedTwitchChannel,
-        );
-
-        if (status) {
-          setViewerCount(status.viewerCount || 0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch viewer count:", error);
-      }
-    };
-
-    fetchViewerCount();
-
-    // Fetch viewer count every 30s instead of 15s to avoid rate limiting
-    // Reduces from 240 to 120 queries/hour per user
-    const interval = setInterval(fetchViewerCount, 30000);
-    return () => clearInterval(interval);
-  }, [selectedTwitchChannel, sessions.twitch]);
-
-  // Linked YouTube URL lookup is handled by useYoutubeLink.
-
-  // Handle mouse events for resizing
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const container = document.querySelector(
-        "[data-app-grid]",
-      ) as HTMLElement;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const newX = e.clientX - rect.left;
-      const newRatio = Math.max(30, Math.min(80, (newX / rect.width) * 100));
-      setVideoRatio(newRatio);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging]);
+  // All embed-runtime state (videoRatio, drag handle, HLS quality, viewer
+  // count, YouTube fallback) now lives in useEmbedState.
 
   // Auth login flows now live in useAuthSessions. The Twitch logout also has
   // to clear non-auth state (channel list, current selection, favorites).
