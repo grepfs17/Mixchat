@@ -34,13 +34,13 @@ export function playEventSound(
 /**
  * Clear the event sound cache for a specific event type.
  */
-export function clearEventSoundCache(eventType: string): void {
+function clearEventSoundCache(eventType: string): void {
   eventSoundCache.delete(eventType);
 }
 
 /**
  * Clear all event sound caches.
  */
-export function clearAllEventSoundCache(): void {
+function clearAllEventSoundCache(): void {
   eventSoundCache.clear();
 }

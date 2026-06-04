@@ -2,7 +2,7 @@ export type Platform = "twitch" | "youtube";
 
 export const MAX_DISPLAYED_MESSAGES = 100;
 
-export const MESSAGE_TYPES = [
+const MESSAGE_TYPES = [
   "chat",
   "cheer",
   "subscription",
