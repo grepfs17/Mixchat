@@ -17,6 +17,7 @@ import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/useTwitchChat";
 import type { MentionSoundType } from "../hooks/useTwitchChat";
 import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
+import { listenForOAuthSession } from "../lib/oauthSession";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
@@ -1040,28 +1041,13 @@ export default function AppContainer() {
 
     setIsLoggingIn(true);
 
-    // Listen for session message from the popup callback
-    const onMessage = (ev: MessageEvent) => {
-      try {
-        if (ev.origin !== window.location.origin) return;
-        const data = ev.data;
-        if (
-          data &&
-          data.type === "mixchat_session" &&
-          data.session &&
-          data.session.platform === "twitch"
-        ) {
-          setSessions((prev) => ({ ...prev, twitch: data.session }));
-          setIsLoggingIn(false);
-          if (popup && !popup.closed) popup.close();
-          window.removeEventListener("message", onMessage);
-        }
-      } catch (e) {
-        console.error("Failed to process auth message", e);
-      }
-    };
-
-    window.addEventListener("message", onMessage);
+    const removeMessageListener = listenForOAuthSession(
+      "twitch",
+      popup,
+      (session) =>
+        setSessions((prev) => ({ ...prev, twitch: session as PlatformSession })),
+      () => setIsLoggingIn(false),
+    );
 
     // Also listen for storage events as a fallback for cross-origin popups
     const onStorage = (e: StorageEvent) => {
@@ -1084,7 +1070,7 @@ export default function AppContainer() {
             setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
             setIsLoggingIn(false);
             if (popup && !popup.closed) popup.close();
-            window.removeEventListener("message", onMessage);
+            removeMessageListener();
             window.removeEventListener("storage", onStorage);
           }
         } catch (err) {
@@ -1095,7 +1081,7 @@ export default function AppContainer() {
     window.addEventListener("storage", onStorage);
 
     return () => {
-      window.removeEventListener("message", onMessage);
+      removeMessageListener();
       window.removeEventListener("storage", onStorage);
     };
   }, []);
@@ -1154,35 +1140,20 @@ export default function AppContainer() {
 
     setIsLoggingIn(true);
 
-    // Listen for session message from the popup callback
-    const onMessage = (ev: MessageEvent) => {
-      try {
-        if (ev.origin !== window.location.origin) return;
-        const data = ev.data;
-        if (
-          data &&
-          data.type === "mixchat_session" &&
-          data.session &&
-          data.session.platform === "youtube"
-        ) {
-          setSessions((prev) => ({ ...prev, youtube: data.session }));
-          setIsLoggingIn(false);
-          if (popup && !popup.closed) popup.close();
-          window.removeEventListener("message", onMessage);
-        }
-      } catch (e) {
-        console.error("Failed to process YouTube auth message", e);
-      }
-    };
-
-    window.addEventListener("message", onMessage);
+    const removeMessageListener = listenForOAuthSession(
+      "youtube",
+      popup,
+      (session) =>
+        setSessions((prev) => ({ ...prev, youtube: session as PlatformSession })),
+      () => setIsLoggingIn(false),
+    );
 
     // Clean up listener if popup is closed without completing auth
     const pollClosed = setInterval(() => {
       if (popup && popup.closed) {
         clearInterval(pollClosed);
         setIsLoggingIn(false);
-        window.removeEventListener("message", onMessage);
+        removeMessageListener();
       }
     }, 500);
   }, []);

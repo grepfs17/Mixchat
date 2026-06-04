@@ -20,11 +20,13 @@ import {
 import {
   playMentionSoundPreview,
   MENTION_SOUND_OPTIONS,
-  type MentionSoundType,
 } from "../hooks/useTwitchChat";
 import { exportSettings, importSettings } from "../lib/settingsBackup";
-import { saveSettingsToDrive, loadSettingsFromDrive } from "../lib/googleDrive";
-import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
+import {
+  backupSettingsToDrive,
+  restoreSettingsFromDrive,
+} from "../lib/driveSync";
+import type { SettingsProps } from "../lib/settings/types";
 
 const GROUPS = [
   "appearance",
@@ -45,45 +47,7 @@ const GROUP_LABELS: Record<GroupKey, string> = {
   backup: "Backup & Restore",
 };
 
-interface EmbedConfigModalProps {
-  embedDefaultOpen: boolean;
-  onEmbedDefaultOpenChange: (value: boolean) => void;
-  unifyChatEnabled: boolean;
-  onUnifyChatEnabledChange: (value: boolean) => void;
-  useYoutubeEmbed: boolean;
-  onUseYoutubeEmbedChange: (value: boolean) => void;
-  fontSize: number;
-  onFontSizeChange: (value: number) => void;
-  chatFont: ChatFont;
-  onChatFontChange: (value: ChatFont) => void;
-  mentionSoundEnabled: boolean;
-  onMentionSoundEnabledChange: (value: boolean) => void;
-  mentionVolume: number;
-  onMentionVolumeChange: (value: number) => void;
-  mentionSoundType: MentionSoundType;
-  onMentionSoundTypeChange: (value: MentionSoundType) => void;
-  showDeletedMessages: boolean;
-  onShowDeletedMessagesChange: (value: boolean) => void;
-  compactActions: boolean;
-  onCompactActionsChange: (value: boolean) => void;
-  splitChatEnabled: boolean;
-  onSplitChatEnabledChange: (value: boolean) => void;
-  chatTheme: ChatTheme;
-  onChatThemeChange: (value: ChatTheme) => void;
-  hideViewerCount: boolean;
-  onHideViewerCountChange: (value: boolean) => void;
-  hideChatTimestamps: boolean;
-  onHideChatTimestampsChange: (value: boolean) => void;
-  disableModModeByDefault: boolean;
-  onDisableModModeByDefaultChange: (value: boolean) => void;
-  eventSounds: Record<string, string>;
-  onEventSoundChange: (eventType: string, soundData: string | null) => void;
-  eventSoundVolume: number;
-  onEventSoundVolumeChange: (value: number) => void;
-  ignoredUsers: string[];
-  onIgnoredUsersChange: (users: string[]) => void;
-  hasYoutubeSession: boolean;
-  onReauthYoutube: () => void;
+interface EmbedConfigModalProps extends SettingsProps {
   onClose: () => void;
 }
 
@@ -161,114 +125,30 @@ export default function EmbedConfigModal({
     setDriveMessage(null);
     setShareLink(null);
     setLinkCopied(false);
-    try {
-      const eventSoundsData = await loadEventSounds();
-      const settings: Record<string, string> = {};
-
-      for (const k of [
-        "mixchat_video_ratio",
-        "mixchat_favorite_channels",
-        "mixchat_embed_default_open",
-        "mixchat_unify_chat",
-        "mixchat_split_chat",
-        "mixchat_use_youtube_embed",
-        "mixchat_font_size",
-        "mixchat_chat_font",
-        "mixchat_chat_theme",
-        "mixchat_mention_sound",
-        "mixchat_mention_volume",
-        "mixchat_mention_sound_type",
-        "mixchat_show_deleted_messages",
-        "mixchat_compact_actions",
-        "mixchat_hide_viewer_count",
-        "mixchat_disable_mod_mode_by_default",
-        "mixchat_hide_chat_timestamps",
-        "mixchat_event_sound_volume",
-        "mixchat_chat_split_ratio",
-        "mixchat_watched_streamers",
-        "mixchat_youtube_links",
-        "disabled_emotes_v1",
-        "mixchat_ignored_users",
-      ]) {
-        const v = localStorage.getItem(k);
-        if (v !== null) settings[k] = v;
-      }
-
-      if (eventSoundsData && Object.keys(eventSoundsData).length > 0) {
-        settings["mixchat_event_sounds"] = JSON.stringify(eventSoundsData);
-      }
-
-      const backup = {
-        _version: 1,
-        _app: "mixchat",
-        _exportedAt: new Date().toISOString(),
-        settings,
-      };
-
-      const result = await saveSettingsToDrive(JSON.stringify(backup, null, 2));
+    const result = await backupSettingsToDrive();
+    if (result.ok) {
       setDriveMessage("Settings saved to Google Drive!");
       if (result.webViewLink) {
         setShareLink(result.webViewLink);
       }
-    } catch (err: any) {
-      if (
-        err?.message?.includes("Drive permission") ||
-        err?.message?.includes("insufficient") ||
-        err?.message?.includes("sign in again")
-      ) {
-        setDriveMessage(
-          'Drive access required. Click "Re-auth with Drive" below.',
-        );
-      } else {
-        setDriveMessage(
-          err instanceof Error ? err.message : "Failed to save to Drive",
-        );
-      }
-    } finally {
-      setDriveLoading(null);
+    } else {
+      setDriveMessage(result.message);
     }
+    setDriveLoading(null);
   }, []);
 
   const handleDriveLoad = useCallback(async () => {
     setDriveLoading("load");
     setDriveMessage(null);
     setShareLink(null);
-    try {
-      const result = await loadSettingsFromDrive();
-      let count = 0;
-      for (const [key, value] of Object.entries(result.settings)) {
-        if (key === "mixchat_event_sounds") {
-          try {
-            const sounds = JSON.parse(value);
-            await saveEventSounds(sounds);
-            count++;
-          } catch {
-            /* ignore */
-          }
-        } else {
-          localStorage.setItem(key, value);
-          count++;
-        }
-      }
-      setDriveMessage(`Loaded ${count} settings from Drive. Reloading...`);
+    const result = await restoreSettingsFromDrive();
+    if (result.ok) {
+      setDriveMessage(`Loaded ${result.count} settings from Drive. Reloading...`);
       setTimeout(() => window.location.reload(), 1200);
-    } catch (err: any) {
-      if (
-        err?.message?.includes("Drive permission") ||
-        err?.message?.includes("insufficient") ||
-        err?.message?.includes("sign in again")
-      ) {
-        setDriveMessage(
-          'Drive access required. Click "Re-auth with Drive" below.',
-        );
-      } else {
-        setDriveMessage(
-          err instanceof Error ? err.message : "Failed to load from Drive",
-        );
-      }
-    } finally {
-      setDriveLoading(null);
+    } else {
+      setDriveMessage(result.message);
     }
+    setDriveLoading(null);
   }, []);
 
   const handleCopyLink = useCallback(() => {

@@ -1,0 +1,43 @@
+import type { ChatFont, ChatTheme } from "../types";
+import type { MentionSoundType } from "../../hooks/useTwitchChat";
+
+export interface SettingsProps {
+  embedDefaultOpen: boolean;
+  onEmbedDefaultOpenChange: (value: boolean) => void;
+  unifyChatEnabled: boolean;
+  onUnifyChatEnabledChange: (value: boolean) => void;
+  useYoutubeEmbed: boolean;
+  onUseYoutubeEmbedChange: (value: boolean) => void;
+  fontSize: number;
+  onFontSizeChange: (value: number) => void;
+  chatFont: ChatFont;
+  onChatFontChange: (value: ChatFont) => void;
+  mentionSoundEnabled: boolean;
+  onMentionSoundEnabledChange: (value: boolean) => void;
+  mentionVolume: number;
+  onMentionVolumeChange: (value: number) => void;
+  mentionSoundType: MentionSoundType;
+  onMentionSoundTypeChange: (value: MentionSoundType) => void;
+  showDeletedMessages: boolean;
+  onShowDeletedMessagesChange: (value: boolean) => void;
+  compactActions: boolean;
+  onCompactActionsChange: (value: boolean) => void;
+  splitChatEnabled: boolean;
+  onSplitChatEnabledChange: (value: boolean) => void;
+  chatTheme: ChatTheme;
+  onChatThemeChange: (value: ChatTheme) => void;
+  hideViewerCount: boolean;
+  onHideViewerCountChange: (value: boolean) => void;
+  hideChatTimestamps: boolean;
+  onHideChatTimestampsChange: (value: boolean) => void;
+  disableModModeByDefault: boolean;
+  onDisableModModeByDefaultChange: (value: boolean) => void;
+  eventSounds: Record<string, string>;
+  onEventSoundChange: (eventType: string, soundData: string | null) => void;
+  eventSoundVolume: number;
+  onEventSoundVolumeChange: (value: number) => void;
+  ignoredUsers: string[];
+  onIgnoredUsersChange: (users: string[]) => void;
+  hasYoutubeSession: boolean;
+  onReauthYoutube: () => void;
+}
