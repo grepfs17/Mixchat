@@ -4,7 +4,9 @@ const WIDE_SCREEN_MIN_WIDTH = 1366;
 
 export type UseUiStateResult = {
   leftColumnVisible: boolean | undefined;
-  setLeftColumnVisible: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  setLeftColumnVisible: React.Dispatch<
+    React.SetStateAction<boolean | undefined>
+  >;
   showWatchlistManager: boolean;
   setShowWatchlistManager: React.Dispatch<React.SetStateAction<boolean>>;
   showYoutubeLinker: boolean;
@@ -12,9 +14,9 @@ export type UseUiStateResult = {
 };
 
 export function useUiState(): UseUiStateResult {
-  const [leftColumnVisible, setLeftColumnVisible] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [leftColumnVisible, setLeftColumnVisible] = useState<
+    boolean | undefined
+  >(undefined);
   const [showWatchlistManager, setShowWatchlistManager] = useState(false);
   const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
 
