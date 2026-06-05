@@ -45,23 +45,13 @@ import type { ChatDisplayHandle } from "../../components/chat/display";
 import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
 
-const STREAM_STATUS_POLL_INTERVAL = 60000;
-const UPTIME_UPDATE_INTERVAL = 1000;
-
-/** Formats a stream start time into a human-readable uptime string. */
-function calculateUptime(startedAt: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - startedAt.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffDay > 0) return `${diffDay}d ${diffHour % 24}h ${diffMin % 60}m`;
-  if (diffHour > 0) return `${diffHour}h ${diffMin % 60}m ${diffSec % 60}s`;
-  if (diffMin > 0) return `${diffMin}m ${diffSec % 60}s`;
-  return `${diffSec}s`;
-}
+import {
+  useChatLayout,
+  useStreamInfo,
+  useYouTubeSync,
+  useModeration,
+  useChatMessages,
+} from "./chatAppStateHelpers";
 
 export interface ChatAppStateProps {
   twitchConnected: boolean;
@@ -112,20 +102,12 @@ export function useChatAppState({
   eventSoundVolume = 1,
   ignoredUsers = [],
 }: ChatAppStateProps) {
-  // State
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
   const [isRaidInitiator, setIsRaidInitiator] = useState(false);
   const [isRefreshingEmotes, setIsRefreshingEmotes] = useState(false);
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
-  const [streamIsLive, setStreamIsLive] = useState(false);
-  const [streamUptime, setStreamUptime] = useState<string>("");
-  const [streamTitle, setStreamTitle] = useState<string>("");
-  const [streamGameName, setStreamGameName] = useState<string>("");
-  const [streamGameId, setStreamGameId] = useState<string>("");
-  const [showPreloadedMessages, _setShowPreloadedMessages] = useState(true);
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -134,526 +116,116 @@ export function useChatAppState({
   const notificationIdRef = useRef(0);
   const chatDisplayRef = useRef<ChatDisplayHandle>(null);
   const unifiedChatRef = useRef<UnifiedChatHandle>(null);
-  const preloadedMessagesRef = useRef<Set<string>>(new Set());
+  const showDeletedMessagesRef = useRef(showDeletedMessages);
   const currentUserBadgesRef = useRef<{
     badges: Record<string, string>;
     badgeDetails: Record<string, { url: string; title: string }>;
   }>({ badges: {}, badgeDetails: {} });
-  const streamStartedAtRef = useRef<Date | null>(null);
-  const [manualVideoId, setManualVideoId] = useState<string>("");
-  const [autoVideoId, setAutoVideoId] = useState<string | null>(null);
-  const [ytLoading, setYtLoading] = useState(false);
-  const [ytError, setYtError] = useState<string | null>(null);
-  const [showYoutubeSection, setShowYoutubeSection] = useState(true);
-  const [chatSplitRatio, setChatSplitRatio] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("mixchat_chat_split_ratio");
-      return saved ? parseFloat(saved) : 50;
-    }
-    return 50;
-  });
-  const [isDraggingChatSplit, setIsDraggingChatSplit] = useState(false);
-  const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
-  const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>(
-    [],
-  );
-  const [badgesReady, setBadgesReady] = useState(false);
-  const [isModerator, setIsModerator] = useState(false);
-  const [modModeActive, setModModeActive] = useState(false);
-  const [isFollowingChannelState, setIsFollowingChannelState] = useState<
-    boolean | null
-  >(null);
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
+  const [badgesReady, setBadgesReady] = useState(false);
 
-  // Periodic pruning of old IndexedDB messages
-  useEffect(() => {
-    // Initial prune
-    pruneMessages(24);
-
-    // Prune every hour
-    const interval = setInterval(() => pruneMessages(24), 3600000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Track recent EventSub redemptions to avoid duplicates when an empty-text
-  // IRC PRIVMSG also arrives for the same redemption.
-  const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
-
-  // Refs synced with props
-  const showDeletedMessagesRef = useRef(showDeletedMessages);
   useEffect(() => {
     showDeletedMessagesRef.current = showDeletedMessages;
   }, [showDeletedMessages]);
 
-  // Drag split handler
+  const showDeletedMessagesRefForMessages = useRef(showDeletedMessages);
   useEffect(() => {
-    if (!isDraggingChatSplit) return;
+    showDeletedMessagesRefForMessages.current = showDeletedMessages;
+  }, [showDeletedMessages]);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const container = document.querySelector("[data-chat-app-container]");
-      if (!container) return;
-      const rect = container.getBoundingClientRect();
-      let percentage = ((e.clientY - rect.top) / rect.height) * 100;
-      if (percentage < 20) percentage = 20;
-      if (percentage > 80) percentage = 80;
-      setChatSplitRatio(percentage);
-    };
-
-    const handleMouseUp = () => {
-      setIsDraggingChatSplit(false);
-      localStorage.setItem(
-        "mixchat_chat_split_ratio",
-        chatSplitRatio.toString(),
-      );
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDraggingChatSplit, chatSplitRatio]);
-
-  // YouTube video ID memo
-  const youtubeVideoId = useMemo(() => {
-    if (manualVideoId) return manualVideoId;
-    if (autoVideoId) return autoVideoId;
-    if (!linkedYoutubeUrl) return null;
-    let videoId = null;
-    try {
-      if (linkedYoutubeUrl.includes("v=")) {
-        videoId = new URLSearchParams(new URL(linkedYoutubeUrl).search).get(
-          "v",
-        );
-      } else if (linkedYoutubeUrl.includes("youtu.be/")) {
-        videoId = linkedYoutubeUrl.split("youtu.be/")[1].split("?")[0];
-      } else if (linkedYoutubeUrl.includes("/live/")) {
-        videoId = linkedYoutubeUrl.split("/live/")[1].split("?")[0];
-      }
-    } catch (e) {
-      console.warn("Failed to parse YouTube URL:", e);
-    }
-    return videoId;
-  }, [linkedYoutubeUrl, manualVideoId, autoVideoId]);
-
-  // Auto-fetch live video ID
-  useEffect(() => {
-    if (!linkedYoutubeUrl || !showYoutubeSection) {
-      setAutoVideoId(null);
-      setYtError(null);
-      return;
-    }
-    if (
-      linkedYoutubeUrl.includes("v=") ||
-      linkedYoutubeUrl.includes("youtu.be/") ||
-      linkedYoutubeUrl.includes("/live/")
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    const abortController = new AbortController();
-    const fetchLiveVideoId = async () => {
-      setYtLoading(true);
-      setYtError(null);
-      try {
-        const params = new URLSearchParams();
-        params.append("channelUrl", linkedYoutubeUrl);
-        const res = await fetch(`/api/youtube-live?${params.toString()}`, {
-          signal: abortController.signal,
-        });
-        const data = await res.json();
-        if (cancelled) return;
-        if (res.ok && data.videoId) {
-          setAutoVideoId((prev) =>
-            prev !== data.videoId ? data.videoId : prev,
-          );
-          setYtError(null);
-        } else {
-          if (!res.ok) {
-            setYtError(data.error || "Failed to check for live stream");
-          } else {
-            setYtError("No live stream found");
-            setAutoVideoId(null);
-          }
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!cancelled) {
-          setYtError("Failed to check for live stream");
-          console.error("YouTube live fetch error:", err);
-        }
-      } finally {
-        if (!cancelled) setYtLoading(false);
-      }
-    };
-
-    fetchLiveVideoId();
-    const interval = setInterval(fetchLiveVideoId, 600000);
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-      clearInterval(interval);
-    };
-  }, [linkedYoutubeUrl, showYoutubeSection]);
-
-  // Reset YouTube state on channel change
-  useEffect(() => {
-    setManualVideoId("");
-    setAutoVideoId(null);
-    setYtError(null);
-    setYtMessages([]);
-  }, [selectedTwitchChannel]);
-
-  // Update document title
-  useEffect(() => {
-    if (selectedTwitchChannelDisplayName) {
-      document.title = `Mixchat - ${selectedTwitchChannelDisplayName}`;
-    } else {
-      document.title = "Mixchat - Multi-Platform Live Chat";
-    }
-  }, [selectedTwitchChannelDisplayName]);
-
-  // Twitch message handler
-  const handleTwitchMessage = useCallback(
-    (message: ChatMessage) => {
-      if (message.isCurrentUser && !message.optimistic) {
-        const hasBadges =
-          (message.badgeDetails &&
-            Object.keys(message.badgeDetails).length > 0) ||
-          (message.badges && Object.keys(message.badges).length > 0);
-        if (hasBadges) {
-          currentUserBadgesRef.current = {
-            badges: message.badges || {},
-            badgeDetails: message.badgeDetails || {},
-          };
-        }
-      }
-
-      setMessages((prev) => {
-        const existingIdx = prev.findIndex(
-          (m) => m.id === message.id || m.id === `optimistic_${message.id}`,
-        );
-        if (existingIdx !== -1) {
-          const existing = prev[existingIdx];
-          if (existing.optimistic || existing.id.startsWith("optimistic_")) {
-            saveMessage(message, selectedTwitchChannelName);
-            const copy = [...prev];
-            copy[existingIdx] = message;
-            return copy;
-          }
-          // Merge async enrichment fields (reward title/cost, avatar, shared-chat source)
-          const enrichments: Partial<ChatMessage> = {};
-          if (!existing.rewardTitle && message.rewardTitle)
-            enrichments.rewardTitle = message.rewardTitle;
-          if (existing.rewardCost == null && message.rewardCost != null)
-            enrichments.rewardCost = message.rewardCost;
-          if (!existing.authorAvatar && message.authorAvatar)
-            enrichments.authorAvatar = message.authorAvatar;
-          if (!existing.sourceChannelLogin && message.sourceChannelLogin)
-            enrichments.sourceChannelLogin = message.sourceChannelLogin;
-          if (!existing.sourceChannelAvatar && message.sourceChannelAvatar)
-            enrichments.sourceChannelAvatar = message.sourceChannelAvatar;
-
-          if (Object.keys(enrichments).length > 0) {
-            const copy = [...prev];
-            copy[existingIdx] = { ...existing, ...enrichments };
-            return copy;
-          }
-          return prev;
-        }
-
-        const sessionName = (
-          twitchSession?.displayName ||
-          twitchSession?.username ||
-          ""
-        ).toLowerCase();
-        const isFromSession = Boolean(
-          message.isCurrentUser ||
-          (message.userId && message.userId === twitchSession?.userId) ||
-          (message.author &&
-            sessionName &&
-            message.author.toLowerCase() === sessionName),
-        );
-
-        const normalize = (s?: string) =>
-          (s || "").normalize("NFKC").trim().toLowerCase();
-        const serverNorm = normalize(message.content);
-
-        if (isFromSession) {
-          let matchIndex = -1;
-
-          if (message.userId) {
-            matchIndex = prev.findIndex(
-              (m) =>
-                m.optimistic &&
-                m.userId === message.userId &&
-                normalize(m.content) === serverNorm &&
-                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
-            );
-          }
-
-          if (matchIndex === -1 && message.author) {
-            matchIndex = prev.findIndex(
-              (m) =>
-                m.optimistic &&
-                m.author &&
-                m.author.toLowerCase() === message.author.toLowerCase() &&
-                normalize(m.content) === serverNorm &&
-                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
-            );
-          }
-
-          if (matchIndex === -1) {
-            const serverTs = message.timestamp
-              ? new Date(message.timestamp).getTime()
-              : Date.now();
-            matchIndex = prev.findIndex(
-              (m) =>
-                m.optimistic &&
-                Math.abs((m.timestamp?.getTime() || 0) - serverTs) < 10000 &&
-                normalize(m.content) === serverNorm &&
-                (m.replyTo?.id || "") === (message.replyTo?.id || ""),
-            );
-          }
-
-          if (matchIndex !== -1) {
-            saveMessage(message, selectedTwitchChannelName);
-            const copy = [...prev];
-            copy[matchIndex] = message;
-            return copy.length > MAX_DISPLAYED_MESSAGES
-              ? copy.slice(-MAX_DISPLAYED_MESSAGES)
-              : copy;
-          }
-        }
-
-        // Deduplicate IRC redemptions against recent EventSub redemptions.
-        // Twitch sometimes sends an empty PRIVMSG for non-text redemptions;
-        // EventSub already handles those, so skip the IRC duplicate.
-        if (
-          message.messageType === "redemption" &&
-          message.rewardId &&
-          message.userId &&
-          (!message.content || message.content.trim().length === 0)
-        ) {
-          const dedupKey = `${message.rewardId}-${message.userId}`;
-          const recentTime = recentRedemptionsRef.current.get(dedupKey);
-          if (recentTime && Math.abs(Date.now() - recentTime) < 5000) {
-            return prev;
-          }
-        }
-
-        const updated = [...prev, message];
-
-        // Persist to IndexedDB for Chatter History
-        saveMessage(message, selectedTwitchChannelName);
-
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
-      });
-    },
-    [twitchSession, selectedTwitchChannelName],
-  );
-
-  // Moderator status effects
-  useEffect(() => {
-    if (twitchSession && selectedTwitchChannelName) {
-      const isOwnerByName =
-        (twitchSession.username || "").toLowerCase() ===
-        selectedTwitchChannelName.toLowerCase();
-      const isOwnerById =
-        twitchSession.userId && selectedTwitchChannel
-          ? twitchSession.userId === selectedTwitchChannel
-          : false;
-      const isOwner = isOwnerByName || isOwnerById;
-      if (isOwner) {
-        setIsModerator(true);
-        setModModeActive(!disableModModeByDefault);
-      } else {
-        setModModeActive(false);
-      }
-    } else {
-      setModModeActive(false);
-    }
-  }, [
-    twitchSession,
-    selectedTwitchChannelName,
-    selectedTwitchChannel,
-    disableModModeByDefault,
-  ]);
-
-  useEffect(() => {
-    const checkModViaApi = async () => {
-      if (
-        twitchSession?.accessToken &&
-        selectedTwitchChannel &&
-        twitchSession.userId
-      ) {
-        try {
-          const isMod = await checkUserModStatus(
-            twitchSession.accessToken,
-            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            selectedTwitchChannel,
-            twitchSession.userId,
-          );
-          if (isMod) {
-            setIsModerator(true);
-          }
-        } catch (err) {
-          console.error("[ChatApp] API mod check failed:", err);
-        }
-      }
-    };
-    checkModViaApi();
-  }, [
-    twitchSession?.accessToken,
-    selectedTwitchChannel,
-    twitchSession?.userId,
-  ]);
-
-  // Own badges loaded handler
-  const handleOwnBadgesLoaded = useCallback(
-    (
-      badges: Record<string, string>,
-      badgeDetails: Record<string, { url: string; title: string }>,
-    ) => {
-      if (
-        Object.keys(badges).length > 0 ||
-        Object.keys(badgeDetails).length > 0
-      ) {
-        currentUserBadgesRef.current = { badges, badgeDetails };
-      }
-      const isOwnerByName =
-        (twitchSession?.username || "").toLowerCase() ===
-        selectedTwitchChannelName.toLowerCase();
-      const isOwnerById =
-        twitchSession?.userId && selectedTwitchChannel
-          ? twitchSession.userId === selectedTwitchChannel
-          : false;
-      const isOwner = isOwnerByName || isOwnerById;
-      const isMod = Boolean(
-        badges && (badges["moderator"] || badges["broadcaster"]),
-      );
-      setIsModerator(isMod || isOwner);
-    },
-    [
-      twitchSession?.username,
-      twitchSession?.userId,
-      selectedTwitchChannelName,
-      selectedTwitchChannel,
-    ],
-  );
-
-  // Message deleted handler
-  const handleMessageDeleted = useCallback((messageId: string) => {
-    setMessages((prev) => {
-      if (showDeletedMessagesRef.current) {
-        return prev.map((m) =>
-          m.id === messageId ? { ...m, isDeleted: true } : m,
-        );
-      } else {
-        return prev.filter((m) => m.id !== messageId);
-      }
+  const { chatSplitRatio, isDraggingChatSplit, setIsDraggingChatSplit } =
+    useChatLayout({
+      selectedTwitchChannelDisplayName,
     });
-  }, []);
 
-  // Raid detection
-  useRaidDetection({
-    channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || "",
-    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady
-    ),
-    onRaidOut: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
-    onScopeError: () => {
-      notificationIdRef.current += 1;
-      setNotification({
-        message:
-          "Raid detection unavailable — please re-login to refresh your Twitch session",
-        type: "info",
-        id: notificationIdRef.current,
-      });
-    },
-  });
-
-  // Channel point redemption (EventSub) — catches non-text redemptions that
-  // Twitch does not send through IRC.
-  const handleRedemptionEvent = useCallback(
-    (message: ChatMessage) => {
-      // Track for IRC deduplication
-      if (message.rewardId && message.userId) {
-        recentRedemptionsRef.current.set(
-          `${message.rewardId}-${message.userId}`,
-          Date.now(),
-        );
-        // Clean up entries older than 10s
-        const now = Date.now();
-        for (const [key, ts] of recentRedemptionsRef.current) {
-          if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
-        }
-      }
-
-      setMessages((prev) => {
-        // Persist to IndexedDB for Chatter History
-        saveMessage(message, selectedTwitchChannelName);
-
-        const updated = [...prev, message];
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
-      });
-    },
-    [selectedTwitchChannelName],
-  );
-
-  useChannelPointRedemptions({
-    channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || "",
-    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady
-    ),
-    onRedemption: handleRedemptionEvent,
-    onScopeError: () => {
-      // Silent — most viewers won't have channel:read:redemptions for the
-      // broadcaster's channel, which is expected.
-      console.info(
-        "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
-      );
-    },
-  });
-  // Twitch chat connection
   const {
-    sendMessage: sendTwitchMessage,
-    slowModeWaitTime,
-    followerModeMinutes,
-  } = useTwitchChat(
+    streamIsLive,
+    streamUptime,
+    streamStartedAtRef,
+    streamTitle,
+    streamGameName,
+    streamGameId,
+    isFollowingChannelState,
+    setStreamTitle,
+    setStreamGameName,
+    setStreamGameId,
+    setIsFollowingChannelState,
+    handleUpdateTitle,
+    handleUpdateCategory,
+    handleSearchCategories,
+  } = useStreamInfo({
+    selectedTwitchChannel,
     selectedTwitchChannelName,
-    twitchSession?.accessToken || "",
-    twitchSession?.username || twitchSession?.displayName || "",
-    handleTwitchMessage,
-    badgesReady,
-    mentionSoundEnabled,
-    mentionVolume,
-    mentionSoundType,
-    eventSounds,
-    eventSoundVolume,
-    handleOwnBadgesLoaded,
-    handleMessageDeleted,
-  );
+    twitchAccessToken: twitchSession?.accessToken,
+    twitchUserId: twitchSession?.userId,
+  });
 
-  // Reset chat state on channel change
+  const {
+    youtubeVideoId,
+    manualVideoId,
+    autoVideoId,
+    ytLoading,
+    ytError,
+    showYoutubeSection,
+    ytMessages,
+    ytOptimisticMessages,
+    setManualVideoId,
+    setAutoVideoId,
+    setShowYoutubeSection,
+    setYtMessages,
+    handleYtMessages,
+    handleYtOptimisticMessage,
+    handleYtOptimisticFailed,
+    getYtMessageText,
+  } = useYouTubeSync({
+    linkedYoutubeUrl,
+    showYoutubeSection: true,
+    selectedTwitchChannelName,
+    youtubeSession,
+    unifyChatEnabled,
+    unifiedChatRef,
+  });
+
+  const {
+    messages,
+    showPreloadedMessages,
+    setMessages,
+    setShowPreloadedMessages,
+    preloadedMessagesRef,
+    recentRedemptionsRef,
+    handleTwitchMessage,
+    handleMessageDeleted,
+  } = useChatMessages({
+    selectedTwitchChannelName,
+    twitchSession,
+    showDeletedMessages,
+    showDeletedMessagesRef: showDeletedMessagesRefForMessages,
+    currentUserBadgesRef,
+  });
+
+  const {
+    isModerator,
+    modModeActive,
+    setIsModerator,
+    setModModeActive,
+    handleToggleModMode,
+    handleDelete,
+    handleBan,
+    handleTimeout,
+    handleUntimeout,
+    handleWarn,
+    handleCancelRaid,
+    handleOwnBadgesLoaded,
+  } = useModeration({
+    twitchSession,
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
+    disableModModeByDefault,
+    setMessages,
+    setNotification,
+    notificationIdRef,
+  });
+
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
@@ -662,35 +234,15 @@ export function useChatAppState({
     setIsFollowingChannelState(null);
     setMessages([]);
     preloadedMessagesRef.current.clear();
-  }, [selectedTwitchChannelName, selectedTwitchChannel]);
+  }, [
+    selectedTwitchChannelName,
+    selectedTwitchChannel,
+    setStreamTitle,
+    setStreamGameName,
+    setIsFollowingChannelState,
+    setMessages,
+  ]);
 
-  // Load preloaded messages after badges are ready
-  useEffect(() => {
-    if (!badgesReady || !selectedTwitchChannelName) return;
-
-    const loadRecentMessages = async () => {
-      try {
-        const recentMessages = await getRecentMessages(
-          selectedTwitchChannelName,
-        );
-        recentMessages.forEach((msg) =>
-          preloadedMessagesRef.current.add(msg.id),
-        );
-        const uniqueRecent = recentMessages.filter(
-          (msg, index, self) =>
-            index === self.findIndex((t) => t.id === msg.id),
-        );
-        setMessages(uniqueRecent);
-      } catch (error) {
-        console.error("Failed to load recent messages:", error);
-      }
-    };
-    loadRecentMessages();
-  }, [badgesReady, selectedTwitchChannelName]);
-
-  // Initialize emotes/badges and check follow status
-  // This re-runs when the access token refreshes, but it intentionally does NOT
-  // touch messages so a background token refresh won't wipe chat history.
   useEffect(() => {
     if (!selectedTwitchChannelName || !selectedTwitchChannel) return;
 
@@ -722,47 +274,6 @@ export function useChatAppState({
       } catch (err) {
         console.error("Failed to initialize chat assets:", err);
       }
-      try {
-        if (
-          twitchSession?.accessToken &&
-          twitchSession?.userId &&
-          selectedTwitchChannelName
-        ) {
-          const twitchLib = await import("../../lib/twitch");
-          let follows = await twitchLib.isFollowingChannel(
-            twitchSession.accessToken,
-            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            twitchSession.userId,
-            selectedTwitchChannelName,
-          );
-          if (!follows) {
-            try {
-              const all = await twitchLib.getAllFollowedChannels(
-                twitchSession.accessToken,
-                import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-                twitchSession.userId,
-              );
-              const match = all.some((ch: any) => {
-                const login = (ch.name || "").toLowerCase();
-                const display = (ch.displayName || "").toLowerCase();
-                return (
-                  login === selectedTwitchChannelName.toLowerCase() ||
-                  display === selectedTwitchChannelName.toLowerCase()
-                );
-              });
-              if (match) follows = true;
-            } catch (fallbackErr) {
-              console.warn("Fallback follow-list check failed:", fallbackErr);
-            }
-          }
-          setIsFollowingChannelState(follows);
-        } else {
-          setIsFollowingChannelState(null);
-        }
-      } catch (err) {
-        console.error("Failed to check follow status:", err);
-        setIsFollowingChannelState(null);
-      }
     };
 
     initializeAssets();
@@ -777,78 +288,72 @@ export function useChatAppState({
     twitchSession?.accessToken,
   ]);
 
-  // Stream status polling
-  useEffect(() => {
-    const fetchStreamStatus = async () => {
-      if (selectedTwitchChannel && twitchSession?.accessToken) {
-        try {
-          const status = await getStreamStatus(
-            twitchSession.accessToken,
-            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            selectedTwitchChannel,
-          );
-          if (status) {
-            setStreamIsLive(status.isLive);
-            setStreamTitle(status.isLive ? status.title || "" : "");
-            setStreamGameName(status.isLive ? status.gameName || "" : "");
-            if (status.isLive && status.startedAt) {
-              streamStartedAtRef.current = status.startedAt;
-              setStreamUptime(calculateUptime(status.startedAt));
-            } else {
-              streamStartedAtRef.current = null;
-              setStreamUptime("");
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch stream status:", error);
+  useRaidDetection({
+    channelId: selectedTwitchChannel,
+    accessToken: twitchSession?.accessToken || "",
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
+    onRaidOut: (raid) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(false);
+    },
+    onScopeError: () => {
+      notificationIdRef.current += 1;
+      setNotification({
+        message:
+          "Raid detection unavailable — please re-login to refresh your Twitch session",
+        type: "info",
+        id: notificationIdRef.current,
+      });
+    },
+  });
+
+  const handleRedemptionEvent = useCallback(
+    (message: ChatMessage) => {
+      if (message.rewardId && message.userId) {
+        recentRedemptionsRef.current.set(
+          `${message.rewardId}-${message.userId}`,
+          Date.now(),
+        );
+        const now = Date.now();
+        for (const [key, ts] of recentRedemptionsRef.current) {
+          if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
         }
       }
-    };
 
-    fetchStreamStatus();
-    const statusInterval = setInterval(
-      fetchStreamStatus,
-      STREAM_STATUS_POLL_INTERVAL,
-    );
-    const uptimeInterval = setInterval(() => {
-      if (streamStartedAtRef.current) {
-        setStreamUptime(calculateUptime(streamStartedAtRef.current));
-      }
-    }, UPTIME_UPDATE_INTERVAL);
+      setMessages((prev) => {
+        saveMessage(message, selectedTwitchChannelName);
 
-    return () => {
-      clearInterval(statusInterval);
-      clearInterval(uptimeInterval);
-    };
-  }, [selectedTwitchChannel, twitchSession?.accessToken]);
+        const updated = [...prev, message];
+        return updated.length > MAX_DISPLAYED_MESSAGES
+          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+          : updated;
+      });
+    },
+    [selectedTwitchChannelName, setMessages, recentRedemptionsRef],
+  );
 
-  // Channel info polling
-  useEffect(() => {
-    const fetchChannelInfo = async () => {
-      if (selectedTwitchChannel && twitchSession?.accessToken) {
-        try {
-          const info = await getChannelInfo(
-            twitchSession.accessToken,
-            import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-            selectedTwitchChannel,
-          );
-          if (info) {
-            setStreamTitle(info.title);
-            setStreamGameName(info.gameName);
-            setStreamGameId(info.gameId);
-          }
-        } catch (error) {
-          console.error("Failed to fetch channel info:", error);
-        }
-      }
-    };
+  useChannelPointRedemptions({
+    channelId: selectedTwitchChannel,
+    accessToken: twitchSession?.accessToken || "",
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
+    onRedemption: handleRedemptionEvent,
+    onScopeError: () => {
+      console.info(
+        "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
+      );
+    },
+  });
 
-    fetchChannelInfo();
-    const interval = setInterval(fetchChannelInfo, 30000);
-    return () => clearInterval(interval);
-  }, [selectedTwitchChannel, twitchSession?.accessToken]);
-
-  // Hype Train EventSub
   useHypeTrainEventSub({
     channelId: selectedTwitchChannel,
     accessToken: twitchSession?.accessToken || "",
@@ -894,7 +399,25 @@ export function useChatAppState({
     },
   });
 
-  // Send message handler
+  const {
+    sendMessage: sendTwitchMessage,
+    slowModeWaitTime,
+    followerModeMinutes,
+  } = useTwitchChat(
+    selectedTwitchChannelName,
+    twitchSession?.accessToken || "",
+    twitchSession?.username || twitchSession?.displayName || "",
+    handleTwitchMessage,
+    badgesReady,
+    mentionSoundEnabled,
+    mentionVolume,
+    mentionSoundType,
+    eventSounds,
+    eventSoundVolume,
+    handleOwnBadgesLoaded,
+    handleMessageDeleted,
+  );
+
   const handleSendMessage = useCallback(
     async (message: string, platforms: Platform[], _replyToId?: string) => {
       if (!message.trim() || platforms.length === 0) return;
@@ -1307,10 +830,10 @@ export function useChatAppState({
       twitchSession,
       replyingTo,
       unifyChatEnabled,
+      selectedTwitchChannelName,
     ],
   );
 
-  // Refresh emotes
   const handleRefreshEmotes = useCallback(async () => {
     console.log("User initiated emote reload");
     setIsRefreshingEmotes(true);
@@ -1331,7 +854,7 @@ export function useChatAppState({
       console.error("Failed to reinitialize emotes:", err);
       notificationIdRef.current += 1;
       setNotification({
-        message: "❌ Failed to reload emotes",
+        message: "Failed to reload emotes",
         type: "error",
         id: notificationIdRef.current,
       });
@@ -1340,375 +863,7 @@ export function useChatAppState({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
-  // Moderation actions
-  const handleToggleModMode = useCallback(() => {
-    if (!isModerator) return;
-    setModModeActive((v) => !v);
-  }, [isModerator]);
-
-  const handleDelete = useCallback(
-    async (messageId: string) => {
-      if (!twitchSession || !selectedTwitchChannel) return;
-      try {
-        await deleteChatMessage(
-          selectedTwitchChannel,
-          twitchSession.userId,
-          messageId,
-        );
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Message deleted",
-          type: "success",
-          id: notificationIdRef.current,
-        });
-      } catch (err) {
-        console.error("Failed to delete message:", err);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to delete message",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [selectedTwitchChannel, twitchSession],
-  );
-
-  const handleBan = useCallback(
-    async (userId: string, displayName?: string) => {
-      if (!twitchSession || !selectedTwitchChannel) return;
-      try {
-        await createBan(
-          selectedTwitchChannel,
-          twitchSession.userId,
-          userId,
-          undefined,
-          "Banned via Mixchat",
-        );
-        notificationIdRef.current += 1;
-        setNotification({
-          message: `${displayName || userId} banned`,
-          type: "success",
-          id: notificationIdRef.current,
-        });
-      } catch (err) {
-        console.error("Failed to ban user:", err);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to ban user",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [selectedTwitchChannel, twitchSession],
-  );
-
-  const handleTimeout = useCallback(
-    async (userId: string, seconds: number, displayName?: string) => {
-      if (!twitchSession || !selectedTwitchChannel) return;
-      try {
-        await createBan(
-          selectedTwitchChannel,
-          twitchSession.userId,
-          userId,
-          seconds,
-          `Timeout ${seconds}s`,
-        );
-        notificationIdRef.current += 1;
-        setNotification({
-          message: `${displayName || userId} timed out for ${seconds}s`,
-          type: "success",
-          id: notificationIdRef.current,
-        });
-      } catch (err) {
-        console.error("Failed to timeout user:", err);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to timeout user",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [selectedTwitchChannel, twitchSession],
-  );
-
-  const handleUntimeout = useCallback(
-    async (userName: string) => {
-      if (!twitchSession || !selectedTwitchChannel) return;
-      try {
-        const targetUserId = await resolveBroadcasterId(userName);
-        await removeBan(
-          selectedTwitchChannel,
-          twitchSession.userId,
-          targetUserId,
-        );
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `untimeout-${userName}-${Date.now()}`,
-            platform: "twitch" as Platform,
-            author: "System",
-            content: `${userName} timeout/ban was removed.`,
-            timestamp: new Date(),
-            userId: "system",
-            authorColor: "#22c55e",
-            mentionsUser: false,
-            emotes: {},
-            isBot: true,
-            badges: {},
-            badgeDetails: {},
-            messageType: "untimeout" as MessageType,
-            targetUsername: userName,
-          },
-        ]);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: `Removed timeout/ban for ${userName}`,
-          type: "success",
-          id: notificationIdRef.current,
-        });
-      } catch (err) {
-        console.error("Failed to untimeout user:", err);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to remove timeout",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [selectedTwitchChannel, twitchSession],
-  );
-
-  const handleWarn = useCallback(
-    async (userName: string) => {
-      if (!selectedTwitchChannel || !twitchSession) return;
-      const reason = prompt(
-        `Enter a warning message for @${userName}:`,
-        "Please follow the chat rules",
-      );
-      if (!reason) return;
-      try {
-        const resolvedUserId = await resolveBroadcasterId(userName);
-        if (resolvedUserId === userName && !/^\d+$/.test(resolvedUserId)) {
-          notificationIdRef.current += 1;
-          setNotification({
-            message: `Could not find user ${userName}`,
-            type: "error",
-            id: notificationIdRef.current,
-          });
-          return;
-        }
-        await warnChatUser(
-          selectedTwitchChannel,
-          twitchSession.userId,
-          resolvedUserId,
-          reason,
-        );
-        notificationIdRef.current += 1;
-        setNotification({
-          message: `Warning sent to ${userName}`,
-          type: "success",
-          id: notificationIdRef.current,
-        });
-      } catch (err: any) {
-        console.error("Failed to warn user:", err);
-        notificationIdRef.current += 1;
-        setNotification({
-          message: err.message || "Failed to warn user",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [selectedTwitchChannel, twitchSession],
-  );
-
-  const handleCancelRaid = useCallback(async () => {
-    if (!selectedTwitchChannel) return;
-    try {
-      await cancelRaid(selectedTwitchChannel);
-      setPendingRaid(null);
-      setIsRaidInitiator(false);
-      notificationIdRef.current += 1;
-      setNotification({
-        message: "Raid cancelled",
-        type: "success",
-        id: notificationIdRef.current,
-      });
-    } catch (err: any) {
-      console.error("Failed to cancel raid:", err);
-      notificationIdRef.current += 1;
-      setNotification({
-        message: err.message || "Failed to cancel raid",
-        type: "error",
-        id: notificationIdRef.current,
-      });
-    }
-  }, [selectedTwitchChannel]);
-
-  const handleUpdateTitle = useCallback(
-    async (title: string) => {
-      if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
-      try {
-        const ok = await updateChannelInfo(
-          twitchSession.accessToken,
-          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-          selectedTwitchChannel,
-          { title },
-        );
-        if (ok) {
-          setStreamTitle(title);
-          notificationIdRef.current += 1;
-          setNotification({
-            message: "Title updated",
-            type: "success",
-            id: notificationIdRef.current,
-          });
-        } else {
-          notificationIdRef.current += 1;
-          setNotification({
-            message: "Failed to update title (missing permission?)",
-            type: "error",
-            id: notificationIdRef.current,
-          });
-        }
-      } catch {
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to update title",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [twitchSession, selectedTwitchChannel],
-  );
-
-  const handleUpdateCategory = useCallback(
-    async (gameId: string, gameName: string) => {
-      if (!twitchSession?.accessToken || !selectedTwitchChannel) return;
-      try {
-        const ok = await updateChannelInfo(
-          twitchSession.accessToken,
-          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-          selectedTwitchChannel,
-          { gameId },
-        );
-        if (ok) {
-          setStreamGameName(gameName);
-          setStreamGameId(gameId);
-          notificationIdRef.current += 1;
-          setNotification({
-            message: "Category updated",
-            type: "success",
-            id: notificationIdRef.current,
-          });
-        } else {
-          notificationIdRef.current += 1;
-          setNotification({
-            message: "Failed to update category (missing permission?)",
-            type: "error",
-            id: notificationIdRef.current,
-          });
-        }
-      } catch {
-        notificationIdRef.current += 1;
-        setNotification({
-          message: "Failed to update category",
-          type: "error",
-          id: notificationIdRef.current,
-        });
-      }
-    },
-    [twitchSession, selectedTwitchChannel],
-  );
-
-  const handleSearchCategories = useCallback(
-    async (query: string): Promise<Array<{ id: string; name: string }>> => {
-      if (!twitchSession?.accessToken) return [];
-      try {
-        return await searchCategories(
-          twitchSession.accessToken,
-          import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
-          query,
-        );
-      } catch {
-        return [];
-      }
-    },
-    [twitchSession],
-  );
-
-  // YouTube helpers
-  const getYtMessageText = useCallback(
-    (m: YTMessage) =>
-      m.parts
-        .map(
-          (p) =>
-            (p as any).text || (p as any).emojiText || (p as any).alt || "",
-        )
-        .join(""),
-    [],
-  );
-
-  const handleYtMessages = useCallback(
-    (msgs: YTMessage[]) => {
-      setYtOptimisticMessages((prev) => {
-        if (!prev.length) return prev;
-        const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase();
-
-        const realKeys = new Set(
-          msgs.map((m) => {
-            const textKey = norm(getYtMessageText(m));
-            return m.authorChannelId
-              ? `${m.authorChannelId}|${textKey}`
-              : `${norm(m.author)}|${textKey}`;
-          }),
-        );
-
-        const remaining = prev.filter((opt) => {
-          const textKey = norm(getYtMessageText(opt));
-          const key = opt.authorChannelId
-            ? `${opt.authorChannelId}|${textKey}`
-            : `${norm(opt.author)}|${textKey}`;
-          return !realKeys.has(key);
-        });
-
-        return remaining.length === prev.length ? prev : remaining;
-      });
-      setYtMessages(msgs);
-    },
-    [getYtMessageText],
-  );
-
-  const handleYtOptimisticMessage = useCallback(
-    (id: string, text: string) => {
-      const optimistic: YTMessage = {
-        id,
-        author: youtubeSession?.displayName || "You",
-        authorChannelId: youtubeSession?.userId,
-        authorAvatar: youtubeSession?.profileImageUrl,
-        parts: [{ type: "text", text }],
-        timestamp: new Date(),
-        optimistic: true,
-      };
-      setYtOptimisticMessages((prev) => [...prev, optimistic]);
-      if (unifyChatEnabled) {
-        unifiedChatRef.current?.scrollToBottom();
-      }
-    },
-    [youtubeSession, unifyChatEnabled],
-  );
-
-  const handleYtOptimisticFailed = useCallback((id: string) => {
-    setYtOptimisticMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
-
   return {
-    //State
     messages,
     isLoading,
     pendingRaid,
@@ -1742,7 +897,6 @@ export function useChatAppState({
     hypeTrain,
     notificationIdRef,
 
-    //Setters
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
@@ -1753,7 +907,6 @@ export function useChatAppState({
     setIsRaidInitiator,
     setHypeTrain,
 
-    // Handlers
     handleSendMessage,
     handleRefreshEmotes,
     handleToggleModMode,
@@ -1771,12 +924,10 @@ export function useChatAppState({
     handleYtOptimisticFailed,
     getYtMessageText,
 
-    // From useTwitchChat
     sendTwitchMessage,
     slowModeWaitTime,
     followerModeMinutes,
 
-    // Ignored users
     ignoredUsers,
   };
 }
