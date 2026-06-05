@@ -20,7 +20,7 @@ import {
 import {
   playMentionSoundPreview,
   MENTION_SOUND_OPTIONS,
-} from "../hooks/useTwitchChat";
+} from "../hooks/chat/useTwitchChat";
 import { exportSettings, importSettings } from "../lib/settingsBackup";
 import {
   backupSettingsToDrive,
@@ -143,7 +143,9 @@ export default function EmbedConfigModal({
     setShareLink(null);
     const result = await restoreSettingsFromDrive();
     if (result.ok) {
-      setDriveMessage(`Loaded ${result.count} settings from Drive. Reloading...`);
+      setDriveMessage(
+        `Loaded ${result.count} settings from Drive. Reloading...`,
+      );
       setTimeout(() => window.location.reload(), 1200);
     } else {
       setDriveMessage(result.message);

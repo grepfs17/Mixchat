@@ -26,7 +26,7 @@ const mockHandleTouchStart = vi.fn();
 const mockHandleTouchEnd = vi.fn();
 const mockHandleTouchMove = vi.fn();
 
-vi.mock("../../src/hooks/useChatTouchGestures", () => ({
+vi.mock("../../src/hooks/chat/useChatTouchGestures", () => ({
   useChatTouchGestures: () => ({
     handleCopy: mockHandleCopy,
     handleTouchStart: mockHandleTouchStart,
@@ -35,7 +35,7 @@ vi.mock("../../src/hooks/useChatTouchGestures", () => ({
   }),
 }));
 
-vi.mock("../../src/hooks/useScrollToBottomOnKeyboard", () => ({
+vi.mock("../../src/hooks/chat/useScrollToBottomOnKeyboard", () => ({
   useScrollToBottomOnKeyboard: () => ({}),
 }));
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-import type { PlatformSession } from "../lib/types";
+import type { PlatformSession } from "../../lib/types";
 
 interface TokenRefreshOptions {
   warningThreshold?: number; // ms before expiry to start refresh (default: 5 min)

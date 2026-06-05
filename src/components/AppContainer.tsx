@@ -8,15 +8,15 @@ import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
 import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
-import { applyTheme } from "../lib/themes";
-import { getYoutubeLinkForChannel, getYoutubeLinks } from "../lib/youtubeLinks";
-import { getAllFollowedChannels, getStreamStatus } from "../lib/twitch";
-import { useStreamMonitor } from "../hooks/useStreamMonitor";
-import { useAuthSessions } from "../hooks/useAuthSessions";
+import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
+import { useAuthSessions } from "../hooks/app/useAuthSessions";
+import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
+import { useChatSettings } from "../hooks/app/useChatSettings";
+import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
+import { useEmbedState } from "../hooks/app/useEmbedState";
+import { useUiState } from "../hooks/app/useUiState";
 import { markStreamerNotified } from "../lib/streamMonitor";
-import { primeAudioContext } from "../hooks/useTwitchChat";
-import type { MentionSoundType } from "../hooks/useTwitchChat";
-import { loadEventSounds, saveEventSounds } from "../lib/eventSoundStorage";
+import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
@@ -45,65 +45,105 @@ export default function AppContainer() {
     youtubeLogout: handleYoutubeLogout,
     clearTwitchSession,
   } = useAuthSessions();
-  const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
-  const [allTwitchChannels, setAllTwitchChannels] = useState<TwitchChannel[]>(
-    [],
-  );
-  const [selectedTwitchChannel, setSelectedTwitchChannel] =
-    useState<string>("");
-  const [selectedTwitchChannelName, setSelectedTwitchChannelName] =
-    useState<string>("");
-  const [
-    selectedTwitchChannelDisplayName,
-    setSelectedTwitchChannelDisplayName,
-  ] = useState<string>("");
-  const [hasLoadedChannel, setHasLoadedChannel] = useState(false);
-  const [channelsLoading, setChannelsLoading] = useState(true);
-  const [leftColumnVisible, setLeftColumnVisible] = useState<
-    boolean | undefined
-  >(undefined);
-  const [embedDefaultOpen, setEmbedDefaultOpen] = useState(true); // Should the stream be expanded by default?
-  const [showStreamEmbed, setShowStreamEmbed] = useState(true);
-  const [videoRatio, setVideoRatio] = useState(70); // Default 75% video
-  const [isDragging, setIsDragging] = useState(false);
-  const embedRef = useRef<HTMLDivElement>(null);
-  const [playerType, setPlayerType] = useState<"embed" | "m3u8" | "youtube">(
-    "embed",
-  );
-  const [viewerCount, setViewerCount] = useState<number | null>(null);
-  const [favoriteChannels, setFavoriteChannels] = useState<string[]>([]); // Favorite channel IDs
-  const [showWatchlistManager, setShowWatchlistManager] = useState(false);
-  const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
-  const [linkedYoutubeUrl, setLinkedYoutubeUrl] = useState<string | null>(null);
-  const [ytLinksVersion, setYtLinksVersion] = useState(0);
-  const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<
-    string | null
-  >(null);
-  const [unifyChatEnabled, setUnifyChatEnabled] = useState(false);
-  const [useYoutubeEmbed, setUseYoutubeEmbed] = useState(true);
-  const [fontSize, setFontSize] = useState(14); // Global chat font size setting
-  const [chatFont, setChatFont] = useState<ChatFont>("inter"); // Global chat font family
-  const [mentionSoundEnabled, setMentionSoundEnabled] = useState(true); // Toggle for mention notification sound
-  const [mentionVolume, setMentionVolume] = useState(0.2); // Mention sound volume 0,1
-  const [mentionSoundType, setMentionSoundType] =
-    useState<MentionSoundType>("ding"); // Mention sound style
-  const [showDeletedMessages, setShowDeletedMessages] = useState(true); // Show or hide messages deleted by mods
-  const [compactActions, setCompactActions] = useState(false); // Hide inline action buttons and sort context menu
-  const [splitChatEnabled, setSplitChatEnabled] = useState(false); // Split chat visual separator
-  const [chatTheme, setChatTheme] = useState<ChatTheme>("default"); // Chat theme
-  const [hideViewerCount, setHideViewerCount] = useState(false);
-  const [disableModModeByDefault, setDisableModModeByDefault] = useState(false);
-  const [hideChatTimestamps, setHideChatTimestamps] = useState(false);
-  const [hlsQualities, setHlsQualities] = useState<
-    Array<{ label: string; url: string }>
-  >([]);
-  const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
-  const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
   const [streamTransition, setStreamTransition] =
     useState<StreamTransitionInfo | null>(null);
-  const [eventSounds, setEventSounds] = useState<Record<string, string>>({});
-  const [eventSoundVolume, setEventSoundVolume] = useState(1);
-  const [ignoredUsers, setIgnoredUsers] = useState<string[]>([]);
+  const {
+    twitchChannels,
+    allTwitchChannels,
+    sortedChannels,
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
+    selectedTwitchChannelDisplayName,
+    channelsLoading,
+    favoriteChannels,
+    setChannelData,
+    toggleFavorite,
+    reset: resetChannels,
+  } = useTwitchChannels({
+    session: sessions.twitch,
+    isInitialAuthLoading: isLoading,
+    onSessionInvalid: clearTwitchSession,
+    onStreamTransition: setStreamTransition,
+  });
+  const {
+    embedDefaultOpen,
+    setEmbedDefaultOpen,
+    showStreamEmbed,
+    setShowStreamEmbed,
+    unifyChatEnabled,
+    setUnifyChatEnabled,
+    useYoutubeEmbed,
+    setUseYoutubeEmbed,
+    fontSize,
+    setFontSize,
+    chatFont,
+    setChatFont,
+    mentionSoundEnabled,
+    setMentionSoundEnabled,
+    mentionVolume,
+    setMentionVolume,
+    mentionSoundType,
+    setMentionSoundType,
+    showDeletedMessages,
+    setShowDeletedMessages,
+    compactActions,
+    setCompactActions,
+    splitChatEnabled,
+    setSplitChatEnabled,
+    chatTheme,
+    setChatTheme,
+    hideViewerCount,
+    setHideViewerCount,
+    disableModModeByDefault,
+    setDisableModModeByDefault,
+    hideChatTimestamps,
+    setHideChatTimestamps,
+    eventSounds,
+    eventSoundVolume,
+    setEventSoundVolume,
+    ignoredUsers,
+    setIgnoredUsers,
+    handleEventSoundChange,
+  } = useChatSettings();
+  const {
+    linkedYoutubeUrl,
+    youtubeStreamVideoId,
+    linkedYoutubeChannelIds,
+    notifyLinksChanged,
+  } = useYoutubeLink({
+    selectedTwitchChannel,
+    twitchSession: sessions.twitch,
+    youtubeSession: sessions.youtube,
+  });
+  const {
+    videoRatio,
+    setVideoRatio,
+    isDragging,
+    setIsDragging,
+    embedRef,
+    playerType,
+    setPlayerType,
+    hlsQualities,
+    setHlsQualities,
+    selectedHlsQualityIdx,
+    setSelectedHlsQualityIdx,
+    showHlsQualityMenu,
+    setShowHlsQualityMenu,
+    viewerCount,
+  } = useEmbedState({
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
+    twitchAccessToken: sessions.twitch?.accessToken,
+    linkedYoutubeUrl,
+  });
+  const {
+    leftColumnVisible,
+    setLeftColumnVisible,
+    showWatchlistManager,
+    setShowWatchlistManager,
+    showYoutubeLinker,
+    setShowYoutubeLinker,
+  } = useUiState();
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -115,9 +155,6 @@ export default function AppContainer() {
   );
   const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
 
-  // Prevent saving event sounds until the initial IndexedDB load completes
-  const eventSoundsLoadedRef = useRef(false);
-
   // Stream monitoring
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
   const { newLiveStreamer, clearNewNotification } = useStreamMonitor({
@@ -127,767 +164,27 @@ export default function AppContainer() {
     checkInterval: 60000, // Check every minute
   });
 
+  // Layout-side effects (resize listener, viewport height pin, modal flags)
+  // are owned by useUiState.
+
+  // Mark app-level loading complete once the initial channel fetch settles.
+  // Mirrors the pre-extraction behavior: if there's no session or the session
+  // already has a token, the channel fetch is the last gate before rendering.
   useEffect(() => {
-    // Set initial value based on screen width
-    setLeftColumnVisible(window.innerWidth >= 1366);
-
-    const handleResize = () => {
-      // Auto-show sidebar when resizing to a wide screen, but don't
-      // force-close it on narrow screens — the user may have explicitly
-      // opened it on mobile (e.g. tapping the hamburger button).
-      // This also prevents the mobile virtual-keyboard resize from
-      // closing the sidebar when the user taps an input field.
-      if (window.innerWidth >= 1366) {
-        setLeftColumnVisible(true);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // Pin the viewport height once on mount so the stream embed height is immune
-  // to the mobile virtual keyboard resizing the layout viewport.
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--initial-vh-px",
-      `${window.innerHeight}px`,
-    );
-  }, []);
-
-  // Keep the stream embed visible when the mobile keyboard opens
-
-  // Fetch Twitch channels when user logs in
-  useEffect(() => {
-    const fetchChannels = async () => {
-      if (sessions.twitch && sessions.twitch.accessToken) {
-        try {
-          const accessToken = sessions.twitch.accessToken;
-
-          const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-
-          const allChannels = await getAllFollowedChannels(
-            accessToken,
-            clientId,
-            sessions.twitch.userId,
-          );
-
-          setAllTwitchChannels(allChannels);
-
-          const onlineChannels = allChannels.filter((ch) => ch.viewerCount > 0);
-          setTwitchChannels(onlineChannels);
-
-          setHasLoadedChannel(false);
-        } catch (error) {
-          console.error("Failed to fetch Twitch channels:", error);
-          const is401Error =
-            error instanceof Error && error.message.includes("401");
-          if (is401Error) {
-            console.log("Received 401 error, clearing session...");
-            clearTwitchSession();
-          }
-        } finally {
-          setChannelsLoading(false);
-        }
-      }
-    };
-
-    fetchChannels().finally(() => {
-      if (!sessions.twitch || sessions.twitch.accessToken) {
-        setIsLoading(false);
-      }
-    });
-
-    // Fetch channels every 2 minutes instead of 30s to avoid rate limiting
-    const interval = setInterval(fetchChannels, 120000);
-    return () => clearInterval(interval);
-  }, [sessions.twitch]);
-
-  const setChannelData = useCallback(
-    (channelId: string, transitionInfo?: StreamTransitionInfo) => {
-      // Search by numeric ID first, then by login name, across online and all channels
-      const channel =
-        twitchChannels.find((ch) => ch.id === channelId) ||
-        allTwitchChannels.find((ch) => ch.id === channelId) ||
-        twitchChannels.find((ch) => ch.name === channelId) ||
-        allTwitchChannels.find((ch) => ch.name === channelId);
-
-      // Use the resolved numeric ID so 7TV/BTTV/Twitch APIs receive the correct value
-      const resolvedId = channel?.id || channelId;
-
-      const ownSession = sessions.twitch;
-      const isOwnUserId = !channel && ownSession?.userId === channelId;
-
-      const isOwnLogin =
-        !channel &&
-        !!ownSession?.username &&
-        ownSession.username.toLowerCase() === channelId.toLowerCase();
-
-      const channelName =
-        channel?.name ||
-        (isOwnUserId || isOwnLogin
-          ? (ownSession!.username ?? channelId)
-          : channelId);
-      const channelDisplayName =
-        channel?.displayName ||
-        (isOwnUserId || isOwnLogin
-          ? (ownSession!.displayName ?? channelId)
-          : channel?.name || channelId);
-      const finalId =
-        isOwnUserId || isOwnLogin
-          ? ownSession!.userId || resolvedId
-          : resolvedId;
-
-      setSelectedTwitchChannel(finalId);
-      setSelectedTwitchChannelName(channelName);
-      setSelectedTwitchChannelDisplayName(channelDisplayName);
-
-      if (transitionInfo) {
-        setStreamTransition(transitionInfo);
-      }
-
-      // Update URL to /channel/<name>
-      window.history.pushState({}, "", `/channel/${channelName}`);
-    },
-    [twitchChannels, allTwitchChannels, sessions.twitch],
-  );
-
-  // Restore channel from URL path /channel/<name>
-  useEffect(() => {
-    const match = window.location.pathname.match(/^\/channel\/([^\/]+)$/);
-    const channelParam = match ? decodeURIComponent(match[1]) : null;
-
-    if (channelParam && !hasLoadedChannel) {
-      // Search online followed channels first, then all followed channels
-      const foundChannel =
-        twitchChannels.find((ch) => ch.name === channelParam) ||
-        allTwitchChannels.find((ch) => ch.name === channelParam);
-
-      if (foundChannel) {
-        setChannelData(foundChannel.id);
-        setHasLoadedChannel(true);
-      } else if (!isLoading) {
-        // Channels have finished loading and this channel isn't in the followed list
-        setChannelData(channelParam);
-        setHasLoadedChannel(true);
-      }
+    if (!channelsLoading && (!sessions.twitch || sessions.twitch.accessToken)) {
+      setIsLoading(false);
     }
-  }, [
-    twitchChannels,
-    allTwitchChannels,
-    hasLoadedChannel,
-    isLoading,
-    setChannelData,
-  ]);
+  }, [channelsLoading, sessions.twitch, setIsLoading]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_video_ratio");
-    if (saved) {
-      setVideoRatio(Number(saved));
-    }
-  }, []);
-
-  // Save video ratio to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_video_ratio", String(videoRatio));
-  }, [videoRatio]);
-
-  // Player always defaults to Twitch embed on load — no localStorage restore
-
-  // Reset HLS quality state when channel or player type changes
-  useEffect(() => {
-    setHlsQualities([]);
-    setSelectedHlsQualityIdx(0);
-    setShowHlsQualityMenu(false);
-  }, [selectedTwitchChannelName, playerType]);
-
-  // If player is set to youtube but there's no linked URL, fall back to embed
-  useEffect(() => {
-    if (playerType === "youtube" && !linkedYoutubeUrl) {
-      setPlayerType("embed");
-    }
-  }, [linkedYoutubeUrl, playerType]);
-
-  // Fetch YouTube live video ID for the stream embed
-  useEffect(() => {
-    if (!linkedYoutubeUrl) {
-      setYoutubeStreamVideoId(null);
-      return;
-    }
-
-    // If URL is a direct video link, extract the ID
-    try {
-      if (linkedYoutubeUrl.includes("v=")) {
-        setYoutubeStreamVideoId(
-          new URLSearchParams(new URL(linkedYoutubeUrl).search).get("v"),
-        );
-        return;
-      } else if (linkedYoutubeUrl.includes("youtu.be/")) {
-        setYoutubeStreamVideoId(
-          linkedYoutubeUrl.split("youtu.be/")[1].split("?")[0],
-        );
-        return;
-      } else if (linkedYoutubeUrl.includes("/live/")) {
-        setYoutubeStreamVideoId(
-          linkedYoutubeUrl.split("/live/")[1].split("?")[0],
-        );
-        return;
-      }
-    } catch {
-      /* not a direct video URL */
-    }
-
-    // Otherwise resolve via API
-    let cancelled = false;
-    const fetchId = async () => {
-      try {
-        const params = new URLSearchParams();
-        params.append("action", "getLiveVideo");
-        params.append("channelUrl", linkedYoutubeUrl);
-
-        const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
-        const data = await res.json();
-        if (!cancelled && res.ok && data.videoId) {
-          setYoutubeStreamVideoId(data.videoId);
-        } else if (!cancelled) {
-          setYoutubeStreamVideoId(null);
-        }
-      } catch {
-        if (!cancelled) setYoutubeStreamVideoId(null);
-      }
-    };
-
-    fetchId();
-    const interval = setInterval(fetchId, 600000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [linkedYoutubeUrl]);
-
-  useEffect(() => {
-    if (
-      !selectedTwitchChannel ||
-      !sessions.twitch ||
-      !sessions.twitch.accessToken
-    ) {
-      setViewerCount(null);
-      return;
-    }
-
-    const fetchViewerCount = async () => {
-      try {
-        const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-        const status = await getStreamStatus(
-          sessions.twitch!.accessToken,
-          clientId,
-          selectedTwitchChannel,
-        );
-
-        if (status) {
-          setViewerCount(status.viewerCount || 0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch viewer count:", error);
-      }
-    };
-
-    fetchViewerCount();
-
-    // Fetch viewer count every 30s instead of 15s to avoid rate limiting
-    // Reduces from 240 to 120 queries/hour per user
-    const interval = setInterval(fetchViewerCount, 30000);
-    return () => clearInterval(interval);
-  }, [selectedTwitchChannel, sessions.twitch]);
-
-  // Look up linked YouTube URL for the selected channel
-  useEffect(() => {
-    if (selectedTwitchChannel) {
-      const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
-      if (storedLink) {
-        setLinkedYoutubeUrl(storedLink);
-      } else if (
-        sessions.youtube &&
-        sessions.twitch &&
-        (selectedTwitchChannel === sessions.twitch.userId ||
-          selectedTwitchChannel === sessions.twitch.username)
-      ) {
-        // If viewing our own channel and logged into YouTube, use our own channel
-        setLinkedYoutubeUrl(
-          `https://www.youtube.com/channel/${sessions.youtube.userId}`,
-        );
-      } else {
-        setLinkedYoutubeUrl(null);
-      }
-    } else {
-      setLinkedYoutubeUrl(null);
-    }
-  }, [
-    selectedTwitchChannel,
-    ytLinksVersion,
-    sessions.youtube,
-    sessions.twitch,
-  ]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_favorite_channels");
-    if (saved) {
-      try {
-        setFavoriteChannels(JSON.parse(saved));
-      } catch (error) {
-        console.error("Failed to load favorite channels:", error);
-      }
-    }
-  }, []);
-
-  // Save favorite channels to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_favorite_channels",
-      JSON.stringify(favoriteChannels),
-    );
-  }, [favoriteChannels]);
-
-  // Load embed default open config from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_embed_default_open");
-    if (saved !== null) {
-      try {
-        const value = JSON.parse(saved);
-        setEmbedDefaultOpen(value);
-        setShowStreamEmbed(value);
-      } catch (error) {
-        console.error("Failed to load embed default open config:", error);
-      }
-    }
-  }, []);
-
-  // Save embed default open config to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_embed_default_open",
-      JSON.stringify(embedDefaultOpen),
-    );
-  }, [embedDefaultOpen]);
-
-  // Load unify chat setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_unify_chat");
-    if (saved !== null) {
-      try {
-        setUnifyChatEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save unify chat setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_unify_chat",
-      JSON.stringify(unifyChatEnabled),
-    );
-  }, [unifyChatEnabled]);
-
-  // Load split chat setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_split_chat");
-    if (saved !== null) {
-      try {
-        setSplitChatEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save split chat setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_split_chat",
-      JSON.stringify(splitChatEnabled),
-    );
-  }, [splitChatEnabled]);
-
-  // Load YouTube embed setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_use_youtube_embed");
-    if (saved !== null) {
-      try {
-        setUseYoutubeEmbed(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save YouTube embed setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_use_youtube_embed",
-      JSON.stringify(useYoutubeEmbed),
-    );
-  }, [useYoutubeEmbed]);
-
-  // Load font size setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_font_size");
-    if (saved !== null) {
-      try {
-        setFontSize(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save font size setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_font_size", JSON.stringify(fontSize));
-  }, [fontSize]);
-
-  // Load mention sound setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_sound");
-    if (saved !== null) {
-      try {
-        setMentionSoundEnabled(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention sound setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_sound",
-      JSON.stringify(mentionSoundEnabled),
-    );
-  }, [mentionSoundEnabled]);
-
-  // Load mention volume from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_volume");
-    if (saved !== null) {
-      try {
-        setMentionVolume(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention volume to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_volume",
-      JSON.stringify(mentionVolume),
-    );
-  }, [mentionVolume]);
-
-  // Load mention sound type from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_mention_sound_type");
-    if (saved !== null) {
-      try {
-        setMentionSoundType(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save mention sound type to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_mention_sound_type",
-      JSON.stringify(mentionSoundType),
-    );
-  }, [mentionSoundType]);
-
-  // Load show deleted messages setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_show_deleted_messages");
-    if (saved !== null) {
-      try {
-        setShowDeletedMessages(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Load compact actions setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_compact_actions");
-    if (saved !== null) {
-      try {
-        setCompactActions(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save show deleted messages setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_show_deleted_messages",
-      JSON.stringify(showDeletedMessages),
-    );
-  }, [showDeletedMessages]);
-
-  // Save compact actions setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_compact_actions",
-      JSON.stringify(compactActions),
-    );
-  }, [compactActions]);
-
-  // Load chat font setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_chat_font");
-    if (saved !== null) {
-      try {
-        setChatFont(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save chat font setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_chat_font", JSON.stringify(chatFont));
-  }, [chatFont]);
-
-  // Load hide viewer count setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_hide_viewer_count");
-    if (saved !== null) {
-      try {
-        setHideViewerCount(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save hide viewer count setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_hide_viewer_count",
-      JSON.stringify(hideViewerCount),
-    );
-  }, [hideViewerCount]);
-
-  // Load disable mod mode by default setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_disable_mod_mode_by_default");
-    if (saved !== null) {
-      try {
-        setDisableModModeByDefault(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save disable mod mode by default setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_disable_mod_mode_by_default",
-      JSON.stringify(disableModModeByDefault),
-    );
-  }, [disableModModeByDefault]);
-
-  // Load hide chat timestamps setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_hide_chat_timestamps");
-    if (saved !== null) {
-      try {
-        setHideChatTimestamps(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save hide chat timestamps setting to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_hide_chat_timestamps",
-      JSON.stringify(hideChatTimestamps),
-    );
-  }, [hideChatTimestamps]);
-
-  // Load event sounds from IndexedDB (migrates legacy localStorage on first run)
-  useEffect(() => {
-    let cancelled = false;
-    loadEventSounds()
-      .then((sounds) => {
-        if (!cancelled) {
-          setEventSounds(sounds || {});
-          eventSoundsLoadedRef.current = true;
-        }
-      })
-      .catch(() => {
-        eventSoundsLoadedRef.current = true;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Save event sounds to IndexedDB
-  useEffect(() => {
-    if (!eventSoundsLoadedRef.current) return;
-    saveEventSounds(eventSounds).catch(() => {});
-  }, [eventSounds]);
-
-  // Load event sound volume from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_event_sound_volume");
-    if (saved !== null) {
-      try {
-        setEventSoundVolume(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save event sound volume to localStorage
-  useEffect(() => {
-    localStorage.setItem(
-      "mixchat_event_sound_volume",
-      JSON.stringify(eventSoundVolume),
-    );
-  }, [eventSoundVolume]);
-
-  // Load chat theme setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_chat_theme");
-    if (saved !== null) {
-      try {
-        setChatTheme(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save chat theme setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_chat_theme", JSON.stringify(chatTheme));
-  }, [chatTheme]);
-
-  // Load ignored users setting from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("mixchat_ignored_users");
-    if (saved !== null) {
-      try {
-        setIgnoredUsers(JSON.parse(saved));
-      } catch {
-        /* ignore */
-      }
-    }
-  }, []);
-
-  // Save ignored users setting to localStorage
-  useEffect(() => {
-    localStorage.setItem("mixchat_ignored_users", JSON.stringify(ignoredUsers));
-  }, [ignoredUsers]);
-
-  // Apply theme to document
-  useEffect(() => {
-    applyTheme(chatTheme);
-  }, [chatTheme]);
-
-  // Handle mouse events for resizing
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const container = document.querySelector(
-        "[data-app-grid]",
-      ) as HTMLElement;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const newX = e.clientX - rect.left;
-      const newRatio = Math.max(30, Math.min(80, (newX / rect.width) * 100));
-      setVideoRatio(newRatio);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging]);
+  // All embed-runtime state (videoRatio, drag handle, HLS quality, viewer
+  // count, YouTube fallback) now lives in useEmbedState.
 
   // Auth login flows now live in useAuthSessions. The Twitch logout also has
   // to clear non-auth state (channel list, current selection, favorites).
   const handleTwitchLogout = useCallback(() => {
     twitchLogout();
-    setTwitchChannels([]);
-    setChannelsLoading(true);
-    setSelectedTwitchChannel("");
-    setSelectedTwitchChannelName("");
-    setFavoriteChannels([]);
-  }, [twitchLogout]);
-
-  const toggleFavorite = useCallback((channelId: string) => {
-    setFavoriteChannels((prev) => {
-      if (prev.includes(channelId)) {
-        return prev.filter((id) => id !== channelId);
-      } else {
-        return [...prev, channelId];
-      }
-    });
-  }, []);
-
-  const handleEventSoundChange = useCallback(
-    (eventType: string, soundData: string | null) => {
-      setEventSounds((prev) => {
-        const updated = { ...prev };
-        if (soundData === null) {
-          delete updated[eventType];
-        } else {
-          updated[eventType] = soundData;
-        }
-        return updated;
-      });
-    },
-    [],
-  );
-
-  const sortedChannels = useMemo(
-    () =>
-      [...twitchChannels].sort((a, b) => {
-        const aIsFavorite = favoriteChannels.includes(a.id);
-        const bIsFavorite = favoriteChannels.includes(b.id);
-        if (aIsFavorite && !bIsFavorite) return -1;
-        if (!aIsFavorite && bIsFavorite) return 1;
-        return 0;
-      }),
-    [twitchChannels, favoriteChannels],
-  );
-
-  const linkedYoutubeChannelIds = useMemo(
-    () => getYoutubeLinks().map((l) => l.twitchChannelId),
-    [ytLinksVersion],
-  );
+    resetChannels();
+  }, [twitchLogout, resetChannels]);
 
   // While sessions are being restored from localStorage, render skeleton cards
   if (isLoading) {
@@ -1026,9 +323,7 @@ export default function AppContainer() {
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
-              setSelectedTwitchChannel("");
-              setSelectedTwitchChannelName("");
-              setSelectedTwitchChannelDisplayName("");
+              resetChannels();
               setStreamTransition(null);
               window.history.pushState({}, "", "/");
             }}
@@ -1323,7 +618,7 @@ export default function AppContainer() {
         <YouTubeLinker
           availableChannels={allTwitchChannels}
           onClose={() => setShowYoutubeLinker(false)}
-          onLinksChanged={() => setYtLinksVersion((v) => v + 1)}
+          onLinksChanged={notifyLinksChanged}
         />
       )}
 

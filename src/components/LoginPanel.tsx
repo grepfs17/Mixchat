@@ -9,7 +9,7 @@ import {
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
 import type { ChatFont, ChatTheme } from "../lib/types";
-import type { MentionSoundType } from "../hooks/useTwitchChat";
+import type { MentionSoundType } from "../hooks/chat/useTwitchChat";
 import type { SettingsProps } from "../lib/settings/types";
 
 interface TwitchChannel {
