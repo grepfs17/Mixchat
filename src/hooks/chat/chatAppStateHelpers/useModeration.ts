@@ -7,6 +7,10 @@ import {
   resolveBroadcasterId,
   cancelRaid,
   warnChatUser,
+  clearChat,
+  startRaid,
+  sendAnnouncement,
+  sendShoutout,
 } from "../../../lib/twitch";
 import type {
   ChatMessage,
@@ -51,6 +55,9 @@ export interface UseModerationReturn {
     badges: Record<string, string>,
     badgeDetails: Record<string, { url: string; title: string }>,
   ) => void;
+  handleModCommand: (
+    message: string,
+  ) => Promise<{ handled: boolean; error?: string }>;
 }
 
 export function useModeration({
@@ -354,6 +361,287 @@ export function useModeration({
     }
   }, [selectedTwitchChannel, notificationIdRef, setNotification]);
 
+  const handleModCommand = useCallback(
+    async (message: string): Promise<{ handled: boolean; error?: string }> => {
+      if (
+        !message.startsWith("/") ||
+        !twitchSession ||
+        !selectedTwitchChannel
+      ) {
+        return { handled: false };
+      }
+
+      const parts = message.split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+
+      if (
+        cmd === "/timeout" ||
+        cmd === "/ban" ||
+        cmd === "/unban" ||
+        cmd === "/untimeout" ||
+        cmd === "/clear"
+      ) {
+        try {
+          if (cmd === "/clear") {
+            await clearChat(selectedTwitchChannel, twitchSession.userId);
+            return { handled: true };
+          }
+
+          const targetUser = parts[1];
+          if (!targetUser)
+            return { handled: false, error: `${cmd} requires a username` };
+
+          const resolvedTargetId = await resolveBroadcasterId(targetUser);
+          if (
+            resolvedTargetId === targetUser &&
+            !/^\d+$/.test(resolvedTargetId)
+          ) {
+            return {
+              handled: false,
+              error: `Could not find user ${targetUser}`,
+            };
+          }
+
+          if (cmd === "/unban" || cmd === "/untimeout") {
+            await removeBan(
+              selectedTwitchChannel,
+              twitchSession.userId,
+              resolvedTargetId,
+            );
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `untimeout-${targetUser}-${Date.now()}`,
+                platform: "twitch" as Platform,
+                author: "System",
+                content: `${targetUser} timeout/ban was removed.`,
+                timestamp: new Date(),
+                userId: "system",
+                authorColor: "#22c55e",
+                mentionsUser: false,
+                emotes: {},
+                isBot: true,
+                badges: {},
+                badgeDetails: {},
+                messageType: "untimeout" as MessageType,
+                targetUsername: targetUser,
+              },
+            ]);
+            notificationIdRef.current += 1;
+            setNotification({
+              message: `Removed timeout/ban for ${targetUser}`,
+              type: "success",
+              id: notificationIdRef.current,
+            });
+            return { handled: true };
+          }
+
+          let duration: number | undefined = undefined;
+          let reasonIndex = 2;
+
+          if (cmd === "/timeout") {
+            const durationStr = parts[2] || "600";
+            const match = durationStr.match(/^(\d+)([smhd])?$/i);
+            if (match) {
+              const val = parseInt(match[1]);
+              const unit = (match[2] || "s").toLowerCase();
+              const multipliers: Record<string, number> = {
+                s: 1,
+                m: 60,
+                h: 3600,
+                d: 86400,
+              };
+              duration = val * (multipliers[unit] || 1);
+              reasonIndex = 3;
+            } else {
+              duration = 600;
+            }
+          }
+
+          const reason = parts.slice(reasonIndex).join(" ") || null;
+          await createBan(
+            selectedTwitchChannel,
+            twitchSession.userId,
+            resolvedTargetId,
+            duration,
+            reason,
+          );
+          return { handled: true };
+        } catch (err: any) {
+          return {
+            handled: true,
+            error: err.message || `Failed to execute ${cmd}`,
+          };
+        }
+      }
+
+      if (cmd === "/raid" || cmd === "/unraid") {
+        const isOwnerByName =
+          (twitchSession?.username || "").toLowerCase() ===
+          (selectedTwitchChannelName || "").toLowerCase();
+        const isOwnerById =
+          twitchSession?.userId && selectedTwitchChannel
+            ? twitchSession.userId === selectedTwitchChannel
+            : false;
+        if (!isOwnerByName && !isOwnerById) {
+          return {
+            handled: false,
+            error: "Only the broadcaster can start or cancel a raid",
+          };
+        }
+
+        try {
+          if (cmd === "/unraid") {
+            await cancelRaid(selectedTwitchChannel);
+            notificationIdRef.current += 1;
+            setNotification({
+              message: "Raid cancelled",
+              type: "success",
+              id: notificationIdRef.current,
+            });
+            return { handled: true };
+          }
+
+          const targetUser = parts[1];
+          if (!targetUser)
+            return { handled: false, error: "/raid requires a username" };
+
+          const resolvedTargetId = await resolveBroadcasterId(targetUser);
+          if (
+            resolvedTargetId === targetUser &&
+            !/^\d+$/.test(resolvedTargetId)
+          ) {
+            return {
+              handled: false,
+              error: `Could not find user ${targetUser}`,
+            };
+          }
+
+          await startRaid(selectedTwitchChannel, resolvedTargetId);
+          notificationIdRef.current += 1;
+          setNotification({
+            message: `Raiding ${targetUser}`,
+            type: "success",
+            id: notificationIdRef.current,
+          });
+          return { handled: true };
+        } catch (err: any) {
+          return {
+            handled: true,
+            error: err.message || `Failed to execute ${cmd}`,
+          };
+        }
+      }
+
+      if (cmd === "/announce") {
+        const announcementText = parts.slice(1).join(" ");
+        if (!announcementText) {
+          return { handled: false, error: "Usage: /announce <message>" };
+        }
+        try {
+          await sendAnnouncement(
+            selectedTwitchChannel,
+            twitchSession.userId,
+            announcementText,
+          );
+          notificationIdRef.current += 1;
+          setNotification({
+            message: "Announcement sent!",
+            type: "success",
+            id: notificationIdRef.current,
+          });
+          return { handled: true };
+        } catch (err: any) {
+          return {
+            handled: true,
+            error: err.message || "Failed to send announcement",
+          };
+        }
+      }
+
+      if (cmd === "/shoutout") {
+        const targetUser = parts[1];
+        if (!targetUser) {
+          return { handled: false, error: "Usage: /shoutout <username>" };
+        }
+        try {
+          const resolvedTargetId = await resolveBroadcasterId(targetUser);
+          if (
+            resolvedTargetId === targetUser &&
+            !/^\d+$/.test(resolvedTargetId)
+          ) {
+            return {
+              handled: false,
+              error: `Could not find user ${targetUser}`,
+            };
+          }
+          await sendShoutout(
+            selectedTwitchChannel,
+            resolvedTargetId,
+            twitchSession.userId,
+          );
+          notificationIdRef.current += 1;
+          setNotification({
+            message: `Shoutout sent to ${targetUser}!`,
+            type: "success",
+            id: notificationIdRef.current,
+          });
+          return { handled: true };
+        } catch (err: any) {
+          return {
+            handled: true,
+            error: err.message || "Failed to send shoutout",
+          };
+        }
+      }
+
+      if (cmd === "/warn") {
+        const targetUser = parts[1];
+        if (!targetUser) {
+          return { handled: false, error: "Usage: /warn <username> [reason]" };
+        }
+        try {
+          const resolvedTargetId = await resolveBroadcasterId(targetUser);
+          if (
+            resolvedTargetId === targetUser &&
+            !/^\d+$/.test(resolvedTargetId)
+          ) {
+            return {
+              handled: false,
+              error: `Could not find user ${targetUser}`,
+            };
+          }
+          const reason = parts.slice(2).join(" ") || undefined;
+          await warnChatUser(
+            selectedTwitchChannel,
+            twitchSession.userId,
+            resolvedTargetId,
+            reason,
+          );
+          notificationIdRef.current += 1;
+          setNotification({
+            message: `Warning sent to ${targetUser}`,
+            type: "success",
+            id: notificationIdRef.current,
+          });
+          return { handled: true };
+        } catch (err: any) {
+          return { handled: true, error: err.message || "Failed to warn user" };
+        }
+      }
+
+      return { handled: false };
+    },
+    [
+      twitchSession,
+      selectedTwitchChannel,
+      selectedTwitchChannelName,
+      notificationIdRef,
+      setNotification,
+      setMessages,
+    ],
+  );
+
   return {
     isModerator,
     modModeActive,
@@ -367,5 +655,6 @@ export function useModeration({
     handleWarn,
     handleCancelRaid,
     handleOwnBadgesLoaded,
+    handleModCommand,
   };
 }
