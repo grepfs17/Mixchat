@@ -23,7 +23,7 @@ export function useChatLayout({
   const [isDraggingChatSplit, setIsDraggingChatSplit] = useState(false);
 
   useEffect(() => {
-    if (isDraggingChatSplit) return;
+    if (!isDraggingChatSplit) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const container = document.querySelector("[data-chat-app-container]");
@@ -37,10 +37,6 @@ export function useChatLayout({
 
     const handleMouseUp = () => {
       setIsDraggingChatSplit(false);
-      localStorage.setItem(
-        "mixchat_chat_split_ratio",
-        chatSplitRatio.toString(),
-      );
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -49,7 +45,11 @@ export function useChatLayout({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDraggingChatSplit, chatSplitRatio]);
+  }, [isDraggingChatSplit]);
+
+  useEffect(() => {
+    localStorage.setItem("mixchat_chat_split_ratio", chatSplitRatio.toString());
+  }, [chatSplitRatio]);
 
   useEffect(() => {
     if (selectedTwitchChannelDisplayName) {
