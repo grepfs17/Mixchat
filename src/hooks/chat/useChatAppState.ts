@@ -11,14 +11,7 @@ import {
   subscribeTo7TVUpdates,
 } from "../../lib/emotes";
 import { initializeBadges, clearBadgeCache } from "../../lib/badges";
-import {
-  getStreamStatus,
-  deleteChatMessage,
-  createBan,
-  checkUserModStatus,
-  sendHelixMessage,
-  searchCategories,
-} from "../../lib/twitch";
+import { sendHelixMessage } from "../../lib/twitch";
 import { saveMessage } from "../../lib/chatHistoryStorage";
 import type {
   ChatMessage,
