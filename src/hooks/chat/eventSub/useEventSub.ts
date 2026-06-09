@@ -40,7 +40,8 @@ export function useEventSub({
   const clientIdRef = useRef(clientId);
   const rateLimitedUntilRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
-  const triggerResubscribeRef = useRef<(() => void) | null>(null);
+  const subscribedKeysRef = useRef(new Set<string>());
+  const triggerResubscribeRef = useRef<((keys?: string[]) => void) | null>(null);
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
@@ -69,12 +70,14 @@ export function useEventSub({
         onScopeError,
       });
 
-      if (sessionIdRef.current) {
-        triggerResubscribeRef.current?.();
+      if (sessionIdRef.current && !subscribedKeysRef.current.has(key)) {
+        const sid = sessionIdRef.current;
+        triggerResubscribeRef.current?.([key]);
       }
 
       return () => {
         subscriptionsRef.current.delete(key);
+        subscribedKeysRef.current.delete(key);
       };
     },
     [],
@@ -103,11 +106,13 @@ export function useEventSub({
     const sleep = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
 
-    const subscribeAll = async (sid: string) => {
+    const subscribeAll = async (sid: string, keys?: string[]) => {
       if (pendingSubscribes) return;
       pendingSubscribes = true;
       try {
-        const entries = Array.from(subscriptionsRef.current.values());
+        const entries = keys
+          ? keys.map((k) => [k, subscriptionsRef.current.get(k)] as const).filter((e): e is [string, Subscription] => e[1] != null)
+          : Array.from(subscriptionsRef.current.entries());
         for (let i = 0; i < entries.length; i++) {
           if (!active) return;
           if (sessionIdRef.current !== sid) return;
@@ -116,7 +121,8 @@ export function useEventSub({
             await sleep(wait);
             if (!active || sessionIdRef.current !== sid) return;
           }
-          const sub = entries[i];
+          const [key, sub] = entries[i];
+          if (subscribedKeysRef.current.has(key)) continue;
           try {
             const res = await subscribeEventSub(
               accessTokenRef.current,
@@ -134,6 +140,9 @@ export function useEventSub({
             ) {
               rateLimitedUntilRef.current =
                 Date.now() + POST_429_COOLDOWN_MS;
+            }
+            if (res.ok || res.status === 409) {
+              subscribedKeysRef.current.add(key);
             }
             if (
               !res.ok &&
@@ -184,6 +193,7 @@ export function useEventSub({
           if (!sid) return;
           setSessionId(sid);
           sessionIdRef.current = sid;
+          subscribedKeysRef.current.clear();
           resetKeepalive(keepaliveTimeout);
           await subscribeAll(sid);
         } else if (msgType === "session_keepalive") {
@@ -233,14 +243,14 @@ export function useEventSub({
 
     connect(WS_URL);
 
-    triggerResubscribeRef.current = () => {
+    triggerResubscribeRef.current = (keys?: string[]) => {
       const sid = sessionIdRef.current;
       if (!sid) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
         if (active && sessionIdRef.current === sid) {
-          void subscribeAll(sid);
+          void subscribeAll(sid, keys);
         }
       }, 300);
     };

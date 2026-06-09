@@ -128,8 +128,11 @@ export function YouTubeMessageContent({
           <span className="message-text">
             {msg.messageType === "membership" && (
               <>
-                <span className="yt-superchat-amount-inline">
-                  {msg.superchat!.amount}
+                <span
+                  className="yt-superchat-amount-inline"
+                  style={{ marginRight: "5px" }}
+                >
+                  [{msg.superchat!.amount}]
                 </span>
                 {msg.parts.length > 0 && (
                   <YTMessageParts parts={msg.parts} variant={variant} />
@@ -147,8 +150,11 @@ export function YouTubeMessageContent({
             )}
             {msg.superchat && !msg.messageType && (
               <>
-                <span className="yt-superchat-amount-inline">
-                  {msg.superchat.amount}
+                <span
+                  className="yt-superchat-amount-inline"
+                  style={{ marginRight: "5px" }}
+                >
+                  [{msg.superchat.amount}]
                 </span>
                 {msg.parts.length > 0 && (
                   <YTMessageParts parts={msg.parts} variant={variant} />
