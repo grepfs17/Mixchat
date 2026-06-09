@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useEventSub, resolveBroadcasterId } from "./useEventSub";
+import { resolveBroadcasterId } from "./useEventSub";
+import type { SubscribeFn } from "./useEventSub";
 
 interface HypeTrainEvent {
   id: string;
@@ -38,9 +39,8 @@ interface HypeTrainEvent {
 }
 
 interface UseHypeTrainEventSubOptions {
+  subscribe: SubscribeFn;
   channelId: string;
-  accessToken: string;
-  clientId: string;
   enabled: boolean;
   onHypeTrainBegin: (event: HypeTrainEvent) => void;
   onHypeTrainProgress: (event: HypeTrainEvent) => void;
@@ -71,9 +71,8 @@ function parseHypeTrainEvent(ev: any): HypeTrainEvent {
 }
 
 export function useHypeTrainEventSub({
+  subscribe,
   channelId,
-  accessToken,
-  clientId,
   enabled,
   onHypeTrainBegin,
   onHypeTrainProgress,
@@ -89,7 +88,6 @@ export function useHypeTrainEventSub({
   const onEndRef = useRef(onHypeTrainEnd);
   useEffect(() => { onEndRef.current = onHypeTrainEnd; }, [onHypeTrainEnd]);
 
-  const { subscribe } = useEventSub({ accessToken, clientId, enabled });
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
     subscribeRef.current = subscribe;

@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useEventSub, resolveBroadcasterId } from "./useEventSub";
+import { resolveBroadcasterId } from "./useEventSub";
+import type { SubscribeFn } from "./useEventSub";
 import type { TwitchMessage } from "../../../lib/types";
 
 interface RedemptionEvent {
@@ -24,18 +25,16 @@ interface RedemptionEvent {
 }
 
 interface UseChannelPointRedemptionsOptions {
+  subscribe: SubscribeFn;
   channelId: string;
-  accessToken: string;
-  clientId: string;
   enabled: boolean;
   onRedemption: (message: TwitchMessage) => void;
   onScopeError?: () => void;
 }
 
 export function useChannelPointRedemptions({
+  subscribe,
   channelId,
-  accessToken,
-  clientId,
   enabled,
   onRedemption,
   onScopeError,
@@ -45,7 +44,6 @@ export function useChannelPointRedemptions({
     onRedemptionRef.current = onRedemption;
   }, [onRedemption]);
 
-  const { subscribe } = useEventSub({ accessToken, clientId, enabled });
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
     subscribeRef.current = subscribe;

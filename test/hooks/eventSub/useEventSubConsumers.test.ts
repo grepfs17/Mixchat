@@ -1,21 +1,35 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// --- Mock useEventSub ---
-
 vi.mock("../../../src/hooks/chat/eventSub/useEventSub", () => ({
-  useEventSub: vi.fn(),
   resolveBroadcasterId: vi.fn().mockResolvedValue("12345"),
 }));
 
-// Import hooks AFTER mock setup
 import { useAutomodQueue } from "../../../src/hooks/chat/eventSub/useAutomodQueue";
 import { useRaidDetection } from "../../../src/hooks/chat/eventSub/useRaidDetection";
 import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSub/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSub/useHypeTrainEventSub";
-import { useEventSub } from "../../../src/hooks/chat/eventSub/useEventSub";
+import type { SubscribeFn } from "../../../src/hooks/chat/eventSub/useEventSub";
 
-// --- Tests ---
+function makeSubscribe(
+  record?: { type: string; condition: Record<string, string> }[],
+): SubscribeFn {
+  return (type, _v, condition, _cb) => {
+    record?.push({ type, condition });
+    return vi.fn();
+  };
+}
+
+function makeSubscribeCapture(
+  handlers: Record<string, (event: unknown) => void>,
+): SubscribeFn {
+  return (type, _v, _c, onNotification) => {
+    const key = Object.keys(handlers).length === 0 ? "first" : "other";
+    if (key === "first") handlers[type] = onNotification;
+    else handlers[type] = onNotification;
+    return vi.fn();
+  };
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -29,20 +43,11 @@ describe("useAutomodQueue", () => {
   it("subscribes to automod.message.hold and automod.message.update", () => {
     const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (type, _v, condition, _cb) => {
-        subscribeCalls.push({ type, condition });
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     renderHook(() =>
       useAutomodQueue({
+        subscribe: makeSubscribe(subscribeCalls),
         channelId: "ch-1",
         moderatorId: "mod-1",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onHeldMessage: vi.fn(),
         onResolvedMessage: vi.fn(),
@@ -63,15 +68,13 @@ describe("useAutomodQueue", () => {
   });
 
   it("does not subscribe when disabled", () => {
-    const mockSubscribe = vi.fn(() => vi.fn());
-    vi.mocked(useEventSub).mockReturnValue({ subscribe: mockSubscribe, sessionId: "s1" });
+    const mockSubscribe = vi.fn(() => vi.fn()) as SubscribeFn;
 
     renderHook(() =>
       useAutomodQueue({
+        subscribe: mockSubscribe,
         channelId: "ch-1",
         moderatorId: "mod-1",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: false,
         onHeldMessage: vi.fn(),
       }),
@@ -83,30 +86,43 @@ describe("useAutomodQueue", () => {
   it("parses held message event and calls onHeldMessage", () => {
     const handlers: Record<string, (event: unknown) => void> = {};
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, _c, onNotification) => {
-        // Store by order: first call = hold, second = update
-        const key = Object.keys(handlers).length === 0 ? "hold" : "update";
-        handlers[key] = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
+    renderHook(() =>
+      useAutomodQueue({
+        subscribe: makeSubscribeCapture(handlers),
+        channelId: "ch-1",
+        moderatorId: "mod-1",
+        enabled: true,
+        onHeldMessage: vi.fn(),
+      }),
+    );
+
+    const heldType = "automod.message.hold";
+    act(() => {
+      handlers[heldType]({
+        message_id: "msg-1",
+        message: "bad word",
+        user_id: "u-1",
+        user_login: "user1",
+        user_name: "User1",
+        category: "swearing",
+        level: 2,
+        held_at: "2024-01-01T00:00:00Z",
+      });
     });
 
     const onHeldMessage = vi.fn();
     renderHook(() =>
       useAutomodQueue({
+        subscribe: makeSubscribeCapture(handlers),
         channelId: "ch-1",
         moderatorId: "mod-1",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onHeldMessage,
       }),
     );
 
     act(() => {
-      handlers.hold({
+      handlers[heldType]({
         message_id: "msg-1",
         message: "bad word",
         user_id: "u-1",
@@ -133,30 +149,21 @@ describe("useAutomodQueue", () => {
   it("parses resolved message event and calls onResolvedMessage", () => {
     const handlers: Record<string, (event: unknown) => void> = {};
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, _c, onNotification) => {
-        const key = Object.keys(handlers).length === 0 ? "hold" : "update";
-        handlers[key] = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     const onResolvedMessage = vi.fn();
     renderHook(() =>
       useAutomodQueue({
+        subscribe: makeSubscribeCapture(handlers),
         channelId: "ch-1",
         moderatorId: "mod-1",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onHeldMessage: vi.fn(),
         onResolvedMessage,
       }),
     );
 
+    const updateType = "automod.message.update";
     act(() => {
-      handlers.update({
+      handlers[updateType]({
         message_id: "msg-2",
         status: "approved",
       });
@@ -173,19 +180,13 @@ describe("useRaidDetection", () => {
   it("subscribes to channel.raid with resolved numeric ID", async () => {
     let subscribeCondition: Record<string, string> | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, condition, _cb) => {
-        subscribeCondition = condition;
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     renderHook(() =>
       useRaidDetection({
+        subscribe: (_type, _v, condition, _cb) => {
+          subscribeCondition = condition;
+          return vi.fn();
+        },
         channelId: "somechannel",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onRaidOut: vi.fn(),
       }),
@@ -201,20 +202,30 @@ describe("useRaidDetection", () => {
   it("parses raid notification and calls onRaidOut", async () => {
     let notificationHandler: ((event: unknown) => void) | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, _c, onNotification) => {
-        notificationHandler = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
+    renderHook(() =>
+      useRaidDetection({
+        subscribe: (_type, _v, _c, onNotification) => {
+          notificationHandler = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onRaidOut: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => expect(notificationHandler).toBeDefined());
     });
 
     const onRaidOut = vi.fn();
     renderHook(() =>
       useRaidDetection({
+        subscribe: (_type, _v, _c, onNotification) => {
+          notificationHandler = onNotification;
+          return vi.fn();
+        },
         channelId: "12345",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onRaidOut,
       }),
@@ -244,19 +255,13 @@ describe("useChannelPointRedemptions", () => {
   it("subscribes to channel.channel_points_custom_reward_redemption.add", async () => {
     let subscribeCondition: Record<string, string> | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, condition, _cb) => {
-        subscribeCondition = condition;
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     renderHook(() =>
       useChannelPointRedemptions({
+        subscribe: (_type, _v, condition, _cb) => {
+          subscribeCondition = condition;
+          return vi.fn();
+        },
         channelId: "somechannel",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onRedemption: vi.fn(),
       }),
@@ -272,20 +277,14 @@ describe("useChannelPointRedemptions", () => {
   it("parses redemption and calls onRedemption", async () => {
     let notificationHandler: ((event: unknown) => void) | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, _c, onNotification) => {
-        notificationHandler = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     const onRedemption = vi.fn();
     renderHook(() =>
       useChannelPointRedemptions({
+        subscribe: (_type, _v, _c, onNotification) => {
+          notificationHandler = onNotification;
+          return vi.fn();
+        },
         channelId: "12345",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onRedemption,
       }),
@@ -319,20 +318,14 @@ describe("useChannelPointRedemptions", () => {
   it("skips redemptions with user input", async () => {
     let notificationHandler: ((event: unknown) => void) | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (_type, _v, _c, onNotification) => {
-        notificationHandler = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     const onRedemption = vi.fn();
     renderHook(() =>
       useChannelPointRedemptions({
+        subscribe: (_type, _v, _c, onNotification) => {
+          notificationHandler = onNotification;
+          return vi.fn();
+        },
         channelId: "12345",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onRedemption,
       }),
@@ -362,19 +355,13 @@ describe("useHypeTrainEventSub", () => {
   it("subscribes to hype_train.begin, progress, and end", async () => {
     const subscribedTypes: string[] = [];
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (type, _v, _c, _cb) => {
-        subscribedTypes.push(type);
-        return vi.fn();
-      },
-      sessionId: "s1",
-    });
-
     renderHook(() =>
       useHypeTrainEventSub({
+        subscribe: (type, _v, _c, _cb) => {
+          subscribedTypes.push(type);
+          return vi.fn();
+        },
         channelId: "somechannel",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onHypeTrainBegin: vi.fn(),
         onHypeTrainProgress: vi.fn(),
@@ -394,20 +381,32 @@ describe("useHypeTrainEventSub", () => {
   it("parses hype train begin event", async () => {
     let notificationHandler: ((event: unknown) => void) | undefined;
 
-    vi.mocked(useEventSub).mockReturnValue({
-      subscribe: (type, _v, _c, onNotification) => {
-        if (type === "channel.hype_train.begin") notificationHandler = onNotification;
-        return vi.fn();
-      },
-      sessionId: "s1",
+    renderHook(() =>
+      useHypeTrainEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.hype_train.begin") notificationHandler = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onHypeTrainBegin: vi.fn(),
+        onHypeTrainProgress: vi.fn(),
+        onHypeTrainEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => expect(notificationHandler).toBeDefined());
     });
 
     const onBegin = vi.fn();
     renderHook(() =>
       useHypeTrainEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.hype_train.begin") notificationHandler = onNotification;
+          return vi.fn();
+        },
         channelId: "12345",
-        accessToken: "tok",
-        clientId: "cid",
         enabled: true,
         onHypeTrainBegin: onBegin,
         onHypeTrainProgress: vi.fn(),

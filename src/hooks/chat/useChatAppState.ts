@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
+import { useEventSub } from "./eventSub/useEventSub";
 import { useRaidDetection } from "./eventSub/useRaidDetection";
 import type { RaidOutEvent } from "./eventSub/useRaidDetection";
 import { useChannelPointRedemptions } from "./eventSub/useChannelPointRedemptions";
@@ -260,11 +261,16 @@ export function useChatAppState({
     [setMessages],
   );
 
-  useAutomodQueue({
-    channelId: selectedTwitchChannel,
-    moderatorId: twitchSession?.userId || "",
+  const { subscribe } = useEventSub({
     accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
+  });
+
+  useAutomodQueue({
+    subscribe,
+    channelId: selectedTwitchChannel,
+    moderatorId: twitchSession?.userId || "",
     enabled: !!(
       twitchSession?.accessToken &&
       twitchSession?.userId &&
@@ -351,9 +357,8 @@ export function useChatAppState({
   ]);
 
   useRaidDetection({
+    subscribe,
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || "",
-    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
     enabled: !!(
       twitchSession?.accessToken &&
       selectedTwitchChannel &&
@@ -400,9 +405,8 @@ export function useChatAppState({
   );
 
   useChannelPointRedemptions({
+    subscribe,
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || "",
-    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
     enabled: !!(
       twitchSession?.accessToken &&
       selectedTwitchChannel &&
@@ -421,9 +425,8 @@ export function useChatAppState({
     twitchSession?.broadcasterType === "affiliate";
 
   useHypeTrainEventSub({
+    subscribe,
     channelId: selectedTwitchChannel,
-    accessToken: twitchSession?.accessToken || "",
-    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
     enabled: !!(
       twitchSession?.accessToken &&
       selectedTwitchChannel &&

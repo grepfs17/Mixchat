@@ -29,6 +29,14 @@ interface UseEventSubOptions {
   enabled: boolean;
 }
 
+export type SubscribeFn = (
+  type: string,
+  version: string,
+  condition: Record<string, string>,
+  onNotification: (event: unknown) => void,
+  onScopeError?: () => void,
+) => () => void;
+
 export function useEventSub({
   accessToken,
   clientId,

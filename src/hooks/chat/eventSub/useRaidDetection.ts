@@ -8,7 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useEventSub, resolveBroadcasterId } from "./useEventSub";
+import { resolveBroadcasterId } from "./useEventSub";
+import type { SubscribeFn } from "./useEventSub";
 
 export interface RaidOutEvent {
   targetLogin: string;
@@ -17,18 +18,16 @@ export interface RaidOutEvent {
 }
 
 interface UseRaidDetectionOptions {
+  subscribe: SubscribeFn;
   channelId: string;
-  accessToken: string;
-  clientId: string;
   enabled: boolean;
   onRaidOut: (event: RaidOutEvent) => void;
   onScopeError?: () => void;
 }
 
 export function useRaidDetection({
+  subscribe,
   channelId,
-  accessToken,
-  clientId,
   enabled,
   onRaidOut,
   onScopeError,
@@ -38,7 +37,6 @@ export function useRaidDetection({
     onRaidOutRef.current = onRaidOut;
   }, [onRaidOut]);
 
-  const { subscribe } = useEventSub({ accessToken, clientId, enabled });
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
     subscribeRef.current = subscribe;

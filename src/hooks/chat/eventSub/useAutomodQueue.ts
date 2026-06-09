@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { useEventSub } from "./useEventSub";
+import type { SubscribeFn } from "./useEventSub";
 
 export interface HeldMessage {
   id: string;
@@ -27,10 +27,9 @@ export interface ResolvedMessage {
 }
 
 interface UseAutomodQueueOptions {
+  subscribe: SubscribeFn;
   channelId: string;
   moderatorId: string;
-  accessToken: string;
-  clientId: string;
   enabled: boolean;
   onHeldMessage: (message: HeldMessage) => void;
   onResolvedMessage?: (resolved: ResolvedMessage) => void;
@@ -38,10 +37,9 @@ interface UseAutomodQueueOptions {
 }
 
 export function useAutomodQueue({
+  subscribe,
   channelId,
   moderatorId,
-  accessToken,
-  clientId,
   enabled,
   onHeldMessage,
   onResolvedMessage,
@@ -57,7 +55,6 @@ export function useAutomodQueue({
     onResolvedMessageRef.current = onResolvedMessage;
   }, [onResolvedMessage]);
 
-  const { subscribe } = useEventSub({ accessToken, clientId, enabled });
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
     subscribeRef.current = subscribe;
