@@ -13,6 +13,7 @@ export interface UseChatMessagesOptions {
     badges: Record<string, string>;
     badgeDetails: Record<string, { url: string; title: string }>;
   }>;
+  badgesReady?: boolean;
 }
 
 export interface UseChatMessagesReturn {
@@ -32,6 +33,7 @@ export function useChatMessages({
   showDeletedMessages = true,
   showDeletedMessagesRef,
   currentUserBadgesRef,
+  badgesReady = false,
 }: UseChatMessagesOptions = {}): UseChatMessagesReturn {
   const [messages, setMessages] = useState<TwitchMessage[]>([]);
   const [showPreloadedMessages, setShowPreloadedMessages] = useState(true);
@@ -51,7 +53,7 @@ export function useChatMessages({
   }, [selectedTwitchChannelName]);
 
   useEffect(() => {
-    if (!showPreloadedMessages || !selectedTwitchChannelName) return;
+    if (!showPreloadedMessages || !selectedTwitchChannelName || !badgesReady) return;
 
     const loadRecentMessages = async () => {
       try {
@@ -71,7 +73,7 @@ export function useChatMessages({
       }
     };
     loadRecentMessages();
-  }, [showPreloadedMessages, selectedTwitchChannelName]);
+  }, [showPreloadedMessages, selectedTwitchChannelName, badgesReady]);
 
   const handleTwitchMessage = useCallback(
     (message: TwitchMessage) => {

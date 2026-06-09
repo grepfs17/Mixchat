@@ -180,6 +180,7 @@ export function useChatAppState({
     showDeletedMessages,
     showDeletedMessagesRef: showDeletedMessagesRefForMessages,
     currentUserBadgesRef,
+    badgesReady,
   });
 
   const {
