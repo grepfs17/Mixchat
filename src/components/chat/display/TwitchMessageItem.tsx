@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { TwitchMessageContent } from "../shared/TwitchMessage";
+import { TwitchMessageContent } from "../shared/TwitchMessageContent";
 import type { TwitchMessage } from "../../../lib/types";
 
 function hashChannelColor(id: string): string {

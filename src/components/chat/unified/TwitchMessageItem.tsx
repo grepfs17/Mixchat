@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { TwitchMessageContent } from "../shared/TwitchMessage";
+import { TwitchMessageContent } from "../shared/TwitchMessageContent";
 import { PlatformTag } from "./PlatformTag";
 import type { TwitchMessage } from "../../../lib/types";
 import type { UnifiedEntry } from "./types";
