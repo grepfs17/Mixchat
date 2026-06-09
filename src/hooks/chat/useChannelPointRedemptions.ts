@@ -46,6 +46,10 @@ export function useChannelPointRedemptions({
   }, [onRedemption]);
 
   const { subscribe } = useEventSub({ accessToken, clientId, enabled });
+  const subscribeRef = useRef(subscribe);
+  useEffect(() => {
+    subscribeRef.current = subscribe;
+  }, [subscribe]);
 
   useEffect(() => {
     if (!enabled || !channelId) return;
@@ -66,7 +70,7 @@ export function useChannelPointRedemptions({
 
       if (cancelled) return;
 
-      return subscribe(
+      return subscribeRef.current(
         "channel.channel_points_custom_reward_redemption.add",
         "1",
         { broadcaster_user_id: numericId },
@@ -121,5 +125,5 @@ export function useChannelPointRedemptions({
       cancelled = true;
       unsub?.();
     };
-  }, [channelId, enabled, subscribe, onScopeError]);
+  }, [channelId, enabled, onScopeError]);
 }

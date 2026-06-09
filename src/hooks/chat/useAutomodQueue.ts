@@ -58,11 +58,15 @@ export function useAutomodQueue({
   }, [onResolvedMessage]);
 
   const { subscribe } = useEventSub({ accessToken, clientId, enabled });
+  const subscribeRef = useRef(subscribe);
+  useEffect(() => {
+    subscribeRef.current = subscribe;
+  }, [subscribe]);
 
   useEffect(() => {
     if (!enabled || !channelId || !moderatorId) return;
 
-    const unsubHold = subscribe(
+    const unsubHold = subscribeRef.current(
       "automod.message.hold",
       "1",
       {
@@ -94,7 +98,7 @@ export function useAutomodQueue({
       onScopeError,
     );
 
-    const unsubUpdate = subscribe(
+    const unsubUpdate = subscribeRef.current(
       "automod.message.update",
       "1",
       {
@@ -113,5 +117,5 @@ export function useAutomodQueue({
       unsubHold();
       unsubUpdate();
     };
-  }, [channelId, moderatorId, enabled, subscribe]);
+  }, [channelId, moderatorId, enabled]);
 }

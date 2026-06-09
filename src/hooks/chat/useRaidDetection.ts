@@ -39,6 +39,10 @@ export function useRaidDetection({
   }, [onRaidOut]);
 
   const { subscribe } = useEventSub({ accessToken, clientId, enabled });
+  const subscribeRef = useRef(subscribe);
+  useEffect(() => {
+    subscribeRef.current = subscribe;
+  }, [subscribe]);
 
   useEffect(() => {
     if (!enabled || !channelId) return;
@@ -59,7 +63,7 @@ export function useRaidDetection({
 
       if (cancelled) return;
 
-      return subscribe(
+      return subscribeRef.current(
         "channel.raid",
         "1",
         { from_broadcaster_user_id: numericId },
@@ -83,5 +87,5 @@ export function useRaidDetection({
       cancelled = true;
       unsub?.();
     };
-  }, [channelId, enabled, subscribe, onScopeError]);
+  }, [channelId, enabled, onScopeError]);
 }

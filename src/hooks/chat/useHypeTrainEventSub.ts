@@ -90,6 +90,10 @@ export function useHypeTrainEventSub({
   useEffect(() => { onEndRef.current = onHypeTrainEnd; }, [onHypeTrainEnd]);
 
   const { subscribe } = useEventSub({ accessToken, clientId, enabled });
+  const subscribeRef = useRef(subscribe);
+  useEffect(() => {
+    subscribeRef.current = subscribe;
+  }, [subscribe]);
 
   useEffect(() => {
     if (!enabled || !channelId) return;
@@ -113,13 +117,13 @@ export function useHypeTrainEventSub({
       const condition = { broadcaster_user_id: numericId };
 
       const unsubs = [
-        subscribe("channel.hype_train.begin", "2", condition, (ev: any) => {
+        subscribeRef.current("channel.hype_train.begin", "2", condition, (ev: any) => {
           onBeginRef.current(parseHypeTrainEvent(ev));
         }, onScopeError),
-        subscribe("channel.hype_train.progress", "2", condition, (ev: any) => {
+        subscribeRef.current("channel.hype_train.progress", "2", condition, (ev: any) => {
           onProgressRef.current(parseHypeTrainEvent(ev));
         }),
-        subscribe("channel.hype_train.end", "2", condition, (ev: any) => {
+        subscribeRef.current("channel.hype_train.end", "2", condition, (ev: any) => {
           onEndRef.current(parseHypeTrainEvent(ev));
         }),
       ];
@@ -136,5 +140,5 @@ export function useHypeTrainEventSub({
       cancelled = true;
       cleanup?.();
     };
-  }, [channelId, enabled, subscribe, onScopeError]);
+  }, [channelId, enabled, onScopeError]);
 }

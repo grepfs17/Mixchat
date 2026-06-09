@@ -73,7 +73,7 @@ export function useEventSub({
             transport: { method: "websocket", session_id: sessionId },
           },
         ).then((res) => {
-          if (!res.ok && (res.status === 401 || res.status === 403)) {
+          if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
             onScopeError?.();
           }
         });
@@ -118,7 +118,7 @@ export function useEventSub({
               transport: { method: "websocket", session_id: sid },
             },
           );
-          if (!res.ok && (res.status === 401 || res.status === 403)) {
+          if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
             sub.onScopeError?.();
           }
         } catch (err) {
