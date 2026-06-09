@@ -15,6 +15,10 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const SUBSCRIPTION_STAGGER_MS = 250;
 const POST_429_COOLDOWN_MS = 5000;
 
+/** Module-level cache: subscription keys already created on Twitch's side.
+ *  Survives component remounts — prevents re-POSTing known subscriptions. */
+const subscribedKeys = new Set<string>();
+
 interface Subscription {
   type: string;
   version: string;
@@ -48,7 +52,6 @@ export function useEventSub({
   const clientIdRef = useRef(clientId);
   const rateLimitedUntilRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
-  const subscribedKeysRef = useRef(new Set<string>());
   const triggerResubscribeRef = useRef<((keys?: string[]) => void) | null>(null);
 
   useEffect(() => {
@@ -78,14 +81,13 @@ export function useEventSub({
         onScopeError,
       });
 
-      if (sessionIdRef.current && !subscribedKeysRef.current.has(key)) {
+      if (sessionIdRef.current && !subscribedKeys.has(key)) {
         const sid = sessionIdRef.current;
         triggerResubscribeRef.current?.([key]);
       }
 
       return () => {
         subscriptionsRef.current.delete(key);
-        subscribedKeysRef.current.delete(key);
       };
     },
     [],
@@ -130,7 +132,7 @@ export function useEventSub({
             if (!active || sessionIdRef.current !== sid) return;
           }
           const [key, sub] = entries[i];
-          if (subscribedKeysRef.current.has(key)) continue;
+          if (subscribedKeys.has(key)) continue;
           try {
             const res = await subscribeEventSub(
               accessTokenRef.current,
@@ -150,7 +152,7 @@ export function useEventSub({
                 Date.now() + POST_429_COOLDOWN_MS;
             }
             if (res.ok || res.status === 409) {
-              subscribedKeysRef.current.add(key);
+              subscribedKeys.add(key);
             }
             if (
               !res.ok &&
