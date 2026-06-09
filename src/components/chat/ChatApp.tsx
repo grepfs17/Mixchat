@@ -36,7 +36,6 @@ export default function ChatApp(props: ChatAppStateProps) {
     streamUptime,
     streamTitle,
     streamGameName,
-    streamGameId,
     notification,
     chatDisplayRef,
     unifiedChatRef,
@@ -88,6 +87,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const {
     twitchConnected,
+    selectedTwitchChannel,
     selectedTwitchChannelName,
     selectedTwitchChannelDisplayName,
     twitchSession,

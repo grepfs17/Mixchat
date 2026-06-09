@@ -59,6 +59,11 @@ export const EVENT_CONFIG: Record<
     color: "#c9a2ff",
     bg: "rgba(145, 71, 255, 0.15)",
   },
+  automod: {
+    title: "Held by AutoMod",
+    color: "#fbbf24",
+    bg: "rgba(251, 191, 36, 0.12)",
+  },
 };
 
 interface TwitchEventLabelProps {

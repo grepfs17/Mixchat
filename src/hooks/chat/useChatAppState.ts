@@ -5,6 +5,7 @@ import { useRaidDetection } from "./useRaidDetection";
 import type { RaidOutEvent } from "./useRaidDetection";
 import { useChannelPointRedemptions } from "./useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "./useHypeTrainEventSub";
+import { useAutomodQueue } from "./useAutomodQueue";
 import {
   initializeEmotes,
   clearEmoteCache,
@@ -32,7 +33,9 @@ import {
   useYouTubeSync,
   useModeration,
   useChatMessages,
+  useAutomodState,
 } from "./chatAppStateHelpers";
+import { setAutomodIds } from "./automodIds";
 
 export interface ChatAppStateProps {
   twitchConnected: boolean;
@@ -200,6 +203,82 @@ export function useChatAppState({
     setMessages,
     setNotification,
     notificationIdRef,
+  });
+
+  useAutomodState({
+    moderatorId: twitchSession?.userId || "",
+    onError: (msg) => {
+      notificationIdRef.current += 1;
+      setNotification({ message: msg, type: "error", id: notificationIdRef.current });
+    },
+  });
+
+  // Listen for automod message approvals/denials from inline buttons
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const heldMsgId = (e as CustomEvent).detail?.heldMsgId;
+      if (heldMsgId) {
+        setMessages((prev) => prev.filter((m) => m.id !== `automod-${heldMsgId}`));
+      }
+    };
+    window.addEventListener("automod-message-resolved", handler);
+    return () => window.removeEventListener("automod-message-resolved", handler);
+  }, [setMessages]);
+
+  // Keep automod IDs in sync for AutomodActions
+  useEffect(() => {
+    setAutomodIds(twitchSession?.userId || "", selectedTwitchChannel);
+  }, [twitchSession?.userId, selectedTwitchChannel]);
+
+  // Inject held messages into the chat messages array
+  const handleHeldMessageInline = useCallback(
+    (heldMsg: import("./useAutomodQueue").HeldMessage) => {
+      const chatMsg: ChatMessage = {
+        id: `automod-${heldMsg.id}`,
+        platform: "twitch",
+        author: heldMsg.userDisplayName || heldMsg.userName,
+        content: heldMsg.content,
+        timestamp: new Date(heldMsg.holdDate),
+        userId: heldMsg.userId,
+        messageType: "automod",
+        targetUsername: heldMsg.id,
+      };
+      setMessages((prev) => {
+        const updated = [...prev, chatMsg];
+        return updated.length > MAX_DISPLAYED_MESSAGES
+          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+          : updated;
+      });
+    },
+    [setMessages],
+  );
+
+  useAutomodQueue({
+    channelId: selectedTwitchChannel,
+    moderatorId: twitchSession?.userId || "",
+    accessToken: twitchSession?.accessToken || "",
+    clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+    enabled: !!(
+      twitchSession?.accessToken &&
+      twitchSession?.userId &&
+      selectedTwitchChannel &&
+      badgesReady &&
+      isModerator
+    ),
+    onHeldMessage: handleHeldMessageInline,
+    onResolvedMessage: useCallback(
+      (resolved: import("./useAutomodQueue").ResolvedMessage) => {
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== `automod-${resolved.messageId}`),
+        );
+      },
+      [setMessages],
+    ),
+    onScopeError: () => {
+      console.info(
+        "[useChatAppState] Automod EventSub subscription rejected — this is expected when not a moderator or missing moderator:manage:automod scope.",
+      );
+    },
   });
 
   useEffect(() => {

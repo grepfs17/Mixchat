@@ -21,6 +21,7 @@ const MESSAGE_TYPES = [
   "reward-gift",
   "gift-purchase",
   "gift-redemption",
+  "automod",
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 

@@ -76,7 +76,7 @@ function buildCSP(nonce?: string): string {
       " https://events.7tv.io" + // 7TV EventAPI
       " wss://events.7tv.io" + // 7TV EventAPI (WebSocket alternate)
       " wss://irc-ws.chat.twitch.tv" + // Twitch chat IRC WebSocket
-      " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket (raid detection)
+      " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket
     // Twitch and YouTube embedded players
     "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)

@@ -11,6 +11,7 @@ import type { ChatMessage } from "../../../lib/types";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
 import MessageBadges from "../../MessageBadges";
+import AutomodActions from "../shared/AutomodActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import { PlatformTag } from "./PlatformTag";
 import type { UnifiedEntry } from "./types";
@@ -331,6 +332,13 @@ function TwitchMessageItemBase({
                 )}
               </div>
             )}
+          {msg.messageType === "automod" && isModerator && !compactActions && (
+            <AutomodActions
+              heldMsgId={msg.targetUsername || ""}
+              userId={msg.userId || ""}
+              username={msg.author}
+            />
+          )}
         </div>
         {msg.isDeleted && (
           <div className="deleted-notice">Deleted by a moderator</div>

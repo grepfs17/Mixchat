@@ -10,6 +10,7 @@ import {
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
 import MessageBadges from "../../MessageBadges";
+import AutomodActions from "../shared/AutomodActions";
 import TwitchEventIcon from "../../TwitchEventIcon";
 import { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { ChatMessage } from "../../../lib/types";
@@ -402,6 +403,13 @@ function ChatMessageItemBase({
                 )}
               </div>
             )}
+          {msg.messageType === "automod" && isModerator && !compactActions && (
+            <AutomodActions
+              heldMsgId={msg.targetUsername || ""}
+              userId={msg.userId || ""}
+              username={msg.author}
+            />
+          )}
           {msg.isDeleted && (
             <div className="deleted-notice">Deleted by a moderator</div>
           )}

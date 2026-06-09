@@ -360,6 +360,38 @@ export const warnChatUser = async (
 };
 
 /**
+ * Approve or deny a message held by AutoMod.
+ * Requires moderator:manage:automod scope.
+ */
+export const manageHeldAutomodMessage = async (
+  userId: string,
+  msgId: string,
+  action: "ALLOW" | "DENY",
+): Promise<boolean> => {
+  try {
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/moderation/automod/message`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ user_id: userId, msg_id: msgId, action }),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to ${action === "ALLOW" ? "approve" : "deny"} automod message: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("manageHeldAutomodMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Start a raid to another channel.
  */
 export const startRaid = async (
