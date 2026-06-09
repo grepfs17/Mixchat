@@ -193,7 +193,6 @@ export function useEventSub({
           if (!sid) return;
           setSessionId(sid);
           sessionIdRef.current = sid;
-          subscribedKeysRef.current.clear();
           resetKeepalive(keepaliveTimeout);
           await subscribeAll(sid);
         } else if (msgType === "session_keepalive") {

@@ -80,7 +80,7 @@ describe("YouTubeMessageContent", () => {
         superchat: { amount: "$20.00", color: "#ff4444" },
       });
       render(<YouTubeMessageContent msg={msg} />);
-      expect(screen.getByText("$20.00")).toBeInTheDocument();
+      expect(screen.getByText("[$20.00]")).toBeInTheDocument();
     });
 
     it("renders super chat sticker", () => {

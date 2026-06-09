@@ -444,7 +444,7 @@ describe("YouTubeMessageItem (Unified Chat)", () => {
     render(
       <YouTubeMessageItem {...baseProps} entry={makeUnifiedYouTube(scMsg)} />,
     );
-    expect(screen.getByText("$20.00")).toBeInTheDocument();
+    expect(screen.getByText("[$20.00]")).toBeInTheDocument();
   });
 
   it("renders deleted notice for deleted messages", () => {
