@@ -8,13 +8,13 @@ import React, {
   forwardRef,
   useRef,
 } from "react";
-import type { ChatMessage, Platform, ChatFont } from "../../../lib/types";
+import type { TwitchMessage, Platform, ChatFont } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
-import ChatMessageItem from "./ChatMessageItem";
+import { TwitchMessageItem } from "./TwitchMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
 import TimeoutMenu from "../shared/TimeoutMenu";
 import MessageMenu from "../shared/MessageMenu";
@@ -27,11 +27,11 @@ import type {
 } from "./types";
 
 interface ChatDisplayProps {
-  messages: ChatMessage[];
+  messages: TwitchMessage[];
   ytMessages?: Array<{ author: string; authorAvatar?: string }>;
   isLoading: boolean;
   selectedPlatforms: Platform[];
-  onReply?: (message: ChatMessage) => void;
+  onReply?: (message: TwitchMessage) => void;
   channelName?: string;
   channelDisplayName?: string;
   streamTitle?: string;
@@ -321,7 +321,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     }, [handlePointerMove]);
 
     const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } =
-      useChatTouchGestures<ChatMessage>({
+      useChatTouchGestures<TwitchMessage>({
         onReply,
         onLongPress: (msg) =>
           setMessageMenu({
@@ -395,7 +395,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
               </div>
             ) : (
               filteredMessages.map((msg, index) => (
-                <ChatMessageItem
+                <TwitchMessageItem
                   key={msg.id}
                   msg={msg}
                   index={index}

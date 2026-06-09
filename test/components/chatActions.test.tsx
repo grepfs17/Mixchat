@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import type { ChatMessage, Platform } from "../../src/lib/types";
+import type { TwitchMessage, Platform } from "../../src/lib/types";
 import type {
   UnifiedEntry,
   YTMessage,
@@ -83,7 +83,7 @@ function withModeration(
   );
 }
 
-function makeTwitchMsg(overrides: Partial<ChatMessage> = {}): ChatMessage {
+function makeTwitchMsg(overrides: Partial<TwitchMessage> = {}): TwitchMessage {
   return {
     id: "msg-1",
     platform: "twitch",
@@ -106,7 +106,7 @@ function makeYTMsg(overrides: Partial<YTMessage> = {}): YTMessage {
   };
 }
 
-function makeUnifiedTwitch(msg?: ChatMessage): UnifiedEntry {
+function makeUnifiedTwitch(msg?: TwitchMessage): UnifiedEntry {
   return { source: "twitch", msg: msg ?? makeTwitchMsg() };
 }
 
@@ -116,16 +116,16 @@ function makeUnifiedYouTube(msg?: YTMessage): UnifiedEntry {
 
 // Components
 
-import ChatMessageItem from "../../src/components/chat/display/ChatMessageItem";
+import { TwitchMessageItem as DisplayTwitchMessageItem } from "../../src/components/chat/display/TwitchMessageItem";
 import ChatDisplay from "../../src/components/chat/display";
-import { TwitchMessageItem } from "../../src/components/chat/unified/TwitchMessageItem";
+import { TwitchMessageItem as UnifiedTwitchMessageItem } from "../../src/components/chat/unified/TwitchMessageItem";
 import { YouTubeMessageItem } from "../../src/components/chat/unified/YouTubeMessageItem";
 import MessageMenu from "../../src/components/chat/shared/MessageMenu";
 import TimeoutMenu from "../../src/components/chat/shared/TimeoutMenu";
 import UnifiedChat from "../../src/components/chat/unified";
 
-//  ChatMessageItem (used in Split / display chat)
-describe("ChatMessageItem (Split Chat)", () => {
+//  DisplayTwitchMessageItem (used in Split / display chat)
+describe("TwitchMessageItem (Split Chat)", () => {
   const baseProps = {
     msg: makeTwitchMsg(),
     index: 0,
@@ -141,12 +141,12 @@ describe("ChatMessageItem (Split Chat)", () => {
   };
 
   it("shows reply button when onReply is provided", () => {
-    render(<ChatMessageItem {...baseProps} onReply={vi.fn()} />);
+    render(<DisplayTwitchMessageItem {...baseProps} onReply={vi.fn()} />);
     expect(screen.getByTitle("Reply to this message")).toBeInTheDocument();
   });
 
   it("does not show reply button when onReply is not provided", () => {
-    render(<ChatMessageItem {...baseProps} />);
+    render(<DisplayTwitchMessageItem {...baseProps} />);
     expect(
       screen.queryByTitle("Reply to this message"),
     ).not.toBeInTheDocument();
@@ -154,14 +154,14 @@ describe("ChatMessageItem (Split Chat)", () => {
 
   it("calls onReply when reply button is clicked", () => {
     const onReply = vi.fn();
-    render(<ChatMessageItem {...baseProps} onReply={onReply} />);
+    render(<DisplayTwitchMessageItem {...baseProps} onReply={onReply} />);
     fireEvent.click(screen.getByTitle("Reply to this message"));
     expect(onReply).toHaveBeenCalledWith(baseProps.msg);
   });
 
   it("calls onCopy when copy button is clicked", () => {
     const onCopy = vi.fn();
-    render(<ChatMessageItem {...baseProps} onCopy={onCopy} />);
+    render(<DisplayTwitchMessageItem {...baseProps} onCopy={onCopy} />);
     fireEvent.click(screen.getByTitle("Copy message"));
     expect(onCopy).toHaveBeenCalledWith(baseProps.msg);
   });
@@ -169,7 +169,7 @@ describe("ChatMessageItem (Split Chat)", () => {
   it("hides action buttons in compact mode", () => {
     const { container } = render(
       withModeration(
-        <ChatMessageItem {...baseProps} onReply={vi.fn()} />,
+        <DisplayTwitchMessageItem {...baseProps} onReply={vi.fn()} />,
         { compactActions: true },
       ),
     );
@@ -183,10 +183,10 @@ describe("ChatMessageItem (Split Chat)", () => {
     });
     const onUntimeout = vi.fn();
     render(
-      withModeration(
-        <ChatMessageItem {...baseProps} msg={msg} />,
-        { isModerator: true, onUntimeoutUser: onUntimeout },
-      ),
+      withModeration(<DisplayTwitchMessageItem {...baseProps} msg={msg} />, {
+        isModerator: true,
+        onUntimeoutUser: onUntimeout,
+      }),
     );
     expect(screen.getByTitle("Undo moderation action")).toBeInTheDocument();
     fireEvent.click(screen.getByTitle("Undo moderation action"));
@@ -196,7 +196,7 @@ describe("ChatMessageItem (Split Chat)", () => {
   it("calls onContextMenu on right-click", () => {
     const onContextMenu = vi.fn();
     const { container } = render(
-      <ChatMessageItem {...baseProps} onContextMenu={onContextMenu} />,
+      <DisplayTwitchMessageItem {...baseProps} onContextMenu={onContextMenu} />,
     );
     const messageEl = container.querySelector(".message")!;
     fireEvent.contextMenu(messageEl);
@@ -205,17 +205,14 @@ describe("ChatMessageItem (Split Chat)", () => {
 
   it("renders mod action buttons when mod mode is active", () => {
     render(
-      withModeration(
-        <ChatMessageItem {...baseProps} />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onDeleteMessage: vi.fn(),
-          onTimeoutUser: vi.fn(),
-          onBanUser: vi.fn(),
-          onWarnUser: vi.fn(),
-        },
-      ),
+      withModeration(<DisplayTwitchMessageItem {...baseProps} />, {
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser: vi.fn(),
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
     expect(
@@ -226,7 +223,7 @@ describe("ChatMessageItem (Split Chat)", () => {
   });
 });
 
-//  TwitchMessageItem (used in Unified chat)
+//  UnifiedTwitchMessageItem (used in Unified chat)
 
 describe("TwitchMessageItem (Unified Chat)", () => {
   const baseProps = {
@@ -251,13 +248,13 @@ describe("TwitchMessageItem (Unified Chat)", () => {
   });
 
   it("shows reply button when onReply is provided", () => {
-    render(<TwitchMessageItem {...baseProps} onReply={vi.fn()} />);
+    render(<UnifiedTwitchMessageItem {...baseProps} onReply={vi.fn()} />);
     expect(screen.getByTitle("Reply to this message")).toBeInTheDocument();
   });
 
   it("calls onReply when reply button clicked", () => {
     const onReply = vi.fn();
-    render(<TwitchMessageItem {...baseProps} onReply={onReply} />);
+    render(<UnifiedTwitchMessageItem {...baseProps} onReply={onReply} />);
     fireEvent.click(screen.getByTitle("Reply to this message"));
     expect(onReply).toHaveBeenCalledWith(baseProps.entry.msg);
   });
@@ -266,7 +263,9 @@ describe("TwitchMessageItem (Unified Chat)", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
     const onCopyMessage = vi.fn();
-    render(<TwitchMessageItem {...baseProps} onCopyMessage={onCopyMessage} />);
+    render(
+      <UnifiedTwitchMessageItem {...baseProps} onCopyMessage={onCopyMessage} />,
+    );
     fireEvent.click(screen.getByTitle("Copy message"));
     expect(writeText).toHaveBeenCalledWith("Hello world");
     await vi.waitFor(() => {
@@ -282,7 +281,10 @@ describe("TwitchMessageItem (Unified Chat)", () => {
     const onUntimeout = vi.fn();
     render(
       withModeration(
-        <TwitchMessageItem {...baseProps} entry={makeUnifiedTwitch(msg)} />,
+        <UnifiedTwitchMessageItem
+          {...baseProps}
+          entry={makeUnifiedTwitch(msg)}
+        />,
         { isModerator: true, onUntimeoutUser: onUntimeout },
       ),
     );
@@ -294,7 +296,7 @@ describe("TwitchMessageItem (Unified Chat)", () => {
   it("opens message menu on right-click", () => {
     const onMessageMenu = vi.fn();
     const { container } = render(
-      <TwitchMessageItem {...baseProps} onMessageMenu={onMessageMenu} />,
+      <UnifiedTwitchMessageItem {...baseProps} onMessageMenu={onMessageMenu} />,
     );
     const messageEl = container.querySelector(".message")!;
     fireEvent.contextMenu(messageEl);
@@ -307,17 +309,14 @@ describe("TwitchMessageItem (Unified Chat)", () => {
 
   it("renders mod action buttons when mod mode is active", () => {
     render(
-      withModeration(
-        <TwitchMessageItem {...baseProps} />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onDeleteMessage: vi.fn(),
-          onTimeoutUser: vi.fn(),
-          onBanUser: vi.fn(),
-          onWarnUser: vi.fn(),
-        },
-      ),
+      withModeration(<UnifiedTwitchMessageItem {...baseProps} />, {
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser: vi.fn(),
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
     expect(
@@ -330,7 +329,7 @@ describe("TwitchMessageItem (Unified Chat)", () => {
   it("hides action buttons in compact mode", () => {
     const { container } = render(
       withModeration(
-        <TwitchMessageItem {...baseProps} onReply={vi.fn()} />,
+        <UnifiedTwitchMessageItem {...baseProps} onReply={vi.fn()} />,
         { compactActions: true },
       ),
     );
@@ -343,7 +342,7 @@ describe("TwitchMessageItem (Unified Chat)", () => {
     });
     render(
       withModeration(
-        <TwitchMessageItem
+        <UnifiedTwitchMessageItem
           {...baseProps}
           entry={makeUnifiedTwitch(bcMsg)}
         />,
@@ -369,7 +368,7 @@ describe("TwitchMessageItem (Unified Chat)", () => {
     const onTimeoutMenu = vi.fn();
     render(
       withModeration(
-        <TwitchMessageItem
+        <UnifiedTwitchMessageItem
           {...baseProps}
           onTimeoutMenu={onTimeoutMenu}
         />,
@@ -484,7 +483,7 @@ describe("MessageMenu (Context Menu)", () => {
     expect(baseProps.onClose).toHaveBeenCalled();
   });
 
-  it("calls onReply with ChatMessage when Reply is clicked", () => {
+  it("calls onReply with TwitchMessage when Reply is clicked", () => {
     const onReply = vi.fn();
     const msg = makeTwitchMsg();
     render(<MessageMenu {...baseProps} entry={msg} onReply={onReply} />);
@@ -519,17 +518,14 @@ describe("MessageMenu (Context Menu)", () => {
 
   it("shows mod actions when mod mode is active", () => {
     render(
-      withModeration(
-        <MessageMenu {...baseProps} />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onDeleteMessage: vi.fn(),
-          onTimeoutUser: vi.fn(),
-          onBanUser: vi.fn(),
-          onWarnUser: vi.fn(),
-        },
-      ),
+      withModeration(<MessageMenu {...baseProps} />, {
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser: vi.fn(),
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
     );
     expect(screen.getByText("Delete")).toBeInTheDocument();
     expect(screen.getByText("Timeout (10m)")).toBeInTheDocument();
@@ -583,10 +579,7 @@ describe("MessageMenu (Context Menu)", () => {
   it("does not show mod actions for non-Twitch entries", () => {
     render(
       withModeration(
-        <MessageMenu
-          {...baseProps}
-          entry={makeUnifiedYouTube()}
-        />,
+        <MessageMenu {...baseProps} entry={makeUnifiedYouTube()} />,
         {
           isModerator: true,
           modModeActive: true,
@@ -660,7 +653,7 @@ describe("TimeoutMenu", () => {
 //  ChatDisplay Integration (Split Chat)
 describe("ChatDisplay Integration — Actions", () => {
   const defaultProps = {
-    messages: [] as ChatMessage[],
+    messages: [] as TwitchMessage[],
     isLoading: false,
     selectedPlatforms: ["twitch"] as Platform[],
   };
@@ -696,20 +689,14 @@ describe("ChatDisplay Integration — Actions", () => {
     const msg = makeTwitchMsg();
     const onTimeoutUser = vi.fn();
     render(
-      withModeration(
-        <ChatDisplay
-          {...defaultProps}
-          messages={[msg]}
-        />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onDeleteMessage: vi.fn(),
-          onTimeoutUser,
-          onBanUser: vi.fn(),
-          onWarnUser: vi.fn(),
-        },
-      ),
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser,
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
     );
 
     const timeoutBtn = screen.getByTitle(
@@ -748,10 +735,7 @@ describe("ChatDisplay Integration — Actions", () => {
     const onUntimeoutUser = vi.fn();
     render(
       withModeration(
-        <ChatDisplay
-          {...defaultProps}
-          messages={[timeoutMsg]}
-        />,
+        <ChatDisplay {...defaultProps} messages={[timeoutMsg]} />,
         { isModerator: true, onUntimeoutUser },
       ),
     );
@@ -764,17 +748,11 @@ describe("ChatDisplay Integration — Actions", () => {
     const msg = makeTwitchMsg();
     const onTimeoutUser = vi.fn();
     render(
-      withModeration(
-        <ChatDisplay
-          {...defaultProps}
-          messages={[msg]}
-        />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onTimeoutUser,
-        },
-      ),
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onTimeoutUser,
+      }),
     );
 
     const timeoutBtn = screen.getByTitle(
@@ -788,17 +766,11 @@ describe("ChatDisplay Integration — Actions", () => {
     const msg = makeTwitchMsg();
     const onBanUser = vi.fn();
     render(
-      withModeration(
-        <ChatDisplay
-          {...defaultProps}
-          messages={[msg]}
-        />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onBanUser,
-        },
-      ),
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onBanUser,
+      }),
     );
     fireEvent.click(screen.getByTitle("Ban user"));
     expect(onBanUser).toHaveBeenCalledWith("user-1", "TestUser");
@@ -808,17 +780,11 @@ describe("ChatDisplay Integration — Actions", () => {
     const msg = makeTwitchMsg();
     const onWarnUser = vi.fn();
     render(
-      withModeration(
-        <ChatDisplay
-          {...defaultProps}
-          messages={[msg]}
-        />,
-        {
-          isModerator: true,
-          modModeActive: true,
-          onWarnUser,
-        },
-      ),
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onWarnUser,
+      }),
     );
     fireEvent.click(screen.getByTitle("Warn user"));
     expect(onWarnUser).toHaveBeenCalledWith("TestUser");

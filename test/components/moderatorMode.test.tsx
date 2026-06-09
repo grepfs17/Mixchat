@@ -4,7 +4,7 @@ import React from "react";
 import ChatDisplay from "../../src/components/chat/display";
 import UnifiedChat from "../../src/components/chat/unified";
 import MessageInput from "../../src/components/chat/shared/MessageInput";
-import type { ChatMessage, Platform } from "../../src/lib/types";
+import type { TwitchMessage, Platform } from "../../src/lib/types";
 import {
   ModerationContext,
   type ModerationContextValue,
@@ -70,7 +70,7 @@ function withModeration(
   );
 }
 
-const baseMessage: ChatMessage = {
+const baseMessage: TwitchMessage = {
   id: "msg-1",
   platform: "twitch",
   author: "TestUser",
@@ -79,28 +79,28 @@ const baseMessage: ChatMessage = {
   userId: "user-1",
 };
 
-const broadcasterMessage: ChatMessage = {
+const broadcasterMessage: TwitchMessage = {
   ...baseMessage,
   id: "msg-bc",
   author: "BroadcasterUser",
   badges: { broadcaster: "1" },
 };
 
-const moderatorMessage: ChatMessage = {
+const moderatorMessage: TwitchMessage = {
   ...baseMessage,
   id: "msg-mod",
   author: "ModUser",
   badges: { moderator: "1" },
 };
 
-const ownMessage: ChatMessage = {
+const ownMessage: TwitchMessage = {
   ...baseMessage,
   id: "msg-self",
   author: "MySelf",
   isCurrentUser: true,
 };
 
-const timeoutMessage: ChatMessage = {
+const timeoutMessage: TwitchMessage = {
   ...baseMessage,
   id: "msg-timeout",
   author: "system",
@@ -109,7 +109,7 @@ const timeoutMessage: ChatMessage = {
   content: "TimedOutUser was timed out",
 };
 
-const banMessage: ChatMessage = {
+const banMessage: TwitchMessage = {
   ...baseMessage,
   id: "msg-ban",
   author: "system",
@@ -121,27 +121,27 @@ const banMessage: ChatMessage = {
 describe("Moderator Mode", () => {
   describe("ChatDisplay - Mod Mode Toggle", () => {
     const defaultProps = {
-      messages: [] as ChatMessage[],
+      messages: [] as TwitchMessage[],
       isLoading: false,
       selectedPlatforms: ["twitch"] as Platform[],
     };
 
     it("renders mod mode button when user is a moderator", () => {
       render(
-        withModeration(
-          <ChatDisplay {...defaultProps} />,
-          { isModerator: true, onToggleModMode: vi.fn() },
-        ),
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: true,
+          onToggleModMode: vi.fn(),
+        }),
       );
       expect(screen.getByTitle("Enable Mod Mode")).toBeInTheDocument();
     });
 
     it("does not render mod mode button when user is not a moderator", () => {
       render(
-        withModeration(
-          <ChatDisplay {...defaultProps} />,
-          { isModerator: false, onToggleModMode: vi.fn() },
-        ),
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: false,
+          onToggleModMode: vi.fn(),
+        }),
       );
       expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Disable Mod Mode")).not.toBeInTheDocument();
@@ -149,10 +149,11 @@ describe("Moderator Mode", () => {
 
     it("shows active state when mod mode is enabled", () => {
       render(
-        withModeration(
-          <ChatDisplay {...defaultProps} />,
-          { isModerator: true, modModeActive: true, onToggleModMode: vi.fn() },
-        ),
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: true,
+          modModeActive: true,
+          onToggleModMode: vi.fn(),
+        }),
       );
       expect(screen.getByTitle("Disable Mod Mode")).toBeInTheDocument();
       expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
@@ -161,10 +162,11 @@ describe("Moderator Mode", () => {
     it("calls onToggleModMode when mod mode button is clicked", async () => {
       const onToggle = vi.fn();
       render(
-        withModeration(
-          <ChatDisplay {...defaultProps} />,
-          { isModerator: true, modModeActive: false, onToggleModMode: onToggle },
-        ),
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: true,
+          modModeActive: false,
+          onToggleModMode: onToggle,
+        }),
       );
       fireEvent.click(screen.getByTitle("Enable Mod Mode"));
       expect(onToggle).toHaveBeenCalledTimes(1);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  deleteChatMessage,
+  deleteTwitchMessage,
   createBan,
   checkUserModStatus,
   removeBan,
@@ -13,7 +13,7 @@ import {
   sendShoutout,
 } from "../../../lib/twitch";
 import type {
-  ChatMessage,
+  TwitchMessage,
   PlatformSession,
   Platform,
   MessageType,
@@ -24,7 +24,7 @@ export interface UseModerationOptions {
   selectedTwitchChannel?: string;
   selectedTwitchChannelName?: string;
   disableModModeByDefault?: boolean;
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
   setNotification: (
     notification: {
       message: string;
@@ -32,7 +32,7 @@ export interface UseModerationOptions {
       id?: number;
     } | null,
   ) => void;
-  notificationIdRef: React.MutableRefObject<number>;
+  notificationIdRef: React.RefObject<number>;
 }
 
 export interface UseModerationReturn {
@@ -158,7 +158,7 @@ export function useModeration({
     async (messageId: string) => {
       if (!twitchSession || !selectedTwitchChannel) return;
       try {
-        await deleteChatMessage(
+        await deleteTwitchMessage(
           selectedTwitchChannel,
           twitchSession.userId,
           messageId,

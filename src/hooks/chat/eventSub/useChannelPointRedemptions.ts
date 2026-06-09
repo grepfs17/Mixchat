@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from "react";
 import { useEventSub, resolveBroadcasterId } from "./useEventSub";
-import type { ChatMessage } from "../../../lib/types";
+import type { TwitchMessage } from "../../../lib/types";
 
 interface RedemptionEvent {
   id: string;
@@ -28,7 +28,7 @@ interface UseChannelPointRedemptionsOptions {
   accessToken: string;
   clientId: string;
   enabled: boolean;
-  onRedemption: (message: ChatMessage) => void;
+  onRedemption: (message: TwitchMessage) => void;
   onScopeError?: () => void;
 }
 
@@ -90,11 +90,10 @@ export function useChannelPointRedemptions({
             redeemedAt: ev.redeemed_at as string,
           };
 
-          const chatMessage: ChatMessage = {
+          const chatMessage: TwitchMessage = {
             id: `redemption-${redemptionEvent.id}`,
             platform: "twitch",
-            author:
-              redemptionEvent.userDisplayName || redemptionEvent.userName,
+            author: redemptionEvent.userDisplayName || redemptionEvent.userName,
             content: `${redemptionEvent.userDisplayName || redemptionEvent.userName} redeemed ${redemptionEvent.rewardTitle}`,
             timestamp: new Date(redemptionEvent.redeemedAt),
             userId: redemptionEvent.userId,

@@ -1,9 +1,9 @@
-import type { ChatMessage } from "../../../lib/types";
+import type { TwitchMessage } from "../../../lib/types";
 
 export interface MessageMenuState {
   x: number;
   y: number;
-  message: ChatMessage;
+  message: TwitchMessage;
 }
 
 export interface TimeoutMenuState {

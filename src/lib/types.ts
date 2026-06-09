@@ -25,7 +25,7 @@ const MESSAGE_TYPES = [
 ] as const;
 export type MessageType = (typeof MESSAGE_TYPES)[number];
 
-export interface ChatMessage {
+export interface TwitchMessage {
   id: string;
   platform: Platform;
   author: string;

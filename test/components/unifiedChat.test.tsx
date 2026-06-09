@@ -2,11 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import UnifiedChat from "../../src/components/chat/unified";
-import type { ChatMessage } from "../../src/lib/types";
+import type { TwitchMessage } from "../../src/lib/types";
 
 describe("UnifiedChat component", () => {
   it("renders messages from both Twitch and YouTube", () => {
-    const twitchMessages: ChatMessage[] = [
+    const twitchMessages: TwitchMessage[] = [
       {
         id: "t1",
         platform: "twitch",
@@ -47,7 +47,7 @@ describe("UnifiedChat component", () => {
     const now = new Date();
     const older = new Date(now.getTime() - 1000);
 
-    const twitchMessages: ChatMessage[] = [
+    const twitchMessages: TwitchMessage[] = [
       {
         id: "t1",
         platform: "twitch",

@@ -2,27 +2,27 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getRecentMessages } from "../../../lib/twitch";
 import { saveMessage, pruneMessages } from "../../../lib/chatHistoryStorage";
 import { MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
-import type { ChatMessage, PlatformSession } from "../../../lib/types";
+import type { TwitchMessage, PlatformSession } from "../../../lib/types";
 
 export interface UseChatMessagesOptions {
   selectedTwitchChannelName?: string;
   twitchSession?: PlatformSession;
   showDeletedMessages?: boolean;
-  showDeletedMessagesRef?: React.MutableRefObject<boolean>;
-  currentUserBadgesRef?: React.MutableRefObject<{
+  showDeletedMessagesRef?: React.RefObject<boolean>;
+  currentUserBadgesRef?: React.RefObject<{
     badges: Record<string, string>;
     badgeDetails: Record<string, { url: string; title: string }>;
   }>;
 }
 
 export interface UseChatMessagesReturn {
-  messages: ChatMessage[];
+  messages: TwitchMessage[];
   showPreloadedMessages: boolean;
-  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
   setShowPreloadedMessages: (v: boolean) => void;
-  preloadedMessagesRef: React.MutableRefObject<Set<string>>;
-  recentRedemptionsRef: React.MutableRefObject<Map<string, number>>;
-  handleTwitchMessage: (message: ChatMessage) => void;
+  preloadedMessagesRef: React.RefObject<Set<string>>;
+  recentRedemptionsRef: React.RefObject<Map<string, number>>;
+  handleTwitchMessage: (message: TwitchMessage) => void;
   handleMessageDeleted: (messageId: string) => void;
 }
 
@@ -33,7 +33,7 @@ export function useChatMessages({
   showDeletedMessagesRef,
   currentUserBadgesRef,
 }: UseChatMessagesOptions = {}): UseChatMessagesReturn {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<TwitchMessage[]>([]);
   const [showPreloadedMessages, setShowPreloadedMessages] = useState(true);
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
   const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
@@ -74,7 +74,7 @@ export function useChatMessages({
   }, [showPreloadedMessages, selectedTwitchChannelName]);
 
   const handleTwitchMessage = useCallback(
-    (message: ChatMessage) => {
+    (message: TwitchMessage) => {
       if (currentUserBadgesRef?.current) {
         if (message.isCurrentUser && !message.optimistic) {
           const hasBadges =
@@ -102,7 +102,7 @@ export function useChatMessages({
             copy[existingIdx] = message;
             return copy;
           }
-          const enrichments: Partial<ChatMessage> = {};
+          const enrichments: Partial<TwitchMessage> = {};
           if (!existing.rewardTitle && message.rewardTitle)
             enrichments.rewardTitle = message.rewardTitle;
           if (existing.rewardCost == null && message.rewardCost != null)

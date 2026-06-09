@@ -15,7 +15,7 @@ import { initializeBadges, clearBadgeCache } from "../../lib/badges";
 import { sendHelixMessage } from "../../lib/twitch";
 import { saveMessage } from "../../lib/chatHistoryStorage";
 import type {
-  ChatMessage,
+  TwitchMessage,
   Platform,
   PlatformSession,
   ChatFont,
@@ -90,7 +90,7 @@ export function useChatAppState({
   const [isRaidInitiator, setIsRaidInitiator] = useState(false);
   const [isRefreshingEmotes, setIsRefreshingEmotes] = useState(false);
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([]);
-  const [replyingTo, setReplyingTo] = useState<ChatMessage | undefined>();
+  const [replyingTo, setReplyingTo] = useState<TwitchMessage | undefined>();
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -239,7 +239,7 @@ export function useChatAppState({
   // Inject held messages into the chat messages array
   const handleHeldMessageInline = useCallback(
     (heldMsg: import("./eventSub/useAutomodQueue").HeldMessage) => {
-      const chatMsg: ChatMessage = {
+      const chatMsg: TwitchMessage = {
         id: `automod-${heldMsg.id}`,
         platform: "twitch",
         author: heldMsg.userDisplayName || heldMsg.userName,
@@ -374,7 +374,7 @@ export function useChatAppState({
   });
 
   const handleRedemptionEvent = useCallback(
-    (message: ChatMessage) => {
+    (message: TwitchMessage) => {
       if (message.rewardId && message.userId) {
         recentRedemptionsRef.current.set(
           `${message.rewardId}-${message.userId}`,
@@ -520,7 +520,7 @@ export function useChatAppState({
 
               if (serverMessageId) {
                 const optimisticId = `optimistic_${serverMessageId}`;
-                const optimisticMessage: ChatMessage = {
+                const optimisticMessage: TwitchMessage = {
                   id: optimisticId,
                   platform: "twitch",
                   author:

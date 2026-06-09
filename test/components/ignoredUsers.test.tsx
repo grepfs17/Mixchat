@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import ChatDisplay from "../../src/components/chat/display";
 import UnifiedChat from "../../src/components/chat/unified";
-import type { ChatMessage, Platform } from "../../src/lib/types";
+import type { TwitchMessage, Platform } from "../../src/lib/types";
 
 vi.mock("react-dom", async () => {
   const actual = await vi.importActual("react-dom");
@@ -51,7 +51,7 @@ const makeTwitchMessage = (
   id: string,
   author: string,
   content: string,
-): ChatMessage => ({
+): TwitchMessage => ({
   id,
   platform: "twitch",
   author,
@@ -70,7 +70,7 @@ const makeYtMessage = (id: string, author: string, text: string) => ({
 describe("Ignored Users", () => {
   describe("ChatDisplay - Ignored Users filtering", () => {
     const defaultProps = {
-      messages: [] as ChatMessage[],
+      messages: [] as TwitchMessage[],
       isLoading: false,
       selectedPlatforms: ["twitch"] as Platform[],
     };

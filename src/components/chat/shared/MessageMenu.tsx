@@ -1,4 +1,4 @@
-import type { ChatMessage } from "../../../lib/types";
+import type { TwitchMessage } from "../../../lib/types";
 import type { UnifiedEntry, YTMessage } from "../unified/types";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { ContextMenuShell } from "./ContextMenuShell";
@@ -6,8 +6,8 @@ import { ContextMenuShell } from "./ContextMenuShell";
 interface MessageMenuProps {
   x: number;
   y: number;
-  entry: ChatMessage | UnifiedEntry;
-  onReply?: (msg: ChatMessage) => void;
+  entry: TwitchMessage | UnifiedEntry;
+  onReply?: (msg: TwitchMessage) => void;
   onCopy: (msg: any) => void;
   onViewHistory?: (author: string, avatar?: string) => void;
   onClose: () => void;
@@ -36,8 +36,8 @@ export default function MessageMenu({
   const msg = isUnified ? entry.msg : entry;
 
   const isTwitch = source === "twitch";
-  const isChatMessage = isTwitch; // In this app, only twitch uses ChatMessage directly
-  const chatMsg = isTwitch ? (msg as ChatMessage) : null;
+  const isTwitchMessage = isTwitch; // In this app, only twitch uses TwitchMessage directly
+  const chatMsg = isTwitch ? (msg as TwitchMessage) : null;
   const ytMsg = source === "youtube" ? (msg as YTMessage) : null;
 
   const isSystemMessage =
@@ -64,7 +64,7 @@ export default function MessageMenu({
     key: "copy",
     label: "Copy message",
     onClick: () => {
-      onCopy(msg as ChatMessage | YTMessage);
+      onCopy(msg as TwitchMessage | YTMessage);
       onClose();
     },
   });

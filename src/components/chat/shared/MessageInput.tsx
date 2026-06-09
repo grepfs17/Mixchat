@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
 import { FaTimes, FaSmile, FaTwitch } from "react-icons/fa";
-import type { Platform, ChatMessage } from "../../../lib/types";
+import type { Platform, TwitchMessage } from "../../../lib/types";
 import {
   searchEmotes,
   getAllEmotesOrganized,
@@ -20,9 +20,9 @@ interface MessageInputProps {
   ) => Promise<void>;
   isLoading: boolean;
   isConnected: { twitch: boolean };
-  replyingTo?: ChatMessage;
+  replyingTo?: TwitchMessage;
   onCancelReply?: () => void;
-  chatMessages?: ChatMessage[];
+  chatMessages?: TwitchMessage[];
   currentUsername?: string;
   onInputFocus?: () => void;
   slowModeWaitTime?: number | null;

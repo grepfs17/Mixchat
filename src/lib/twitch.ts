@@ -1,4 +1,4 @@
-import type { ChatMessage } from "./types.js";
+import type { TwitchMessage } from "./types.js";
 import { getBadgeDetail } from "./badges.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
@@ -30,10 +30,7 @@ export async function subscribeEventSub(
     });
 
     if (res.status === 429) {
-      const retryAfter = parseInt(
-        res.headers.get("Retry-After") || "2",
-        10,
-      );
+      const retryAfter = parseInt(res.headers.get("Retry-After") || "2", 10);
       console.warn(
         `[subscribeEventSub] 429 rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1})`,
       );
@@ -148,12 +145,12 @@ export const sendHelixMessage = async (
  * Requires the server-side twitch token to belong to a moderator for the
  * specified broadcaster (the httpOnly cookie is used by the proxy).
  */
-export const deleteChatMessage = async (
+export const deleteTwitchMessage = async (
   broadcasterId: string,
   moderatorId: string,
   messageId: string,
 ) => {
-  console.log("deleteChatMessage", messageId);
+  console.log("deleteTwitchMessage", messageId);
   try {
     if (messageId.startsWith("optimistic_")) {
       messageId = messageId.split("optimistic_")[1];
@@ -177,7 +174,7 @@ export const deleteChatMessage = async (
 
     return true;
   } catch (error) {
-    console.error("deleteChatMessage failed:", error);
+    console.error("deleteTwitchMessage failed:", error);
     throw error;
   }
 };
@@ -424,7 +421,9 @@ export const manageHeldAutomodMessage = async (
 
     if (!res.ok) {
       const text = await res.text().catch(() => "(unreadable)");
-      throw new Error(`Failed to ${action === "ALLOW" ? "approve" : "deny"} automod message: ${res.status} ${text}`);
+      throw new Error(
+        `Failed to ${action === "ALLOW" ? "approve" : "deny"} automod message: ${res.status} ${text}`,
+      );
     }
 
     return true;
@@ -992,7 +991,7 @@ export const getStreamStatuses = async (
 
 export const getRecentMessages = async (
   channelName: string,
-): Promise<ChatMessage[]> => {
+): Promise<TwitchMessage[]> => {
   try {
     const response = await fetch(
       `https://recent-messages.robotty.de/api/v2/recent-messages/${channelName}`,
@@ -1008,7 +1007,7 @@ export const getRecentMessages = async (
 
     const data = await response.json();
 
-    const messages: ChatMessage[] = (data.messages || [])
+    const messages: TwitchMessage[] = (data.messages || [])
       .map((rawMsg: string) => {
         try {
           const tagsMatch = rawMsg.match(/^@(.+?)\s+:/);
@@ -1115,7 +1114,7 @@ export const getRecentMessages = async (
             tags["id"] ||
             `${tags["user-id"] || "unknown"}_${tags["tmi-sent-ts"] || Date.now()}`;
 
-          const message: ChatMessage = {
+          const message: TwitchMessage = {
             id: messageId,
             platform: "twitch",
             author,
@@ -1142,7 +1141,9 @@ export const getRecentMessages = async (
           return null;
         }
       })
-      .filter((msg: ChatMessage | null): msg is ChatMessage => msg !== null);
+      .filter(
+        (msg: TwitchMessage | null): msg is TwitchMessage => msg !== null,
+      );
 
     const RECENT_WINDOW_MS = 12 * 60 * 60 * 1000;
     const cutoff = Date.now() - RECENT_WINDOW_MS;

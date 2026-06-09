@@ -1,4 +1,4 @@
-import type { ChatMessage, Platform } from "./types";
+import type { TwitchMessage, Platform } from "./types";
 
 const DB_NAME = "mixchat_history";
 const DB_VERSION = 2;
@@ -34,7 +34,7 @@ function openDB(): Promise<IDBDatabase> {
  * Persists a message to IndexedDB.
  */
 export async function saveMessage(
-  msg: ChatMessage,
+  msg: TwitchMessage,
   channel: string,
 ): Promise<void> {
   if (!isIDBAvailable()) return;
@@ -75,7 +75,7 @@ export async function getUserHistory(
   channel: string,
   maxAgeHours: number = 24,
   platform?: Platform,
-): Promise<ChatMessage[]> {
+): Promise<TwitchMessage[]> {
   if (!isIDBAvailable()) return [];
 
   try {

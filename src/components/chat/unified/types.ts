@@ -31,7 +31,7 @@ export interface YTMessage {
 }
 
 export type UnifiedEntry =
-  | { source: "twitch"; msg: import("../../../lib/types").ChatMessage }
+  | { source: "twitch"; msg: import("../../../lib/types").TwitchMessage }
   | { source: "youtube"; msg: YTMessage };
 
 export function getKey(e: UnifiedEntry) {

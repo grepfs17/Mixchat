@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { StaticAuthProvider } from "@twurple/auth";
 import { ChatClient, UserState, UserNotice } from "@twurple/chat";
 import { getBadgeDetail } from "../../lib/badges";
-import type { ChatMessage, MessageType } from "../../lib/types";
+import type { TwitchMessage, MessageType } from "../../lib/types";
 import { playEventSound } from "../../lib/eventSounds";
 
 // Cache for user info - limit to 500 entries for memory efficiency
@@ -220,12 +220,12 @@ function getCachedAvatar(userId?: string): string | undefined {
     : undefined;
 }
 
-/** Build a standard system ChatMessage (mod actions, mode changes, etc.). */
+/** Build a standard system TwitchMessage (mod actions, mode changes, etc.). */
 function createSystemMessage(
   content: string,
   messageType: MessageType,
-  extra?: Partial<ChatMessage>,
-): ChatMessage {
+  extra?: Partial<TwitchMessage>,
+): TwitchMessage {
   const isError = messageType === "timeout" || messageType === "ban";
   return {
     id: `${messageType}-${Date.now()}`,
@@ -245,8 +245,8 @@ function createSystemMessage(
   };
 }
 
-/** Build a ChatMessage from a user-triggered IRC event (sub, raid, etc.). */
-function buildUserChatMessage(
+/** Build a TwitchMessage from a user-triggered IRC event (sub, raid, etc.). */
+function buildUserTwitchMessage(
   msg: {
     id: string;
     date: Date;
@@ -260,8 +260,8 @@ function buildUserChatMessage(
   },
   content: string,
   username: string,
-  overrides?: Partial<ChatMessage>,
-): ChatMessage {
+  overrides?: Partial<TwitchMessage>,
+): TwitchMessage {
   const { badges, badgeDetails } = extractBadges(msg.userInfo);
   return {
     id: msg.id,
@@ -395,7 +395,7 @@ export function useTwitchChat(
   channelName: string,
   accessToken: string,
   username: string,
-  onMessage: (message: ChatMessage) => void,
+  onMessage: (message: TwitchMessage) => void,
   enabled: boolean = true,
   mentionSoundEnabled: boolean = true,
   mentionVolume: number = 0.5,
@@ -654,7 +654,7 @@ export function useTwitchChat(
           ? sourceChannelInfoCache.get(sourceRoomId)
           : undefined;
 
-      const chatMessage: ChatMessage = {
+      const chatMessage: TwitchMessage = {
         id: msg.id,
         platform: "twitch",
         author:
@@ -809,7 +809,7 @@ export function useTwitchChat(
     newClient.onAction((_channel, _user, message, msg) => {
       if (!active) return;
       onMessageRef.current(
-        buildUserChatMessage(msg, message, usernameRef.current, {
+        buildUserTwitchMessage(msg, message, usernameRef.current, {
           messageType: "chat",
         }),
       );
@@ -821,7 +821,7 @@ export function useTwitchChat(
         msg.emoteOffsets.size > 0
           ? Object.fromEntries(msg.emoteOffsets)
           : undefined;
-      const chatMessage = buildUserChatMessage(
+      const chatMessage = buildUserTwitchMessage(
         msg,
         msg.text ?? "",
         usernameRef.current,
@@ -857,7 +857,7 @@ export function useTwitchChat(
       if (!active) return;
       const content = `gifted ${rewardGiftInfo.count} reward${rewardGiftInfo.count > 1 ? "s" : ""} (${rewardGiftInfo.triggerType})`;
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, {
+        buildUserTwitchMessage(msg, content, usernameRef.current, {
           messageType: "reward-gift",
           isBot: false,
         }),
@@ -935,7 +935,7 @@ export function useTwitchChat(
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
-      const overrides: Partial<ChatMessage> = { messageType: "subscription" };
+      const overrides: Partial<TwitchMessage> = { messageType: "subscription" };
       if (subInfo.message && msg.emoteOffsets.size > 0) {
         overrides.emotes = shiftEmoteOffsets(
           msg.emoteOffsets,
@@ -944,7 +944,7 @@ export function useTwitchChat(
       }
 
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, overrides),
+        buildUserTwitchMessage(msg, content, usernameRef.current, overrides),
       );
 
       const soundData = eventSoundsRef.current["subscription"];
@@ -961,7 +961,7 @@ export function useTwitchChat(
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
-      const overrides: Partial<ChatMessage> = { messageType: "resub" };
+      const overrides: Partial<TwitchMessage> = { messageType: "resub" };
       if (subInfo.message && msg.emoteOffsets.size > 0) {
         overrides.emotes = shiftEmoteOffsets(
           msg.emoteOffsets,
@@ -970,7 +970,7 @@ export function useTwitchChat(
       }
 
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, overrides),
+        buildUserTwitchMessage(msg, content, usernameRef.current, overrides),
       );
 
       const soundData = eventSoundsRef.current["resub"];
@@ -986,7 +986,7 @@ export function useTwitchChat(
       const content = `gifted a Tier ${tier} subscription to ${recipient}`;
 
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, {
+        buildUserTwitchMessage(msg, content, usernameRef.current, {
           messageType: "subgift",
         }),
       );
@@ -1004,7 +1004,7 @@ export function useTwitchChat(
       const content = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;
 
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, {
+        buildUserTwitchMessage(msg, content, usernameRef.current, {
           messageType: "subgift",
         }),
       );
@@ -1020,7 +1020,7 @@ export function useTwitchChat(
       const content = `is raiding with a party of ${raidInfo.viewerCount} viewers!`;
 
       onMessageRef.current(
-        buildUserChatMessage(msg, content, usernameRef.current, {
+        buildUserTwitchMessage(msg, content, usernameRef.current, {
           messageType: "raid",
           author:
             raidInfo.displayName ||
@@ -1084,7 +1084,7 @@ export function useTwitchChat(
           }
         }
 
-        const chatMessage: ChatMessage = {
+        const chatMessage: TwitchMessage = {
           id: redemptionMsgId,
           platform: "twitch",
           author: displayName,
@@ -1147,7 +1147,7 @@ export function useTwitchChat(
 
       const cachedUserInfo = userId ? userInfoCache.get(userId) : undefined;
 
-      const chatMessage: ChatMessage = {
+      const chatMessage: TwitchMessage = {
         id: streakMsgId,
         platform: "twitch",
         author: displayName,

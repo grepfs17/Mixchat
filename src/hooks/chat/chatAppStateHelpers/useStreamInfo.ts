@@ -35,7 +35,7 @@ export interface UseStreamInfoOptions {
 export interface UseStreamInfoReturn {
   streamIsLive: boolean;
   streamUptime: string;
-  streamStartedAtRef: React.MutableRefObject<Date | null>;
+  streamStartedAtRef: React.RefObject<Date | null>;
   streamTitle: string;
   streamGameName: string;
   streamGameId: string;

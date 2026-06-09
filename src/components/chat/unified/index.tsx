@@ -8,7 +8,7 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import type { ChatMessage, ChatFont, Platform } from "../../../lib/types";
+import type { TwitchMessage, ChatFont, Platform } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
@@ -24,7 +24,7 @@ import type { UnifiedEntry, MessagePart, YTMessage } from "./types";
 import { getKey, getTime } from "./types";
 
 interface UnifiedChatProps {
-  twitchMessages: ChatMessage[];
+  twitchMessages: TwitchMessage[];
   ytMessages: YTMessage[];
   channelName: string;
   ytConnectionState?: {
@@ -33,7 +33,7 @@ interface UnifiedChatProps {
     error: string | null;
   };
   twitchConnected?: boolean;
-  onReply?: (message: ChatMessage) => void;
+  onReply?: (message: TwitchMessage) => void;
   onCopyMessage?: () => void;
   currentUserDisplayName?: string;
   fontSize?: number;
@@ -223,7 +223,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       useChatTouchGestures<UnifiedEntry>({
         onReply: onReply
           ? (entry) => {
-              if (entry.source === "twitch") onReply(entry.msg as ChatMessage);
+              if (entry.source === "twitch")
+                onReply(entry.msg as TwitchMessage);
             }
           : undefined,
         onLongPress: (entry) =>
@@ -235,7 +236,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
         onCopyMessage,
         getContent: (entry) => {
           if (entry.source === "twitch")
-            return (entry.msg as ChatMessage).content;
+            return (entry.msg as TwitchMessage).content;
           return (entry.msg as YTMessage).parts
             .map((p: MessagePart) =>
               p.type === "text" ? (p.text ?? "") : (p.emojiText ?? p.alt ?? ""),

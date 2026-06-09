@@ -14,7 +14,7 @@ import {
   getUserHistory,
   pruneMessages,
 } from "../../src/lib/chatHistoryStorage";
-import type { ChatMessage } from "../../src/lib/types";
+import type { TwitchMessage } from "../../src/lib/types";
 
 describe("chatHistoryStorage", () => {
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe("chatHistoryStorage", () => {
     author: string,
     content: string,
     platform: "twitch" | "youtube" = "twitch",
-  ): ChatMessage => ({
+  ): TwitchMessage => ({
     id,
     platform,
     author,

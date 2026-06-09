@@ -29,7 +29,7 @@ vi.mock("../../src/lib/badges", () => ({
 vi.mock("../../src/lib/twitch", () => ({
   getStreamStatus: vi.fn().mockResolvedValue(null),
   getRecentMessages: vi.fn().mockResolvedValue([]),
-  deleteChatMessage: vi.fn(),
+  deleteTwitchMessage: vi.fn(),
   createBan: vi.fn(),
   checkUserModStatus: vi.fn().mockResolvedValue(false),
   sendHelixMessage: vi.fn(),
