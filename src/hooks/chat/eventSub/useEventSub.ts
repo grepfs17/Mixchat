@@ -61,22 +61,25 @@ export function useEventSub({
         onScopeError,
       });
 
-      // If session already active, subscribe immediately
+      // If session already active, subscribe with a small stagger to avoid 429
       if (sessionId) {
-        subscribeEventSub(
-          accessTokenRef.current,
-          clientIdRef.current,
-          {
-            type,
-            version,
-            condition,
-            transport: { method: "websocket", session_id: sessionId },
-          },
-        ).then((res) => {
-          if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
-            onScopeError?.();
-          }
-        });
+        const delay = subscriptionsRef.current.size * 150;
+        setTimeout(() => {
+          subscribeEventSub(
+            accessTokenRef.current,
+            clientIdRef.current,
+            {
+              type,
+              version,
+              condition,
+              transport: { method: "websocket", session_id: sessionId },
+            },
+          ).then((res) => {
+            if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
+              onScopeError?.();
+            }
+          });
+        }, delay);
       }
 
       return () => {
@@ -104,9 +107,14 @@ export function useEventSub({
       }, (fallback + KEEPALIVE_GRACE_S) * 1000);
     };
 
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
     const subscribeAll = async (sid: string) => {
-      for (const sub of subscriptionsRef.current.values()) {
+      const entries = Array.from(subscriptionsRef.current.values());
+      for (let i = 0; i < entries.length; i++) {
         if (!active) return;
+        const sub = entries[i];
         try {
           const res = await subscribeEventSub(
             accessTokenRef.current,
@@ -123,6 +131,9 @@ export function useEventSub({
           }
         } catch (err) {
           console.error(`[useEventSub] Subscription error for ${sub.type}:`, err);
+        }
+        if (i < entries.length - 1) {
+          await sleep(150);
         }
       }
     };
