@@ -61,8 +61,8 @@ export const EVENT_CONFIG: Record<
   },
   automod: {
     title: "Held by AutoMod",
-    color: "#fbbf24",
-    bg: "rgba(251, 191, 36, 0.12)",
+    color: "#f97316",
+    bg: "rgba(249, 115, 22, 0.15)",
   },
 };
 
