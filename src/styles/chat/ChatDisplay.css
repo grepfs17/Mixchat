@@ -804,7 +804,8 @@
 .message.timeout,
 .message.ban,
 .message.untimeout,
-.message.unban {
+.message.unban,
+.message.automod {
     background-color: var(--event-bg);
     border-left: 2px solid var(--event-color);
 }
