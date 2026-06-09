@@ -359,11 +359,7 @@ export function useChatAppState({
   useRaidDetection({
     subscribe,
     channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady
-    ),
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
     onRaidOut: (raid) => {
       setPendingRaid(raid);
       setIsRaidInitiator(false);
