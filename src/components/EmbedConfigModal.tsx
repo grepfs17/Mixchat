@@ -432,7 +432,7 @@ export default function EmbedConfigModal({
         group: "chat",
         label: "Show deleted messages",
         description:
-          "Messages deleted by a moderator remain visible but are dimmed",
+          "Deleted messages are hidden behind a click-to-reveal link",
         render: () => (
           <div className="embed-config-section">
             <label className="embed-config-checkbox-label">
@@ -444,9 +444,8 @@ export default function EmbedConfigModal({
               <span>Show deleted messages</span>
             </label>
             <p className="embed-config-description embed-config-description--indented">
-              When enabled, messages deleted by a moderator remain visible but
-              are dimmed and marked as deleted. When disabled, they are removed
-              from chat.
+              When enabled, deleted messages are hidden behind a click-to-reveal
+              link. When disabled, they are removed from chat entirely.
             </p>
           </div>
         ),

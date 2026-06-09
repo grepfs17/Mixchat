@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import {
   MdReply,
   MdContentCopy,
@@ -78,6 +78,7 @@ function TwitchMessageItemBase({
   onTouchMove,
   onScrollToMessage,
 }: TwitchMessageItemProps) {
+  const [deletedRevealed, setDeletedRevealed] = useState(false);
   const msg = entry.msg as ChatMessage;
   const isMentioned =
     currentUserDisplayName && msg.content.includes(currentUserDisplayName);
@@ -186,14 +187,23 @@ function TwitchMessageItemBase({
             {msg.author}
           </a>
           <span className="message-separator">:</span>
-          <span
-            className="message-text"
-            dangerouslySetInnerHTML={{
-              __html: parseMessageWithEmotes(msg.content, msg.emotes, {
-                gigantified: msg.isGigantifiedEmote,
-              }),
-            }}
-          />
+          {msg.isDeleted && !deletedRevealed ? (
+            <span
+              className="message-text deleted-clickable"
+              onClick={() => setDeletedRevealed(true)}
+            >
+              click to see the deleted message
+            </span>
+          ) : (
+            <span
+              className="message-text"
+              dangerouslySetInnerHTML={{
+                __html: parseMessageWithEmotes(msg.content, msg.emotes, {
+                  gigantified: msg.isGigantifiedEmote,
+                }),
+              }}
+            />
+          )}
           {!compactActions &&
             (!msg.messageType ||
               msg.messageType === "chat" ||

@@ -235,9 +235,6 @@
 }
 
 /* Split Chat styling for YouTube chat container */
-.yt-chat-container.split-chat {
-    /* keep default spacing to avoid introducing visible gaps between messages */
-}
 
 .yt-chat-container.split-chat .message.odd:not(.yt-event) {
     background-color: rgba(255, 255, 255, 0.07);
@@ -250,6 +247,21 @@
 /* Deleted message styling */
 .yt-chat-container .message.deleted {
     opacity: 0.45;
+}
+
+.deleted-clickable {
+    cursor: pointer;
+    color: #94a3b8;
+    text-decoration: underline;
+    font-style: italic;
+    font-size: 0.78rem;
+    padding-left: 2px;
+    letter-spacing: 0.01em;
+    user-select: none;
+}
+
+.deleted-clickable:hover {
+    color: #cbd5e1;
 }
 
 .deleted-notice {

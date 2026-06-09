@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   getColorFromName,
   getReadableUsernameColor,
@@ -49,6 +50,7 @@ export function YouTubeMessageItem({
   onTouchMove,
   onUsernameClick,
 }: YouTubeMessageItemProps) {
+  const [deletedRevealed, setDeletedRevealed] = useState(false);
   const msg = entry.msg as YTMessage;
 
   const getConfig = () => {
@@ -215,9 +217,18 @@ export function YouTubeMessageItem({
           {msg.author}
         </span>
         <span className="message-separator">:</span>
-        <span className="message-text">
-          <YTMessageParts parts={msg.parts} variant="unified" />
-        </span>
+        {msg.isDeleted && !deletedRevealed ? (
+          <span
+            className="message-text deleted-clickable"
+            onClick={() => setDeletedRevealed(true)}
+          >
+            click to see the deleted message
+          </span>
+        ) : (
+          <span className="message-text">
+            <YTMessageParts parts={msg.parts} variant="unified" />
+          </span>
+        )}
       </div>
       {msg.isDeleted && (
         <div className="deleted-notice">Deleted by a moderator</div>

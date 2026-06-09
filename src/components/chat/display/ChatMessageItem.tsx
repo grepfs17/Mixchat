@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import {
   MdReply,
   MdContentCopy,
@@ -88,6 +88,7 @@ function ChatMessageItemBase({
   onTouchMove,
   onContextMenu,
 }: ChatMessageItemProps) {
+  const [deletedRevealed, setDeletedRevealed] = useState(false);
   const isMentioned =
     currentUserDisplayName && msg.content.includes(currentUserDisplayName);
   const isFirstLive =
@@ -248,14 +249,23 @@ function ChatMessageItemBase({
             {msg.author}
           </a>
           <span className="message-separator">:</span>
-          <span
-            className="message-text"
-            dangerouslySetInnerHTML={{
-              __html: parseMessageWithEmotes(msg.content, msg.emotes, {
-                gigantified: msg.isGigantifiedEmote,
-              }),
-            }}
-          />
+          {msg.isDeleted && !deletedRevealed ? (
+            <span
+              className="message-text deleted-clickable"
+              onClick={() => setDeletedRevealed(true)}
+            >
+              click to see the deleted message
+            </span>
+          ) : (
+            <span
+              className="message-text"
+              dangerouslySetInnerHTML={{
+                __html: parseMessageWithEmotes(msg.content, msg.emotes, {
+                  gigantified: msg.isGigantifiedEmote,
+                }),
+              }}
+            />
+          )}
           {!compactActions &&
             (!msg.messageType ||
               msg.messageType === "chat" ||

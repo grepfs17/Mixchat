@@ -81,6 +81,22 @@ interface SSEEndEvent {
   reason: string;
 }
 
+function ClickToDeleteReveal({ parts }: { parts: ChatMessage["parts"] }) {
+  const [revealed, setRevealed] = useState(false);
+  if (!revealed) {
+    return (
+      <span className="message-text deleted-clickable" onClick={() => setRevealed(true)}>
+        click to see the deleted message
+      </span>
+    );
+  }
+  return (
+    <span className="message-text">
+      <YTMessageParts parts={parts} />
+    </span>
+  );
+}
+
 export default function YouTubeChat({
   videoId,
   channel,
@@ -810,9 +826,13 @@ export default function YouTubeChat({
                     {msg.author}
                   </span>
                   <span className="message-separator">:</span>
-                  <span className="message-text">
-                    <YTMessageParts parts={msg.parts} />
-                  </span>
+                  {msg.isDeleted ? (
+                    <ClickToDeleteReveal parts={msg.parts} />
+                  ) : (
+                    <span className="message-text">
+                      <YTMessageParts parts={msg.parts} />
+                    </span>
+                  )}
                 </div>
                 {msg.isDeleted && (
                   <div className="deleted-notice">Deleted by a moderator</div>

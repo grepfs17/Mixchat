@@ -726,6 +726,21 @@
     background-color: var(--color-bg-primary);
 }
 
+.deleted-clickable {
+    cursor: pointer;
+    color: #94a3b8;
+    text-decoration: underline;
+    font-style: italic;
+    font-size: 0.78rem;
+    padding-left: 2px;
+    letter-spacing: 0.01em;
+    user-select: none;
+}
+
+.deleted-clickable:hover {
+    color: #cbd5e1;
+}
+
 .deleted-notice {
     flex-basis: 100%;
     font-size: 0.68rem;
