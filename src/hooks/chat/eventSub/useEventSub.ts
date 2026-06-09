@@ -12,6 +12,8 @@ import { subscribeEventSub, resolveBroadcasterId } from "../../../lib/twitch";
 const WS_URL = "wss://eventsub.wss.twitch.tv/ws";
 const KEEPALIVE_GRACE_S = 5;
 const MAX_RECONNECT_DELAY_MS = 30000;
+const SUBSCRIPTION_STAGGER_MS = 250;
+const POST_429_COOLDOWN_MS = 5000;
 
 interface Subscription {
   type: string;
@@ -36,6 +38,9 @@ export function useEventSub({
   const subscriptionsRef = useRef(new Map<string, Subscription>());
   const accessTokenRef = useRef(accessToken);
   const clientIdRef = useRef(clientId);
+  const rateLimitedUntilRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
+  const triggerResubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
@@ -43,6 +48,9 @@ export function useEventSub({
   useEffect(() => {
     clientIdRef.current = clientId;
   }, [clientId]);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   const subscribe = useCallback(
     (
@@ -61,32 +69,15 @@ export function useEventSub({
         onScopeError,
       });
 
-      // If session already active, subscribe with a small stagger to avoid 429
-      if (sessionId) {
-        const delay = subscriptionsRef.current.size * 150;
-        setTimeout(() => {
-          subscribeEventSub(
-            accessTokenRef.current,
-            clientIdRef.current,
-            {
-              type,
-              version,
-              condition,
-              transport: { method: "websocket", session_id: sessionId },
-            },
-          ).then((res) => {
-            if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
-              onScopeError?.();
-            }
-          });
-        }, delay);
+      if (sessionIdRef.current) {
+        triggerResubscribeRef.current?.();
       }
 
       return () => {
         subscriptionsRef.current.delete(key);
       };
     },
-    [sessionId],
+    [],
   );
 
   useEffect(() => {
@@ -96,6 +87,8 @@ export function useEventSub({
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectDelay = 1000;
+    let pendingSubscribes = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const resetKeepalive = (timeoutSeconds: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
@@ -111,30 +104,56 @@ export function useEventSub({
       new Promise((resolve) => setTimeout(resolve, ms));
 
     const subscribeAll = async (sid: string) => {
-      const entries = Array.from(subscriptionsRef.current.values());
-      for (let i = 0; i < entries.length; i++) {
-        if (!active) return;
-        const sub = entries[i];
-        try {
-          const res = await subscribeEventSub(
-            accessTokenRef.current,
-            clientIdRef.current,
-            {
-              type: sub.type,
-              version: sub.version,
-              condition: sub.condition,
-              transport: { method: "websocket", session_id: sid },
-            },
-          );
-          if (!res.ok && res.status !== 409 && (res.status === 401 || res.status === 403)) {
-            sub.onScopeError?.();
+      if (pendingSubscribes) return;
+      pendingSubscribes = true;
+      try {
+        const entries = Array.from(subscriptionsRef.current.values());
+        for (let i = 0; i < entries.length; i++) {
+          if (!active) return;
+          if (sessionIdRef.current !== sid) return;
+          if (Date.now() < rateLimitedUntilRef.current) {
+            const wait = rateLimitedUntilRef.current - Date.now();
+            await sleep(wait);
+            if (!active || sessionIdRef.current !== sid) return;
           }
-        } catch (err) {
-          console.error(`[useEventSub] Subscription error for ${sub.type}:`, err);
+          const sub = entries[i];
+          try {
+            const res = await subscribeEventSub(
+              accessTokenRef.current,
+              clientIdRef.current,
+              {
+                type: sub.type,
+                version: sub.version,
+                condition: sub.condition,
+                transport: { method: "websocket", session_id: sid },
+              },
+            );
+            if (
+              res.status === 429 &&
+              rateLimitedUntilRef.current < Date.now()
+            ) {
+              rateLimitedUntilRef.current =
+                Date.now() + POST_429_COOLDOWN_MS;
+            }
+            if (
+              !res.ok &&
+              res.status !== 409 &&
+              (res.status === 401 || res.status === 403)
+            ) {
+              sub.onScopeError?.();
+            }
+          } catch (err) {
+            console.error(
+              `[useEventSub] Subscription error for ${sub.type}:`,
+              err,
+            );
+          }
+          if (i < entries.length - 1) {
+            await sleep(SUBSCRIPTION_STAGGER_MS);
+          }
         }
-        if (i < entries.length - 1) {
-          await sleep(150);
-        }
+      } finally {
+        pendingSubscribes = false;
       }
     };
 
@@ -164,6 +183,7 @@ export function useEventSub({
             session?.keepalive_timeout_seconds ?? 10;
           if (!sid) return;
           setSessionId(sid);
+          sessionIdRef.current = sid;
           resetKeepalive(keepaliveTimeout);
           await subscribeAll(sid);
         } else if (msgType === "session_keepalive") {
@@ -199,6 +219,8 @@ export function useEventSub({
       ws.onclose = (evt) => {
         if (keepaliveTimer) clearTimeout(keepaliveTimer);
         if (!active) return;
+        sessionIdRef.current = null;
+        setSessionId(null);
         if (evt.code !== 1000) {
           const delay = Math.min(reconnectDelay, MAX_RECONNECT_DELAY_MS);
           reconnectTimer = setTimeout(() => {
@@ -211,10 +233,25 @@ export function useEventSub({
 
     connect(WS_URL);
 
+    triggerResubscribeRef.current = () => {
+      const sid = sessionIdRef.current;
+      if (!sid) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        if (active && sessionIdRef.current === sid) {
+          void subscribeAll(sid);
+        }
+      }, 300);
+    };
+
     return () => {
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      triggerResubscribeRef.current = null;
+      sessionIdRef.current = null;
       ws?.close(1000, "hook unmounting");
     };
   }, [accessToken, clientId, enabled]);
