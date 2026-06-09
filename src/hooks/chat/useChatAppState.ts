@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
-import { useRaidDetection } from "./useRaidDetection";
-import type { RaidOutEvent } from "./useRaidDetection";
-import { useChannelPointRedemptions } from "./useChannelPointRedemptions";
-import { useHypeTrainEventSub } from "./useHypeTrainEventSub";
-import { useAutomodQueue } from "./useAutomodQueue";
+import { useRaidDetection } from "./eventSub/useRaidDetection";
+import type { RaidOutEvent } from "./eventSub/useRaidDetection";
+import { useChannelPointRedemptions } from "./eventSub/useChannelPointRedemptions";
+import { useHypeTrainEventSub } from "./eventSub/useHypeTrainEventSub";
+import { useAutomodQueue } from "./eventSub/useAutomodQueue";
 import {
   initializeEmotes,
   clearEmoteCache,
@@ -22,7 +22,6 @@ import type {
   ChatTheme,
 } from "../../lib/types";
 import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
-import type { YTMessage } from "../../components/chat/unified/types";
 import type { ChatDisplayHandle } from "../../components/chat/display";
 import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
@@ -209,7 +208,11 @@ export function useChatAppState({
     moderatorId: twitchSession?.userId || "",
     onError: (msg) => {
       notificationIdRef.current += 1;
-      setNotification({ message: msg, type: "error", id: notificationIdRef.current });
+      setNotification({
+        message: msg,
+        type: "error",
+        id: notificationIdRef.current,
+      });
     },
   });
 
@@ -218,11 +221,14 @@ export function useChatAppState({
     const handler = (e: Event) => {
       const heldMsgId = (e as CustomEvent).detail?.heldMsgId;
       if (heldMsgId) {
-        setMessages((prev) => prev.filter((m) => m.id !== `automod-${heldMsgId}`));
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== `automod-${heldMsgId}`),
+        );
       }
     };
     window.addEventListener("automod-message-resolved", handler);
-    return () => window.removeEventListener("automod-message-resolved", handler);
+    return () =>
+      window.removeEventListener("automod-message-resolved", handler);
   }, [setMessages]);
 
   // Keep automod IDs in sync for AutomodActions
@@ -232,7 +238,7 @@ export function useChatAppState({
 
   // Inject held messages into the chat messages array
   const handleHeldMessageInline = useCallback(
-    (heldMsg: import("./useAutomodQueue").HeldMessage) => {
+    (heldMsg: import("./eventSub/useAutomodQueue").HeldMessage) => {
       const chatMsg: ChatMessage = {
         id: `automod-${heldMsg.id}`,
         platform: "twitch",
@@ -267,7 +273,7 @@ export function useChatAppState({
     ),
     onHeldMessage: handleHeldMessageInline,
     onResolvedMessage: useCallback(
-      (resolved: import("./useAutomodQueue").ResolvedMessage) => {
+      (resolved: import("./eventSub/useAutomodQueue").ResolvedMessage) => {
         setMessages((prev) =>
           prev.filter((m) => m.id !== `automod-${resolved.messageId}`),
         );

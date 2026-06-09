@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { manageHeldAutomodMessage } from "../../../lib/twitch";
-import type { HeldMessage } from "../useAutomodQueue";
+import type { HeldMessage } from "../eventSub/useAutomodQueue";
 
 export interface UseAutomodStateReturn {
   heldMessages: HeldMessage[];
