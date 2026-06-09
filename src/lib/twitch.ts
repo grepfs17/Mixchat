@@ -5,6 +5,49 @@ const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
 const BATCH_SIZE = 100;
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Create an EventSub subscription with automatic retry on 429.
+ */
+export async function subscribeEventSub(
+  accessToken: string,
+  clientId: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; body?: unknown }> {
+  const url = `${TWITCH_API_BASE}/eventsub/subscriptions`;
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    "Client-Id": clientId,
+  };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 429) {
+      const retryAfter = parseInt(
+        res.headers.get("Retry-After") || "2",
+        10,
+      );
+      console.warn(
+        `[subscribeEventSub] 429 rate limited, retrying in ${retryAfter}s (attempt ${attempt + 1})`,
+      );
+      await sleep(retryAfter * 1000);
+      continue;
+    }
+
+    const json = await res.json().catch(() => undefined);
+    return { ok: res.ok, status: res.status, body: json };
+  }
+
+  return { ok: false, status: 429 };
+}
+
 /** Resolve a broadcaster login name to a numeric ID when necessary.
  * If the input is already numeric, it is returned unchanged.
  * Returns the resolved numeric ID or the original input if resolution fails.
@@ -519,6 +562,7 @@ export const getTwitchUser = async (accessToken: string, clientId: string) => {
       displayName: user.display_name,
       login: user.login,
       profileImageUrl: user.profile_image_url,
+      broadcasterType: user.broadcaster_type || "",
     };
   } catch (error) {
     console.error("Failed to get Twitch user:", error);
@@ -573,6 +617,7 @@ export const getTwitchUserById = async (
       displayName: user.display_name,
       login: user.login,
       profileImageUrl: user.profile_image_url,
+      broadcasterType: user.broadcaster_type || "",
     };
   } catch (error) {
     console.error("Failed to get Twitch user by ID:", error);

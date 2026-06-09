@@ -409,6 +409,10 @@ export function useChatAppState({
     },
   });
 
+  const isPartnerOrAffiliate =
+    twitchSession?.broadcasterType === "partner" ||
+    twitchSession?.broadcasterType === "affiliate";
+
   useHypeTrainEventSub({
     channelId: selectedTwitchChannel,
     accessToken: twitchSession?.accessToken || "",
@@ -416,7 +420,8 @@ export function useChatAppState({
     enabled: !!(
       twitchSession?.accessToken &&
       selectedTwitchChannel &&
-      badgesReady
+      badgesReady &&
+      isPartnerOrAffiliate
     ),
     onHypeTrainBegin: (event) => {
       setHypeTrain({

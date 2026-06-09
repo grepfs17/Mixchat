@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { subscribeEventSub } from "../../lib/twitch";
 import { resolveBroadcasterId } from "../../lib/twitch";
 
 export interface RaidOutEvent {
@@ -152,37 +153,27 @@ export function useRaidDetection({
 
             // Subscribe to outgoing raids from the broadcaster via the Helix API
             try {
-              const subRes = await fetch(
-                "https://api.twitch.tv/helix/eventsub/subscriptions",
+              const subRes = await subscribeEventSub(
+                accessTokenRef.current,
+                clientId,
                 {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessTokenRef.current}`,
-                    "Client-Id": clientId,
-                  },
-                  body: JSON.stringify({
-                    type: "channel.raid",
-                    version: "1",
-                    condition: { from_broadcaster_user_id: numericId },
-                    transport: { method: "websocket", session_id: sessionId },
-                  }),
+                  type: "channel.raid",
+                  version: "1",
+                  condition: { from_broadcaster_user_id: numericId },
+                  transport: { method: "websocket", session_id: sessionId },
                 },
               );
 
               if (!subRes.ok) {
-                const errBody = await subRes.json().catch(() => ({}));
                 if (subRes.status === 401 || subRes.status === 403) {
                   console.warn(
                     "[useRaidDetection] Subscription rejected — token may be invalid or expired.",
-                    errBody,
                   );
                   onScopeErrorRef.current?.();
                 } else {
                   console.warn(
                     "[useRaidDetection] Subscription failed:",
                     subRes.status,
-                    errBody,
                   );
                 }
               } else {

@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { resolveBroadcasterId } from "../../lib/twitch";
+import { resolveBroadcasterId, subscribeEventSub } from "../../lib/twitch";
 
 interface HypeTrainEvent {
   id: string;
@@ -116,43 +116,34 @@ export function useHypeTrainEventSub({
     ) => {
       if (!active) return;
       try {
-        const subRes = await fetch(
-          "https://api.twitch.tv/helix/eventsub/subscriptions",
+        const subRes = await subscribeEventSub(
+          accessTokenRef.current,
+          clientId,
           {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessTokenRef.current}`,
-              "Client-Id": clientId,
-            },
-            body: JSON.stringify({
-              type,
-              version,
-              condition: { broadcaster_user_id: numericId },
-              transport: { method: "websocket", session_id: sessionId },
-            }),
+            type,
+            version,
+            condition: { broadcaster_user_id: numericId },
+            transport: { method: "websocket", session_id: sessionId },
           },
         );
 
         if (!subRes.ok) {
-          const errBody = await subRes.json().catch(() => ({}));
           if (subRes.status === 401 || subRes.status === 403) {
             console.warn(
               `[useHypeTrainEventSub] Subscription rejected for ${type} — token may be invalid or missing channel:read:hype_train scope.`,
-              errBody,
             );
             onScopeErrorRef.current?.();
           } else {
             console.warn(
               `[useHypeTrainEventSub] Subscription failed for ${type}:`,
               subRes.status,
-              errBody,
             );
           }
         } else {
-          const subData = await subRes.json();
-          const subId = subData?.data?.[0]?.id;
-          if (subId) subscriptions.push(subId);
+          const subData = subRes.body as Record<string, unknown> | undefined;
+          const data = subData?.data as Array<Record<string, unknown>> | undefined;
+          const subId = data?.[0]?.id;
+          if (subId) subscriptions.push(subId as string);
           console.log(
             `[useHypeTrainEventSub] Subscribed to ${type} for channel ${numericId}`,
           );

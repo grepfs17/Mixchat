@@ -65,6 +65,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       displayName: user.displayName,
       username: user.login,
       profileImageUrl: user.profileImageUrl,
+      broadcasterType: user.broadcasterType,
       accessToken: tokenData.accessToken,
       refreshToken: tokenData.refreshToken ?? "",
       expiresAt: Date.now() + (tokenData.expiresIn ?? 3600) * 1000,

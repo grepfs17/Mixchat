@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { subscribeEventSub } from "../../lib/twitch";
 
 const EVENTSUB_WS_URL = "wss://eventsub.wss.twitch.tv/ws";
 const KEEPALIVE_GRACE_S = 5;
@@ -121,33 +122,24 @@ export function useAutomodQueue({
           resetKeepalive(keepaliveTimeout);
 
           try {
-            const subRes = await fetch(
-              "https://api.twitch.tv/helix/eventsub/subscriptions",
+            const subRes = await subscribeEventSub(
+              accessTokenRef.current,
+              clientId,
               {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${accessTokenRef.current}`,
-                  "Client-Id": clientId,
+                type: "automod.message.hold",
+                version: "1",
+                condition: {
+                  broadcaster_user_id: channelId,
+                  moderator_user_id: moderatorId,
                 },
-                body: JSON.stringify({
-                  type: "automod.message.hold",
-                  version: "1",
-                  condition: {
-                    broadcaster_user_id: channelId,
-                    moderator_user_id: moderatorId,
-                  },
-                  transport: { method: "websocket", session_id: sessionId },
-                }),
+                transport: { method: "websocket", session_id: sessionId },
               },
             );
 
             if (!subRes.ok) {
-              const errBody = await subRes.json().catch(() => ({}));
               console.warn(
                 "[useAutomodQueue] Subscription failed:",
                 subRes.status,
-                errBody,
               );
               if (subRes.status === 401 || subRes.status === 403) {
                 onScopeErrorRef.current?.();
@@ -160,24 +152,17 @@ export function useAutomodQueue({
             }
 
             // Also subscribe to automod.message.update to detect when another mod resolves a message
-            const updateSubRes = await fetch(
-              "https://api.twitch.tv/helix/eventsub/subscriptions",
+            const updateSubRes = await subscribeEventSub(
+              accessTokenRef.current,
+              clientId,
               {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${accessTokenRef.current}`,
-                  "Client-Id": clientId,
+                type: "automod.message.update",
+                version: "1",
+                condition: {
+                  broadcaster_user_id: channelId,
+                  moderator_user_id: moderatorId,
                 },
-                body: JSON.stringify({
-                  type: "automod.message.update",
-                  version: "1",
-                  condition: {
-                    broadcaster_user_id: channelId,
-                    moderator_user_id: moderatorId,
-                  },
-                  transport: { method: "websocket", session_id: sessionId },
-                }),
+                transport: { method: "websocket", session_id: sessionId },
               },
             );
 

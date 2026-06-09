@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { subscribeEventSub } from "../../lib/twitch";
 import { resolveBroadcasterId } from "../../lib/twitch";
 import type { ChatMessage } from "../../lib/types";
 
@@ -154,37 +155,27 @@ export function useChannelPointRedemptions({
             resetKeepalive(keepaliveTimeout);
 
             try {
-              const subRes = await fetch(
-                "https://api.twitch.tv/helix/eventsub/subscriptions",
+              const subRes = await subscribeEventSub(
+                accessTokenRef.current,
+                clientId,
                 {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${accessTokenRef.current}`,
-                    "Client-Id": clientId,
-                  },
-                  body: JSON.stringify({
-                    type: "channel.channel_points_custom_reward_redemption.add",
-                    version: "1",
-                    condition: { broadcaster_user_id: numericId },
-                    transport: { method: "websocket", session_id: sessionId },
-                  }),
+                  type: "channel.channel_points_custom_reward_redemption.add",
+                  version: "1",
+                  condition: { broadcaster_user_id: numericId },
+                  transport: { method: "websocket", session_id: sessionId },
                 },
               );
 
               if (!subRes.ok) {
-                const errBody = await subRes.json().catch(() => ({}));
                 if (subRes.status === 401 || subRes.status === 403) {
                   console.warn(
                     "[useChannelPointRedemptions] Subscription rejected — token may be invalid or missing channel:read:redemptions scope.",
-                    errBody,
                   );
                   onScopeErrorRef.current?.();
                 } else {
                   console.warn(
                     "[useChannelPointRedemptions] Subscription failed:",
                     subRes.status,
-                    errBody,
                   );
                 }
               } else {
