@@ -193,25 +193,13 @@ function TwitchJSEmbed({
       }
     };
 
-    // Fast heartbeat (500ms) to catch the SDK's repeated pause-on-blur.
-    // The SDK may re-pause immediately after a play() call, so we need
-    // to keep kicking it while the document is visible.
-    heartbeatId = setInterval(forceResume, 500);
-
-    // Prevent focus loss from propagating into the Twitch iframe when
-    // clicking elements outside the embed (e.g. emote menu). By calling
-    // preventDefault() on mousedown in the capture phase, the browser
-    // won't move focus away from the iframe, so the SDK's internal
-    // blur handler never fires.
-    const preventFocusLoss = (e: MouseEvent) => {
-      const iframe = document.querySelector(
-        'iframe[src*="player.twitch.tv"], iframe[src*="embed.twitch.tv"]',
-      );
-      if (iframe && !iframe.contains(e.target as Node)) {
-        e.preventDefault();
-      }
-    };
-    document.addEventListener("mousedown", preventFocusLoss, true);
+    // Very fast heartbeat (100ms) to catch the SDK's pause-on-blur.
+    // The Twitch SDK pauses the video when its iframe loses focus
+    // (e.g. clicking the emote menu). The VIDEO_PAUSE listener above
+    // handles the first pause, but the SDK may re-pause immediately,
+    // so this heartbeat keeps kicking it back to life. At 100ms the
+    // pause is imperceptible to the user.
+    heartbeatId = setInterval(forceResume, 100);
 
     // Chrome/Chromium workaround: Active (even silent) AudioContext prevents aggressive tab suspension.
     let audioCtx: AudioContext | null = null;
@@ -244,7 +232,6 @@ function TwitchJSEmbed({
     return () => {
       if (heartbeatId) clearInterval(heartbeatId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("mousedown", preventFocusLoss, true);
       if (audioCtx && audioCtx.state !== "closed") {
         audioCtx.close().catch(() => {});
       }
