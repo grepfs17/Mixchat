@@ -1,15 +1,14 @@
 /**
  * useHypeTrainEventSub
  *
- * Connects to the Twitch EventSub WebSocket and subscribes to
- * `channel.hype_train.begin`, `channel.hype_train.progress`, and
- * `channel.hype_train.end` v2 events.
+ * Subscribes to `channel.hype_train.begin`, `channel.hype_train.progress`,
+ * and `channel.hype_train.end` v2 via the shared EventSub connection.
  *
  * Required scope: channel:read:hype_train
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { resolveBroadcasterId, subscribeEventSub } from "../../lib/twitch";
+import { useEffect, useRef } from "react";
+import { useEventSub, resolveBroadcasterId } from "./useEventSub";
 
 interface HypeTrainEvent {
   id: string;
@@ -49,8 +48,27 @@ interface UseHypeTrainEventSubOptions {
   onScopeError?: () => void;
 }
 
-const EVENTSUB_WS_URL = "wss://eventsub.wss.twitch.tv/ws";
-const KEEPALIVE_GRACE_S = 5;
+function parseHypeTrainEvent(ev: any): HypeTrainEvent {
+  return {
+    id: ev.id,
+    broadcasterUserId: ev.broadcaster_user_id,
+    broadcasterUserName: ev.broadcaster_user_name,
+    level: ev.level,
+    total: ev.total,
+    progress: ev.progress,
+    goal: ev.goal,
+    topContributions: (ev.top_contributions || []).map((c: any) => ({
+      userId: c.user_id,
+      userName: c.user_name,
+      displayName: c.display_name || c.user_name,
+      type: c.type,
+      total: c.total,
+    })),
+    startedAt: ev.started_at,
+    expiresAt: ev.expires_at,
+    cooldownEndsAt: ev.cooldown_ends_at,
+  };
+}
 
 export function useHypeTrainEventSub({
   channelId,
@@ -62,250 +80,61 @@ export function useHypeTrainEventSub({
   onHypeTrainEnd,
   onScopeError,
 }: UseHypeTrainEventSubOptions): void {
-  const [wsSessionId, setWsSessionId] = useState<string | null>(null);
+  const onBeginRef = useRef(onHypeTrainBegin);
+  useEffect(() => { onBeginRef.current = onHypeTrainBegin; }, [onHypeTrainBegin]);
 
-  const onHypeTrainBeginRef = useRef(onHypeTrainBegin);
-  useEffect(() => {
-    onHypeTrainBeginRef.current = onHypeTrainBegin;
-  }, [onHypeTrainBegin]);
+  const onProgressRef = useRef(onHypeTrainProgress);
+  useEffect(() => { onProgressRef.current = onHypeTrainProgress; }, [onHypeTrainProgress]);
 
-  const onHypeTrainProgressRef = useRef(onHypeTrainProgress);
-  useEffect(() => {
-    onHypeTrainProgressRef.current = onHypeTrainProgress;
-  }, [onHypeTrainProgress]);
+  const onEndRef = useRef(onHypeTrainEnd);
+  useEffect(() => { onEndRef.current = onHypeTrainEnd; }, [onHypeTrainEnd]);
 
-  const onHypeTrainEndRef = useRef(onHypeTrainEnd);
-  useEffect(() => {
-    onHypeTrainEndRef.current = onHypeTrainEnd;
-  }, [onHypeTrainEnd]);
-
-  const onScopeErrorRef = useRef(onScopeError);
-  useEffect(() => {
-    onScopeErrorRef.current = onScopeError;
-  }, [onScopeError]);
-
-  const accessTokenRef = useRef(accessToken);
-  useEffect(() => {
-    accessTokenRef.current = accessToken;
-  }, [accessToken]);
+  const { subscribe } = useEventSub({ accessToken, clientId, enabled });
 
   useEffect(() => {
-    if (!enabled || !channelId || !accessToken || !clientId) return;
-    let active = true;
-    let ws: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
-    const subscriptions: string[] = [];
+    if (!enabled || !channelId) return;
 
-    const resetKeepalive = (timeoutSeconds: number) => {
-      if (keepaliveTimer) clearTimeout(keepaliveTimer);
-      const raw = Number(timeoutSeconds);
-      const fallback = Number.isFinite(raw) && raw > 0 ? raw : 10;
-      const ms = (fallback + KEEPALIVE_GRACE_S) * 1000;
-      keepaliveTimer = setTimeout(() => {
-        console.warn("[useHypeTrainEventSub] Keepalive timeout — reconnecting");
-        ws?.close();
-      }, ms);
-    };
+    let cancelled = false;
 
-    const subscribe = async (
-      sessionId: string,
-      numericId: string,
-      type: string,
-      version: string,
-    ) => {
-      if (!active) return;
-      try {
-        const subRes = await subscribeEventSub(
-          accessTokenRef.current,
-          clientId,
-          {
-            type,
-            version,
-            condition: { broadcaster_user_id: numericId },
-            transport: { method: "websocket", session_id: sessionId },
-          },
-        );
-
-        if (!subRes.ok) {
-          if (subRes.status === 401 || subRes.status === 403) {
-            console.warn(
-              `[useHypeTrainEventSub] Subscription rejected for ${type} — token may be invalid or missing channel:read:hype_train scope.`,
-            );
-            onScopeErrorRef.current?.();
-          } else {
-            console.warn(
-              `[useHypeTrainEventSub] Subscription failed for ${type}:`,
-              subRes.status,
-            );
-          }
-        } else {
-          const subData = subRes.body as Record<string, unknown> | undefined;
-          const data = subData?.data as Array<Record<string, unknown>> | undefined;
-          const subId = data?.[0]?.id;
-          if (subId) subscriptions.push(subId as string);
-          console.log(
-            `[useHypeTrainEventSub] Subscribed to ${type} for channel ${numericId}`,
-          );
-        }
-      } catch (err) {
-        console.error(
-          `[useHypeTrainEventSub] Subscription error for ${type}:`,
-          err,
-        );
-      }
-    };
-
-    const resolveAndConnect = async (url = EVENTSUB_WS_URL) => {
-      if (!active) return;
-
+    const setup = async () => {
       let numericId = channelId;
       if (!/^\d+$/.test(channelId)) {
         try {
           const resolved = await resolveBroadcasterId(channelId);
-          if (!resolved || !/^\d+$/.test(resolved)) {
-            console.warn(
-              `[useHypeTrainEventSub] Could not resolve channel name "${channelId}" to ID`,
-            );
-            return;
-          }
+          if (!resolved || !/^\d+$/.test(resolved)) return;
           numericId = resolved;
-        } catch (err) {
-          console.error(
-            `[useHypeTrainEventSub] Error resolving channel name "${channelId}":`,
-            err,
-          );
+        } catch {
           return;
         }
       }
 
-      const connect = (targetUrl: string) => {
-        if (!active) return;
-        ws = new WebSocket(targetUrl);
+      if (cancelled) return;
 
-        ws.onopen = () => {
-          console.log("[useHypeTrainEventSub] EventSub WebSocket connected");
-        };
+      const condition = { broadcaster_user_id: numericId };
 
-        ws.onmessage = async (event) => {
-          if (!active) return;
+      const unsubs = [
+        subscribe("channel.hype_train.begin", "2", condition, (ev: any) => {
+          onBeginRef.current(parseHypeTrainEvent(ev));
+        }, onScopeError),
+        subscribe("channel.hype_train.progress", "2", condition, (ev: any) => {
+          onProgressRef.current(parseHypeTrainEvent(ev));
+        }),
+        subscribe("channel.hype_train.end", "2", condition, (ev: any) => {
+          onEndRef.current(parseHypeTrainEvent(ev));
+        }),
+      ];
 
-          let data: any;
-          try {
-            data = JSON.parse(event.data as string);
-          } catch {
-            return;
-          }
-
-          const msgType: string | undefined = data?.metadata?.message_type;
-
-          if (msgType === "session_welcome") {
-            const session = data.payload?.session;
-            const sessionId: string | undefined = session?.id;
-            const keepaliveTimeout: number =
-              session?.keepalive_timeout_seconds ?? 10;
-
-            if (!sessionId) return;
-            setWsSessionId(sessionId);
-            resetKeepalive(keepaliveTimeout);
-
-            // Subscribe to all three Hype Train v2 events
-            await subscribe(
-              sessionId,
-              numericId,
-              "channel.hype_train.begin",
-              "2",
-            );
-            await subscribe(
-              sessionId,
-              numericId,
-              "channel.hype_train.progress",
-              "2",
-            );
-            await subscribe(
-              sessionId,
-              numericId,
-              "channel.hype_train.end",
-              "2",
-            );
-          } else if (msgType === "session_keepalive") {
-            const keepaliveTimeout: number =
-              data.payload?.session?.keepalive_timeout_seconds ?? 10;
-            resetKeepalive(keepaliveTimeout);
-          } else if (msgType === "notification") {
-            resetKeepalive(10);
-            const subType: string | undefined =
-              data?.payload?.subscription?.type;
-            const event = data.payload.event;
-
-            const hypeTrainEvent: HypeTrainEvent = {
-              id: event.id,
-              broadcasterUserId: event.broadcaster_user_id,
-              broadcasterUserName: event.broadcaster_user_name,
-              level: event.level,
-              total: event.total,
-              progress: event.progress,
-              goal: event.goal,
-              topContributions: (event.top_contributions || []).map(
-                (c: any) => ({
-                  userId: c.user_id,
-                  userName: c.user_name,
-                  displayName: c.display_name || c.user_name,
-                  type: c.type,
-                  total: c.total,
-                }),
-              ),
-              startedAt: event.started_at,
-              expiresAt: event.expires_at,
-              cooldownEndsAt: event.cooldown_ends_at,
-            };
-
-            if (subType === "channel.hype_train.begin") {
-              onHypeTrainBeginRef.current(hypeTrainEvent);
-            } else if (subType === "channel.hype_train.progress") {
-              onHypeTrainProgressRef.current(hypeTrainEvent);
-            } else if (subType === "channel.hype_train.end") {
-              onHypeTrainEndRef.current(hypeTrainEvent);
-            }
-          } else if (msgType === "session_reconnect") {
-            const reconnectUrl: string | undefined =
-              data.payload?.session?.reconnect_url;
-            ws?.close(1000, "reconnect requested by server");
-            if (active) connect(reconnectUrl ?? EVENTSUB_WS_URL);
-          } else if (msgType === "revocation") {
-            console.warn(
-              "[useHypeTrainEventSub] Subscription revoked:",
-              data.payload?.subscription?.status,
-            );
-          }
-        };
-
-        ws.onerror = () => {
-          console.error("[useHypeTrainEventSub] WebSocket error");
-        };
-
-        ws.onclose = (evt) => {
-          if (keepaliveTimer) clearTimeout(keepaliveTimer);
-          if (!active) return;
-          if (evt.code !== 1000) {
-            console.log(
-              `[useHypeTrainEventSub] WS closed (code ${evt.code}) — reconnecting in 5 s`,
-            );
-            reconnectTimer = setTimeout(() => resolveAndConnect(), 5000);
-          }
-        };
-      };
-
-      connect(url);
+      return () => unsubs.forEach((fn) => fn());
     };
 
-    resolveAndConnect();
+    let cleanup: (() => void) | undefined;
+    setup().then((fn) => {
+      if (!cancelled) cleanup = fn;
+    });
 
     return () => {
-      active = false;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (keepaliveTimer) clearTimeout(keepaliveTimer);
-      ws?.close(1000, "hook unmounting");
+      cancelled = true;
+      cleanup?.();
     };
-  }, [channelId, clientId, enabled]);
+  }, [channelId, enabled, subscribe, onScopeError]);
 }
