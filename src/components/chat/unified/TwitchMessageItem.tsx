@@ -10,6 +10,7 @@ import {
 import type { ChatMessage } from "../../../lib/types";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "../shared/AutomodActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
@@ -20,21 +21,9 @@ interface TwitchMessageItemProps {
   entry: UnifiedEntry;
   index: number;
   entries: UnifiedEntry[];
-  isModerator: boolean;
-  modModeActive: boolean;
-  compactActions: boolean;
   currentUserDisplayName?: string;
   onReply?: (msg: ChatMessage) => void;
   onCopyMessage?: () => void;
-  onDeleteMessage?: (id: string) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onUntimeoutUser?: (userName: string) => void;
-  onWarnUser?: (userName: string) => void;
   onViewHistory?: (author: string, avatar?: string) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
@@ -58,17 +47,9 @@ function TwitchMessageItemBase({
   entry,
   index,
   entries,
-  isModerator,
-  modModeActive,
-  compactActions,
   currentUserDisplayName,
   onReply,
   onCopyMessage,
-  onDeleteMessage,
-  onBanUser,
-  onTimeoutUser,
-  onUntimeoutUser,
-  onWarnUser,
   onViewHistory,
   onUsernameClick,
   onTimeoutMenu,
@@ -78,6 +59,16 @@ function TwitchMessageItemBase({
   onTouchMove,
   onScrollToMessage,
 }: TwitchMessageItemProps) {
+  const {
+    isModerator,
+    modModeActive,
+    compactActions,
+    onDeleteMessage,
+    onBanUser,
+    onTimeoutUser,
+    onUntimeoutUser,
+    onWarnUser,
+  } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const msg = entry.msg as ChatMessage;
   const isMentioned =
@@ -362,9 +353,6 @@ export const TwitchMessageItem = memo(TwitchMessageItemBase, (prev, next) => {
   return (
     prev.entry === next.entry &&
     prev.entry.msg.id === next.entry.msg.id &&
-    prev.isModerator === next.isModerator &&
-    prev.modModeActive === next.modModeActive &&
-    prev.compactActions === next.compactActions &&
     prev.currentUserDisplayName === next.currentUserDisplayName
   );
 });

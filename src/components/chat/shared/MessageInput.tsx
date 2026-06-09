@@ -8,6 +8,7 @@ import {
   type EmotesBySource,
 } from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
 
@@ -27,7 +28,6 @@ interface MessageInputProps {
   slowModeWaitTime?: number | null;
   followerModeMinutes?: number | null;
   isFollowing?: boolean | null;
-  isModerator?: boolean;
   channelName?: string;
 }
 
@@ -84,9 +84,9 @@ function MessageInput({
   slowModeWaitTime = null,
   followerModeMinutes = null,
   isFollowing = null,
-  isModerator = false,
   channelName = "",
 }: MessageInputProps) {
+  const { isModerator } = useModerationContext();
   const [message, setMessage] = useState("");
   const [placeholder, _setPlaceholder] = useState("Type your message");
   const [selectedPlatforms, _setSelectedPlatforms] = useState<Platform[]>([

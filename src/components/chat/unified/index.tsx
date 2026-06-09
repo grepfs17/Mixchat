@@ -12,6 +12,7 @@ import type { ChatMessage, ChatFont, Platform } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import { TwitchMessageItem } from "./TwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";
@@ -37,19 +38,6 @@ interface UnifiedChatProps {
   currentUserDisplayName?: string;
   fontSize?: number;
   chatFont?: ChatFont;
-  isModerator?: boolean;
-  modModeActive?: boolean;
-  onToggleModMode?: () => void;
-  onDeleteMessage?: (messageId: string) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onUntimeoutUser?: (userName: string) => void;
-  onWarnUser?: (userName: string) => void;
-  compactActions?: boolean;
   splitChatEnabled?: boolean;
   ignoredUsers?: string[];
 }
@@ -71,19 +59,21 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       currentUserDisplayName,
       fontSize = 14,
       chatFont = "inter" as ChatFont,
-      isModerator = false,
-      modModeActive = false,
-      onDeleteMessage,
-      onBanUser,
-      onTimeoutUser,
-      onUntimeoutUser,
-      onWarnUser,
-      compactActions = false,
       splitChatEnabled = false,
       ignoredUsers = [],
     }: UnifiedChatProps,
     ref: React.ForwardedRef<UnifiedChatHandle>,
   ) {
+    const {
+      isModerator,
+      modModeActive,
+      compactActions,
+      onDeleteMessage,
+      onBanUser,
+      onTimeoutUser,
+      onUntimeoutUser,
+      onWarnUser,
+    } = useModerationContext();
     const containerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<{
       url: string;
@@ -312,17 +302,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   entry={entry}
                   index={index}
                   entries={entries}
-                  isModerator={isModerator}
-                  modModeActive={modModeActive}
-                  compactActions={compactActions}
                   currentUserDisplayName={currentUserDisplayName}
                   onReply={onReply}
                   onCopyMessage={onCopyMessage}
-                  onDeleteMessage={onDeleteMessage}
-                  onBanUser={onBanUser}
-                  onTimeoutUser={onTimeoutUser}
-                  onUntimeoutUser={onUntimeoutUser}
-                  onWarnUser={onWarnUser}
                   onTimeoutMenu={(x, y, userId, username) =>
                     setTimeoutMenu({ x, y, userId, username })
                   }
@@ -372,15 +354,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             x={messageMenu.x}
             y={messageMenu.y}
             entry={messageMenu.entry}
-            isModerator={isModerator}
-            modModeActive={modModeActive}
-            compactActions={compactActions}
             onReply={onReply}
             onCopy={handleCopy}
-            onDeleteMessage={onDeleteMessage}
-            onTimeoutUser={onTimeoutUser}
-            onBanUser={onBanUser}
-            onWarnUser={onWarnUser}
             onViewHistory={(author, avatar) =>
               handleViewHistory(author, messageMenu.entry.source, avatar)
             }
@@ -394,10 +369,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             platform={chatterHistory.platform}
             authorAvatar={chatterHistory.authorAvatar}
             channel={channelName}
-            isModerator={isModerator}
-            onTimeoutUser={onTimeoutUser}
-            onBanUser={onBanUser}
-            onWarnUser={onWarnUser}
             onClose={() => setChatterHistory(null)}
           />
         )}

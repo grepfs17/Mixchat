@@ -8,6 +8,7 @@ import {
 } from "react-icons/md";
 import { FaUsers, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { GiCrossedSwords } from "react-icons/gi";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
 import type { Platform } from "../../../lib/types";
@@ -25,12 +26,9 @@ interface ChatHeaderProps {
   isRefreshingEmotes?: boolean;
   showStreamEmbed?: boolean;
   sidebarVisible?: boolean;
-  isModerator?: boolean;
-  modModeActive?: boolean;
   onToggleSidebar?: () => void;
   onToggleStreamEmbed?: () => void;
   onRefreshEmotes?: () => void;
-  onToggleModMode?: () => void;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -63,18 +61,17 @@ export default function ChatHeader({
   isRefreshingEmotes,
   showStreamEmbed,
   sidebarVisible,
-  isModerator,
-  modModeActive,
   onToggleSidebar,
   onToggleStreamEmbed,
   onRefreshEmotes,
-  onToggleModMode,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
   ignoredUserCounts = new Map(),
   onOpenIgnoredUserOverlay,
 }: ChatHeaderProps) {
+  const { isModerator, modModeActive, onToggleModMode } =
+    useModerationContext();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);

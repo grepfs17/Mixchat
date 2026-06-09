@@ -1,24 +1,14 @@
 import type { ChatMessage } from "../../../lib/types";
 import type { UnifiedEntry, YTMessage } from "../unified/types";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import { ContextMenuShell } from "./ContextMenuShell";
 
 interface MessageMenuProps {
   x: number;
   y: number;
   entry: ChatMessage | UnifiedEntry;
-  isModerator: boolean;
-  modModeActive: boolean;
-  compactActions: boolean;
   onReply?: (msg: ChatMessage) => void;
   onCopy: (msg: any) => void;
-  onDeleteMessage?: (id: string) => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onWarnUser?: (userName: string) => void;
   onViewHistory?: (author: string, avatar?: string) => void;
   onClose: () => void;
 }
@@ -27,18 +17,19 @@ export default function MessageMenu({
   x,
   y,
   entry,
-  isModerator,
-  modModeActive,
-  compactActions,
   onReply,
   onCopy,
-  onDeleteMessage,
-  onTimeoutUser,
-  onBanUser,
-  onWarnUser,
   onViewHistory,
   onClose,
 }: MessageMenuProps) {
+  const {
+    isModerator,
+    modModeActive,
+    onDeleteMessage,
+    onTimeoutUser,
+    onBanUser,
+    onWarnUser,
+  } = useModerationContext();
   // Normalize entry to a common format for logic
   const isUnified = "source" in entry;
   const source = isUnified ? entry.source : "twitch";

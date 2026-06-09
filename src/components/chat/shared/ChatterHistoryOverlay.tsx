@@ -10,6 +10,7 @@ import { FaYoutube, FaTwitch } from "react-icons/fa";
 import type { ChatMessage, Platform } from "../../../lib/types";
 import { getUserHistory } from "../../../lib/chatHistoryStorage";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import MessageBadges from "../../MessageBadges";
 import { useMemo } from "react";
 import "../../../styles/chat/ChatterHistoryOverlay.css";
@@ -19,15 +20,7 @@ interface ChatterHistoryOverlayProps {
   channel: string;
   platform: Platform;
   authorAvatar?: string;
-  isModerator?: boolean;
   onClose: () => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onWarnUser?: (userName: string) => void;
 }
 
 export default function ChatterHistoryOverlay({
@@ -35,12 +28,10 @@ export default function ChatterHistoryOverlay({
   channel,
   platform,
   authorAvatar,
-  isModerator,
   onClose,
-  onTimeoutUser,
-  onBanUser,
-  onWarnUser,
 }: ChatterHistoryOverlayProps) {
+  const { isModerator, onTimeoutUser, onBanUser, onWarnUser } =
+    useModerationContext();
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);

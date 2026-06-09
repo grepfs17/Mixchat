@@ -9,6 +9,7 @@ import {
 } from "react-icons/md";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "../shared/AutomodActions";
 import TwitchEventIcon from "../../TwitchEventIcon";
@@ -31,20 +32,8 @@ interface ChatMessageItemProps {
   filteredMessages: ChatMessage[];
   authorColorById: Map<string, string>;
   currentUserDisplayName?: string;
-  isModerator: boolean;
-  modModeActive: boolean;
-  compactActions: boolean;
   onReply?: (msg: ChatMessage) => void;
   onCopy: (msg: ChatMessage) => void;
-  onDeleteMessage?: (id: string) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onUntimeoutUser?: (userName: string) => void;
-  onWarnUser?: (userName: string) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
     author: string,
@@ -70,16 +59,8 @@ function ChatMessageItemBase({
   filteredMessages,
   authorColorById,
   currentUserDisplayName,
-  isModerator,
-  modModeActive,
-  compactActions,
   onReply,
   onCopy,
-  onDeleteMessage,
-  onBanUser,
-  onTimeoutUser,
-  onUntimeoutUser,
-  onWarnUser,
   onUsernameClick,
   onTimeoutMenu,
   onScrollToMessage,
@@ -88,6 +69,16 @@ function ChatMessageItemBase({
   onTouchMove,
   onContextMenu,
 }: ChatMessageItemProps) {
+  const {
+    isModerator,
+    modModeActive,
+    compactActions,
+    onDeleteMessage,
+    onBanUser,
+    onTimeoutUser,
+    onUntimeoutUser,
+    onWarnUser,
+  } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const isMentioned =
     currentUserDisplayName && msg.content.includes(currentUserDisplayName);
@@ -433,9 +424,6 @@ const ChatMessageItem = memo(ChatMessageItemBase, (prev, next) => {
   return (
     prev.msg.id === next.msg.id &&
     prev.msg === next.msg &&
-    prev.isModerator === next.isModerator &&
-    prev.modModeActive === next.modModeActive &&
-    prev.compactActions === next.compactActions &&
     prev.currentUserDisplayName === next.currentUserDisplayName
   );
 });

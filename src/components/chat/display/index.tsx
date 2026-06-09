@@ -12,6 +12,7 @@ import type { ChatMessage, Platform, ChatFont } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
 import ChatMessageItem from "./ChatMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
@@ -49,19 +50,6 @@ interface ChatDisplayProps {
   fontSize?: number;
   chatFont?: ChatFont;
   unifiedChatSlot?: React.ReactNode;
-  isModerator?: boolean;
-  modModeActive?: boolean;
-  onToggleModMode?: () => void;
-  onDeleteMessage?: (messageId: string) => void;
-  onBanUser?: (userId: string, displayName?: string) => void;
-  onTimeoutUser?: (
-    userId: string,
-    seconds: number,
-    displayName?: string,
-  ) => void;
-  onUntimeoutUser?: (userName: string) => void;
-  onWarnUser?: (userName: string) => void;
-  compactActions?: boolean;
   splitChatEnabled?: boolean;
   hideViewerCount?: boolean;
   ignoredUsers?: string[];
@@ -102,15 +90,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       fontSize = 14,
       chatFont = "inter" as ChatFont,
       unifiedChatSlot,
-      isModerator = false,
-      modModeActive = false,
-      onToggleModMode,
-      onDeleteMessage,
-      onBanUser,
-      onTimeoutUser,
-      onUntimeoutUser,
-      onWarnUser,
-      compactActions = false,
       splitChatEnabled = false,
       hideViewerCount = false,
       ignoredUsers = [],
@@ -120,6 +99,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
   ) {
+    const {
+      isModerator,
+      modModeActive,
+      compactActions,
+      onDeleteMessage,
+      onBanUser,
+      onTimeoutUser,
+      onUntimeoutUser,
+      onWarnUser,
+      onToggleModMode,
+    } = useModerationContext();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(
       null,
@@ -370,12 +360,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           isRefreshingEmotes={isRefreshingEmotes}
           showStreamEmbed={showStreamEmbed}
           sidebarVisible={sidebarVisible}
-          isModerator={isModerator}
-          modModeActive={modModeActive}
           onToggleSidebar={onToggleSidebar}
           onToggleStreamEmbed={onToggleStreamEmbed}
           onRefreshEmotes={onRefreshEmotes}
-          onToggleModMode={onToggleModMode}
           onUpdateTitle={onUpdateTitle}
           onUpdateCategory={onUpdateCategory}
           onSearchCategories={onSearchCategories}
@@ -415,16 +402,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
                   filteredMessages={filteredMessages}
                   authorColorById={authorColorById}
                   currentUserDisplayName={currentUserDisplayName}
-                  isModerator={isModerator}
-                  modModeActive={modModeActive}
-                  compactActions={compactActions}
                   onReply={onReply}
                   onCopy={handleCopy}
-                  onDeleteMessage={onDeleteMessage}
-                  onBanUser={onBanUser}
-                  onTimeoutUser={onTimeoutUser}
-                  onUntimeoutUser={onUntimeoutUser}
-                  onWarnUser={onWarnUser}
                   onUsernameClick={(e, author) =>
                     handleUsernameClick(
                       e,
@@ -487,15 +466,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
             entry={messageMenu.message}
             x={messageMenu.x}
             y={messageMenu.y}
-            isModerator={isModerator}
-            modModeActive={modModeActive}
-            compactActions={compactActions}
             onReply={onReply}
             onCopy={handleCopy}
-            onDeleteMessage={onDeleteMessage}
-            onTimeoutUser={onTimeoutUser}
-            onBanUser={onBanUser}
-            onWarnUser={onWarnUser}
             onViewHistory={(author) =>
               handleViewHistory(author, messageMenu.message.platform)
             }
@@ -509,10 +481,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
             platform={chatterHistory.platform}
             authorAvatar={chatterHistory.authorAvatar}
             channel={channelName || ""}
-            isModerator={isModerator}
-            onTimeoutUser={onTimeoutUser}
-            onBanUser={onBanUser}
-            onWarnUser={onWarnUser}
             onClose={() => setChatterHistory(null)}
           />
         )}

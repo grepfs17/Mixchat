@@ -5,6 +5,10 @@ import ChatDisplay from "../../src/components/chat/display";
 import UnifiedChat from "../../src/components/chat/unified";
 import MessageInput from "../../src/components/chat/shared/MessageInput";
 import type { ChatMessage, Platform } from "../../src/lib/types";
+import {
+  ModerationContext,
+  type ModerationContextValue,
+} from "../../src/contexts/ModerationContext";
 
 vi.mock("react-dom", async () => {
   const actual = await vi.importActual("react-dom");
@@ -47,6 +51,24 @@ vi.mock("../../src/components/TwitchEventIcon", () => ({
 vi.mock("../../src/lib/device", () => ({
   isMobileDevice: () => false,
 }));
+
+function withModeration(
+  ui: React.ReactNode,
+  values: Partial<ModerationContextValue> = {},
+) {
+  return (
+    <ModerationContext.Provider
+      value={{
+        isModerator: false,
+        modModeActive: false,
+        compactActions: false,
+        ...values,
+      }}
+    >
+      {ui}
+    </ModerationContext.Provider>
+  );
+}
 
 const baseMessage: ChatMessage = {
   id: "msg-1",
@@ -106,24 +128,20 @@ describe("Moderator Mode", () => {
 
     it("renders mod mode button when user is a moderator", () => {
       render(
-        <ChatDisplay
-          {...defaultProps}
-          isModerator={true}
-          modModeActive={false}
-          onToggleModMode={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay {...defaultProps} />,
+          { isModerator: true, onToggleModMode: vi.fn() },
+        ),
       );
       expect(screen.getByTitle("Enable Mod Mode")).toBeInTheDocument();
     });
 
     it("does not render mod mode button when user is not a moderator", () => {
       render(
-        <ChatDisplay
-          {...defaultProps}
-          isModerator={false}
-          modModeActive={false}
-          onToggleModMode={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay {...defaultProps} />,
+          { isModerator: false, onToggleModMode: vi.fn() },
+        ),
       );
       expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Disable Mod Mode")).not.toBeInTheDocument();
@@ -131,12 +149,10 @@ describe("Moderator Mode", () => {
 
     it("shows active state when mod mode is enabled", () => {
       render(
-        <ChatDisplay
-          {...defaultProps}
-          isModerator={true}
-          modModeActive={true}
-          onToggleModMode={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay {...defaultProps} />,
+          { isModerator: true, modModeActive: true, onToggleModMode: vi.fn() },
+        ),
       );
       expect(screen.getByTitle("Disable Mod Mode")).toBeInTheDocument();
       expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
@@ -145,12 +161,10 @@ describe("Moderator Mode", () => {
     it("calls onToggleModMode when mod mode button is clicked", async () => {
       const onToggle = vi.fn();
       render(
-        <ChatDisplay
-          {...defaultProps}
-          isModerator={true}
-          modModeActive={false}
-          onToggleModMode={onToggle}
-        />,
+        withModeration(
+          <ChatDisplay {...defaultProps} />,
+          { isModerator: true, modModeActive: false, onToggleModMode: onToggle },
+        ),
       );
       fireEvent.click(screen.getByTitle("Enable Mod Mode"));
       expect(onToggle).toHaveBeenCalledTimes(1);
@@ -160,17 +174,21 @@ describe("Moderator Mode", () => {
   describe("ChatDisplay - Mod Actions (inline buttons)", () => {
     it("shows mod action buttons when isModerator and modModeActive", () => {
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -182,17 +200,21 @@ describe("Moderator Mode", () => {
 
     it("does not show mod action buttons when modModeActive is false", () => {
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={false}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: false,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
       expect(
@@ -204,34 +226,42 @@ describe("Moderator Mode", () => {
 
     it("does not show mod action buttons when isModerator is false", () => {
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={false}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: false,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
     });
 
     it("shows delete but not timeout/ban/warn for broadcaster messages", () => {
       render(
-        <ChatDisplay
-          messages={[broadcasterMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[broadcasterMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -243,17 +273,21 @@ describe("Moderator Mode", () => {
 
     it("shows delete but not timeout/ban/warn for moderator messages", () => {
       render(
-        <ChatDisplay
-          messages={[moderatorMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[moderatorMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -265,17 +299,21 @@ describe("Moderator Mode", () => {
 
     it("shows delete but not timeout/ban/warn for current user messages", () => {
       render(
-        <ChatDisplay
-          messages={[ownMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[ownMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -287,17 +325,21 @@ describe("Moderator Mode", () => {
     it("calls onDeleteMessage when delete is clicked", () => {
       const onDelete = vi.fn();
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={onDelete}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: onDelete,
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       fireEvent.click(screen.getByTitle("Delete message"));
       expect(onDelete).toHaveBeenCalledWith("msg-1");
@@ -306,17 +348,21 @@ describe("Moderator Mode", () => {
     it("calls onTimeoutUser when timeout is clicked", () => {
       const onTimeout = vi.fn();
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={onTimeout}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: onTimeout,
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       fireEvent.click(
         screen.getByTitle("Timeout (10m) - Right-click for more"),
@@ -327,17 +373,21 @@ describe("Moderator Mode", () => {
     it("calls onBanUser when ban is clicked", () => {
       const onBan = vi.fn();
       render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={onBan}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: onBan,
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       fireEvent.click(screen.getByTitle("Ban user"));
       expect(onBan).toHaveBeenCalledWith("user-1", "TestUser");
@@ -347,26 +397,28 @@ describe("Moderator Mode", () => {
   describe("ChatDisplay - Timeout/Ban message undo", () => {
     it("shows Undo button for timeout messages when user is moderator", () => {
       render(
-        <ChatDisplay
-          messages={[timeoutMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          onUntimeoutUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[timeoutMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          { isModerator: true, onUntimeoutUser: vi.fn() },
+        ),
       );
       expect(screen.getByTitle("Undo moderation action")).toBeInTheDocument();
     });
 
     it("shows Undo button for ban messages when user is moderator", () => {
       render(
-        <ChatDisplay
-          messages={[banMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          onUntimeoutUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[banMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          { isModerator: true, onUntimeoutUser: vi.fn() },
+        ),
       );
       expect(screen.getByTitle("Undo moderation action")).toBeInTheDocument();
     });
@@ -374,26 +426,29 @@ describe("Moderator Mode", () => {
     it("calls onUntimeoutUser with targetUsername when Undo is clicked", () => {
       const onUntimeout = vi.fn();
       render(
-        <ChatDisplay
-          messages={[timeoutMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          onUntimeoutUser={onUntimeout}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[timeoutMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          { isModerator: true, onUntimeoutUser: onUntimeout },
+        ),
       );
       fireEvent.click(screen.getByTitle("Undo moderation action"));
       expect(onUntimeout).toHaveBeenCalledWith("TimedOutUser");
     });
 
     it("does not show Undo button when user is not a moderator", () => {
-      const { container } = render(
-        <ChatDisplay
-          messages={[timeoutMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={false}
-        />,
+      render(
+        withModeration(
+          <ChatDisplay
+            messages={[timeoutMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          { isModerator: false },
+        ),
       );
       expect(
         screen.queryByTitle("Undo moderation action"),
@@ -404,17 +459,21 @@ describe("Moderator Mode", () => {
   describe("ChatDisplay - Context Menu Mod Actions", () => {
     it("shows mod actions in context menu when isModerator and modModeActive", () => {
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -429,17 +488,21 @@ describe("Moderator Mode", () => {
 
     it("does not show mod actions in context menu when modModeActive is false", () => {
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={false}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: false,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -454,17 +517,21 @@ describe("Moderator Mode", () => {
 
     it("hides all mod actions for broadcaster in context menu", () => {
       const { container } = render(
-        <ChatDisplay
-          messages={[broadcasterMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[broadcasterMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-bc"]');
@@ -479,17 +546,21 @@ describe("Moderator Mode", () => {
     it("calls onDeleteMessage from context menu", () => {
       const onDelete = vi.fn();
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={onDelete}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: onDelete,
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -501,17 +572,21 @@ describe("Moderator Mode", () => {
     it("calls onTimeoutUser from context menu", () => {
       const onTimeout = vi.fn();
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={onTimeout}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: onTimeout,
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -523,17 +598,21 @@ describe("Moderator Mode", () => {
     it("calls onBanUser from context menu", () => {
       const onBan = vi.fn();
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={onBan}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: onBan,
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -545,17 +624,21 @@ describe("Moderator Mode", () => {
     it("calls onWarnUser from context menu", () => {
       const onWarn = vi.fn();
       const { container } = render(
-        <ChatDisplay
-          messages={[baseMessage]}
-          isLoading={false}
-          selectedPlatforms={["twitch"]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={onWarn}
-        />,
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: onWarn,
+          },
+        ),
       );
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
@@ -575,17 +658,21 @@ describe("Moderator Mode", () => {
 
     it("shows mod action buttons on Twitch messages when isModerator and modModeActive", () => {
       render(
-        <UnifiedChat
-          channelName="testchannel"
-          twitchMessages={[baseMessage]}
-          ytMessages={[baseYtMessage]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[baseMessage]}
+            ytMessages={[baseYtMessage]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -597,17 +684,21 @@ describe("Moderator Mode", () => {
 
     it("does not show mod action buttons when modModeActive is false", () => {
       render(
-        <UnifiedChat
-          channelName="testchannel"
-          twitchMessages={[baseMessage]}
-          ytMessages={[baseYtMessage]}
-          isModerator={true}
-          modModeActive={false}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[baseMessage]}
+            ytMessages={[baseYtMessage]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: false,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
       expect(
@@ -617,17 +708,21 @@ describe("Moderator Mode", () => {
 
     it("shows delete but not timeout/ban/warn for broadcaster messages", () => {
       render(
-        <UnifiedChat
-          channelName="testchannel"
-          twitchMessages={[broadcasterMessage]}
-          ytMessages={[]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={vi.fn()}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[broadcasterMessage]}
+            ytMessages={[]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -638,13 +733,14 @@ describe("Moderator Mode", () => {
 
     it("shows Undo button for timeout messages when isModerator", () => {
       render(
-        <UnifiedChat
-          channelName="testchannel"
-          twitchMessages={[timeoutMessage]}
-          ytMessages={[]}
-          isModerator={true}
-          onUntimeoutUser={vi.fn()}
-        />,
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[timeoutMessage]}
+            ytMessages={[]}
+          />,
+          { isModerator: true, onUntimeoutUser: vi.fn() },
+        ),
       );
       expect(screen.getByTitle("Undo moderation action")).toBeInTheDocument();
     });
@@ -652,17 +748,21 @@ describe("Moderator Mode", () => {
     it("calls onDeleteMessage from inline button", () => {
       const onDelete = vi.fn();
       render(
-        <UnifiedChat
-          channelName="testchannel"
-          twitchMessages={[baseMessage]}
-          ytMessages={[]}
-          isModerator={true}
-          modModeActive={true}
-          onDeleteMessage={onDelete}
-          onTimeoutUser={vi.fn()}
-          onBanUser={vi.fn()}
-          onWarnUser={vi.fn()}
-        />,
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[baseMessage]}
+            ytMessages={[]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: onDelete,
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
       );
       fireEvent.click(screen.getByTitle("Delete message"));
       expect(onDelete).toHaveBeenCalledWith("msg-1");
@@ -672,14 +772,16 @@ describe("Moderator Mode", () => {
   describe("MessageInput - Mod Commands", () => {
     it("shows command menu when isModerator and typing /", () => {
       render(
-        <MessageInput
-          onSendMessage={vi.fn()}
-          isLoading={false}
-          isConnected={{ twitch: true }}
-          isModerator={true}
-          chatMessages={[baseMessage]}
-          currentUsername="TestUser"
-        />,
+        withModeration(
+          <MessageInput
+            onSendMessage={vi.fn()}
+            isLoading={false}
+            isConnected={{ twitch: true }}
+            chatMessages={[baseMessage]}
+            currentUsername="TestUser"
+          />,
+          { isModerator: true },
+        ),
       );
 
       const textarea = screen.getByPlaceholderText("Type your message");
@@ -691,14 +793,16 @@ describe("Moderator Mode", () => {
 
     it("does not show command menu when isModerator is false", () => {
       render(
-        <MessageInput
-          onSendMessage={vi.fn()}
-          isLoading={false}
-          isConnected={{ twitch: true }}
-          isModerator={false}
-          chatMessages={[baseMessage]}
-          currentUsername="TestUser"
-        />,
+        withModeration(
+          <MessageInput
+            onSendMessage={vi.fn()}
+            isLoading={false}
+            isConnected={{ twitch: true }}
+            chatMessages={[baseMessage]}
+            currentUsername="TestUser"
+          />,
+          { isModerator: false },
+        ),
       );
 
       const textarea = screen.getByPlaceholderText("Type your message");

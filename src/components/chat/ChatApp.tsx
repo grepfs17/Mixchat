@@ -12,6 +12,7 @@ import {
   useChatAppState,
   type ChatAppStateProps,
 } from "../../hooks/chat/useChatAppState";
+import { ModerationContext } from "../../contexts/ModerationContext";
 import type { ChatFont, ChatTheme } from "../../lib/types";
 import { useState, useCallback, useEffect } from "react";
 
@@ -155,7 +156,20 @@ export default function ChatApp(props: ChatAppStateProps) {
     setNotification({ message, type });
   };
 
+  const moderationValue = {
+    isModerator,
+    modModeActive,
+    compactActions,
+    onDeleteMessage: handleDelete,
+    onBanUser: handleBan,
+    onTimeoutUser: handleTimeout,
+    onUntimeoutUser: handleUntimeout,
+    onWarnUser: handleWarn,
+    onToggleModMode: handleToggleModMode,
+  };
+
   return (
+    <ModerationContext.Provider value={moderationValue}>
     <div
       data-chat-app-container
       style={{
@@ -254,9 +268,6 @@ export default function ChatApp(props: ChatAppStateProps) {
               fontSize={fontSize}
               chatFont={chatFont}
               splitChatEnabled={splitChatEnabled}
-              isModerator={isModerator}
-              modModeActive={modModeActive}
-              onToggleModMode={handleToggleModMode}
               onUpdateTitle={handleUpdateTitle}
               onUpdateCategory={handleUpdateCategory}
               onSearchCategories={handleSearchCategories}
@@ -302,14 +313,6 @@ export default function ChatApp(props: ChatAppStateProps) {
                   fontSize={fontSize}
                   chatFont={chatFont}
                   splitChatEnabled={splitChatEnabled}
-                  isModerator={isModerator}
-                  compactActions={compactActions}
-                  modModeActive={modModeActive}
-                  onDeleteMessage={handleDelete}
-                  onBanUser={handleBan}
-                  onTimeoutUser={handleTimeout}
-                  onUntimeoutUser={handleUntimeout}
-                  onWarnUser={handleWarn}
                   ignoredUsers={ignoredUsers}
                 />
               }
@@ -329,7 +332,6 @@ export default function ChatApp(props: ChatAppStateProps) {
             slowModeWaitTime={slowModeWaitTime}
             followerModeMinutes={followerModeMinutes}
             isFollowing={isFollowingChannelState}
-            isModerator={isModerator}
             channelName={selectedTwitchChannelName}
           />
 
@@ -383,6 +385,71 @@ export default function ChatApp(props: ChatAppStateProps) {
         </>
       ) : (
         <SplitLayout
+          chatSlot={
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 0,
+                }}
+              >
+                <ChatDisplay
+                  ref={chatDisplayRef}
+                  messages={messages}
+                  isLoading={isLoading}
+                  selectedPlatforms={selectedPlatforms}
+                  onReply={(message) => setReplyingTo(message)}
+                  channelName={selectedTwitchChannelName}
+                  channelDisplayName={selectedTwitchChannelDisplayName}
+                  streamTitle={streamTitle}
+                  streamGameName={streamGameName}
+                  isStreamLive={streamIsLive}
+                  streamUptime={streamUptime}
+                  viewerCount={viewerCount}
+                  hideViewerCount={hideViewerCount}
+                  onRefreshEmotes={handleRefreshEmotes}
+                  isRefreshingEmotes={isRefreshingEmotes}
+                  onToggleSidebar={onToggleSidebar}
+                  sidebarVisible={sidebarVisible}
+                  onCopyMessage={() => showNotification("Message copied!", "success")}
+                  showStreamEmbed={showStreamEmbed}
+                  onToggleStreamEmbed={onToggleStreamEmbed}
+                  currentUserDisplayName={twitchSession?.displayName}
+                  fontSize={fontSize}
+                  chatFont={chatFont}
+                  splitChatEnabled={splitChatEnabled}
+                  onUpdateTitle={handleUpdateTitle}
+                  onUpdateCategory={handleUpdateCategory}
+                  onSearchCategories={handleSearchCategories}
+                  ignoredUsers={ignoredUsers}
+                  ytMessages={ytMessages}
+                />
+              </div>
+              <MessageInput
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                isConnected={{ twitch: twitchConnected }}
+                replyingTo={replyingTo}
+                onCancelReply={() => setReplyingTo(undefined)}
+                chatMessages={messages}
+                currentUsername={twitchSession?.username || ""}
+                onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
+                slowModeWaitTime={slowModeWaitTime}
+                followerModeMinutes={followerModeMinutes}
+                isFollowing={isFollowingChannelState}
+                channelName={selectedTwitchChannelName}
+              />
+            </div>
+          }
           linkedYoutubeUrl={linkedYoutubeUrl}
           showYoutubeSection={showYoutubeSection}
           chatSplitRatio={chatSplitRatio}
@@ -405,49 +472,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           onOptimisticFailed={handleYtOptimisticFailed}
           onShowError={(msg) => showNotification(msg, "error")}
           onYtConnectionChange={handleYtConnectionChange}
-          chatDisplayRef={chatDisplayRef}
-          messages={messages}
-          isLoading={isLoading}
-          selectedPlatforms={selectedPlatforms}
-          onReply={(message) => setReplyingTo(message)}
           channelName={selectedTwitchChannelName}
-          channelDisplayName={selectedTwitchChannelDisplayName}
-          streamTitle={streamTitle}
-          streamGameName={streamGameName}
-          isStreamLive={streamIsLive}
-          streamUptime={streamUptime}
-          viewerCount={viewerCount}
-          hideViewerCount={hideViewerCount}
-          onRefreshEmotes={handleRefreshEmotes}
-          isRefreshingEmotes={isRefreshingEmotes}
-          onToggleSidebar={onToggleSidebar}
-          sidebarVisible={sidebarVisible}
-          onCopyMessage={() => showNotification("Message copied!", "success")}
-          showStreamEmbed={showStreamEmbed}
-          onToggleStreamEmbed={onToggleStreamEmbed}
-          currentUserDisplayName={twitchSession?.displayName}
-          isModerator={isModerator}
-          modModeActive={modModeActive}
-          onToggleModMode={handleToggleModMode}
-          onUpdateTitle={handleUpdateTitle}
-          onUpdateCategory={handleUpdateCategory}
-          onSearchCategories={handleSearchCategories}
-          compactActions={compactActions}
-          onDeleteMessage={handleDelete}
-          onBanUser={handleBan}
-          onTimeoutUser={handleTimeout}
-          onUntimeoutUser={handleUntimeout}
-          onWarnUser={handleWarn}
-          ignoredUsers={ignoredUsers}
-          onSendMessage={handleSendMessage}
-          twitchConnected={twitchConnected}
-          replyingTo={replyingTo}
-          onCancelReply={() => setReplyingTo(undefined)}
-          currentUsername={twitchSession?.username || ""}
-          onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
-          slowModeWaitTime={slowModeWaitTime}
-          followerModeMinutes={followerModeMinutes}
-          isFollowing={isFollowingChannelState}
         />
       )}
 
@@ -481,5 +506,6 @@ export default function ChatApp(props: ChatAppStateProps) {
         </>
       )}
     </div>
+    </ModerationContext.Provider>
   );
 }
