@@ -342,7 +342,7 @@ function TwitchMessageItemBase({
                 )}
               </div>
             )}
-          {msg.messageType === "automod" && isModerator && !compactActions && (
+          {msg.messageType === "automod" && isModerator && (
             <AutomodActions
               heldMsgId={msg.targetUsername || ""}
               userId={msg.userId || ""}
