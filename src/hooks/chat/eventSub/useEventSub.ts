@@ -15,9 +15,10 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const SUBSCRIPTION_STAGGER_MS = 250;
 const POST_429_COOLDOWN_MS = 5000;
 
-/** Module-level cache: subscription keys already created on Twitch's side.
- *  Survives component remounts — prevents re-POSTing known subscriptions. */
-const subscribedKeys = new Set<string>();
+/** Module-level cache: subscription keys → session ID they were registered with.
+ *  Survives component remounts — prevents re-POSTing within the same session,
+ *  but re-registers when the WebSocket session changes. */
+const subscribedKeys = new Map<string, string>();
 
 interface Subscription {
   type: string;
@@ -81,8 +82,8 @@ export function useEventSub({
         onScopeError,
       });
 
-      if (sessionIdRef.current && !subscribedKeys.has(key)) {
-        const sid = sessionIdRef.current;
+      const currentSid = sessionIdRef.current;
+      if (currentSid && subscribedKeys.get(key) !== currentSid) {
         triggerResubscribeRef.current?.([key]);
       }
 
@@ -142,7 +143,7 @@ export function useEventSub({
             if (!active || sessionIdRef.current !== sid) return;
           }
           const [key, sub] = entries[i];
-          if (subscribedKeys.has(key)) continue;
+          if (subscribedKeys.get(key) === sid) continue;
           try {
             const res = await subscribeEventSub(
               accessTokenRef.current,
@@ -162,7 +163,7 @@ export function useEventSub({
                 Date.now() + POST_429_COOLDOWN_MS;
             }
             if (res.ok || res.status === 409) {
-              subscribedKeys.add(key);
+              subscribedKeys.set(key, sid);
             }
             if (
               !res.ok &&
@@ -210,7 +211,22 @@ export function useEventSub({
 
         const msgType: string | undefined = data?.metadata?.message_type;
 
-        if (msgType === "session_welcome") {
+        if (msgType === "notification") {
+          resetKeepalive(10);
+          const subType: string | undefined =
+            data?.payload?.subscription?.type;
+          if (subType) {
+            const key = `${subType}:${JSON.stringify(data?.payload?.subscription?.condition)}`;
+            let sub = subscriptionsRef.current.get(key);
+            if (!sub) {
+              for (const [k, v] of subscriptionsRef.current) {
+                if (k.startsWith(subType + ":")) { sub = v; break; }
+              }
+            }
+            console.log("[EventSub] notification:", subType, "found:", !!sub);
+            sub?.onNotification(data.payload.event);
+          }
+        } else if (msgType === "session_welcome") {
           const session = data.payload?.session;
           const sid: string | undefined = session?.id;
           const keepaliveTimeout: number =

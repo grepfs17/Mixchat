@@ -2,7 +2,7 @@
  * useRaidDetection
  *
  * Subscribes to `channel.raid` via the shared EventSub connection.
- * When the watched channel initiates an outgoing raid, `onRaidOut` is called.
+ * Supports both outgoing raids (isInitiator=true) and incoming raids (isInitiator=false).
  *
  * No special OAuth scopes required.
  */
@@ -21,7 +21,8 @@ interface UseRaidDetectionOptions {
   subscribe: SubscribeFn;
   channelId: string;
   enabled: boolean;
-  onRaidOut: (event: RaidOutEvent) => void;
+  isInitiator: boolean;
+  onRaid: (event: RaidOutEvent) => void;
   onScopeError?: () => void;
 }
 
@@ -29,13 +30,14 @@ export function useRaidDetection({
   subscribe,
   channelId,
   enabled,
-  onRaidOut,
+  isInitiator,
+  onRaid,
   onScopeError,
 }: UseRaidDetectionOptions): void {
-  const onRaidOutRef = useRef(onRaidOut);
+  const onRaidRef = useRef(onRaid);
   useEffect(() => {
-    onRaidOutRef.current = onRaidOut;
-  }, [onRaidOut]);
+    onRaidRef.current = onRaid;
+  }, [onRaid]);
 
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
@@ -61,12 +63,16 @@ export function useRaidDetection({
 
       if (cancelled) return;
 
+      const condition: Record<string, string> = isInitiator
+        ? { from_broadcaster_user_id: numericId }
+        : { to_broadcaster_user_id: numericId };
+
       return subscribeRef.current(
         "channel.raid",
         "1",
-        { from_broadcaster_user_id: numericId },
+        condition,
         (ev: any) => {
-          onRaidOutRef.current({
+          onRaidRef.current({
             targetLogin: ev.to_broadcaster_user_login as string,
             targetDisplayName: ev.to_broadcaster_user_name as string,
             viewerCount: ev.viewers as number,
@@ -85,5 +91,5 @@ export function useRaidDetection({
       cancelled = true;
       unsub?.();
     };
-  }, [channelId, enabled, onScopeError]);
+  }, [channelId, enabled, isInitiator, onScopeError]);
 }

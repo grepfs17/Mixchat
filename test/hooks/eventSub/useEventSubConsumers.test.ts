@@ -177,7 +177,7 @@ describe("useAutomodQueue", () => {
 });
 
 describe("useRaidDetection", () => {
-  it("subscribes to channel.raid with resolved numeric ID", async () => {
+  it("subscribes to channel.raid with from_broadcaster_user_id when isInitiator", async () => {
     let subscribeCondition: Record<string, string> | undefined;
 
     renderHook(() =>
@@ -188,7 +188,8 @@ describe("useRaidDetection", () => {
         },
         channelId: "somechannel",
         enabled: true,
-        onRaidOut: vi.fn(),
+        isInitiator: true,
+        onRaid: vi.fn(),
       }),
     );
 
@@ -199,7 +200,30 @@ describe("useRaidDetection", () => {
     expect(subscribeCondition).toEqual({ from_broadcaster_user_id: "12345" });
   });
 
-  it("parses raid notification and calls onRaidOut", async () => {
+  it("subscribes to channel.raid with to_broadcaster_user_id when !isInitiator", async () => {
+    let subscribeCondition: Record<string, string> | undefined;
+
+    renderHook(() =>
+      useRaidDetection({
+        subscribe: (_type, _v, condition, _cb) => {
+          subscribeCondition = condition;
+          return vi.fn();
+        },
+        channelId: "somechannel",
+        enabled: true,
+        isInitiator: false,
+        onRaid: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
+    });
+
+    expect(subscribeCondition).toEqual({ to_broadcaster_user_id: "12345" });
+  });
+
+  it("parses raid notification and calls onRaid", async () => {
     let notificationHandler: ((event: unknown) => void) | undefined;
 
     renderHook(() =>
@@ -210,7 +234,8 @@ describe("useRaidDetection", () => {
         },
         channelId: "12345",
         enabled: true,
-        onRaidOut: vi.fn(),
+        isInitiator: true,
+        onRaid: vi.fn(),
       }),
     );
 
@@ -218,7 +243,7 @@ describe("useRaidDetection", () => {
       await vi.waitFor(() => expect(notificationHandler).toBeDefined());
     });
 
-    const onRaidOut = vi.fn();
+    const onRaid = vi.fn();
     renderHook(() =>
       useRaidDetection({
         subscribe: (_type, _v, _c, onNotification) => {
@@ -227,7 +252,8 @@ describe("useRaidDetection", () => {
         },
         channelId: "12345",
         enabled: true,
-        onRaidOut,
+        isInitiator: true,
+        onRaid,
       }),
     );
 
@@ -243,7 +269,7 @@ describe("useRaidDetection", () => {
       });
     });
 
-    expect(onRaidOut).toHaveBeenCalledWith({
+    expect(onRaid).toHaveBeenCalledWith({
       targetLogin: "target",
       targetDisplayName: "TargetChannel",
       viewerCount: 200,

@@ -204,6 +204,8 @@ export function useChatAppState({
     setMessages,
     setNotification,
     notificationIdRef,
+    setPendingRaid,
+    setIsRaidInitiator,
   });
 
   useAutomodState({
@@ -356,23 +358,38 @@ export function useChatAppState({
     twitchSession?.accessToken,
   ]);
 
+  const onRaidScopeError = useCallback(() => {
+    notificationIdRef.current += 1;
+    setNotification({
+      message:
+        "Raid detection unavailable — please re-login to refresh your Twitch session",
+      type: "info",
+      id: notificationIdRef.current,
+    });
+  }, []);
+
   useRaidDetection({
     subscribe,
     channelId: selectedTwitchChannel,
     enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
-    onRaidOut: (raid) => {
+    isInitiator: true,
+    onRaid: (raid) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(true);
+    },
+    onScopeError: onRaidScopeError,
+  });
+
+  useRaidDetection({
+    subscribe,
+    channelId: selectedTwitchChannel,
+    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
+    isInitiator: false,
+    onRaid: (raid) => {
       setPendingRaid(raid);
       setIsRaidInitiator(false);
     },
-    onScopeError: () => {
-      notificationIdRef.current += 1;
-      setNotification({
-        message:
-          "Raid detection unavailable — please re-login to refresh your Twitch session",
-        type: "info",
-        id: notificationIdRef.current,
-      });
-    },
+    onScopeError: onRaidScopeError,
   });
 
   const handleRedemptionEvent = useCallback(
@@ -400,6 +417,12 @@ export function useChatAppState({
     [selectedTwitchChannelName, setMessages, recentRedemptionsRef],
   );
 
+  const onRedemptionScopeError = useCallback(() => {
+    console.info(
+      "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
+    );
+  }, []);
+
   useChannelPointRedemptions({
     subscribe,
     channelId: selectedTwitchChannel,
@@ -409,16 +432,18 @@ export function useChatAppState({
       badgesReady
     ),
     onRedemption: handleRedemptionEvent,
-    onScopeError: () => {
-      console.info(
-        "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
-      );
-    },
+    onScopeError: onRedemptionScopeError,
   });
 
   const isPartnerOrAffiliate =
     twitchSession?.broadcasterType === "partner" ||
     twitchSession?.broadcasterType === "affiliate";
+
+  const onHypeTrainScopeError = useCallback(() => {
+    console.info(
+      "[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster's channel.",
+    );
+  }, []);
 
   useHypeTrainEventSub({
     subscribe,
@@ -458,11 +483,7 @@ export function useChatAppState({
     onHypeTrainEnd: () => {
       setHypeTrain(null);
     },
-    onScopeError: () => {
-      console.info(
-        "[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster's channel.",
-      );
-    },
+    onScopeError: onHypeTrainScopeError,
   });
 
   const {
@@ -534,10 +555,10 @@ export function useChatAppState({
                   authorAvatar: twitchSession.profileImageUrl,
                   replyTo: replyingTo
                     ? {
-                        id: replyingTo.id,
-                        author: replyingTo.author,
-                        content: replyingTo.content,
-                      }
+                      id: replyingTo.id,
+                      author: replyingTo.author,
+                      content: replyingTo.content,
+                    }
                     : undefined,
                   mentionsUser: false,
                   emotes: {},

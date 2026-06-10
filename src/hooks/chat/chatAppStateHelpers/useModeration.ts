@@ -18,6 +18,7 @@ import type {
   Platform,
   MessageType,
 } from "../../../lib/types";
+import type { RaidOutEvent } from "../eventSub/useRaidDetection";
 
 export interface UseModerationOptions {
   twitchSession?: PlatformSession;
@@ -33,6 +34,8 @@ export interface UseModerationOptions {
     } | null,
   ) => void;
   notificationIdRef: React.RefObject<number>;
+  setPendingRaid: (raid: RaidOutEvent | null) => void;
+  setIsRaidInitiator: (initiator: boolean) => void;
 }
 
 export interface UseModerationReturn {
@@ -68,6 +71,8 @@ export function useModeration({
   setMessages,
   setNotification,
   notificationIdRef,
+  setPendingRaid,
+  setIsRaidInitiator,
 }: UseModerationOptions): UseModerationReturn {
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
@@ -350,6 +355,8 @@ export function useModeration({
         type: "success",
         id: notificationIdRef.current,
       });
+      setPendingRaid(null);
+      setIsRaidInitiator(false);
     } catch (err: any) {
       console.error("Failed to cancel raid:", err);
       notificationIdRef.current += 1;
@@ -359,7 +366,7 @@ export function useModeration({
         id: notificationIdRef.current,
       });
     }
-  }, [selectedTwitchChannel, notificationIdRef, setNotification]);
+  }, [selectedTwitchChannel, notificationIdRef, setNotification, setPendingRaid, setIsRaidInitiator]);
 
   const handleModCommand = useCallback(
     async (message: string): Promise<{ handled: boolean; error?: string }> => {
@@ -499,6 +506,8 @@ export function useModeration({
               type: "success",
               id: notificationIdRef.current,
             });
+            setPendingRaid(null);
+            setIsRaidInitiator(false);
             return { handled: true };
           }
 
@@ -524,6 +533,12 @@ export function useModeration({
             type: "success",
             id: notificationIdRef.current,
           });
+          setPendingRaid({
+            targetLogin: targetUser,
+            targetDisplayName: targetUser,
+            viewerCount: 0,
+          });
+          setIsRaidInitiator(true);
           return { handled: true };
         } catch (err: any) {
           return {
@@ -639,6 +654,8 @@ export function useModeration({
       notificationIdRef,
       setNotification,
       setMessages,
+      setPendingRaid,
+      setIsRaidInitiator,
     ],
   );
 
