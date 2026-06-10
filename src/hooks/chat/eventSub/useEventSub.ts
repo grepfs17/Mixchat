@@ -102,6 +102,7 @@ export function useEventSub({
     let reconnectDelay = 1000;
     let pendingSubscribes = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingKeysQueue: string[] = [];
 
     const resetKeepalive = (timeoutSeconds: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
@@ -117,12 +118,21 @@ export function useEventSub({
       new Promise((resolve) => setTimeout(resolve, ms));
 
     const subscribeAll = async (sid: string, keys?: string[]) => {
-      if (pendingSubscribes) return;
+      if (pendingSubscribes) {
+        if (keys) pendingKeysQueue.push(...keys);
+        return;
+      }
       pendingSubscribes = true;
       try {
-        const entries = keys
-          ? keys.map((k) => [k, subscriptionsRef.current.get(k)] as const).filter((e): e is [string, Subscription] => e[1] != null)
-          : Array.from(subscriptionsRef.current.entries());
+        let entries: [string, Subscription][];
+        if (keys) {
+          pendingKeysQueue.push(...keys);
+          const allKeys = [...new Set(pendingKeysQueue)];
+          pendingKeysQueue = [];
+          entries = allKeys.map((k) => [k, subscriptionsRef.current.get(k)] as const).filter((e): e is [string, Subscription] => e[1] != null);
+        } else {
+          entries = Array.from(subscriptionsRef.current.entries());
+        }
         for (let i = 0; i < entries.length; i++) {
           if (!active) return;
           if (sessionIdRef.current !== sid) return;
@@ -173,6 +183,11 @@ export function useEventSub({
         }
       } finally {
         pendingSubscribes = false;
+        if (pendingKeysQueue.length > 0 && active && sessionIdRef.current === sid) {
+          const queued = [...pendingKeysQueue];
+          pendingKeysQueue = [];
+          void subscribeAll(sid, queued);
+        }
       }
     };
 
