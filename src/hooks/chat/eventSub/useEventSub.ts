@@ -28,6 +28,36 @@ interface Subscription {
   onScopeError?: () => void;
 }
 
+/** Order-independent condition comparison. JSON.stringify depends on key
+ *  insertion order, so two semantically equal conditions can produce
+ *  different strings. We compare by sorted-key entries. */
+function conditionsEqual(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const aKeys = Object.keys(a).sort();
+  const bKeys = Object.keys(b).sort();
+  if (aKeys.length !== bKeys.length) return false;
+  for (let i = 0; i < aKeys.length; i++) {
+    if (aKeys[i] !== bKeys[i]) return false;
+    if (a[aKeys[i]] !== b[aKeys[i]]) return false;
+  }
+  return true;
+}
+
+function parseConditionFromKey(
+  key: string,
+  type: string,
+): Record<string, string> {
+  const prefix = `${type}:`;
+  if (!key.startsWith(prefix)) return {};
+  try {
+    return JSON.parse(key.slice(prefix.length)) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
 interface UseEventSubOptions {
   accessToken: string;
   clientId: string;
@@ -53,7 +83,9 @@ export function useEventSub({
   const clientIdRef = useRef(clientId);
   const rateLimitedUntilRef = useRef(0);
   const sessionIdRef = useRef<string | null>(null);
-  const triggerResubscribeRef = useRef<((keys?: string[]) => void) | null>(null);
+  const triggerResubscribeRef = useRef<((keys?: string[]) => void) | null>(
+    null,
+  );
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
@@ -109,10 +141,13 @@ export function useEventSub({
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
       const raw = Number(timeoutSeconds);
       const fallback = Number.isFinite(raw) && raw > 0 ? raw : 10;
-      keepaliveTimer = setTimeout(() => {
-        console.warn("[useEventSub] Keepalive timeout — reconnecting");
-        ws?.close();
-      }, (fallback + KEEPALIVE_GRACE_S) * 1000);
+      keepaliveTimer = setTimeout(
+        () => {
+          console.warn("[useEventSub] Keepalive timeout — reconnecting");
+          ws?.close();
+        },
+        (fallback + KEEPALIVE_GRACE_S) * 1000,
+      );
     };
 
     const sleep = (ms: number) =>
@@ -130,7 +165,9 @@ export function useEventSub({
           pendingKeysQueue.push(...keys);
           const allKeys = [...new Set(pendingKeysQueue)];
           pendingKeysQueue = [];
-          entries = allKeys.map((k) => [k, subscriptionsRef.current.get(k)] as const).filter((e): e is [string, Subscription] => e[1] != null);
+          entries = allKeys
+            .map((k) => [k, subscriptionsRef.current.get(k)] as const)
+            .filter((e): e is [string, Subscription] => e[1] != null);
         } else {
           entries = Array.from(subscriptionsRef.current.entries());
         }
@@ -159,8 +196,7 @@ export function useEventSub({
               res.status === 429 &&
               rateLimitedUntilRef.current < Date.now()
             ) {
-              rateLimitedUntilRef.current =
-                Date.now() + POST_429_COOLDOWN_MS;
+              rateLimitedUntilRef.current = Date.now() + POST_429_COOLDOWN_MS;
             }
             if (res.ok || res.status === 409) {
               subscribedKeys.set(key, sid);
@@ -184,7 +220,11 @@ export function useEventSub({
         }
       } finally {
         pendingSubscribes = false;
-        if (pendingKeysQueue.length > 0 && active && sessionIdRef.current === sid) {
+        if (
+          pendingKeysQueue.length > 0 &&
+          active &&
+          sessionIdRef.current === sid
+        ) {
           const queued = [...pendingKeysQueue];
           pendingKeysQueue = [];
           void subscribeAll(sid, queued);
@@ -213,14 +253,34 @@ export function useEventSub({
 
         if (msgType === "notification") {
           resetKeepalive(10);
-          const subType: string | undefined =
-            data?.payload?.subscription?.type;
+          const subType: string | undefined = data?.payload?.subscription?.type;
           if (subType) {
-            const key = `${subType}:${JSON.stringify(data?.payload?.subscription?.condition)}`;
+            const incomingCondition =
+              data?.payload?.subscription?.condition ?? {};
+            const key = `${subType}:${JSON.stringify(incomingCondition)}`;
             let sub = subscriptionsRef.current.get(key);
             if (!sub) {
+              const prefix = `${subType}:`;
+              const matches: Subscription[] = [];
               for (const [k, v] of subscriptionsRef.current) {
-                if (k.startsWith(subType + ":")) { sub = v; break; }
+                if (
+                  k.startsWith(prefix) &&
+                  conditionsEqual(
+                    parseConditionFromKey(k, subType),
+                    incomingCondition,
+                  )
+                ) {
+                  matches.push(v);
+                }
+              }
+              if (matches.length === 1) {
+                sub = matches[0];
+              } else if (matches.length > 1) {
+                console.warn(
+                  "[useEventSub] Ambiguous notification for",
+                  subType,
+                  "— matching subscriptions have identical conditions; dropping event",
+                );
               }
             }
             console.log("[EventSub] notification:", subType, "found:", !!sub);
@@ -241,15 +301,6 @@ export function useEventSub({
           const keepaliveTimeout: number =
             data.payload?.session?.keepalive_timeout_seconds ?? 10;
           resetKeepalive(keepaliveTimeout);
-        } else if (msgType === "notification") {
-          resetKeepalive(10);
-          const subType: string | undefined =
-            data?.payload?.subscription?.type;
-          if (subType) {
-            const key = `${subType}:${JSON.stringify(data?.payload?.subscription?.condition)}`;
-            const sub = subscriptionsRef.current.get(key);
-            sub?.onNotification(data.payload.event);
-          }
         } else if (msgType === "session_reconnect") {
           const reconnectUrl: string | undefined =
             data.payload?.session?.reconnect_url;

@@ -197,6 +197,64 @@ describe("useEventSub", () => {
     expect(callbackB).not.toHaveBeenCalled();
   });
 
+  it("routes channel.raid notifications to the correct handler when both initiator and incoming subscriptions are registered (regression: incoming raid must not be delivered to the initiator handler)", async () => {
+    const onInitiatorRaid = vi.fn();
+    const onIncomingRaid = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    // Initiator subscription is registered FIRST (as in useChatAppState).
+    act(() => {
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { from_broadcaster_user_id: "user-A" },
+        onInitiatorRaid,
+      );
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { to_broadcaster_user_id: "channel-B" },
+        onIncomingRaid,
+      );
+    });
+
+    const ws = wsInstances[0];
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Incoming raid for channel-B (the user is watching channel-B and a third
+    // party raids it). The notification must be delivered to onIncomingRaid
+    // and NEVER to onInitiatorRaid.
+    const incomingRaidEvent = {
+      from_broadcaster_user_login: "raider",
+      from_broadcaster_user_name: "Raider",
+      to_broadcaster_user_login: "channel-b",
+      to_broadcaster_user_name: "ChannelB",
+      viewers: 42,
+    };
+
+    act(() => {
+      ws.simulateMessage(
+        notification(
+          "channel.raid",
+          { to_broadcaster_user_id: "channel-B" },
+          incomingRaidEvent,
+        ),
+      );
+    });
+
+    expect(onIncomingRaid).toHaveBeenCalledTimes(1);
+    expect(onIncomingRaid).toHaveBeenCalledWith(incomingRaidEvent);
+    expect(onInitiatorRaid).not.toHaveBeenCalled();
+  });
+
   it("resets keepalive on session_keepalive", () => {
     renderHook(() =>
       useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
@@ -245,10 +303,15 @@ describe("useEventSub", () => {
     act(() => ws.simulateOpen());
     act(() => ws.simulateMessage(sessionWelcome("sess-1")));
     act(() =>
-      ws.simulateMessage(sessionReconnect("wss://eventsub.wss.twitch.tv/ws?reconnect=test")),
+      ws.simulateMessage(
+        sessionReconnect("wss://eventsub.wss.twitch.tv/ws?reconnect=test"),
+      ),
     );
 
-    expect(ws.close).toHaveBeenCalledWith(1000, "reconnect requested by server");
+    expect(ws.close).toHaveBeenCalledWith(
+      1000,
+      "reconnect requested by server",
+    );
     expect(wsInstances).toHaveLength(2);
     expect(wsInstances[1].url).toBe(
       "wss://eventsub.wss.twitch.tv/ws?reconnect=test",
