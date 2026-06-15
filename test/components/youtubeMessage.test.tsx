@@ -152,16 +152,37 @@ describe("YouTubeMessageContent", () => {
   });
 
   describe("badges", () => {
-    it("renders badge images when badges are provided", () => {
+    it("renders moderator shield when badges contain Moderator", () => {
       const msg = makeYTMsg({
         badges: {
-          moderator: "https://example.com/mod.png",
-          owner: "https://example.com/owner.png",
+          Moderator: "https://example.com/mod.png",
         },
       });
       const { container } = render(<YouTubeMessageContent msg={msg} />);
-      const badges = container.querySelectorAll(".badge");
-      expect(badges.length).toBe(2);
+      const shield = container.querySelector(".yt-mod-shield");
+      expect(shield).toBeInTheDocument();
+    });
+
+    it("does not render moderator shield when no moderator badge", () => {
+      const msg = makeYTMsg({
+        badges: {
+          member: "https://example.com/member.png",
+        },
+      });
+      const { container } = render(<YouTubeMessageContent msg={msg} />);
+      const shield = container.querySelector(".yt-mod-shield");
+      expect(shield).not.toBeInTheDocument();
+    });
+
+    it("renders moderator shield case-insensitively", () => {
+      const msg = makeYTMsg({
+        badges: {
+          moderator: "https://example.com/mod.png",
+        },
+      });
+      const { container } = render(<YouTubeMessageContent msg={msg} />);
+      const shield = container.querySelector(".yt-mod-shield");
+      expect(shield).toBeInTheDocument();
     });
   });
 

@@ -1,9 +1,9 @@
 import { useState } from "react";
+import { FaShieldAlt } from "react-icons/fa";
 import {
   getColorFromName,
   getReadableUsernameColor,
 } from "../../../lib/chatColors";
-import MessageBadges from "../../MessageBadges";
 import YTMessageParts from "../../YTMessageParts";
 import { PlatformTag } from "../unified/PlatformTag";
 import type { YTMessage } from "../unified/types";
@@ -78,6 +78,9 @@ export function YouTubeMessageContent({
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
+  const isMod = Boolean(
+    msg.badges && Object.keys(msg.badges).some((k) => /moderator/i.test(k)),
+  );
 
   if (config) {
     return (
@@ -109,11 +112,7 @@ export function YouTubeMessageContent({
           {msg.authorAvatar && (
             <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
           )}
-          <MessageBadges
-            badges={msg.badges}
-            style={{ marginRight: "4px" }}
-            lazy
-          />
+          {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
           <span
             className="author"
             style={{ color: config.color }}
@@ -196,11 +195,7 @@ export function YouTubeMessageContent({
         {msg.authorAvatar && (
           <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
         )}
-        <MessageBadges
-          badges={msg.badges}
-          style={{ marginRight: "4px" }}
-          lazy
-        />
+        {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
         <span
           className="author"
           style={{

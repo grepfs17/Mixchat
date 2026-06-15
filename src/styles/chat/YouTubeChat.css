@@ -283,3 +283,12 @@
     text-decoration: underline;
     opacity: 0.85;
 }
+
+/* YouTube moderator shield icon */
+.yt-mod-shield {
+    color: #0f9d58;
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 2px;
+    flex-shrink: 0;
+}
