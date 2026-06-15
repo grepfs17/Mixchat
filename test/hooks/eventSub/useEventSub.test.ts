@@ -255,6 +255,76 @@ describe("useEventSub", () => {
     expect(onInitiatorRaid).not.toHaveBeenCalled();
   });
 
+  it("routes channel.raid notifications to the watched-channel raid-out handler (regression: when the channel you watch raids another, the Follow Raid popup must appear)", async () => {
+    const onSelfInitiatorRaid = vi.fn();
+    const onIncomingRaid = vi.fn();
+    const onWatchedChannelRaidOut = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    // Mirror the order and conditions used by useChatAppState:
+    //   1. self-initiator sub (from = user-A)
+    //   2. incoming sub       (to   = channel-B)
+    //   3. watched-channel raid-out sub (from = channel-B)
+    act(() => {
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { from_broadcaster_user_id: "user-A" },
+        onSelfInitiatorRaid,
+      );
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { to_broadcaster_user_id: "channel-B" },
+        onIncomingRaid,
+      );
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { from_broadcaster_user_id: "channel-B" },
+        onWatchedChannelRaidOut,
+      );
+    });
+
+    const ws = wsInstances[0];
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Event: the watched channel (channel-B) is raiding target-C.
+    const watchedRaidOutEvent = {
+      from_broadcaster_user_login: "channel-b",
+      from_broadcaster_user_name: "ChannelB",
+      to_broadcaster_user_login: "target-c",
+      to_broadcaster_user_name: "TargetC",
+      viewers: 17,
+    };
+
+    act(() => {
+      ws.simulateMessage(
+        notification(
+          "channel.raid",
+          { from_broadcaster_user_id: "channel-B" },
+          watchedRaidOutEvent,
+        ),
+      );
+    });
+
+    // Must reach the watched-channel raid-out handler exactly once.
+    expect(onWatchedChannelRaidOut).toHaveBeenCalledTimes(1);
+    expect(onWatchedChannelRaidOut).toHaveBeenCalledWith(watchedRaidOutEvent);
+
+    // Must not be misrouted to the other two handlers.
+    expect(onSelfInitiatorRaid).not.toHaveBeenCalled();
+    expect(onIncomingRaid).not.toHaveBeenCalled();
+  });
+
   it("resets keepalive on session_keepalive", () => {
     renderHook(() =>
       useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),

@@ -396,6 +396,22 @@ export function useChatAppState({
     onScopeError: onRaidScopeError,
   });
 
+  useRaidDetection({
+    subscribe,
+    channelId: selectedTwitchChannel,
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      selectedTwitchChannel !== twitchSession?.userId
+    ),
+    isInitiator: true,
+    onRaid: (raid) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(false);
+    },
+    onScopeError: onRaidScopeError,
+  });
+
   const handleRedemptionEvent = useCallback(
     (message: TwitchMessage) => {
       if (message.rewardId && message.userId) {
