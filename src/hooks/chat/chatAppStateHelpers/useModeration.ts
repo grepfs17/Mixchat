@@ -534,6 +534,9 @@ export function useModeration({
             id: notificationIdRef.current,
           });
           setPendingRaid({
+            fromLogin: twitchSession?.username || "",
+            fromDisplayName:
+              twitchSession?.displayName || twitchSession?.username || "",
             targetLogin: targetUser,
             targetDisplayName: targetUser,
             viewerCount: 0,

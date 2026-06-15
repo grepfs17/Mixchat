@@ -55,7 +55,11 @@ export default function RaidNotification({
         <div className="raid-notification-title">
           <span className="raid-badge">RAID</span>
           <FaTwitch className="raid-twitch-icon" size={13} />
-          <span className="raid-channel-name">{raid.targetDisplayName}</span>
+          <span className="raid-channel-name">
+            {isInitiator
+              ? raid.targetDisplayName
+              : raid.fromDisplayName}
+          </span>
         </div>
         <div className="raid-notification-close-wrapper">
           {confirmClose && (
@@ -90,7 +94,7 @@ export default function RaidNotification({
           </>
         ) : (
           <>
-            Raiding <strong>{raid.targetDisplayName}</strong> with{" "}
+            <strong>{raid.fromDisplayName}</strong> is raiding with{" "}
             <strong>{raid.viewerCount.toLocaleString()}</strong>{" "}
             {raid.viewerCount === 1 ? "viewer" : "viewers"}!
           </>

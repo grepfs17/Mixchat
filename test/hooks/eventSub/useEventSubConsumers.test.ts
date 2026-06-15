@@ -263,6 +263,8 @@ describe("useRaidDetection", () => {
 
     act(() => {
       notificationHandler!({
+        from_broadcaster_user_login: "raider",
+        from_broadcaster_user_name: "RaiderUser",
         to_broadcaster_user_login: "target",
         to_broadcaster_user_name: "TargetChannel",
         viewers: 200,
@@ -270,6 +272,8 @@ describe("useRaidDetection", () => {
     });
 
     expect(onRaid).toHaveBeenCalledWith({
+      fromLogin: "raider",
+      fromDisplayName: "RaiderUser",
       targetLogin: "target",
       targetDisplayName: "TargetChannel",
       viewerCount: 200,

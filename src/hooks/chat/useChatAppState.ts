@@ -383,7 +383,11 @@ export function useChatAppState({
   useRaidDetection({
     subscribe,
     channelId: selectedTwitchChannel,
-    enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      selectedTwitchChannel !== twitchSession?.userId
+    ),
     isInitiator: false,
     onRaid: (raid) => {
       setPendingRaid(raid);

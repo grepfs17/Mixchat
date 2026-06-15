@@ -12,6 +12,8 @@ import { resolveBroadcasterId } from "./useEventSub";
 import type { SubscribeFn } from "./useEventSub";
 
 export interface RaidOutEvent {
+  fromLogin: string;
+  fromDisplayName: string;
   targetLogin: string;
   targetDisplayName: string;
   viewerCount: number;
@@ -73,6 +75,8 @@ export function useRaidDetection({
         condition,
         (ev: any) => {
           onRaidRef.current({
+            fromLogin: ev.from_broadcaster_user_login as string,
+            fromDisplayName: ev.from_broadcaster_user_name as string,
             targetLogin: ev.to_broadcaster_user_login as string,
             targetDisplayName: ev.to_broadcaster_user_name as string,
             viewerCount: ev.viewers as number,
