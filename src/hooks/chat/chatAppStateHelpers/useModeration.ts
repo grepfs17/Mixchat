@@ -366,7 +366,13 @@ export function useModeration({
         id: notificationIdRef.current,
       });
     }
-  }, [selectedTwitchChannel, notificationIdRef, setNotification, setPendingRaid, setIsRaidInitiator]);
+  }, [
+    selectedTwitchChannel,
+    notificationIdRef,
+    setNotification,
+    setPendingRaid,
+    setIsRaidInitiator,
+  ]);
 
   const handleModCommand = useCallback(
     async (message: string): Promise<{ handled: boolean; error?: string }> => {

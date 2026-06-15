@@ -559,10 +559,10 @@ export function useChatAppState({
                   authorAvatar: twitchSession.profileImageUrl,
                   replyTo: replyingTo
                     ? {
-                      id: replyingTo.id,
-                      author: replyingTo.author,
-                      content: replyingTo.content,
-                    }
+                        id: replyingTo.id,
+                        author: replyingTo.author,
+                        content: replyingTo.content,
+                      }
                     : undefined,
                   mentionsUser: false,
                   emotes: {},

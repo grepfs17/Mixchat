@@ -56,9 +56,7 @@ export default function RaidNotification({
           <span className="raid-badge">RAID</span>
           <FaTwitch className="raid-twitch-icon" size={13} />
           <span className="raid-channel-name">
-            {isInitiator
-              ? raid.targetDisplayName
-              : raid.fromDisplayName}
+            {isInitiator ? raid.targetDisplayName : raid.fromDisplayName}
           </span>
         </div>
         <div className="raid-notification-close-wrapper">
