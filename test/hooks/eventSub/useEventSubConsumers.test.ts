@@ -5,10 +5,10 @@ vi.mock("../../../src/hooks/chat/useEventSub", () => ({
   resolveBroadcasterId: vi.fn().mockResolvedValue("12345"),
 }));
 
-import { useAutomodQueue } from "../../../src/hooks/chat/eventSub/useAutomodQueue";
-import { useRaidDetection } from "../../../src/hooks/chat/eventSub/useRaidDetection";
-import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSub/useChannelPointRedemptions";
-import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSub/useHypeTrainEventSub";
+import { useAutomodQueue } from "../../../src/hooks/chat/eventSubHelpers/useAutomodQueue";
+import { useRaidDetection } from "../../../src/hooks/chat/eventSubHelpers/useRaidDetection";
+import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptions";
+import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSubHelpers/useHypeTrainEventSub";
 import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
 
 function makeSubscribe(

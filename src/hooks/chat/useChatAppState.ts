@@ -2,11 +2,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
 import { useEventSub } from "./useEventSub";
-import { useRaidDetection } from "./eventSub/useRaidDetection";
-import type { RaidOutEvent } from "./eventSub/useRaidDetection";
-import { useChannelPointRedemptions } from "./eventSub/useChannelPointRedemptions";
-import { useHypeTrainEventSub } from "./eventSub/useHypeTrainEventSub";
-import { useAutomodQueue } from "./eventSub/useAutomodQueue";
+import { useRaidDetection } from "./eventSubHelpers/useRaidDetection";
+import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
+import { useChannelPointRedemptions } from "./eventSubHelpers/useChannelPointRedemptions";
+import { useHypeTrainEventSub } from "./eventSubHelpers/useHypeTrainEventSub";
+import { useAutomodQueue } from "./eventSubHelpers/useAutomodQueue";
 import {
   initializeEmotes,
   clearEmoteCache,
@@ -242,7 +242,7 @@ export function useChatAppState({
 
   // Inject held messages into the chat messages array
   const handleHeldMessageInline = useCallback(
-    (heldMsg: import("./eventSub/useAutomodQueue").HeldMessage) => {
+    (heldMsg: import("./eventSubHelpers/useAutomodQueue").HeldMessage) => {
       const chatMsg: TwitchMessage = {
         id: `automod-${heldMsg.id}`,
         platform: "twitch",
@@ -282,7 +282,7 @@ export function useChatAppState({
     ),
     onHeldMessage: handleHeldMessageInline,
     onResolvedMessage: useCallback(
-      (resolved: import("./eventSub/useAutomodQueue").ResolvedMessage) => {
+      (resolved: import("./eventSubHelpers/useAutomodQueue").ResolvedMessage) => {
         setMessages((prev) =>
           prev.filter((m) => m.id !== `automod-${resolved.messageId}`),
         );

@@ -18,7 +18,7 @@ import type {
   Platform,
   MessageType,
 } from "../../../lib/types";
-import type { RaidOutEvent } from "../eventSub/useRaidDetection";
+import type { RaidOutEvent } from "../eventSubHelpers/useRaidDetection";
 
 export interface UseModerationOptions {
   twitchSession?: PlatformSession;
