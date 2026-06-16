@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
-import { useEventSub } from "./eventSub/useEventSub";
+import { useEventSub } from "./useEventSub";
 import { useRaidDetection } from "./eventSub/useRaidDetection";
 import type { RaidOutEvent } from "./eventSub/useRaidDetection";
 import { useChannelPointRedemptions } from "./eventSub/useChannelPointRedemptions";

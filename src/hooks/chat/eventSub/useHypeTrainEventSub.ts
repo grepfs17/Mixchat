@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { resolveBroadcasterId } from "./useEventSub";
-import type { SubscribeFn } from "./useEventSub";
+import { resolveBroadcasterId } from "../useEventSub";
+import type { SubscribeFn } from "../useEventSub";
 
 interface HypeTrainEvent {
   id: string;
@@ -80,13 +80,19 @@ export function useHypeTrainEventSub({
   onScopeError,
 }: UseHypeTrainEventSubOptions): void {
   const onBeginRef = useRef(onHypeTrainBegin);
-  useEffect(() => { onBeginRef.current = onHypeTrainBegin; }, [onHypeTrainBegin]);
+  useEffect(() => {
+    onBeginRef.current = onHypeTrainBegin;
+  }, [onHypeTrainBegin]);
 
   const onProgressRef = useRef(onHypeTrainProgress);
-  useEffect(() => { onProgressRef.current = onHypeTrainProgress; }, [onHypeTrainProgress]);
+  useEffect(() => {
+    onProgressRef.current = onHypeTrainProgress;
+  }, [onHypeTrainProgress]);
 
   const onEndRef = useRef(onHypeTrainEnd);
-  useEffect(() => { onEndRef.current = onHypeTrainEnd; }, [onHypeTrainEnd]);
+  useEffect(() => {
+    onEndRef.current = onHypeTrainEnd;
+  }, [onHypeTrainEnd]);
 
   const subscribeRef = useRef(subscribe);
   useEffect(() => {
@@ -115,15 +121,31 @@ export function useHypeTrainEventSub({
       const condition = { broadcaster_user_id: numericId };
 
       const unsubs = [
-        subscribeRef.current("channel.hype_train.begin", "2", condition, (ev: any) => {
-          onBeginRef.current(parseHypeTrainEvent(ev));
-        }, onScopeError),
-        subscribeRef.current("channel.hype_train.progress", "2", condition, (ev: any) => {
-          onProgressRef.current(parseHypeTrainEvent(ev));
-        }),
-        subscribeRef.current("channel.hype_train.end", "2", condition, (ev: any) => {
-          onEndRef.current(parseHypeTrainEvent(ev));
-        }),
+        subscribeRef.current(
+          "channel.hype_train.begin",
+          "2",
+          condition,
+          (ev: any) => {
+            onBeginRef.current(parseHypeTrainEvent(ev));
+          },
+          onScopeError,
+        ),
+        subscribeRef.current(
+          "channel.hype_train.progress",
+          "2",
+          condition,
+          (ev: any) => {
+            onProgressRef.current(parseHypeTrainEvent(ev));
+          },
+        ),
+        subscribeRef.current(
+          "channel.hype_train.end",
+          "2",
+          condition,
+          (ev: any) => {
+            onEndRef.current(parseHypeTrainEvent(ev));
+          },
+        ),
       ];
 
       return () => unsubs.forEach((fn) => fn());

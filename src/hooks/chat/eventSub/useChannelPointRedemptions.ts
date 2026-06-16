@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { resolveBroadcasterId } from "./useEventSub";
-import type { SubscribeFn } from "./useEventSub";
+import { resolveBroadcasterId } from "../useEventSub";
+import type { SubscribeFn } from "../useEventSub";
 import type { TwitchMessage } from "../../../lib/types";
 
 interface RedemptionEvent {

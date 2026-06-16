@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("../../../src/hooks/chat/eventSub/useEventSub", () => ({
+vi.mock("../../../src/hooks/chat/useEventSub", () => ({
   resolveBroadcasterId: vi.fn().mockResolvedValue("12345"),
 }));
 
@@ -9,7 +9,7 @@ import { useAutomodQueue } from "../../../src/hooks/chat/eventSub/useAutomodQueu
 import { useRaidDetection } from "../../../src/hooks/chat/eventSub/useRaidDetection";
 import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSub/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSub/useHypeTrainEventSub";
-import type { SubscribeFn } from "../../../src/hooks/chat/eventSub/useEventSub";
+import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
 
 function makeSubscribe(
   record?: { type: string; condition: Record<string, string> }[],

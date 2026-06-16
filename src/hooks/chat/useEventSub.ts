@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { subscribeEventSub, resolveBroadcasterId } from "../../../lib/twitch";
+import { subscribeEventSub, resolveBroadcasterId } from "../../lib/twitch";
 
 const WS_URL = "wss://eventsub.wss.twitch.tv/ws";
 const KEEPALIVE_GRACE_S = 5;

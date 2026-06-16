@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useRef } from "react";
-import { resolveBroadcasterId } from "./useEventSub";
-import type { SubscribeFn } from "./useEventSub";
+import { resolveBroadcasterId } from "../useEventSub";
+import type { SubscribeFn } from "../useEventSub";
 
 export interface RaidOutEvent {
   fromLogin: string;

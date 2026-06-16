@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import type { SubscribeFn } from "./useEventSub";
+import type { SubscribeFn } from "../useEventSub";
 
 export interface HeldMessage {
   id: string;

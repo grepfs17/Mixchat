@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useEventSub } from "../../../src/hooks/chat/eventSub/useEventSub";
+import { useEventSub } from "../../../src/hooks/chat/useEventSub";
 
 // --- Mocks ---
 
