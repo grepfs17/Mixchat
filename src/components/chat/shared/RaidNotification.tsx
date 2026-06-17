@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaTimes } from "react-icons/fa";
 import { FaTwitch } from "react-icons/fa";
-import type { RaidOutEvent } from "../../../hooks/chat/eventSub/useRaidDetection";
+import type { RaidOutEvent } from "../../../hooks/chat/eventSubHelpers/useRaidDetection";
 import "../../../styles/chat/RaidNotification.css";
 
 const RAID_TOTAL_SECONDS = 90;
