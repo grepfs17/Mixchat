@@ -11,6 +11,7 @@ import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSubHelp
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSubHelpers/useHypeTrainEventSub";
 import { usePollEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePollEventSub";
 import { usePredictionEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePredictionEventSub";
+import { useBitsPowerUpEventSub } from "../../../src/hooks/chat/eventSubHelpers/useBitsPowerUpEventSub";
 import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
 
 function makeSubscribe(
@@ -1027,5 +1028,155 @@ describe("usePredictionEventSub", () => {
         ]),
       }),
     );
+  });
+});
+
+describe("useBitsPowerUpEventSub", () => {
+  it("subscribes to channel.bits.use v2", async () => {
+    const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
+
+    renderHook(() =>
+      useBitsPowerUpEventSub({
+        subscribe: makeSubscribe(subscribeCalls),
+        channelId: "12345",
+        enabled: true,
+        onCelebration: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(subscribeCalls.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    expect(subscribeCalls.some((c) => c.type === "channel.bits.use")).toBe(true);
+  });
+
+  it("does not subscribe when disabled", () => {
+    const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
+
+    renderHook(() =>
+      useBitsPowerUpEventSub({
+        subscribe: makeSubscribe(subscribeCalls),
+        channelId: "12345",
+        enabled: false,
+        onCelebration: vi.fn(),
+      }),
+    );
+
+    expect(subscribeCalls).toHaveLength(0);
+  });
+
+  it("calls onCelebration for celebration power-up events", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+    const onCelebration = vi.fn();
+
+    renderHook(() =>
+      useBitsPowerUpEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onCelebration,
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.bits.use"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.bits.use"]({
+        id: "bits-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_name: "TestStreamer",
+        user_id: "67890",
+        user_name: "cheerer",
+        user_display_name: "Cheerer",
+        bits_used: 100,
+        total_bits_used: 500,
+        is_anonymous: false,
+        power_up: {
+          type: "celebration",
+        },
+      });
+    });
+
+    expect(onCelebration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "bits-1",
+        userName: "cheerer",
+        userDisplayName: "Cheerer",
+        bitsUsed: 100,
+        totalBitsUsed: 500,
+      }),
+    );
+  });
+
+  it("ignores non-celebration power-up events (message_effect)", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+    const onCelebration = vi.fn();
+
+    renderHook(() =>
+      useBitsPowerUpEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onCelebration,
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.bits.use"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.bits.use"]({
+        id: "bits-2",
+        broadcaster_user_id: "12345",
+        broadcaster_user_name: "TestStreamer",
+        user_id: "67890",
+        user_name: "cheerer",
+        user_display_name: "Cheerer",
+        bits_used: 50,
+        total_bits_used: 200,
+        is_anonymous: false,
+        power_up: {
+          type: "message_effect",
+          message_effect_id: "slide-in",
+        },
+      });
+    });
+
+    expect(onCelebration).not.toHaveBeenCalled();
+  });
+
+  it("calls onScopeError on 401/403", () => {
+    const onScopeError = vi.fn();
+
+    renderHook(() =>
+      useBitsPowerUpEventSub({
+        subscribe: (_type, _v, _c, _cb, onScopeErrorHandler) => {
+          onScopeErrorHandler?.();
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onCelebration: vi.fn(),
+        onScopeError,
+      }),
+    );
+
+    expect(onScopeError).toHaveBeenCalled();
   });
 });

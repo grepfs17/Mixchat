@@ -23,6 +23,7 @@ import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
 import type { PollState } from "../../components/chat/shared/PollBanner";
 import type { PredictionState } from "../../components/chat/shared/PredictionBanner";
+import type { CelebrationState } from "../../components/chat/shared/CelebrationBanner";
 
 import {
   useChatLayout,
@@ -106,6 +107,7 @@ export function useChatAppState({
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
   const [poll, setPoll] = useState<PollState | null>(null);
   const [prediction, setPrediction] = useState<PredictionState | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [badgesReady, setBadgesReady] = useState(false);
 
   useEffect(() => {
@@ -256,6 +258,7 @@ export function useChatAppState({
     setHypeTrain,
     setPoll,
     setPrediction,
+    setCelebration,
     setPendingRaid,
     setIsRaidInitiator,
     setMessages,
@@ -274,6 +277,7 @@ export function useChatAppState({
     setMessages([]);
     setPoll(null);
     setPrediction(null);
+    setCelebration(null);
     preloadedMessagesRef.current.clear();
   }, [
     selectedTwitchChannelName,
@@ -504,6 +508,136 @@ export function useChatAppState({
     }
   }, [selectedTwitchChannel, selectedTwitchChannelName, twitchSession?.userId]);
 
+  // DEV ONLY: expose helper to inject test messages and trigger banners
+  useEffect(() => {
+    if (import.meta.env.MODE === "production") return;
+    const w = window as any;
+    w.__mixchatDev = {
+      injectMessage(msg: Partial<TwitchMessage>) {
+        const full: TwitchMessage = {
+          id: msg.id ?? `dev-${Date.now()}`,
+          platform: msg.platform ?? "twitch",
+          author: msg.author ?? "DevTestUser",
+          content: msg.content ?? "This is a dev test message",
+          timestamp: msg.timestamp ?? new Date(),
+          authorColor: msg.authorColor ?? "#9146FF",
+          ...(msg as Partial<TwitchMessage>),
+        };
+        setMessages((prev) => [...prev, full]);
+      },
+      triggerCelebration() {
+        setCelebration({
+          id: `dev-cele-${Date.now()}`,
+          userName: "DevTester",
+          userDisplayName: "DevTester",
+          bitsUsed: 100,
+          totalBitsUsed: 500,
+          messageEffectId: null,
+          endsAt: new Date(Date.now() + 10000),
+        });
+      },
+      triggerHypeTrain() {
+        setHypeTrain({
+          level: 1,
+          progress: 1500,
+          goal: 5000,
+          totalPoints: 1500,
+          topContributors: [
+            { displayName: "DevTester", points: 800 },
+            { displayName: "DevFan", points: 400 },
+          ],
+          endsAt: new Date(Date.now() + 300000),
+        });
+      },
+      triggerPoll() {
+        setPoll({
+          id: `dev-poll-${Date.now()}`,
+          title: "Dev Poll: Which power-up style?",
+          choices: [
+            { id: "1", title: "Message Effect", votes: 42 },
+            { id: "2", title: "Celebration", votes: 88 },
+            { id: "3", title: "Gigantify", votes: 31 },
+          ],
+          totalVotes: 161,
+          endsAt: new Date(Date.now() + 60000),
+        });
+      },
+      triggerPrediction() {
+        setPrediction({
+          id: `dev-pred-${Date.now()}`,
+          title: "Dev Prediction: Who will win?",
+          outcomes: [
+            {
+              id: "o1",
+              title: "Team Blue",
+              color: "#0099FF",
+              users: 142,
+              channelPoints: 5000,
+            },
+            {
+              id: "o2",
+              title: "Team Pink",
+              color: "#FF69B4",
+              users: 98,
+              channelPoints: 2800,
+            },
+          ],
+          totalPoints: 7800,
+          totalUsers: 240,
+          status: "active",
+          endsAt: new Date(Date.now() + 120000),
+        });
+      },
+      triggerGigantifiedEmote() {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `dev-gig-${Date.now()}`,
+            platform: "twitch" as const,
+            author: "DevTester",
+            content: "Kappa PogChamp",
+            timestamp: new Date(),
+            authorColor: "#9146FF",
+            isGigantifiedEmote: true,
+            emotes: { "25": ["0-4"], "301492158": ["6-14"] },
+          },
+        ]);
+      },
+      triggerMessageEffect() {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `dev-me-${Date.now()}`,
+            platform: "twitch" as const,
+            author: "DevTester",
+            content: "This message has a glow effect!",
+            timestamp: new Date(),
+            authorColor: "#00d4aa",
+            powerUpType: "message_effect" as const,
+            messageEffectId: "slide-in",
+          },
+        ]);
+      },
+      triggerCelebrationMessage() {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `dev-cele-${Date.now()}`,
+            platform: "twitch" as const,
+            author: "DevTester",
+            content: "Party time! 🎉",
+            timestamp: new Date(),
+            authorColor: "#ff6b9d",
+            powerUpType: "celebration" as const,
+          },
+        ]);
+      },
+    };
+    return () => {
+      delete w.__mixchatDev;
+    };
+  }, [setMessages, setCelebration, setHypeTrain, setPoll, setPrediction]);
+
   return {
     messages,
     isLoading,
@@ -538,6 +672,7 @@ export function useChatAppState({
     hypeTrain,
     poll,
     prediction,
+    celebration,
     notificationIdRef,
 
     setReplyingTo,
@@ -551,6 +686,7 @@ export function useChatAppState({
     setHypeTrain,
     setPoll,
     setPrediction,
+    setCelebration,
 
     handleSendMessage,
     handleRefreshEmotes,

@@ -6,3 +6,16 @@ declare namespace App {
     nonce: string;
   }
 }
+
+interface MixchatDevHelpers {
+  injectMessage: (msg: Partial<import("./lib/types").TwitchMessage>) => void;
+  triggerCelebration: () => void;
+  triggerHypeTrain: () => void;
+  triggerPoll: () => void;
+  triggerPrediction: () => void;
+  triggerGigantifiedEmote: () => void;
+  triggerMessageEffect: () => void;
+  triggerCelebrationMessage: () => void;
+}
+
+declare var __mixchatDev: MixchatDevHelpers | undefined;

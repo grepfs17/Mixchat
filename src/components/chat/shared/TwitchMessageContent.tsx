@@ -75,9 +75,18 @@ function TwitchMessageContentBase({
   const isFirstLive =
     !msg.isPreloaded && previousMsg !== null && previousMsg.isPreloaded;
   const parityClass = index % 2 === 0 ? "even" : "odd";
+  const powerUpClass =
+    msg.powerUpType === "message_effect"
+      ? "message-effect"
+      : msg.powerUpType === "celebration"
+        ? "celebration"
+        : "";
+  const gigantifiedClass = msg.isGigantifiedEmote ? "gigantified-emote" : "";
   const messageClasses = [
     "message",
     msg.messageType || "chat",
+    powerUpClass,
+    gigantifiedClass,
     msg.isPreloaded ? "preloaded" : "",
     msg.isDeleted ? "deleted" : "",
     msg.isBot ? "bot" : "",
@@ -93,10 +102,17 @@ function TwitchMessageContentBase({
 
   const eventStyle = (() => {
     const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
-    return cfg
+    const powerUpCfg = msg.powerUpType
+      ? EVENT_CONFIG[msg.powerUpType.replace(/_/g, "-")]
+      : undefined;
+    const gigantifiedCfg = msg.isGigantifiedEmote
+      ? EVENT_CONFIG["gigantified-emote"]
+      : undefined;
+    const activeCfg = cfg || powerUpCfg || gigantifiedCfg;
+    return activeCfg
       ? ({
-          "--event-color": cfg.color,
-          "--event-bg": cfg.bg,
+          "--event-color": activeCfg.color,
+          "--event-bg": activeCfg.bg,
         } as React.CSSProperties)
       : undefined;
   })();
@@ -154,7 +170,11 @@ function TwitchMessageContentBase({
           </div>
         )}
 
-        <TwitchEventIcon messageType={msg.messageType} />
+        <TwitchEventIcon
+          messageType={msg.messageType}
+          powerUpType={msg.powerUpType}
+          isGigantifiedEmote={msg.isGigantifiedEmote}
+        />
 
         <div className="message-single-line">
           <span className="timestamp">

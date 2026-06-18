@@ -81,6 +81,15 @@ export function useTwitchChatMessageHandler({
         rawTags?.get("source-room-id") || undefined;
       const isGigantifiedEmote =
         rawTags?.get("msg-id") === "gigantified-emote-message";
+      const powerUpTag = rawTags?.get("msg-param-power-up-type") || undefined;
+      const powerUpType: "message_effect" | "celebration" | undefined =
+        powerUpTag === "message_effect"
+          ? "message_effect"
+          : powerUpTag === "celebration"
+            ? "celebration"
+            : undefined;
+      const messageEffectId =
+        rawTags?.get("msg-param-power-up-id") || undefined;
       const cachedRewardInfo =
         msg.isRedemption && msg.rewardId
           ? getCachedRewardInfo(msg.rewardId)
@@ -127,6 +136,9 @@ export function useTwitchChatMessageHandler({
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
         isGigantifiedEmote,
+        powerUpType,
+        messageEffectId:
+          powerUpType === "message_effect" ? messageEffectId : undefined,
       };
 
       const needsUserInfo = !authorAvatar && !!msg.userInfo.userId;

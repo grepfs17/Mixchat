@@ -1,7 +1,7 @@
 export const EMOTE_SIZE = "2";
 
 /** URL prefix that marks a 7TV emote as zero-width (overlay). */
-export const ZW_EMOTE_PREFIX = "ZW:";
+const ZW_EMOTE_PREFIX = "ZW:";
 /** 7TV emote flag bit for zero-width/overlay emotes (1 << 8 = 256). */
 export const ZERO_WIDTH_FLAG = 1 << 8;
 

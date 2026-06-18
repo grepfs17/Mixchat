@@ -773,6 +773,66 @@
     white-space: nowrap;
 }
 
+.twitch-event-label.message-effect-label {
+    border-color: #00d4aa;
+    background: rgba(0, 212, 170, 0.12);
+    color: #00d4aa;
+    animation: messageEffectLabelPulse 2s ease-in-out infinite alternate;
+}
+
+.twitch-event-label.celebration-label {
+    border-color: #ff6b9d;
+    background: rgba(255, 107, 157, 0.12);
+    color: #ff6b9d;
+    animation: celebrationLabelPulse 2s ease-in-out infinite alternate;
+}
+
+.twitch-event-label.gigantified-emote-label {
+    border-color: #00d4aa;
+    background: rgba(0, 212, 170, 0.12);
+    color: #00d4aa;
+    animation: gigantifiedLabelPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes messageEffectLabelPulse {
+    0% {
+        color: #00d4aa;
+        border-color: #00d4aa;
+        background: rgba(0, 212, 170, 0.12);
+    }
+    100% {
+        color: #9146ff;
+        border-color: #9146ff;
+        background: rgba(145, 70, 255, 0.18);
+    }
+}
+
+@keyframes celebrationLabelPulse {
+    0% {
+        color: #ff6b9d;
+        border-color: #ff6b9d;
+        background: rgba(255, 107, 157, 0.12);
+    }
+    100% {
+        color: #ff9f43;
+        border-color: #ff9f43;
+        background: rgba(255, 159, 67, 0.18);
+    }
+}
+
+@keyframes gigantifiedLabelPulse {
+    0% {
+        color: #00d4aa;
+        border-color: #00d4aa;
+        background: rgba(0, 212, 170, 0.12);
+    }
+    100% {
+        color: #00b4d8;
+        border-color: #00b4d8;
+        background: rgba(0, 180, 216, 0.15);
+    }
+}
+
 .reward-title-badge {
     display: inline-flex;
     align-items: center;
@@ -805,9 +865,72 @@
 .message.ban,
 .message.untimeout,
 .message.unban,
-.message.automod {
+.message.automod,
+.message.message-effect,
+.message.celebration,
+.message.gigantified-emote {
     background-color: var(--event-bg);
     border-left: 2px solid var(--event-color);
+}
+
+.message.gigantified-emote {
+    border-left: 3px solid #00d4aa;
+    animation: gigantifiedEmoteGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes gigantifiedEmoteGlow {
+    0% {
+        border-left-color: #00d4aa;
+        box-shadow:
+            inset 3px 0 6px -3px rgba(0, 212, 170, 0.25),
+            0 0 4px rgba(0, 212, 170, 0.15);
+    }
+    100% {
+        border-left-color: #00b4d8;
+        box-shadow:
+            inset 3px 0 10px -3px rgba(0, 180, 216, 0.35),
+            0 0 10px rgba(0, 180, 216, 0.25);
+    }
+}
+
+.message.message-effect {
+    border-left: 3px solid #00d4aa;
+    animation: powerUpMessageEffectGlow 2s ease-in-out infinite alternate;
+}
+
+.message.celebration {
+    border-left: 3px solid #ff6b9d;
+    animation: powerUpCelebrationGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes powerUpMessageEffectGlow {
+    0% {
+        border-left-color: #00d4aa;
+        box-shadow:
+            inset 3px 0 8px -3px rgba(0, 212, 170, 0.4),
+            0 0 6px rgba(0, 212, 170, 0.2);
+    }
+    100% {
+        border-left-color: #9146ff;
+        box-shadow:
+            inset 3px 0 12px -3px rgba(145, 70, 255, 0.5),
+            0 0 14px rgba(145, 70, 255, 0.35);
+    }
+}
+
+@keyframes powerUpCelebrationGlow {
+    0% {
+        border-left-color: #ff6b9d;
+        box-shadow:
+            inset 3px 0 8px -3px rgba(255, 107, 157, 0.4),
+            0 0 6px rgba(255, 107, 157, 0.2);
+    }
+    100% {
+        border-left-color: #ff9f43;
+        box-shadow:
+            inset 3px 0 12px -3px rgba(255, 159, 67, 0.5),
+            0 0 14px rgba(255, 159, 67, 0.35);
+    }
 }
 
 .message.mention {

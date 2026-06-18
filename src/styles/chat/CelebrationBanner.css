@@ -1,0 +1,181 @@
+@import "../vars.css";
+
+.celebration-banner {
+    background: var(--color-bg-twitch-event);
+    border: 1px solid var(--color-border-twitch-event);
+    border-radius: var(--radius-lg);
+    padding: 10px 14px;
+    margin: 8px;
+    box-shadow: var(--shadow-glow-twitch);
+    animation: celebrationSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes celebrationSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.celebration-confetti {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        #ff6b9d,
+        #ff9f43,
+        #ffd93d,
+        #6bcb77,
+        #4d96ff,
+        #9b59b6
+    );
+    background-size: 200% 100%;
+    animation: celebrationGradient 3s linear infinite;
+}
+
+@keyframes celebrationGradient {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 200% 0%;
+    }
+}
+
+.celebration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.celebration-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.celebration-icon {
+    color: #ffd93d;
+    animation: celebrationPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes celebrationPulse {
+    0%,
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+    50% {
+        transform: scale(1.15) rotate(15deg);
+    }
+}
+
+.celebration-badge {
+    background: linear-gradient(135deg, #ff6b9d, #ff9f43);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+}
+
+.celebration-user {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.celebration-close-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.celebration-close-tooltip {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    margin-right: 6px;
+    pointer-events: none;
+    animation: celebrationTooltipIn 0.15s ease-out;
+}
+
+@keyframes celebrationTooltipIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+.celebration-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-md);
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.celebration-close:hover {
+    color: var(--color-text-primary);
+}
+
+.celebration-body {
+    margin-bottom: 8px;
+}
+
+.celebration-bits {
+    color: #ff9f43;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.celebration-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.celebration-timer {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}

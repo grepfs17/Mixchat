@@ -11,6 +11,8 @@ import PollBanner from "./shared/PollBanner";
 import type { PollState } from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
 import type { PredictionState } from "./shared/PredictionBanner";
+import CelebrationBanner from "./shared/CelebrationBanner";
+import type { CelebrationState } from "./shared/CelebrationBanner";
 import SplitLayout from "./SplitLayout";
 import {
   useChatAppState,
@@ -61,6 +63,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     setPoll,
     prediction,
     setPrediction,
+    celebration,
+    setCelebration,
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
@@ -128,7 +132,6 @@ export default function ChatApp(props: ChatAppStateProps) {
     message: string,
     type: "success" | "error" | "info",
   ) => {
-    // This is handled internally by the hook; exposed here for any direct UI needs
     setNotification({ message, type });
   };
 
@@ -199,6 +202,14 @@ export default function ChatApp(props: ChatAppStateProps) {
           <PredictionBanner
             prediction={prediction}
             onDismiss={() => setPrediction(null)}
+          />
+        )}
+
+        {/* Celebration notification */}
+        {celebration && (
+          <CelebrationBanner
+            celebration={celebration}
+            onDismiss={() => setCelebration(null)}
           />
         )}
 

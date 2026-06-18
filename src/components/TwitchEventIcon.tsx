@@ -59,6 +59,21 @@ export const EVENT_CONFIG: Record<
     color: "#c9a2ff",
     bg: "rgba(145, 71, 255, 0.15)",
   },
+  "message-effect": {
+    title: "Message Effect",
+    color: "#00d4aa",
+    bg: "rgba(0, 212, 170, 0.12)",
+  },
+  celebration: {
+    title: "Celebration",
+    color: "#ff6b9d",
+    bg: "rgba(255, 107, 157, 0.12)",
+  },
+  "gigantified-emote": {
+    title: "Gigantified Emote",
+    color: "#00d4aa",
+    bg: "rgba(0, 212, 170, 0.12)",
+  },
   automod: {
     title: "Held by AutoMod",
     color: "#f97316",
@@ -68,16 +83,42 @@ export const EVENT_CONFIG: Record<
 
 interface TwitchEventLabelProps {
   messageType?: string;
+  powerUpType?: "message_effect" | "celebration";
+  isGigantifiedEmote?: boolean;
 }
 
 /**
  * Renders a small text label at the top of special Twitch chat events
- * (cheer, sub, resub, subgift, channel-points redemption).
+ * (cheer, sub, resub, subgift, channel-points redemption, power-ups, etc).
  * Returns null for regular chat messages.
  */
 export default function TwitchEventIcon({
   messageType,
+  powerUpType,
+  isGigantifiedEmote,
 }: TwitchEventLabelProps) {
+  if (isGigantifiedEmote) {
+    const cfg = EVENT_CONFIG["gigantified-emote"];
+    return (
+      <div className="twitch-event-label gigantified-emote-label">
+        {cfg.title}
+      </div>
+    );
+  }
+
+  if (powerUpType) {
+    const key =
+      powerUpType === "message_effect" ? "message-effect" : "celebration";
+    const cfg = EVENT_CONFIG[key];
+    const labelClass =
+      powerUpType === "message_effect"
+        ? "message-effect-label"
+        : "celebration-label";
+    return (
+      <div className={`twitch-event-label ${labelClass}`}>{cfg.title}</div>
+    );
+  }
+
   if (!messageType) return null;
   const cfg = EVENT_CONFIG[messageType];
   if (!cfg) return null;

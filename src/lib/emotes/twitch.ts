@@ -76,7 +76,7 @@ const MAX_BROADCASTER_CACHE = 200;
  * Resolve Twitch user IDs to display names + profile images.
  * Uses the existing /api/user-info endpoint, 10 requests in parallel at a time.
  */
-export async function fetchBroadcasterInfo(
+async function fetchBroadcasterInfo(
   ownerIds: string[],
 ): Promise<Record<string, BroadcasterInfo>> {
   if (ownerIds.length === 0) return {};

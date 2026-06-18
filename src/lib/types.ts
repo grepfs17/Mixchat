@@ -61,6 +61,10 @@ export interface TwitchMessage {
   sourceChannelAvatar?: string;
   /** True when Twitch's "Gigantify an Emote" power-up (100 bits) was used on this message. */
   isGigantifiedEmote?: boolean;
+  /** Twitch Power-up type applied to this message (message_effect or celebration). */
+  powerUpType?: "message_effect" | "celebration";
+  /** Twitch Power-up message effect ID (e.g. "slide-in", "bouncy") when powerUpType is message_effect. */
+  messageEffectId?: string;
 }
 
 export interface PlatformSession {

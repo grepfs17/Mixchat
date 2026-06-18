@@ -12,6 +12,8 @@ import { usePollEventSub } from "../eventSubHelpers/usePollEventSub";
 import type { PollState } from "../../../components/chat/shared/PollBanner";
 import { usePredictionEventSub } from "../eventSubHelpers/usePredictionEventSub";
 import type { PredictionState } from "../../../components/chat/shared/PredictionBanner";
+import { useBitsPowerUpEventSub } from "../eventSubHelpers/useBitsPowerUpEventSub";
+import type { CelebrationState } from "../../../components/chat/shared/CelebrationBanner";
 import type { HypeTrainState } from "../../../components/chat/shared/HypeTrainBanner";
 import type { TwitchMessage } from "../../../lib/types";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
@@ -32,6 +34,7 @@ interface UseLiveEventsOptions {
   setHypeTrain: React.Dispatch<React.SetStateAction<HypeTrainState | null>>;
   setPoll: React.Dispatch<React.SetStateAction<PollState | null>>;
   setPrediction: React.Dispatch<React.SetStateAction<PredictionState | null>>;
+  setCelebration: React.Dispatch<React.SetStateAction<CelebrationState | null>>;
   setPendingRaid: React.Dispatch<React.SetStateAction<RaidOutEvent | null>>;
   setIsRaidInitiator: React.Dispatch<React.SetStateAction<boolean>>;
   setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
@@ -60,6 +63,7 @@ export function useLiveEvents({
   setHypeTrain,
   setPoll,
   setPrediction,
+  setCelebration,
   setPendingRaid,
   setIsRaidInitiator,
   setMessages,
@@ -437,5 +441,22 @@ export function useLiveEvents({
       });
     },
     onScopeError: onPredictionScopeError,
+  });
+
+  // --- Celebration (Bits Power-Up) ---
+  const onCelebrationScopeError = useCallback(() => {
+    console.info(
+      "[useLiveEvents] EventSub bits power-up subscription rejected — this is expected when missing bits:read scope.",
+    );
+  }, []);
+
+  useBitsPowerUpEventSub({
+    subscribe,
+    channelId,
+    enabled: !!(accessToken && channelId && badgesReady),
+    onCelebration: (event) => {
+      setCelebration(event);
+    },
+    onScopeError: onCelebrationScopeError,
   });
 }
