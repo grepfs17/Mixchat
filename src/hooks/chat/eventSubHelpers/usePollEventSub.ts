@@ -145,14 +145,9 @@ export function usePollEventSub({
             onProgressRef.current(parsePollEvent(ev));
           },
         ),
-        subscribeRef.current(
-          "channel.poll.end",
-          "1",
-          condition,
-          (ev: any) => {
-            onEndRef.current(parsePollEvent(ev));
-          },
-        ),
+        subscribeRef.current("channel.poll.end", "1", condition, (ev: any) => {
+          onEndRef.current(parsePollEvent(ev));
+        }),
       ];
 
       return () => unsubs.forEach((fn) => fn());

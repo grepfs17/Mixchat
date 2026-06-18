@@ -30,7 +30,10 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
 
   const [confirmClose, setConfirmClose] = useState(false);
 
-  const isEnded = poll.status === "completed" || poll.status === "archived" || poll.status === "terminated";
+  const isEnded =
+    poll.status === "completed" ||
+    poll.status === "archived" ||
+    poll.status === "terminated";
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -89,7 +92,9 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
     <div className="poll-banner" role="alert" aria-live="polite">
       <div className="poll-banner-header">
         <div className="poll-banner-title">
-          <span className={`poll-banner-badge${isEnded ? " poll-banner-badge--ended" : ""}`}>
+          <span
+            className={`poll-banner-badge${isEnded ? " poll-banner-badge--ended" : ""}`}
+          >
             {statusLabel}
           </span>
           <FaPoll className="poll-banner-icon" size={14} />
@@ -120,14 +125,18 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
 
       <div className="poll-banner-choices">
         {poll.choices.map((choice) => {
-          const pct = poll.totalVotes > 0
-            ? Math.round((choice.votes / poll.totalVotes) * 100)
-            : 0;
+          const pct =
+            poll.totalVotes > 0
+              ? Math.round((choice.votes / poll.totalVotes) * 100)
+              : 0;
           const barWidth = Math.max(2, (choice.votes / maxVotes) * 100);
           const isWinner = isEnded && choice.id === winningId;
 
           return (
-            <div key={choice.id} className={`poll-banner-choice${isWinner ? " poll-banner-choice--winner" : ""}`}>
+            <div
+              key={choice.id}
+              className={`poll-banner-choice${isWinner ? " poll-banner-choice--winner" : ""}`}
+            >
               <div className="poll-banner-choice-bar-bg">
                 <div
                   className="poll-banner-choice-bar-fill"
@@ -137,7 +146,8 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
               <div className="poll-banner-choice-content">
                 <span className="poll-banner-choice-title">{choice.title}</span>
                 <span className="poll-banner-choice-votes">
-                  {choice.votes.toLocaleString()} {choice.votes === 1 ? "vote" : "votes"} · {pct}%
+                  {choice.votes.toLocaleString()}{" "}
+                  {choice.votes === 1 ? "vote" : "votes"} · {pct}%
                 </span>
               </div>
             </div>
