@@ -9,6 +9,8 @@ import RaidNotification from "./shared/RaidNotification";
 import HypeTrainBanner from "./shared/HypeTrainBanner";
 import PollBanner from "./shared/PollBanner";
 import type { PollState } from "./shared/PollBanner";
+import PredictionBanner from "./shared/PredictionBanner";
+import type { PredictionState } from "./shared/PredictionBanner";
 import SplitLayout from "./SplitLayout";
 import {
   useChatAppState,
@@ -57,6 +59,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     setHypeTrain,
     poll,
     setPoll,
+    prediction,
+    setPrediction,
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
@@ -119,10 +123,6 @@ export default function ChatApp(props: ChatAppStateProps) {
       setYtConnectionState({ connected: false, loading: false, error: null });
     }
   }, [linkedYoutubeUrl, youtubeVideoId]);
-
-  
-
-  
 
   const showNotification = (
     message: string,
@@ -192,10 +192,13 @@ export default function ChatApp(props: ChatAppStateProps) {
         )}
 
         {/* Poll notification */}
-        {poll && (
-          <PollBanner
-            poll={poll}
-            onDismiss={() => setPoll(null)}
+        {poll && <PollBanner poll={poll} onDismiss={() => setPoll(null)} />}
+
+        {/* Prediction notification */}
+        {prediction && (
+          <PredictionBanner
+            prediction={prediction}
+            onDismiss={() => setPrediction(null)}
           />
         )}
 

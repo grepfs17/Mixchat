@@ -10,6 +10,7 @@ import { useRaidDetection } from "../../../src/hooks/chat/eventSubHelpers/useRai
 import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSubHelpers/useHypeTrainEventSub";
 import { usePollEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePollEventSub";
+import { usePredictionEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePredictionEventSub";
 import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
 
 function makeSubscribe(
@@ -747,6 +748,282 @@ describe("usePollEventSub", () => {
         choices: expect.arrayContaining([
           expect.objectContaining({ id: "1", title: "Blue", votes: 120 }),
           expect.objectContaining({ id: "2", title: "Yellow", votes: 140 }),
+        ]),
+      }),
+    );
+  });
+});
+
+describe("usePredictionEventSub", () => {
+  it("subscribes to channel.prediction.begin, progress, lock, and end", async () => {
+    const subscribedTypes: string[] = [];
+
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (type, _v, _c, _cb) => {
+          subscribedTypes.push(type);
+          return vi.fn();
+        },
+        channelId: "somechannel",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => expect(subscribedTypes).toHaveLength(4));
+    });
+
+    expect(subscribedTypes).toContain("channel.prediction.begin");
+    expect(subscribedTypes).toContain("channel.prediction.progress");
+    expect(subscribedTypes).toContain("channel.prediction.lock");
+    expect(subscribedTypes).toContain("channel.prediction.end");
+  });
+
+  it("does not subscribe when disabled", () => {
+    const mockSubscribe = vi.fn(() => vi.fn()) as SubscribeFn;
+
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: mockSubscribe,
+        channelId: "ch-1",
+        enabled: false,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    expect(mockSubscribe).not.toHaveBeenCalled();
+  });
+
+  it("parses prediction begin event and calls onPredictionBegin", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.begin"]).toBeDefined();
+      });
+    });
+
+    const onBegin = vi.fn();
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.prediction.begin") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: onBegin,
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.begin"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.prediction.begin"]({
+        id: "pred-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "Will we win this game?",
+        outcomes: [
+          { id: "o1", title: "Yes!", color: "blue" },
+          { id: "o2", title: "No!", color: "pink" },
+        ],
+        started_at: "2020-07-15T17:16:03Z",
+        locks_at: "2020-07-15T17:21:03Z",
+      });
+    });
+
+    expect(onBegin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "pred-1",
+        title: "Will we win this game?",
+        outcomes: expect.arrayContaining([
+          expect.objectContaining({ id: "o1", title: "Yes!", color: "blue", users: 0 }),
+          expect.objectContaining({ id: "o2", title: "No!", color: "pink", users: 0 }),
+        ]),
+        locksAt: "2020-07-15T17:21:03Z",
+      }),
+    );
+  });
+
+  it("parses prediction progress event with outcomes including users and points", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.progress"]).toBeDefined();
+      });
+    });
+
+    const onProgress = vi.fn();
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.prediction.progress") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: onProgress,
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.progress"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.prediction.progress"]({
+        id: "pred-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "Will we win this game?",
+        outcomes: [
+          { id: "o1", title: "Yes!", color: "blue", users: 10, channel_points: 15000, top_predictors: [] },
+          { id: "o2", title: "No!", color: "pink", users: 5, channel_points: 5000, top_predictors: [] },
+        ],
+        started_at: "2020-07-15T17:16:03Z",
+        locks_at: "2020-07-15T17:21:03Z",
+      });
+    });
+
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "pred-1",
+        title: "Will we win this game?",
+        outcomes: expect.arrayContaining([
+          expect.objectContaining({ id: "o1", title: "Yes!", users: 10, channelPoints: 15000 }),
+          expect.objectContaining({ id: "o2", title: "No!", users: 5, channelPoints: 5000 }),
+        ]),
+      }),
+    );
+  });
+
+  it("parses prediction end event with status and winning_outcome_id", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.end"]).toBeDefined();
+      });
+    });
+
+    const onEnd = vi.fn();
+    renderHook(() =>
+      usePredictionEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.prediction.end") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPredictionBegin: vi.fn(),
+        onPredictionProgress: vi.fn(),
+        onPredictionLock: vi.fn(),
+        onPredictionEnd: onEnd,
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.prediction.end"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.prediction.end"]({
+        id: "pred-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "Will we win this game?",
+        winning_outcome_id: "o1",
+        outcomes: [
+          { id: "o1", title: "Yes!", color: "blue", users: 12, channel_points: 20000, top_predictors: [] },
+          { id: "o2", title: "No!", color: "pink", users: 3, channel_points: 1000, top_predictors: [] },
+        ],
+        status: "resolved",
+        started_at: "2020-07-15T17:16:03Z",
+        ended_at: "2020-07-15T17:16:11Z",
+      });
+    });
+
+    expect(onEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "pred-1",
+        title: "Will we win this game?",
+        status: "resolved",
+        winningOutcomeId: "o1",
+        endedAt: "2020-07-15T17:16:11Z",
+        outcomes: expect.arrayContaining([
+          expect.objectContaining({ id: "o1", title: "Yes!", channelPoints: 20000 }),
+          expect.objectContaining({ id: "o2", title: "No!", channelPoints: 1000 }),
         ]),
       }),
     );

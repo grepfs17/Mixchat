@@ -4,3 +4,4 @@ export { useYouTubeSync } from "./useYouTubeSync";
 export { useModeration } from "./useModeration";
 export { useChatMessages } from "./useChatMessages";
 export { useAutomodState } from "./useAutomodState";
+export { useLiveEvents } from "./useLiveEvents";

@@ -169,7 +169,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
       redirect_uri: redirectUri,
       response_type: "code",
       scope:
-        "chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions channel:read:hype_train channel:read:polls moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids",
+        "chat:read chat:edit user:read:email user:read:follows user:read:emotes channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids",
       state,
     });
 

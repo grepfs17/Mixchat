@@ -2,12 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
 import { useEventSub } from "./useEventSub";
-import { useRaidDetection } from "./eventSubHelpers/useRaidDetection";
 import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
-import { useChannelPointRedemptions } from "./eventSubHelpers/useChannelPointRedemptions";
-import { useHypeTrainEventSub } from "./eventSubHelpers/useHypeTrainEventSub";
-import { useAutomodQueue } from "./eventSubHelpers/useAutomodQueue";
-import { usePollEventSub } from "./eventSubHelpers/usePollEventSub";
 import {
   initializeEmotes,
   clearEmoteCache,
@@ -15,7 +10,6 @@ import {
 } from "../../lib/emotes";
 import { initializeBadges, clearBadgeCache } from "../../lib/badges";
 import { sendHelixMessage } from "../../lib/twitch";
-import { saveMessage } from "../../lib/chatHistoryStorage";
 import type {
   TwitchMessage,
   Platform,
@@ -28,6 +22,7 @@ import type { ChatDisplayHandle } from "../../components/chat/display";
 import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
 import type { PollState } from "../../components/chat/shared/PollBanner";
+import type { PredictionState } from "../../components/chat/shared/PredictionBanner";
 
 import {
   useChatLayout,
@@ -36,6 +31,7 @@ import {
   useModeration,
   useChatMessages,
   useAutomodState,
+  useLiveEvents,
 } from "./chatAppStateHelpers";
 import { setAutomodIds } from "./automodIds";
 
@@ -109,6 +105,7 @@ export function useChatAppState({
   }>({ badges: {}, badgeDetails: {} });
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
   const [poll, setPoll] = useState<PollState | null>(null);
+  const [prediction, setPrediction] = useState<PredictionState | null>(null);
   const [badgesReady, setBadgesReady] = useState(false);
 
   useEffect(() => {
@@ -243,60 +240,29 @@ export function useChatAppState({
     setAutomodIds(twitchSession?.userId || "", selectedTwitchChannel);
   }, [twitchSession?.userId, selectedTwitchChannel]);
 
-  // Inject held messages into the chat messages array
-  const handleHeldMessageInline = useCallback(
-    (heldMsg: import("./eventSubHelpers/useAutomodQueue").HeldMessage) => {
-      const chatMsg: TwitchMessage = {
-        id: `automod-${heldMsg.id}`,
-        platform: "twitch",
-        author: heldMsg.userDisplayName || heldMsg.userName,
-        content: heldMsg.content,
-        timestamp: new Date(heldMsg.holdDate),
-        userId: heldMsg.userId,
-        messageType: "automod",
-        targetUsername: heldMsg.id,
-      };
-      setMessages((prev) => {
-        const updated = [...prev, chatMsg];
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
-      });
-    },
-    [setMessages],
-  );
-
   const { subscribe } = useEventSub({
     accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
     enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
   });
 
-  useAutomodQueue({
+  useLiveEvents({
     subscribe,
     channelId: selectedTwitchChannel,
-    moderatorId: twitchSession?.userId || "",
-    enabled: !!(
-      twitchSession?.accessToken &&
-      twitchSession?.userId &&
-      selectedTwitchChannel &&
-      badgesReady &&
-      isModerator
-    ),
-    onHeldMessage: handleHeldMessageInline,
-    onResolvedMessage: useCallback(
-      (resolved: import("./eventSubHelpers/useAutomodQueue").ResolvedMessage) => {
-        setMessages((prev) =>
-          prev.filter((m) => m.id !== `automod-${resolved.messageId}`),
-        );
-      },
-      [setMessages],
-    ),
-    onScopeError: () => {
-      console.info(
-        "[useChatAppState] Automod EventSub subscription rejected — this is expected when not a moderator or missing moderator:manage:automod scope.",
-      );
-    },
+    twitchSession,
+    badgesReady,
+    isModerator,
+    selectedTwitchChannelName,
+    setHypeTrain,
+    setPoll,
+    setPrediction,
+    setPendingRaid,
+    setIsRaidInitiator,
+    setMessages,
+    setNotification,
+    notificationIdRef,
+    recentRedemptionsRef,
+    currentUserBadgesRef,
   });
 
   useEffect(() => {
@@ -307,6 +273,7 @@ export function useChatAppState({
     setIsFollowingChannelState(null);
     setMessages([]);
     setPoll(null);
+    setPrediction(null);
     preloadedMessagesRef.current.clear();
   }, [
     selectedTwitchChannelName,
@@ -361,219 +328,6 @@ export function useChatAppState({
     twitchSession?.userId,
     twitchSession?.accessToken,
   ]);
-
-  const onRaidScopeError = useCallback(() => {
-    notificationIdRef.current += 1;
-    setNotification({
-      message:
-        "Raid detection unavailable — please re-login to refresh your Twitch session",
-      type: "info",
-      id: notificationIdRef.current,
-    });
-  }, []);
-
-  useRaidDetection({
-    subscribe,
-    channelId: twitchSession?.userId || "",
-    enabled: !!(twitchSession?.accessToken && twitchSession?.userId),
-    isInitiator: true,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(true);
-    },
-    onScopeError: onRaidScopeError,
-  });
-
-  useRaidDetection({
-    subscribe,
-    channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      selectedTwitchChannel !== twitchSession?.userId
-    ),
-    isInitiator: false,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
-    onScopeError: onRaidScopeError,
-  });
-
-  useRaidDetection({
-    subscribe,
-    channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      selectedTwitchChannel !== twitchSession?.userId
-    ),
-    isInitiator: true,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
-    onScopeError: onRaidScopeError,
-  });
-
-  const handleRedemptionEvent = useCallback(
-    (message: TwitchMessage) => {
-      if (message.rewardId && message.userId) {
-        recentRedemptionsRef.current.set(
-          `${message.rewardId}-${message.userId}`,
-          Date.now(),
-        );
-        const now = Date.now();
-        for (const [key, ts] of recentRedemptionsRef.current) {
-          if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
-        }
-      }
-
-      setMessages((prev) => {
-        saveMessage(message, selectedTwitchChannelName);
-
-        const updated = [...prev, message];
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
-      });
-    },
-    [selectedTwitchChannelName, setMessages, recentRedemptionsRef],
-  );
-
-  const onRedemptionScopeError = useCallback(() => {
-    console.info(
-      "[useChatAppState] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
-    );
-  }, []);
-
-  useChannelPointRedemptions({
-    subscribe,
-    channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady
-    ),
-    onRedemption: handleRedemptionEvent,
-    onScopeError: onRedemptionScopeError,
-  });
-
-  const isPartnerOrAffiliate =
-    twitchSession?.broadcasterType === "partner" ||
-    twitchSession?.broadcasterType === "affiliate";
-
-  const onHypeTrainScopeError = useCallback(() => {
-    console.info(
-      "[useChatAppState] EventSub hype train subscription rejected — this is expected when viewing another broadcaster's channel.",
-    );
-  }, []);
-
-  useHypeTrainEventSub({
-    subscribe,
-    channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady &&
-      isPartnerOrAffiliate
-    ),
-    onHypeTrainBegin: (event) => {
-      setHypeTrain({
-        level: event.level,
-        progress: event.progress,
-        goal: event.goal,
-        totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map((c) => ({
-          displayName: c.displayName,
-          points: c.total,
-        })),
-        endsAt: new Date(event.expiresAt),
-      });
-    },
-    onHypeTrainProgress: (event) => {
-      setHypeTrain({
-        level: event.level,
-        progress: event.progress,
-        goal: event.goal,
-        totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map((c) => ({
-          displayName: c.displayName,
-          points: c.total,
-        })),
-        endsAt: new Date(event.expiresAt),
-      });
-    },
-    onHypeTrainEnd: () => {
-      setHypeTrain(null);
-    },
-    onScopeError: onHypeTrainScopeError,
-  });
-
-  const onPollScopeError = useCallback(() => {
-    console.info(
-      "[useChatAppState] EventSub poll subscription rejected — this is expected when missing channel:read:polls scope.",
-    );
-  }, []);
-
-  usePollEventSub({
-    subscribe,
-    channelId: selectedTwitchChannel,
-    enabled: !!(
-      twitchSession?.accessToken &&
-      selectedTwitchChannel &&
-      badgesReady
-    ),
-    onPollBegin: (event) => {
-      setPoll({
-        id: event.id,
-        title: event.title,
-        choices: event.choices.map((c) => ({
-          id: c.id,
-          title: c.title,
-          votes: c.votes,
-        })),
-        totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
-        endsAt: new Date(event.endsAt || event.startedAt),
-      });
-    },
-    onPollProgress: (event) => {
-      setPoll((prev) => {
-        if (prev && prev.id !== event.id) return prev;
-        return {
-          ...prev,
-          id: event.id,
-          title: event.title,
-          choices: event.choices.map((c) => ({
-            id: c.id,
-            title: c.title,
-            votes: c.votes,
-          })),
-          totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
-          endsAt: prev?.endsAt || new Date(event.endsAt || event.startedAt),
-        };
-      });
-    },
-    onPollEnd: (event) => {
-      setPoll((prev) => {
-        if (prev && prev.id !== event.id) return prev;
-        return {
-          ...prev,
-          id: event.id,
-          title: event.title,
-          choices: event.choices.map((c) => ({
-            id: c.id,
-            title: c.title,
-            votes: c.votes,
-          })),
-          totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
-          status: event.status,
-          endsAt: prev?.endsAt || new Date(event.startedAt),
-        };
-      });
-    },
-    onScopeError: onPollScopeError,
-  });
 
   const {
     sendMessage: sendTwitchMessage,
@@ -783,6 +537,7 @@ export function useChatAppState({
     isFollowingChannelState,
     hypeTrain,
     poll,
+    prediction,
     notificationIdRef,
 
     setReplyingTo,
@@ -795,6 +550,7 @@ export function useChatAppState({
     setIsRaidInitiator,
     setHypeTrain,
     setPoll,
+    setPrediction,
 
     handleSendMessage,
     handleRefreshEmotes,
