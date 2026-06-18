@@ -9,6 +9,7 @@ import { useAutomodQueue } from "../../../src/hooks/chat/eventSubHelpers/useAuto
 import { useRaidDetection } from "../../../src/hooks/chat/eventSubHelpers/useRaidDetection";
 import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSubHelpers/useHypeTrainEventSub";
+import { usePollEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePollEventSub";
 import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
 
 function makeSubscribe(
@@ -473,6 +474,279 @@ describe("useHypeTrainEventSub", () => {
         total: 500,
         topContributions: expect.arrayContaining([
           expect.objectContaining({ displayName: "Fan", total: 250 }),
+        ]),
+      }),
+    );
+  });
+});
+
+describe("usePollEventSub", () => {
+  it("subscribes to channel.poll.begin, progress, and end", async () => {
+    const subscribedTypes: string[] = [];
+
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (type, _v, _c, _cb) => {
+          subscribedTypes.push(type);
+          return vi.fn();
+        },
+        channelId: "somechannel",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => expect(subscribedTypes).toHaveLength(3));
+    });
+
+    expect(subscribedTypes).toContain("channel.poll.begin");
+    expect(subscribedTypes).toContain("channel.poll.progress");
+    expect(subscribedTypes).toContain("channel.poll.end");
+  });
+
+  it("does not subscribe when disabled", () => {
+    const mockSubscribe = vi.fn(() => vi.fn()) as SubscribeFn;
+
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: mockSubscribe,
+        channelId: "ch-1",
+        enabled: false,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    expect(mockSubscribe).not.toHaveBeenCalled();
+  });
+
+  it("parses poll begin event and calls onPollBegin", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.begin"]).toBeDefined();
+      });
+    });
+
+    const onBegin = vi.fn();
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.poll.begin") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: onBegin,
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.begin"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.poll.begin"]({
+        id: "poll-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "Aren't shoes just really hard socks?",
+        choices: [
+          { id: "1", title: "Yeah!" },
+          { id: "2", title: "No!" },
+          { id: "3", title: "Maybe!" },
+        ],
+        bits_voting: { is_enabled: true, amount_per_vote: 10 },
+        channel_points_voting: { is_enabled: true, amount_per_vote: 10 },
+        started_at: "2020-07-15T17:16:03Z",
+        ends_at: "2020-07-15T17:16:08Z",
+      });
+    });
+
+    expect(onBegin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "poll-1",
+        broadcasterUserId: "12345",
+        title: "Aren't shoes just really hard socks?",
+        choices: expect.arrayContaining([
+          expect.objectContaining({ id: "1", title: "Yeah!", votes: 0 }),
+          expect.objectContaining({ id: "2", title: "No!", votes: 0 }),
+          expect.objectContaining({ id: "3", title: "Maybe!", votes: 0 }),
+        ]),
+      }),
+    );
+  });
+
+  it("parses poll progress event and calls onPollProgress", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.progress"]).toBeDefined();
+      });
+    });
+
+    const onProgress = vi.fn();
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.poll.progress") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: onProgress,
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.progress"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.poll.progress"]({
+        id: "poll-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "What game next?",
+        choices: [
+          { id: "1", title: "Valorant", bits_votes: 5, channel_points_votes: 7, votes: 12 },
+          { id: "2", title: "League", bits_votes: 10, channel_points_votes: 4, votes: 14 },
+        ],
+        bits_voting: { is_enabled: true, amount_per_vote: 10 },
+        channel_points_voting: { is_enabled: true, amount_per_vote: 10 },
+        started_at: "2020-07-15T17:16:03Z",
+        ends_at: "2020-07-15T17:16:08Z",
+      });
+    });
+
+    expect(onProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "poll-1",
+        title: "What game next?",
+        choices: expect.arrayContaining([
+          expect.objectContaining({ id: "1", title: "Valorant", votes: 12, bitsVotes: 5, channelPointsVotes: 7 }),
+          expect.objectContaining({ id: "2", title: "League", votes: 14, bitsVotes: 10, channelPointsVotes: 4 }),
+        ]),
+      }),
+    );
+  });
+
+  it("parses poll end event and calls onPollEnd with status", async () => {
+    const handlers: Record<string, (event: unknown) => void> = {};
+
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (_type, _v, _c, onNotification) => {
+          handlers[_type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: vi.fn(),
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.end"]).toBeDefined();
+      });
+    });
+
+    const onEnd = vi.fn();
+    renderHook(() =>
+      usePollEventSub({
+        subscribe: (type, _v, _c, onNotification) => {
+          if (type === "channel.poll.end") handlers[type] = onNotification;
+          return vi.fn();
+        },
+        channelId: "12345",
+        enabled: true,
+        onPollBegin: vi.fn(),
+        onPollProgress: vi.fn(),
+        onPollEnd: onEnd,
+      }),
+    );
+
+    await act(async () => {
+      await vi.waitFor(() => {
+        expect(handlers["channel.poll.end"]).toBeDefined();
+      });
+    });
+
+    act(() => {
+      handlers["channel.poll.end"]({
+        id: "poll-1",
+        broadcaster_user_id: "12345",
+        broadcaster_user_login: "cool_user",
+        broadcaster_user_name: "Cool_User",
+        title: "Pick a color!",
+        choices: [
+          { id: "1", title: "Blue", bits_votes: 50, channel_points_votes: 70, votes: 120 },
+          { id: "2", title: "Yellow", bits_votes: 100, channel_points_votes: 40, votes: 140 },
+        ],
+        bits_voting: { is_enabled: true, amount_per_vote: 10 },
+        channel_points_voting: { is_enabled: true, amount_per_vote: 10 },
+        status: "completed",
+        started_at: "2020-07-15T17:16:03Z",
+        ended_at: "2020-07-15T17:16:11Z",
+      });
+    });
+
+    expect(onEnd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "poll-1",
+        title: "Pick a color!",
+        status: "completed",
+        endedAt: "2020-07-15T17:16:11Z",
+        choices: expect.arrayContaining([
+          expect.objectContaining({ id: "1", title: "Blue", votes: 120 }),
+          expect.objectContaining({ id: "2", title: "Yellow", votes: 140 }),
         ]),
       }),
     );

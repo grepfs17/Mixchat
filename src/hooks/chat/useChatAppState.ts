@@ -7,6 +7,7 @@ import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
 import { useChannelPointRedemptions } from "./eventSubHelpers/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "./eventSubHelpers/useHypeTrainEventSub";
 import { useAutomodQueue } from "./eventSubHelpers/useAutomodQueue";
+import { usePollEventSub } from "./eventSubHelpers/usePollEventSub";
 import {
   initializeEmotes,
   clearEmoteCache,
@@ -26,6 +27,7 @@ import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
 import type { ChatDisplayHandle } from "../../components/chat/display";
 import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
+import type { PollState } from "../../components/chat/shared/PollBanner";
 
 import {
   useChatLayout,
@@ -106,6 +108,7 @@ export function useChatAppState({
     badgeDetails: Record<string, { url: string; title: string }>;
   }>({ badges: {}, badgeDetails: {} });
   const [hypeTrain, setHypeTrain] = useState<HypeTrainState | null>(null);
+  const [poll, setPoll] = useState<PollState | null>(null);
   const [badgesReady, setBadgesReady] = useState(false);
 
   useEffect(() => {
@@ -303,6 +306,7 @@ export function useChatAppState({
     setStreamGameName("");
     setIsFollowingChannelState(null);
     setMessages([]);
+    setPoll(null);
     preloadedMessagesRef.current.clear();
   }, [
     selectedTwitchChannelName,
@@ -504,6 +508,71 @@ export function useChatAppState({
       setHypeTrain(null);
     },
     onScopeError: onHypeTrainScopeError,
+  });
+
+  const onPollScopeError = useCallback(() => {
+    console.info(
+      "[useChatAppState] EventSub poll subscription rejected — this is expected when missing channel:read:polls scope.",
+    );
+  }, []);
+
+  usePollEventSub({
+    subscribe,
+    channelId: selectedTwitchChannel,
+    enabled: !!(
+      twitchSession?.accessToken &&
+      selectedTwitchChannel &&
+      badgesReady
+    ),
+    onPollBegin: (event) => {
+      setPoll({
+        id: event.id,
+        title: event.title,
+        choices: event.choices.map((c) => ({
+          id: c.id,
+          title: c.title,
+          votes: c.votes,
+        })),
+        totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
+        endsAt: new Date(event.endsAt || event.startedAt),
+      });
+    },
+    onPollProgress: (event) => {
+      setPoll((prev) => {
+        if (prev && prev.id !== event.id) return prev;
+        return {
+          ...prev,
+          id: event.id,
+          title: event.title,
+          choices: event.choices.map((c) => ({
+            id: c.id,
+            title: c.title,
+            votes: c.votes,
+          })),
+          totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
+          endsAt: prev?.endsAt || new Date(event.endsAt || event.startedAt),
+        };
+      });
+    },
+    onPollEnd: (event) => {
+      setPoll((prev) => {
+        if (prev && prev.id !== event.id) return prev;
+        return {
+          ...prev,
+          id: event.id,
+          title: event.title,
+          choices: event.choices.map((c) => ({
+            id: c.id,
+            title: c.title,
+            votes: c.votes,
+          })),
+          totalVotes: event.choices.reduce((sum, c) => sum + c.votes, 0),
+          status: event.status,
+          endsAt: prev?.endsAt || new Date(event.startedAt),
+        };
+      });
+    },
+    onScopeError: onPollScopeError,
   });
 
   const {
@@ -713,6 +782,7 @@ export function useChatAppState({
     modModeActive,
     isFollowingChannelState,
     hypeTrain,
+    poll,
     notificationIdRef,
 
     setReplyingTo,
@@ -724,6 +794,7 @@ export function useChatAppState({
     setPendingRaid,
     setIsRaidInitiator,
     setHypeTrain,
+    setPoll,
 
     handleSendMessage,
     handleRefreshEmotes,

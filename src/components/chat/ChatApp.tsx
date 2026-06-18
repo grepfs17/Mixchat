@@ -7,6 +7,8 @@ import YouTubeMessageInput from "./shared/YouTubeMessageInput";
 import UnifiedChat from "./unified";
 import RaidNotification from "./shared/RaidNotification";
 import HypeTrainBanner from "./shared/HypeTrainBanner";
+import PollBanner from "./shared/PollBanner";
+import type { PollState } from "./shared/PollBanner";
 import SplitLayout from "./SplitLayout";
 import {
   useChatAppState,
@@ -53,6 +55,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     isFollowingChannelState,
     hypeTrain,
     setHypeTrain,
+    poll,
+    setPoll,
     setReplyingTo,
     setShowYoutubeSection,
     setIsDraggingChatSplit,
@@ -116,37 +120,9 @@ export default function ChatApp(props: ChatAppStateProps) {
     }
   }, [linkedYoutubeUrl, youtubeVideoId]);
 
-  // DEV ONLY: expose a manual test helper so you can call
-  // window.__testHypeTrain() from the browser console
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      (window as any).__testHypeTrain = () => {
-        console.log("[DEV] Triggering mock Hype Train");
-        setHypeTrain({
-          level: 5,
-          progress: 3500,
-          goal: 5000,
-          totalPoints: 3500,
-          topContributors: [
-            { displayName: "TestUser1", points: 1500 },
-            { displayName: "TestUser2", points: 1200 },
-            { displayName: "TestUser3", points: 800 },
-          ],
-          endsAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
-        });
-      };
-      (window as any).__endHypeTrain = () => {
-        console.log("[DEV] Ending mock Hype Train");
-        setHypeTrain(null);
-      };
-    }
-    return () => {
-      if (typeof window !== "undefined") {
-        delete (window as any).__testHypeTrain;
-        delete (window as any).__endHypeTrain;
-      }
-    };
-  }, [setHypeTrain]);
+  
+
+  
 
   const showNotification = (
     message: string,
@@ -212,6 +188,14 @@ export default function ChatApp(props: ChatAppStateProps) {
           <HypeTrainBanner
             hypeTrain={hypeTrain}
             onDismiss={() => setHypeTrain(null)}
+          />
+        )}
+
+        {/* Poll notification */}
+        {poll && (
+          <PollBanner
+            poll={poll}
+            onDismiss={() => setPoll(null)}
           />
         )}
 
