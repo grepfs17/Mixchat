@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PlatformSession } from "../../../lib/types";
+import type { YTMessage } from "../../../components/chat/unified/types";
 import {
   deleteYouTubeMessage,
   banYouTubeUser,
@@ -18,6 +19,14 @@ export interface UseYouTubeModerationOptions {
   ) => void;
   notificationIdRef: React.RefObject<number>;
   onLocalDelete?: (messageId: string) => void;
+  /**
+   * Current YouTube chat messages. Used to attach author channel + text to a
+   * delete request so the server can resolve the official Data API message id
+   * (the rendered InnerTube id is not accepted by liveChatMessages.delete).
+   */
+  messages?: YTMessage[];
+  /** Reconstructs the plain text of a YT message from its parts. */
+  getMessageText?: (m: YTMessage) => string;
 }
 
 export interface UseYouTubeModerationReturn {
@@ -50,10 +59,19 @@ export function useYouTubeModeration({
   setNotification,
   notificationIdRef,
   onLocalDelete,
+  messages,
+  getMessageText,
 }: UseYouTubeModerationOptions): UseYouTubeModerationReturn {
   const [isYouTubeModerator, setIsYouTubeModerator] = useState(false);
   const [youtubeModModeActive, setYoutubeModModeActive] = useState(false);
   const lastNotifiedIdRef = useRef<number | null>(null);
+
+  // Keep the latest messages in a ref so handleYtDelete stays stable while
+  // still seeing current data when resolving the official message id.
+  const messagesRef = useRef<YTMessage[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages ?? [];
+  }, [messages]);
 
   useEffect(() => {
     if (!youtubeVideoId) {
@@ -86,8 +104,25 @@ export function useYouTubeModeration({
     async (messageId: string) => {
       if (!youtubeVideoId) return;
       onLocalDelete?.(messageId);
+
+      // Attach author channel + text + timestamp so the server can resolve the
+      // official Data API message id (the rendered InnerTube id won't match).
+      const target = messagesRef.current.find((m) => m.id === messageId);
+      const context = target
+        ? {
+            channelId: target.authorChannelId,
+            text: getMessageText ? getMessageText(target) : undefined,
+            publishedAtMs:
+              target.timestamp instanceof Date
+                ? target.timestamp.getTime()
+                : target.timestamp
+                  ? new Date(target.timestamp).getTime()
+                  : undefined,
+          }
+        : undefined;
+
       try {
-        await deleteYouTubeMessage(youtubeVideoId, messageId);
+        await deleteYouTubeMessage(youtubeVideoId, messageId, context);
         notify("Message deleted", "success");
       } catch (err) {
         console.error("Failed to delete YouTube message:", err);
@@ -96,7 +131,7 @@ export function useYouTubeModeration({
         notify(message, "error");
       }
     },
-    [youtubeVideoId, notify, onLocalDelete],
+    [youtubeVideoId, notify, onLocalDelete, getMessageText],
   );
 
   const handleYtBan = useCallback(

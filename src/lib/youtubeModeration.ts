@@ -37,11 +37,28 @@ async function callModeration(
   }
 }
 
+export interface DeleteMessageContext {
+  /** Author channel id (UC...), used to resolve the official Data API id. */
+  channelId?: string;
+  /** Plain text of the message, used to resolve the official Data API id. */
+  text?: string;
+  /** Render timestamp (ms) used to disambiguate matches. */
+  publishedAtMs?: number;
+}
+
 export async function deleteYouTubeMessage(
   videoId: string,
   messageId: string,
+  context?: DeleteMessageContext,
 ): Promise<void> {
-  await callModeration({ action: "delete", videoId, messageId });
+  await callModeration({
+    action: "delete",
+    videoId,
+    messageId,
+    channelId: context?.channelId,
+    text: context?.text,
+    publishedAtMs: context?.publishedAtMs,
+  });
 }
 
 export async function banYouTubeUser(

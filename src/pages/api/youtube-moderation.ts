@@ -3,6 +3,7 @@ import { checkRateLimit } from "../../lib/rateLimit";
 import { googleFetch } from "../../lib/google";
 import {
   resolveActiveLiveChatId,
+  resolveLiveChatMessageId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
 
@@ -12,6 +13,10 @@ interface ModerationBody {
   messageId?: string;
   channelId?: string;
   durationSeconds?: number;
+  /** For delete: text of the message, used to resolve the official Data API id. */
+  text?: string;
+  /** For delete: render timestamp (ms) used to disambiguate matches. */
+  publishedAtMs?: number;
 }
 
 const MIN_TIMEOUT_SECONDS = 1;
@@ -89,7 +94,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const body = (await request.json()) as ModerationBody;
-    const { action, videoId, messageId, channelId, durationSeconds } = body;
+    const {
+      action,
+      videoId,
+      messageId,
+      channelId,
+      durationSeconds,
+      text,
+      publishedAtMs,
+    } = body;
 
     if (!action || !["delete", "ban", "timeout"].includes(action)) {
       return jsonResponse(
@@ -138,9 +151,30 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     if (action === "delete") {
+      // The id rendered by youtubei.js (InnerTube) is NOT the same as the
+      // official Data API liveChatMessage id, so we resolve the official id by
+      // matching author channel + text before deleting. Fall back to the raw
+      // id for streams where they happen to coincide.
+      let idToDelete = messageId!;
+      if (channelId || (text && text.length)) {
+        try {
+          const resolved = await resolveLiveChatMessageId(videoId, accessToken, {
+            channelId,
+            text,
+            publishedAtMs,
+          });
+          if (resolved) idToDelete = resolved;
+        } catch (err) {
+          console.warn(
+            "[youtube-moderation] Failed to resolve official message id:",
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }
+
       try {
         await googleFetch(
-          `https://www.googleapis.com/youtube/v3/liveChat/messages?id=${encodeURIComponent(messageId!)}`,
+          `https://www.googleapis.com/youtube/v3/liveChat/messages?id=${encodeURIComponent(idToDelete)}`,
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -148,7 +182,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           {
             action: "liveChatMessages.delete",
             videoId,
-            messageId,
+            messageId: idToDelete,
           },
         );
       } catch (err) {

@@ -227,6 +227,8 @@ export function useChatAppState({
     setNotification,
     notificationIdRef,
     onLocalDelete: removeYtMessage,
+    messages: ytMessages,
+    getMessageText: getYtMessageText,
   });
 
   // Broadcaster = owner of the YouTube live stream.

@@ -41,6 +41,35 @@ describe("youtubeModeration client helpers", () => {
       );
     });
 
+    it("forwards channel/text/timestamp context for official-id resolution", async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      });
+
+      await deleteYouTubeMessage("vid-1", "innertube-id", {
+        channelId: "UC-author",
+        text: "hello world",
+        publishedAtMs: 1700000000000,
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/youtube-moderation",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            action: "delete",
+            videoId: "vid-1",
+            messageId: "innertube-id",
+            channelId: "UC-author",
+            text: "hello world",
+            publishedAtMs: 1700000000000,
+          }),
+        }),
+      );
+    });
+
     it("throws a YouTubeModError with the server's message on failure", async () => {
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
