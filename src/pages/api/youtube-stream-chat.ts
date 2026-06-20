@@ -215,14 +215,14 @@ export function parseBadges(msg: any): Record<string, string> {
 }
 
 export function isAuthorModerator(msg: any): boolean {
+  // youtubei.js exposes Author.is_moderator and LiveChatAuthorBadge.icon_type
+  // for the authoritative moderator signal. Match the same rule used by
+  // isAuthorOwner (icon_type === "OWNER" only) to avoid false positives from
+  // community badges whose label happens to contain "moderator".
   if (!msg.author) return false;
   if (msg.author.is_moderator) return true;
   if (!msg.author.badges) return false;
-  return msg.author.badges.some((b: any) => {
-    if (b?.icon_type === "MODERATOR") return true;
-    const label = getBadgeLabel(b);
-    return /moderator/i.test(label);
-  });
+  return msg.author.badges.some((b: any) => b?.icon_type === "MODERATOR");
 }
 
 export function isAuthorOwner(msg: any): boolean {

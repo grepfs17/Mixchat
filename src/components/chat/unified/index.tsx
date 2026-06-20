@@ -17,6 +17,7 @@ import { TwitchMessageItem } from "./TwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";
 import TimeoutMenu from "../shared/TimeoutMenu";
+import YouTubeTimeoutMenu from "../shared/YouTubeTimeoutMenu";
 import EmoteTooltip from "../shared/EmoteTooltip";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
@@ -93,6 +94,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       userId: string;
       username: string;
     } | null>(null);
+    const [ytTimeoutMenu, setYtTimeoutMenu] = useState<{
+      x: number;
+      y: number;
+      channelId: string;
+      username: string;
+    } | null>(null);
     const [messageMenu, setMessageMenu] = useState<{
       x: number;
       y: number;
@@ -127,9 +134,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
     useEffect(() => {
       const handleClick = () => {
         setTimeoutMenu(null);
+        setYtTimeoutMenu(null);
         setMessageMenu(null);
       };
-      if (timeoutMenu || messageMenu) {
+      if (timeoutMenu || messageMenu || ytTimeoutMenu) {
         window.addEventListener("click", handleClick);
         window.addEventListener("contextmenu", handleClick);
       }
@@ -137,7 +145,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
         window.removeEventListener("click", handleClick);
         window.removeEventListener("contextmenu", handleClick);
       };
-    }, [timeoutMenu, messageMenu]);
+    }, [timeoutMenu, messageMenu, ytTimeoutMenu]);
 
     const ignoredSet = useMemo(
       () => new Set(ignoredUsers.map((u) => u.toLowerCase())),
@@ -341,8 +349,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 onContextMenu={(x, y, e) =>
                   setMessageMenu({ x, y, entry: e })
                 }
-                onTimeoutMenu={(x, y, userId, username) =>
-                  setTimeoutMenu({ x, y, userId, username })
+                onTimeoutMenu={(x, y, channelId, username) =>
+                  setYtTimeoutMenu({ x, y, channelId, username })
                 }
                 onUsernameClick={(e, author, avatar) =>
                   handleUsernameClick(e, author, "youtube", avatar)
@@ -371,6 +379,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             onViewHistory={(author, avatar) =>
               handleViewHistory(author, messageMenu.entry.source, avatar)
             }
+            onOpenYouTubeTimeoutMenu={(x, y, channelId, username) =>
+              setYtTimeoutMenu({ x, y, channelId, username })
+            }
             onClose={() => setMessageMenu(null)}
           />
         )}
@@ -395,6 +406,19 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
               onTimeoutUser?.(userId, seconds, username)
             }
             onClose={() => setTimeoutMenu(null)}
+          />
+        )}
+
+        {ytTimeoutMenu && (
+          <YouTubeTimeoutMenu
+            channelId={ytTimeoutMenu.channelId}
+            username={ytTimeoutMenu.username}
+            x={ytTimeoutMenu.x}
+            y={ytTimeoutMenu.y}
+            onTimeout={(channelId, seconds, username) =>
+              onTimeoutYouTubeUser?.(channelId, seconds, username)
+            }
+            onClose={() => setYtTimeoutMenu(null)}
           />
         )}
       </div>

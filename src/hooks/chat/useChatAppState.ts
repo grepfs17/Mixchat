@@ -692,6 +692,7 @@ export function useChatAppState({
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,
+    youtubeOwnChannelId: youtubeSession?.userId ?? null,
     isFollowingChannelState,
     hypeTrain,
     poll,

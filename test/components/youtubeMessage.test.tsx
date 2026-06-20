@@ -3,6 +3,10 @@ import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { YouTubeMessageContent } from "../../src/components/chat/shared/YouTubeMessageContent";
 import type { YTMessage } from "../../src/components/chat/unified/types";
+import {
+  ModerationContext,
+  type ModerationContextValue,
+} from "../../src/contexts/ModerationContext";
 
 function makeYTMsg(overrides: Partial<YTMessage> = {}): YTMessage {
   return {
@@ -12,6 +16,27 @@ function makeYTMsg(overrides: Partial<YTMessage> = {}): YTMessage {
     timestamp: new Date("2025-01-15T12:30:45"),
     ...overrides,
   };
+}
+
+function renderWithModeration(
+  msg: YTMessage,
+  value: Partial<ModerationContextValue>,
+) {
+  const full: ModerationContextValue = {
+    isModerator: false,
+    modModeActive: false,
+    compactActions: false,
+    isYouTubeModerator: false,
+    youtubeModModeActive: false,
+    youtubeVideoId: null,
+    youtubeOwnChannelId: null,
+    ...value,
+  };
+  return render(
+    <ModerationContext.Provider value={full}>
+      <YouTubeMessageContent msg={msg} />
+    </ModerationContext.Provider>,
+  );
 }
 
 describe("YouTubeMessageContent", () => {
@@ -152,37 +177,34 @@ describe("YouTubeMessageContent", () => {
   });
 
   describe("badges", () => {
-    it("renders moderator shield when badges contain Moderator", () => {
+    it("renders moderator shield when authorIsModerator is true", () => {
       const msg = makeYTMsg({
-        badges: {
-          Moderator: "https://example.com/mod.png",
-        },
+        authorIsModerator: true,
+        badges: { Moderator: "https://example.com/mod.png" },
       });
       const { container } = render(<YouTubeMessageContent msg={msg} />);
       const shield = container.querySelector(".yt-mod-shield");
       expect(shield).toBeInTheDocument();
     });
 
-    it("does not render moderator shield when no moderator badge", () => {
+    it("does not render moderator shield when no moderator flag is set", () => {
       const msg = makeYTMsg({
-        badges: {
-          member: "https://example.com/member.png",
-        },
+        badges: { member: "https://example.com/member.png" },
       });
       const { container } = render(<YouTubeMessageContent msg={msg} />);
       const shield = container.querySelector(".yt-mod-shield");
       expect(shield).not.toBeInTheDocument();
     });
 
-    it("renders moderator shield case-insensitively", () => {
+    it("does NOT render moderator shield from a label-only 'moderator' badge", () => {
+      // Only the authoritative server-side flag counts now; arbitrary badge
+      // labels can be set by community roles and must not promote a viewer.
       const msg = makeYTMsg({
-        badges: {
-          moderator: "https://example.com/mod.png",
-        },
+        badges: { moderator: "https://example.com/mod.png" },
       });
       const { container } = render(<YouTubeMessageContent msg={msg} />);
       const shield = container.querySelector(".yt-mod-shield");
-      expect(shield).toBeInTheDocument();
+      expect(shield).not.toBeInTheDocument();
     });
   });
 
@@ -221,6 +243,123 @@ describe("YouTubeMessageContent", () => {
         "YTUser",
         "https://example.com/avatar.jpg",
       );
+    });
+  });
+
+  describe("moderator action buttons", () => {
+    const VIEWER_CHANNEL = "UC-viewer";
+    const ME = "UC-mine";
+
+    it("shows timeout and ban buttons on a regular viewer message when mod mode is on", () => {
+      const msg = makeYTMsg({ authorChannelId: VIEWER_CHANNEL });
+      const onDelete = vi.fn();
+      const onTimeout = vi.fn();
+      const onBan = vi.fn();
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+        onDeleteYouTubeMessage: onDelete,
+        onTimeoutYouTubeUser: onTimeout,
+        onBanYouTubeUser: onBan,
+      });
+      const buttons = screen.getAllByTitle(/Delete message|Timeout|Ban/);
+      expect(buttons.length).toBe(3);
+      // Delete is always present (no isUnmoderatable guard).
+      expect(screen.getByTitle("Delete message")).toBeInTheDocument();
+      // Timeout + Ban are gated on !isUnmoderatable.
+      expect(
+        screen.getByTitle(/Timeout \(10m\) - Right-click for more/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTitle(/Ban \(this chat\)/),
+      ).toBeInTheDocument();
+    });
+
+    it("hides timeout and ban for the signed-in user's own messages", () => {
+      const msg = makeYTMsg({ authorChannelId: ME });
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+        onDeleteYouTubeMessage: vi.fn(),
+        onTimeoutYouTubeUser: vi.fn(),
+        onBanYouTubeUser: vi.fn(),
+      });
+      expect(screen.queryByTitle("Delete message")).toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/Timeout \(10m\) - Right-click for more/),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/Ban \(this chat\)/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides timeout and ban for the broadcaster (authorIsOwner=true)", () => {
+      const msg = makeYTMsg({
+        authorChannelId: "UC-streamer",
+        authorIsOwner: true,
+      });
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+      });
+      expect(screen.queryByTitle("Delete message")).toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/Timeout \(10m\) - Right-click for more/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides timeout and ban for moderators (authorIsModerator=true)", () => {
+      const msg = makeYTMsg({
+        authorChannelId: "UC-another-mod",
+        authorIsModerator: true,
+      });
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+      });
+      expect(screen.queryByTitle("Delete message")).toBeInTheDocument();
+      expect(
+        screen.queryByTitle(/Timeout \(10m\) - Right-click for more/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides all mod actions when mod mode is off", () => {
+      const msg = makeYTMsg({ authorChannelId: VIEWER_CHANNEL });
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: false,
+        youtubeOwnChannelId: ME,
+      });
+      expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
+    });
+
+    it("hides all mod actions when user is not a YouTube moderator", () => {
+      const msg = makeYTMsg({ authorChannelId: VIEWER_CHANNEL });
+      renderWithModeration(msg, {
+        isYouTubeModerator: false,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+      });
+      expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
+    });
+
+    it("clicking the timeout button fires onTimeoutYouTubeUser with 600s for a viewer", () => {
+      const onTimeout = vi.fn();
+      const msg = makeYTMsg({ authorChannelId: VIEWER_CHANNEL });
+      renderWithModeration(msg, {
+        isYouTubeModerator: true,
+        youtubeModModeActive: true,
+        youtubeOwnChannelId: ME,
+        onTimeoutYouTubeUser: onTimeout,
+      });
+      fireEvent.click(
+        screen.getByTitle(/Timeout \(10m\) - Right-click for more/),
+      );
+      expect(onTimeout).toHaveBeenCalledWith(VIEWER_CHANNEL, 600, "YTUser");
     });
   });
 });

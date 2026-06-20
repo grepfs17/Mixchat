@@ -10,6 +10,18 @@ interface MessageMenuProps {
   onReply?: (msg: TwitchMessage) => void;
   onCopy: (msg: any) => void;
   onViewHistory?: (author: string, avatar?: string) => void;
+  /**
+   * Opens the YouTube-specific duration picker at the given screen
+   * coordinates for the given YouTube author. Used to expose the
+   * 1m / 5m / 10m / 1h / 24h / Custom presets the official YouTube Studio
+   * live-chat moderation dialog surfaces.
+   */
+  onOpenYouTubeTimeoutMenu?: (
+    x: number,
+    y: number,
+    channelId: string,
+    username: string,
+  ) => void;
   onClose: () => void;
 }
 
@@ -20,6 +32,7 @@ export default function MessageMenu({
   onReply,
   onCopy,
   onViewHistory,
+  onOpenYouTubeTimeoutMenu,
   onClose,
 }: MessageMenuProps) {
   const {
@@ -27,6 +40,7 @@ export default function MessageMenu({
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,
+    youtubeOwnChannelId,
     onDeleteMessage,
     onTimeoutUser,
     onBanUser,
@@ -51,7 +65,12 @@ export default function MessageMenu({
   const author = chatMsg ? chatMsg.author : ytMsg?.author || "Unknown";
   const authorAvatar = chatMsg?.authorAvatar || ytMsg?.authorAvatar;
 
-  const items: Array<{ key: string; label: string; onClick: () => void }> = [];
+  const items: Array<{
+    key: string;
+    label: string;
+    title?: string;
+    onClick: () => void;
+  }> = [];
 
   // Reply (Twitch only for now)
   if (isTwitch && !isSystemMessage && onReply && chatMsg) {
@@ -135,7 +154,10 @@ export default function MessageMenu({
     youtubeModModeActive &&
     ytMsg.authorChannelId &&
     !ytMsg.authorIsModerator &&
-    !ytMsg.authorIsOwner
+    !ytMsg.authorIsOwner &&
+    !(
+      youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
+    )
   ) {
     items.push({
       key: "yt-delete",
@@ -147,15 +169,20 @@ export default function MessageMenu({
     });
     items.push({
       key: "yt-timeout",
-      label: "Timeout (10m)",
+      label: "Timeout…",
       onClick: () => {
-        onTimeoutYouTubeUser?.(ytMsg.authorChannelId!, 600, ytMsg.author);
+        if (onOpenYouTubeTimeoutMenu && ytMsg.authorChannelId) {
+          onOpenYouTubeTimeoutMenu(x, y, ytMsg.authorChannelId, ytMsg.author);
+        } else {
+          onTimeoutYouTubeUser?.(ytMsg.authorChannelId!, 600, ytMsg.author);
+        }
         onClose();
       },
     });
     items.push({
       key: "yt-ban",
-      label: "Ban",
+      label: "Ban (this chat)",
+      title: "Data API only supports per-broadcast bans",
       onClick: () => {
         onBanYouTubeUser?.(ytMsg.authorChannelId!, ytMsg.author);
         onClose();
@@ -167,7 +194,12 @@ export default function MessageMenu({
     <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
       <div className="context-menu-header">@{author}</div>
       {items.map((it) => (
-        <button key={it.key} onClick={it.onClick} className="context-menu-item">
+        <button
+          key={it.key}
+          onClick={it.onClick}
+          className="context-menu-item"
+          title={it.title}
+        >
           {it.label}
         </button>
       ))}

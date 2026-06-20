@@ -57,6 +57,7 @@ describe("YouTube chat badge parsing", () => {
     });
 
     it("returns true when a badge label contains 'Moderator'", () => {
+      // Labels alone are no longer authoritative — only icon_type="MODERATOR" is.
       expect(
         isAuthorModerator({
           author: {
@@ -68,7 +69,7 @@ describe("YouTube chat badge parsing", () => {
             ],
           },
         }),
-      ).toBe(true);
+      ).toBe(false);
     });
 
     it("returns false when the author has no mod signals", () => {

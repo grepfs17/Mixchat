@@ -153,6 +153,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     isYouTubeModerator,
     youtubeModModeActive,
     youtubeVideoId,
+    youtubeOwnChannelId: youtubeSession?.userId ?? null,
     onDeleteMessage: handleDelete,
     onBanUser: handleBan,
     onTimeoutUser: handleTimeout,

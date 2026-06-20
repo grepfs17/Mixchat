@@ -7,6 +7,8 @@ export interface ModerationContextValue {
   isYouTubeModerator?: boolean;
   youtubeModModeActive?: boolean;
   youtubeVideoId?: string | null;
+  /** Signed-in YouTube channel id; used to skip mod actions on the user's own messages. */
+  youtubeOwnChannelId?: string | null;
   onDeleteMessage?: (messageId: string) => void;
   onBanUser?: (userId: string, displayName?: string) => void;
   onTimeoutUser?: (
@@ -34,6 +36,7 @@ export const ModerationContext = createContext<ModerationContextValue>({
   isYouTubeModerator: false,
   youtubeModModeActive: false,
   youtubeVideoId: null,
+  youtubeOwnChannelId: null,
 });
 
 export function useModerationContext() {

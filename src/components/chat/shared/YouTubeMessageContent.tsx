@@ -88,6 +88,7 @@ export function YouTubeMessageContent({
   const {
     isYouTubeModerator,
     youtubeModModeActive,
+    youtubeOwnChannelId,
     onDeleteYouTubeMessage,
     onBanYouTubeUser,
     onTimeoutYouTubeUser,
@@ -95,12 +96,15 @@ export function YouTubeMessageContent({
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
-  const isMod = Boolean(
-    msg.authorIsModerator ||
-      (msg.badges && Object.keys(msg.badges).some((k) => /moderator/i.test(k))),
-  );
+  // Trust the authoritative server-side flags only; the per-message badge
+  // labels are user-visible and can be set by community roles or mod-bot
+  // integrations, so we no longer use them to gate action availability.
+  const isMod = Boolean(msg.authorIsModerator);
   const isOwner = Boolean(msg.authorIsOwner);
-  const isUnmoderatable = isMod || isOwner;
+  const isCurrentUser = Boolean(
+    youtubeOwnChannelId && msg.authorChannelId === youtubeOwnChannelId,
+  );
+  const isUnmoderatable = isMod || isOwner || isCurrentUser;
   const showModActions =
     isYouTubeModerator &&
     youtubeModModeActive &&
@@ -147,7 +151,7 @@ export function YouTubeMessageContent({
             <button
               onClick={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
               className="action-button mod-action"
-              title="Ban user"
+              title="Ban (this chat) - Data API only supports per-broadcast bans"
               style={{
                 display: "flex",
                 alignItems: "center",
