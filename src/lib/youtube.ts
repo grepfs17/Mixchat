@@ -67,15 +67,10 @@ export function _getProxyState() {
   return { failCounts: proxyFailCounts, cooldownUntil: proxyCooldownUntil };
 }
 
-export {
-  selectProxy,
-  markProxyFailed,
-  markProxyOk,
-  PROXY_MAX_FAILS,
-};
+export { selectProxy, markProxyFailed, markProxyOk, PROXY_MAX_FAILS };
 
 const LIVE_CHAT_POLL_MIN_MS = parseInt(
-  process.env.YT_CHAT_POLL_MIN_MS || "5000",
+  process.env.YT_CHAT_POLL_MIN_MS || "2000",
   10,
 );
 const METADATA_POLL_MIN_MS = parseInt(
