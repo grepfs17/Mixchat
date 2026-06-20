@@ -7,6 +7,13 @@ interface YouTubeMessageItemProps {
   onTouchStart: (entry: UnifiedEntry) => void;
   onTouchEnd: (entry: UnifiedEntry) => void;
   onTouchMove: (e: React.TouchEvent) => void;
+  onContextMenu?: (x: number, y: number, entry: UnifiedEntry) => void;
+  onTimeoutMenu?: (
+    x: number,
+    y: number,
+    channelId: string,
+    username: string,
+  ) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
     author: string,
@@ -20,9 +27,25 @@ export function YouTubeMessageItem({
   onTouchStart,
   onTouchEnd,
   onTouchMove,
+  onContextMenu,
+  onTimeoutMenu,
   onUsernameClick,
 }: YouTubeMessageItemProps) {
   const msg = entry.msg as YTMessage;
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (!onContextMenu) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu(e.clientX, e.clientY, entry);
+  };
+
+  const handleTimeoutMenu = (e: React.MouseEvent) => {
+    if (!onTimeoutMenu || !msg.authorChannelId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onTimeoutMenu(e.clientX, e.clientY, msg.authorChannelId, msg.author);
+  };
 
   return (
     <YouTubeMessageContent
@@ -33,6 +56,8 @@ export function YouTubeMessageItem({
       onTouchStart={() => onTouchStart(entry)}
       onTouchEnd={() => onTouchEnd(entry)}
       onTouchMove={onTouchMove}
+      onContextMenu={onContextMenu ? handleContextMenu : undefined}
+      onTimeoutMenu={onTimeoutMenu ? handleTimeoutMenu : undefined}
       onUsernameClick={onUsernameClick}
     />
   );

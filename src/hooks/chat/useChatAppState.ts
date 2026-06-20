@@ -33,6 +33,7 @@ import {
   useChatMessages,
   useAutomodState,
   useLiveEvents,
+  useYouTubeModeration,
 } from "./chatAppStateHelpers";
 import { setAutomodIds } from "./automodIds";
 
@@ -153,12 +154,14 @@ export function useChatAppState({
     showYoutubeSection,
     ytMessages,
     ytOptimisticMessages,
+    ytChannelId,
     setManualVideoId,
     setAutoVideoId,
     setShowYoutubeSection,
     handleYtMessages,
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
+    removeYtMessage,
     getYtMessageText,
   } = useYouTubeSync({
     linkedYoutubeUrl,
@@ -209,6 +212,53 @@ export function useChatAppState({
     setPendingRaid,
     setIsRaidInitiator,
   });
+
+  const {
+    isYouTubeModerator,
+    youtubeModModeActive,
+    handleToggleYoutubeModMode,
+    handleYtDelete,
+    handleYtBan,
+    handleYtTimeout,
+    handleYtOwnBadgesLoaded,
+  } = useYouTubeModeration({
+    youtubeSession,
+    youtubeVideoId,
+    setNotification,
+    notificationIdRef,
+    onLocalDelete: removeYtMessage,
+  });
+
+  // Broadcaster = owner of the YouTube live stream.
+  useEffect(() => {
+    if (!youtubeSession?.userId || !ytChannelId) return;
+    if (youtubeSession.userId === ytChannelId) {
+      // Reuse the dedicated hook's setter indirectly via the API: we
+      // promote the user to moderator, which in turn auto-enables mod mode.
+      handleYtOwnBadgesLoaded({ owner: "1", broadcaster: "1" });
+    }
+  }, [youtubeSession?.userId, ytChannelId, handleYtOwnBadgesLoaded]);
+
+  // External moderator detection: when the signed-in user posts (or appears)
+  // a chat message carrying a moderator/owner badge, treat them as a mod.
+  // (YouTube Data API has no public way to verify non-owner mods, so the
+  // authoritative signal is the badge on the user's own chat message.)
+  const ownChannelId = youtubeSession?.userId;
+  useEffect(() => {
+    if (!ownChannelId) return;
+    const ownMsg = ytMessages.find(
+      (m) =>
+        m.authorChannelId === ownChannelId &&
+        (m.authorIsModerator || m.authorIsOwner),
+    );
+    if (ownMsg) {
+      const badges: Record<string, string> = {};
+      if (ownMsg.authorIsOwner) badges.owner = "1";
+      if (ownMsg.authorIsModerator) badges.moderator = "1";
+      if (ownMsg.badges) Object.assign(badges, ownMsg.badges);
+      handleYtOwnBadgesLoaded(badges);
+    }
+  }, [ytMessages, ownChannelId, handleYtOwnBadgesLoaded]);
 
   useAutomodState({
     moderatorId: twitchSession?.userId || "",
@@ -665,9 +715,12 @@ export function useChatAppState({
     ytMessages,
     ytOptimisticMessages,
     youtubeVideoId,
+    ytChannelId,
     badgesReady,
     isModerator,
     modModeActive,
+    isYouTubeModerator,
+    youtubeModModeActive,
     isFollowingChannelState,
     hypeTrain,
     poll,
@@ -703,6 +756,10 @@ export function useChatAppState({
     handleYtMessages,
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
+    handleYtDelete,
+    handleYtBan,
+    handleYtTimeout,
+    handleToggleYoutubeModMode,
     getYtMessageText,
     sendTwitchMessage,
     slowModeWaitTime,

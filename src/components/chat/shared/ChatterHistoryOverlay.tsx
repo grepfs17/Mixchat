@@ -30,8 +30,15 @@ export default function ChatterHistoryOverlay({
   authorAvatar,
   onClose,
 }: ChatterHistoryOverlayProps) {
-  const { isModerator, onTimeoutUser, onBanUser, onWarnUser } =
-    useModerationContext();
+  const {
+    isModerator,
+    isYouTubeModerator,
+    onTimeoutUser,
+    onBanUser,
+    onWarnUser,
+    onTimeoutYouTubeUser,
+    onBanYouTubeUser,
+  } = useModerationContext();
   const [history, setHistory] = useState<TwitchMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,6 +124,21 @@ export default function ChatterHistoryOverlay({
     }
   }, [loading, history, author, platform]);
 
+  // For YouTube, prefer the channelId (UC...) from history, since we already
+  // have it on every recorded message.
+  const youtubeChannelId = useMemo(() => {
+    if (platform !== "youtube") return undefined;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const ch = (history[i] as any).authorChannelId;
+      if (ch) return ch as string;
+    }
+    return undefined;
+  }, [history, platform]);
+
+  const isYouTube = platform === "youtube";
+  const canModerate = isYouTube ? isYouTubeModerator : isModerator;
+  const userId = isYouTube ? youtubeChannelId : resolvedUserId;
+
   const mostRecentBadges = useMemo(() => {
     for (let i = history.length - 1; i >= 0; i--) {
       if (history[i].badgeDetails || history[i].badges) {
@@ -129,8 +151,6 @@ export default function ChatterHistoryOverlay({
     return null;
   }, [history]);
 
-  const userId = resolvedUserId;
-
   const handleTimeout = (sec: number) => {
     console.log(
       `[ChatterHistory] Internal Timeout click: userId=${userId}, author=${author}, sec=${sec}`,
@@ -139,11 +159,21 @@ export default function ChatterHistoryOverlay({
       console.error("[ChatterHistory] Cannot timeout: userId is missing");
       return;
     }
-    if (!onTimeoutUser) {
-      console.error("[ChatterHistory] onTimeoutUser handler is missing");
-      return;
+    if (isYouTube) {
+      if (!onTimeoutYouTubeUser) {
+        console.error(
+          "[ChatterHistory] onTimeoutYouTubeUser handler is missing",
+        );
+        return;
+      }
+      onTimeoutYouTubeUser(userId, sec, author);
+    } else {
+      if (!onTimeoutUser) {
+        console.error("[ChatterHistory] onTimeoutUser handler is missing");
+        return;
+      }
+      onTimeoutUser(userId, sec, author);
     }
-    onTimeoutUser(userId, sec, author);
   };
 
   const handleBan = () => {
@@ -154,15 +184,24 @@ export default function ChatterHistoryOverlay({
       console.error("[ChatterHistory] Cannot ban: userId is missing");
       return;
     }
-    if (!onBanUser) {
-      console.error("[ChatterHistory] onBanUser handler is missing");
-      return;
+    if (isYouTube) {
+      if (!onBanYouTubeUser) {
+        console.error("[ChatterHistory] onBanYouTubeUser handler is missing");
+        return;
+      }
+      onBanYouTubeUser(userId, author);
+    } else {
+      if (!onBanUser) {
+        console.error("[ChatterHistory] onBanUser handler is missing");
+        return;
+      }
+      onBanUser(userId, author);
     }
-    onBanUser(userId, author);
   };
 
   const handleWarn = () => {
     console.log(`[ChatterHistory] Internal Warn click: author=${author}`);
+    if (isYouTube) return; // YouTube has no warn action
     if (!onWarnUser) {
       console.error("[ChatterHistory] onWarnUser handler is missing");
       return;
@@ -225,25 +264,41 @@ export default function ChatterHistoryOverlay({
       </div>
 
       {/* Moderation Toolbar */}
-      {isModerator && platform === "twitch" && (
+      {canModerate && (platform === "twitch" || platform === "youtube") && (
         <div className="moderation-toolbar">
           <span className="mod-label">MOD:</span>
 
           <div className="mod-buttons-group">
-            {[
-              { label: "10m", sec: 600 },
-              { label: "1h", sec: 3600 },
-              { label: "24h", sec: 86400 },
-            ].map((t) => (
-              <button
-                key={t.label}
-                onClick={() => handleTimeout(t.sec)}
-                disabled={!userId}
-                className="mod-btn"
-              >
-                {t.label}
-              </button>
-            ))}
+            {isYouTube
+              ? [
+                  { label: "1m", sec: 60 },
+                  { label: "5m", sec: 300 },
+                  { label: "10m", sec: 600 },
+                  { label: "1h", sec: 3600 },
+                ].map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => handleTimeout(t.sec)}
+                    disabled={!userId}
+                    className="mod-btn"
+                  >
+                    {t.label}
+                  </button>
+                ))
+              : [
+                  { label: "10m", sec: 600 },
+                  { label: "1h", sec: 3600 },
+                  { label: "24h", sec: 86400 },
+                ].map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => handleTimeout(t.sec)}
+                    disabled={!userId}
+                    className="mod-btn"
+                  >
+                    {t.label}
+                  </button>
+                ))}
           </div>
 
           <button
@@ -254,9 +309,11 @@ export default function ChatterHistoryOverlay({
             <MdBlock size={14} /> Ban
           </button>
 
-          <button onClick={handleWarn} className="mod-btn mod-btn-warn">
-            <MdWarning size={14} /> Warn
-          </button>
+          {!isYouTube && (
+            <button onClick={handleWarn} className="mod-btn mod-btn-warn">
+              <MdWarning size={14} /> Warn
+            </button>
+          )}
         </div>
       )}
 

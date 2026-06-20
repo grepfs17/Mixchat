@@ -23,6 +23,7 @@ export interface UseYouTubeSyncReturn {
   showYoutubeSection: boolean;
   ytMessages: YTMessage[];
   ytOptimisticMessages: YTMessage[];
+  ytChannelId: string | null;
   setManualVideoId: (v: string) => void;
   setAutoVideoId: (v: string | null) => void;
   setShowYoutubeSection: (v: boolean) => void;
@@ -30,6 +31,7 @@ export interface UseYouTubeSyncReturn {
   handleYtMessages: (msgs: YTMessage[]) => void;
   handleYtOptimisticMessage: (id: string, text: string) => void;
   handleYtOptimisticFailed: (id: string) => void;
+  removeYtMessage: (id: string) => void;
   getYtMessageText: (m: YTMessage) => string;
 }
 
@@ -43,6 +45,7 @@ export function useYouTubeSync({
 }: UseYouTubeSyncOptions): UseYouTubeSyncReturn {
   const [manualVideoId, setManualVideoId] = useState("");
   const [autoVideoId, setAutoVideoId] = useState<string | null>(null);
+  const [autoChannelId, setAutoChannelId] = useState<string | null>(null);
   const [ytLoading, setYtLoading] = useState(false);
   const [ytError, setYtError] = useState<string | null>(null);
   const [showYoutubeSectionState, setShowYoutubeSection] = useState(true);
@@ -103,6 +106,13 @@ export function useYouTubeSync({
           setAutoVideoId((prev) =>
             prev !== data.videoId ? data.videoId : prev,
           );
+          if (data.channelId) {
+            setAutoChannelId((prev) =>
+              prev !== data.channelId ? data.channelId : prev,
+            );
+          } else {
+            setAutoChannelId(null);
+          }
           setYtError(null);
         } else {
           if (!res.ok) {
@@ -110,6 +120,7 @@ export function useYouTubeSync({
           } else {
             setYtError("No live stream found");
             setAutoVideoId(null);
+            setAutoChannelId(null);
           }
         }
       } catch (err) {
@@ -136,6 +147,7 @@ export function useYouTubeSync({
   useEffect(() => {
     setManualVideoId("");
     setAutoVideoId(null);
+    setAutoChannelId(null);
     setYtError(null);
     setYtMessages([]);
   }, [selectedTwitchChannelName]);
@@ -204,6 +216,14 @@ export function useYouTubeSync({
     setYtOptimisticMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const removeYtMessage = useCallback((id: string) => {
+    setYtMessages((prev) => {
+      const exists = prev.some((m) => m.id === id);
+      if (!exists) return prev;
+      return prev.map((m) => (m.id === id ? { ...m, isDeleted: true } : m));
+    });
+  }, []);
+
   return {
     youtubeVideoId,
     manualVideoId,
@@ -213,6 +233,7 @@ export function useYouTubeSync({
     showYoutubeSection: showYoutubeSectionState,
     ytMessages,
     ytOptimisticMessages,
+    ytChannelId: autoChannelId,
     setManualVideoId,
     setAutoVideoId,
     setShowYoutubeSection,
@@ -220,6 +241,7 @@ export function useYouTubeSync({
     handleYtMessages,
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
+    removeYtMessage,
     getYtMessageText,
   };
 }

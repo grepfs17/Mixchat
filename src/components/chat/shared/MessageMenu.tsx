@@ -25,10 +25,15 @@ export default function MessageMenu({
   const {
     isModerator,
     modModeActive,
+    isYouTubeModerator,
+    youtubeModModeActive,
     onDeleteMessage,
     onTimeoutUser,
     onBanUser,
     onWarnUser,
+    onDeleteYouTubeMessage,
+    onTimeoutYouTubeUser,
+    onBanYouTubeUser,
   } = useModerationContext();
   // Normalize entry to a common format for logic
   const isUnified = "source" in entry;
@@ -36,9 +41,10 @@ export default function MessageMenu({
   const msg = isUnified ? entry.msg : entry;
 
   const isTwitch = source === "twitch";
+  const isYouTube = source === "youtube";
   const isTwitchMessage = isTwitch; // In this app, only twitch uses TwitchMessage directly
   const chatMsg = isTwitch ? (msg as TwitchMessage) : null;
-  const ytMsg = source === "youtube" ? (msg as YTMessage) : null;
+  const ytMsg = isYouTube ? (msg as YTMessage) : null;
 
   const isSystemMessage =
     chatMsg?.messageType && chatMsg.messageType !== "chat";
@@ -81,7 +87,7 @@ export default function MessageMenu({
     });
   }
 
-  // Moderation (Twitch only for now)
+  // Twitch moderation
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
@@ -119,6 +125,42 @@ export default function MessageMenu({
         },
       });
     }
+  }
+
+  // YouTube moderation
+  if (
+    isYouTube &&
+    ytMsg &&
+    isYouTubeModerator &&
+    youtubeModModeActive &&
+    ytMsg.authorChannelId &&
+    !ytMsg.authorIsModerator &&
+    !ytMsg.authorIsOwner
+  ) {
+    items.push({
+      key: "yt-delete",
+      label: "Delete",
+      onClick: () => {
+        onDeleteYouTubeMessage?.(ytMsg.id);
+        onClose();
+      },
+    });
+    items.push({
+      key: "yt-timeout",
+      label: "Timeout (10m)",
+      onClick: () => {
+        onTimeoutYouTubeUser?.(ytMsg.authorChannelId!, 600, ytMsg.author);
+        onClose();
+      },
+    });
+    items.push({
+      key: "yt-ban",
+      label: "Ban",
+      onClick: () => {
+        onBanYouTubeUser?.(ytMsg.authorChannelId!, ytMsg.author);
+        onClose();
+      },
+    });
   }
 
   return (

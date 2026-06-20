@@ -1,9 +1,15 @@
 import { useState } from "react";
+import {
+  MdDelete,
+  MdHourglassEmpty,
+  MdBlock,
+} from "react-icons/md";
 import { FaShieldAlt } from "react-icons/fa";
 import {
   getColorFromName,
   getReadableUsernameColor,
 } from "../../../lib/chatColors";
+import { useModerationContext } from "../../../contexts/ModerationContext";
 import YTMessageParts from "../../YTMessageParts";
 import { PlatformTag } from "../unified/PlatformTag";
 import type { YTMessage } from "../unified/types";
@@ -16,6 +22,8 @@ export interface YouTubeMessageContentProps {
   onTouchStart?: () => void;
   onTouchEnd?: () => void;
   onTouchMove?: (e: React.TouchEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  onTimeoutMenu?: (e: React.MouseEvent) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
     author: string,
@@ -40,7 +48,7 @@ const YT_EVENT_CONFIG: Record<
   "gift-redemption": {
     label: "GIFT RECEIVED",
     color: "#4caf50",
-    bg: "rgba(76, 175, 80, 0.15)",
+    bg: "rgba(76, 80, 0.15)",
   },
 };
 
@@ -73,14 +81,86 @@ export function YouTubeMessageContent({
   onTouchStart,
   onTouchEnd,
   onTouchMove,
+  onContextMenu,
+  onTimeoutMenu,
   onUsernameClick,
 }: YouTubeMessageContentProps) {
+  const {
+    isYouTubeModerator,
+    youtubeModModeActive,
+    onDeleteYouTubeMessage,
+    onBanYouTubeUser,
+    onTimeoutYouTubeUser,
+  } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
   const isMod = Boolean(
-    msg.badges && Object.keys(msg.badges).some((k) => /moderator/i.test(k)),
+    msg.authorIsModerator ||
+      (msg.badges && Object.keys(msg.badges).some((k) => /moderator/i.test(k))),
   );
+  const isOwner = Boolean(msg.authorIsOwner);
+  const isUnmoderatable = isMod || isOwner;
+  const showModActions =
+    isYouTubeModerator &&
+    youtubeModModeActive &&
+    !msg.isDeleted &&
+    msg.authorChannelId;
+
+  const renderModActions = () => {
+    if (!showModActions) return null;
+    return (
+      <div className="message-actions">
+        <button
+          onClick={() => onDeleteYouTubeMessage?.(msg.id)}
+          className="action-button mod-action"
+          title="Delete message"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+          }}
+        >
+          <MdDelete size={12} />
+        </button>
+        {!isUnmoderatable && msg.authorChannelId && (
+          <>
+            <button
+              onClick={() =>
+                onTimeoutYouTubeUser?.(msg.authorChannelId!, 600, msg.author)
+              }
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onTimeoutMenu?.(e);
+              }}
+              className="action-button mod-action"
+              title="Timeout (10m) - Right-click for more"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <MdHourglassEmpty size={12} />
+            </button>
+            <button
+              onClick={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
+              className="action-button mod-action"
+              title="Ban user"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <MdBlock size={12} />
+            </button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   if (config) {
     return (
@@ -95,6 +175,7 @@ export function YouTubeMessageContent({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         onTouchMove={onTouchMove}
+        onContextMenu={onContextMenu}
       >
         <div
           className="yt-event-label"
@@ -161,6 +242,7 @@ export function YouTubeMessageContent({
               </>
             )}
           </span>
+          {renderModActions()}
         </div>
         {msg.superchat?.sticker && (
           <div className="yt-superchat-sticker-row">
@@ -188,6 +270,7 @@ export function YouTubeMessageContent({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onTouchMove={onTouchMove}
+      onContextMenu={onContextMenu}
     >
       <div className="message-single-line">
         <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
@@ -221,6 +304,7 @@ export function YouTubeMessageContent({
             <YTMessageParts parts={msg.parts} variant={variant} />
           </span>
         )}
+        {renderModActions()}
       </div>
       {msg.isDeleted && (
         <div className="deleted-notice">Deleted by a moderator</div>

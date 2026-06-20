@@ -20,6 +20,8 @@ export interface YTMessage {
   giftCount?: number;
   recipientName?: string;
   isDeleted?: boolean;
+  authorIsModerator?: boolean;
+  authorIsOwner?: boolean;
   superchat?: {
     amount: string;
     color: string;

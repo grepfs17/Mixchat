@@ -68,11 +68,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       isModerator,
       modModeActive,
       compactActions,
+      isYouTubeModerator,
+      youtubeModModeActive,
       onDeleteMessage,
       onBanUser,
       onTimeoutUser,
       onUntimeoutUser,
       onWarnUser,
+      onDeleteYouTubeMessage,
+      onBanYouTubeUser,
+      onTimeoutYouTubeUser,
     } = useModerationContext();
     const containerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<{
@@ -333,6 +338,12 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchMove}
+                onContextMenu={(x, y, e) =>
+                  setMessageMenu({ x, y, entry: e })
+                }
+                onTimeoutMenu={(x, y, userId, username) =>
+                  setTimeoutMenu({ x, y, userId, username })
+                }
                 onUsernameClick={(e, author, avatar) =>
                   handleUsernameClick(e, author, "youtube", avatar)
                 }

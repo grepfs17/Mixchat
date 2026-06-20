@@ -70,8 +70,14 @@ export default function ChatHeader({
   ignoredUserCounts = new Map(),
   onOpenIgnoredUserOverlay,
 }: ChatHeaderProps) {
-  const { isModerator, modModeActive, onToggleModMode } =
-    useModerationContext();
+  const {
+    isModerator,
+    modModeActive,
+    isYouTubeModerator,
+    youtubeModModeActive,
+    onToggleModMode,
+  } = useModerationContext();
+  const showModToggle = isModerator || isYouTubeModerator;
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
@@ -230,19 +236,24 @@ export default function ChatHeader({
               </span>
             </button>
           )}
-          {isModerator && (
+          {showModToggle && (
             <button
               onClick={onToggleModMode}
-              className={`header-button ${modModeActive ? "mod-active" : ""}`}
-              title={modModeActive ? "Disable Mod Mode" : "Enable Mod Mode"}
+              className={`header-button ${modModeActive || youtubeModModeActive ? "mod-active" : ""}`}
+              title={
+                modModeActive || youtubeModModeActive
+                  ? "Disable Mod Mode"
+                  : "Enable Mod Mode"
+              }
             >
               <GiCrossedSwords
                 size={16}
                 className="mod-icon"
                 style={{
-                  color: modModeActive
-                    ? "var(--color-green)"
-                    : "var(--color-text-muted)",
+                  color:
+                    modModeActive || youtubeModModeActive
+                      ? "var(--color-green)"
+                      : "var(--color-text-muted)",
                 }}
               />
               <span className="mod-label">Mod Mode</span>

@@ -171,6 +171,44 @@ describe("Moderator Mode", () => {
       fireEvent.click(screen.getByTitle("Enable Mod Mode"));
       expect(onToggle).toHaveBeenCalledTimes(1);
     });
+
+    it("renders mod mode button when user is only a YouTube moderator", () => {
+      render(
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: false,
+          isYouTubeModerator: true,
+          onToggleModMode: vi.fn(),
+        }),
+      );
+      expect(screen.getByTitle("Enable Mod Mode")).toBeInTheDocument();
+    });
+
+    it("calls onToggleModMode when YouTube-only moderator clicks the button", () => {
+      const onToggle = vi.fn();
+      render(
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: false,
+          isYouTubeModerator: true,
+          youtubeModModeActive: false,
+          onToggleModMode: onToggle,
+        }),
+      );
+      fireEvent.click(screen.getByTitle("Enable Mod Mode"));
+      expect(onToggle).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows active state when only YouTube mod mode is enabled", () => {
+      render(
+        withModeration(<ChatDisplay {...defaultProps} />, {
+          isModerator: false,
+          isYouTubeModerator: true,
+          youtubeModModeActive: true,
+          onToggleModMode: vi.fn(),
+        }),
+      );
+      expect(screen.getByTitle("Disable Mod Mode")).toBeInTheDocument();
+      expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
+    });
   });
 
   describe("ChatDisplay - Mod Actions (inline buttons)", () => {

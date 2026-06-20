@@ -23,6 +23,8 @@ interface ChatMessage {
   messageType?: string;
   giftCount?: number;
   recipientName?: string;
+  authorIsModerator?: boolean;
+  authorIsOwner?: boolean;
   superchat?: {
     amount: string;
     color: string;
@@ -175,16 +177,63 @@ function parseTimestamp(msg: any): Date {
     : asUs;
 }
 
-function parseBadges(msg: any): Record<string, string> {
+function getBadgeLabel(badge: any): string {
+  if (!badge) return "";
+  if (typeof badge.label === "string") return badge.label;
+  if (typeof badge.tooltip === "string") return badge.tooltip;
+  if (typeof badge.icon_type === "string") return badge.icon_type;
+  return "";
+}
+
+function getBadgeIconUrl(badge: any): string | undefined {
+  if (!badge) return undefined;
+  if (Array.isArray(badge.custom_thumbnail) && badge.custom_thumbnail[0]) {
+    const first = badge.custom_thumbnail[0];
+    if (Array.isArray(first?.thumbnails) && first.thumbnails[0]?.url) {
+      return first.thumbnails[0].url;
+    }
+    if (first?.url) return first.url;
+  }
+  if (Array.isArray(badge.thumbnails) && badge.thumbnails[0]?.url) {
+    return badge.thumbnails[0].url;
+  }
+  return undefined;
+}
+
+export function parseBadges(msg: any): Record<string, string> {
   const badges: Record<string, string> = {};
   if (msg.author?.badges) {
     for (const badge of msg.author.badges) {
-      if (badge.thumbnails && badge.thumbnails[0]) {
-        badges[badge.label || "badge"] = badge.thumbnails[0].url;
+      const url = getBadgeIconUrl(badge);
+      if (url) {
+        const label = getBadgeLabel(badge) || "badge";
+        badges[label] = url;
       }
     }
   }
   return badges;
+}
+
+export function isAuthorModerator(msg: any): boolean {
+  if (!msg.author) return false;
+  if (msg.author.is_moderator) return true;
+  if (!msg.author.badges) return false;
+  return msg.author.badges.some((b: any) => {
+    if (b?.icon_type === "MODERATOR") return true;
+    const label = getBadgeLabel(b);
+    return /moderator/i.test(label);
+  });
+}
+
+export function isAuthorOwner(msg: any): boolean {
+  if (!msg.author) return false;
+  if (msg.author.is_verified) return true;
+  if (!msg.author.badges) return false;
+  return msg.author.badges.some((b: any) => {
+    if (b?.style === "BADGE_STYLE_TYPE_VERIFIED") return true;
+    const label = getBadgeLabel(b);
+    return /owner/i.test(label) || /broadcaster/i.test(label);
+  });
 }
 
 function parseTextMessageBase(item: any): ChatMessage {
@@ -198,6 +247,8 @@ function parseTextMessageBase(item: any): ChatMessage {
     badges: parseBadges(item),
     parts: parseMessageRuns(item),
     timestamp: parseTimestamp(item),
+    authorIsModerator: isAuthorModerator(item) || undefined,
+    authorIsOwner: isAuthorOwner(item) || undefined,
   };
 }
 
@@ -232,6 +283,8 @@ function parseChatItem(item: any): ChatMessage | null {
       badges: parseBadges(item),
       parts: [],
       timestamp: parseTimestamp(item),
+      authorIsModerator: isAuthorModerator(item) || undefined,
+      authorIsOwner: isAuthorOwner(item) || undefined,
       superchat: {
         amount: item.purchase_amount?.toString() || "Unknown",
         color: ARGBtoHex(
@@ -690,6 +743,8 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     parts: [],
     timestamp: parseTimestamp(msg),
     messageType: "gift-purchase",
+    authorIsModerator: isAuthorModerator(msg) || undefined,
+    authorIsOwner: isAuthorOwner(msg) || undefined,
     superchat: {
       amount,
       color: "#9c27b0",
@@ -776,5 +831,7 @@ function parseLiveChatMessage(msg: any): ChatMessage {
     badges,
     parts,
     timestamp,
+    authorIsModerator: isAuthorModerator(msg) || undefined,
+    authorIsOwner: isAuthorOwner(msg) || undefined,
   };
 }

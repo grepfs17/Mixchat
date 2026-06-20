@@ -53,6 +53,8 @@ interface ChatMessage {
   giftCount?: number;
   recipientName?: string;
   isDeleted?: boolean;
+  authorIsModerator?: boolean;
+  authorIsOwner?: boolean;
   superchat?: {
     amount: string;
     color: string;
@@ -209,6 +211,8 @@ export default function YouTubeChat({
           recipientName: msg.recipientName,
           superchat: msg.superchat,
           isDeleted: msg.isDeleted,
+          authorIsModerator: msg.authorIsModerator,
+          authorIsOwner: msg.authorIsOwner,
         }));
 
         setMessages((prev) => {
@@ -269,6 +273,8 @@ export default function YouTubeChat({
           recipientName: msg.recipientName,
           superchat: msg.superchat,
           isDeleted: msg.isDeleted,
+          authorIsModerator: msg.authorIsModerator,
+          authorIsOwner: msg.authorIsOwner,
         };
 
         setMessages((prev) => {

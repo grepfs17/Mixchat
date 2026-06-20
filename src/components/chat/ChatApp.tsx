@@ -56,6 +56,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     youtubeVideoId,
     isModerator,
     modModeActive,
+    isYouTubeModerator,
+    youtubeModModeActive,
     isFollowingChannelState,
     hypeTrain,
     setHypeTrain,
@@ -73,6 +75,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     handleSendMessage,
     handleRefreshEmotes,
     handleToggleModMode,
+    handleToggleYoutubeModMode,
     handleDelete,
     handleBan,
     handleTimeout,
@@ -85,6 +88,9 @@ export default function ChatApp(props: ChatAppStateProps) {
     handleYtMessages,
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
+    handleYtDelete,
+    handleYtBan,
+    handleYtTimeout,
     getYtMessageText,
     slowModeWaitTime,
     followerModeMinutes,
@@ -135,16 +141,28 @@ export default function ChatApp(props: ChatAppStateProps) {
     setNotification({ message, type });
   };
 
+  const handleToggleAnyModMode = useCallback(() => {
+    if (isModerator) handleToggleModMode();
+    if (isYouTubeModerator) handleToggleYoutubeModMode();
+  }, [isModerator, isYouTubeModerator, handleToggleModMode, handleToggleYoutubeModMode]);
+
   const moderationValue = {
     isModerator,
     modModeActive,
     compactActions,
+    isYouTubeModerator,
+    youtubeModModeActive,
+    youtubeVideoId,
     onDeleteMessage: handleDelete,
     onBanUser: handleBan,
     onTimeoutUser: handleTimeout,
     onUntimeoutUser: handleUntimeout,
     onWarnUser: handleWarn,
-    onToggleModMode: handleToggleModMode,
+    onDeleteYouTubeMessage: handleYtDelete,
+    onBanYouTubeUser: handleYtBan,
+    onTimeoutYouTubeUser: handleYtTimeout,
+    onToggleModMode: handleToggleAnyModMode,
+    onToggleYouTubeModMode: handleToggleAnyModMode,
   };
 
   return (
