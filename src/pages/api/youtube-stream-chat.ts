@@ -226,13 +226,14 @@ export function isAuthorModerator(msg: any): boolean {
 }
 
 export function isAuthorOwner(msg: any): boolean {
-  if (!msg.author) return false;
-  if (msg.author.is_verified) return true;
-  if (!msg.author.badges) return false;
+  // NOTE: A *verified* author is NOT the broadcaster. The live-chat owner badge
+  // is identified by its icon type ("OWNER"); youtubei.js exposes no is_owner
+  // flag. Treating verified/verified-artist as owner caused non-mods (any
+  // verified channel) to be flagged as the broadcaster.
+  if (!msg.author?.badges) return false;
   return msg.author.badges.some((b: any) => {
-    if (b?.style === "BADGE_STYLE_TYPE_VERIFIED") return true;
-    const label = getBadgeLabel(b);
-    return /owner/i.test(label) || /broadcaster/i.test(label);
+    if (b?.icon_type === "OWNER") return true;
+    return getBadgeLabel(b).toLowerCase() === "owner";
   });
 }
 

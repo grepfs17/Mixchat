@@ -85,19 +85,40 @@ describe("YouTube chat badge parsing", () => {
   });
 
   describe("isAuthorOwner", () => {
-    it("returns true when the Author instance has is_verified=true", () => {
+    it("returns FALSE when the Author instance has is_verified=true (verified != owner)", () => {
+      // A verified author is not the broadcaster. Ownership is identified by
+      // the OWNER badge, not by the account-level verified flag.
       expect(
         isAuthorOwner({ author: { is_verified: true, badges: [] } }),
-      ).toBe(true);
+      ).toBe(false);
     });
 
-    it("returns true when a badge has style=BADGE_STYLE_TYPE_VERIFIED", () => {
+    it("returns FALSE for a verified-style badge (verified != owner)", () => {
       expect(
         isAuthorOwner({ author: { badges: [makeVerifiedBadge()] } }),
+      ).toBe(false);
+    });
+
+    it("returns true when a badge has icon_type=OWNER", () => {
+      expect(
+        isAuthorOwner({
+          author: {
+            badges: [
+              {
+                icon_type: "OWNER",
+                tooltip: "Owner",
+                label: "Owner",
+                custom_thumbnail: [
+                  { url: "https://example.com/owner.png" },
+                ],
+              },
+            ],
+          },
+        }),
       ).toBe(true);
     });
 
-    it("returns true when a badge label contains 'Owner'", () => {
+    it("returns true when a badge label is exactly 'Owner'", () => {
       expect(
         isAuthorOwner({
           author: {

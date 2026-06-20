@@ -10,6 +10,8 @@ import {
 export interface UseYouTubeModerationOptions {
   youtubeSession?: PlatformSession;
   youtubeVideoId?: string | null;
+  /** Channel id of the live stream's owner, used to detect the broadcaster. */
+  ytChannelId?: string | null;
   setNotification: (
     notification: {
       message: string;
@@ -42,20 +44,12 @@ export interface UseYouTubeModerationReturn {
     seconds: number,
     displayName?: string,
   ) => Promise<void>;
-  handleYtOwnBadgesLoaded: (badges: Record<string, string> | undefined) => void;
-}
-
-const YOUTUBE_MOD_BADGE_KEYS = ["moderator", "owner", "broadcaster"];
-
-function isYouTubeModBadge(value: string | undefined): boolean {
-  if (!value) return false;
-  const lower = value.toLowerCase();
-  return YOUTUBE_MOD_BADGE_KEYS.some((k) => lower.includes(k));
 }
 
 export function useYouTubeModeration({
   youtubeSession,
   youtubeVideoId,
+  ytChannelId,
   setNotification,
   notificationIdRef,
   onLocalDelete,
@@ -72,6 +66,43 @@ export function useYouTubeModeration({
   useEffect(() => {
     messagesRef.current = messages ?? [];
   }, [messages]);
+
+  // Moderator detection is scoped to the *current* stream and is fully
+  // recomputed whenever the stream or its messages change — there is no
+  // permanent "once a mod, always a mod" latch that could leak across streams.
+  //
+  //  - Broadcaster: the signed-in channel id equals the stream owner's channel
+  //    id (authoritative, per-stream — sticky so it survives message churn).
+  //  - Non-owner moderator: an authoritative moderator/owner badge appears on
+  //    the signed-in user's OWN message in the current chat buffer.
+  //
+  // Anyone else (including verified channels and members) is NOT a moderator.
+  const ownChannelId = youtubeSession?.userId;
+  const ownerConfirmedVideoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!youtubeVideoId || !ownChannelId) {
+      ownerConfirmedVideoRef.current = null;
+      setIsYouTubeModerator(false);
+      return;
+    }
+
+    // Broadcaster of this exact stream — sticky for the stream's lifetime.
+    if (ytChannelId && ownChannelId === ytChannelId) {
+      ownerConfirmedVideoRef.current = youtubeVideoId;
+      setIsYouTubeModerator(true);
+      return;
+    }
+    if (ownerConfirmedVideoRef.current === youtubeVideoId) return;
+
+    // Non-owner moderator: re-derived from the current buffer so stale messages
+    // from a previously-viewed stream can never keep mod mode enabled here.
+    const hasOwnModMessage = (messages ?? []).some(
+      (m) =>
+        m.authorChannelId === ownChannelId &&
+        (m.authorIsModerator || m.authorIsOwner),
+    );
+    setIsYouTubeModerator(hasOwnModMessage);
+  }, [youtubeVideoId, ytChannelId, ownChannelId, messages]);
 
   useEffect(() => {
     if (!youtubeVideoId) {
@@ -174,19 +205,6 @@ export function useYouTubeModeration({
     [youtubeVideoId, notify],
   );
 
-  const handleYtOwnBadgesLoaded = useCallback(
-    (badges: Record<string, string> | undefined) => {
-      if (!badges) return;
-      // YouTube badge objects are keyed by the badge *label* (e.g. "Moderator",
-      // "Owner") with the icon URL as the value. Inspect the keys.
-      const isMod = Object.keys(badges).some((label) =>
-        isYouTubeModBadge(label),
-      );
-      if (isMod) setIsYouTubeModerator(true);
-    },
-    [],
-  );
-
   return {
     isYouTubeModerator,
     youtubeModModeActive,
@@ -196,6 +214,5 @@ export function useYouTubeModeration({
     handleYtDelete,
     handleYtBan,
     handleYtTimeout,
-    handleYtOwnBadgesLoaded,
   };
 }
