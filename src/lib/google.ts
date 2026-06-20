@@ -47,9 +47,18 @@ export async function googleFetch(
     throw err;
   }
 
+  // Some endpoints (e.g. liveChatMessages.delete) return 204/205 No Content
+  // with an empty body. Calling res.json() on those throws a SyntaxError, so
+  // treat them as a successful, content-less response.
+  if (res.status === 204 || res.status === 205) {
+    return null;
+  }
+
   try {
     return await res.json();
   } catch (e) {
+    // An empty body on an otherwise-successful response is not an error.
+    if (res.headers?.get?.("content-length") === "0") return null;
     console.error("[Google API] Failed to parse JSON response", {
       url,
       err: e,
