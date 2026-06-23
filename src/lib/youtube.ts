@@ -71,7 +71,8 @@ function simpleHash(str: string): number {
 
 function markProxyFailed(proxy: string, cooldownMs?: number): void {
   proxyFailCounts[proxy] = (proxyFailCounts[proxy] || 0) + 1;
-  const effectiveCooldown = cooldownMs ?? PROXY_COOLDOWN_MS;
+  const effectiveCooldown =
+    Number.isFinite(cooldownMs) && cooldownMs! > 0 ? cooldownMs! : PROXY_COOLDOWN_MS;
   if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS || cooldownMs) {
     proxyCooldownUntil[proxy] = Date.now() + effectiveCooldown;
     console.warn(
@@ -273,7 +274,7 @@ export async function getInnertube() {
           const wait = Math.max(0, interval - elapsed);
           // Set expiry so the cleanup interval can evict stale entries
           throttleTimestamps.set(throttleKey, now + wait + interval);
-          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+          if (wait > 0 && Number.isFinite(wait)) await new Promise((r) => setTimeout(r, wait));
         }
       }
 
@@ -338,7 +339,10 @@ export async function getInnertube() {
                   let retryAfter: number | undefined;
                   try {
                     const parsed = JSON.parse(errBody);
-                    if (parsed.retryAfter) retryAfter = Number(parsed.retryAfter) * 1000;
+                    if (parsed.retryAfter) {
+                      const ms = Number(parsed.retryAfter) * 1000;
+                      if (Number.isFinite(ms) && ms > 0) retryAfter = ms;
+                    }
                   } catch {}
                   console.error(
                     `[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`,
