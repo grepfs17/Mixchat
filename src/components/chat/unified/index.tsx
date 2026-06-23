@@ -33,6 +33,8 @@ interface UnifiedChatProps {
     loading: boolean;
     error: string | null;
   };
+  ytLoading?: boolean;
+  ytError?: string | null;
   twitchConnected?: boolean;
   onReply?: (message: TwitchMessage) => void;
   onCopyMessage?: () => void;
@@ -54,6 +56,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       ytMessages,
       channelName,
       ytConnectionState,
+      ytLoading,
+      ytError,
       twitchConnected,
       onReply,
       onCopyMessage,
@@ -273,24 +277,41 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
               <span className="platform-status-dot" />
               <span className="platform-status-text">Twitch</span>
             </span>
-            {ytState && (
-              <span
-                className={`platform-status${ytState.connected ? " platform-status--connected" : ytState.loading ? " platform-status--loading" : ytState.error ? " platform-status--error" : " platform-status--disconnected"}`}
-              >
-                <span
-                  className={`platform-status-dot${ytState.loading ? " platform-status-dot--loading" : ""}`}
-                />
-                <span className="platform-status-text">
-                  {ytState.connected
-                    ? "YouTube"
-                    : ytState.loading
-                      ? "YouTube..."
-                      : ytState.error
-                        ? `YouTube: ${ytState.error}`
-                        : "YouTube"}
+            {ytState && (() => {
+              const isLive = ytState.connected;
+              const isSseLoading = ytState.loading && !isLive;
+              const isSearching = ytLoading && !isLive && !isSseLoading;
+              const hasError = ytState.error || ytError;
+
+              let statusClass = "platform-status";
+              let statusText = "YouTube";
+              let dotClass = "platform-status-dot";
+
+              if (isLive) {
+                statusClass += " platform-status--connected";
+                statusText = "YouTube Live";
+              } else if (isSseLoading) {
+                statusClass += " platform-status--loading";
+                statusText = "YouTube: Connecting\u2026";
+                dotClass += " platform-status-dot--loading";
+              } else if (isSearching) {
+                statusClass += " platform-status--searching";
+                statusText = "YouTube: Searching\u2026";
+                dotClass += " platform-status-dot--loading";
+              } else if (hasError) {
+                statusClass += " platform-status--error";
+                statusText = `YouTube: ${hasError}`;
+              } else {
+                statusClass += " platform-status--disconnected";
+              }
+
+              return (
+                <span className={statusClass}>
+                  <span className={dotClass} />
+                  <span className="platform-status-text">{statusText}</span>
                 </span>
-              </span>
-            )}
+              );
+            })()}
           </div>
         )}
         <div

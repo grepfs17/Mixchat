@@ -326,6 +326,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                     ytConnectionState={
                       linkedYoutubeUrl ? ytConnectionState : undefined
                     }
+                    ytLoading={ytLoading}
+                    ytError={ytError}
                     twitchConnected={twitchConnected}
                     onReply={setReplyingTo}
                     onCopyMessage={() => {

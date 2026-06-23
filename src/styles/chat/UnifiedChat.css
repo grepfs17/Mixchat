@@ -77,12 +77,25 @@
     background-color: #22c55e;
 }
 
+.platform-status--connected .platform-status-text {
+    color: #22c55e;
+}
+
 .platform-status--loading .platform-status-dot {
-    background-color: var(--color-youtube, #ff0000);
+    background-color: #f59e0b;
 }
 
 .platform-status--loading .platform-status-text {
-    color: var(--color-youtube, #ff0000);
+    color: #f59e0b;
+}
+
+.platform-status--searching .platform-status-dot {
+    background-color: #f59e0b;
+}
+
+.platform-status--searching .platform-status-text {
+    color: #f59e0b;
+    opacity: 0.8;
 }
 
 .platform-status--disconnected .platform-status-dot {
@@ -90,11 +103,11 @@
 }
 
 .platform-status--error .platform-status-dot {
-    background-color: var(--color-offline, #6b7280);
+    background-color: var(--color-youtube, #ff0000);
 }
 
 .platform-status--error .platform-status-text {
-    color: #f87171;
+    color: var(--color-youtube, #ff0000);
 }
 
 .platform-status--disconnected .platform-status-text {
