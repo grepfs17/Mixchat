@@ -301,7 +301,7 @@ export default function StreamGrid({
             Twitch clips.
           </span>
           <a
-            href="https://clipexplorer.grepfs.xyz/"
+            href="https://twitchclipexplorer.grepfs.xyz/"
             target="_blank"
             rel="noopener noreferrer"
             className="stream-grid-kofi-link"
