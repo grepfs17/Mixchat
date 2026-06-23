@@ -69,12 +69,13 @@ function simpleHash(str: string): number {
   return hash;
 }
 
-function markProxyFailed(proxy: string): void {
+function markProxyFailed(proxy: string, cooldownMs?: number): void {
   proxyFailCounts[proxy] = (proxyFailCounts[proxy] || 0) + 1;
-  if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS) {
-    proxyCooldownUntil[proxy] = Date.now() + PROXY_COOLDOWN_MS;
+  const effectiveCooldown = cooldownMs ?? PROXY_COOLDOWN_MS;
+  if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS || cooldownMs) {
+    proxyCooldownUntil[proxy] = Date.now() + effectiveCooldown;
     console.warn(
-      `[YouTube Proxy] ${proxy} failed ${PROXY_MAX_FAILS} times — cooling down for ${PROXY_COOLDOWN_MS / 1000}s`,
+      `[YouTube Proxy] ${proxy} failed ${proxyFailCounts[proxy]} time(s) — cooling down for ${effectiveCooldown / 1000}s`,
     );
     proxyFailCounts[proxy] = 0;
   }
@@ -334,11 +335,16 @@ export async function getInnertube() {
 
                 if (proxyRes.status === 503) {
                   const errBody = await proxyRes.text().catch(() => "");
+                  let retryAfter: number | undefined;
+                  try {
+                    const parsed = JSON.parse(errBody);
+                    if (parsed.retryAfter) retryAfter = Number(parsed.retryAfter) * 1000;
+                  } catch {}
                   console.error(
                     `[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`,
                     errBody.slice(0, 500),
                   );
-                  markProxyFailed(proxy);
+                  markProxyFailed(proxy, retryAfter);
                   lastError = new Error(errBody || "503");
                   lastStatus = 503;
                   continue;

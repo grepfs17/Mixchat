@@ -71,6 +71,13 @@ describe("proxy failover", () => {
       markProxyFailed(PROXY_A);
       expect(_getProxyState().failCounts[PROXY_A]).toBe(0);
     });
+
+    it("cooldowns immediately when cooldownMs is provided", () => {
+      markProxyFailed(PROXY_A, 60_000);
+      const state = _getProxyState();
+      expect(state.failCounts[PROXY_A]).toBe(0);
+      expect(state.cooldownUntil[PROXY_A]).toBeGreaterThan(Date.now());
+    });
   });
 
   describe("markProxyOk", () => {
