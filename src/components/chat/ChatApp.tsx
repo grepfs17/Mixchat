@@ -359,7 +359,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
             {/* YouTube message input (when we have a live video). Hidden when using the official embed. */}
             {linkedYoutubeUrl && youtubeVideoId && !useYoutubeEmbed && (
-              <div style={{ borderTop: "1px solid #333" }}>
+              <div className="youtube-input-wrapper" style={{ borderTop: "1px solid #333" }}>
                 {youtubeSession ? (
                   <YouTubeMessageInput
                     youtubeVideoId={youtubeVideoId}

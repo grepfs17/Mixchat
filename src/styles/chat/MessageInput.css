@@ -448,6 +448,19 @@
         z-index: 10;
     }
 
+    .youtube-input-wrapper {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        box-sizing: border-box;
+        z-index: 9;
+    }
+
+    .youtube-input-wrapper .message-input {
+        position: static;
+    }
+
     .platform-selector {
         gap: 8px;
     }
