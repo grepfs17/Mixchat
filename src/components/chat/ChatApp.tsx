@@ -98,7 +98,7 @@ export default function ChatApp(props: ChatAppStateProps) {
   } = useChatAppState(props);
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
-    { connected: false, loading: false, error: null },
+    { connected: false, loading: true, error: null },
   );
   const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
     setYtConnectionState(state);
@@ -144,7 +144,12 @@ export default function ChatApp(props: ChatAppStateProps) {
   const handleToggleAnyModMode = useCallback(() => {
     if (isModerator) handleToggleModMode();
     if (isYouTubeModerator) handleToggleYoutubeModMode();
-  }, [isModerator, isYouTubeModerator, handleToggleModMode, handleToggleYoutubeModMode]);
+  }, [
+    isModerator,
+    isYouTubeModerator,
+    handleToggleModMode,
+    handleToggleYoutubeModMode,
+  ]);
 
   const moderationValue = {
     isModerator,
