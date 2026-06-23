@@ -30,6 +30,8 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
       candidate = candidate.split("/")[1] || candidate;
     if (candidate.startsWith("user/"))
       candidate = candidate.split("/")[1] || candidate;
+    // @handle format — strip the @ so downstream code recognises it as a handle
+    if (candidate.startsWith("@")) return candidate;
     return candidate || null;
   } catch {
     return null;
@@ -257,7 +259,18 @@ export async function resolveChannelId(
 
   if (isFullUrl) {
     const pathCandidate = parsePathCandidateFromUrl(trimmed);
-    if (pathCandidate) return pathCandidate;
+    if (pathCandidate) {
+      // If the path candidate is a @handle, resolve it via Innertube
+      if (pathCandidate.startsWith("@") && yt?.resolveURL) {
+        try {
+          const endpoint = await yt.resolveURL(
+            `https://www.youtube.com/${pathCandidate}`,
+          );
+          if (endpoint?.payload?.browseId) return endpoint.payload.browseId;
+        } catch {}
+      }
+      return pathCandidate;
+    }
     return null;
   }
 
@@ -329,7 +342,11 @@ export async function findLiveForChannel(
     if (ytClient && (resolvedChannelId || trimmedParam)) {
       const targetId = resolvedChannelId || trimmedParam;
       try {
-        channel = await ytClient.getChannel(targetId);
+        // @handle format — getChannel needs a URL, not a raw handle
+        const channelParam = targetId.startsWith("@")
+          ? `https://www.youtube.com/${targetId}`
+          : targetId;
+        channel = await ytClient.getChannel(channelParam);
         if (debug)
           console.log(
             `[YouTube Lookup] getChannel("${targetId}") OK — id=${channel?.basic_info?.id ?? "unknown"}`,
