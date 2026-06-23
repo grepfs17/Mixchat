@@ -36,7 +36,10 @@ interface ChatMessage {
 }
 
 /** Maximum number of concurrent YouTube live chat sessions held in memory. */
-const MAX_ACTIVE_SESSIONS = 50;
+const MAX_ACTIVE_SESSIONS = parseInt(
+  process.env.YT_MAX_SESSIONS || "200",
+  10,
+);
 
 /** Maximum idle time (ms) before a session is reaped. */
 const MAX_IDLE_MS = 10 * 60_000;

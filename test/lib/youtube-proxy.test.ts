@@ -6,6 +6,7 @@ import {
   _resetProxyState,
   _getProxyState,
   PROXY_MAX_FAILS,
+  simpleHash,
 } from "../../src/lib/youtube";
 
 const PROXY_A = "https://proxy-a.vercel.app";
@@ -138,6 +139,51 @@ describe("proxy failover", () => {
       }
 
       expect(selectProxy(PROXIES)).toBe(PROXY_A);
+    });
+  });
+
+  describe("hash-based distribution", () => {
+    it("simpleHash returns consistent values", () => {
+      expect(simpleHash("dQw4w9WgXcQ")).toBe(simpleHash("dQw4w9WgXcQ"));
+      expect(simpleHash("abc")).not.toBe(simpleHash("xyz"));
+    });
+
+    it("simpleHash produces non-negative integers", () => {
+      for (const id of ["dQw4w9WgXcQ", "abc12345678", "x", ""] ) {
+        expect(simpleHash(id)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it("selectProxy with videoId distributes across proxies", () => {
+      const assigned = new Set<string>();
+      // Try many videoIds — with 3 proxies, hash distribution should hit all of them
+      for (let i = 0; i < 100; i++) {
+        const videoId = `vid${i.toString().padStart(2, "0")}abcdefghij`;
+        assigned.add(selectProxy(PROXIES, videoId)!);
+      }
+      expect(assigned.size).toBeGreaterThanOrEqual(2);
+    });
+
+    it("same videoId always maps to same proxy", () => {
+      const videoId = "dQw4w9WgXcQ";
+      const first = selectProxy(PROXIES, videoId);
+      for (let i = 0; i < 20; i++) {
+        expect(selectProxy(PROXIES, videoId)).toBe(first);
+      }
+    });
+
+    it("falls back to next proxy when preferred one is in cooldown", () => {
+      const videoId = "dQw4w9WgXcQ";
+      const preferred = selectProxy(PROXIES, videoId)!;
+
+      // Cool down the preferred proxy
+      for (let i = 0; i < PROXY_MAX_FAILS; i++) {
+        markProxyFailed(preferred);
+      }
+
+      const fallback = selectProxy(PROXIES, videoId);
+      expect(fallback).not.toBe(preferred);
+      expect(PROXIES).toContain(fallback);
     });
   });
 });

@@ -32,14 +32,41 @@ let proxyCooldownUntil: Record<string, number> = {};
 const PROXY_MAX_FAILS = 3;
 const PROXY_COOLDOWN_MS = 30_000;
 
-function selectProxy(proxies: string[] = YT_PROXIES): string | undefined {
+function selectProxy(
+  proxies: string[] = YT_PROXIES,
+  videoId?: string,
+): string | undefined {
   if (!proxies.length) return undefined;
   const now = Date.now();
-  for (const proxy of proxies) {
+
+  // Without a videoId, return first available (backward compat).
+  if (!videoId) {
+    for (const proxy of proxies) {
+      if (proxyCooldownUntil[proxy] && now < proxyCooldownUntil[proxy])
+        continue;
+      return proxy;
+    }
+    return proxies[0];
+  }
+
+  // Hash-based distribution: same videoId always maps to the same proxy,
+  // different videos spread evenly. Failover to next available on cooldown.
+  const idx = simpleHash(videoId) % proxies.length;
+  for (let i = 0; i < proxies.length; i++) {
+    const proxy = proxies[(idx + i) % proxies.length];
     if (proxyCooldownUntil[proxy] && now < proxyCooldownUntil[proxy]) continue;
     return proxy;
   }
-  return proxies[0];
+  return proxies[idx]; // all cooled down — return hash pick anyway
+}
+
+/** Deterministic string hash (djb2 variant). Non-cryptographic, good distribution. */
+function simpleHash(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+  }
+  return hash;
 }
 
 function markProxyFailed(proxy: string): void {
@@ -76,7 +103,7 @@ export function _getThrottleState() {
 }
 
 export { selectProxy, markProxyFailed, markProxyOk, PROXY_MAX_FAILS };
-export { extractVideoId, getThrottleKey };
+export { extractVideoId, getThrottleKey, simpleHash };
 
 const LIVE_CHAT_POLL_MIN_MS = parseInt(
   process.env.YT_CHAT_POLL_MIN_MS || "2000",
@@ -234,8 +261,7 @@ export async function getInnertube() {
         urlStr = String(input);
       }
 
-      const body =
-        typeof init?.body === "string" ? init.body : undefined;
+      const body = typeof init?.body === "string" ? init.body : undefined;
       const throttleKey = getThrottleKey(urlStr, body);
       if (throttleKey) {
         const interval = getThrottleInterval(throttleKey);
@@ -272,7 +298,10 @@ export async function getInnertube() {
 
             const method = init?.method || (body ? "POST" : "GET");
 
-            const startIndex = YT_PROXIES.indexOf(selectProxy()!);
+            const requestVideoId = extractVideoId(body) ?? undefined;
+            const startIndex = YT_PROXIES.indexOf(
+              selectProxy(YT_PROXIES, requestVideoId)!,
+            );
             const order =
               startIndex >= 0
                 ? [
