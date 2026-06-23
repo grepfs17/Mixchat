@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { YTNodes } from "youtubei.js";
-import { getInnertube, invalidateInnertube } from "../../lib/youtube";
+import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 interface MessagePart {
@@ -481,9 +481,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       console.error(
         "[YouTube Chat] Blocked for",
         videoId,
-        "— invalidating Innertube.",
+        "— cleaning up session ( Innertube left intact for other videos )",
       );
-      invalidateInnertube();
       for (const c of s.clients.values()) {
         try {
           c.controller.enqueue(

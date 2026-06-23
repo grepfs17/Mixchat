@@ -352,7 +352,8 @@ export async function getInnertube() {
 
             console.error("[YouTube Proxy] All proxies failed");
             if (lastStatus === 403) {
-              invalidateInnertube();
+              // Don't invalidate Innertube here — a 403 on one video
+              // doesn't mean the session is broken for other videos.
               last403Time = Date.now();
             }
             return new Response(lastError?.message || "All proxies failed", {
