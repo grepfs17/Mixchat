@@ -483,17 +483,21 @@ export async function findLiveForChannel(
 
     const result: LookupResult = { videoId, channelId: finalChannelId || "" };
     try {
-      channelLiveCache.set(paramKey, {
-        videoId: result.videoId,
-        channelId: result.channelId,
-        expires: Date.now() + ttl,
-      });
-      if (result.channelId)
-        channelLiveCache.set(`id:${result.channelId}`, {
+      // Only cache successful lookups. Null results (no live stream, transient
+      // failures) should not be cached so the next poll can retry immediately.
+      if (result.videoId) {
+        channelLiveCache.set(paramKey, {
           videoId: result.videoId,
           channelId: result.channelId,
           expires: Date.now() + ttl,
         });
+        if (result.channelId)
+          channelLiveCache.set(`id:${result.channelId}`, {
+            videoId: result.videoId,
+            channelId: result.channelId,
+            expires: Date.now() + ttl,
+          });
+      }
     } catch {}
 
     return result;

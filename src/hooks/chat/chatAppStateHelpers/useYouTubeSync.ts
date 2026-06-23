@@ -135,7 +135,7 @@ export function useYouTubeSync({
     };
 
     fetchLiveVideoId();
-    const interval = setInterval(fetchLiveVideoId, 600000);
+    const interval = setInterval(fetchLiveVideoId, 30_000);
 
     return () => {
       cancelled = true;

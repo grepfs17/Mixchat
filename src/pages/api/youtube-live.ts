@@ -72,11 +72,14 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
 
     const result = await findLiveForChannel(channelUrl, { debug: DEBUG_YT });
-    liveVideoCache.set(channelUrl, {
-      videoId: result.videoId,
-      channelId: result.channelId || "",
-      expires: Date.now() + LIVE_CACHE_TTL,
-    });
+    // Only cache successful lookups — null results should not block retries
+    if (result.videoId) {
+      liveVideoCache.set(channelUrl, {
+        videoId: result.videoId,
+        channelId: result.channelId || "",
+        expires: Date.now() + LIVE_CACHE_TTL,
+      });
+    }
 
     return new Response(
       JSON.stringify({
