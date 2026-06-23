@@ -245,7 +245,18 @@ export function useAuthSessions(): UseAuthSessionsResult {
     };
     window.addEventListener("storage", onStorage);
 
+    // Clean up if popup is closed without completing auth.
+    const pollClosed = setInterval(() => {
+      if (popup && popup.closed) {
+        clearInterval(pollClosed);
+        setIsLoggingIn(false);
+        removeMessageListener();
+        window.removeEventListener("storage", onStorage);
+      }
+    }, 500);
+
     return () => {
+      clearInterval(pollClosed);
       removeMessageListener();
       window.removeEventListener("storage", onStorage);
     };
