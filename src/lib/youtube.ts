@@ -67,7 +67,16 @@ export function _getProxyState() {
   return { failCounts: proxyFailCounts, cooldownUntil: proxyCooldownUntil };
 }
 
+export function _resetThrottleState(): void {
+  throttleTimestamps.clear();
+}
+
+export function _getThrottleState() {
+  return Object.fromEntries(throttleTimestamps);
+}
+
 export { selectProxy, markProxyFailed, markProxyOk, PROXY_MAX_FAILS };
+export { extractVideoId, getThrottleKey };
 
 const LIVE_CHAT_POLL_MIN_MS = parseInt(
   process.env.YT_CHAT_POLL_MIN_MS || "2000",
@@ -78,17 +87,52 @@ const METADATA_POLL_MIN_MS = parseInt(
   10,
 );
 
-const throttleTimestamps: Record<string, number> = {};
+// Per-videoId throttle timestamps so each session polls independently.
+// Key format: "live_chat:<videoId>" or "metadata:<videoId>"
+const throttleTimestamps = new Map<string, number>();
 
-function getThrottleKey(urlStr: string): string | null {
-  if (urlStr.includes("/live_chat/get_live_chat")) return "live_chat";
-  if (urlStr.includes("/updated_metadata")) return "metadata";
+function extractVideoId(body: string | undefined): string | null {
+  if (!body) return null;
+  try {
+    const parsed = JSON.parse(body);
+    // InnerTube live_chat/get_live_chat sends videoId at top level
+    if (parsed.videoId) return String(parsed.videoId);
+    // updated_metadata may also carry videoId
+    if (parsed.context?.videoId) return String(parsed.context.videoId);
+  } catch {}
   return null;
 }
 
-function getThrottleInterval(key: string): number {
-  return key === "live_chat" ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
+function getThrottleKey(urlStr: string, body?: string): string | null {
+  if (urlStr.includes("/live_chat/get_live_chat")) {
+    const videoId = extractVideoId(body);
+    return videoId ? `live_chat:${videoId}` : "live_chat";
+  }
+  if (urlStr.includes("/updated_metadata")) {
+    const videoId = extractVideoId(body);
+    return videoId ? `metadata:${videoId}` : "metadata";
+  }
+  return null;
 }
+
+function getThrottleBaseKey(compositeKey: string): string {
+  // "live_chat:abc123" → "live_chat"
+  const idx = compositeKey.indexOf(":");
+  return idx >= 0 ? compositeKey.slice(0, idx) : compositeKey;
+}
+
+function getThrottleInterval(compositeKey: string): number {
+  const base = getThrottleBaseKey(compositeKey);
+  return base === "live_chat" ? LIVE_CHAT_POLL_MIN_MS : METADATA_POLL_MIN_MS;
+}
+
+// Evict stale throttle entries every 60s to prevent unbounded growth.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, expiresAt] of throttleTimestamps) {
+    if (now > expiresAt) throttleTimestamps.delete(key);
+  }
+}, 60_000);
 
 export async function getInnertube() {
   if (yt) return yt;
@@ -190,17 +234,18 @@ export async function getInnertube() {
         urlStr = String(input);
       }
 
-      const throttleKey = getThrottleKey(urlStr);
+      const body =
+        typeof init?.body === "string" ? init.body : undefined;
+      const throttleKey = getThrottleKey(urlStr, body);
       if (throttleKey) {
         const interval = getThrottleInterval(throttleKey);
         if (interval > 0) {
           const now = Date.now();
-          const elapsed = Math.max(
-            0,
-            now - (throttleTimestamps[throttleKey] || 0),
-          );
+          const lastRun = throttleTimestamps.get(throttleKey) || 0;
+          const elapsed = Math.max(0, now - lastRun);
           const wait = Math.max(0, interval - elapsed);
-          throttleTimestamps[throttleKey] = now + wait;
+          // Set expiry so the cleanup interval can evict stale entries
+          throttleTimestamps.set(throttleKey, now + wait + interval);
           if (wait > 0) await new Promise((r) => setTimeout(r, wait));
         }
       }
@@ -225,7 +270,6 @@ export async function getInnertube() {
               proxyHeaders["Authorization"] = `Bearer ${YT_PROXY_TOKEN}`;
             }
 
-            const body = typeof init?.body === "string" ? init.body : undefined;
             const method = init?.method || (body ? "POST" : "GET");
 
             const startIndex = YT_PROXIES.indexOf(selectProxy()!);
