@@ -1,9 +1,9 @@
 import ChatDisplay from "./display";
 import MobileTouchHintModal from "./shared/MobileTouchHintModal";
+import UnifiedInput from "./shared/UnifiedInput";
 import MessageInput from "./shared/MessageInput";
 import Notification from "./shared/Notification";
 import YouTubeChat from "./shared/YouTubeChat";
-import YouTubeMessageInput from "./shared/YouTubeMessageInput";
 import UnifiedChat from "./unified";
 import RaidNotification from "./shared/RaidNotification";
 import HypeTrainBanner from "./shared/HypeTrainBanner";
@@ -343,11 +343,10 @@ export default function ChatApp(props: ChatAppStateProps) {
               />
             </div>
 
-            {/* Twitch message input */}
-            <MessageInput
+            {/* Unified input */}
+            <UnifiedInput
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
-              isConnected={{ twitch: twitchConnected }}
               replyingTo={replyingTo}
               onCancelReply={() => setReplyingTo(undefined)}
               chatMessages={messages}
@@ -357,55 +356,34 @@ export default function ChatApp(props: ChatAppStateProps) {
               followerModeMinutes={followerModeMinutes}
               isFollowing={isFollowingChannelState}
               channelName={selectedTwitchChannelName}
+              youtubeVideoId={youtubeVideoId}
+              ytChatMessages={ytMessages}
+              onSendYoutube={async (text) => {
+                if (!youtubeVideoId) return;
+                const res = await fetch("/api/youtube-chat", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    videoId: youtubeVideoId,
+                    message: text,
+                  }),
+                });
+                if (!res.ok) {
+                  const data = await res.json();
+                  throw new Error(data.error || "Failed to send to YouTube");
+                }
+              }}
+              onOptimisticYoutube={handleYtOptimisticMessage}
+              onOptimisticYoutubeFailed={handleYtOptimisticFailed}
+              youtubeAvailable={
+                !!(
+                  linkedYoutubeUrl &&
+                  youtubeVideoId &&
+                  !useYoutubeEmbed &&
+                  youtubeSession
+                )
+              }
             />
-
-            {/* YouTube message input (when we have a live video). Hidden when using the official embed. */}
-            {linkedYoutubeUrl && youtubeVideoId && !useYoutubeEmbed && (
-              <div className="youtube-input-wrapper" style={{ borderTop: "1px solid #333" }}>
-                {youtubeSession ? (
-                  <YouTubeMessageInput
-                    youtubeVideoId={youtubeVideoId}
-                    chatMessages={ytMessages}
-                    onOptimisticMessage={handleYtOptimisticMessage}
-                    onOptimisticFailed={handleYtOptimisticFailed}
-                    onError={(msg) => {
-                      showNotification(msg, "error");
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: "12px",
-                      color: "#aaa",
-                      textAlign: "center",
-                      backgroundColor: "#0f0f0f",
-                    }}
-                  >
-                    <button
-                      onClick={() =>
-                        (
-                          document.querySelector<HTMLElement>(
-                            ".login-btn.youtube-btn",
-                          ) as HTMLElement | null
-                        )?.click()
-                      }
-                      style={{
-                        color: "#ff6b6b",
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        cursor: "pointer",
-                        fontSize: "inherit",
-                      }}
-                    >
-                      Login with YouTube
-                    </button>{" "}
-                    to send messages
-                  </div>
-                )}
-              </div>
-            )}
           </>
         ) : (
           <SplitLayout
