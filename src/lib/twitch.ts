@@ -562,7 +562,6 @@ export const getTwitchUser = async (accessToken: string, clientId: string) => {
       login: user.login,
       profileImageUrl: user.profile_image_url,
       broadcasterType: user.broadcaster_type || "",
-      accountType: user.type || "",
     };
   } catch (error) {
     console.error("Failed to get Twitch user:", error);
@@ -618,7 +617,6 @@ export const getTwitchUserById = async (
       login: user.login,
       profileImageUrl: user.profile_image_url,
       broadcasterType: user.broadcaster_type || "",
-      accountType: user.type || "",
     };
   } catch (error) {
     console.error("Failed to get Twitch user by ID:", error);
