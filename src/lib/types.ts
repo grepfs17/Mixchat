@@ -77,6 +77,7 @@ export interface PlatformSession {
   username?: string;
   profileImageUrl?: string;
   broadcasterType?: string;
+  accountType?: string;
   badges?: Record<string, string>; // badgeName -> imageUrl
   badgeDetails?: Record<string, { url: string; title: string }>; // detailed badge info
 }

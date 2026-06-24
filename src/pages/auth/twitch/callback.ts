@@ -33,6 +33,23 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 
     const user = await getTwitchUser(tokenData.accessToken, clientId);
 
+    // Require a verified Twitch account (email verified) to prevent bot logins.
+    if (user.accountType !== "verified") {
+      return new Response(
+        `<!DOCTYPE html>
+<html>
+<head><title>Account Not Verified</title></head>
+<body>
+<h1>Twitch Account Not Verified</h1>
+<p>Your Twitch account must have a verified email to use MixChat.</p>
+<p>Please verify your email on <a href="https://www.twitch.tv/settings/profile">Twitch Settings</a> and try again.</p>
+<a href="/">Back to MixChat</a>
+</body>
+</html>`,
+        { status: 403, headers: { "Content-Type": "text/html" } },
+      );
+    }
+
     // Store token in secure cookie
     cookies.set("twitch_token", tokenData.accessToken, {
       httpOnly: true,
@@ -66,6 +83,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       username: user.login,
       profileImageUrl: user.profileImageUrl,
       broadcasterType: user.broadcasterType,
+      accountType: user.accountType,
       accessToken: tokenData.accessToken,
       refreshToken: tokenData.refreshToken ?? "",
       expiresAt: Date.now() + (tokenData.expiresIn ?? 3600) * 1000,
