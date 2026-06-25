@@ -1,6 +1,7 @@
 import type { EmoteMap } from "./types";
 import {
   getCachedEmotes,
+  getCachedAuthors,
   setCachedEmotes,
   setActiveEmoteSetId,
   setEventSource7tv,
@@ -13,6 +14,9 @@ import {
 } from "./state";
 import { EMOTE_SIZE, fetchWithTimeout, ZERO_WIDTH_FLAG } from "./utils";
 
+/** Accumulated author data for 7TV emotes, populated during fetch. */
+export const authors7tv: Record<string, string> = {};
+
 const RECONNECT_7TV_MIN = 5000;
 const RECONNECT_7TV_MAX = 300_000;
 
@@ -23,6 +27,8 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_7tv_global_v2";
   const cached = getCachedEmotes(cacheKey);
   if (cached) {
+    const cachedAuthors = getCachedAuthors(cacheKey);
+    if (cachedAuthors) Object.assign(authors7tv, cachedAuthors);
     console.log(
       "Using cached 7TV global emotes, count:",
       Object.keys(cached).length,
@@ -43,9 +49,11 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
         const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
         const flags: number = emote.data?.flags ?? 0;
         emotes[emote.name] = flags & ZERO_WIDTH_FLAG ? `ZW:${url}` : url;
+        const ownerName = emote.data?.owner?.display_name;
+        if (ownerName) authors7tv[emote.name] = ownerName;
       });
     }
-    setCachedEmotes(cacheKey, emotes);
+    setCachedEmotes(cacheKey, emotes, undefined, { ...authors7tv });
     console.log(
       "Fetched 7TV global emotes, count:",
       Object.keys(emotes).length,
@@ -63,7 +71,11 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
 export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
   const cacheKey = `emotes_7tv_v2_${channelId}`;
   const cached = getCachedEmotes(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    const cachedAuthors = getCachedAuthors(cacheKey);
+    if (cachedAuthors) Object.assign(authors7tv, cachedAuthors);
+    return cached;
+  }
 
   try {
     console.log(`[7TV] Fetching emotes for channelId: ${channelId}`);
@@ -129,6 +141,8 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
           const url = `https://cdn.7tv.app/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
           const flags: number = emote.data?.flags ?? 0;
           emotes[emote.name] = flags & ZERO_WIDTH_FLAG ? `ZW:${url}` : url;
+          const ownerName = emote.data?.owner?.display_name;
+          if (ownerName) authors7tv[emote.name] = ownerName;
         });
       }
     } else {
@@ -137,7 +151,9 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
         Object.keys(data),
       );
     }
-    setCachedEmotes(cacheKey, emotes, activeEmoteSetId || undefined);
+    setCachedEmotes(cacheKey, emotes, activeEmoteSetId || undefined, {
+      ...authors7tv,
+    });
     return emotes;
   } catch (error) {
     console.warn("7TV emotes not loaded", error);

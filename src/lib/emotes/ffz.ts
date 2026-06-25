@@ -1,6 +1,9 @@
 import type { EmoteMap } from "./types";
-import { getCachedEmotes, setCachedEmotes } from "./state";
+import { getCachedEmotes, getCachedAuthors, setCachedEmotes } from "./state";
 import { EMOTE_SIZE, fetchWithTimeout } from "./utils";
+
+/** Accumulated author data for FFZ emotes, populated during fetch. */
+export const authorsFfz: Record<string, string> = {};
 
 /**
  * Fetch FFZ global emotes
@@ -8,7 +11,11 @@ import { EMOTE_SIZE, fetchWithTimeout } from "./utils";
 export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_ffz_global";
   const cached = getCachedEmotes(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    const cachedAuthors = getCachedAuthors(cacheKey);
+    if (cachedAuthors) Object.assign(authorsFfz, cachedAuthors);
+    return cached;
+  }
 
   try {
     const response = await fetchWithTimeout(
@@ -23,11 +30,13 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
           set.emoticons.forEach((emote: any) => {
             emotes[emote.name] =
               `https://cdn.frankerfacez.com/emote/${emote.id}/${EMOTE_SIZE}`;
+            const ownerName = emote.owner?.display_name;
+            if (ownerName) authorsFfz[emote.name] = ownerName;
           });
         }
       });
     }
-    setCachedEmotes(cacheKey, emotes);
+    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
     return emotes;
   } catch (error) {
     console.warn("FFZ global emotes not loaded", error);
@@ -41,7 +50,11 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
 export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
   const cacheKey = `emotes_ffz_${channelName}`;
   const cached = getCachedEmotes(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    const cachedAuthors = getCachedAuthors(cacheKey);
+    if (cachedAuthors) Object.assign(authorsFfz, cachedAuthors);
+    return cached;
+  }
 
   try {
     const response = await fetchWithTimeout(
@@ -59,7 +72,7 @@ export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
         });
       }
     }
-    setCachedEmotes(cacheKey, emotes);
+    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
     return emotes;
   } catch (error) {
     console.warn("FFZ emotes not loaded", error);

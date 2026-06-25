@@ -18,6 +18,9 @@ export let emotesTwitch: EmoteMap = {};
 export let emotesTwitchGlobal: EmoteMap = {};
 export let emotesTwitchByChannel: ChannelEmoteGroup[] = [];
 
+/** Emote author map — emote name → author display name. */
+export let emoteAuthors: Record<string, string> = {};
+
 /** Last Twitch user ID used to fetch subscribed channel emotes. */
 export let lastUserId: string | undefined;
 
@@ -72,6 +75,10 @@ export function setEmotesTwitchGlobal(map: EmoteMap): void {
 
 export function setEmotesTwitchByChannel(groups: ChannelEmoteGroup[]): void {
   emotesTwitchByChannel = groups;
+}
+
+export function setEmoteAuthors(map: Record<string, string>): void {
+  emoteAuthors = map;
 }
 
 export function setLastUserId(id: string | undefined): void {
@@ -134,16 +141,35 @@ export function setCachedEmotes(
   cacheKey: string,
   emotes: EmoteMap,
   emoteSetId?: string,
+  authors?: Record<string, string>,
 ): void {
   try {
     const cacheData: EmoteCache = {
       emotes,
       timestamp: Date.now(),
       emoteSetId,
+      authors,
     };
     localStorage.setItem(cacheKey, JSON.stringify(cacheData));
   } catch (error) {
     console.warn("Failed to cache emotes:", error);
+  }
+}
+
+/**
+ * Get cached authors for a given cache key, if valid.
+ */
+export function getCachedAuthors(
+  cacheKey: string,
+): Record<string, string> | null {
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (!cached) return null;
+    const cacheData: EmoteCache = JSON.parse(cached);
+    if (Date.now() - cacheData.timestamp > CACHE_DURATION) return null;
+    return cacheData.authors ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -166,6 +192,7 @@ export function clearEmoteCache(): void {
   emotesTwitch = {};
   emotesTwitchGlobal = {};
   emotesTwitchByChannel = [];
+  emoteAuthors = {};
   lastUserId = undefined;
   parseCache.clear();
 }

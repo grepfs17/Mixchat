@@ -145,6 +145,7 @@ export async function fetchUserEmotesByChannel(
           "Using cached user channel emotes, groups:",
           cacheData.groups.length,
         );
+        // author population removed — will be handled via hover resolution
         return cacheData.groups;
       }
       localStorage.removeItem(cacheKey);
@@ -211,6 +212,7 @@ export async function fetchUserEmotesByChannel(
         profileImageUrl: info?.profileImageUrl,
         emotes,
       });
+      // author population removed — will be handled via hover resolution
     }
     groups.sort((a, b) => a.channelName.localeCompare(b.channelName));
 

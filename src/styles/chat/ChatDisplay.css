@@ -497,6 +497,13 @@
     word-break: break-word;
 }
 
+.chat-emote-tooltip-author {
+    color: var(--color-text-secondary);
+    font-size: 0.7rem;
+    text-align: center;
+    word-break: break-word;
+}
+
 .chat-emote-tooltip-source {
     color: var(--color-text-secondary);
     font-size: 0.7rem;

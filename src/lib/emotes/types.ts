@@ -6,6 +6,7 @@ export interface EmoteCache {
   emotes: EmoteMap;
   timestamp: number;
   emoteSetId?: string;
+  authors?: Record<string, string>;
 }
 
 export interface ChannelEmoteGroup {

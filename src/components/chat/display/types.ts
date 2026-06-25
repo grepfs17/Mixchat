@@ -17,6 +17,7 @@ export interface EmoteTooltipState {
   url: string;
   name: string;
   source: string;
+  author?: string;
   x: number;
   y: number;
 }

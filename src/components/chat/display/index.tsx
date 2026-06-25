@@ -281,6 +281,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         const emoteName = target.getAttribute("data-emote-name") || "Emote";
         const emoteSource =
           target.getAttribute("data-emote-source") || "Twitch";
+        const emoteAuthor = target.getAttribute("data-emote-author") || undefined;
         if (tooltipUrl) {
           const rect = target.getBoundingClientRect();
           setEmoteTooltip((prev) => {
@@ -295,6 +296,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
               url: tooltipUrl,
               name: emoteName,
               source: emoteSource,
+              author: emoteAuthor,
               x: rect.left,
               y: rect.top,
             };

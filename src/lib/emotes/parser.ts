@@ -4,6 +4,7 @@ import {
   emotesBttv,
   emotesFfz,
   emotesTwitch,
+  emoteAuthors,
   emoteMapVersion,
   parseCache,
   MAX_PARSE_CACHE,
@@ -33,6 +34,7 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
     "loading",
     "data-emote-name",
     "data-emote-source",
+    "data-emote-author",
     "data-tooltip-url",
     // <a>
     "href",
@@ -77,7 +79,13 @@ export function parseMessageWithEmotes(
         replacements.push({
           start,
           end: end + 1,
-          html: createEmoteImg(emoteUrl, emoteName, "Twitch", gigantified),
+          html: createEmoteImg(
+            emoteUrl,
+            emoteName,
+            "Twitch",
+            gigantified,
+            emoteAuthors[emoteName],
+          ),
         });
       });
     });
@@ -110,12 +118,33 @@ export function parseMessageWithEmotes(
  * Look up a word across all emote providers (7TV > BTTV > FFZ > Twitch).
  * Returns the emote URL and provider name, or null if not found.
  */
-function lookupEmote(word: string): { url: string; provider: string } | null {
-  if (emotes7tv[word]) return { url: emotes7tv[word], provider: "7TV" };
-  if (emotesBttv[word]) return { url: emotesBttv[word], provider: "BTTV" };
-  if (emotesFfz[word]) return { url: emotesFfz[word], provider: "FFZ" };
+function lookupEmote(
+  word: string,
+): { url: string; provider: string; author?: string } | null {
+  if (emotes7tv[word])
+    return {
+      url: emotes7tv[word],
+      provider: "7TV",
+      author: emoteAuthors[word],
+    };
+  if (emotesBttv[word])
+    return {
+      url: emotesBttv[word],
+      provider: "BTTV",
+      author: emoteAuthors[word],
+    };
+  if (emotesFfz[word])
+    return {
+      url: emotesFfz[word],
+      provider: "FFZ",
+      author: emoteAuthors[word],
+    };
   if (emotesTwitch[word])
-    return { url: emotesTwitch[word], provider: "Twitch" };
+    return {
+      url: emotesTwitch[word],
+      provider: "Twitch",
+      author: emoteAuthors[word],
+    };
   return null;
 }
 
@@ -167,13 +196,25 @@ function parseThirdPartyEmotes(text: string): string {
         if (isZeroWidthUrl(match.url)) {
           // Orphan zero-width emote (no preceding base) — render as normal emote
           output.push(
-            createEmoteImg(getEmoteUrl(match.url), word, match.provider),
+            createEmoteImg(
+              getEmoteUrl(match.url),
+              word,
+              match.provider,
+              false,
+              match.author,
+            ),
           );
           i++;
         } else {
           // Any emote from any provider can be a base.
           // Look ahead for 7TV zero-width overlays only.
-          const baseHtml = createEmoteImg(match.url, word, match.provider);
+          const baseHtml = createEmoteImg(
+            match.url,
+            word,
+            match.provider,
+            false,
+            match.author,
+          );
           const overlays: string[] = [];
           let j = i + 1;
           while (j < words.length) {
@@ -181,7 +222,12 @@ function parseThirdPartyEmotes(text: string): string {
             const nextUrl = emotes7tv[nextWord];
             if (nextUrl && isZeroWidthUrl(nextUrl)) {
               overlays.push(
-                createZeroWidthEmoteImg(getEmoteUrl(nextUrl), nextWord),
+                createZeroWidthEmoteImg(
+                  getEmoteUrl(nextUrl),
+                  nextWord,
+                  "7TV",
+                  emoteAuthors[nextWord],
+                ),
               );
               j++;
             } else {

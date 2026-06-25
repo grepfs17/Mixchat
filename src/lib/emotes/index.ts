@@ -7,13 +7,14 @@ import {
   setEmotesTwitch,
   setEmotesTwitchGlobal,
   setEmotesTwitchByChannel,
+  setEmoteAuthors,
   setLastUserId,
   lastUserId,
   emotesTwitch,
 } from "./state";
-import { fetch7TVGlobalEmotes, fetch7TVEmotes } from "./7tv";
-import { fetchBTTVGlobalEmotes, fetchBTTVEmotes } from "./bttv";
-import { fetchFFZGlobalEmotes, fetchFFZEmotes } from "./ffz";
+import { fetch7TVGlobalEmotes, fetch7TVEmotes, authors7tv } from "./7tv";
+import { fetchBTTVGlobalEmotes, fetchBTTVEmotes, authorsBttv } from "./bttv";
+import { fetchFFZGlobalEmotes, fetchFFZEmotes, authorsFfz } from "./ffz";
 import {
   fetchTwitchGlobalEmotes,
   fetchTwitchChannelEmotes,
@@ -109,6 +110,12 @@ export async function initializeEmotes(
   });
 
   await Promise.allSettled([stv7, bttv, ffz, twitch]);
+
+  setEmoteAuthors({
+    ...authors7tv,
+    ...authorsBttv,
+    ...authorsFfz,
+  });
 }
 
 // Re-export 7TV real-time subscription with the same public signature.

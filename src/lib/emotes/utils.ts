@@ -98,6 +98,7 @@ export function createEmoteImg(
   emoteName: string,
   source: string = "Twitch",
   gigantified: boolean = false,
+  author?: string,
 ): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   // Convert any quality URL to 4x quality for tooltip (highest resolution)
@@ -115,7 +116,8 @@ export function createEmoteImg(
   const className = gigantified
     ? "chat-emote chat-emote--gigantified"
     : "chat-emote";
-  return `<img src="${src}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="${className}" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
+  const authorAttr = author ? ` data-emote-author="${escapeHtml(author)}"` : "";
+  return `<img src="${src}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}"${authorAttr} class="${className}" style="height: 2em; vertical-align: middle; margin: 0 2px; cursor: pointer;" />`;
 }
 
 /**
@@ -126,6 +128,7 @@ export function createZeroWidthEmoteImg(
   emoteUrl: string,
   emoteName: string,
   source: string = "7TV",
+  author?: string,
 ): string {
   if (typeof emoteUrl !== "string") return escapeHtml(emoteName);
   let highQualityUrl = emoteUrl;
@@ -136,5 +139,6 @@ export function createZeroWidthEmoteImg(
   ) {
     highQualityUrl = replaceSize(emoteUrl);
   }
-  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}" class="chat-emote" style="height: 2em; cursor: pointer;" /></span>`;
+  const authorAttr = author ? ` data-emote-author="${escapeHtml(author)}"` : "";
+  return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}"${authorAttr} class="chat-emote" style="height: 2em; cursor: pointer;" /></span>`;
 }

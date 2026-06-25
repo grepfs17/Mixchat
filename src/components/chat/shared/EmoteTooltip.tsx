@@ -4,6 +4,7 @@ interface EmoteTooltipProps {
   url: string;
   name: string;
   source: string;
+  author?: string;
   x: number;
   y: number;
 }
@@ -12,6 +13,7 @@ export default function EmoteTooltip({
   url,
   name,
   source,
+  author,
   x,
   y,
 }: EmoteTooltipProps) {
@@ -29,6 +31,7 @@ export default function EmoteTooltip({
     >
       <img src={url} alt={name} />
       <div className="chat-emote-tooltip-name">{name}</div>
+      {author && <div className="chat-emote-tooltip-author">by {author}</div>}
       <div className="chat-emote-tooltip-source">{source}</div>
     </div>,
     document.body,
