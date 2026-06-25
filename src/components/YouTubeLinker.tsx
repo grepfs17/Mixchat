@@ -340,9 +340,7 @@ export default function YouTubeLinker({
                         </button>
                         <button
                           className="ytlinker-remove-button"
-                          onClick={() =>
-                            handleRemoveLink(link.twitchChannelId)
-                          }
+                          onClick={() => handleRemoveLink(link.twitchChannelId)}
                           title="Remove YouTube link"
                         >
                           <FaTrash />

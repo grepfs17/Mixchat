@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import YouTubeLinker from "../../src/components/YouTubeLinker";
-import {
-  addYoutubeLink,
-  getYoutubeLinks,
-} from "../../src/lib/youtubeLinks";
+import { addYoutubeLink, getYoutubeLinks } from "../../src/lib/youtubeLinks";
 
 describe("YouTubeLinker component", () => {
   beforeEach(() => {
@@ -79,10 +76,7 @@ describe("YouTubeLinker component", () => {
     });
 
     render(
-      <YouTubeLinker
-        availableChannels={availableChannels}
-        onClose={vi.fn()}
-      />,
+      <YouTubeLinker availableChannels={availableChannels} onClose={vi.fn()} />,
     );
 
     // Link should be active by default
@@ -144,10 +138,7 @@ describe("YouTubeLinker component", () => {
     });
 
     render(
-      <YouTubeLinker
-        availableChannels={availableChannels}
-        onClose={vi.fn()}
-      />,
+      <YouTubeLinker availableChannels={availableChannels} onClose={vi.fn()} />,
     );
 
     // Original URL should be visible
@@ -204,10 +195,7 @@ describe("YouTubeLinker component", () => {
     });
 
     render(
-      <YouTubeLinker
-        availableChannels={availableChannels}
-        onClose={vi.fn()}
-      />,
+      <YouTubeLinker availableChannels={availableChannels} onClose={vi.fn()} />,
     );
 
     // Click edit
