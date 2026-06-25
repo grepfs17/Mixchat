@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
-import { FaYoutube, FaRegSmile } from "react-icons/fa";
+import { FaRegSmile } from "react-icons/fa";
 import {
   searchEmojis,
   EMOJI_LIST,
@@ -280,7 +280,7 @@ export default function YouTubeMessageInput({
 
   return (
     <div className="message-input">
-      <div className="input-group">
+      <div className="input-group youtube">
         {emojiAC.isOpen &&
           emojiAC.results.length > 0 &&
           menuRect &&
@@ -379,18 +379,10 @@ export default function YouTubeMessageInput({
           value={ytMessage}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Send a message to YouTube chat..."
+          placeholder="Send to YouTube..."
           disabled={ytSending}
-          className="message-textarea youtube"
+          className="message-textarea"
         />
-
-        <button
-          onClick={handleSend}
-          disabled={ytSending || !ytMessage.trim()}
-          className="send-button"
-        >
-          {ytSending ? "..." : <FaYoutube size={16} />}
-        </button>
 
         {showPicker &&
           pickerRect &&

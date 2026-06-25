@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { FaTimes, FaSmile, FaTwitch } from "react-icons/fa";
+import { FaTimes, FaSmile } from "react-icons/fa";
 import type { Platform, TwitchMessage } from "../../../lib/types";
 import { searchEmotes } from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
@@ -359,7 +359,14 @@ function MessageInput({
           )}
         </div>
       )}
-      <div className="input-group" style={{ position: "relative" }}>
+      <div className="input-group twitch" style={{ position: "relative" }}>
+        <PresetMessages
+          onSendMessage={onSendMessage}
+          isLoading={isLoading}
+          selectedPlatforms={selectedPlatforms}
+          replyingTo={replyingTo}
+          onCancelReply={onCancelReply}
+        />
         <button
           onClick={() => setShowEmotePicker(!showEmotePicker)}
           disabled={selectedPlatforms.length === 0 || isLoading}
@@ -368,48 +375,18 @@ function MessageInput({
         >
           <FaSmile size={18} />
         </button>
-        <PresetMessages
-          onSendMessage={onSendMessage}
-          isLoading={isLoading}
-          selectedPlatforms={selectedPlatforms}
-          replyingTo={replyingTo}
-          onCancelReply={onCancelReply}
-        />
         <textarea
           ref={textareaRef}
           value={message}
           onChange={handleMessageChange}
           onKeyDown={handleKeyPress}
           onFocus={onInputFocus}
-          placeholder="Type your message"
+          placeholder="Send to Twitch..."
           disabled={selectedPlatforms.length === 0 || isLoading}
-          className="message-textarea twitch"
+          className="message-textarea"
           autoComplete="off"
           autoCapitalize="off"
         />
-        <button
-          onClick={handleSend}
-          disabled={
-            !message.trim() ||
-            selectedPlatforms.length === 0 ||
-            isLoading ||
-            slowModeCooldown > 0
-          }
-          className="send-button"
-          title={
-            slowModeCooldown > 0
-              ? `Slow mode, wait ${slowModeCooldown}s`
-              : undefined
-          }
-        >
-          {isLoading ? (
-            "..."
-          ) : slowModeCooldown > 0 ? (
-            `${slowModeCooldown}s`
-          ) : (
-            <FaTwitch size={16} />
-          )}
-        </button>
 
         {emoteAC.isOpen &&
           emoteAC.results.length > 0 &&

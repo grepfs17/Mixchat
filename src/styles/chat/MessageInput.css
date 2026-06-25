@@ -3,8 +3,8 @@
 .message-input {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 10px;
+    gap: 4px;
+    padding: 6px 8px;
     background: var(--color-bg-primary);
     border-top: 1px solid var(--color-border-dark);
 }
@@ -74,106 +74,70 @@
 
 .input-group {
     display: flex;
-    gap: 8px;
-    align-items: stretch;
-    height: 36px;
+    gap: 4px;
+    align-items: center;
+    height: 32px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-secondary);
+    padding: 0 4px;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+
+.input-group:focus-within {
+    box-shadow: 0 0 0 2px rgba(158, 64, 115, 0.15);
 }
 
 .message-textarea {
     flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--color-border-medium);
+    min-width: 0;
+    border: none;
+    background: transparent;
     font-family: inherit;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+    line-height: 30px;
     resize: none;
     height: 100%;
     box-sizing: border-box;
-    transition:
-        border-color 0.2s,
-        box-shadow 0.2s;
-    background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     overflow: hidden;
-    border-radius: var(--radius-lg);
-}
-
-.message-textarea:focus {
     outline: none;
-    border-color: var(--color-accent);
-    box-shadow: var(--shadow-accent-sm);
+    padding: 0 4px;
 }
 
-.message-textarea.twitch {
+.input-group.twitch {
     border-color: #9146ff;
 }
 
-.message-textarea.twitch:focus {
+.input-group.twitch:focus-within {
     border-color: #a970ff;
     box-shadow: 0 0 0 3px rgba(145, 70, 255, 0.2);
 }
 
-.message-textarea.youtube {
+.input-group.youtube {
     border-color: #ff0000;
 }
 
-.message-textarea.youtube:focus {
+.input-group.youtube:focus-within {
     border-color: #ff3333;
     box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.2);
 }
 
 .message-textarea:disabled {
-    background-color: var(--color-bg-secondary);
     cursor: not-allowed;
     opacity: 0.5;
 }
 
-.send-button {
-    padding: 8px 16px;
-    background: linear-gradient(
-        135deg,
-        var(--color-accent) 0%,
-        var(--color-accent-hover) 100%
-    );
-    color: white;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
-    height: 100%;
-    min-width: 36px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-accent-sm);
-}
-
-.send-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-accent-md);
-}
-
-.send-button:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.send-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    background: var(--color-bg-tertiary);
-}
-
 .emote-picker-button {
     padding: 0;
-    width: 40px;
-    min-width: 40px;
-    height: 100%;
-    background: var(--color-bg-secondary);
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    background: transparent;
     color: var(--color-text-secondary);
-    border: 1px solid var(--color-border-medium);
+    border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -181,6 +145,7 @@
     transition: all 0.2s;
     flex-shrink: 0;
     border-radius: var(--radius-lg);
+    font-size: 13px;
 }
 
 /* YouTube emoji picker popup */
@@ -275,8 +240,7 @@
 }
 
 .emote-picker-button:hover:not(:disabled) {
-    background: var(--color-bg-tertiary);
-    border-color: var(--color-border-lighter);
+    background: var(--color-bg-hover);
     color: var(--color-text-primary);
     transform: scale(1.05);
 }
@@ -437,8 +401,8 @@
 /* Responsive design for lower resolutions */
 @media (max-width: 768px) {
     .message-input {
-        gap: 8px;
-        padding: 12px;
+        gap: 4px;
+        padding: 6px;
         flex-shrink: 0;
         position: fixed;
         bottom: 0;
@@ -476,27 +440,27 @@
     }
 
     .input-group {
-        height: 40px;
-        gap: 6px;
+        height: 36px;
+        gap: 4px;
     }
 
     .message-textarea {
-        padding: 8px;
+        padding: 0 8px;
+        line-height: 34px;
         /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
         font-size: 16px;
     }
 
-    .send-button {
-        padding: 8px 16px;
-        font-size: 0.9rem;
-        min-width: 80px;
+    .emote-picker-button {
+        width: 32px;
+        min-width: 32px;
     }
 }
 
 @media (max-width: 480px) {
     .message-input {
-        gap: 6px;
-        padding: 8px;
+        gap: 4px;
+        padding: 4px;
         flex-shrink: 0;
     }
 
@@ -520,13 +484,14 @@
     }
 
     .input-group {
-        height: 34px;
+        height: 30px;
         gap: 4px;
         flex-direction: row;
     }
 
     .message-textarea {
-        padding: 6px;
+        padding: 0 6px;
+        line-height: 28px;
         /* Must be >= 16px to prevent iOS Safari from zooming in on input focus */
         font-size: 16px;
         height: 100%;
@@ -534,15 +499,8 @@
     }
 
     .emote-picker-button {
-        width: 44px;
-        min-width: 44px;
-        height: 100%;
-    }
-
-    .send-button {
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        min-width: 60px;
+        width: 28px;
+        min-width: 28px;
         height: 100%;
     }
 
@@ -742,6 +700,33 @@
 /* Preset split button adjustments for unified input */
 .unified-input .preset-split-button {
     flex-shrink: 0;
+}
+
+.input-group .preset-split-button {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+}
+
+.input-group .preset-split-left {
+    background: transparent;
+    border-right: none;
+    padding: 0 6px;
+    min-width: auto;
+}
+
+.input-group .preset-split-left:hover {
+    background: var(--color-bg-hover);
+}
+
+.input-group .preset-split-right {
+    background: transparent;
+    padding: 0 4px;
+    min-width: auto;
+}
+
+.input-group .preset-split-right:hover:not(:disabled) {
+    background: var(--color-bg-hover);
 }
 
 .unified-input .preset-split-left,
