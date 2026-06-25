@@ -101,27 +101,32 @@ function MessageInput({
   ]);
 
   // --- Autocomplete instances ---
-  const emoteAC = useAutocomplete<{
-    name: string;
-    url: string;
-    source: string;
-  }>({
-    onSelect: (emote) => {
+  const insertEmote = useCallback(
+    (name: string) => {
       if (!textareaRef.current) return;
       const cursorPos = textareaRef.current.selectionStart;
       const textBeforeCursor = message.substring(0, cursorPos);
       const textAfterCursor = message.substring(cursorPos);
       const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
       const beforeWord = textBeforeCursor.substring(0, lastSpaceIndex + 1);
-      const newMessage = beforeWord + emote.name + " " + textAfterCursor;
+      const newMessage = beforeWord + name + " " + textAfterCursor;
       setMessage(newMessage);
       setShowEmotePicker(false);
-      const newPos = (beforeWord + emote.name + " ").length;
+      const newPos = (beforeWord + name + " ").length;
       setTimeout(() => {
         textareaRef.current?.setSelectionRange(newPos, newPos);
         textareaRef.current?.focus();
       }, 0);
     },
+    [message],
+  );
+
+  const emoteAC = useAutocomplete<{
+    name: string;
+    url: string;
+    source: string;
+  }>({
+    onSelect: (emote) => insertEmote(emote.name),
     onSend: handleSend,
   });
 
@@ -570,10 +575,7 @@ function MessageInput({
 
       <EmoteMenu
         emotes={emotesOrganized}
-        onSelectEmote={(name) => {
-          const idx = emoteAC.results.findIndex((e) => e.name === name);
-          if (idx >= 0) emoteAC.select(idx);
-        }}
+        onSelectEmote={insertEmote}
         isOpen={showEmotePicker}
         onClose={() => setShowEmotePicker(false)}
       />

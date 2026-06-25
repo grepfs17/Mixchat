@@ -228,19 +228,8 @@ export default function UnifiedInput({
     source: string;
   }>({
     onSelect: (emote) => {
-      const cursor = inputRef.current?.selectionStart ?? message.length;
-      const before = message.substring(0, cursor);
-      const after = message.substring(cursor);
-      const lastSpace = before.lastIndexOf(" ");
-      const prefix = before.substring(0, lastSpace + 1);
-      const newVal = prefix + emote.name + " " + after;
-      setMessage(newVal);
+      insertAtCursor(emote.name);
       setShowEmotePicker(false);
-      const pos = (prefix + emote.name + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
     },
     onSend: doSend,
   });
@@ -919,10 +908,8 @@ export default function UnifiedInput({
       <EmoteMenu
         emotes={emotesOrganized}
         onSelectEmote={(name) => {
-          const idx = emoteAutocomplete.results.findIndex(
-            (e) => e.name === name,
-          );
-          if (idx >= 0) emoteAutocomplete.select(idx);
+          insertAtCursor(name);
+          setShowEmotePicker(false);
         }}
         isOpen={showEmotePicker}
         onClose={() => setShowEmotePicker(false)}

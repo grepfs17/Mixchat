@@ -111,6 +111,158 @@ describe("emotes lib", () => {
     expect(result).toContain("cdn.7tv.app/emote/base");
   });
 
+  it("7TV zero-width emote overlays a BTTV base emote", async () => {
+    const ZERO_WIDTH_FLAG = 1 << 8;
+    vi.mocked(fetch).mockImplementation((url: any) => {
+      if (url.includes("7tv.io/v3/users/twitch/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            username: "testuser",
+            emote_set: {
+              id: "set-cross",
+              emotes: [
+                {
+                  id: "zw1",
+                  name: "SnowOverlay",
+                  data: { flags: ZERO_WIDTH_FLAG },
+                },
+              ],
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("betterttv.net/3/cached/users/twitch/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            channelEmotes: [{ id: "bttv1", code: "BttvEmote" }],
+            sharedEmotes: [],
+          }),
+        } as Response);
+      }
+      if (url.includes("betterttv.net")) {
+        return Promise.resolve({ ok: true, json: async () => [] } as Response);
+      }
+      if (url.includes("frankerfacez.com")) {
+        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+    });
+
+    await initializeEmotes("channelId", "channelName");
+
+    const text = "BttvEmote SnowOverlay";
+    const result = parseMessageWithEmotes(text);
+    expect(result).toContain('class="emote-overlay-container"');
+    expect(result).toContain('class="emote-overlay"');
+    expect(result).toContain("cdn.betterttv.net/emote/bttv1");
+    expect(result).toContain("SnowOverlay");
+  });
+
+  it("7TV zero-width emote overlays an FFZ base emote", async () => {
+    const ZERO_WIDTH_FLAG = 1 << 8;
+    vi.mocked(fetch).mockImplementation((url: any) => {
+      if (url.includes("7tv.io/v3/users/twitch/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            username: "testuser",
+            emote_set: {
+              id: "set-ffz",
+              emotes: [
+                {
+                  id: "zw2",
+                  name: "HatOverlay",
+                  data: { flags: ZERO_WIDTH_FLAG },
+                },
+              ],
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("frankerfacez.com/v1/room/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            room: { set: 123 },
+            sets: {
+              123: {
+                emoticons: [{ id: 456, name: "FfzEmote" }],
+              },
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("betterttv.net")) {
+        return Promise.resolve({ ok: true, json: async () => [] } as Response);
+      }
+      if (url.includes("frankerfacez.com")) {
+        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+    });
+
+    await initializeEmotes("channelId", "channelName");
+
+    const text = "FfzEmote HatOverlay";
+    const result = parseMessageWithEmotes(text);
+    expect(result).toContain('class="emote-overlay-container"');
+    expect(result).toContain('class="emote-overlay"');
+    expect(result).toContain("cdn.frankerfacez.com/emote/456");
+    expect(result).toContain("HatOverlay");
+  });
+
+  it("7TV zero-width emote overlays a manually-typed Twitch emote", async () => {
+    const ZERO_WIDTH_FLAG = 1 << 8;
+    vi.mocked(fetch).mockImplementation((url: any) => {
+      if (url.includes("7tv.io/v3/users/twitch/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            username: "testuser",
+            emote_set: {
+              id: "set-tw",
+              emotes: [
+                {
+                  id: "zw3",
+                  name: "SparkleOverlay",
+                  data: { flags: ZERO_WIDTH_FLAG },
+                },
+              ],
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("helix/chat/emotes/global")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: "999", name: "Kappa", images: { url_1x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/1.0", url_2x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/2.0", url_4x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/4.0" }, tier: "0", emote_type: "global", emote_set_id: "0" },
+            ],
+          }),
+        } as Response);
+      }
+      // Return arrays for BTTV/FFZ endpoints that expect forEach
+      if (url.includes("betterttv.net")) {
+        return Promise.resolve({ ok: true, json: async () => [] } as Response);
+      }
+      if (url.includes("frankerfacez.com")) {
+        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+    });
+
+    await initializeEmotes("channelId", "channelName");
+
+    const text = "Kappa SparkleOverlay";
+    const result = parseMessageWithEmotes(text);
+    expect(result).toContain('class="emote-overlay-container"');
+    expect(result).toContain('class="emote-overlay"');
+    expect(result).toContain("SparkleOverlay");
+  });
+
   describe("Gigantify power-up (Twitch-only)", () => {
     it("renders Twitch emotes with the gigantified class and 4x source when gigantified", () => {
       const text = "Kappa";

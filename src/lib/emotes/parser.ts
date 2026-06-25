@@ -107,6 +107,19 @@ export function parseMessageWithEmotes(
 }
 
 /**
+ * Look up a word across all emote providers (7TV > BTTV > FFZ > Twitch).
+ * Returns the emote URL and provider name, or null if not found.
+ */
+function lookupEmote(word: string): { url: string; provider: string } | null {
+  if (emotes7tv[word]) return { url: emotes7tv[word], provider: "7TV" };
+  if (emotesBttv[word]) return { url: emotesBttv[word], provider: "BTTV" };
+  if (emotesFfz[word]) return { url: emotesFfz[word], provider: "FFZ" };
+  if (emotesTwitch[word])
+    return { url: emotesTwitch[word], provider: "Twitch" };
+  return null;
+}
+
+/**
  * Parse third-party emotes and @mentions in text.
  *
  * NOTE: The Twitch "Gigantify an Emote" power-up only applies to Twitch
@@ -148,23 +161,19 @@ function parseThirdPartyEmotes(text: string): string {
         continue;
       }
 
-      // Check Twitch native emotes (from cache map, manually typed)
-      if (emotesTwitch[word]) {
-        output.push(createEmoteImg(emotesTwitch[word], word, "Twitch"));
-        i++;
-        continue;
-      }
-
-      // Check 7TV — with zero-width overlay support
-      if (emotes7tv[word]) {
-        const url = emotes7tv[word];
-        if (isZeroWidthUrl(url)) {
-          // Orphan zero-width emote (no preceding base) — render normally
-          output.push(createEmoteImg(getEmoteUrl(url), word, "7TV"));
+      // Unified emote lookup across all providers
+      const match = lookupEmote(word);
+      if (match) {
+        if (isZeroWidthUrl(match.url)) {
+          // Orphan zero-width emote (no preceding base) — render as normal emote
+          output.push(
+            createEmoteImg(getEmoteUrl(match.url), word, match.provider),
+          );
           i++;
         } else {
-          // Regular 7TV emote: look ahead for consecutive zero-width emotes
-          const baseHtml = createEmoteImg(url, word, "7TV");
+          // Any emote from any provider can be a base.
+          // Look ahead for 7TV zero-width overlays only.
+          const baseHtml = createEmoteImg(match.url, word, match.provider);
           const overlays: string[] = [];
           let j = i + 1;
           while (j < words.length) {
@@ -189,20 +198,6 @@ function parseThirdPartyEmotes(text: string): string {
             i++;
           }
         }
-        continue;
-      }
-
-      // Check BTTV
-      if (emotesBttv[word]) {
-        output.push(createEmoteImg(emotesBttv[word], word, "BTTV"));
-        i++;
-        continue;
-      }
-
-      // Check FFZ
-      if (emotesFfz[word]) {
-        output.push(createEmoteImg(emotesFfz[word], word, "FFZ"));
-        i++;
         continue;
       }
 
