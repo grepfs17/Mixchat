@@ -247,6 +247,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding: 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
@@ -258,6 +259,14 @@
 .ytlinker-item:hover {
     background: var(--color-bg-tertiary);
     border-color: var(--color-accent);
+}
+
+.ytlinker-item--inactive {
+    opacity: 0.5;
+}
+
+.ytlinker-item--inactive:hover {
+    opacity: 0.7;
 }
 
 .ytlinker-item-info {
@@ -313,6 +322,136 @@
 .ytlinker-remove-button:hover {
     color: #cc0000;
     transform: scale(1.1);
+}
+
+/* Toggle switch for active/inactive */
+.ytlinker-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.ytlinker-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.ytlinker-toggle-track {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: #555;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.ytlinker-toggle--active .ytlinker-toggle-track {
+    background: var(--color-accent);
+}
+
+.ytlinker-toggle-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+}
+
+.ytlinker-toggle--active .ytlinker-toggle-thumb {
+    transform: translateX(16px);
+}
+
+/* Edit mode */
+.ytlinker-item--editing {
+    border-color: var(--color-accent);
+    background: var(--color-bg-tertiary);
+}
+
+.ytlinker-edit-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ytlinker-edit-input {
+    width: 100%;
+    padding: 5px 8px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: 12px;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.ytlinker-edit-input:focus {
+    border-color: var(--color-accent);
+}
+
+.ytlinker-edit-button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    font-size: 13px;
+}
+
+.ytlinker-edit-button:hover {
+    color: var(--color-accent);
+}
+
+.ytlinker-edit-save {
+    background: #22c55e;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.ytlinker-edit-save:hover {
+    background: #16a34a;
+}
+
+.ytlinker-edit-cancel {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.ytlinker-edit-cancel:hover {
+    color: #ef4444;
 }
 
 /* Footer */

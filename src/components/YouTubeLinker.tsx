@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { FaPlus, FaTrash, FaYoutube } from "react-icons/fa";
+import { FaPlus, FaTrash, FaYoutube, FaPencilAlt } from "react-icons/fa";
 import {
   getYoutubeLinks,
   addYoutubeLink,
   removeYoutubeLink,
+  toggleYoutubeLinkActive,
+  updateYoutubeLink,
 } from "../lib/youtubeLinks";
 import type { YouTubeLink } from "../lib/youtubeLinks";
 import type { TwitchChannel } from "../components/AppContainer";
@@ -25,6 +27,9 @@ export default function YouTubeLinker({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editUrl, setEditUrl] = useState<string>("");
+  const [editError, setEditError] = useState<string>("");
 
   const handleAddLink = () => {
     if (!selectedChannelId || !youtubeUrl.trim()) return;
@@ -63,6 +68,48 @@ export default function YouTubeLinker({
     removeYoutubeLink(twitchChannelId);
     setYoutubeLinks(getYoutubeLinks());
     onLinksChanged?.();
+  };
+
+  const handleToggleActive = (twitchChannelId: string) => {
+    toggleYoutubeLinkActive(twitchChannelId);
+    setYoutubeLinks(getYoutubeLinks());
+    onLinksChanged?.();
+  };
+
+  const handleEditStart = (twitchChannelId: string, currentUrl: string) => {
+    setEditingId(twitchChannelId);
+    setEditUrl(currentUrl);
+    setEditError("");
+  };
+
+  const handleEditSave = () => {
+    if (!editingId) return;
+
+    const trimmed = editUrl.trim();
+    if (
+      !trimmed.startsWith("https://www.youtube.com/") &&
+      !trimmed.startsWith("https://youtube.com/") &&
+      !trimmed.startsWith("http://www.youtube.com/") &&
+      !trimmed.startsWith("http://youtube.com/")
+    ) {
+      setEditError(
+        "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
+      );
+      return;
+    }
+
+    updateYoutubeLink(editingId, trimmed);
+    setYoutubeLinks(getYoutubeLinks());
+    setEditingId(null);
+    setEditUrl("");
+    setEditError("");
+    onLinksChanged?.();
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditUrl("");
+    setEditError("");
   };
 
   const isAlreadyLinked = (channelId: string) =>
@@ -192,8 +239,13 @@ export default function YouTubeLinker({
               const channel = availableChannels.find(
                 (c) => c.id === link.twitchChannelId,
               );
+              const isActive = link.active !== false;
+              const isEditing = editingId === link.twitchChannelId;
               return (
-                <div key={link.twitchChannelId} className="ytlinker-item">
+                <div
+                  key={link.twitchChannelId}
+                  className={`ytlinker-item${!isActive ? " ytlinker-item--inactive" : ""}${isEditing ? " ytlinker-item--editing" : ""}`}
+                >
                   <div className="ytlinker-item-info">
                     {channel?.profileImageUrl && (
                       <img
@@ -206,23 +258,98 @@ export default function YouTubeLinker({
                       <div className="ytlinker-item-name">
                         {link.twitchDisplayName}
                       </div>
-                      <a
-                        href={link.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ytlinker-item-url"
-                      >
-                        {link.youtubeUrl}
-                      </a>
+                      {isEditing ? (
+                        <div className="ytlinker-edit-row">
+                          <input
+                            type="text"
+                            value={editUrl}
+                            onChange={(e) => {
+                              setEditUrl(e.target.value);
+                              setEditError("");
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleEditSave();
+                              if (e.key === "Escape") handleEditCancel();
+                            }}
+                            className="ytlinker-edit-input"
+                            autoFocus
+                          />
+                          {editError && (
+                            <div className="ytlinker-error">{editError}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <a
+                          href={link.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ytlinker-item-url"
+                        >
+                          {link.youtubeUrl}
+                        </a>
+                      )}
                     </div>
                   </div>
-                  <button
-                    className="ytlinker-remove-button"
-                    onClick={() => handleRemoveLink(link.twitchChannelId)}
-                    title="Remove YouTube link"
-                  >
-                    <FaTrash />
-                  </button>
+                  <div className="ytlinker-item-actions">
+                    {isEditing ? (
+                      <>
+                        <button
+                          className="ytlinker-edit-save"
+                          onClick={handleEditSave}
+                          title="Save changes"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          className="ytlinker-edit-cancel"
+                          onClick={handleEditCancel}
+                          title="Cancel edit"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="ytlinker-edit-button"
+                          onClick={() =>
+                            handleEditStart(
+                              link.twitchChannelId,
+                              link.youtubeUrl,
+                            )
+                          }
+                          title="Edit YouTube URL"
+                        >
+                          <FaPencilAlt />
+                        </button>
+                        <button
+                          className={`ytlinker-toggle${isActive ? " ytlinker-toggle--active" : ""}`}
+                          onClick={() =>
+                            handleToggleActive(link.twitchChannelId)
+                          }
+                          title={isActive ? "Deactivate link" : "Activate link"}
+                          aria-label={
+                            isActive
+                              ? "Deactivate YouTube link"
+                              : "Activate YouTube link"
+                          }
+                        >
+                          <span className="ytlinker-toggle-track">
+                            <span className="ytlinker-toggle-thumb" />
+                          </span>
+                        </button>
+                        <button
+                          className="ytlinker-remove-button"
+                          onClick={() =>
+                            handleRemoveLink(link.twitchChannelId)
+                          }
+                          title="Remove YouTube link"
+                        >
+                          <FaTrash />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })

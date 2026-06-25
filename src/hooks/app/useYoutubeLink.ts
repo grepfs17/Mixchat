@@ -119,7 +119,10 @@ export function useYoutubeLink(
   }, [linkedYoutubeUrl]);
 
   const linkedYoutubeChannelIds = useMemo(
-    () => getYoutubeLinks().map((l) => l.twitchChannelId),
+    () =>
+      getYoutubeLinks()
+        .filter((l) => l.active !== false)
+        .map((l) => l.twitchChannelId),
     [ytLinksVersion],
   );
 

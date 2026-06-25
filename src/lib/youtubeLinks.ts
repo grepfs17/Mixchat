@@ -9,12 +9,20 @@ export interface YouTubeLink {
   twitchChannelId: string;
   twitchDisplayName: string;
   youtubeUrl: string;
+  active?: boolean;
 }
 
 export function getYoutubeLinks(): YouTubeLink[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: unknown[] = JSON.parse(raw);
+    // Backward compat: default `active` to true for old entries
+    return parsed.map((l) =>
+      l && typeof l === "object" && "active" in l
+        ? (l as YouTubeLink)
+        : { ...(l as Omit<YouTubeLink, "active">), active: true },
+    );
   } catch {
     return [];
   }
@@ -41,10 +49,33 @@ export function removeYoutubeLink(twitchChannelId: string): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
 }
 
+export function toggleYoutubeLinkActive(twitchChannelId: string): void {
+  const links = getYoutubeLinks();
+  const found = links.find((l) => l.twitchChannelId === twitchChannelId);
+  if (found) {
+    found.active = found.active === false ? true : false;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+  }
+}
+
+export function updateYoutubeLink(
+  twitchChannelId: string,
+  youtubeUrl: string,
+): void {
+  const links = getYoutubeLinks();
+  const found = links.find((l) => l.twitchChannelId === twitchChannelId);
+  if (found) {
+    found.youtubeUrl = youtubeUrl;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+  }
+}
+
 export function getYoutubeLinkForChannel(
   twitchChannelId: string,
 ): string | null {
   const links = getYoutubeLinks();
-  const found = links.find((l) => l.twitchChannelId === twitchChannelId);
+  const found = links.find(
+    (l) => l.twitchChannelId === twitchChannelId && l.active !== false,
+  );
   return found?.youtubeUrl ?? null;
 }
