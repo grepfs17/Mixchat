@@ -355,6 +355,53 @@ export function useChatAppState({
     twitchSession?.accessToken,
   ]);
 
+  // Auto-refresh emotes every 3 hours in the background.
+  // Uses a localStorage timestamp so the interval persists across navigations.
+  useEffect(() => {
+    if (!selectedTwitchChannelName || !selectedTwitchChannel) return;
+    if (!twitchSession?.userId) return;
+
+    const STORAGE_KEY = "emotes_last_auto_refresh";
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+
+    const doRefresh = async () => {
+      console.log("[emotes] Auto-refresh (3h interval)");
+      try {
+        await clearEmoteCacheStorage();
+        await initializeEmotes(
+          selectedTwitchChannel,
+          selectedTwitchChannelName,
+          twitchSession.userId,
+        );
+      } catch (err) {
+        console.error("[emotes] Auto-refresh failed:", err);
+      }
+      localStorage.setItem(STORAGE_KEY, String(Date.now()));
+    };
+
+    // Calculate time until next refresh
+    const lastRefresh = Number(localStorage.getItem(STORAGE_KEY) || 0);
+    const elapsed = Date.now() - lastRefresh;
+    const delay = elapsed >= THREE_HOURS ? 0 : THREE_HOURS - elapsed;
+
+    const timer = setTimeout(async () => {
+      await doRefresh();
+      // After the first refresh, set a regular interval
+      const id = setInterval(doRefresh, THREE_HOURS);
+      // Store interval id on a ref so cleanup can clear it
+      intervalRef.current = id;
+    }, delay);
+
+    const intervalRef = {
+      current: null as ReturnType<typeof setInterval> | null,
+    };
+
+    return () => {
+      clearTimeout(timer);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId]);
+
   const {
     sendMessage: sendTwitchMessage,
     slowModeWaitTime,
