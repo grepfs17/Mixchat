@@ -5,13 +5,14 @@ import type {
   ChannelGroupCache,
 } from "./types";
 import { getCachedEmotes, setCachedEmotes, CACHE_DURATION } from "./state";
+import { getEmoteCache, setEmoteCache } from "./emoteStorage";
 
 /**
  * Fetch Twitch global emotes
  */
 export async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_twitch_global";
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) return cached;
 
   try {
@@ -28,7 +29,7 @@ export async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
         emotes[emote.name] = url;
       });
     }
-    setCachedEmotes(cacheKey, emotes);
+    await setCachedEmotes(cacheKey, emotes);
     return emotes;
   } catch (error) {
     console.warn("Twitch global emotes not loaded", error);
@@ -43,7 +44,7 @@ export async function fetchTwitchChannelEmotes(
   channelId: string,
 ): Promise<EmoteMap> {
   const cacheKey = `emotes_twitch_channel_${channelId}`;
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) return cached;
 
   try {
@@ -60,7 +61,7 @@ export async function fetchTwitchChannelEmotes(
         emotes[emote.name] = url;
       });
     }
-    setCachedEmotes(cacheKey, emotes);
+    await setCachedEmotes(cacheKey, emotes);
     return emotes;
   } catch (error) {
     console.warn("Twitch channel emotes not loaded", error);
@@ -137,18 +138,15 @@ export async function fetchUserEmotesByChannel(
   const cacheKey = `emotes_twitch_user_channels_v6_${userId}`;
 
   try {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const cacheData: ChannelGroupCache = JSON.parse(cached);
+    const cacheData = await getEmoteCache<ChannelGroupCache>(cacheKey);
+    if (cacheData) {
       if (Date.now() - cacheData.timestamp <= CACHE_DURATION) {
         console.log(
           "Using cached user channel emotes, groups:",
           cacheData.groups.length,
         );
-        // author population removed — will be handled via hover resolution
         return cacheData.groups;
       }
-      localStorage.removeItem(cacheKey);
     }
   } catch {
     // ignore cache errors
@@ -218,7 +216,7 @@ export async function fetchUserEmotesByChannel(
 
     try {
       const cacheData: ChannelGroupCache = { groups, timestamp: Date.now() };
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      await setEmoteCache(cacheKey, cacheData);
     } catch {
       // ignore storage errors
     }

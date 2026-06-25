@@ -1,4 +1,9 @@
 import type { EmoteMap, EmoteCache, ChannelEmoteGroup } from "./types";
+import {
+  getEmoteCache,
+  setEmoteCache,
+  clearAllEmoteCaches,
+} from "./emoteStorage";
 
 const CACHE_DURATION_DAYS = 7;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -102,21 +107,20 @@ export function setReconnect7tvDelay(delay: number): void {
 /**
  * Get cached emotes if valid
  */
-export function getCachedEmotes(cacheKey: string): EmoteMap | null {
+export async function getCachedEmotes(
+  cacheKey: string,
+): Promise<EmoteMap | null> {
   try {
-    const cached = localStorage.getItem(cacheKey);
-    if (!cached) return null;
+    const cacheData = await getEmoteCache<EmoteCache>(cacheKey);
+    if (!cacheData) return null;
 
-    const cacheData: EmoteCache = JSON.parse(cached);
     const isExpired = Date.now() - cacheData.timestamp > CACHE_DURATION;
-
     if (isExpired) {
-      localStorage.removeItem(cacheKey);
+      // expired — will be cleaned up on next write; no need to await delete
       return null;
     }
 
     // Sanitize: drop any entry whose value is not a plain string
-    // (guards against old cache formats that stored objects instead of URLs)
     const raw = cacheData.emotes;
     const clean: EmoteMap = {};
     for (const [k, v] of Object.entries(raw)) {
@@ -137,12 +141,12 @@ export function getCachedEmotes(cacheKey: string): EmoteMap | null {
 /**
  * Save emotes to cache
  */
-export function setCachedEmotes(
+export async function setCachedEmotes(
   cacheKey: string,
   emotes: EmoteMap,
   emoteSetId?: string,
   authors?: Record<string, string>,
-): void {
+): Promise<void> {
   try {
     const cacheData: EmoteCache = {
       emotes,
@@ -150,7 +154,7 @@ export function setCachedEmotes(
       emoteSetId,
       authors,
     };
-    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    await setEmoteCache(cacheKey, cacheData);
   } catch (error) {
     console.warn("Failed to cache emotes:", error);
   }
@@ -159,13 +163,12 @@ export function setCachedEmotes(
 /**
  * Get cached authors for a given cache key, if valid.
  */
-export function getCachedAuthors(
+export async function getCachedAuthors(
   cacheKey: string,
-): Record<string, string> | null {
+): Promise<Record<string, string> | null> {
   try {
-    const cached = localStorage.getItem(cacheKey);
-    if (!cached) return null;
-    const cacheData: EmoteCache = JSON.parse(cached);
+    const cacheData = await getEmoteCache<EmoteCache>(cacheKey);
+    if (!cacheData) return null;
     if (Date.now() - cacheData.timestamp > CACHE_DURATION) return null;
     return cacheData.authors ?? null;
   } catch {
@@ -176,15 +179,8 @@ export function getCachedAuthors(
 /**
  * Clear all emote caches
  */
-export function clearEmoteCache(): void {
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith("emotes_")) {
-      keysToRemove.push(key);
-    }
-  }
-  keysToRemove.forEach((key) => localStorage.removeItem(key));
+export async function clearEmoteCache(): Promise<void> {
+  await clearAllEmoteCaches();
 
   emotes7tv = {};
   emotesBttv = {};

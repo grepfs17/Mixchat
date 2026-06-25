@@ -21,6 +21,7 @@ import {
   fetchUserEmotesByChannel,
 } from "./twitch";
 import { subscribeTo7TVUpdates as subscribeTo7TVUpdatesRaw } from "./7tv";
+import { migrateEmoteCachesFromLocalStorage } from "./emoteStorage";
 
 export type {
   EmoteMap,
@@ -59,6 +60,8 @@ export async function initializeEmotes(
   channelName: string,
   userId?: string,
 ): Promise<void> {
+  await migrateEmoteCachesFromLocalStorage();
+
   const stv7 = Promise.all([
     fetch7TVGlobalEmotes(),
     fetch7TVEmotes(channelId),

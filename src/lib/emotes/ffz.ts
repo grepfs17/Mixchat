@@ -10,9 +10,9 @@ export const authorsFfz: Record<string, string> = {};
  */
 export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_ffz_global";
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authorsFfz, cachedAuthors);
     return cached;
   }
@@ -36,7 +36,7 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
         }
       });
     }
-    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
+    await setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
     return emotes;
   } catch (error) {
     console.warn("FFZ global emotes not loaded", error);
@@ -49,9 +49,9 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
  */
 export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
   const cacheKey = `emotes_ffz_${channelName}`;
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authorsFfz, cachedAuthors);
     return cached;
   }
@@ -72,7 +72,7 @@ export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
         });
       }
     }
-    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
+    await setCachedEmotes(cacheKey, emotes, undefined, { ...authorsFfz });
     return emotes;
   } catch (error) {
     console.warn("FFZ emotes not loaded", error);

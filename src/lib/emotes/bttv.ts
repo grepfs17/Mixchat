@@ -10,9 +10,9 @@ export const authorsBttv: Record<string, string> = {};
  */
 export async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_bttv_global";
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authorsBttv, cachedAuthors);
     return cached;
   }
@@ -29,7 +29,7 @@ export async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
         `https://cdn.betterttv.net/emote/${emote.id}/${EMOTE_SIZE}x.webp`;
     });
 
-    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsBttv });
+    await setCachedEmotes(cacheKey, emotes, undefined, { ...authorsBttv });
     return emotes;
   } catch (error) {
     console.warn("BTTV global emotes not loaded", error);
@@ -42,9 +42,9 @@ export async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
  */
 export async function fetchBTTVEmotes(channelId: string): Promise<EmoteMap> {
   const cacheKey = `emotes_bttv_${channelId}`;
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authorsBttv, cachedAuthors);
     return cached;
   }
@@ -72,7 +72,7 @@ export async function fetchBTTVEmotes(channelId: string): Promise<EmoteMap> {
       });
     }
 
-    setCachedEmotes(cacheKey, emotes, undefined, { ...authorsBttv });
+    await setCachedEmotes(cacheKey, emotes, undefined, { ...authorsBttv });
     return emotes;
   } catch (error) {
     console.warn("BTTV emotes not loaded", error);

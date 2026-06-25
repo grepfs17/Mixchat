@@ -12,6 +12,7 @@ import {
   reconnect7tvTimer,
   reconnect7tvDelay,
 } from "./state";
+import { deleteEmoteCache } from "./emoteStorage";
 import { EMOTE_SIZE, fetchWithTimeout, ZERO_WIDTH_FLAG } from "./utils";
 
 /** Accumulated author data for 7TV emotes, populated during fetch. */
@@ -25,9 +26,9 @@ const RECONNECT_7TV_MAX = 300_000;
  */
 export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_7tv_global_v2";
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authors7tv, cachedAuthors);
     console.log(
       "Using cached 7TV global emotes, count:",
@@ -53,7 +54,7 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
         if (ownerName) authors7tv[emote.name] = ownerName;
       });
     }
-    setCachedEmotes(cacheKey, emotes, undefined, { ...authors7tv });
+    await setCachedEmotes(cacheKey, emotes, undefined, { ...authors7tv });
     console.log(
       "Fetched 7TV global emotes, count:",
       Object.keys(emotes).length,
@@ -70,9 +71,9 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
  */
 export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
   const cacheKey = `emotes_7tv_v2_${channelId}`;
-  const cached = getCachedEmotes(cacheKey);
+  const cached = await getCachedEmotes(cacheKey);
   if (cached) {
-    const cachedAuthors = getCachedAuthors(cacheKey);
+    const cachedAuthors = await getCachedAuthors(cacheKey);
     if (cachedAuthors) Object.assign(authors7tv, cachedAuthors);
     return cached;
   }
@@ -151,7 +152,7 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
         Object.keys(data),
       );
     }
-    setCachedEmotes(cacheKey, emotes, activeEmoteSetId || undefined, {
+    await setCachedEmotes(cacheKey, emotes, activeEmoteSetId || undefined, {
       ...authors7tv,
     });
     return emotes;
@@ -245,7 +246,7 @@ export function subscribeTo7TVUpdates(
           });
 
           // Clear cache and re-initialize
-          localStorage.removeItem(`emotes_7tv_v2_${channelId}`);
+          await deleteEmoteCache(`emotes_7tv_v2_${channelId}`);
           await reinitialize(channelId, channelName);
         }
       }

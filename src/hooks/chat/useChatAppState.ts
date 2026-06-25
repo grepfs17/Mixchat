@@ -504,7 +504,7 @@ export function useChatAppState({
     console.log("User initiated emote reload");
     setIsRefreshingEmotes(true);
     try {
-      clearEmoteCache();
+      await clearEmoteCache();
       await initializeEmotes(
         selectedTwitchChannel,
         selectedTwitchChannelName,
