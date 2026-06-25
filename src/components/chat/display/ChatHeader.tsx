@@ -220,7 +220,7 @@ export default function ChatHeader({
               title={
                 isRefreshingEmotes
                   ? "Reloading emotes..."
-                  : "Reload all emotes (clears cache)"
+                  : "Reload emotes in background"
               }
             >
               <MdRefresh

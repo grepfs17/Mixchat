@@ -42,7 +42,7 @@ export {
   getAllEmotesOrganized,
 } from "./search";
 
-export { clearEmoteCache } from "./state";
+export { clearEmoteCache, clearEmoteCacheStorage } from "./state";
 
 /**
  * Initialize emotes for a given channel.

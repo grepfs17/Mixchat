@@ -6,6 +6,7 @@ import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
 import {
   initializeEmotes,
   clearEmoteCache,
+  clearEmoteCacheStorage,
   subscribeTo7TVUpdates,
 } from "../../lib/emotes";
 import { initializeBadges, clearBadgeCache } from "../../lib/badges";
@@ -501,29 +502,17 @@ export function useChatAppState({
   );
 
   const handleRefreshEmotes = useCallback(async () => {
-    console.log("User initiated emote reload");
+    console.log("User initiated emote reload (background)");
     setIsRefreshingEmotes(true);
     try {
-      await clearEmoteCache();
+      await clearEmoteCacheStorage();
       await initializeEmotes(
         selectedTwitchChannel,
         selectedTwitchChannelName,
         twitchSession?.userId,
       );
-      notificationIdRef.current += 1;
-      setNotification({
-        message: "Emotes reloaded successfully!",
-        type: "success",
-        id: notificationIdRef.current,
-      });
     } catch (err) {
       console.error("Failed to reinitialize emotes:", err);
-      notificationIdRef.current += 1;
-      setNotification({
-        message: "Failed to reload emotes",
-        type: "error",
-        id: notificationIdRef.current,
-      });
     } finally {
       setIsRefreshingEmotes(false);
     }

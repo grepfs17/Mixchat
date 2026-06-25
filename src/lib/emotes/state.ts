@@ -192,3 +192,12 @@ export async function clearEmoteCache(): Promise<void> {
   lastUserId = undefined;
   parseCache.clear();
 }
+
+/**
+ * Clear emote caches from storage only (IndexedDB/localStorage).
+ * In-memory maps are left intact so the UI keeps showing old emotes
+ * while fresh data is fetched in the background.
+ */
+export async function clearEmoteCacheStorage(): Promise<void> {
+  await clearAllEmoteCaches();
+}
