@@ -3,6 +3,7 @@ import type { ChatFont, ChatTheme } from "../../lib/types";
 import { applyTheme } from "../../lib/themes";
 import { loadEventSounds, saveEventSounds } from "../../lib/eventSoundStorage";
 import type { MentionSoundType } from "../chat/useTwitchChat";
+import type { ModModeTarget } from "../../contexts/ModerationContext";
 
 function useLocalStorageState<T>(
   key: string,
@@ -65,6 +66,8 @@ export type UseChatSettingsResult = {
   ignoredUsers: string[];
   setIgnoredUsers: React.Dispatch<React.SetStateAction<string[]>>;
   handleEventSoundChange: (eventType: string, soundData: string | null) => void;
+  modModeTargets: Record<string, ModModeTarget>;
+  setModModeTargetForChannel: (channelId: string, target: ModModeTarget) => void;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -170,6 +173,9 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_ignored_users",
     [],
   );
+  const [modModeTargets, setModModeTargets] = useLocalStorageState<
+    Record<string, ModModeTarget>
+  >("mixchat_mod_mode_targets", {});
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -187,6 +193,13 @@ export function useChatSettings(): UseChatSettingsResult {
         }
         return updated;
       });
+    },
+    [],
+  );
+
+  const setModModeTargetForChannel = useCallback(
+    (channelId: string, target: ModModeTarget) => {
+      setModModeTargets((prev) => ({ ...prev, [channelId]: target }));
     },
     [],
   );
@@ -230,5 +243,7 @@ export function useChatSettings(): UseChatSettingsResult {
     ignoredUsers,
     setIgnoredUsers,
     handleEventSoundChange,
+    modModeTargets,
+    setModModeTargetForChannel,
   };
 }

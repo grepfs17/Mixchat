@@ -60,7 +60,7 @@ describe("useChatAppState - auto moderator mode", () => {
     vi.clearAllMocks();
   });
 
-  it("auto-activates mod mode when user accesses their own channel by username", async () => {
+  it("activates mod mode when modModeTarget is twitch on own channel", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: true,
@@ -68,6 +68,7 @@ describe("useChatAppState - auto moderator mode", () => {
         selectedTwitchChannelName: "testuser",
         selectedTwitchChannelDisplayName: "TestUser",
         twitchSession: createTwitchSession(),
+        modModeTarget: "twitch",
       }),
     );
 
@@ -77,7 +78,7 @@ describe("useChatAppState - auto moderator mode", () => {
     });
   });
 
-  it("auto-activates mod mode when user accesses their own channel by userId", async () => {
+  it("activates mod mode when modModeTarget is both on own channel", async () => {
     const { result } = renderHook(() =>
       useChatAppState({
         twitchConnected: true,
@@ -85,12 +86,31 @@ describe("useChatAppState - auto moderator mode", () => {
         selectedTwitchChannelName: "someothername",
         selectedTwitchChannelDisplayName: "SomeOtherName",
         twitchSession: createTwitchSession(),
+        modModeTarget: "both",
       }),
     );
 
     await waitFor(() => {
       expect(result.current.isModerator).toBe(true);
       expect(result.current.modModeActive).toBe(true);
+    });
+  });
+
+  it("does not activate mod mode when modModeTarget is off on own channel", async () => {
+    const { result } = renderHook(() =>
+      useChatAppState({
+        twitchConnected: true,
+        selectedTwitchChannel: "broadcaster-123",
+        selectedTwitchChannelName: "testuser",
+        selectedTwitchChannelDisplayName: "TestUser",
+        twitchSession: createTwitchSession(),
+        modModeTarget: "off",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isModerator).toBe(true);
+      expect(result.current.modModeActive).toBe(false);
     });
   });
 

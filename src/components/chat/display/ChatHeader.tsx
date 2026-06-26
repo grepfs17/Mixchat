@@ -6,7 +6,13 @@ import {
   MdClose,
   MdVisibilityOff,
 } from "react-icons/md";
-import { FaUsers, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import {
+  FaUsers,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTwitch,
+  FaYoutube,
+} from "react-icons/fa";
 import { GiCrossedSwords } from "react-icons/gi";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import CategoryDropdown from "./CategoryDropdown";
@@ -75,7 +81,7 @@ export default function ChatHeader({
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,
-    onToggleModMode,
+    onSetModMode,
   } = useModerationContext();
   const showModToggle = isModerator || isYouTubeModerator;
   const [editingTitle, setEditingTitle] = useState(false);
@@ -93,6 +99,8 @@ export default function ChatHeader({
   const categorySearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const categoryInputRef = useRef<HTMLInputElement>(null);
+  const modModeDropdownRef = useRef<HTMLDivElement>(null);
+  const [modModeDropdownOpen, setModModeDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!editingCategory) return;
@@ -115,6 +123,17 @@ export default function ChatHeader({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [editingCategory]);
+
+  useEffect(() => {
+    if (!modModeDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!modModeDropdownRef.current?.contains(e.target as Node)) {
+        setModModeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [modModeDropdownOpen]);
 
   const handleSaveTitle = useCallback(() => {
     setSavingTitle(true);
@@ -237,27 +256,110 @@ export default function ChatHeader({
             </button>
           )}
           {showModToggle && (
-            <button
-              onClick={onToggleModMode}
-              className={`header-button ${modModeActive || youtubeModModeActive ? "mod-active" : ""}`}
-              title={
-                modModeActive || youtubeModModeActive
-                  ? "Disable Mod Mode"
-                  : "Enable Mod Mode"
-              }
-            >
-              <GiCrossedSwords
-                size={16}
-                className="mod-icon"
-                style={{
-                  color:
-                    modModeActive || youtubeModModeActive
-                      ? "var(--color-green)"
-                      : "var(--color-text-muted)",
-                }}
-              />
-              <span className="mod-label">Mod Mode</span>
-            </button>
+            <div className="mod-mode-container" ref={modModeDropdownRef}>
+              <button
+                onClick={() => setModModeDropdownOpen((v) => !v)}
+                className={`header-button mod-mode-trigger ${
+                  modModeActive || youtubeModModeActive ? "mod-active" : ""
+                }`}
+                title="Mod Mode"
+              >
+                {modModeActive && youtubeModModeActive ? (
+                  <GiCrossedSwords
+                    size={16}
+                    className="mod-icon"
+                    style={{ color: "var(--color-green)" }}
+                  />
+                ) : modModeActive ? (
+                  <FaTwitch
+                    size={16}
+                    className="mod-icon"
+                    style={{ color: "var(--color-twitch, #9146ff)" }}
+                  />
+                ) : youtubeModModeActive ? (
+                  <FaYoutube
+                    size={16}
+                    className="mod-icon"
+                    style={{ color: "var(--color-youtube, #ff2222)" }}
+                  />
+                ) : (
+                  <GiCrossedSwords
+                    size={16}
+                    className="mod-icon"
+                    style={{ color: "var(--color-text-muted)" }}
+                  />
+                )}
+                <span className="mod-label">Mod Mode</span>
+              </button>
+              {modModeDropdownOpen && (
+                <div className="mod-mode-dropdown">
+                  {(isModerator || isYouTubeModerator) && (
+                    <button
+                      className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
+                      onClick={() => {
+                        onSetModMode?.("off");
+                        setModModeDropdownOpen(false);
+                      }}
+                      title="Disable Mod Mode"
+                    >
+                      <GiCrossedSwords size={14} />
+                      <span>Off</span>
+                      {!modModeActive && !youtubeModModeActive && (
+                        <span className="mod-mode-check">✓</span>
+                      )}
+                    </button>
+                  )}
+                  {isModerator && (
+                    <button
+                      className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
+                      onClick={() => {
+                        onSetModMode?.("twitch");
+                        setModModeDropdownOpen(false);
+                      }}
+                      title="Twitch Mod Mode"
+                    >
+                      <FaTwitch size={14} />
+                      <span>Twitch</span>
+                      {modModeActive && !youtubeModModeActive && (
+                        <span className="mod-mode-check">✓</span>
+                      )}
+                    </button>
+                  )}
+                  {isYouTubeModerator && (
+                    <button
+                      className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
+                      onClick={() => {
+                        onSetModMode?.("youtube");
+                        setModModeDropdownOpen(false);
+                      }}
+                      title="YouTube Mod Mode"
+                    >
+                      <FaYoutube size={14} />
+                      <span>YouTube</span>
+                      {youtubeModModeActive && !modModeActive && (
+                        <span className="mod-mode-check">✓</span>
+                      )}
+                    </button>
+                  )}
+                  {isModerator && isYouTubeModerator && (
+                    <button
+                      className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
+                      onClick={() => {
+                        onSetModMode?.("both");
+                        setModModeDropdownOpen(false);
+                      }}
+                      title="Both Platforms Mod Mode"
+                    >
+                      <GiCrossedSwords size={14} />
+                      <span>Both</span>
+                      {modModeActive && youtubeModModeActive && (
+                        <span className="mod-mode-check">✓</span>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {isLoading && <span className="loading-indicator">●</span>}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { PlatformSession } from "../../../lib/types";
 import type { YTMessage } from "../../../components/chat/unified/types";
+import type { ModModeTarget } from "../../../contexts/ModerationContext";
 import {
   deleteYouTubeMessage,
   banYouTubeUser,
@@ -12,6 +13,8 @@ export interface UseYouTubeModerationOptions {
   youtubeVideoId?: string | null;
   /** Channel id of the live stream's owner, used to detect the broadcaster. */
   ytChannelId?: string | null;
+  /** Current mod mode target selection, drives youtubeModModeActive. */
+  modModeTarget?: ModModeTarget;
   setNotification: (
     notification: {
       message: string;
@@ -50,6 +53,7 @@ export function useYouTubeModeration({
   youtubeSession,
   youtubeVideoId,
   ytChannelId,
+  modModeTarget = "off",
   setNotification,
   notificationIdRef,
   onLocalDelete,
@@ -109,12 +113,11 @@ export function useYouTubeModeration({
       setYoutubeModModeActive(false);
       return;
     }
-    if (isYouTubeModerator) {
-      setYoutubeModModeActive(true);
-    } else {
-      setYoutubeModModeActive(false);
-    }
-  }, [isYouTubeModerator, youtubeVideoId]);
+    setYoutubeModModeActive(
+      isYouTubeModerator &&
+        (modModeTarget === "youtube" || modModeTarget === "both"),
+    );
+  }, [isYouTubeModerator, modModeTarget, youtubeVideoId]);
 
   const handleToggleYoutubeModMode = useCallback(() => {
     if (!isYouTubeModerator) return;

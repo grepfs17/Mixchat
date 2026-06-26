@@ -19,12 +19,15 @@ import type {
   MessageType,
 } from "../../../lib/types";
 import type { RaidOutEvent } from "../eventSubHelpers/useRaidDetection";
+import type { ModModeTarget } from "../../../contexts/ModerationContext";
 
 export interface UseModerationOptions {
   twitchSession?: PlatformSession;
   selectedTwitchChannel?: string;
   selectedTwitchChannelName?: string;
   disableModModeByDefault?: boolean;
+  /** Current mod mode target selection, drives modModeActive. */
+  modModeTarget?: ModModeTarget;
   setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
   setNotification: (
     notification: {
@@ -68,6 +71,7 @@ export function useModeration({
   selectedTwitchChannel = "",
   selectedTwitchChannelName = "",
   disableModModeByDefault = false,
+  modModeTarget = "off",
   setMessages,
   setNotification,
   notificationIdRef,
@@ -86,22 +90,17 @@ export function useModeration({
         twitchSession.userId && selectedTwitchChannel
           ? twitchSession.userId === selectedTwitchChannel
           : false;
-      const isOwner = isOwnerByName || isOwnerById;
-      if (isOwner) {
+      if (isOwnerByName || isOwnerById) {
         setIsModerator(true);
-        setModModeActive(!disableModModeByDefault);
-      } else {
-        setModModeActive(false);
       }
-    } else {
-      setModModeActive(false);
     }
-  }, [
-    twitchSession,
-    selectedTwitchChannelName,
-    selectedTwitchChannel,
-    disableModModeByDefault,
-  ]);
+  }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel]);
+
+  useEffect(() => {
+    setModModeActive(
+      isModerator && (modModeTarget === "twitch" || modModeTarget === "both"),
+    );
+  }, [isModerator, modModeTarget]);
 
   useEffect(() => {
     const checkModViaApi = async () => {

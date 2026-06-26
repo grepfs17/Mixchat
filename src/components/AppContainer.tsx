@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import LoginPanel from "./LoginPanel";
 import ChatApp from "./chat/ChatApp";
@@ -7,7 +7,6 @@ import LiveNotification from "./LiveNotification";
 import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
-import type { PlatformSession, ChatFont, ChatTheme } from "../lib/types";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
@@ -104,6 +103,8 @@ export default function AppContainer() {
     ignoredUsers,
     setIgnoredUsers,
     handleEventSoundChange,
+    modModeTargets,
+    setModModeTargetForChannel,
   } = useChatSettings();
   const {
     linkedYoutubeUrl,
@@ -578,6 +579,8 @@ export default function AppContainer() {
                 chatTheme={chatTheme}
                 hideViewerCount={shouldHideViewerCount}
                 disableModModeByDefault={disableModModeByDefault}
+                modModeTargets={modModeTargets}
+                setModModeTargetForChannel={setModModeTargetForChannel}
                 eventSounds={eventSounds}
                 eventSoundVolume={eventSoundVolume}
                 ignoredUsers={ignoredUsers}

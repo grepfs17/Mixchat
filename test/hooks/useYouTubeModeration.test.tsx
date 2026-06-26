@@ -58,7 +58,8 @@ describe("useYouTubeModeration - moderator detection", () => {
       useYouTubeModeration(baseProps({ ytChannelId: OWN })),
     );
     expect(result.current.isYouTubeModerator).toBe(true);
-    expect(result.current.youtubeModModeActive).toBe(true);
+    // youtubeModModeActive is driven by modModeTarget, not auto-activated
+    expect(result.current.youtubeModModeActive).toBe(false);
   });
 
   it("promotes a non-owner moderator from a moderator badge on their own message", () => {
@@ -87,9 +88,7 @@ describe("useYouTubeModeration - moderator detection", () => {
     const { result } = renderHook(() =>
       useYouTubeModeration(
         baseProps({
-          messages: [
-            msg({ authorChannelId: OWN, badges: { Verified: "x" } }),
-          ],
+          messages: [msg({ authorChannelId: OWN, badges: { Verified: "x" } })],
         }),
       ),
     );
@@ -155,9 +154,7 @@ describe("useYouTubeModeration - moderator detection", () => {
     expect(result.current.isYouTubeModerator).toBe(true);
 
     // New stream, but the buffer momentarily still holds the old message.
-    rerender(
-      baseProps({ youtubeVideoId: "vid-2", messages: [staleModMsg] }),
-    );
+    rerender(baseProps({ youtubeVideoId: "vid-2", messages: [staleModMsg] }));
     // Still derived from a message whose author is the signed-in user, so it
     // stays true here — but once the buffer clears it must drop.
     rerender(baseProps({ youtubeVideoId: "vid-2", messages: [] }));
@@ -172,16 +169,49 @@ describe("useYouTubeModeration - moderator detection", () => {
     expect(result.current.youtubeModModeActive).toBe(false);
   });
 
-  it("toggles youtubeModModeActive when the user is a moderator", () => {
+  it("activates youtubeModModeActive when modModeTarget includes youtube", () => {
     const { result } = renderHook(() =>
-      useYouTubeModeration(baseProps({ ytChannelId: OWN })),
+      useYouTubeModeration(
+        baseProps({ ytChannelId: OWN, modModeTarget: "youtube" }),
+      ),
     );
     expect(result.current.isYouTubeModerator).toBe(true);
     expect(result.current.youtubeModModeActive).toBe(true);
+  });
 
-    act(() => {
-      result.current.handleToggleYoutubeModMode();
-    });
+  it("activates youtubeModModeActive when modModeTarget is both", () => {
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({ ytChannelId: OWN, modModeTarget: "both" }),
+      ),
+    );
+    expect(result.current.isYouTubeModerator).toBe(true);
+    expect(result.current.youtubeModModeActive).toBe(true);
+  });
+
+  it("keeps youtubeModModeActive false when modModeTarget is off", () => {
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({ ytChannelId: OWN, modModeTarget: "off" }),
+      ),
+    );
+    expect(result.current.isYouTubeModerator).toBe(true);
+    expect(result.current.youtubeModModeActive).toBe(false);
+  });
+
+  it("deactivates youtubeModModeActive when modModeTarget changes to off", () => {
+    const { result, rerender } = renderHook(
+      (props: Props) => useYouTubeModeration(props),
+      {
+        initialProps: baseProps({
+          ytChannelId: OWN,
+          modModeTarget: "youtube",
+        }),
+      },
+    );
+    expect(result.current.youtubeModModeActive).toBe(true);
+
+    rerender(baseProps({ ytChannelId: OWN, modModeTarget: "off" }));
     expect(result.current.youtubeModModeActive).toBe(false);
   });
 });

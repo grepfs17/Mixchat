@@ -8,17 +8,15 @@ import UnifiedChat from "./unified";
 import RaidNotification from "./shared/RaidNotification";
 import HypeTrainBanner from "./shared/HypeTrainBanner";
 import PollBanner from "./shared/PollBanner";
-import type { PollState } from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
-import type { PredictionState } from "./shared/PredictionBanner";
 import CelebrationBanner from "./shared/CelebrationBanner";
-import type { CelebrationState } from "./shared/CelebrationBanner";
 import SplitLayout from "./SplitLayout";
 import {
   useChatAppState,
   type ChatAppStateProps,
 } from "../../hooks/chat/useChatAppState";
 import { ModerationContext } from "../../contexts/ModerationContext";
+import type { ModModeTarget } from "../../contexts/ModerationContext";
 import type { ChatFont, ChatTheme } from "../../lib/types";
 import { useState, useCallback, useEffect } from "react";
 
@@ -29,6 +27,9 @@ interface YtConnectionState {
 }
 
 export default function ChatApp(props: ChatAppStateProps) {
+  const currentModModeTarget: ModModeTarget =
+    props.modModeTargets?.[props.selectedTwitchChannel ?? ""] ?? "off";
+
   const {
     messages,
     isLoading,
@@ -74,8 +75,6 @@ export default function ChatApp(props: ChatAppStateProps) {
     setNotification,
     handleSendMessage,
     handleRefreshEmotes,
-    handleToggleModMode,
-    handleToggleYoutubeModMode,
     handleDelete,
     handleBan,
     handleTimeout,
@@ -95,7 +94,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     slowModeWaitTime,
     followerModeMinutes,
     ignoredUsers,
-  } = useChatAppState(props);
+  } = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
     { connected: false, loading: true, error: null },
@@ -141,15 +140,14 @@ export default function ChatApp(props: ChatAppStateProps) {
     setNotification({ message, type });
   };
 
-  const handleToggleAnyModMode = useCallback(() => {
-    if (isModerator) handleToggleModMode();
-    if (isYouTubeModerator) handleToggleYoutubeModMode();
-  }, [
-    isModerator,
-    isYouTubeModerator,
-    handleToggleModMode,
-    handleToggleYoutubeModMode,
-  ]);
+  const handleSetModMode = useCallback(
+    (target: ModModeTarget) => {
+      if (props.setModModeTargetForChannel && selectedTwitchChannel) {
+        props.setModModeTargetForChannel(selectedTwitchChannel, target);
+      }
+    },
+    [props.setModModeTargetForChannel, selectedTwitchChannel],
+  );
 
   const moderationValue = {
     isModerator,
@@ -167,8 +165,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     onDeleteYouTubeMessage: handleYtDelete,
     onBanYouTubeUser: handleYtBan,
     onTimeoutYouTubeUser: handleYtTimeout,
-    onToggleModMode: handleToggleAnyModMode,
-    onToggleYouTubeModMode: handleToggleAnyModMode,
+    onSetModMode: handleSetModMode,
   };
 
   return (

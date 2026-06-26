@@ -25,6 +25,7 @@ import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanne
 import type { PollState } from "../../components/chat/shared/PollBanner";
 import type { PredictionState } from "../../components/chat/shared/PredictionBanner";
 import type { CelebrationState } from "../../components/chat/shared/CelebrationBanner";
+import type { ModModeTarget } from "../../contexts/ModerationContext";
 
 import {
   useChatLayout,
@@ -59,6 +60,9 @@ export interface ChatAppStateProps {
   chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
   disableModModeByDefault?: boolean;
+  modModeTarget?: ModModeTarget;
+  modModeTargets?: Record<string, ModModeTarget>;
+  setModModeTargetForChannel?: (channelId: string, target: ModModeTarget) => void;
   eventSounds?: Record<string, string>;
   eventSoundVolume?: number;
   ignoredUsers?: string[];
@@ -83,6 +87,7 @@ export function useChatAppState({
   mentionSoundType = "ding" as MentionSoundType,
   showDeletedMessages = true,
   disableModModeByDefault = false,
+  modModeTarget = "off",
   eventSounds = {},
   eventSoundVolume = 1,
   ignoredUsers = [],
@@ -207,6 +212,7 @@ export function useChatAppState({
     selectedTwitchChannel,
     selectedTwitchChannelName,
     disableModModeByDefault,
+    modModeTarget,
     setMessages,
     setNotification,
     notificationIdRef,
@@ -225,6 +231,7 @@ export function useChatAppState({
     youtubeSession,
     youtubeVideoId,
     ytChannelId,
+    modModeTarget,
     setNotification,
     notificationIdRef,
     onLocalDelete: removeYtMessage,

@@ -1,5 +1,7 @@
 import { createContext, useContext } from "react";
 
+export type ModModeTarget = "off" | "twitch" | "youtube" | "both";
+
 export interface ModerationContextValue {
   isModerator: boolean;
   modModeActive: boolean;
@@ -7,7 +9,6 @@ export interface ModerationContextValue {
   isYouTubeModerator?: boolean;
   youtubeModModeActive?: boolean;
   youtubeVideoId?: string | null;
-  /** Signed-in YouTube channel id; used to skip mod actions on the user's own messages. */
   youtubeOwnChannelId?: string | null;
   onDeleteMessage?: (messageId: string) => void;
   onBanUser?: (userId: string, displayName?: string) => void;
@@ -25,8 +26,7 @@ export interface ModerationContextValue {
     seconds: number,
     displayName?: string,
   ) => void;
-  onToggleModMode?: () => void;
-  onToggleYouTubeModMode?: () => void;
+  onSetModMode?: (target: ModModeTarget) => void;
 }
 
 export const ModerationContext = createContext<ModerationContextValue>({

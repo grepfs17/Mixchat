@@ -108,7 +108,6 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       onTimeoutUser,
       onUntimeoutUser,
       onWarnUser,
-      onToggleModMode,
     } = useModerationContext();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(
@@ -281,7 +280,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         const emoteName = target.getAttribute("data-emote-name") || "Emote";
         const emoteSource =
           target.getAttribute("data-emote-source") || "Twitch";
-        const emoteAuthor = target.getAttribute("data-emote-author") || undefined;
+        const emoteAuthor =
+          target.getAttribute("data-emote-author") || undefined;
         if (tooltipUrl) {
           const rect = target.getBoundingClientRect();
           setEmoteTooltip((prev) => {

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import ChatDisplay from "../../src/components/chat/display";
 import UnifiedChat from "../../src/components/chat/unified";
@@ -130,21 +130,20 @@ describe("Moderator Mode", () => {
       render(
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: true,
-          onToggleModMode: vi.fn(),
+          onSetModMode: vi.fn(),
         }),
       );
-      expect(screen.getByTitle("Enable Mod Mode")).toBeInTheDocument();
+      expect(screen.getByTitle("Mod Mode")).toBeInTheDocument();
     });
 
     it("does not render mod mode button when user is not a moderator", () => {
       render(
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: false,
-          onToggleModMode: vi.fn(),
+          onSetModMode: vi.fn(),
         }),
       );
-      expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
-      expect(screen.queryByTitle("Disable Mod Mode")).not.toBeInTheDocument();
+      expect(screen.queryByTitle("Mod Mode")).not.toBeInTheDocument();
     });
 
     it("shows active state when mod mode is enabled", () => {
@@ -152,24 +151,26 @@ describe("Moderator Mode", () => {
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: true,
           modModeActive: true,
-          onToggleModMode: vi.fn(),
+          onSetModMode: vi.fn(),
         }),
       );
-      expect(screen.getByTitle("Disable Mod Mode")).toBeInTheDocument();
-      expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
+      expect(screen.getByTitle("Mod Mode")).toBeInTheDocument();
     });
 
-    it("calls onToggleModMode when mod mode button is clicked", async () => {
-      const onToggle = vi.fn();
+    it("opens dropdown and calls onSetModMode when option is clicked", async () => {
+      const onSetModMode = vi.fn();
       render(
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: true,
           modModeActive: false,
-          onToggleModMode: onToggle,
+          onSetModMode,
         }),
       );
-      fireEvent.click(screen.getByTitle("Enable Mod Mode"));
-      expect(onToggle).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByTitle("Mod Mode"));
+      expect(screen.getByText("Off")).toBeInTheDocument();
+      expect(screen.getByText("Twitch")).toBeInTheDocument();
+      fireEvent.click(screen.getByText("Twitch"));
+      expect(onSetModMode).toHaveBeenCalledWith("twitch");
     });
 
     it("renders mod mode button when user is only a YouTube moderator", () => {
@@ -177,37 +178,41 @@ describe("Moderator Mode", () => {
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: false,
           isYouTubeModerator: true,
-          onToggleModMode: vi.fn(),
+          onSetModMode: vi.fn(),
         }),
       );
-      expect(screen.getByTitle("Enable Mod Mode")).toBeInTheDocument();
+      expect(screen.getByTitle("Mod Mode")).toBeInTheDocument();
     });
 
-    it("calls onToggleModMode when YouTube-only moderator clicks the button", () => {
-      const onToggle = vi.fn();
+    it("shows Off and YouTube options for YouTube-only moderator", () => {
       render(
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: false,
           isYouTubeModerator: true,
           youtubeModModeActive: false,
-          onToggleModMode: onToggle,
+          onSetModMode: vi.fn(),
         }),
       );
-      fireEvent.click(screen.getByTitle("Enable Mod Mode"));
-      expect(onToggle).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByTitle("Mod Mode"));
+      expect(screen.getByText("Off")).toBeInTheDocument();
+      expect(screen.getByText("YouTube")).toBeInTheDocument();
+      expect(screen.queryByText("Twitch")).not.toBeInTheDocument();
+      expect(screen.queryByText("Both")).not.toBeInTheDocument();
     });
 
-    it("shows active state when only YouTube mod mode is enabled", () => {
+    it("calls onSetModMode when YouTube-only moderator selects YouTube", () => {
+      const onSetModMode = vi.fn();
       render(
         withModeration(<ChatDisplay {...defaultProps} />, {
           isModerator: false,
           isYouTubeModerator: true,
-          youtubeModModeActive: true,
-          onToggleModMode: vi.fn(),
+          youtubeModModeActive: false,
+          onSetModMode,
         }),
       );
-      expect(screen.getByTitle("Disable Mod Mode")).toBeInTheDocument();
-      expect(screen.queryByTitle("Enable Mod Mode")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTitle("Mod Mode"));
+      fireEvent.click(screen.getByText("YouTube"));
+      expect(onSetModMode).toHaveBeenCalledWith("youtube");
     });
   });
 
@@ -824,7 +829,7 @@ describe("Moderator Mode", () => {
         ),
       );
 
-      const textarea = screen.getByPlaceholderText("Type your message");
+      const textarea = screen.getByPlaceholderText("Send to Twitch...");
       fireEvent.change(textarea, { target: { value: "/" } });
       fireEvent.change(textarea, { target: { value: "/ban" } });
 
@@ -845,7 +850,7 @@ describe("Moderator Mode", () => {
         ),
       );
 
-      const textarea = screen.getByPlaceholderText("Type your message");
+      const textarea = screen.getByPlaceholderText("Send to Twitch...");
       fireEvent.change(textarea, { target: { value: "/ban" } });
 
       expect(
