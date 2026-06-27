@@ -44,7 +44,10 @@ afterEach(() => {
 
 describe("useAutomodQueue", () => {
   it("subscribes to automod.message.hold and automod.message.update", () => {
-    const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
+    const subscribeCalls: Array<{
+      type: string;
+      condition: Record<string, string>;
+    }> = [];
 
     renderHook(() =>
       useAutomodQueue({
@@ -413,7 +416,8 @@ describe("useHypeTrainEventSub", () => {
     renderHook(() =>
       useHypeTrainEventSub({
         subscribe: (type, _v, _c, onNotification) => {
-          if (type === "channel.hype_train.begin") notificationHandler = onNotification;
+          if (type === "channel.hype_train.begin")
+            notificationHandler = onNotification;
           return vi.fn();
         },
         channelId: "12345",
@@ -432,7 +436,8 @@ describe("useHypeTrainEventSub", () => {
     renderHook(() =>
       useHypeTrainEventSub({
         subscribe: (type, _v, _c, onNotification) => {
-          if (type === "channel.hype_train.begin") notificationHandler = onNotification;
+          if (type === "channel.hype_train.begin")
+            notificationHandler = onNotification;
           return vi.fn();
         },
         channelId: "12345",
@@ -457,7 +462,13 @@ describe("useHypeTrainEventSub", () => {
         progress: 250,
         goal: 500,
         top_contributions: [
-          { user_id: "u-1", user_name: "Fan", display_name: "Fan", type: "bits", total: 250 },
+          {
+            user_id: "u-1",
+            user_name: "Fan",
+            display_name: "Fan",
+            type: "bits",
+            total: 250,
+          },
         ],
         started_at: "2024-01-01T00:00:00Z",
         expires_at: "2024-01-01T00:05:00Z",
@@ -651,8 +662,20 @@ describe("usePollEventSub", () => {
         broadcaster_user_name: "Cool_User",
         title: "What game next?",
         choices: [
-          { id: "1", title: "Valorant", bits_votes: 5, channel_points_votes: 7, votes: 12 },
-          { id: "2", title: "League", bits_votes: 10, channel_points_votes: 4, votes: 14 },
+          {
+            id: "1",
+            title: "Valorant",
+            bits_votes: 5,
+            channel_points_votes: 7,
+            votes: 12,
+          },
+          {
+            id: "2",
+            title: "League",
+            bits_votes: 10,
+            channel_points_votes: 4,
+            votes: 14,
+          },
         ],
         bits_voting: { is_enabled: true, amount_per_vote: 10 },
         channel_points_voting: { is_enabled: true, amount_per_vote: 10 },
@@ -666,8 +689,20 @@ describe("usePollEventSub", () => {
         id: "poll-1",
         title: "What game next?",
         choices: expect.arrayContaining([
-          expect.objectContaining({ id: "1", title: "Valorant", votes: 12, bitsVotes: 5, channelPointsVotes: 7 }),
-          expect.objectContaining({ id: "2", title: "League", votes: 14, bitsVotes: 10, channelPointsVotes: 4 }),
+          expect.objectContaining({
+            id: "1",
+            title: "Valorant",
+            votes: 12,
+            bitsVotes: 5,
+            channelPointsVotes: 7,
+          }),
+          expect.objectContaining({
+            id: "2",
+            title: "League",
+            votes: 14,
+            bitsVotes: 10,
+            channelPointsVotes: 4,
+          }),
         ]),
       }),
     );
@@ -725,8 +760,20 @@ describe("usePollEventSub", () => {
         broadcaster_user_name: "Cool_User",
         title: "Pick a color!",
         choices: [
-          { id: "1", title: "Blue", bits_votes: 50, channel_points_votes: 70, votes: 120 },
-          { id: "2", title: "Yellow", bits_votes: 100, channel_points_votes: 40, votes: 140 },
+          {
+            id: "1",
+            title: "Blue",
+            bits_votes: 50,
+            channel_points_votes: 70,
+            votes: 120,
+          },
+          {
+            id: "2",
+            title: "Yellow",
+            bits_votes: 100,
+            channel_points_votes: 40,
+            votes: 140,
+          },
         ],
         bits_voting: { is_enabled: true, amount_per_vote: 10 },
         channel_points_voting: { is_enabled: true, amount_per_vote: 10 },
@@ -826,7 +873,8 @@ describe("usePredictionEventSub", () => {
     renderHook(() =>
       usePredictionEventSub({
         subscribe: (type, _v, _c, onNotification) => {
-          if (type === "channel.prediction.begin") handlers[type] = onNotification;
+          if (type === "channel.prediction.begin")
+            handlers[type] = onNotification;
           return vi.fn();
         },
         channelId: "12345",
@@ -865,8 +913,18 @@ describe("usePredictionEventSub", () => {
         id: "pred-1",
         title: "Will we win this game?",
         outcomes: expect.arrayContaining([
-          expect.objectContaining({ id: "o1", title: "Yes!", color: "blue", users: 0 }),
-          expect.objectContaining({ id: "o2", title: "No!", color: "pink", users: 0 }),
+          expect.objectContaining({
+            id: "o1",
+            title: "Yes!",
+            color: "blue",
+            users: 0,
+          }),
+          expect.objectContaining({
+            id: "o2",
+            title: "No!",
+            color: "pink",
+            users: 0,
+          }),
         ]),
         locksAt: "2020-07-15T17:21:03Z",
       }),
@@ -901,7 +959,8 @@ describe("usePredictionEventSub", () => {
     renderHook(() =>
       usePredictionEventSub({
         subscribe: (type, _v, _c, onNotification) => {
-          if (type === "channel.prediction.progress") handlers[type] = onNotification;
+          if (type === "channel.prediction.progress")
+            handlers[type] = onNotification;
           return vi.fn();
         },
         channelId: "12345",
@@ -927,8 +986,22 @@ describe("usePredictionEventSub", () => {
         broadcaster_user_name: "Cool_User",
         title: "Will we win this game?",
         outcomes: [
-          { id: "o1", title: "Yes!", color: "blue", users: 10, channel_points: 15000, top_predictors: [] },
-          { id: "o2", title: "No!", color: "pink", users: 5, channel_points: 5000, top_predictors: [] },
+          {
+            id: "o1",
+            title: "Yes!",
+            color: "blue",
+            users: 10,
+            channel_points: 15000,
+            top_predictors: [],
+          },
+          {
+            id: "o2",
+            title: "No!",
+            color: "pink",
+            users: 5,
+            channel_points: 5000,
+            top_predictors: [],
+          },
         ],
         started_at: "2020-07-15T17:16:03Z",
         locks_at: "2020-07-15T17:21:03Z",
@@ -940,8 +1013,18 @@ describe("usePredictionEventSub", () => {
         id: "pred-1",
         title: "Will we win this game?",
         outcomes: expect.arrayContaining([
-          expect.objectContaining({ id: "o1", title: "Yes!", users: 10, channelPoints: 15000 }),
-          expect.objectContaining({ id: "o2", title: "No!", users: 5, channelPoints: 5000 }),
+          expect.objectContaining({
+            id: "o1",
+            title: "Yes!",
+            users: 10,
+            channelPoints: 15000,
+          }),
+          expect.objectContaining({
+            id: "o2",
+            title: "No!",
+            users: 5,
+            channelPoints: 5000,
+          }),
         ]),
       }),
     );
@@ -975,7 +1058,8 @@ describe("usePredictionEventSub", () => {
     renderHook(() =>
       usePredictionEventSub({
         subscribe: (type, _v, _c, onNotification) => {
-          if (type === "channel.prediction.end") handlers[type] = onNotification;
+          if (type === "channel.prediction.end")
+            handlers[type] = onNotification;
           return vi.fn();
         },
         channelId: "12345",
@@ -1002,8 +1086,22 @@ describe("usePredictionEventSub", () => {
         title: "Will we win this game?",
         winning_outcome_id: "o1",
         outcomes: [
-          { id: "o1", title: "Yes!", color: "blue", users: 12, channel_points: 20000, top_predictors: [] },
-          { id: "o2", title: "No!", color: "pink", users: 3, channel_points: 1000, top_predictors: [] },
+          {
+            id: "o1",
+            title: "Yes!",
+            color: "blue",
+            users: 12,
+            channel_points: 20000,
+            top_predictors: [],
+          },
+          {
+            id: "o2",
+            title: "No!",
+            color: "pink",
+            users: 3,
+            channel_points: 1000,
+            top_predictors: [],
+          },
         ],
         status: "resolved",
         started_at: "2020-07-15T17:16:03Z",
@@ -1019,8 +1117,16 @@ describe("usePredictionEventSub", () => {
         winningOutcomeId: "o1",
         endedAt: "2020-07-15T17:16:11Z",
         outcomes: expect.arrayContaining([
-          expect.objectContaining({ id: "o1", title: "Yes!", channelPoints: 20000 }),
-          expect.objectContaining({ id: "o2", title: "No!", channelPoints: 1000 }),
+          expect.objectContaining({
+            id: "o1",
+            title: "Yes!",
+            channelPoints: 20000,
+          }),
+          expect.objectContaining({
+            id: "o2",
+            title: "No!",
+            channelPoints: 1000,
+          }),
         ]),
       }),
     );
@@ -1029,7 +1135,10 @@ describe("usePredictionEventSub", () => {
 
 describe("useBitsPowerUpEventSub", () => {
   it("subscribes to channel.bits.use v2", async () => {
-    const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
+    const subscribeCalls: Array<{
+      type: string;
+      condition: Record<string, string>;
+    }> = [];
 
     renderHook(() =>
       useBitsPowerUpEventSub({
@@ -1046,11 +1155,16 @@ describe("useBitsPowerUpEventSub", () => {
       });
     });
 
-    expect(subscribeCalls.some((c) => c.type === "channel.bits.use")).toBe(true);
+    expect(subscribeCalls.some((c) => c.type === "channel.bits.use")).toBe(
+      true,
+    );
   });
 
   it("does not subscribe when disabled", () => {
-    const subscribeCalls: Array<{ type: string; condition: Record<string, string> }> = [];
+    const subscribeCalls: Array<{
+      type: string;
+      condition: Record<string, string>;
+    }> = [];
 
     renderHook(() =>
       useBitsPowerUpEventSub({
