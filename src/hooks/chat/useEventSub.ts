@@ -30,17 +30,18 @@ interface Subscription {
 
 /** Order-independent condition comparison. JSON.stringify depends on key
  *  insertion order, so two semantically equal conditions can produce
- *  different strings. We compare by sorted-key entries. */
+ *  different strings. We compare by sorted-key entries.
+ *  The incoming condition may contain extra keys (e.g. Twitch sends both
+ *  from_broadcaster_user_id and to_broadcaster_user_id even when only one
+ *  was subscribed), so we match as long as every key in `a` is present in
+ *  `b` with the same value. */
 function conditionsEqual(
   a: Record<string, string>,
   b: Record<string, string>,
 ): boolean {
-  const aKeys = Object.keys(a).sort();
-  const bKeys = Object.keys(b).sort();
-  if (aKeys.length !== bKeys.length) return false;
-  for (let i = 0; i < aKeys.length; i++) {
-    if (aKeys[i] !== bKeys[i]) return false;
-    if (a[aKeys[i]] !== b[aKeys[i]]) return false;
+  const aKeys = Object.keys(a);
+  for (const k of aKeys) {
+    if (a[k] !== b[k]) return false;
   }
   return true;
 }

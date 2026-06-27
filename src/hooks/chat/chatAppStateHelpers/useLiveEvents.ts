@@ -138,15 +138,36 @@ export function useLiveEvents({
     });
   }, [setNotification, notificationIdRef]);
 
+  const onUserRaid = useCallback(
+    (raid: RaidOutEvent) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(true);
+    },
+    [setPendingRaid, setIsRaidInitiator],
+  );
+
+  const onIncomingRaid = useCallback(
+    (raid: RaidOutEvent) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(false);
+    },
+    [setPendingRaid, setIsRaidInitiator],
+  );
+
+  const onOutgoingRaid = useCallback(
+    (raid: RaidOutEvent) => {
+      setPendingRaid(raid);
+      setIsRaidInitiator(false);
+    },
+    [setPendingRaid, setIsRaidInitiator],
+  );
+
   useRaidDetection({
     subscribe,
     channelId: userId || "",
     enabled: !!(accessToken && userId),
     isInitiator: true,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(true);
-    },
+    onRaid: onUserRaid,
     onScopeError: onRaidScopeError,
   });
 
@@ -155,10 +176,7 @@ export function useLiveEvents({
     channelId,
     enabled: !!(accessToken && channelId && channelId !== userId),
     isInitiator: false,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
+    onRaid: onIncomingRaid,
     onScopeError: onRaidScopeError,
   });
 
@@ -167,10 +185,7 @@ export function useLiveEvents({
     channelId,
     enabled: !!(accessToken && channelId && channelId !== userId),
     isInitiator: true,
-    onRaid: (raid) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
+    onRaid: onOutgoingRaid,
     onScopeError: onRaidScopeError,
   });
 

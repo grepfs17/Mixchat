@@ -196,9 +196,7 @@ describe("useRaidDetection", () => {
       }),
     );
 
-    await act(async () => {
-      await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
-    });
+    await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
 
     expect(subscribeCondition).toEqual({ from_broadcaster_user_id: "12345" });
   });
@@ -219,9 +217,7 @@ describe("useRaidDetection", () => {
       }),
     );
 
-    await act(async () => {
-      await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
-    });
+    await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
 
     expect(subscribeCondition).toEqual({ to_broadcaster_user_id: "12345" });
   });
