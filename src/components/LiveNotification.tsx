@@ -17,6 +17,13 @@ export default function LiveNotification({
       <div className="live-notification-header">
         <div className="live-notification-title">
           <span className="live-badge">LIVE</span>
+          {streamer.profileImageUrl && (
+            <img
+              src={streamer.profileImageUrl}
+              alt={streamer.displayName}
+              className="streamer-avatar-inline"
+            />
+          )}
           <span className="streamer-name">{streamer.displayName}</span>
         </div>
         <button
@@ -28,25 +35,11 @@ export default function LiveNotification({
         </button>
       </div>
 
-      {streamer.profileImageUrl && (
-        <img
-          src={streamer.profileImageUrl}
-          alt={streamer.displayName}
-          className="streamer-avatar"
-        />
-      )}
-
       {streamer.gameName && (
         <div className="stream-game">{streamer.gameName}</div>
       )}
 
       {streamer.title && <div className="stream-title">{streamer.title}</div>}
-
-      {streamer.viewerCount && (
-        <div className="viewer-count">
-          👥 {streamer.viewerCount.toLocaleString()} watching
-        </div>
-      )}
 
       <button className="view-now-button" onClick={onViewNow}>
         View Now
