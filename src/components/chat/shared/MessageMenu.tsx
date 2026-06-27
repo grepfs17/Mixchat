@@ -89,7 +89,7 @@ export default function MessageMenu({
     key: "copy",
     label: "Copy message",
     onClick: () => {
-      onCopy(msg as TwitchMessage | YTMessage);
+      onCopy(entry);
       onClose();
     },
   });
