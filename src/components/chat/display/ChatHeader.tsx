@@ -202,7 +202,8 @@ export default function ChatHeader({
               viewerCount !== undefined &&
               viewerCount !== null && (
                 <span className="viewer-count-display">
-                  <FaUsers size={14} /> {viewerCount.toLocaleString()}
+                  <FaUsers size={14} style={{ paddingTop: "4px" }} />{" "}
+                  {viewerCount.toLocaleString()}
                 </span>
               )}
             {streamUptime && isStreamLive && (

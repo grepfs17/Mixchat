@@ -768,6 +768,18 @@
     font-weight: 500;
 }
 
+@media (max-width: 640px) {
+    .channel-link {
+        font-size: 0.9rem;
+    }
+
+    .uptime-display,
+    .viewer-count-display {
+        font-size: 0.75em;
+        margin-left: 6px;
+    }
+}
+
 .live-start-marker {
     display: flex;
     align-items: center;
