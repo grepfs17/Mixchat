@@ -1,5 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
-import { FaTimes, FaChevronLeft, FaChevronRight, FaTwitch } from "react-icons/fa";
+import {
+  FaTimes,
+  FaChevronLeft,
+  FaChevronRight,
+  FaTwitch,
+} from "react-icons/fa";
 import LoginPanel from "./LoginPanel";
 import ChatApp from "./chat/ChatApp";
 import StreamEmbed from "./StreamEmbed";
@@ -363,7 +368,11 @@ export default function AppContainer() {
                 className="sidebar-toggle-button sidebar-toggle-button--home"
                 title={leftColumnVisible ? "Close sidebar" : "Open sidebar"}
               >
-                {leftColumnVisible ? <FaChevronLeft size={14} /> : <FaChevronRight size={14} />}
+                {leftColumnVisible ? (
+                  <FaChevronLeft size={14} />
+                ) : (
+                  <FaChevronRight size={14} />
+                )}
               </button>
               <div className="your-channel-left">
                 {sessions.twitch.profileImageUrl && (
@@ -379,7 +388,8 @@ export default function AppContainer() {
                   </span>
                 </div>
               </div>
-              {(myChannelInfo.description || myChannelInfo.followerCount !== null) && (
+              {(myChannelInfo.description ||
+                myChannelInfo.followerCount !== null) && (
                 <div className="your-channel-meta">
                   {myChannelInfo.followerCount !== null && (
                     <span className="your-channel-followers">
@@ -396,9 +406,7 @@ export default function AppContainer() {
               <div className="your-channel-actions">
                 <button
                   className="your-channel-btn"
-                  onClick={() =>
-                    setChannelData(sessions.twitch!.userId)
-                  }
+                  onClick={() => setChannelData(sessions.twitch!.userId)}
                 >
                   Go to channel
                 </button>
