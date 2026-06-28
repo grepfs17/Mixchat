@@ -90,6 +90,14 @@
     font-size: 1rem;
 }
 
+.platform-login.twitch {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-accent) 6%, rgba(0, 0, 0, 0.18)) 0%,
+        rgba(0, 0, 0, 0.18) 100%
+    );
+}
+
 .platform-login.twitch .platform-name {
     color: var(--color-twitch);
 }

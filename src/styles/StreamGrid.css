@@ -518,12 +518,19 @@ StreamGrid stream cards list
 }
 
 .stream-grid-kofi-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: opacity 0.2s ease;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    line-height: 0;
 }
 
 .stream-grid-kofi-link:hover {
     opacity: 0.85;
+    border-color: var(--color-border-light);
 }
 
 .stream-grid-kofi-separator {
@@ -769,5 +776,27 @@ StreamGrid stream cards list
 
     .sidebar-toggle-button--home {
         padding: 6px;
+    }
+
+    .stream-grid-kofi {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 14px;
+        padding-right: 32px;
+    }
+
+    .stream-grid-kofi-text {
+        display: none;
+    }
+
+    .stream-grid-kofi-separator {
+        display: none;
+    }
+
+    .stream-grid-kofi-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        transform: none;
     }
 }
