@@ -5,6 +5,7 @@ import {
   markStreamerNotified,
   markStreamerOffline,
   getNotifiedStreamers,
+  getSystemNotificationsEnabled,
 } from "../../lib/streamMonitor";
 import type { LiveStreamer } from "../../lib/streamMonitor";
 import type { PlatformSession } from "../../lib/types";
@@ -55,6 +56,7 @@ export function useStreamMonitor({
 
         // Send browser notification
         if (
+          getSystemNotificationsEnabled() &&
           typeof Notification !== "undefined" &&
           Notification.permission === "granted"
         ) {
@@ -95,6 +97,7 @@ export function useStreamMonitor({
   useEffect(() => {
     if (
       enabled &&
+      getSystemNotificationsEnabled() &&
       session?.accessToken &&
       typeof Notification !== "undefined" &&
       Notification.permission === "default"

@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { FaPlus, FaTrash, FaEye } from "react-icons/fa";
+import { FaPlus, FaTrash, FaEye, FaInfoCircle } from "react-icons/fa";
 import {
   getWatchedStreamers,
   addWatchedStreamer,
   removeWatchedStreamer,
+  getSystemNotificationsEnabled,
+  setSystemNotificationsEnabled,
 } from "../lib/streamMonitor";
 import type { TwitchChannel } from "../components/AppContainer";
 
@@ -21,6 +23,9 @@ export default function WatchlistManager({
   );
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [systemNotifications, setSystemNotifications] = useState(
+    getSystemNotificationsEnabled(),
+  );
 
   const handleAddStreamer = () => {
     if (!selectedChannelId) return;
@@ -125,6 +130,30 @@ export default function WatchlistManager({
           >
             <FaPlus /> Add
           </button>
+        </div>
+
+        <div className="watchlist-settings">
+          <label className="watchlist-toggle">
+            <span className="watchlist-toggle-label">
+              <FaEye style={{ marginRight: "6px", opacity: 0.7 }} />
+              Browser notifications
+              <span className="watchlist-info-icon" title="In-app notifications show a small popup on the page. Browser notifications are sent by your browser even when you're not actively using this tab.">
+                <FaInfoCircle size={12} />
+              </span>
+            </span>
+            <button
+              className={`watchlist-toggle-switch${systemNotifications ? " active" : ""}`}
+              onClick={() => {
+                const next = !systemNotifications;
+                setSystemNotifications(next);
+                setSystemNotificationsEnabled(next);
+              }}
+              role="switch"
+              aria-checked={systemNotifications}
+            >
+              <span className="watchlist-toggle-knob" />
+            </button>
+          </label>
         </div>
 
         <div className="watchlist-items">

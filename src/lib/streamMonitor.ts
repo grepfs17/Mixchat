@@ -128,3 +128,21 @@ export function markStreamerOffline(streamerId: string): void {
     JSON.stringify(Array.from(notified)),
   );
 }
+
+/**
+ * Get whether system (browser) notifications are enabled
+ */
+export function getSystemNotificationsEnabled(): boolean {
+  try {
+    return localStorage.getItem("mixchat_system_notifications") !== "false";
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Set whether system (browser) notifications are enabled
+ */
+export function setSystemNotificationsEnabled(enabled: boolean): void {
+  localStorage.setItem("mixchat_system_notifications", String(enabled));
+}

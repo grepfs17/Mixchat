@@ -187,6 +187,76 @@
     cursor: not-allowed;
 }
 
+.watchlist-settings {
+    margin-bottom: 16px;
+}
+
+.watchlist-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.watchlist-toggle-label {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    font-weight: 500;
+    gap: 2px;
+}
+
+.watchlist-info-icon {
+    color: var(--color-text-muted);
+    margin-left: 6px;
+    cursor: help;
+    display: inline-flex;
+    transition: color 0.15s;
+}
+
+.watchlist-info-icon:hover {
+    color: var(--color-text-secondary);
+}
+
+.watchlist-toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: 11px;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.watchlist-toggle-switch.active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+}
+
+.watchlist-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    pointer-events: none;
+}
+
+.watchlist-toggle-switch.active .watchlist-toggle-knob {
+    transform: translateX(18px);
+}
+
 .watchlist-items {
     flex: 1;
     overflow-y: auto;

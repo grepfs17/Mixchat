@@ -4,6 +4,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaTwitch,
+  FaYoutube,
 } from "react-icons/fa";
 import LoginPanel from "./LoginPanel";
 import ChatApp from "./chat/ChatApp";
@@ -386,6 +387,12 @@ export default function AppContainer() {
                   <span className="your-channel-name">
                     {sessions.twitch.displayName}
                   </span>
+                  {sessions.youtube && (
+                    <span className="your-channel-youtube-chip">
+                      <FaYoutube size={12} />
+                      {sessions.youtube.displayName}
+                    </span>
+                  )}
                 </div>
               </div>
               {(myChannelInfo.description ||
@@ -419,9 +426,20 @@ export default function AppContainer() {
                   <FaTwitch size={14} />
                   Open on Twitch
                 </a>
+                {sessions.youtube && (
+                  <a
+                    className="your-channel-btn your-channel-btn--youtube"
+                    href={`https://www.youtube.com/channel/${sessions.youtube.userId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FaYoutube size={14} />
+                    Open on YouTube
+                  </a>
+                )}
               </div>
-            </div>
-            <StreamGrid
+              </div>
+              <StreamGrid
               channels={twitchChannels}
               favoriteChannels={favoriteChannels}
               linkedYoutubeChannelIds={linkedYoutubeChannelIds}
