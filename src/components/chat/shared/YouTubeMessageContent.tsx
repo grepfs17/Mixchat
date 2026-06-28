@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  MdDelete,
-  MdHourglassEmpty,
-  MdBlock,
-} from "react-icons/md";
+import { MdDelete, MdHourglassEmpty, MdBlock } from "react-icons/md";
 import { FaShieldAlt } from "react-icons/fa";
 import {
   getColorFromName,
@@ -96,9 +92,6 @@ export function YouTubeMessageContent({
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
-  // Trust the authoritative server-side flags only; the per-message badge
-  // labels are user-visible and can be set by community roles or mod-bot
-  // integrations, so we no longer use them to gate action availability.
   const isMod = Boolean(msg.authorIsModerator);
   const isOwner = Boolean(msg.authorIsOwner);
   const isCurrentUser = Boolean(
@@ -149,7 +142,9 @@ export function YouTubeMessageContent({
               <MdHourglassEmpty size={12} />
             </button>
             <button
-              onClick={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
+              onClick={() =>
+                onBanYouTubeUser?.(msg.authorChannelId!, msg.author)
+              }
               className="action-button mod-action"
               title="Ban (this chat) - Data API only supports per-broadcast bans"
               style={{
