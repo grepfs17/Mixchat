@@ -16,6 +16,7 @@ const ALLOWED_PATH_PREFIXES = [
   "/helix/chat/announcements", // send chat announcements
   "/helix/chat/shoutouts", // send shoutouts
   "/helix/users", // used to resolve broadcaster IDs -> display names
+  "/helix/channels/followers", // used to get follower count for own channel
   "/helix/channel_points/custom_rewards", // used to resolve reward titles by reward ID
   "/helix/moderation", // moderation endpoints (moderators only)
   "/helix/chat/messages", // used to send messages via Helix

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaTimes, FaChevronLeft, FaChevronRight, FaTwitch } from "react-icons/fa";
 import LoginPanel from "./LoginPanel";
 import ChatApp from "./chat/ChatApp";
 import StreamEmbed from "./StreamEmbed";
@@ -14,6 +14,7 @@ import { useChatSettings } from "../hooks/app/useChatSettings";
 import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
 import { useEmbedState } from "../hooks/app/useEmbedState";
 import { useUiState } from "../hooks/app/useUiState";
+import { useMyChannelInfo } from "../hooks/app/useMyChannelInfo";
 import { markStreamerNotified } from "../lib/streamMonitor";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
@@ -57,6 +58,7 @@ export default function AppContainer() {
     favoriteChannels,
     setChannelData,
     toggleFavorite,
+    clearSelection,
     reset: resetChannels,
   } = useTwitchChannels({
     session: sessions.twitch,
@@ -145,6 +147,7 @@ export default function AppContainer() {
     showYoutubeLinker,
     setShowYoutubeLinker,
   } = useUiState();
+  const myChannelInfo = useMyChannelInfo(sessions.twitch);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -324,7 +327,7 @@ export default function AppContainer() {
             hasYoutubeSession={!!sessions.youtube}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
-              resetChannels();
+              clearSelection();
               setStreamTransition(null);
               window.history.pushState({}, "", "/");
             }}
@@ -346,16 +349,81 @@ export default function AppContainer() {
         className={`app-grid${streamTransition ? " app-grid--transitioning" : ""}`}
       >
         {sessions.twitch && !selectedTwitchChannel ? (
-          <StreamGrid
-            channels={twitchChannels}
-            favoriteChannels={favoriteChannels}
-            linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-            onChannelSelect={(id, transitionInfo) =>
-              setChannelData(id, transitionInfo)
-            }
-            onToggleFavorite={toggleFavorite}
-            loading={channelsLoading}
-          />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              height: "100%",
+            }}
+          >
+            <div className="your-channel-banner">
+              <button
+                onClick={() => setLeftColumnVisible((v) => !v)}
+                className="sidebar-toggle-button sidebar-toggle-button--home"
+                title={leftColumnVisible ? "Close sidebar" : "Open sidebar"}
+              >
+                {leftColumnVisible ? <FaChevronLeft size={14} /> : <FaChevronRight size={14} />}
+              </button>
+              <div className="your-channel-left">
+                {sessions.twitch.profileImageUrl && (
+                  <img
+                    src={sessions.twitch.profileImageUrl}
+                    alt=""
+                    className="your-channel-avatar"
+                  />
+                )}
+                <div className="your-channel-identity">
+                  <span className="your-channel-name">
+                    {sessions.twitch.displayName}
+                  </span>
+                </div>
+              </div>
+              {(myChannelInfo.description || myChannelInfo.followerCount !== null) && (
+                <div className="your-channel-meta">
+                  {myChannelInfo.followerCount !== null && (
+                    <span className="your-channel-followers">
+                      {myChannelInfo.followerCount.toLocaleString()} followers
+                    </span>
+                  )}
+                  {myChannelInfo.description && (
+                    <span className="your-channel-description">
+                      {myChannelInfo.description}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="your-channel-actions">
+                <button
+                  className="your-channel-btn"
+                  onClick={() =>
+                    setChannelData(sessions.twitch!.userId)
+                  }
+                >
+                  Go to channel
+                </button>
+                <a
+                  className="your-channel-btn your-channel-btn--twitch"
+                  href={`https://www.twitch.tv/${sessions.twitch!.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FaTwitch size={14} />
+                  Open on Twitch
+                </a>
+              </div>
+            </div>
+            <StreamGrid
+              channels={twitchChannels}
+              favoriteChannels={favoriteChannels}
+              linkedYoutubeChannelIds={linkedYoutubeChannelIds}
+              onChannelSelect={(id, transitionInfo) =>
+                setChannelData(id, transitionInfo)
+              }
+              onToggleFavorite={toggleFavorite}
+              loading={channelsLoading}
+            />
+          </div>
         ) : (
           <>
             {showStreamEmbed && (

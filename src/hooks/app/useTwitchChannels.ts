@@ -31,6 +31,8 @@ export type UseTwitchChannelsResult = {
     transitionInfo?: StreamTransitionInfo,
   ) => void;
   toggleFavorite: (channelId: string) => void;
+  /** Clears channel selection without touching loading state or channel list. */
+  clearSelection: () => void;
   /** Clears all channel/selection state. Call this on Twitch logout. */
   reset: () => void;
 };
@@ -203,6 +205,13 @@ export function useTwitchChannels(
     );
   }, []);
 
+  const clearSelection = useCallback(() => {
+    setSelectedTwitchChannel("");
+    setSelectedTwitchChannelName("");
+    setSelectedTwitchChannelDisplayName("");
+    setHasLoadedChannel(false);
+  }, []);
+
   const reset = useCallback(() => {
     setTwitchChannels([]);
     setAllTwitchChannels([]);
@@ -237,6 +246,7 @@ export function useTwitchChannels(
     favoriteChannels,
     setChannelData,
     toggleFavorite,
+    clearSelection,
     reset,
   };
 }
