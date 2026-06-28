@@ -98,10 +98,6 @@
     );
 }
 
-.platform-login.twitch .platform-name {
-    color: var(--color-twitch);
-}
-
 .platform-login.youtube .platform-name {
     color: var(--color-youtube);
 }

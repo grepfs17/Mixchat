@@ -101,8 +101,6 @@ export default function AppContainer() {
     setChatTheme,
     hideViewerCount,
     setHideViewerCount,
-    disableModModeByDefault,
-    setDisableModModeByDefault,
     hideChatTimestamps,
     setHideChatTimestamps,
     eventSounds,
@@ -320,8 +318,6 @@ export default function AppContainer() {
             onChatThemeChange={setChatTheme}
             hideViewerCount={hideViewerCount}
             onHideViewerCountChange={setHideViewerCount}
-            disableModModeByDefault={disableModModeByDefault}
-            onDisableModModeByDefaultChange={setDisableModModeByDefault}
             hideChatTimestamps={hideChatTimestamps}
             onHideChatTimestampsChange={setHideChatTimestamps}
             eventSounds={eventSounds}
@@ -672,7 +668,6 @@ export default function AppContainer() {
                 splitChatEnabled={splitChatEnabled}
                 chatTheme={chatTheme}
                 hideViewerCount={shouldHideViewerCount}
-                disableModModeByDefault={disableModModeByDefault}
                 modModeTargets={modModeTargets}
                 setModModeTargetForChannel={setModModeTargetForChannel}
                 eventSounds={eventSounds}

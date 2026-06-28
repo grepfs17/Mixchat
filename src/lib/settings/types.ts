@@ -30,8 +30,6 @@ export interface SettingsProps {
   onHideViewerCountChange: (value: boolean) => void;
   hideChatTimestamps: boolean;
   onHideChatTimestampsChange: (value: boolean) => void;
-  disableModModeByDefault: boolean;
-  onDisableModModeByDefaultChange: (value: boolean) => void;
   eventSounds: Record<string, string>;
   onEventSoundChange: (eventType: string, soundData: string | null) => void;
   eventSoundVolume: number;

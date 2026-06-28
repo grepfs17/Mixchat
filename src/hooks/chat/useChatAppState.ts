@@ -59,7 +59,6 @@ export interface ChatAppStateProps {
   splitChatEnabled?: boolean;
   chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
-  disableModModeByDefault?: boolean;
   modModeTarget?: ModModeTarget;
   modModeTargets?: Record<string, ModModeTarget>;
   setModModeTargetForChannel?: (channelId: string, target: ModModeTarget) => void;
@@ -86,7 +85,6 @@ export function useChatAppState({
   mentionVolume = 0.2,
   mentionSoundType = "ding" as MentionSoundType,
   showDeletedMessages = true,
-  disableModModeByDefault = false,
   modModeTarget = "off",
   eventSounds = {},
   eventSoundVolume = 1,
@@ -211,7 +209,6 @@ export function useChatAppState({
     twitchSession,
     selectedTwitchChannel,
     selectedTwitchChannelName,
-    disableModModeByDefault,
     modModeTarget,
     setMessages,
     setNotification,

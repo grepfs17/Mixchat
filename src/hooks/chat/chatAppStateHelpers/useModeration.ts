@@ -25,7 +25,6 @@ export interface UseModerationOptions {
   twitchSession?: PlatformSession;
   selectedTwitchChannel?: string;
   selectedTwitchChannelName?: string;
-  disableModModeByDefault?: boolean;
   /** Current mod mode target selection, drives modModeActive. */
   modModeTarget?: ModModeTarget;
   setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
@@ -70,7 +69,6 @@ export function useModeration({
   twitchSession,
   selectedTwitchChannel = "",
   selectedTwitchChannelName = "",
-  disableModModeByDefault = false,
   modModeTarget = "off",
   setMessages,
   setNotification,

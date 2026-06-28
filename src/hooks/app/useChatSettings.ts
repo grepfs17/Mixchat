@@ -56,8 +56,6 @@ export type UseChatSettingsResult = {
   setChatTheme: React.Dispatch<React.SetStateAction<ChatTheme>>;
   hideViewerCount: boolean;
   setHideViewerCount: React.Dispatch<React.SetStateAction<boolean>>;
-  disableModModeByDefault: boolean;
-  setDisableModModeByDefault: React.Dispatch<React.SetStateAction<boolean>>;
   hideChatTimestamps: boolean;
   setHideChatTimestamps: React.Dispatch<React.SetStateAction<boolean>>;
   eventSounds: Record<string, string>;
@@ -67,7 +65,10 @@ export type UseChatSettingsResult = {
   setIgnoredUsers: React.Dispatch<React.SetStateAction<string[]>>;
   handleEventSoundChange: (eventType: string, soundData: string | null) => void;
   modModeTargets: Record<string, ModModeTarget>;
-  setModModeTargetForChannel: (channelId: string, target: ModModeTarget) => void;
+  setModModeTargetForChannel: (
+    channelId: string,
+    target: ModModeTarget,
+  ) => void;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -131,8 +132,6 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_hide_viewer_count",
     false,
   );
-  const [disableModModeByDefault, setDisableModModeByDefault] =
-    useLocalStorageState<boolean>("mixchat_disable_mod_mode_by_default", false);
   const [hideChatTimestamps, setHideChatTimestamps] =
     useLocalStorageState<boolean>("mixchat_hide_chat_timestamps", false);
 
@@ -233,8 +232,6 @@ export function useChatSettings(): UseChatSettingsResult {
     setChatTheme,
     hideViewerCount,
     setHideViewerCount,
-    disableModModeByDefault,
-    setDisableModModeByDefault,
     hideChatTimestamps,
     setHideChatTimestamps,
     eventSounds,

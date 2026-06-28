@@ -6,6 +6,7 @@ import {
   FaEye,
   FaYoutube,
   FaCog,
+  FaTwitch,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
 import type { ChatFont, ChatTheme } from "../lib/types";
@@ -92,8 +93,6 @@ function LoginPanel({
   onChatThemeChange,
   hideViewerCount = false,
   onHideViewerCountChange,
-  disableModModeByDefault = false,
-  onDisableModModeByDefaultChange,
   hideChatTimestamps = false,
   onHideChatTimestampsChange,
   eventSounds = {},
@@ -160,7 +159,6 @@ function LoginPanel({
 
       <div className="platform-login twitch">
         <div className="platform-header">
-          <span className="platform-name">Twitch</span>
         </div>
 
         {twitchConnected && twitchUser ? (
@@ -442,11 +440,6 @@ function LoginPanel({
           hideViewerCount={hideViewerCount}
           onHideViewerCountChange={(value) => {
             if (onHideViewerCountChange) onHideViewerCountChange(value);
-          }}
-          disableModModeByDefault={disableModModeByDefault}
-          onDisableModModeByDefaultChange={(value) => {
-            if (onDisableModModeByDefaultChange)
-              onDisableModModeByDefaultChange(value);
           }}
           hideChatTimestamps={hideChatTimestamps}
           onHideChatTimestampsChange={(value) => {

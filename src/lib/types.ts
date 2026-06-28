@@ -125,11 +125,17 @@ export const THEME_OPTIONS: {
   value: ChatTheme;
   label: string;
   preview: { bg: string; hover: string; accent: string };
+  section?: string;
 }[] = [
   {
     value: "default",
     label: "Default",
     preview: { bg: "#0c0c0e", hover: "#292930", accent: "#9e4073" },
+  },
+  {
+    value: "twitch",
+    label: "Twitched",
+    preview: { bg: "#18181B", hover: "#1f1f23", accent: "#9146ff" },
   },
   {
     value: "one-dark",
@@ -160,15 +166,11 @@ export const THEME_OPTIONS: {
     value: "mushu",
     label: "Mushu",
     preview: { bg: "#1a1111", hover: "#3d1c1c", accent: "#e83333" },
+    section: "Custom",
   },
   {
     value: "lunita",
     label: "Lunita",
     preview: { bg: "#1e2a1e", hover: "#2d4a2d", accent: "#d4a54a" },
-  },
-  {
-    value: "twitch",
-    label: "Twitched",
-    preview: { bg: "#18181B", hover: "#1f1f23", accent: "#9146ff" },
   },
 ];

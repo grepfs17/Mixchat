@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useState, useCallback, useMemo } from "react";
 import {
   FaTimes,
   FaSearch,
@@ -80,8 +80,6 @@ export default function EmbedConfigModal({
   onHideViewerCountChange,
   hideChatTimestamps,
   onHideChatTimestampsChange,
-  disableModModeByDefault,
-  onDisableModModeByDefaultChange,
   eventSounds,
   onEventSoundChange,
   eventSoundVolume,
@@ -302,31 +300,35 @@ export default function EmbedConfigModal({
           <div className="embed-config-section">
             <label className="embed-config-label">Chat Theme</label>
             <div className="embed-config-theme-grid">
-              {THEME_OPTIONS.map(({ value, label, preview }) => (
-                <button
-                  key={value}
-                  onClick={() => onChatThemeChange(value as ChatTheme)}
-                  className={`embed-config-theme-btn${chatTheme === value ? " embed-config-theme-btn--active" : ""}`}
-                >
-                  <div className="embed-config-theme-preview">
-                    <div
-                      className="embed-config-theme-preview-bg"
-                      style={{ backgroundColor: preview.bg }}
-                    />
-                    <div
-                      className="embed-config-theme-preview-hover"
-                      style={{ backgroundColor: preview.hover }}
-                    />
-                    <div
-                      className="embed-config-theme-preview-accent"
-                      style={{ backgroundColor: preview.accent }}
-                    />
-                  </div>
-                  <span className="embed-config-theme-label">{label}</span>
-                  {chatTheme === value && (
-                    <span className="embed-config-theme-check">✓</span>
+              {THEME_OPTIONS.map(({ value, label, preview, section }) => (
+                <React.Fragment key={value}>
+                  {section && (
+                    <div className="embed-config-theme-section">{section}</div>
                   )}
-                </button>
+                  <button
+                    onClick={() => onChatThemeChange(value as ChatTheme)}
+                    className={`embed-config-theme-btn${chatTheme === value ? " embed-config-theme-btn--active" : ""}`}
+                  >
+                    <div className="embed-config-theme-preview">
+                      <div
+                        className="embed-config-theme-preview-bg"
+                        style={{ backgroundColor: preview.bg }}
+                      />
+                      <div
+                        className="embed-config-theme-preview-hover"
+                        style={{ backgroundColor: preview.hover }}
+                      />
+                      <div
+                        className="embed-config-theme-preview-accent"
+                        style={{ backgroundColor: preview.accent }}
+                      />
+                    </div>
+                    <span className="embed-config-theme-label">{label}</span>
+                    {chatTheme === value && (
+                      <span className="embed-config-theme-check">✓</span>
+                    )}
+                  </button>
+                </React.Fragment>
               ))}
             </div>
             <p className="embed-config-description">
@@ -515,31 +517,6 @@ export default function EmbedConfigModal({
             <p className="embed-config-description embed-config-description--indented">
               When enabled, the viewer count is hidden while viewing your own
               channel.
-            </p>
-          </div>
-        ),
-      },
-      {
-        id: "disable-mod-mode",
-        group: "streamer",
-        label: "Disable Mod mode by default",
-        description:
-          "Mod mode will be disabled by default when you enter your own channel",
-        render: () => (
-          <div className="embed-config-section">
-            <label className="embed-config-checkbox-label">
-              <input
-                type="checkbox"
-                checked={disableModModeByDefault}
-                onChange={(e) =>
-                  onDisableModModeByDefaultChange(e.target.checked)
-                }
-              />
-              <span>Disable Mod mode by default on own channel</span>
-            </label>
-            <p className="embed-config-description embed-config-description--indented">
-              When enabled, Mod mode will be disabled by default when you enter
-              your own channel.
             </p>
           </div>
         ),
@@ -942,7 +919,6 @@ export default function EmbedConfigModal({
       compactActions,
       embedDefaultOpen,
       hideViewerCount,
-      disableModModeByDefault,
       ignoredUsers,
       eventSounds,
       eventSoundVolume,
@@ -969,7 +945,6 @@ export default function EmbedConfigModal({
       onCompactActionsChange,
       onEmbedDefaultOpenChange,
       onHideViewerCountChange,
-      onDisableModModeByDefaultChange,
       onIgnoredUsersChange,
       onEventSoundVolumeChange,
       onEventSoundChange,
