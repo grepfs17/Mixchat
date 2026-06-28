@@ -438,8 +438,8 @@ export default function AppContainer() {
                   </a>
                 )}
               </div>
-              </div>
-              <StreamGrid
+            </div>
+            <StreamGrid
               channels={twitchChannels}
               favoriteChannels={favoriteChannels}
               linkedYoutubeChannelIds={linkedYoutubeChannelIds}

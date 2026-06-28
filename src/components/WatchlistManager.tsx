@@ -137,7 +137,10 @@ export default function WatchlistManager({
             <span className="watchlist-toggle-label">
               <FaEye style={{ marginRight: "6px", opacity: 0.7 }} />
               Browser notifications
-              <span className="watchlist-info-icon" title="In-app notifications show a small popup on the page. Browser notifications are sent by your browser even when you're not actively using this tab.">
+              <span
+                className="watchlist-info-icon"
+                title="In-app notifications show a small popup on the page. Browser notifications are sent by your browser even when you're not actively using this tab."
+              >
                 <FaInfoCircle size={12} />
               </span>
             </span>
