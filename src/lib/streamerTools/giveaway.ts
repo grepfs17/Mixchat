@@ -65,7 +65,10 @@ function youtubeIsMember(msg: YTMessage): boolean {
   return Boolean(msg.authorIsMember);
 }
 
-function isEligible(item: GiveawayMessage, eligibility: GiveawayEligibility): boolean {
+function isEligible(
+  item: GiveawayMessage,
+  eligibility: GiveawayEligibility,
+): boolean {
   if (eligibility === "everyone") return true;
   if (item.platform === "twitch") {
     return twitchIsSubscriber(item.msg);

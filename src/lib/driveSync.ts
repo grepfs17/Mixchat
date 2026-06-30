@@ -48,12 +48,10 @@ function driveErrorMessage(err: unknown, fallback: string): string {
 }
 
 export type BackupResult =
-  | { ok: true; webViewLink?: string }
-  | { ok: false; message: string };
+  { ok: true; webViewLink?: string } | { ok: false; message: string };
 
 export type RestoreResult =
-  | { ok: true; count: number }
-  | { ok: false; message: string };
+  { ok: true; count: number } | { ok: false; message: string };
 
 export async function backupSettingsToDrive(): Promise<BackupResult> {
   try {
@@ -76,12 +74,13 @@ export async function backupSettingsToDrive(): Promise<BackupResult> {
       settings,
     };
 
-    const result = await saveSettingsToDrive(
-      JSON.stringify(backup, null, 2),
-    );
+    const result = await saveSettingsToDrive(JSON.stringify(backup, null, 2));
     return { ok: true, webViewLink: result.webViewLink };
   } catch (err) {
-    return { ok: false, message: driveErrorMessage(err, "Failed to save to Drive") };
+    return {
+      ok: false,
+      message: driveErrorMessage(err, "Failed to save to Drive"),
+    };
   }
 }
 
@@ -105,6 +104,9 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
     }
     return { ok: true, count };
   } catch (err) {
-    return { ok: false, message: driveErrorMessage(err, "Failed to load from Drive") };
+    return {
+      ok: false,
+      message: driveErrorMessage(err, "Failed to load from Drive"),
+    };
   }
 }

@@ -18,12 +18,17 @@ import {
 } from "../../hooks/chat/useChatAppState";
 import { ModerationContext } from "../../contexts/ModerationContext";
 import type { ModModeTarget } from "../../contexts/ModerationContext";
-import type { ChatFont, ChatTheme, Platform, TwitchMessage } from "../../lib/types";
+import type {
+  ChatFont,
+  ChatTheme,
+  Platform,
+  TwitchMessage,
+} from "../../lib/types";
 import type { YTMessage } from "./unified/types";
-import type { GiveawayMessage, GiveawayEntry } from "../../lib/streamerTools/giveaway";
+import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import GiveawayIndicator from "./shared/GiveawayIndicator";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface YtConnectionState {
   connected: boolean;
@@ -208,27 +213,45 @@ export default function ChatApp(props: ChatAppStateProps) {
     [handleSendMessage, youtubeVideoId],
   );
 
-  const giveawayFeed = useMemo<GiveawayMessage[]>(() => {
-    const out: GiveawayMessage[] = [];
-    for (const m of messages) {
-      if (!m) continue;
-      out.push({ platform: "twitch", msg: m as TwitchMessage });
-    }
-    for (const m of ytMessages) {
-      if (!m) continue;
-      out.push({ platform: "youtube", msg: m as YTMessage });
-    }
-    return out;
-  }, [messages, ytMessages]);
-
   const giveaway = useGiveaway({
-    messages: giveawayFeed,
     owner: {
       twitchBroadcasterId: selectedTwitchChannel,
       youtubeChannelId: youtubeSession?.userId,
     },
     enabled: showModTools,
   });
+
+  // Ingest new messages into the giveaway's entry buffer.
+  //
+  // The chat's `messages` array is capped at MAX_DISPLAYED_MESSAGES (100) and
+  // rolls over, so we cannot derive entries from it after the buffer rotates.
+  // Instead, the hook maintains its own buffer that survives the chat cap.
+  // Here we feed it each new chat message exactly once. We track which
+  // message ids have already been ingested so re-renders don't replay.
+  const ingestedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of messages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "twitch", msg: m as TwitchMessage });
+    }
+  }, [messages, giveaway]);
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of ytMessages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "youtube", msg: m as YTMessage });
+    }
+  }, [ytMessages, giveaway]);
+  // Reset the ingestion ledger when the giveaway leaves the running phase so
+  // the next run starts fresh.
+  useEffect(() => {
+    if (giveaway.phase !== "running") {
+      ingestedIdsRef.current = new Set();
+    }
+  }, [giveaway.phase]);
 
   const moderationValue = {
     isModerator,

@@ -53,7 +53,8 @@ export function useChatMessages({
   }, [selectedTwitchChannelName]);
 
   useEffect(() => {
-    if (!showPreloadedMessages || !selectedTwitchChannelName || !badgesReady) return;
+    if (!showPreloadedMessages || !selectedTwitchChannelName || !badgesReady)
+      return;
 
     const loadRecentMessages = async () => {
       try {

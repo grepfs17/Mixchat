@@ -512,16 +512,14 @@ export default function EmbedConfigModal({
               <input
                 type="checkbox"
                 checked={streamerToolsEnabled}
-                onChange={(e) =>
-                  onStreamerToolsEnabledChange(e.target.checked)
-                }
+                onChange={(e) => onStreamerToolsEnabledChange(e.target.checked)}
               />
               <span>Streamer tools</span>
             </label>
             <p className="embed-config-description embed-config-description--indented">
-              When enabled, a <strong>Streamer tools</strong> button appears in the
-              chat header while you are viewing your own channel. It currently
-              contains a <strong>Giveaway</strong> tool.
+              When enabled, a <strong>Streamer tools</strong> button appears in
+              the chat header while you are viewing your own channel. It
+              currently contains a <strong>Giveaway</strong> tool.
             </p>
           </div>
         ),

@@ -1,4 +1,8 @@
-import type { GiveawayEntry, GiveawayScope, GiveawayEligibility } from "./giveaway";
+import type {
+  GiveawayEntry,
+  GiveawayScope,
+  GiveawayEligibility,
+} from "./giveaway";
 
 export interface GiveawayHistoryEntry {
   id: string;

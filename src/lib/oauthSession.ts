@@ -10,8 +10,7 @@ export function listenForOAuthSession(
     try {
       if (ev.origin !== window.location.origin) return;
       const data = ev.data as
-        | { type?: string; session?: { platform?: string } }
-        | undefined;
+        { type?: string; session?: { platform?: string } } | undefined;
       if (
         data &&
         data.type === "mixchat_session" &&

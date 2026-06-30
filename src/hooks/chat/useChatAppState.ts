@@ -61,7 +61,10 @@ export interface ChatAppStateProps {
   hideViewerCount?: boolean;
   modModeTarget?: ModModeTarget;
   modModeTargets?: Record<string, ModModeTarget>;
-  setModModeTargetForChannel?: (channelId: string, target: ModModeTarget) => void;
+  setModModeTargetForChannel?: (
+    channelId: string,
+    target: ModModeTarget,
+  ) => void;
   eventSounds?: Record<string, string>;
   eventSoundVolume?: number;
   ignoredUsers?: string[];

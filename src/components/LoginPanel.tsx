@@ -160,8 +160,7 @@ function LoginPanel({
       </div>
 
       <div className="platform-login twitch">
-        <div className="platform-header">
-        </div>
+        <div className="platform-header"></div>
 
         {twitchConnected && twitchUser ? (
           <div className="connected-info">

@@ -12,11 +12,7 @@ interface YouTubeTimeoutMenuProps {
   username: string;
   x: number;
   y: number;
-  onTimeout: (
-    channelId: string,
-    seconds: number,
-    username: string,
-  ) => void;
+  onTimeout: (channelId: string, seconds: number, username: string) => void;
   onClose: () => void;
 }
 
