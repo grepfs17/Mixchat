@@ -87,6 +87,8 @@ function LoginPanel({
   onShowDeletedMessagesChange,
   compactActions = false,
   onCompactActionsChange,
+  modActionsFirst = false,
+  onModActionsFirstChange,
   splitChatEnabled = false,
   onSplitChatEnabledChange,
   chatTheme = "default" as ChatTheme,
@@ -429,6 +431,10 @@ function LoginPanel({
           compactActions={compactActions}
           onCompactActionsChange={(value) => {
             if (onCompactActionsChange) onCompactActionsChange(value);
+          }}
+          modActionsFirst={modActionsFirst}
+          onModActionsFirstChange={(value) => {
+            if (onModActionsFirstChange) onModActionsFirstChange(value);
           }}
           splitChatEnabled={splitChatEnabled}
           onSplitChatEnabledChange={(value) => {

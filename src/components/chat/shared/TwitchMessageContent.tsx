@@ -1,17 +1,11 @@
 import React, { memo, useState } from "react";
-import {
-  MdReply,
-  MdContentCopy,
-  MdDelete,
-  MdHourglassEmpty,
-  MdBlock,
-  MdWarning,
-} from "react-icons/md";
+import { MdReply, MdContentCopy } from "react-icons/md";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "./AutomodActions";
+import { MessageModActions } from "./MessageModActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { TwitchMessage } from "../../../lib/types";
 
@@ -63,6 +57,7 @@ function TwitchMessageContentBase({
     isModerator,
     modModeActive,
     compactActions,
+    modActionsFirst,
     onDeleteMessage,
     onBanUser,
     onTimeoutUser,
@@ -128,6 +123,82 @@ function TwitchMessageContentBase({
       "#94a3b8"
     : "#94a3b8";
 
+  const showActionsStrip =
+    !compactActions &&
+    (!msg.messageType ||
+      msg.messageType === "chat" ||
+      ((msg.messageType === "timeout" || msg.messageType === "ban") &&
+        isModerator &&
+        msg.targetUsername));
+
+  const isModAction =
+    msg.messageType === "timeout" || msg.messageType === "ban";
+
+  const inlineActionButtons = showActionsStrip && !isModAction && (
+    <div className="message-actions">
+      {onReply && (
+        <button
+          onClick={() => onReply(msg)}
+          className="action-button"
+          title="Reply to this message"
+          style={{ display: "flex", alignItems: "center", gap: "4px" }}
+        >
+          <MdReply size={12} />
+        </button>
+      )}
+      <button
+        onClick={() => onCopy(msg)}
+        className="action-button"
+        title="Copy message"
+        style={{ display: "flex", alignItems: "center", gap: "4px" }}
+      >
+        <MdContentCopy size={12} />
+      </button>
+    </div>
+  );
+
+  const modActionButtons = (() => {
+    if (!showActionsStrip) return null;
+    if (isModAction) {
+      return (
+        <div className="message-actions">
+          <button
+            onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
+            className="action-button mod-action"
+            title="Undo moderation action"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              border: "1px solid currentColor",
+              borderRadius: "4px",
+              padding: "2px 6px",
+              fontSize: "11px",
+              marginTop: "2px",
+            }}
+          >
+            Undo
+          </button>
+        </div>
+      );
+    }
+    if (!isModerator || !modModeActive) return null;
+    return (
+      <MessageModActions
+        onDelete={() => onDeleteMessage?.(msg.id)}
+        onTimeout={() => onTimeoutUser?.(msg.userId || "", 600, msg.author)}
+        onTimeoutContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onTimeoutMenu(e.clientX, e.clientY, msg.userId || "", msg.author);
+        }}
+        onBan={() => onBanUser?.(msg.userId || "", msg.author)}
+        onWarn={() => onWarnUser?.(msg.author)}
+        showUserActions={!isUnmoderatable}
+      />
+    );
+  })();
+
   return (
     <React.Fragment key={msg.id}>
       {isFirstLive && (
@@ -177,6 +248,7 @@ function TwitchMessageContentBase({
         />
 
         <div className="message-single-line">
+          {modActionsFirst && modActionButtons}
           <span className="timestamp">
             {msg.timestamp.toLocaleTimeString()}
           </span>
@@ -220,142 +292,6 @@ function TwitchMessageContentBase({
               }}
             />
           )}
-          {!compactActions &&
-            (!msg.messageType ||
-              msg.messageType === "chat" ||
-              ((msg.messageType === "timeout" || msg.messageType === "ban") &&
-                isModerator &&
-                msg.targetUsername)) && (
-              <div className="message-actions">
-                {msg.messageType === "timeout" || msg.messageType === "ban" ? (
-                  <button
-                    onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
-                    className="action-button mod-action"
-                    title="Undo moderation action"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      border: "1px solid currentColor",
-                      borderRadius: "4px",
-                      padding: "2px 6px",
-                      fontSize: "11px",
-                      marginTop: "2px",
-                    }}
-                  >
-                    Undo
-                  </button>
-                ) : (
-                  <>
-                    {onReply && (
-                      <button
-                        onClick={() => onReply(msg)}
-                        className="action-button"
-                        title="Reply to this message"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <MdReply size={12} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => onCopy(msg)}
-                      className="action-button"
-                      title="Copy message"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <MdContentCopy size={12} />
-                    </button>
-                    {isModerator && modModeActive && (
-                      <>
-                        <div
-                          className="message-actions-divider"
-                          role="separator"
-                          aria-orientation="vertical"
-                        />
-                        <button
-                          onClick={() => onDeleteMessage?.(msg.id)}
-                          className="action-button mod-action"
-                          title="Delete message"
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <MdDelete size={12} />
-                        </button>
-                        {!isUnmoderatable && (
-                          <>
-                            <button
-                              onClick={() =>
-                                onTimeoutUser?.(
-                                  msg.userId || "",
-                                  600,
-                                  msg.author,
-                                )
-                              }
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onTimeoutMenu(
-                                  e.clientX,
-                                  e.clientY,
-                                  msg.userId || "",
-                                  msg.author,
-                                );
-                              }}
-                              className="action-button mod-action"
-                              title="Timeout (10m) - Right-click for more"
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                            >
-                              <MdHourglassEmpty size={12} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                onBanUser?.(msg.userId || "", msg.author)
-                              }
-                              className="action-button mod-action"
-                              title="Ban user"
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                            >
-                              <MdBlock size={12} />
-                            </button>
-                            <button
-                              onClick={() => onWarnUser?.(msg.author)}
-                              className="action-button mod-action"
-                              title="Warn user"
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                            >
-                              <MdWarning size={12} />
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
           {msg.messageType === "automod" && isModerator && (
             <AutomodActions
               heldMsgId={msg.targetUsername || ""}
@@ -363,6 +299,15 @@ function TwitchMessageContentBase({
               username={msg.author}
             />
           )}
+          {inlineActionButtons}
+          {inlineActionButtons && modActionButtons && !modActionsFirst && (
+            <div
+              className="message-actions-divider"
+              role="separator"
+              aria-orientation="vertical"
+            />
+          )}
+          {!modActionsFirst && modActionButtons}
         </div>
         {msg.isDeleted && (
           <div className="deleted-notice">Deleted by a moderator</div>

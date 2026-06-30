@@ -72,6 +72,8 @@ export default function EmbedConfigModal({
   onShowDeletedMessagesChange,
   compactActions,
   onCompactActionsChange,
+  modActionsFirst,
+  onModActionsFirstChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
   chatTheme,
@@ -474,6 +476,32 @@ export default function EmbedConfigModal({
               When enabled, the small reply/copy/mod buttons are hidden from
               each message. You can still access all actions by right-clicking
               (long press on mobile) a message to open the context menu.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "mod-actions-first",
+        group: "chat",
+        label: "Show mod actions at the start of the message",
+        description:
+          "Move the moderator action buttons (delete, timeout, ban, warn) to the start of the message, before the timestamp and badges",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-checkbox-label">
+              <input
+                type="checkbox"
+                checked={modActionsFirst}
+                onChange={(e) => onModActionsFirstChange(e.target.checked)}
+              />
+              <span>Show mod actions at the start of the message</span>
+            </label>
+            <p className="embed-config-description embed-config-description--indented">
+              When enabled, the mod action buttons (delete, timeout, ban, warn)
+              appear at the <strong>start</strong> of each message instead of
+              the end, putting them before the timestamp, badges and author.
+              Reply and copy buttons stay at the end. Only visible while
+              moderator mode is on.
             </p>
           </div>
         ),

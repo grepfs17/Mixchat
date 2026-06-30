@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdDelete, MdHourglassEmpty, MdBlock } from "react-icons/md";
 import { FaShieldAlt } from "react-icons/fa";
 import {
   getColorFromName,
@@ -8,6 +7,7 @@ import {
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import YTMessageParts from "../../YTMessageParts";
 import { PlatformTag } from "../unified/PlatformTag";
+import { MessageModActions } from "./MessageModActions";
 import type { YTMessage } from "../unified/types";
 
 export interface YouTubeMessageContentProps {
@@ -85,6 +85,7 @@ export function YouTubeMessageContent({
     isYouTubeModerator,
     youtubeModModeActive,
     youtubeOwnChannelId,
+    modActionsFirst,
     onDeleteYouTubeMessage,
     onBanYouTubeUser,
     onTimeoutYouTubeUser,
@@ -107,57 +108,20 @@ export function YouTubeMessageContent({
   const renderModActions = () => {
     if (!showModActions) return null;
     return (
-      <div className="message-actions">
-        <button
-          onClick={() => onDeleteYouTubeMessage?.(msg.id)}
-          className="action-button mod-action"
-          title="Delete message"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-          }}
-        >
-          <MdDelete size={12} />
-        </button>
-        {!isUnmoderatable && msg.authorChannelId && (
-          <>
-            <button
-              onClick={() =>
-                onTimeoutYouTubeUser?.(msg.authorChannelId!, 600, msg.author)
-              }
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onTimeoutMenu?.(e);
-              }}
-              className="action-button mod-action"
-              title="Timeout (10m) - Right-click for more"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <MdHourglassEmpty size={12} />
-            </button>
-            <button
-              onClick={() =>
-                onBanYouTubeUser?.(msg.authorChannelId!, msg.author)
-              }
-              className="action-button mod-action"
-              title="Ban (this chat) - Data API only supports per-broadcast bans"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <MdBlock size={12} />
-            </button>
-          </>
-        )}
-      </div>
+      <MessageModActions
+        onDelete={() => onDeleteYouTubeMessage?.(msg.id)}
+        onTimeout={() =>
+          onTimeoutYouTubeUser?.(msg.authorChannelId!, 600, msg.author)
+        }
+        onTimeoutContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onTimeoutMenu?.(e);
+        }}
+        onBan={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
+        banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
+        showUserActions={!isUnmoderatable && Boolean(msg.authorChannelId)}
+      />
     );
   };
 
@@ -187,6 +151,7 @@ export function YouTubeMessageContent({
           {config.label}
         </div>
         <div className="message-single-line">
+          {modActionsFirst && renderModActions()}
           <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
           {showPlatformTag && <PlatformTag source="youtube" />}
           {msg.authorAvatar && (
@@ -241,7 +206,7 @@ export function YouTubeMessageContent({
               </>
             )}
           </span>
-          {renderModActions()}
+          {!modActionsFirst && renderModActions()}
         </div>
         {msg.superchat?.sticker && (
           <div className="yt-superchat-sticker-row">
@@ -272,6 +237,7 @@ export function YouTubeMessageContent({
       onContextMenu={onContextMenu}
     >
       <div className="message-single-line">
+        {modActionsFirst && renderModActions()}
         <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
         {showPlatformTag && <PlatformTag source="youtube" />}
         {msg.authorAvatar && (
@@ -303,7 +269,7 @@ export function YouTubeMessageContent({
             <YTMessageParts parts={msg.parts} variant={variant} />
           </span>
         )}
-        {renderModActions()}
+        {!modActionsFirst && renderModActions()}
       </div>
       {msg.isDeleted && (
         <div className="deleted-notice">Deleted by a moderator</div>

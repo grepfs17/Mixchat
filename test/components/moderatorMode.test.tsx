@@ -814,6 +814,98 @@ describe("Moderator Mode", () => {
     });
   });
 
+  describe("modActionsFirst placement (Twitch inline)", () => {
+    function modActionsContainer(): HTMLElement {
+      const deleteBtn = screen.getByTitle("Delete message");
+      return deleteBtn.closest(".message-actions") as HTMLElement;
+    }
+
+    function renderTwitchWithModActions(modActionsFirst: boolean) {
+      return render(
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[baseMessage]}
+            ytMessages={[]}
+            onReply={vi.fn()}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            modActionsFirst,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+    }
+
+    it("renders the mod strip after the inline (reply/copy) strip by default", () => {
+      const { container } = renderTwitchWithModActions(false);
+      const line = container.querySelector(".message-single-line")!;
+      const strips = line.querySelectorAll(".message-actions");
+      expect(strips).toHaveLength(2);
+      const modStrip = Array.from(strips).find((s) =>
+        s.querySelector('.action-button[title="Delete message"]'),
+      )!;
+      const inlineStrip = Array.from(strips).find(
+        (s) => !s.querySelector('.action-button[title="Delete message"]'),
+      )!;
+      // In default mode the inline strip precedes the mod strip, and a
+      // vertical divider sits between them.
+      const children = Array.from(line.children);
+      expect(children.indexOf(inlineStrip)).toBeLessThan(
+        children.indexOf(modStrip),
+      );
+      expect(line.querySelector(".message-actions-divider")).not.toBeNull();
+    });
+
+    it("moves the mod strip to the start of the line when modActionsFirst is on", () => {
+      const { container } = renderTwitchWithModActions(true);
+      const line = container.querySelector(".message-single-line")!;
+      const strips = line.querySelectorAll(".message-actions");
+      expect(strips).toHaveLength(2);
+      // When mod is at the start, no inline divider should be needed because
+      // the two strips are already separated by the message content.
+      expect(line.querySelector(".message-actions-divider")).toBeNull();
+      // Mod strip must contain the mod-action buttons and be the first strip
+      const modStrip = Array.from(strips).find((s) =>
+        s.querySelector('.action-button[title="Delete message"]'),
+      )!;
+      const inlineStrip = Array.from(strips).find(
+        (s) => !s.querySelector('.action-button[title="Delete message"]'),
+      )!;
+      expect(modStrip).toBe(strips[0]);
+      expect(inlineStrip).toBe(strips[1]);
+      // Mod strip appears before the timestamp in the line
+      const modIdx = Array.from(line.children).indexOf(modStrip);
+      const tsIdx = Array.from(line.children).indexOf(
+        line.querySelector(".timestamp")!,
+      );
+      const inlineIdx = Array.from(line.children).indexOf(inlineStrip);
+      expect(modIdx).toBeLessThan(tsIdx);
+      expect(inlineIdx).toBeGreaterThan(tsIdx);
+    });
+
+    it("never renders the mod strip twice (start AND end)", () => {
+      const { container } = renderTwitchWithModActions(true);
+      const line = container.querySelector(".message-single-line")!;
+      // One inline strip + one mod strip, never two mod strips
+      expect(line.querySelectorAll(".message-actions")).toHaveLength(2);
+      expect(
+        line.querySelectorAll(".message-actions .action-button.mod-action"),
+      ).toHaveLength(4); // delete, timeout, ban, warn
+    });
+
+    it("does not render the inline divider when modActionsFirst is on (the message content already separates the strips)", () => {
+      const { container } = renderTwitchWithModActions(true);
+      const line = container.querySelector(".message-single-line")!;
+      expect(line.querySelector(".message-actions-divider")).toBeNull();
+    });
+  });
+
   describe("MessageInput - Mod Commands", () => {
     it("shows command menu when isModerator and typing /", () => {
       render(

@@ -522,4 +522,47 @@ describe("YouTube Moderator Mode", () => {
       expect(onBan).toHaveBeenCalledWith("UC-abc", "YTUser");
     });
   });
+
+  describe("modActionsFirst placement", () => {
+    function renderYT(modActionsFirst: boolean) {
+      return render(
+        withModeration(<YouTubeMessageContent msg={makeYTMsg()} />, {
+          isYouTubeModerator: true,
+          youtubeModModeActive: true,
+          modActionsFirst,
+          onDeleteYouTubeMessage: vi.fn(),
+          onTimeoutYouTubeUser: vi.fn(),
+          onBanYouTubeUser: vi.fn(),
+        }),
+      );
+    }
+
+    it("renders the mod action strip at the end of the line by default", () => {
+      const { container } = renderYT(false);
+      expect(container.querySelectorAll(".message-actions")).toHaveLength(1);
+      const line = container.querySelector(".message-single-line")!;
+      const actions = line.querySelector(".message-actions")!;
+      const timestamp = line.querySelector(".timestamp")!;
+      expect(Array.from(line.children).indexOf(actions)).toBeGreaterThan(
+        Array.from(line.children).indexOf(timestamp),
+      );
+    });
+
+    it("moves the mod action strip to the start of the line when modActionsFirst is on", () => {
+      const { container } = renderYT(true);
+      expect(container.querySelectorAll(".message-actions")).toHaveLength(1);
+      const line = container.querySelector(".message-single-line")!;
+      const actions = line.querySelector(".message-actions")!;
+      const timestamp = line.querySelector(".timestamp")!;
+      expect(Array.from(line.children).indexOf(actions)).toBeLessThan(
+        Array.from(line.children).indexOf(timestamp),
+      );
+    });
+
+    it("never renders the mod action strip twice (start AND end)", () => {
+      const { container } = renderYT(true);
+      const line = container.querySelector(".message-single-line")!;
+      expect(line.querySelectorAll(".message-actions")).toHaveLength(1);
+    });
+  });
 });
