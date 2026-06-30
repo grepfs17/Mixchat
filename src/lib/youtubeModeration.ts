@@ -10,9 +10,7 @@ export interface YouTubeModError extends Error {
   status?: number;
 }
 
-async function callModeration(
-  body: Record<string, unknown>,
-): Promise<void> {
+async function callModeration(body: Record<string, unknown>): Promise<void> {
   const res = await fetch("/api/youtube-moderation", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

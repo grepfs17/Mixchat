@@ -48,22 +48,17 @@ describe("per-videoId throttle", () => {
   describe("getThrottleKey", () => {
     const LIVE_CHAT_URL =
       "https://www.youtube.com/youtubei/v1/live_chat/get_live_chat";
-    const METADATA_URL =
-      "https://www.youtube.com/youtubei/v1/updated_metadata";
+    const METADATA_URL = "https://www.youtube.com/youtubei/v1/updated_metadata";
     const OTHER_URL = "https://www.youtube.com/youtubei/v1/player";
 
     it("returns per-videoId key for live_chat with videoId in body", () => {
       const body = JSON.stringify({ videoId: "dQw4w9WgXcQ" });
-      expect(getThrottleKey(LIVE_CHAT_URL, body)).toBe(
-        "live_chat:dQw4w9WgXcQ",
-      );
+      expect(getThrottleKey(LIVE_CHAT_URL, body)).toBe("live_chat:dQw4w9WgXcQ");
     });
 
     it("returns per-videoId key for updated_metadata", () => {
       const body = JSON.stringify({ videoId: "abc12345678" });
-      expect(getThrottleKey(METADATA_URL, body)).toBe(
-        "metadata:abc12345678",
-      );
+      expect(getThrottleKey(METADATA_URL, body)).toBe("metadata:abc12345678");
     });
 
     it("falls back to generic key when no videoId in body", () => {

@@ -137,7 +137,10 @@ function TwitchJSEmbed({
             playerRef.current.play();
           }
         };
-        embedInstance.addEventListener(window.Twitch.Embed.VIDEO_PAUSE, forceResume);
+        embedInstance.addEventListener(
+          window.Twitch.Embed.VIDEO_PAUSE,
+          forceResume,
+        );
         playerRef.current.addEventListener("pause", forceResume);
       });
     };

@@ -77,9 +77,9 @@ describe("youtubeModeration client helpers", () => {
         json: async () => ({ error: "No permission" }),
       });
 
-      await expect(deleteYouTubeMessage("vid-1", "msg-1")).rejects.toMatchObject(
-        { message: "No permission", status: 403 },
-      );
+      await expect(
+        deleteYouTubeMessage("vid-1", "msg-1"),
+      ).rejects.toMatchObject({ message: "No permission", status: 403 });
     });
 
     it("falls back to generic message when error body is unparseable", async () => {
@@ -92,9 +92,9 @@ describe("youtubeModeration client helpers", () => {
         text: async () => "internal",
       });
 
-      await expect(deleteYouTubeMessage("vid-1", "msg-1")).rejects.toMatchObject(
-        { message: "internal", status: 500 },
-      );
+      await expect(
+        deleteYouTubeMessage("vid-1", "msg-1"),
+      ).rejects.toMatchObject({ message: "internal", status: 500 });
     });
   });
 

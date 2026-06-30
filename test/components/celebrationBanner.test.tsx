@@ -31,10 +31,7 @@ afterEach(() => {
 describe("CelebrationBanner", () => {
   it("renders the Celebration label and user name", () => {
     render(
-      <CelebrationBanner
-        celebration={baseCelebration}
-        onDismiss={vi.fn()}
-      />,
+      <CelebrationBanner celebration={baseCelebration} onDismiss={vi.fn()} />,
     );
 
     expect(screen.getByText("CELEBRATION")).toBeInTheDocument();
@@ -43,10 +40,7 @@ describe("CelebrationBanner", () => {
 
   it("displays bits count", () => {
     render(
-      <CelebrationBanner
-        celebration={baseCelebration}
-        onDismiss={vi.fn()}
-      />,
+      <CelebrationBanner celebration={baseCelebration} onDismiss={vi.fn()} />,
     );
 
     expect(screen.getByText("100 bits")).toBeInTheDocument();
@@ -54,9 +48,7 @@ describe("CelebrationBanner", () => {
 
   it("formats large bits counts with locale", () => {
     const bigBits = { ...baseCelebration, bitsUsed: 5000 };
-    render(
-      <CelebrationBanner celebration={bigBits} onDismiss={vi.fn()} />,
-    );
+    render(<CelebrationBanner celebration={bigBits} onDismiss={vi.fn()} />);
 
     expect(screen.getByText("5,000 bits")).toBeInTheDocument();
   });
@@ -68,10 +60,7 @@ describe("CelebrationBanner", () => {
       endsAt: new Date(Date.now() + 1000),
     };
     render(
-      <CelebrationBanner
-        celebration={soonCelebration}
-        onDismiss={onDismiss}
-      />,
+      <CelebrationBanner celebration={soonCelebration} onDismiss={onDismiss} />,
     );
 
     expect(onDismiss).not.toHaveBeenCalled();
@@ -85,15 +74,10 @@ describe("CelebrationBanner", () => {
   it("requires double-click to dismiss early", () => {
     const onDismiss = vi.fn();
     render(
-      <CelebrationBanner
-        celebration={baseCelebration}
-        onDismiss={onDismiss}
-      />,
+      <CelebrationBanner celebration={baseCelebration} onDismiss={onDismiss} />,
     );
 
-    const closeBtn = screen.getByLabelText(
-      "Dismiss celebration notification",
-    );
+    const closeBtn = screen.getByLabelText("Dismiss celebration notification");
     fireEvent.click(closeBtn);
     expect(onDismiss).not.toHaveBeenCalled();
 
@@ -106,30 +90,20 @@ describe("CelebrationBanner", () => {
   it("resets confirm-close on blur", () => {
     const onDismiss = vi.fn();
     render(
-      <CelebrationBanner
-        celebration={baseCelebration}
-        onDismiss={onDismiss}
-      />,
+      <CelebrationBanner celebration={baseCelebration} onDismiss={onDismiss} />,
     );
 
-    const closeBtn = screen.getByLabelText(
-      "Dismiss celebration notification",
-    );
+    const closeBtn = screen.getByLabelText("Dismiss celebration notification");
     fireEvent.click(closeBtn);
     expect(screen.getByText("Press again to close")).toBeInTheDocument();
 
     fireEvent.blur(closeBtn);
-    expect(
-      screen.queryByText("Press again to close"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Press again to close")).not.toBeInTheDocument();
   });
 
   it("has an accessible role", () => {
     render(
-      <CelebrationBanner
-        celebration={baseCelebration}
-        onDismiss={vi.fn()}
-      />,
+      <CelebrationBanner celebration={baseCelebration} onDismiss={vi.fn()} />,
     );
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });

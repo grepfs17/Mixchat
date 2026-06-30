@@ -39,20 +39,18 @@ vi.mock("@twurple/api", () => {
                 { id: "0", title: "Sub", description: "Subscriber" },
               ]),
             ]),
-          getChannelBadges: vi
-            .fn()
-            .mockResolvedValue([
-              mockBadgeSet("subscriber", [
-                {
-                  id: "12",
-                  title: "12-Month Sub",
-                  description: "1 Year Subscriber",
-                },
-              ]),
-              mockBadgeSet("custom-badge", [
-                { id: "1", title: "VIP+", description: "Special VIP" },
-              ]),
+          getChannelBadges: vi.fn().mockResolvedValue([
+            mockBadgeSet("subscriber", [
+              {
+                id: "12",
+                title: "12-Month Sub",
+                description: "1 Year Subscriber",
+              },
             ]),
+            mockBadgeSet("custom-badge", [
+              { id: "1", title: "VIP+", description: "Special VIP" },
+            ]),
+          ]),
         },
         users: {
           getUserByName: vi.fn().mockResolvedValue({ id: "123" }),

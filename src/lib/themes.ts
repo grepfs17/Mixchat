@@ -41,10 +41,7 @@ interface ThemeColors {
   "--shadow-glow-indigo": string;
 }
 
-const THEME_COLORS: Record<
-  Exclude<ChatTheme, "default">,
-  ThemeColors
-> = {
+const THEME_COLORS: Record<Exclude<ChatTheme, "default">, ThemeColors> = {
   "one-dark": {
     "--color-bg-primary": "#282c34",
     "--color-bg-secondary": "#21252b",

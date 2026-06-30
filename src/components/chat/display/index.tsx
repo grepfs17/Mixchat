@@ -58,6 +58,8 @@ interface ChatDisplayProps {
   onSearchCategories?: (
     query: string,
   ) => Promise<Array<{ id: string; name: string }>>;
+  showModTools?: boolean;
+  onOpenModTools?: () => void;
 }
 
 export interface ChatDisplayHandle {
@@ -96,6 +98,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       onUpdateTitle,
       onUpdateCategory,
       onSearchCategories,
+      showModTools = false,
+      onOpenModTools,
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
   ) {
@@ -376,6 +380,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
               authorAvatar,
             })
           }
+          showModTools={showModTools}
+          onOpenModTools={onOpenModTools}
         />
 
         {unifiedChatSlot ? (

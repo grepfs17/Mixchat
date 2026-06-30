@@ -5,6 +5,8 @@ import {
   MdCheck,
   MdClose,
   MdVisibilityOff,
+  MdMoreVert,
+  MdBuild,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -52,6 +54,8 @@ interface ChatHeaderProps {
     authorAvatar?: string,
     platform?: Platform,
   ) => void;
+  showModTools?: boolean;
+  onOpenModTools?: () => void;
 }
 
 export default function ChatHeader({
@@ -75,6 +79,8 @@ export default function ChatHeader({
   onSearchCategories,
   ignoredUserCounts = new Map(),
   onOpenIgnoredUserOverlay,
+  showModTools = false,
+  onOpenModTools,
 }: ChatHeaderProps) {
   const {
     isModerator,
@@ -101,6 +107,8 @@ export default function ChatHeader({
   const categoryInputRef = useRef<HTMLInputElement>(null);
   const modModeDropdownRef = useRef<HTMLDivElement>(null);
   const [modModeDropdownOpen, setModModeDropdownOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!editingCategory) return;
@@ -134,6 +142,17 @@ export default function ChatHeader({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [modModeDropdownOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!mobileMenuRef.current?.contains(e.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [mobileMenuOpen]);
 
   const handleSaveTitle = useCallback(() => {
     setSavingTitle(true);
@@ -212,156 +231,305 @@ export default function ChatHeader({
           </h2>
         </div>
         <div className="chat-header-actions">
-          {Array.from(ignoredUserCounts.entries()).map(
-            ([key, { count, displayName, authorAvatar, platform }]) => (
+          <div className="desktop-header-items">
+            {Array.from(ignoredUserCounts.entries()).map(
+              ([key, { count, displayName, authorAvatar, platform }]) => (
+                <button
+                  key={key}
+                  className="header-button ignored-messages-badge"
+                  title={`${count} hidden message(s) from ${displayName}`}
+                  onClick={() =>
+                    onOpenIgnoredUserOverlay?.(
+                      displayName,
+                      authorAvatar,
+                      platform,
+                    )
+                  }
+                >
+                  <MdVisibilityOff size={12} className="ignored-badge-icon" />
+                  <span className="ignored-badge-user">{displayName}</span>
+                  <span className="ignored-badge-count">{count}</span>
+                </button>
+              ),
+            )}
+            {onRefreshEmotes && (
               <button
-                key={key}
-                className="header-button ignored-messages-badge"
-                title={`${count} hidden message(s) from ${displayName}`}
-                onClick={() =>
-                  onOpenIgnoredUserOverlay?.(
-                    displayName,
-                    authorAvatar,
-                    platform,
-                  )
+                onClick={onRefreshEmotes}
+                disabled={isRefreshingEmotes}
+                className="header-button"
+                title={
+                  isRefreshingEmotes
+                    ? "Reloading emotes..."
+                    : "Reload emotes in background"
                 }
               >
-                <MdVisibilityOff size={12} className="ignored-badge-icon" />
-                <span className="ignored-badge-user">{displayName}</span>
-                <span className="ignored-badge-count">{count}</span>
+                <MdRefresh
+                  size={14}
+                  style={{
+                    animation: isRefreshingEmotes
+                      ? "spin 1s linear infinite"
+                      : "none",
+                  }}
+                />
+                <span className="header-button-label">
+                  {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
+                </span>
               </button>
-            ),
-          )}
-          {onRefreshEmotes && (
-            <button
-              onClick={onRefreshEmotes}
-              disabled={isRefreshingEmotes}
-              className="header-button"
-              title={
-                isRefreshingEmotes
-                  ? "Reloading emotes..."
-                  : "Reload emotes in background"
-              }
-            >
-              <MdRefresh
-                size={14}
-                style={{
-                  animation: isRefreshingEmotes
-                    ? "spin 1s linear infinite"
-                    : "none",
-                }}
-              />
-              <span className="header-button-label">
-                {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
-              </span>
-            </button>
-          )}
-          {showModToggle && (
-            <div className="mod-mode-container" ref={modModeDropdownRef}>
-              <button
-                onClick={() => setModModeDropdownOpen((v) => !v)}
-                className={`header-button mod-mode-trigger ${
-                  modModeActive || youtubeModModeActive ? "mod-active" : ""
-                }`}
-                title="Mod Mode"
-              >
-                {modModeActive && youtubeModModeActive ? (
-                  <GiCrossedSwords
-                    size={16}
-                    className="mod-icon"
-                    style={{ color: "var(--color-green)" }}
-                  />
-                ) : modModeActive ? (
-                  <FaTwitch
-                    size={16}
-                    className="mod-icon"
-                    style={{ color: "var(--color-twitch, #9146ff)" }}
-                  />
-                ) : youtubeModModeActive ? (
-                  <FaYoutube
-                    size={16}
-                    className="mod-icon"
-                    style={{ color: "var(--color-youtube, #ff2222)" }}
-                  />
-                ) : (
-                  <GiCrossedSwords
-                    size={16}
-                    className="mod-icon"
-                    style={{ color: "var(--color-text-muted)" }}
-                  />
+            )}
+            {showModToggle && (
+              <div className="mod-mode-container" ref={modModeDropdownRef}>
+                <button
+                  onClick={() => setModModeDropdownOpen((v) => !v)}
+                  className={`header-button mod-mode-trigger ${
+                    modModeActive || youtubeModModeActive ? "mod-active" : ""
+                  }`}
+                  title="Mod Mode"
+                >
+                  {modModeActive && youtubeModModeActive ? (
+                    <GiCrossedSwords
+                      size={16}
+                      className="mod-icon"
+                      style={{ color: "var(--color-green)" }}
+                    />
+                  ) : modModeActive ? (
+                    <FaTwitch
+                      size={16}
+                      className="mod-icon"
+                      style={{ color: "var(--color-twitch, #9146ff)" }}
+                    />
+                  ) : youtubeModModeActive ? (
+                    <FaYoutube
+                      size={16}
+                      className="mod-icon"
+                      style={{ color: "var(--color-youtube, #ff2222)" }}
+                    />
+                  ) : (
+                    <GiCrossedSwords
+                      size={16}
+                      className="mod-icon"
+                      style={{ color: "var(--color-text-muted)" }}
+                    />
+                  )}
+                  <span className="mod-label">Mod Mode</span>
+                </button>
+                {modModeDropdownOpen && (
+                  <div className="mod-mode-dropdown">
+                    {(isModerator || isYouTubeModerator) && (
+                      <button
+                        className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
+                        onClick={() => {
+                          onSetModMode?.("off");
+                          setModModeDropdownOpen(false);
+                        }}
+                        title="Disable Mod Mode"
+                      >
+                        <GiCrossedSwords size={14} />
+                        <span>Off</span>
+                        {!modModeActive && !youtubeModModeActive && (
+                          <span className="mod-mode-check">✓</span>
+                        )}
+                      </button>
+                    )}
+                    {isModerator && (
+                      <button
+                        className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
+                        onClick={() => {
+                          onSetModMode?.("twitch");
+                          setModModeDropdownOpen(false);
+                        }}
+                        title="Twitch Mod Mode"
+                      >
+                        <FaTwitch size={14} />
+                        <span>Twitch</span>
+                        {modModeActive && !youtubeModModeActive && (
+                          <span className="mod-mode-check">✓</span>
+                        )}
+                      </button>
+                    )}
+                    {isYouTubeModerator && (
+                      <button
+                        className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
+                        onClick={() => {
+                          onSetModMode?.("youtube");
+                          setModModeDropdownOpen(false);
+                        }}
+                        title="YouTube Mod Mode"
+                      >
+                        <FaYoutube size={14} />
+                        <span>YouTube</span>
+                        {youtubeModModeActive && !modModeActive && (
+                          <span className="mod-mode-check">✓</span>
+                        )}
+                      </button>
+                    )}
+                    {isModerator && isYouTubeModerator && (
+                      <button
+                        className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
+                        onClick={() => {
+                          onSetModMode?.("both");
+                          setModModeDropdownOpen(false);
+                        }}
+                        title="Both Platforms Mod Mode"
+                      >
+                        <GiCrossedSwords size={14} />
+                        <span>Both</span>
+                        {modModeActive && youtubeModModeActive && (
+                          <span className="mod-mode-check">✓</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 )}
-                <span className="mod-label">Mod Mode</span>
+              </div>
+            )}
+            {showModTools && onOpenModTools && (
+              <button
+                onClick={onOpenModTools}
+                className="header-button mod-tools-trigger"
+                title="Streamer tools (giveaway, etc.)"
+              >
+                <MdBuild size={14} className="mod-icon" />
+                <span className="header-button-label">Streamer tools</span>
               </button>
-              {modModeDropdownOpen && (
-                <div className="mod-mode-dropdown">
-                  {(isModerator || isYouTubeModerator) && (
+            )}
+          </div>
+
+          {(onRefreshEmotes || showModToggle || ignoredUserCounts.size > 0 || showModTools) && (
+            <div className="mobile-header-menu" ref={mobileMenuRef}>
+              <button
+                className="header-button mobile-menu-trigger"
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                title="Menu"
+              >
+                <MdMoreVert />
+              </button>
+              {mobileMenuOpen && (
+                <div className="mobile-menu-dropdown">
+                  {onRefreshEmotes && (
                     <button
-                      className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
+                      className="mobile-menu-item"
                       onClick={() => {
-                        onSetModMode?.("off");
-                        setModModeDropdownOpen(false);
+                        onRefreshEmotes();
+                        setMobileMenuOpen(false);
                       }}
-                      title="Disable Mod Mode"
+                      disabled={isRefreshingEmotes}
                     >
-                      <GiCrossedSwords size={14} />
-                      <span>Off</span>
-                      {!modModeActive && !youtubeModModeActive && (
-                        <span className="mod-mode-check">✓</span>
-                      )}
+                      <MdRefresh
+                        size={14}
+                        style={{
+                          animation: isRefreshingEmotes
+                            ? "spin 1s linear infinite"
+                            : "none",
+                        }}
+                      />
+                      <span>
+                        {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
+                      </span>
                     </button>
                   )}
-                  {isModerator && (
-                    <button
-                      className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
-                      onClick={() => {
-                        onSetModMode?.("twitch");
-                        setModModeDropdownOpen(false);
-                      }}
-                      title="Twitch Mod Mode"
-                    >
-                      <FaTwitch size={14} />
-                      <span>Twitch</span>
-                      {modModeActive && !youtubeModModeActive && (
-                        <span className="mod-mode-check">✓</span>
-                      )}
-                    </button>
+                  {Array.from(ignoredUserCounts.entries()).map(
+                    ([key, { count, displayName, authorAvatar, platform }]) => (
+                      <button
+                        key={key}
+                        className="mobile-menu-item"
+                        onClick={() => {
+                          onOpenIgnoredUserOverlay?.(
+                            displayName,
+                            authorAvatar,
+                            platform,
+                          );
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <MdVisibilityOff size={14} />
+                        <span>
+                          {displayName} ({count})
+                        </span>
+                      </button>
+                    ),
                   )}
-                  {isYouTubeModerator && (
-                    <button
-                      className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
-                      onClick={() => {
-                        onSetModMode?.("youtube");
-                        setModModeDropdownOpen(false);
-                      }}
-                      title="YouTube Mod Mode"
-                    >
-                      <FaYoutube size={14} />
-                      <span>YouTube</span>
-                      {youtubeModModeActive && !modModeActive && (
-                        <span className="mod-mode-check">✓</span>
+                  {showModToggle && (
+                    <>
+                      <div className="mobile-menu-separator" />
+                      {isModerator && (
+                        <button
+                          className={`mobile-menu-item${modModeActive && !youtubeModModeActive ? " active" : ""}`}
+                          onClick={() => {
+                            onSetModMode?.("twitch");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <FaTwitch size={14} />
+                          <span>
+                            Twitch Mod{" "}
+                            {modModeActive && !youtubeModModeActive ? "✓" : ""}
+                          </span>
+                        </button>
                       )}
-                    </button>
+                      {isYouTubeModerator && (
+                        <button
+                          className={`mobile-menu-item${youtubeModModeActive && !modModeActive ? " active" : ""}`}
+                          onClick={() => {
+                            onSetModMode?.("youtube");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <FaYoutube size={14} />
+                          <span>
+                            YouTube Mod{" "}
+                            {youtubeModModeActive && !modModeActive ? "✓" : ""}
+                          </span>
+                        </button>
+                      )}
+                      {isModerator && isYouTubeModerator && (
+                        <button
+                          className={`mobile-menu-item${modModeActive && youtubeModModeActive ? " active" : ""}`}
+                          onClick={() => {
+                            onSetModMode?.("both");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <GiCrossedSwords size={14} />
+                          <span>
+                            Both Platforms{" "}
+                            {modModeActive && youtubeModModeActive ? "✓" : ""}
+                          </span>
+                        </button>
+                      )}
+                      {(modModeActive || youtubeModModeActive) && (
+                        <button
+                          className="mobile-menu-item"
+                          onClick={() => {
+                            onSetModMode?.("off");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <GiCrossedSwords size={14} />
+                          <span>Mod Mode Off</span>
+                        </button>
+                      )}
+                    </>
                   )}
-                  {isModerator && isYouTubeModerator && (
-                    <button
-                      className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
-                      onClick={() => {
-                        onSetModMode?.("both");
-                        setModModeDropdownOpen(false);
-                      }}
-                      title="Both Platforms Mod Mode"
-                    >
-                      <GiCrossedSwords size={14} />
-                      <span>Both</span>
-                      {modModeActive && youtubeModModeActive && (
-                        <span className="mod-mode-check">✓</span>
-                      )}
-                    </button>
+                  {showModTools && onOpenModTools && (
+                    <>
+                      <div className="mobile-menu-separator" />
+                      <button
+                        className="mobile-menu-item"
+                        onClick={() => {
+                          onOpenModTools();
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <MdBuild size={14} />
+                        <span>Streamer tools</span>
+                      </button>
+                    </>
                   )}
                 </div>
               )}
             </div>
           )}
+
           {isLoading && <span className="loading-indicator">●</span>}
         </div>
       </div>

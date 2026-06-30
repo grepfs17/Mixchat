@@ -38,4 +38,6 @@ export interface SettingsProps {
   onIgnoredUsersChange: (users: string[]) => void;
   hasYoutubeSession: boolean;
   onReauthYoutube: () => void;
+  streamerToolsEnabled: boolean;
+  onStreamerToolsEnabledChange: (value: boolean) => void;
 }

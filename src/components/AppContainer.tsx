@@ -111,6 +111,8 @@ export default function AppContainer() {
     handleEventSoundChange,
     modModeTargets,
     setModModeTargetForChannel,
+    streamerToolsEnabled,
+    setStreamerToolsEnabled,
   } = useChatSettings();
   const {
     linkedYoutubeUrl,
@@ -327,6 +329,8 @@ export default function AppContainer() {
             ignoredUsers={ignoredUsers}
             onIgnoredUsersChange={setIgnoredUsers}
             hasYoutubeSession={!!sessions.youtube}
+            streamerToolsEnabled={streamerToolsEnabled}
+            onStreamerToolsEnabledChange={setStreamerToolsEnabled}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();
@@ -674,6 +678,8 @@ export default function AppContainer() {
                 eventSoundVolume={eventSoundVolume}
                 ignoredUsers={ignoredUsers}
                 onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
+                streamerToolsEnabled={streamerToolsEnabled}
+                isOnOwnChannel={isOnOwnChannel}
               />
             </div>
           </>

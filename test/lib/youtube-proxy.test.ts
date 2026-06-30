@@ -156,7 +156,7 @@ describe("proxy failover", () => {
     });
 
     it("simpleHash produces non-negative integers", () => {
-      for (const id of ["dQw4w9WgXcQ", "abc12345678", "x", ""] ) {
+      for (const id of ["dQw4w9WgXcQ", "abc12345678", "x", ""]) {
         expect(simpleHash(id)).toBeGreaterThanOrEqual(0);
       }
     });

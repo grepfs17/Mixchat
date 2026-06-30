@@ -11,14 +11,24 @@ import PollBanner from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
 import CelebrationBanner from "./shared/CelebrationBanner";
 import SplitLayout from "./SplitLayout";
+import StreamerToolsModal from "./shared/StreamerToolsModal";
 import {
   useChatAppState,
   type ChatAppStateProps,
 } from "../../hooks/chat/useChatAppState";
 import { ModerationContext } from "../../contexts/ModerationContext";
 import type { ModModeTarget } from "../../contexts/ModerationContext";
-import type { ChatFont, ChatTheme } from "../../lib/types";
-import { useState, useCallback, useEffect } from "react";
+import type {
+  ChatFont,
+  ChatTheme,
+  Platform,
+  TwitchMessage,
+} from "../../lib/types";
+import type { YTMessage } from "./unified/types";
+import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
+import { useGiveaway } from "../../hooks/chat/useGiveaway";
+import GiveawayIndicator from "./shared/GiveawayIndicator";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface YtConnectionState {
   connected: boolean;
@@ -125,6 +135,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     showStreamEmbed = true,
     onToggleStreamEmbed,
     onFollowRaid,
+    streamerToolsEnabled = false,
+    isOnOwnChannel = false,
   } = props;
 
   useEffect(() => {
@@ -148,6 +160,98 @@ export default function ChatApp(props: ChatAppStateProps) {
     },
     [props.setModModeTargetForChannel, selectedTwitchChannel],
   );
+
+  const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
+  const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
+    "giveaway" | null
+  >(null);
+  const showModTools = streamerToolsEnabled && isOnOwnChannel;
+
+  const openStreamerTools = (initialTool: "giveaway" | null = null) => {
+    setStreamerToolsInitialTool(initialTool);
+    setStreamerToolsOpen(true);
+  };
+  const closeStreamerTools = () => {
+    setStreamerToolsOpen(false);
+    setStreamerToolsInitialTool(null);
+  };
+
+  const handleAnnounceWinner = useCallback(
+    async (winner: GiveawayEntry, message: string) => {
+      const platforms: Platform[] = [];
+      if (winner.platform === "twitch") platforms.push("twitch");
+      if (winner.platform === "youtube") platforms.push("youtube");
+      if (platforms.length === 0) return;
+      try {
+        if (platforms.includes("twitch")) {
+          await handleSendMessage(message, ["twitch"]);
+        }
+        if (platforms.includes("youtube") && youtubeVideoId) {
+          const res = await fetch("/api/youtube-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              videoId: youtubeVideoId,
+              message,
+            }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showNotification(
+              data.error || "Failed to send winner to YouTube",
+              "error",
+            );
+          }
+        }
+      } catch (err) {
+        showNotification(
+          err instanceof Error ? err.message : "Failed to announce winner",
+          "error",
+        );
+      }
+    },
+    [handleSendMessage, youtubeVideoId],
+  );
+
+  const giveaway = useGiveaway({
+    owner: {
+      twitchBroadcasterId: selectedTwitchChannel,
+      youtubeChannelId: youtubeSession?.userId,
+    },
+    enabled: showModTools,
+  });
+
+  // Ingest new messages into the giveaway's entry buffer.
+  //
+  // The chat's `messages` array is capped at MAX_DISPLAYED_MESSAGES (100) and
+  // rolls over, so we cannot derive entries from it after the buffer rotates.
+  // Instead, the hook maintains its own buffer that survives the chat cap.
+  // Here we feed it each new chat message exactly once. We track which
+  // message ids have already been ingested so re-renders don't replay.
+  const ingestedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of messages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "twitch", msg: m as TwitchMessage });
+    }
+  }, [messages, giveaway]);
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of ytMessages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "youtube", msg: m as YTMessage });
+    }
+  }, [ytMessages, giveaway]);
+  // Reset the ingestion ledger when the giveaway leaves the running phase so
+  // the next run starts fresh.
+  useEffect(() => {
+    if (giveaway.phase !== "running") {
+      ingestedIdsRef.current = new Set();
+    }
+  }, [giveaway.phase]);
 
   const moderationValue = {
     isModerator,
@@ -234,6 +338,24 @@ export default function ChatApp(props: ChatAppStateProps) {
           />
         )}
 
+        {streamerToolsOpen && (
+          <StreamerToolsModal
+            giveaway={giveaway}
+            onAnnounce={handleAnnounceWinner}
+            onMinimize={closeStreamerTools}
+            onClose={closeStreamerTools}
+            initialTool={streamerToolsInitialTool}
+            youtubeConnected={!!youtubeSession}
+          />
+        )}
+
+        {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
+          <GiveawayIndicator
+            giveaway={giveaway}
+            onOpen={() => openStreamerTools("giveaway")}
+          />
+        )}
+
         {/* UNIFIED CHAT MODE */}
         {unifyChatEnabled ? (
           <>
@@ -292,6 +414,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                 onSearchCategories={handleSearchCategories}
                 ignoredUsers={ignoredUsers}
                 ytMessages={ytMessages}
+                showModTools={showModTools}
+                onOpenModTools={() => openStreamerTools()}
                 /* Override messages area with UnifiedChat */
                 unifiedChatSlot={
                   <UnifiedChat
@@ -433,6 +557,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                     onSearchCategories={handleSearchCategories}
                     ignoredUsers={ignoredUsers}
                     ytMessages={ytMessages}
+                    showModTools={showModTools}
+                    onOpenModTools={() => openStreamerTools()}
                   />
                 </div>
                 <MessageInput

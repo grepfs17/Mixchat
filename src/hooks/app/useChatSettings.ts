@@ -69,6 +69,8 @@ export type UseChatSettingsResult = {
     channelId: string,
     target: ModModeTarget,
   ) => void;
+  streamerToolsEnabled: boolean;
+  setStreamerToolsEnabled: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -175,6 +177,8 @@ export function useChatSettings(): UseChatSettingsResult {
   const [modModeTargets, setModModeTargets] = useLocalStorageState<
     Record<string, ModModeTarget>
   >("mixchat_mod_mode_targets", {});
+  const [streamerToolsEnabled, setStreamerToolsEnabled] =
+    useLocalStorageState<boolean>("mixchat_streamer_tools_enabled", false);
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -242,5 +246,7 @@ export function useChatSettings(): UseChatSettingsResult {
     handleEventSoundChange,
     modModeTargets,
     setModModeTargetForChannel,
+    streamerToolsEnabled,
+    setStreamerToolsEnabled,
   };
 }

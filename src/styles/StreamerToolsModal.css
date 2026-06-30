@@ -1,0 +1,946 @@
+/* Streamer Tools Modal — Streamer tools list + active tool container. */
+.streamer-tools-modal {
+    position: relative;
+    background: linear-gradient(160deg, #1a1a1a 0%, #141414 100%);
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    width: min(560px, 92vw);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    color: #e7e7e7;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.streamer-tools-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid #262626;
+}
+
+.streamer-tools-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.streamer-tools-header-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: #9a9a9a;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.streamer-tools-header-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f1f1;
+    border-color: #2c2c2c;
+}
+
+.streamer-tools-header-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.streamer-tools-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    color: #f1f1f1;
+}
+
+.streamer-tools-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+.streamer-tools-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.streamer-tools-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.streamer-tools-body::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: var(--radius-md);
+}
+
+.streamer-tools-body::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-lighter);
+}
+
+.streamer-tools-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.streamer-tools-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #262626;
+    border-radius: 8px;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+}
+
+.streamer-tools-list-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: #3a3a3a;
+}
+
+.streamer-tools-list-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.streamer-tools-list-label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #f1f1f1;
+}
+
+.streamer-tools-list-desc {
+    font-size: 12px;
+    color: #9a9a9a;
+}
+
+.streamer-tools-list-open {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.streamer-tools-list-open:hover {
+    background: #7c7ff5;
+}
+
+.streamer-tools-active {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Recent winners (history) */
+.streamer-tools-history {
+    margin-top: 18px;
+    border-top: 1px solid #262626;
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.streamer-tools-history--empty {
+    border: 1px dashed #2c2c2c;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    color: #7e7e7e;
+    text-align: center;
+}
+
+.streamer-tools-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.streamer-tools-history-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #9a9a9a;
+}
+
+.streamer-tools-history-clear {
+    background: none;
+    border: 1px solid #2c2c2c;
+    color: #9a9a9a;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.streamer-tools-history-clear:hover {
+    background: rgba(255, 90, 90, 0.1);
+    color: #ff8888;
+    border-color: rgba(255, 90, 90, 0.4);
+}
+
+.streamer-tools-history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+.streamer-tools-history-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.streamer-tools-history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.streamer-tools-history-list::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: var(--radius-md);
+}
+
+.streamer-tools-history-list::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-lighter);
+}
+
+.streamer-tools-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #262626;
+    border-radius: 6px;
+}
+
+.streamer-tools-history-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.streamer-tools-history-winner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f1f1f1;
+    min-width: 0;
+}
+
+.streamer-tools-history-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2a2a2a;
+    flex-shrink: 0;
+}
+
+.streamer-tools-history-avatar--placeholder {
+    display: inline-block;
+    background: #2a2a2a;
+}
+
+.streamer-tools-history-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.streamer-tools-history-platform {
+    color: #7e7e7e;
+    display: inline-flex;
+    align-items: center;
+}
+
+.streamer-tools-history-item[data-platform="twitch"]
+    .streamer-tools-history-platform {
+    color: var(--color-twitch, #9146ff);
+}
+
+.streamer-tools-history-item[data-platform="youtube"]
+    .streamer-tools-history-platform {
+    color: var(--color-youtube, #ff2222);
+}
+
+.streamer-tools-history-keyword {
+    font-size: 11px;
+    color: #9a9a9a;
+}
+
+.streamer-tools-history-keyword strong {
+    color: #c5c8ff;
+    font-weight: 600;
+}
+
+.streamer-tools-history-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 11px;
+    color: #7e7e7e;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.streamer-tools-history-date {
+    color: #9a9a9a;
+}
+
+.streamer-tools-back {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 1px solid transparent;
+    color: #9a9a9a;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.streamer-tools-back:hover {
+    color: #e7e7e7;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: #2c2c2c;
+}
+
+/* Giveaway indicator (minimized state) */
+.giveaway-indicator {
+    position: absolute;
+    bottom: 72px;
+    right: 14px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px 6px 10px;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.18) 0%,
+        rgba(168, 85, 247, 0.18) 100%
+    );
+    border: 1px solid rgba(168, 85, 247, 0.5);
+    border-radius: 999px;
+    color: #f1f1f1;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    transition:
+        transform 0.15s,
+        background 0.15s,
+        border-color 0.15s;
+    max-width: calc(100% - 24px);
+}
+
+.giveaway-indicator:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.28) 0%,
+        rgba(168, 85, 247, 0.28) 100%
+    );
+    border-color: rgba(168, 85, 247, 0.7);
+}
+
+.giveaway-indicator--revealed {
+    background: linear-gradient(
+        135deg,
+        rgba(15, 157, 88, 0.2) 0%,
+        rgba(99, 102, 241, 0.2) 100%
+    );
+    border-color: rgba(15, 157, 88, 0.5);
+}
+
+.giveaway-indicator--revealed:hover {
+    background: linear-gradient(
+        135deg,
+        rgba(15, 157, 88, 0.3) 0%,
+        rgba(99, 102, 241, 0.3) 100%
+    );
+    border-color: rgba(15, 157, 88, 0.75);
+}
+
+.giveaway-indicator-icon {
+    display: inline-flex;
+    align-items: center;
+    color: #c5c8ff;
+    flex-shrink: 0;
+}
+
+.giveaway-indicator--revealed .giveaway-indicator-icon {
+    color: #6dd698;
+}
+
+.giveaway-indicator-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+}
+
+.giveaway-indicator-title {
+    font-weight: 600;
+    color: #f1f1f1;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+.giveaway-indicator-sub {
+    font-size: 11px;
+    color: #b8b8b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.giveaway-indicator-sub strong {
+    color: #c5c8ff;
+    font-weight: 600;
+}
+
+.giveaway-indicator-platform {
+    display: inline-flex;
+    align-items: center;
+    color: #7e7e7e;
+    margin-left: 2px;
+}
+
+.giveaway-indicator-time {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-family: "Inter", "Roboto Mono", monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+}
+
+.giveaway-indicator-time-label {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #b8b8b8;
+    font-family: inherit;
+    margin-top: 2px;
+}
+
+/* Giveaway panel */
+.giveaway-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.giveaway-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.giveaway-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.giveaway-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #c5c5c5;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.giveaway-field-hint {
+    font-size: 11px;
+    color: #7e7e7e;
+}
+
+.giveaway-input {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid #2c2c2c;
+    border-radius: 6px;
+    color: #f1f1f1;
+    font-size: 14px;
+    padding: 8px 10px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+}
+
+.giveaway-input:focus {
+    outline: none;
+    border-color: #6366f1;
+}
+
+.giveaway-input-suffix {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.giveaway-input-suffix .giveaway-input--with-suffix {
+    flex: 1;
+    min-width: 0;
+    padding-right: 44px;
+}
+
+.giveaway-input-suffix-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #7e7e7e;
+    background: rgba(0, 0, 0, 0.25);
+    border-left: 1px solid #2c2c2c;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    pointer-events: none;
+}
+
+.giveaway-duration-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.giveaway-duration-row .giveaway-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.giveaway-duration-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.giveaway-preset {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #2c2c2c;
+    color: #c5c5c5;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.giveaway-preset:hover {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #e7e7e7;
+}
+
+.giveaway-preset--active,
+.giveaway-preset--active:hover {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
+    color: #fff;
+}
+
+.giveaway-options-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.giveaway-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #d6d6d6;
+    cursor: pointer;
+}
+
+.giveaway-radio input {
+    margin: 0;
+}
+
+.giveaway-error {
+    margin: 0;
+    font-size: 12px;
+    color: #ff8888;
+    background: rgba(255, 60, 60, 0.08);
+    border: 1px solid rgba(255, 60, 60, 0.3);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.giveaway-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.giveaway-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        opacity 0.15s;
+}
+
+.giveaway-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.giveaway-btn--primary {
+    background: #6366f1;
+    color: #fff;
+}
+
+.giveaway-btn--primary:hover:not(:disabled) {
+    background: #7c7ff5;
+}
+
+.giveaway-btn--secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: #d6d6d6;
+    border: 1px solid #2c2c2c;
+}
+
+.giveaway-btn--secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.giveaway-running {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.giveaway-running-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.giveaway-keyword-chip {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #c5c8ff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+
+.giveaway-countdown {
+    font-family: "Inter", "Roboto Mono", monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #f1f1f1;
+    letter-spacing: 0.04em;
+}
+
+.giveaway-running-stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #9a9a9a;
+}
+
+.giveaway-running-stats strong {
+    color: #f1f1f1;
+    font-size: 14px;
+}
+
+.giveaway-running-breakdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #9a9a9a;
+}
+
+.giveaway-running-breakdown-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #2c2c2c;
+    border-radius: 999px;
+    color: #b8b8b8;
+}
+
+.giveaway-running-breakdown-item[data-platform="twitch"] {
+    color: var(--color-twitch, #c5a8ff);
+    border-color: rgba(145, 70, 255, 0.35);
+}
+
+.giveaway-running-breakdown-item[data-platform="youtube"] {
+    color: var(--color-youtube, #ff8888);
+    border-color: rgba(255, 34, 34, 0.35);
+}
+
+.giveaway-running-meta {
+    font-size: 11px;
+    color: #7e7e7e;
+}
+
+.giveaway-entries {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid #262626;
+    border-radius: 6px;
+    padding: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+.giveaway-entries::-webkit-scrollbar {
+    width: 8px;
+}
+
+.giveaway-entries::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.giveaway-entries::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: var(--radius-md);
+}
+
+.giveaway-entries::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-lighter);
+}
+
+.giveaway-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #d6d6d6;
+    border-radius: 4px;
+}
+
+.giveaway-entry-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.giveaway-entry-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2a2a2a;
+    flex-shrink: 0;
+}
+
+.giveaway-entry-avatar--placeholder {
+    display: inline-block;
+    background: #2a2a2a;
+}
+
+.giveaway-entry-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.giveaway-entry-platform {
+    color: #7e7e7e;
+    display: inline-flex;
+    align-items: center;
+}
+
+.giveaway-revealed {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.giveaway-winner-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.18) 0%,
+        rgba(168, 85, 247, 0.18) 100%
+    );
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    border-radius: 10px;
+}
+
+.giveaway-winner-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2a2a2a;
+    flex-shrink: 0;
+}
+
+.giveaway-winner-avatar--placeholder {
+    display: inline-block;
+    background: #2a2a2a;
+}
+
+.giveaway-winner-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.giveaway-winner-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #c5c8ff;
+}
+
+.giveaway-winner-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.giveaway-winner-platform {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #9a9a9a;
+    text-transform: capitalize;
+}
+
+.giveaway-winner-summary {
+    margin: 0;
+    font-size: 12px;
+    color: #9a9a9a;
+}
+
+.giveaway-winner-summary strong {
+    color: #f1f1f1;
+}
+
+.giveaway-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #d6d6d6;
+    cursor: pointer;
+}
+
+.giveaway-notify-hint {
+    margin: 0;
+    font-size: 11px;
+    color: #6e6e6e;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.giveaway-empty {
+    margin: 0;
+    font-size: 13px;
+    color: #9a9a9a;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #2c2c2c;
+    border-radius: 6px;
+    padding: 12px;
+}

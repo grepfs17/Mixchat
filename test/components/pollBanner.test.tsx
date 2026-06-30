@@ -1,6 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import PollBanner, { type PollState } from "../../src/components/chat/shared/PollBanner";
+import PollBanner, {
+  type PollState,
+} from "../../src/components/chat/shared/PollBanner";
 
 vi.mock("react-icons/fa", () => ({
   FaTimes: () => <span data-testid="fa-times">X</span>,
@@ -116,14 +118,18 @@ describe("PollBanner", () => {
     };
     render(<PollBanner poll={endedPoll} onDismiss={vi.fn()} />);
 
-    const winnerElement = screen.getByText("Valorant").closest(".poll-banner-choice");
+    const winnerElement = screen
+      .getByText("Valorant")
+      .closest(".poll-banner-choice");
     expect(winnerElement).toHaveClass("poll-banner-choice--winner");
   });
 
   it("displays countdown timer for active poll", () => {
     render(<PollBanner poll={basePoll} onDismiss={vi.fn()} />);
 
-    expect(screen.getByText(/Ends in \d+m \d+s|^Ends in \d+s$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ends in \d+m \d+s|^Ends in \d+s$/),
+    ).toBeInTheDocument();
   });
 
   it("shows Final results for ended poll", () => {

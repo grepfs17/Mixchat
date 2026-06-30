@@ -105,6 +105,8 @@ function LoginPanel({
   onRequestClose,
   ignoredUsers = [],
   onIgnoredUsersChange,
+  streamerToolsEnabled = false,
+  onStreamerToolsEnabledChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -158,8 +160,7 @@ function LoginPanel({
       </div>
 
       <div className="platform-login twitch">
-        <div className="platform-header">
-        </div>
+        <div className="platform-header"></div>
 
         {twitchConnected && twitchUser ? (
           <div className="connected-info">
@@ -459,6 +460,11 @@ function LoginPanel({
           }}
           hasYoutubeSession={hasYoutubeSession}
           onReauthYoutube={onReauthYoutube || (() => {})}
+          streamerToolsEnabled={streamerToolsEnabled}
+          onStreamerToolsEnabledChange={(value) => {
+            if (onStreamerToolsEnabledChange)
+              onStreamerToolsEnabledChange(value);
+          }}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}
