@@ -71,6 +71,8 @@ export interface ChatAppStateProps {
   sidebarVisible?: boolean;
   showStreamEmbed?: boolean;
   onToggleStreamEmbed?: () => void;
+  streamerToolsEnabled?: boolean;
+  isOnOwnChannel?: boolean;
 }
 
 export function useChatAppState({

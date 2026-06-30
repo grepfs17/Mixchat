@@ -25,6 +25,7 @@ interface ChatMessage {
   recipientName?: string;
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
+  authorIsMember?: boolean;
   superchat?: {
     amount: string;
     color: string;
@@ -240,6 +241,20 @@ export function isAuthorOwner(msg: any): boolean {
   });
 }
 
+export function isAuthorMember(msg: any): boolean {
+  // The YouTube member badge is identified by its icon_type ("MEMBER" for new
+  // streams, "SPONSOR" for legacy). Channel-level membership cannot be derived
+  // from regular chat events — only from the badges YouTube attaches to the
+  // author's row in the live chat panel.
+  if (!msg.author?.badges) return false;
+  return msg.author.badges.some((b: any) => {
+    if (!b) return false;
+    if (b.icon_type === "MEMBER" || b.icon_type === "SPONSOR") return true;
+    const label = getBadgeLabel(b).toLowerCase();
+    return label === "member" || label === "sponsor";
+  });
+}
+
 function parseTextMessageBase(item: any): ChatMessage {
   return {
     id: item.id,
@@ -253,6 +268,7 @@ function parseTextMessageBase(item: any): ChatMessage {
     timestamp: parseTimestamp(item),
     authorIsModerator: isAuthorModerator(item) || undefined,
     authorIsOwner: isAuthorOwner(item) || undefined,
+    authorIsMember: isAuthorMember(item) || undefined,
   };
 }
 
@@ -289,6 +305,7 @@ function parseChatItem(item: any): ChatMessage | null {
       timestamp: parseTimestamp(item),
       authorIsModerator: isAuthorModerator(item) || undefined,
       authorIsOwner: isAuthorOwner(item) || undefined,
+      authorIsMember: isAuthorMember(item) || undefined,
       superchat: {
         amount: item.purchase_amount?.toString() || "Unknown",
         color: ARGBtoHex(
@@ -748,6 +765,7 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     messageType: "gift-purchase",
     authorIsModerator: isAuthorModerator(msg) || undefined,
     authorIsOwner: isAuthorOwner(msg) || undefined,
+    authorIsMember: isAuthorMember(msg) || undefined,
     superchat: {
       amount,
       color: "#9c27b0",
@@ -836,5 +854,6 @@ function parseLiveChatMessage(msg: any): ChatMessage {
     timestamp,
     authorIsModerator: isAuthorModerator(msg) || undefined,
     authorIsOwner: isAuthorOwner(msg) || undefined,
+    authorIsMember: isAuthorMember(msg) || undefined,
   };
 }

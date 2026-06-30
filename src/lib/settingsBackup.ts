@@ -29,6 +29,7 @@ const SETTINGS_KEYS = [
   "mixchat_chat_split_ratio",
   "mixchat_watched_streamers",
   "mixchat_youtube_links",
+  "mixchat_streamer_tools_enabled",
   "disabled_emotes_v1",
 ] as const;
 

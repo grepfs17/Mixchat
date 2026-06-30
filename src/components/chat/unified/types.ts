@@ -22,6 +22,7 @@ export interface YTMessage {
   isDeleted?: boolean;
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
+  authorIsMember?: boolean;
   superchat?: {
     amount: string;
     color: string;

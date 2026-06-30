@@ -88,6 +88,8 @@ export default function EmbedConfigModal({
   onIgnoredUsersChange,
   hasYoutubeSession,
   onReauthYoutube,
+  streamerToolsEnabled,
+  onStreamerToolsEnabledChange,
   onClose,
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -494,6 +496,32 @@ export default function EmbedConfigModal({
             <p className="embed-config-description embed-config-description--indented">
               If enabled, the stream embed will be visible when you open
               Mixchat. If disabled, the chat will take up the full width.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "streamer-tools",
+        group: "streamer",
+        label: "Streamer tools",
+        description:
+          "Show a Streamer tools button on your own channel with moderation helpers like giveaways",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-checkbox-label">
+              <input
+                type="checkbox"
+                checked={streamerToolsEnabled}
+                onChange={(e) =>
+                  onStreamerToolsEnabledChange(e.target.checked)
+                }
+              />
+              <span>Streamer tools</span>
+            </label>
+            <p className="embed-config-description embed-config-description--indented">
+              When enabled, a <strong>Streamer tools</strong> button appears in the
+              chat header while you are viewing your own channel. It currently
+              contains a <strong>Giveaway</strong> tool.
             </p>
           </div>
         ),
@@ -956,6 +984,8 @@ export default function EmbedConfigModal({
       handleSoundFileUpload,
       handleImport,
       ignoredUserInput,
+      streamerToolsEnabled,
+      onStreamerToolsEnabledChange,
     ],
   );
 

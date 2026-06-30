@@ -105,6 +105,8 @@ function LoginPanel({
   onRequestClose,
   ignoredUsers = [],
   onIgnoredUsersChange,
+  streamerToolsEnabled = false,
+  onStreamerToolsEnabledChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -459,6 +461,11 @@ function LoginPanel({
           }}
           hasYoutubeSession={hasYoutubeSession}
           onReauthYoutube={onReauthYoutube || (() => {})}
+          streamerToolsEnabled={streamerToolsEnabled}
+          onStreamerToolsEnabledChange={(value) => {
+            if (onStreamerToolsEnabledChange)
+              onStreamerToolsEnabledChange(value);
+          }}
           onClose={() => setShowEmbedConfig(false)}
         />
       )}
