@@ -14,13 +14,17 @@ import { appendGiveawayHistory } from "../../lib/streamerTools/history";
 
 const DEFAULT_DURATION = 180;
 const MIN_DURATION = 5;
-const MAX_DURATION = 60 * 60;
+const MAX_DURATION = 2 * 60 * 60;
 /** `0` means "unlimited" (no countdown; streamer reveals manually). */
 export const UNLIMITED_DURATION = 0;
 export const DURATION_PRESETS_SECONDS: { label: string; value: number }[] = [
+  { label: "3 min", value: DEFAULT_DURATION },
   { label: "5 min", value: 300 },
   { label: "10 min", value: 600 },
   { label: "15 min", value: 900 },
+  { label: "30 min", value: 1800 },
+  { label: "1 h", value: 3600 },
+  { label: "2 h", value: 7200 },
 ];
 
 /**

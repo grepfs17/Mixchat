@@ -345,6 +345,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             onMinimize={closeStreamerTools}
             onClose={closeStreamerTools}
             initialTool={streamerToolsInitialTool}
+            youtubeConnected={!!youtubeSession}
           />
         )}
 

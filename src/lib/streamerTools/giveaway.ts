@@ -188,6 +188,5 @@ export function formatWinnerAnnouncement(
   winner: GiveawayEntry,
   keyword: string,
 ): string {
-  const safe = keyword.replace(/[\r\n]+/g, " ").trim();
-  return `🏆 Winner: ${winner.author}! Thanks for playing — keyword was "${safe}".`;
+  return `🏆 Winner: ${winner.author} !`;
 }

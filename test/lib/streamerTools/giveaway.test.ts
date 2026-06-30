@@ -255,7 +255,6 @@ describe("formatWinnerAnnouncement", () => {
       "KEY",
     );
     expect(text).toContain("Alice");
-    expect(text).toContain("KEY");
   });
 
   it("strips newlines from keyword", () => {
@@ -264,7 +263,6 @@ describe("formatWinnerAnnouncement", () => {
       "BAD\nKEY",
     );
     expect(text).not.toContain("\n");
-    expect(text).toContain("BAD KEY");
   });
 });
 

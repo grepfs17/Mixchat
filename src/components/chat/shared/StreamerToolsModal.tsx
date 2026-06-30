@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FaArrowLeft,
   FaTimes,
   FaTwitch,
   FaWindowMinimize,
@@ -22,6 +23,8 @@ interface StreamerToolsModalProps {
   onClose: () => void;
   /** When provided, the modal opens directly into this tool. */
   initialTool?: ToolId | null;
+  /** Whether the user is connected to YouTube (gates YouTube scope options). */
+  youtubeConnected?: boolean;
 }
 
 type ToolId = "giveaway";
@@ -161,6 +164,7 @@ export default function StreamerToolsModal({
   onMinimize,
   onClose,
   initialTool = null,
+  youtubeConnected = false,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(initialTool);
   const [announcing, setAnnouncing] = useState(false);
@@ -253,12 +257,15 @@ export default function StreamerToolsModal({
               <button
                 className="streamer-tools-back"
                 onClick={() => setActiveTool(null)}
+                title="Back to tools"
               >
-                ← Back to tools
+                <FaArrowLeft size={12} />
+                <span>Back to tools</span>
               </button>
               {tool.id === "giveaway" && (
                 <GiveawayPanel
                   giveaway={giveaway}
+                  youtubeConnected={youtubeConnected}
                   onAnnounce={async (winner, text) => {
                     if (announcing) return;
                     setAnnouncing(true);

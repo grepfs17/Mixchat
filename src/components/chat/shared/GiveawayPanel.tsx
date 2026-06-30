@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaTwitch, FaYoutube } from "react-icons/fa";
 import {
   formatWinnerAnnouncement,
@@ -11,7 +11,7 @@ import {
 } from "../../../hooks/chat/useGiveaway";
 
 const MIN_DURATION = 5;
-const MAX_DURATION = 60 * 60;
+const MAX_DURATION = 2 * 60 * 60;
 const ENTRIES_PREVIEW_LIMIT = 50;
 
 function formatCountdown(ms: number): string {
@@ -26,12 +26,15 @@ interface GiveawayPanelProps {
   giveaway: UseGiveawayResult;
   onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
   announcing: boolean;
+  /** Whether the user is connected to YouTube (gates YouTube scope options). */
+  youtubeConnected?: boolean;
 }
 
 export default function GiveawayPanel({
   giveaway,
   onAnnounce,
   announcing,
+  youtubeConnected = false,
 }: GiveawayPanelProps) {
   const {
     phase,
@@ -57,6 +60,30 @@ export default function GiveawayPanel({
   } = giveaway;
 
   const [notifyInChat, setNotifyInChat] = useState(true);
+
+  // If the user signs out of YouTube while the panel is open, force the
+  // scope back to Twitch. The effect runs on the connection-state change
+  // so a manual scope change is not reverted.
+  const requiresYouTube = scope === "youtube" || scope === "both";
+  useEffect(() => {
+    if (!youtubeConnected && requiresYouTube) {
+      setScope("twitch");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [youtubeConnected]);
+
+  // When YouTube is not connected, the YouTube-only and both options are
+  // hidden entirely so the streamer only sees the relevant choice.
+  const allScopes: ReadonlyArray<"twitch" | "youtube" | "both"> = [
+    "twitch",
+    "youtube",
+    "both",
+  ];
+  const scopeOptions = youtubeConnected
+    ? allScopes
+    : (allScopes.filter(
+        (s) => s === "twitch",
+      ) as ReadonlyArray<"twitch">);
 
   return (
     <div className="giveaway-panel">
@@ -84,11 +111,10 @@ export default function GiveawayPanel({
             <div className="giveaway-duration-row">
               <div className="giveaway-input-suffix">
                 <input
-                  type="number"
+                  type="text"
                   className="giveaway-input giveaway-input--with-suffix"
-                  min={0}
-                  max={MAX_DURATION}
-                  value={duration}
+                  inputMode="numeric"
+                  value={Number.isFinite(duration) ? String(duration) : ""}
                   aria-label="Duration in seconds"
                   onChange={(e) => {
                     const raw = e.target.value;
@@ -132,7 +158,7 @@ export default function GiveawayPanel({
           <fieldset className="giveaway-field">
             <legend className="giveaway-field-label">Scope</legend>
             <div className="giveaway-options-row">
-              {(["twitch", "youtube", "both"] as const).map((s) => (
+              {scopeOptions.map((s) => (
                 <label key={s} className="giveaway-radio">
                   <input
                     type="radio"
@@ -194,6 +220,24 @@ export default function GiveawayPanel({
             <span>
               <strong>{liveEntries.length}</strong> entr
               {liveEntries.length === 1 ? "y" : "ies"}
+              {scope === "both" && (
+                <span className="giveaway-running-breakdown">
+                  <span
+                    className="giveaway-running-breakdown-item"
+                    data-platform="twitch"
+                  >
+                    <FaTwitch size={10} />
+                    {liveEntries.filter((e) => e.platform === "twitch").length}
+                  </span>
+                  <span
+                    className="giveaway-running-breakdown-item"
+                    data-platform="youtube"
+                  >
+                    <FaYoutube size={10} />
+                    {liveEntries.filter((e) => e.platform === "youtube").length}
+                  </span>
+                </span>
+              )}
             </span>
             <span className="giveaway-running-meta">
               {labelForScope(scope)} · {labelForEligibility(eligibility)}
