@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { YTNodes } from "youtubei.js";
 import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { isPlayabilityError } from "./youtube-stream-chat.playability";
 
 interface MessagePart {
   type: "text" | "emoji";
@@ -37,10 +38,7 @@ interface ChatMessage {
 }
 
 /** Maximum number of concurrent YouTube live chat sessions held in memory. */
-const MAX_ACTIVE_SESSIONS = parseInt(
-  process.env.YT_MAX_SESSIONS || "200",
-  10,
-);
+const MAX_ACTIVE_SESSIONS = parseInt(process.env.YT_MAX_SESSIONS || "200", 10);
 
 /** Maximum idle time (ms) before a session is reaped. */
 const MAX_IDLE_MS = 10 * 60_000;
@@ -52,10 +50,24 @@ const CHAT_FAILURE_COOLDOWN_MS = parseInt(
 );
 const blockedChatFailures = new Map<string, number>();
 
+/**
+ * Cooldown for terminal playability errors (video unavailable, private,
+ * removed, etc.). These don't change with retries, so we cache the failure
+ * for a few minutes to stop hammering YouTube.
+ */
+const PLAYABILITY_ERROR_COOLDOWN_MS = parseInt(
+  process.env.YT_PLAYABILITY_COOLDOWN_MS || "100000",
+  10,
+);
+const playabilityErrors = new Map<string, { message: string; until: number }>();
+
 setInterval(() => {
   const now = Date.now();
   for (const [key, expiresAt] of blockedChatFailures) {
     if (now > expiresAt) blockedChatFailures.delete(key);
+  }
+  for (const [key, entry] of playabilityErrors) {
+    if (now > entry.until) playabilityErrors.delete(key);
   }
 }, 120_000);
 
@@ -340,6 +352,7 @@ function parseChatItem(item: any): ChatMessage | null {
 }
 
 // Session management
+
 function reapIdleSessions() {
   const nowMs = Date.now();
   for (const [key, session] of activeLiveChats) {
@@ -373,6 +386,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   }
   if (blockedUntil) blockedChatFailures.delete(videoId);
 
+  // Check playability-error cooldown (video unavailable, private, etc.)
+  const playability = playabilityErrors.get(videoId);
+  if (playability && playability.until > Date.now()) {
+    throw new Error(`PLAYABILITY: ${playability.message}`);
+  }
+  if (playability) playabilityErrors.delete(videoId);
+
   // Evict LRU if at capacity
   if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
     let oldestKey = "";
@@ -398,7 +418,19 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   }
 
   const yt = await getInnertube();
-  const info = await yt.getInfo(videoId);
+  let info;
+  try {
+    info = await yt.getInfo(videoId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (isPlayabilityError(msg)) {
+      playabilityErrors.set(videoId, {
+        message: msg,
+        until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
+      });
+    }
+    throw err;
+  }
   const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
@@ -597,7 +629,8 @@ export const GET: APIRoute = async ({ request, url }) => {
   try {
     session = await ensureChatSession(videoId);
   } catch (err: any) {
-    if (err.message === "BLOCKED") {
+    const rawMsg = err instanceof Error ? err.message : String(err);
+    if (rawMsg === "BLOCKED") {
       return new Response(
         JSON.stringify({
           error: "Live chat temporarily unavailable due to repeated failures",
@@ -605,8 +638,17 @@ export const GET: APIRoute = async ({ request, url }) => {
         { status: 503, headers: { "Content-Type": "application/json" } },
       );
     }
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("status code 403") || msg.includes("403")) {
+    if (rawMsg.startsWith("PLAYABILITY: ")) {
+      const innerMsg = rawMsg.slice("PLAYABILITY: ".length);
+      return new Response(
+        JSON.stringify({
+          error: `Live chat is not available for this video (${innerMsg})`,
+          videoId,
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (rawMsg.includes("status code 403") || rawMsg.includes("403")) {
       return new Response(
         JSON.stringify({
           error:
@@ -615,16 +657,22 @@ export const GET: APIRoute = async ({ request, url }) => {
         { status: 503, headers: { "Content-Type": "application/json" } },
       );
     }
-    if (msg.includes("not available")) {
+    if (isPlayabilityError(rawMsg)) {
+      // Fallback for the rare case where isPlayabilityError matches but we
+      // didn't pre-cache the entry (e.g. someone added a new pattern).
+      playabilityErrors.set(videoId, {
+        message: rawMsg,
+        until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
+      });
       return new Response(
         JSON.stringify({
-          error: "Live chat is not available for this video",
+          error: `Live chat is not available for this video (${rawMsg})`,
           videoId,
         }),
         { status: 404, headers: { "Content-Type": "application/json" } },
       );
     }
-    console.error("[YouTube Chat] Error setting up chat for", videoId, msg);
+    console.error("[YouTube Chat] Error setting up chat for", videoId, rawMsg);
     return new Response(
       JSON.stringify({ error: "Failed to connect to YouTube chat" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
