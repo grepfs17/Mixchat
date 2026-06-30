@@ -65,12 +65,14 @@ export default function MessageMenu({
   const author = chatMsg ? chatMsg.author : ytMsg?.author || "Unknown";
   const authorAvatar = chatMsg?.authorAvatar || ytMsg?.authorAvatar;
 
-  const items: Array<{
+  type MenuItem = {
     key: string;
     label: string;
     title?: string;
     onClick: () => void;
-  }> = [];
+  };
+  type MenuDivider = { key: string; divider: true };
+  const items: Array<MenuItem | MenuDivider> = [];
 
   // Reply (Twitch only for now)
   if (isTwitch && !isSystemMessage && onReply && chatMsg) {
@@ -111,6 +113,7 @@ export default function MessageMenu({
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
     if (!isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser) {
+      items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
         key: "delete",
         label: "Delete",
@@ -159,6 +162,7 @@ export default function MessageMenu({
       youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
     )
   ) {
+    items.push({ key: "mod-divider-youtube", divider: true });
     items.push({
       key: "yt-delete",
       label: "Delete",
@@ -193,16 +197,24 @@ export default function MessageMenu({
   return (
     <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
       <div className="context-menu-header">@{author}</div>
-      {items.map((it) => (
-        <button
-          key={it.key}
-          onClick={it.onClick}
-          className="context-menu-item"
-          title={it.title}
-        >
-          {it.label}
-        </button>
-      ))}
+      {items.map((it) =>
+        "divider" in it ? (
+          <div
+            key={it.key}
+            role="separator"
+            className="context-menu-divider"
+          />
+        ) : (
+          <button
+            key={it.key}
+            onClick={it.onClick}
+            className="context-menu-item"
+            title={it.title}
+          >
+            {it.label}
+          </button>
+        ),
+      )}
     </ContextMenuShell>
   );
 }

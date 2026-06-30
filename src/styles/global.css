@@ -282,3 +282,9 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .message-context-menu {
     min-width: 180px;
 }
+.context-menu-divider {
+    height: 1px;
+    margin: 6px 4px;
+    background: var(--color-border, rgba(255, 255, 255, 0.12));
+    pointer-events: none;
+}

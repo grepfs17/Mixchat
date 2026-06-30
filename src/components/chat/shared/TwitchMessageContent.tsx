@@ -275,6 +275,11 @@ function TwitchMessageContentBase({
                     </button>
                     {isModerator && modModeActive && (
                       <>
+                        <div
+                          className="message-actions-divider"
+                          role="separator"
+                          aria-orientation="vertical"
+                        />
                         <button
                           onClick={() => onDeleteMessage?.(msg.id)}
                           className="action-button mod-action"
