@@ -22,7 +22,7 @@ import type { ChatFont, ChatTheme, Platform, TwitchMessage } from "../../lib/typ
 import type { YTMessage } from "./unified/types";
 import type { GiveawayMessage, GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
-
+import GiveawayIndicator from "./shared/GiveawayIndicator";
 import { useState, useCallback, useEffect, useMemo } from "react";
 
 interface YtConnectionState {
@@ -157,7 +157,19 @@ export default function ChatApp(props: ChatAppStateProps) {
   );
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
+  const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
+    "giveaway" | null
+  >(null);
   const showModTools = streamerToolsEnabled && isOnOwnChannel;
+
+  const openStreamerTools = (initialTool: "giveaway" | null = null) => {
+    setStreamerToolsInitialTool(initialTool);
+    setStreamerToolsOpen(true);
+  };
+  const closeStreamerTools = () => {
+    setStreamerToolsOpen(false);
+    setStreamerToolsInitialTool(null);
+  };
 
   const handleAnnounceWinner = useCallback(
     async (winner: GiveawayEntry, message: string) => {
@@ -307,8 +319,16 @@ export default function ChatApp(props: ChatAppStateProps) {
           <StreamerToolsModal
             giveaway={giveaway}
             onAnnounce={handleAnnounceWinner}
-            onMinimize={() => setStreamerToolsOpen(false)}
-            onClose={() => setStreamerToolsOpen(false)}
+            onMinimize={closeStreamerTools}
+            onClose={closeStreamerTools}
+            initialTool={streamerToolsInitialTool}
+          />
+        )}
+
+        {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
+          <GiveawayIndicator
+            giveaway={giveaway}
+            onOpen={() => openStreamerTools("giveaway")}
           />
         )}
 
@@ -371,7 +391,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                 ignoredUsers={ignoredUsers}
                 ytMessages={ytMessages}
                 showModTools={showModTools}
-                onOpenModTools={() => setStreamerToolsOpen(true)}
+                onOpenModTools={() => openStreamerTools()}
                 /* Override messages area with UnifiedChat */
                 unifiedChatSlot={
                   <UnifiedChat
@@ -514,7 +534,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     ignoredUsers={ignoredUsers}
                     ytMessages={ytMessages}
                     showModTools={showModTools}
-                    onOpenModTools={() => setStreamerToolsOpen(true)}
+                    onOpenModTools={() => openStreamerTools()}
                   />
                 </div>
                 <MessageInput
