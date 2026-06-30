@@ -67,9 +67,7 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.getByTitle("Timeout (10m) - Right-click for more"),
       ).toBeInTheDocument();
-      expect(
-        screen.getByTitle(/Ban \(this chat\)/),
-      ).toBeInTheDocument();
+      expect(screen.getByTitle(/Ban \(this chat\)/)).toBeInTheDocument();
     });
 
     it("does not render mod action buttons when youtubeModModeActive is false", () => {
@@ -83,9 +81,7 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.queryByTitle("Timeout (10m) - Right-click for more"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/Ban \(this chat\)/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
 
     it("does not render mod action buttons when isYouTubeModerator is false", () => {
@@ -116,9 +112,7 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.queryByTitle("Timeout (10m) - Right-click for more"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/Ban \(this chat\)/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
 
     it("hides timeout/ban for owner-authored messages", () => {
@@ -136,9 +130,7 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.queryByTitle("Timeout (10m) - Right-click for more"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/Ban \(this chat\)/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
 
     it("hides timeout/ban for the signed-in user's own messages", () => {
@@ -157,9 +149,7 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.queryByTitle("Timeout (10m) - Right-click for more"),
       ).not.toBeInTheDocument();
-      expect(
-        screen.queryByTitle(/Ban \(this chat\)/),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
 
     it("does not render mod actions for messages without an authorChannelId", () => {
@@ -275,18 +265,13 @@ describe("YouTube Moderator Mode", () => {
       expect(
         screen.getByTitle("Timeout (10m) - Right-click for more"),
       ).toBeInTheDocument();
-      expect(
-        screen.getByTitle(/Ban \(this chat\)/),
-      ).toBeInTheDocument();
+      expect(screen.getByTitle(/Ban \(this chat\)/)).toBeInTheDocument();
     });
 
     it("calls onContextMenu on right-click with x, y, entry", () => {
       const onContextMenu = vi.fn();
       const { container } = render(
-        <YouTubeMessageItem
-          {...baseProps}
-          onContextMenu={onContextMenu}
-        />,
+        <YouTubeMessageItem {...baseProps} onContextMenu={onContextMenu} />,
       );
       const messageEl = container.querySelector(".message")!;
       fireEvent.contextMenu(messageEl);
@@ -301,10 +286,7 @@ describe("YouTube Moderator Mode", () => {
       const onTimeoutMenu = vi.fn();
       render(
         withModeration(
-          <YouTubeMessageItem
-            {...baseProps}
-            onTimeoutMenu={onTimeoutMenu}
-          />,
+          <YouTubeMessageItem {...baseProps} onTimeoutMenu={onTimeoutMenu} />,
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
@@ -331,16 +313,13 @@ describe("YouTube Moderator Mode", () => {
         makeYTMsg({ authorIsModerator: true, author: "Mod" }),
       );
       render(
-        withModeration(
-          <YouTubeMessageItem {...baseProps} entry={modEntry} />,
-          {
-            isYouTubeModerator: true,
-            youtubeModModeActive: true,
-            onDeleteYouTubeMessage: vi.fn(),
-            onTimeoutYouTubeUser: vi.fn(),
-            onBanYouTubeUser: vi.fn(),
-          },
-        ),
+        withModeration(<YouTubeMessageItem {...baseProps} entry={modEntry} />, {
+          isYouTubeModerator: true,
+          youtubeModModeActive: true,
+          onDeleteYouTubeMessage: vi.fn(),
+          onTimeoutYouTubeUser: vi.fn(),
+          onBanYouTubeUser: vi.fn(),
+        }),
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
@@ -422,9 +401,7 @@ describe("YouTube Moderator Mode", () => {
     });
 
     it("hides YouTube mod actions for the signed-in user's own messages", () => {
-      const ownEntry = makeUnifiedYT(
-        makeYTMsg({ authorChannelId: "UC-mine" }),
-      );
+      const ownEntry = makeUnifiedYT(makeYTMsg({ authorChannelId: "UC-mine" }));
       render(
         withModeration(
           <MessageMenu

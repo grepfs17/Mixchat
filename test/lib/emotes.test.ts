@@ -145,9 +145,15 @@ describe("emotes lib", () => {
         return Promise.resolve({ ok: true, json: async () => [] } as Response);
       }
       if (url.includes("frankerfacez.com")) {
-        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ sets: {} }),
+        } as Response);
       }
-      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ emotes: [] }),
+      } as Response);
     });
 
     await initializeEmotes("channelId", "channelName");
@@ -198,9 +204,15 @@ describe("emotes lib", () => {
         return Promise.resolve({ ok: true, json: async () => [] } as Response);
       }
       if (url.includes("frankerfacez.com")) {
-        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ sets: {} }),
+        } as Response);
       }
-      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ emotes: [] }),
+      } as Response);
     });
 
     await initializeEmotes("channelId", "channelName");
@@ -239,7 +251,21 @@ describe("emotes lib", () => {
           ok: true,
           json: async () => ({
             data: [
-              { id: "999", name: "Kappa", images: { url_1x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/1.0", url_2x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/2.0", url_4x: "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/4.0" }, tier: "0", emote_type: "global", emote_set_id: "0" },
+              {
+                id: "999",
+                name: "Kappa",
+                images: {
+                  url_1x:
+                    "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/1.0",
+                  url_2x:
+                    "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/2.0",
+                  url_4x:
+                    "https://static-cdn.jtvnw.net/emoticons/v2/999/default/dark/4.0",
+                },
+                tier: "0",
+                emote_type: "global",
+                emote_set_id: "0",
+              },
             ],
           }),
         } as Response);
@@ -249,9 +275,15 @@ describe("emotes lib", () => {
         return Promise.resolve({ ok: true, json: async () => [] } as Response);
       }
       if (url.includes("frankerfacez.com")) {
-        return Promise.resolve({ ok: true, json: async () => ({ sets: {} }) } as Response);
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ sets: {} }),
+        } as Response);
       }
-      return Promise.resolve({ ok: true, json: async () => ({ emotes: [] }) } as Response);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ emotes: [] }),
+      } as Response);
     });
 
     await initializeEmotes("channelId", "channelName");

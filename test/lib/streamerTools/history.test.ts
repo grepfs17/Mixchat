@@ -39,9 +39,7 @@ describe("giveaway history", () => {
   });
 
   it("orders newest first", () => {
-    const first = appendGiveawayHistory(
-      makeEntry({ keyword: "FIRST" }),
-    );
+    const first = appendGiveawayHistory(makeEntry({ keyword: "FIRST" }));
     appendGiveawayHistory(makeEntry({ keyword: "SECOND" }));
     const all = getGiveawayHistory();
     expect(all[0].keyword).toBe("SECOND");

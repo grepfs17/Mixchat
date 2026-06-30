@@ -6,7 +6,13 @@ import { ModerationContext } from "../../src/contexts/ModerationContext";
 
 vi.mock("../../src/lib/emotes", () => ({
   searchEmotes: () => [],
-  getAllEmotesOrganized: () => ({ twitchGlobal: [], twitchChannels: [], "7tv": [], bttv: [], ffz: [] }),
+  getAllEmotesOrganized: () => ({
+    twitchGlobal: [],
+    twitchChannels: [],
+    "7tv": [],
+    bttv: [],
+    ffz: [],
+  }),
 }));
 
 vi.mock("../../src/lib/emojiShortcodes", () => ({
@@ -32,14 +38,12 @@ const defaultCtx = {
   compactActions: false,
 };
 
-function renderInput(props: Partial<React.ComponentProps<typeof UnifiedInput>> = {}) {
+function renderInput(
+  props: Partial<React.ComponentProps<typeof UnifiedInput>> = {},
+) {
   return render(
     <ModerationContext.Provider value={defaultCtx}>
-      <UnifiedInput
-        onSendMessage={vi.fn()}
-        isLoading={false}
-        {...props}
-      />
+      <UnifiedInput onSendMessage={vi.fn()} isLoading={false} {...props} />
     </ModerationContext.Provider>,
   );
 }
@@ -92,7 +96,9 @@ describe("UnifiedInput", () => {
 
       // Select YouTube
       fireEvent.click(screen.getByTitle("Send to YouTube"));
-      expect(screen.getByTitle("Send to YouTube").className).toContain("active");
+      expect(screen.getByTitle("Send to YouTube").className).toContain(
+        "active",
+      );
 
       // Now make YouTube unavailable
       rerender(
@@ -234,19 +240,25 @@ describe("UnifiedInput", () => {
   describe("placeholder text", () => {
     it("shows Twitch placeholder by default", () => {
       renderInput();
-      expect(screen.getByPlaceholderText("Send to Twitch...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Send to Twitch..."),
+      ).toBeInTheDocument();
     });
 
     it("shows YouTube placeholder when YouTube selected", () => {
       renderInput({ youtubeAvailable: true });
       fireEvent.click(screen.getByTitle("Send to YouTube"));
-      expect(screen.getByPlaceholderText("Send to YouTube...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Send to YouTube..."),
+      ).toBeInTheDocument();
     });
 
     it("shows both placeholder when Both selected", () => {
       renderInput({ youtubeAvailable: true });
       fireEvent.click(screen.getByTitle("Send to both"));
-      expect(screen.getByPlaceholderText("Send to both...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Send to both..."),
+      ).toBeInTheDocument();
     });
   });
 });

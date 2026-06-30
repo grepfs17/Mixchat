@@ -73,7 +73,7 @@ describe("messageMatchesKeyword", () => {
   });
   it("strips surrounding punctuation", () => {
     expect(messageMatchesKeyword("KEY!", "key")).toBe(true);
-    expect(messageMatchesKeyword("\"KEY\"", "key")).toBe(true);
+    expect(messageMatchesKeyword('"KEY"', "key")).toBe(true);
   });
   it("does not match substrings", () => {
     expect(messageMatchesKeyword("KEYBOARD", "key")).toBe(false);
@@ -132,9 +132,9 @@ describe("extractEntries — basic matching & dedup", () => {
 
   it("returns empty for empty/blank keyword", () => {
     const messages: GiveawayMessage[] = [twitch("u1", "Alice", "anything")];
-    expect(
-      extractEntries(messages, { ...baseConfig, keyword: "   " }),
-    ).toEqual([]);
+    expect(extractEntries(messages, { ...baseConfig, keyword: "   " })).toEqual(
+      [],
+    );
   });
 });
 
@@ -274,11 +274,9 @@ describe("extractEntries — owner exclusion", () => {
       twitch("broadcaster-1", "Streamer", "KEY"),
       twitch("u2", "Viewer", "KEY"),
     ];
-    const result = extractEntries(
-      messages,
-      baseConfig,
-      { twitchBroadcasterId: "broadcaster-1" },
-    );
+    const result = extractEntries(messages, baseConfig, {
+      twitchBroadcasterId: "broadcaster-1",
+    });
     expect(result.map((e) => e.userId)).toEqual(["u2"]);
   });
 
@@ -342,11 +340,9 @@ describe("extractEntries — owner exclusion", () => {
       twitch("BROADCASTER-1", "Streamer", "KEY"),
       twitch("u2", "Viewer", "KEY"),
     ];
-    const result = extractEntries(
-      messages,
-      baseConfig,
-      { twitchBroadcasterId: "broadcaster-1" },
-    );
+    const result = extractEntries(messages, baseConfig, {
+      twitchBroadcasterId: "broadcaster-1",
+    });
     expect(result.map((e) => e.userId)).toEqual(["u2"]);
   });
 

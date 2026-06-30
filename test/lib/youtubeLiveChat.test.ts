@@ -23,9 +23,7 @@ describe("youtubeLiveChat.resolveActiveLiveChatId", () => {
 
   it("resolves a liveChatId via the Data API and caches it", async () => {
     mockedFetch.mockResolvedValueOnce({
-      items: [
-        { liveStreamingDetails: { activeLiveChatId: "lc-abc" } },
-      ],
+      items: [{ liveStreamingDetails: { activeLiveChatId: "lc-abc" } }],
     });
 
     const id1 = await resolveActiveLiveChatId("vid-1", "token");

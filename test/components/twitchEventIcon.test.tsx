@@ -36,9 +36,7 @@ describe("TwitchEventIcon", () => {
   });
 
   it("prioritizes gigantified over powerUpType", () => {
-    render(
-      <TwitchEventIcon isGigantifiedEmote powerUpType="message_effect" />,
-    );
+    render(<TwitchEventIcon isGigantifiedEmote powerUpType="message_effect" />);
     expect(screen.getByText("Gigantified Emote")).toBeInTheDocument();
     expect(screen.queryByText("Message Effect")).not.toBeInTheDocument();
   });
