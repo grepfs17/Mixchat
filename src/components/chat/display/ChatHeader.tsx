@@ -6,6 +6,7 @@ import {
   MdClose,
   MdVisibilityOff,
   MdMoreVert,
+  MdBuild,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -53,6 +54,8 @@ interface ChatHeaderProps {
     authorAvatar?: string,
     platform?: Platform,
   ) => void;
+  showModTools?: boolean;
+  onOpenModTools?: () => void;
 }
 
 export default function ChatHeader({
@@ -76,6 +79,8 @@ export default function ChatHeader({
   onSearchCategories,
   ignoredUserCounts = new Map(),
   onOpenIgnoredUserOverlay,
+  showModTools = false,
+  onOpenModTools,
 }: ChatHeaderProps) {
   const {
     isModerator,
@@ -377,9 +382,19 @@ export default function ChatHeader({
                 )}
               </div>
             )}
+            {showModTools && onOpenModTools && (
+              <button
+                onClick={onOpenModTools}
+                className="header-button mod-tools-trigger"
+                title="Streamer tools (giveaway, etc.)"
+              >
+                <MdBuild size={14} className="mod-icon" />
+                <span className="header-button-label">Streamer tools</span>
+              </button>
+            )}
           </div>
 
-          {(onRefreshEmotes || showModToggle || ignoredUserCounts.size > 0) && (
+          {(onRefreshEmotes || showModToggle || ignoredUserCounts.size > 0 || showModTools) && (
             <div className="mobile-header-menu" ref={mobileMenuRef}>
               <button
                 className="header-button mobile-menu-trigger"
@@ -493,6 +508,21 @@ export default function ChatHeader({
                           <span>Mod Mode Off</span>
                         </button>
                       )}
+                    </>
+                  )}
+                  {showModTools && onOpenModTools && (
+                    <>
+                      <div className="mobile-menu-separator" />
+                      <button
+                        className="mobile-menu-item"
+                        onClick={() => {
+                          onOpenModTools();
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <MdBuild size={14} />
+                        <span>Streamer tools</span>
+                      </button>
                     </>
                   )}
                 </div>
