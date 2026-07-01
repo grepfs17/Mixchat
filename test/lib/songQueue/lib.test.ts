@@ -234,6 +234,28 @@ describe("extractSubmissions", () => {
     expect(accepted).toEqual([]);
   });
 
+  it("skips optimistic messages (locally-generated placeholders)", () => {
+    const messages: SongQueueMessage[] = [
+      twitch("u1", "Alice", "!songadd https://youtu.be/dQw4w9WgXcQ", {
+        optimistic: true,
+      }),
+    ];
+    const { accepted } = extractSubmissions(messages, baseConfig);
+    expect(accepted).toEqual([]);
+  });
+
+  it("skips preloaded (historical) messages", () => {
+    const base = youtube("u1", "Alice", "!songadd https://youtu.be/dQw4w9WgXcQ");
+    // The unified YTMessage type doesn't model isPreloaded, but live
+    // chat sometimes stamps it. The extractor should still skip it.
+    const message: SongQueueMessage = {
+      platform: "youtube",
+      msg: { ...base.msg, isPreloaded: true } as unknown as YTMessage,
+    };
+    const { accepted } = extractSubmissions([message], baseConfig);
+    expect(accepted).toEqual([]);
+  });
+
   it("excludes the channel owner", () => {
     const messages: SongQueueMessage[] = [
       twitch("bc", "Streamer", "!songadd https://youtu.be/dQw4w9WgXcQ"),
