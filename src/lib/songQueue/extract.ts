@@ -42,8 +42,15 @@ function twitchIsSubscriber(msg: TwitchMessage): boolean {
   return Boolean(msg.badges?.subscriber || msg.badges?.["founder"]);
 }
 
-function isSkippable(msg: { isDeleted?: boolean; messageType?: string }): boolean {
-  if (msg.isDeleted) return true;
+function isSkippable(msg: {
+  optimistic?: boolean;
+  isPreloaded?: boolean;
+  isDeleted?: boolean;
+  messageType?: string;
+}): boolean {
+  if ("optimistic" in msg && msg.optimistic) return true;
+  if ("isPreloaded" in msg && msg.isPreloaded) return true;
+  if ("isDeleted" in msg && msg.isDeleted) return true;
   if (msg.messageType && msg.messageType !== "chat") return true;
   return false;
 }
