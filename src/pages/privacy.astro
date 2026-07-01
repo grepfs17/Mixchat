@@ -152,9 +152,7 @@ const description =
     </p>
     <p>
         No OAuth tokens, email addresses, or passwords are stored in the
-        song queue record. Sessions are garbage-collected 30 days after the
-        streamer's last activity, or immediately when the streamer ends the
-        queue.
+        song queue record. Ending the queue deletes it immediately.
     </p>
 
     <h2>4. Stateless and Database-Free (with One Exception)</h2>
@@ -166,8 +164,8 @@ const description =
     </p>
     <p>
         The Song Queue feature (see section 3.1) is the one piece of stateful
-        server-side storage. It is opt-in, scoped to the streamer's own
-        channel, and garbage-collected on a fixed schedule.
+        server-side storage. It is opt-in and scoped to the streamer's own
+        channel.
     </p>
 
     <h2>5. Data Retention and Deletion</h2>
