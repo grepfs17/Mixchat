@@ -184,7 +184,7 @@ export function useChatSettings(): UseChatSettingsResult {
     Record<string, ModModeTarget>
   >("mixchat_mod_mode_targets", {});
   const [streamerToolsEnabled, setStreamerToolsEnabled] =
-    useLocalStorageState<boolean>("mixchat_streamer_tools_enabled", false);
+    useLocalStorageState<boolean>("mixchat_streamer_tools_enabled", true);
 
   // Apply theme to document whenever it changes.
   useEffect(() => {

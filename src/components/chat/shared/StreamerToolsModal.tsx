@@ -8,8 +8,10 @@ import {
   FaYoutube,
 } from "react-icons/fa";
 import GiveawayPanel from "./GiveawayPanel";
+import SongQueuePanel from "./SongQueuePanel";
 import type { GiveawayEntry } from "../../../lib/streamerTools/giveaway";
 import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
+import type { UseSongQueueResult } from "../../../hooks/chat/useSongQueue";
 import {
   clearGiveawayHistory,
   getGiveawayHistory,
@@ -18,6 +20,7 @@ import {
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
+  songQueue: UseSongQueueResult;
   onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
   onMinimize: () => void;
   onClose: () => void;
@@ -25,9 +28,11 @@ interface StreamerToolsModalProps {
   initialTool?: ToolId | null;
   /** Whether the user is connected to YouTube (gates YouTube scope options). */
   youtubeConnected?: boolean;
+  /** Public origin used to build the song-queue share link. */
+  publicOrigin?: string;
 }
 
-type ToolId = "giveaway";
+type ToolId = "giveaway" | "song-queue";
 
 interface ToolDescriptor {
   id: ToolId;
@@ -40,6 +45,11 @@ const TOOLS: ToolDescriptor[] = [
     id: "giveaway",
     label: "Giveaway",
     description: "Pick a winner from viewers who type a keyword in chat.",
+  },
+  {
+    id: "song-queue",
+    label: "Song Queue",
+    description: "Let viewers queue YouTube songs in chat.",
   },
 ];
 
@@ -89,7 +99,9 @@ function HistorySection({ onChanged }: { onChanged: () => void }) {
   if (history.length === 0) {
     return (
       <div className="streamer-tools-history streamer-tools-history--empty">
-        <span>No past giveaways yet. Run one and the winner will show here.</span>
+        <span>
+          No past giveaways yet. Run one and the winner will show here.
+        </span>
       </div>
     );
   }
@@ -160,11 +172,13 @@ function HistorySection({ onChanged }: { onChanged: () => void }) {
 
 export default function StreamerToolsModal({
   giveaway,
+  songQueue,
   onAnnounce,
   onMinimize,
   onClose,
   initialTool = null,
   youtubeConnected = false,
+  publicOrigin = "",
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(initialTool);
   const [announcing, setAnnouncing] = useState(false);
@@ -177,6 +191,16 @@ export default function StreamerToolsModal({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
+
+  // Minimize is allowed whenever the active tool has something to keep
+  // running. The giveaway is minimizable while running or revealed; the
+  // song queue is minimizable while open.
+  const canMinimize =
+    (activeTool === "giveaway" && giveaway.phase !== "config") ||
+    (activeTool === "song-queue" && songQueue.phase === "open");
+  const minimizeTitle = canMinimize
+    ? "Minimize (the tool keeps running in the corner)"
+    : "Nothing to minimize in this state";
 
   const tool = useMemo(
     () => TOOLS.find((t) => t.id === activeTool) ?? null,
@@ -206,12 +230,8 @@ export default function StreamerToolsModal({
             <button
               className="streamer-tools-header-btn"
               onClick={onMinimize}
-              disabled={giveaway.phase === "config"}
-              title={
-                giveaway.phase === "config"
-                  ? "Start a giveaway to enable minimize"
-                  : "Minimize (giveaway keeps running)"
-              }
+              disabled={!canMinimize}
+              title={minimizeTitle}
               aria-label="Minimize"
             >
               <FaWindowMinimize size={14} />
@@ -276,6 +296,49 @@ export default function StreamerToolsModal({
                     }
                   }}
                   announcing={announcing}
+                />
+              )}
+              {tool.id === "song-queue" && (
+                <SongQueuePanel
+                  publicOrigin={publicOrigin}
+                  phase={songQueue.phase}
+                  config={songQueue.config}
+                  setConfig={songQueue.setConfig}
+                  currentItem={songQueue.currentItem}
+                  pending={songQueue.pending}
+                  history={songQueue.history}
+                  items={songQueue.items}
+                  loading={songQueue.loading}
+                  error={songQueue.error}
+                  publicUrl={
+                    songQueue.bootstrap
+                      ? `${publicOrigin}${songQueue.bootstrap.publicUrl}`
+                      : null
+                  }
+                  start={async () => {
+                    await songQueue.start();
+                  }}
+                  end={async () => {
+                    await songQueue.end();
+                  }}
+                  remove={async (id) => {
+                    await songQueue.remove(id);
+                  }}
+                  skip={async (id) => {
+                    await songQueue.skip(id);
+                  }}
+                  playNow={async (id) => {
+                    await songQueue.playNow(id);
+                  }}
+                  next={async () => {
+                    await songQueue.next();
+                  }}
+                  previous={async () => {
+                    await songQueue.previous();
+                  }}
+                  reportDuration={async (id, dur) => {
+                    await songQueue.reportDuration(id, dur);
+                  }}
                 />
               )}
             </div>

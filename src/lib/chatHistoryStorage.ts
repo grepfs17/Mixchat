@@ -1,7 +1,7 @@
 import type { TwitchMessage, Platform } from "./types";
 
 const DB_NAME = "mixchat_history";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "chatMessages";
 
 function isIDBAvailable(): boolean {
@@ -15,17 +15,42 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (db.objectStoreNames.contains(STORE_NAME)) {
-        db.deleteObjectStore(STORE_NAME);
+      // Only create the store if it doesn't exist; preserve any existing
+      // user data and handle the case where another module (such as the
+      // song-queue mirror in a different DB) shares this DB name with a
+      // higher version number. Always re-create the indexes so the
+      // schema stays consistent across upgrades.
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, {
+          keyPath: "messageKey",
+        });
+        store.createIndex("author", "authorLower", { unique: false });
+        store.createIndex("platform", "platform", { unique: false });
+        store.createIndex("channel", "channel", { unique: false });
+        store.createIndex("timestamp", "timestamp", { unique: false });
+        store.createIndex("author_channel", ["authorLower", "channel"], {
+          unique: false,
+        });
+      } else {
+        // Existing store: verify the indexes are present (they will be in
+        // any pre-existing v2 DB created by this same code).
+        const tx = (event.target as IDBOpenDBRequest).transaction!;
+        const store = tx.objectStore(STORE_NAME);
+        const want = [
+          "author",
+          "platform",
+          "channel",
+          "timestamp",
+          "author_channel",
+        ];
+        for (const name of want) {
+          if (!store.indexNames.contains(name)) {
+            store.createIndex(name, name === "author_channel"
+              ? ["authorLower", "channel"]
+              : name, { unique: false });
+          }
+        }
       }
-      const store = db.createObjectStore(STORE_NAME, { keyPath: "messageKey" });
-      store.createIndex("author", "authorLower", { unique: false });
-      store.createIndex("platform", "platform", { unique: false });
-      store.createIndex("channel", "channel", { unique: false });
-      store.createIndex("timestamp", "timestamp", { unique: false });
-      store.createIndex("author_channel", ["authorLower", "channel"], {
-        unique: false,
-      });
     };
   });
 }

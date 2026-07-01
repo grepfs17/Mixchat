@@ -28,6 +28,9 @@ import type { YTMessage } from "./unified/types";
 import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import GiveawayIndicator from "./shared/GiveawayIndicator";
+import { useSongQueue } from "../../hooks/chat/useSongQueue";
+import SongQueuePanel from "./shared/SongQueuePanel";
+import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface YtConnectionState {
@@ -164,11 +167,13 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
-    "giveaway" | null
+    "giveaway" | "song-queue" | null
   >(null);
   const showModTools = streamerToolsEnabled && isOnOwnChannel;
 
-  const openStreamerTools = (initialTool: "giveaway" | null = null) => {
+  const openStreamerTools = (
+    initialTool: "giveaway" | "song-queue" | null = null,
+  ) => {
     setStreamerToolsInitialTool(initialTool);
     setStreamerToolsOpen(true);
   };
@@ -253,6 +258,40 @@ export default function ChatApp(props: ChatAppStateProps) {
       ingestedIdsRef.current = new Set();
     }
   }, [giveaway.phase]);
+
+  // Song Queue: another stream of messages → server-side queue. The hook
+  // dedupes by message id internally, so we can call `ingestMessage` on
+  // every render without worry.
+  const onSongError = useCallback(
+    (msg: string) => setNotification({ message: msg, type: "error" }),
+    [],
+  );
+  const songChannelKey = useMemo(() => {
+    if (selectedTwitchChannelName) return `twitch:${selectedTwitchChannelName.toLowerCase()}`;
+    if (youtubeSession?.userId) return `youtube:${youtubeSession.userId}`;
+    return null;
+  }, [selectedTwitchChannelName, youtubeSession?.userId]);
+  const songQueue = useSongQueue({
+    channelKey: songChannelKey ?? "twitch:unknown",
+    owner: {
+      twitchBroadcasterId: selectedTwitchChannel,
+      youtubeChannelId: youtubeSession?.userId,
+    },
+    enabled: showModTools && Boolean(songChannelKey),
+    onError: onSongError,
+  });
+  const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
+  useEffect(() => {
+    if (songPhase !== "open") return;
+    for (const m of messages) {
+      if (!m?.id) continue;
+      ingestSong({ platform: "twitch", msg: m as TwitchMessage });
+    }
+    for (const m of ytMessages) {
+      if (!m?.id) continue;
+      ingestSong({ platform: "youtube", msg: m as YTMessage });
+    }
+  }, [messages, ytMessages, ingestSong, songPhase]);
 
   const moderationValue = {
     isModerator,
@@ -343,11 +382,15 @@ export default function ChatApp(props: ChatAppStateProps) {
         {streamerToolsOpen && (
           <StreamerToolsModal
             giveaway={giveaway}
+            songQueue={songQueue}
             onAnnounce={handleAnnounceWinner}
             onMinimize={closeStreamerTools}
             onClose={closeStreamerTools}
             initialTool={streamerToolsInitialTool}
             youtubeConnected={!!youtubeSession}
+            publicOrigin={
+              typeof window !== "undefined" ? window.location.origin : ""
+            }
           />
         )}
 
@@ -355,6 +398,17 @@ export default function ChatApp(props: ChatAppStateProps) {
           <GiveawayIndicator
             giveaway={giveaway}
             onOpen={() => openStreamerTools("giveaway")}
+          />
+        )}
+
+        {showModTools && songQueue.phase === "open" && (
+          <SongQueueMinimizedBar
+            queue={songQueue}
+            hidden={streamerToolsOpen}
+            onOpen={() => openStreamerTools("song-queue")}
+            onEnd={async () => {
+              await songQueue.end();
+            }}
           />
         )}
 
