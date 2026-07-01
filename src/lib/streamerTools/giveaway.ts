@@ -1,5 +1,13 @@
-import type { TwitchMessage, Platform } from "../types";
-import type { YTMessage } from "../../components/chat/unified/types";
+import type { Platform } from "../types";
+import {
+  isEligibleForSubscribers,
+  isOwnerMessage as isOwnerMessageShared,
+  isSkippableMessage,
+  messageContent as messageContentShared,
+  stableUserId,
+  type StreamerToolsMessage,
+  type StreamerToolsOwner,
+} from "./chatHelpers";
 
 export type GiveawayScope = "twitch" | "youtube" | "both";
 export type GiveawayEligibility = "everyone" | "subscribers";
@@ -11,16 +19,8 @@ export interface GiveawayConfig {
   eligibility: GiveawayEligibility;
 }
 
-/**
- * Channel-owner identifiers that are always excluded from giveaway entries.
- * Twitch uses the broadcaster's userId; YouTube uses the channel owner id.
- * The Twitch `broadcaster` badge and YouTube `authorIsOwner` signal are
- * also respected automatically — the channel owner is never eligible.
- */
-export interface GiveawayOwner {
-  twitchBroadcasterId?: string;
-  youtubeChannelId?: string;
-}
+/** Backward-compat alias for the shared owner shape. */
+export type GiveawayOwner = StreamerToolsOwner;
 
 export interface GiveawayEntry {
   /** Stable id (Twitch userId or YouTube authorChannelId), lowercased. */
@@ -30,14 +30,8 @@ export interface GiveawayEntry {
   platform: Platform;
 }
 
-/**
- * Discriminated union for the chat feed that can feed a giveaway.
- * `YTMessage` from the unified chat does not carry a `platform` field, so
- * we model each source explicitly rather than casting through `AnyMessage`.
- */
-export type GiveawayMessage =
-  | { platform: "twitch"; msg: TwitchMessage }
-  | { platform: "youtube"; msg: YTMessage };
+/** Backward-compat alias for the shared message shape. */
+export type GiveawayMessage = StreamerToolsMessage;
 
 export function normalizeKeyword(raw: string): string {
   return raw.normalize("NFKC").trim().toLowerCase();
@@ -57,84 +51,32 @@ export function messageMatchesKeyword(
   return tokens.includes(keywordNormalized);
 }
 
-function twitchIsSubscriber(msg: TwitchMessage): boolean {
-  return Boolean(msg.badges?.subscriber || msg.badges?.["founder"]);
-}
-
-function youtubeIsMember(msg: YTMessage): boolean {
-  return Boolean(msg.authorIsMember);
-}
-
 function isEligible(
   item: GiveawayMessage,
   eligibility: GiveawayEligibility,
 ): boolean {
   if (eligibility === "everyone") return true;
-  if (item.platform === "twitch") {
-    return twitchIsSubscriber(item.msg);
-  }
-  return youtubeIsMember(item.msg);
-}
-
-function twitchIsBroadcaster(msg: TwitchMessage): boolean {
-  return Boolean(msg.badges?.broadcaster);
-}
-
-function isOwnerMessage(item: GiveawayMessage, owner: GiveawayOwner): boolean {
-  if (item.platform === "twitch") {
-    if (twitchIsBroadcaster(item.msg)) return true;
-    if (owner.twitchBroadcasterId) {
-      const id = (item.msg.userId || "").toLowerCase();
-      if (id && id === owner.twitchBroadcasterId.toLowerCase()) return true;
-    }
-    return false;
-  }
-  if (item.msg.authorIsOwner) return true;
-  if (owner.youtubeChannelId) {
-    const id = (item.msg.authorChannelId || "").toLowerCase();
-    if (id && id === owner.youtubeChannelId.toLowerCase()) return true;
-  }
-  return false;
+  return isEligibleForSubscribers(item);
 }
 
 function toEntry(item: GiveawayMessage): GiveawayEntry | null {
+  const id = stableUserId(item);
+  if (!id) return null;
+  const author = item.msg.author;
   if (item.platform === "twitch") {
-    const m = item.msg;
-    const id = (m.userId || m.author).toLowerCase();
-    if (!id) return null;
     return {
       userId: id,
-      author: m.author,
-      authorAvatar: m.authorAvatar,
+      author,
+      authorAvatar: item.msg.authorAvatar,
       platform: "twitch",
     };
   }
-  const m = item.msg;
-  const id = (m.authorChannelId || m.author).toLowerCase();
-  if (!id) return null;
   return {
     userId: id,
-    author: m.author,
-    authorAvatar: m.authorAvatar,
+    author,
+    authorAvatar: item.msg.authorAvatar,
     platform: "youtube",
   };
-}
-
-function messageContent(item: GiveawayMessage): string {
-  if (item.platform === "twitch") return item.msg.content;
-  return item.msg.parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text || "")
-    .join("");
-}
-
-function isSkippable(item: GiveawayMessage): boolean {
-  const m = item.msg;
-  if ("optimistic" in m && m.optimistic) return true;
-  if ("isPreloaded" in m && m.isPreloaded) return true;
-  if ("isDeleted" in m && m.isDeleted) return true;
-  if (m.messageType && m.messageType !== "chat") return true;
-  return false;
 }
 
 /**
@@ -158,9 +100,9 @@ export function extractEntries(
   for (const item of messages) {
     if (item.platform === "twitch" && config.scope === "youtube") continue;
     if (item.platform === "youtube" && config.scope === "twitch") continue;
-    if (isSkippable(item)) continue;
-    if (isOwnerMessage(item, owner)) continue;
-    if (!messageMatchesKeyword(messageContent(item), keyword)) continue;
+    if (isSkippableMessage(item.msg)) continue;
+    if (isOwnerMessageShared(item, owner)) continue;
+    if (!messageMatchesKeyword(messageContentShared(item), keyword)) continue;
     const entry = toEntry(item);
     if (!entry) continue;
     const key = `${entry.platform}:${entry.userId}`;
@@ -190,3 +132,4 @@ export function formatWinnerAnnouncement(
 ): string {
   return `🏆 Winner: ${winner.author} !`;
 }
+
