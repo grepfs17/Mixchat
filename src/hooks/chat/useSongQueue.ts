@@ -361,6 +361,18 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           );
         }
       } catch (err) {
+        // Duplicates (409) and full queues (409) are expected — don't
+        // surface them as errors. The song is already there or there's
+        // no room; nothing the streamer needs to do.
+        if (
+          err instanceof SongQueueApiError &&
+          (err.status === 409)
+        ) {
+          setSession((prev) =>
+            prev ? { ...prev, items: prev.items.filter((it) => it.id !== tempId) } : prev,
+          );
+          continue;
+        }
         const msg =
           err instanceof Error ? err.message : "Failed to add song";
         setError(msg);
