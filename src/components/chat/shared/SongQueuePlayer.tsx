@@ -1,0 +1,338 @@
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
+import type { SongQueueItem } from "../../../lib/songQueue/types";
+
+/**
+ * Shape of `window.YT.Player` we use. The IFrame Player API is loaded
+ * asynchronously, so we keep the type loose and use `any` at the call site
+ * where we read its methods. Tests inject a fake `window.YT` so we can
+ * assert calls without a network round-trip.
+ */
+interface YTPlayer {
+  loadPlaylist(opts: {
+    list: string;
+    listType: "playlist";
+    index: number;
+  }): void;
+  loadVideoById(videoId: string): void;
+  playVideo(): void;
+  pauseVideo(): void;
+  nextVideo(): void;
+  getDuration(): number;
+  getCurrentTime(): number;
+  getVolume(): number;
+  setVolume(percent: number): void;
+  destroy(): void;
+}
+
+export type SongQueuePlayerState =
+  | "unstarted"
+  | "playing"
+  | "paused"
+  | "ended"
+  | "loading";
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (
+        el: HTMLElement,
+        opts: {
+          height?: string | number;
+          width?: string | number;
+          videoId?: string;
+          playerVars?: Record<string, string | number>;
+          events?: {
+            onReady?: (e: { target: YTPlayer }) => void;
+            onStateChange?: (e: { data: number; target: YTPlayer }) => void;
+            onError?: (e: { data: number }) => void;
+          };
+        },
+      ) => YTPlayer;
+      PlayerState: {
+        UNSTARTED: -1;
+        ENDED: 0;
+        PLAYING: 1;
+        PAUSED: 2;
+        BUFFERING: 3;
+        CUED: 5;
+      };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+export interface SongQueuePlayerHandle {
+  /** Resume playback. No-op if the player isn't ready yet. */
+  play(): void;
+  /** Pause playback. No-op if the player isn't ready yet. */
+  pause(): void;
+  /** Get current volume (0–100). Returns 0 if player isn't ready. */
+  getVolume(): number;
+  /** Set volume (0–100). No-op if the player isn't ready yet. */
+  setVolume(percent: number): void;
+}
+
+export interface SongQueuePlayerProps {
+  items: SongQueueItem[];
+  currentIndex: number;
+  onReady?: () => void;
+  /** Called when a video reports ENDED. The host should advance the queue. */
+  onAdvance?: () => void;
+  /** Called once we know the actual duration of the current video. */
+  onDurationKnown?: (itemId: string, durationSec: number) => void;
+  /**
+   * Called whenever the player's reported state changes. The host can
+   * use this to drive a play/pause toggle on a parent control.
+   */
+  onStateChange?: (state: SongQueuePlayerState) => void;
+  /** Optional className for the wrapper element. */
+  className?: string;
+}
+
+/**
+ * Load the YouTube IFrame Player API once per page.
+ *
+ * The IFrame API exposes `window.onYouTubeIframeAPIReady` exactly once,
+ * even when multiple components wait for it. We poll for `window.YT.Player`
+ * to also cover the case where the script was already loaded by a previous
+ * mount of this component (or by the public Astro page on the same origin)
+ * and the `load` event has already fired by the time we attach a listener.
+ */
+function loadIFrameAPI(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.YT?.Player) return Promise.resolve();
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      // Restore the previous onYouTubeIframeAPIReady handler so other
+      // waiters in the page can still chain off it.
+      window.onYouTubeIframeAPIReady = previousReady;
+      resolve();
+    };
+    const previousReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      previousReady?.();
+      settle();
+    };
+
+    // Poll for window.YT.Player in case the script was loaded before we
+    // attached the global callback. The script is small and loads quickly.
+    const interval = window.setInterval(() => {
+      if (window.YT?.Player) {
+        window.clearInterval(interval);
+        settle();
+      }
+    }, 50);
+    // Stop polling after 10s to avoid a leaked timer on failure.
+    window.setTimeout(() => {
+      window.clearInterval(interval);
+      if (!window.YT?.Player) {
+        // eslint-disable-next-line no-console
+        console.warn("YouTube IFrame API did not load within 10s");
+      }
+      settle();
+    }, 10_000);
+
+    // Only inject the script if it isn't already in the DOM. Use a tag
+    // marker so multiple waiters share the same element.
+    const SCRIPT_ID = "youtube-iframe-api-script";
+    if (document.getElementById(SCRIPT_ID)) return;
+    const tag = document.createElement("script");
+    tag.id = SCRIPT_ID;
+    tag.src = "https://www.youtube.com/iframe_api";
+    tag.async = true;
+    document.head.appendChild(tag);
+  });
+}
+
+function mapPlayerState(data: number): SongQueuePlayerState {
+  switch (data) {
+    case 1:
+      return "playing";
+    case 2:
+      return "paused";
+    case 0:
+      return "ended";
+    case 3:
+      return "loading";
+    case -1:
+    case 5:
+    default:
+      return "unstarted";
+  }
+}
+
+const SongQueuePlayerInner = (
+  {
+    items,
+    currentIndex,
+    onReady,
+    onAdvance,
+    onDurationKnown,
+    onStateChange,
+    className,
+  }: SongQueuePlayerProps,
+  ref: React.Ref<SongQueuePlayerHandle>,
+) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
+  const [ready, setReady] = useState(false);
+  const lastListRef = useRef<string>("");
+  const lastIndexRef = useRef<number>(-1);
+  const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      play: () => {
+        try {
+          playerRef.current?.playVideo();
+        } catch {
+          /* not ready yet */
+        }
+      },
+      pause: () => {
+        try {
+          playerRef.current?.pauseVideo();
+        } catch {
+          /* not ready yet */
+        }
+      },
+      getVolume: () => {
+        try {
+          return playerRef.current?.getVolume() ?? 0;
+        } catch {
+          return 0;
+        }
+      },
+      setVolume: (percent: number) => {
+        try {
+          playerRef.current?.setVolume(percent);
+        } catch {
+          /* not ready yet */
+        }
+      },
+    }),
+    [],
+  );
+
+  // Mount the player once.
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+    (async () => {
+      await loadIFrameAPI();
+      if (cancelled || !containerRef.current || !window.YT) return;
+      const player = new window.YT.Player(containerRef.current, {
+        height: "100%",
+        width: "100%",
+        videoId: items[currentIndex]?.videoId,
+        playerVars: {
+          playsinline: 1,
+          autoplay: 1,
+          rel: 0,
+        },
+        events: {
+          onReady: () => {
+            if (cancelled) return;
+            setReady(true);
+            onReady?.();
+          },
+          onStateChange: (e) => {
+            if (cancelled) return;
+            const mapped = mapPlayerState(e.data);
+            if (mapped !== lastStateRef.current) {
+              lastStateRef.current = mapped;
+              onStateChange?.(mapped);
+            }
+            if (window.YT?.PlayerState.ENDED !== undefined && e.data === window.YT.PlayerState.ENDED) {
+              onAdvance?.();
+            }
+            if (window.YT?.PlayerState.PLAYING !== undefined && e.data === window.YT.PlayerState.PLAYING) {
+              const dur = player.getDuration?.();
+              if (typeof dur === "number" && dur > 0) {
+                const current = items[currentIndexRef.current];
+                if (current) onDurationKnown?.(current.id, dur);
+              }
+            }
+          },
+        },
+      });
+      playerRef.current = player;
+      // Reset tracking refs so the sync effect always calls loadPlaylist
+      // on the first render after a fresh player is created (important for
+      // React 18 strict mode double-mount where refs survive cleanup).
+      lastListRef.current = "";
+      lastIndexRef.current = -1;
+    })();
+    return () => {
+      cancelled = true;
+      try {
+        playerRef.current?.destroy();
+      } catch {
+        // ignore
+      }
+      playerRef.current = null;
+    };
+    // Mount once; subsequent renders sync via the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep a ref of the current index so async onStateChange closures can read
+  // the latest value without re-binding.
+  const currentIndexRef = useRef(currentIndex);
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+
+  // Sync the player when the items / currentIndex change.
+  useEffect(() => {
+    if (!ready || !playerRef.current) return;
+    const list = items.map((it) => it.videoId).join(",");
+    if (list !== lastListRef.current) {
+      const hadNoItems = !lastListRef.current;
+      lastListRef.current = list;
+      playerRef.current.loadPlaylist({
+        list: list || items[currentIndex]?.videoId || "",
+        listType: "playlist",
+        index: Math.max(0, Math.min(currentIndex, Math.max(0, items.length - 1))),
+      });
+      // When the player was created empty (no videoId) and the first song
+      // arrives, loadPlaylist loads it but autoplay may be blocked because
+      // the initial player creation wasn't user-gesture-adjacent. Explicitly
+      // call playVideo so playback starts immediately.
+      if (hadNoItems && list) {
+        try { playerRef.current.playVideo(); } catch { /* not ready yet */ }
+      }
+    } else if (currentIndex !== lastIndexRef.current) {
+      lastIndexRef.current = currentIndex;
+      playerRef.current.loadVideoById(items[currentIndex]?.videoId || "");
+    }
+  }, [items, currentIndex, ready]);
+
+  const current = items[currentIndex];
+
+  return (
+    <div className={className ?? "song-queue-player"}>
+      <div
+        ref={containerRef}
+        className="song-queue-player-iframe"
+      />
+    </div>
+  );
+};
+
+const SongQueuePlayer = forwardRef<SongQueuePlayerHandle, SongQueuePlayerProps>(
+  SongQueuePlayerInner,
+);
+
+export default SongQueuePlayer;
