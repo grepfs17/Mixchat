@@ -8,7 +8,10 @@ import {
   type SongQueueSession,
   type SongQueueSubmitter,
 } from "../../lib/songQueue/types";
-import { extractSubmissions, type SongQueueOwner } from "../../lib/songQueue/extract";
+import {
+  extractSubmissions,
+  type SongQueueOwner,
+} from "../../lib/songQueue/extract";
 import {
   SongQueueApiError,
   appendSongQueueItem,
@@ -70,6 +73,25 @@ export interface UseSongQueueResult {
 
 const HISTORY_STATUSES = new Set(["played", "skipped"]);
 
+function buildInitialSession(
+  created: SongQueueOwnerBootstrap,
+): SongQueueSession {
+  return {
+    sessionId: created.sessionId,
+    title: created.title,
+    channelName: created.channelName,
+    channelPlatform: created.channelPlatform,
+    ownerTokenHash: "",
+    createdAt: created.createdAt,
+    lastSeenAt: created.createdAt,
+    isPublic: created.isPublic,
+    currentIndex: 0,
+    version: 0,
+    ended: false,
+    items: [],
+  };
+}
+
 export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   const {
     channelKey,
@@ -81,8 +103,12 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   } = options;
 
   const [phase, setPhase] = useState<SongQueuePhase>("idle");
-  const [config, setConfigState] = useState<SongQueueConfig>(DEFAULT_SONG_QUEUE_CONFIG);
-  const [bootstrap, setBootstrap] = useState<SongQueueOwnerBootstrap | null>(null);
+  const [config, setConfigState] = useState<SongQueueConfig>(
+    DEFAULT_SONG_QUEUE_CONFIG,
+  );
+  const [bootstrap, setBootstrap] = useState<SongQueueOwnerBootstrap | null>(
+    null,
+  );
   const [session, setSession] = useState<SongQueueSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +166,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (!bootstrap) return;
     setLoading(true);
     try {
-      const server = await getSongQueue(bootstrap.sessionId, bootstrap.ownerToken);
+      const server = await getSongQueue(
+        bootstrap.sessionId,
+        bootstrap.ownerToken,
+      );
       setSession(server);
       await saveSongQueueSession(
         channelKey,
@@ -185,31 +214,49 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   }, [session?.currentIndex, session?.version]);
 
   // ---- Public actions ----
-  const setConfig = useCallback(async (next: Partial<SongQueueConfig>) => {
-    setConfigState((prev) => ({ ...prev, ...next }));
-    // Persist isPublic changes to the server and IDB.
-    if (bootstrap && next.isPublic !== undefined && next.isPublic !== bootstrap.isPublic) {
-      try {
-        const updated = await patchSongQueue(
-          bootstrap.sessionId,
-          bootstrap.ownerToken,
-          { isPublic: next.isPublic },
-        );
-        setBootstrap((prev) => prev ? { ...prev, isPublic: updated.isPublic } : prev);
-        setSession((prev) => prev ? { ...prev, isPublic: updated.isPublic } : prev);
-        if (session) {
-          await saveSongQueueSession(channelKey, bootstrap.sessionId, bootstrap.ownerToken, {
-            ...session,
-            isPublic: updated.isPublic,
-          });
+  const setConfig = useCallback(
+    async (next: Partial<SongQueueConfig>) => {
+      setConfigState((prev) => ({ ...prev, ...next }));
+      // Persist isPublic changes to the server and IDB.
+      if (
+        bootstrap &&
+        next.isPublic !== undefined &&
+        next.isPublic !== bootstrap.isPublic
+      ) {
+        try {
+          const updated = await patchSongQueue(
+            bootstrap.sessionId,
+            bootstrap.ownerToken,
+            { isPublic: next.isPublic },
+          );
+          setBootstrap((prev) =>
+            prev ? { ...prev, isPublic: updated.isPublic } : prev,
+          );
+          setSession((prev) =>
+            prev ? { ...prev, isPublic: updated.isPublic } : prev,
+          );
+          if (session) {
+            await saveSongQueueSession(
+              channelKey,
+              bootstrap.sessionId,
+              bootstrap.ownerToken,
+              {
+                ...session,
+                isPublic: updated.isPublic,
+              },
+            );
+          }
+        } catch (err) {
+          onError?.(
+            err instanceof Error ? err.message : "Failed to update sharing",
+          );
+          // Revert the optimistic local update on failure.
+          setConfigState((prev) => ({ ...prev, isPublic: !next.isPublic }));
         }
-      } catch (err) {
-        onError?.(err instanceof Error ? err.message : "Failed to update sharing");
-        // Revert the optimistic local update on failure.
-        setConfigState((prev) => ({ ...prev, isPublic: !next.isPublic }));
       }
-    }
-  }, [bootstrap, session, channelKey, onError]);
+    },
+    [bootstrap, session, channelKey, onError],
+  );
 
   const start = useCallback(async () => {
     setLoading(true);
@@ -227,40 +274,20 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         channelPlatform,
       });
       setBootstrap(created);
-      setSession({
-        sessionId: created.sessionId,
-        title: created.title,
-        channelName: created.channelName,
-        channelPlatform: created.channelPlatform,
-        ownerTokenHash: "",
-        createdAt: created.createdAt,
-        lastSeenAt: created.createdAt,
-        isPublic: created.isPublic,
-        currentIndex: 0,
-        version: 0,
-        ended: false,
-        items: [],
-      });
+      const initial = buildInitialSession(created);
+      setSession(initial);
       setPhase("open");
       setConfigState((prev) => ({
         ...prev,
         title: created.title,
         isPublic: created.isPublic,
       }));
-      await saveSongQueueSession(channelKey, created.sessionId, created.ownerToken, {
-        sessionId: created.sessionId,
-        title: created.title,
-        channelName: created.channelName,
-        channelPlatform: created.channelPlatform,
-        ownerTokenHash: "",
-        createdAt: created.createdAt,
-        lastSeenAt: created.createdAt,
-        isPublic: created.isPublic,
-        currentIndex: 0,
-        version: 0,
-        ended: false,
-        items: [],
-      });
+      await saveSongQueueSession(
+        channelKey,
+        created.sessionId,
+        created.ownerToken,
+        initial,
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to start queue";
       setError(msg);
@@ -279,7 +306,12 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       if (session) {
         const updated = { ...session, ended: true, isPublic: false };
         setSession(updated);
-        await saveSongQueueSession(channelKey, bootstrap.sessionId, bootstrap.ownerToken, updated);
+        await saveSongQueueSession(
+          channelKey,
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          updated,
+        );
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to end queue";
@@ -308,7 +340,11 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (messages.length === 0) return;
     const { accepted } = extractSubmissions(
       messages,
-      { scope: cfg.scope, eligibility: cfg.eligibility, perSubmitterLimit: cap },
+      {
+        scope: cfg.scope,
+        eligibility: cfg.eligibility,
+        perSubmitterLimit: cap,
+      },
       own,
       session?.items ?? [],
     );
@@ -316,7 +352,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
 
     // Append server-side, one at a time so we surface per-item errors. Add to
     // the optimistic pending list first so the UI updates instantly.
-    const optimistic: SongQueueItem[] = [];
+    // Track the running item list locally so each IDB write reflects all
+    // optimistic + confirmed items from prior iterations — not the stale
+    // `session` snapshot captured at hook creation time.
+    let runningItems: SongQueueItem[] = session ? [...session.items] : [];
     for (const submission of accepted) {
       const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const tempItem: SongQueueItem = {
@@ -330,7 +369,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         submittedAt: submission.submittedAt,
         status: "pending",
       };
-      optimistic.push(tempItem);
+      runningItems = [...runningItems, tempItem];
       try {
         const real = await appendSongQueueItem(
           bootstrap.sessionId,
@@ -342,44 +381,36 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           },
         );
         // Replace the temp with the real item.
-        setSession((prev) => {
-          if (!prev) return prev;
-          const withoutTemp = prev.items.filter((it) => it.id !== tempId);
-          return { ...prev, items: [...withoutTemp, real] };
-        });
+        runningItems = [...runningItems.filter((it) => it.id !== tempId), real];
+        setSession((prev) =>
+          prev ? { ...prev, items: [...runningItems] } : prev,
+        );
         // Persist the updated IDB record lazily.
         if (session) {
-          const merged = {
-            ...session,
-            items: session.items.filter((it) => it.id !== tempId).concat(real),
-          };
           await saveSongQueueSession(
             channelKey,
             bootstrap.sessionId,
             bootstrap.ownerToken,
-            merged,
+            { ...session, items: runningItems },
           );
         }
       } catch (err) {
         // Duplicates (409) and full queues (409) are expected — don't
         // surface them as errors. The song is already there or there's
         // no room; nothing the streamer needs to do.
-        if (
-          err instanceof SongQueueApiError &&
-          (err.status === 409)
-        ) {
+        runningItems = runningItems.filter((it) => it.id !== tempId);
+        if (err instanceof SongQueueApiError && err.status === 409) {
           setSession((prev) =>
-            prev ? { ...prev, items: prev.items.filter((it) => it.id !== tempId) } : prev,
+            prev ? { ...prev, items: [...runningItems] } : prev,
           );
           continue;
         }
-        const msg =
-          err instanceof Error ? err.message : "Failed to add song";
+        const msg = err instanceof Error ? err.message : "Failed to add song";
         setError(msg);
         onError?.(msg);
         // Drop the optimistic item.
         setSession((prev) =>
-          prev ? { ...prev, items: prev.items.filter((it) => it.id !== tempId) } : prev,
+          prev ? { ...prev, items: [...runningItems] } : prev,
         );
       }
     }
@@ -407,16 +438,25 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       if (!bootstrap) return;
       const previous = session;
       setSession((prev) =>
-        prev ? { ...prev, items: prev.items.filter((it) => it.id !== itemId) } : prev,
+        prev
+          ? { ...prev, items: prev.items.filter((it) => it.id !== itemId) }
+          : prev,
       );
       try {
-        await removeSongQueueItem(bootstrap.sessionId, bootstrap.ownerToken, itemId);
+        await removeSongQueueItem(
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          itemId,
+        );
         if (previous) {
           await saveSongQueueSession(
             channelKey,
             bootstrap.sessionId,
             bootstrap.ownerToken,
-            { ...previous, items: previous.items.filter((it) => it.id !== itemId) },
+            {
+              ...previous,
+              items: previous.items.filter((it) => it.id !== itemId),
+            },
           );
         }
       } catch (err) {
@@ -441,7 +481,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         );
         setSession((prev) =>
           prev
-            ? { ...prev, items: prev.items.map((it) => (it.id === itemId ? item : it)) }
+            ? {
+                ...prev,
+                items: prev.items.map((it) => (it.id === itemId ? item : it)),
+              }
             : prev,
         );
       } catch (err) {
@@ -484,9 +527,8 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (!bootstrap || !session) return;
     const maxIndex = Math.max(0, session.items.length - 1);
     const atEnd = session.currentIndex >= maxIndex && session.items.length > 0;
-    const target = atEnd && config.loop
-      ? 0
-      : Math.min(session.currentIndex + 1, maxIndex);
+    const target =
+      atEnd && config.loop ? 0 : Math.min(session.currentIndex + 1, maxIndex);
     if (target === session.currentIndex && session.items.length > 0) return;
     const previousId = session.items[session.currentIndex]?.id;
     await setSongQueueIndex(bootstrap.sessionId, bootstrap.ownerToken, target, {
@@ -542,18 +584,27 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
               ...prev,
               items: prev.items.map((it) =>
                 it.id === itemId
-                  ? { ...it, durationSec: Math.max(it.durationSec, durationSec) }
+                  ? {
+                      ...it,
+                      durationSec: Math.max(it.durationSec, durationSec),
+                    }
                   : it,
               ),
             }
           : prev,
       );
       try {
-        await setSongQueueIndex(bootstrap.sessionId, bootstrap.ownerToken, session?.currentIndex ?? 0, {
-          durationSec,
-        });
+        await setSongQueueIndex(
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          session?.currentIndex ?? 0,
+          {
+            durationSec,
+          },
+        );
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to report duration";
+        const msg =
+          err instanceof Error ? err.message : "Failed to report duration";
         setError(msg);
         onError?.(msg);
       }
