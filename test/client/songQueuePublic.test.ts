@@ -134,45 +134,32 @@ describe("createPlayController", () => {
 
   it("defers play() until setPlayer() is called", () => {
     const c = createPlayController();
-    c.play(2);
+    c.play(2, "VIDEO_ID_2");
     // No player yet — no call.
     const player = makeFakePlayer();
     c.setPlayer(player);
-    expect(player.playVideoAt).toHaveBeenCalledWith(2);
+    expect(player.loadVideoById).toHaveBeenCalledWith("VIDEO_ID_2");
+    expect(player.playVideo).toHaveBeenCalled();
   });
 
-  it("calls playVideoAt(index) immediately when the player is already set", () => {
+  it("calls loadVideoById immediately when the player is already set", () => {
     const c = createPlayController();
     const player = makeFakePlayer();
     c.setPlayer(player);
-    c.play(3);
-    expect(player.playVideoAt).toHaveBeenCalledWith(3);
+    c.play(3, "VIDEO_ID_3");
+    expect(player.loadVideoById).toHaveBeenCalledWith("VIDEO_ID_3");
+    expect(player.playVideo).toHaveBeenCalled();
   });
 
   it("only honors the latest pending target", () => {
     const c = createPlayController();
-    c.play(1);
-    c.play(2);
-    c.play(5);
+    c.play(1, "ID_1");
+    c.play(2, "ID_2");
+    c.play(5, "ID_5");
     const player = makeFakePlayer();
     c.setPlayer(player);
-    expect(player.playVideoAt).toHaveBeenCalledTimes(1);
-    expect(player.playVideoAt).toHaveBeenCalledWith(5);
-  });
-
-  it("falls back to loadVideoById + playVideo if playVideoAt throws", () => {
-    const c = createPlayController();
-    const player = {
-      playVideoAt: vi.fn(() => {
-        throw new Error("not ready");
-      }),
-      loadVideoById: vi.fn(),
-      playVideo: vi.fn(),
-    };
-    c.setPlayer(player);
-    c.play(0);
-    expect(player.loadVideoById).toHaveBeenCalled();
-    expect(player.playVideo).toHaveBeenCalled();
+    expect(player.loadVideoById).toHaveBeenCalledTimes(1);
+    expect(player.loadVideoById).toHaveBeenCalledWith("ID_5");
   });
 });
 
@@ -200,7 +187,8 @@ describe("bindPlayHandlers", () => {
     ) as NodeListOf<HTMLButtonElement>;
     fireEvent.click(btns[1]);
     expect(onPlay).toHaveBeenCalledWith(1);
-    expect(player.playVideoAt).toHaveBeenCalledWith(1);
+    expect(player.loadVideoById).toHaveBeenCalledWith("dQw4w9WgXcQ");
+    expect(player.playVideo).toHaveBeenCalled();
     // The visual current class is updated immediately.
     expect(container.querySelectorAll("li")[0].classList.contains("current")).toBe(false);
     expect(container.querySelectorAll("li")[1].classList.contains("current")).toBe(true);
@@ -248,10 +236,16 @@ describe("copyToClipboard", () => {
 });
 
 describe("formatPlaylistCreatedAt", () => {
-  it("formats a valid ISO timestamp as a human-readable string in UTC", () => {
-    expect(formatPlaylistCreatedAt("2026-03-12T14:07:00.000Z")).toMatch(
-      /Mar 12, 2026 at \d{2}:07 UTC/,
-    );
+  it("formats a valid ISO timestamp as a human-readable string", () => {
+    const result = formatPlaylistCreatedAt("2026-03-12T14:07:00.000Z");
+    // Don't pin the locale-dependent format (jsdom may use ICU day-first).
+    // Just check the components are present and the timezone marker is gone.
+    expect(result).toMatch(/2026/);
+    expect(result).toMatch(/Mar/);
+    expect(result).toMatch(/07/);
+    expect(result).toMatch(/:/);
+    expect(result).not.toMatch(/UTC/);
+    expect(result).not.toBe("2026-03-12T14:07:00.000Z");
   });
 
   it("returns the input verbatim when the timestamp is invalid", () => {

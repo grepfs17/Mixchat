@@ -34,9 +34,9 @@ export interface YTPlayerLite {
 }
 
 /**
- * Render the queue list as a string of <li> elements. We pre-escape the
- * inner text fields via the caller, and use data-roles for every text
- * slot so the parent can fill them safely with textContent.
+ * Builds the queue list HTML. The caller fills text slots via
+ * textContent (data-roles mark them) so server strings can't break
+ * the markup.
  */
 export function renderListHtml(
   items: PublicListItem[],
@@ -63,16 +63,14 @@ export function renderListHtml(
 }
 
 function escapeAttr(s: string): string {
-  // Minimal escape: only escape characters that could break out of an
-  // attribute. Server-validated values are 11-char YouTube ids or
-  // https://i.ytimg.com URLs, so this is defensive only.
+  // Defensive only — values are server-validated 11-char ids or
+  // https://i.ytimg.com URLs.
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 /**
- * Walk the freshly-rendered list and attach click handlers. Idempotent:
- * each button is tagged with a `data-bound` flag so a re-render does
- * not attach duplicate listeners.
+ * Attach click handlers to the copy buttons. Idempotent via a
+ * `data-bound` flag so re-renders don't pile up listeners.
  */
 export function bindCopyHandlers(
   listEl: HTMLElement,
@@ -92,43 +90,36 @@ export function bindCopyHandlers(
 }
 
 /**
- * Resolve a YT.Player. The IFrame Player API exposes the player instance
- * after the `onReady` callback. We hand `resolvePlayer` a function that
- * returns the latest player; if the player isn't ready yet we queue the
- * call until it is. The promise is idempotent — if a play is requested
- * while another is in flight, only the latest target wins.
+ * Buffers play() calls until the player is ready, and collapses rapid
+ * clicks to the latest target. Only the most recent pending call wins.
  */
 export interface PlayController {
   /** Request that the player jump to a specific item. */
-  play(index: number): void;
+  play(index: number, videoId: string): void;
   /** Replace the underlying player (called after the IFrame API is ready). */
   setPlayer(player: YTPlayerLite | null): void;
 }
 
 export function createPlayController(): PlayController {
   let player: YTPlayerLite | null = null;
-  let pending: number | null = null;
+  let pending: { index: number; videoId: string } | null = null;
 
   const flush = () => {
     if (!player || pending == null) return;
-    const target = pending;
+    const { videoId } = pending;
     pending = null;
     try {
-      // The IFrame API's playVideoAt takes a zero-based index into the
-      // currently-loaded playlist. The player was constructed with
-      // listType=playlist + list=videoIds.join(','), so this is safe.
-      player.playVideoAt(target);
-    } catch {
-      // Fallback: if the playlist is not loaded for any reason, load
-      // the video directly and start it.
-      player.loadVideoById("");
+      // loadVideoById works whether or not a playlist is loaded.
+      player.loadVideoById(videoId);
       player.playVideo();
+    } catch {
+      /* not ready yet — try again on the next setPlayer */
     }
   };
 
   return {
-    play(index) {
-      pending = index;
+    play(index, videoId) {
+      pending = { index, videoId };
       flush();
     },
     setPlayer(p) {
@@ -139,33 +130,30 @@ export function createPlayController(): PlayController {
 }
 
 /**
- * Wire the per-item ▶ Play buttons. The controller is responsible for
- * routing the click to the right player method. If the controller is
- * `null` (e.g. the player failed to initialise) the click is a no-op.
+ * Wire the per-item ▶ Play buttons. A null controller (player never
+ * loaded) makes the click a no-op.
  */
 export function bindPlayHandlers(
   listEl: HTMLElement,
   controller: PlayController | null,
   onPlay: (index: number) => void,
 ): void {
-  const buttons = listEl.querySelectorAll<HTMLButtonElement>(
-    '[data-role="play"]',
-  );
+  const buttons =
+    listEl.querySelectorAll<HTMLButtonElement>('[data-role="play"]');
   buttons.forEach((btn) => {
     if (btn.dataset.bound === "1") return;
     btn.dataset.bound = "1";
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       const raw = btn.dataset.index;
-      if (raw == null) return;
+      const videoId = btn.dataset.videoId;
+      if (raw == null || !videoId) return;
       const index = Number.parseInt(raw, 10);
       if (Number.isNaN(index)) return;
-      // Update the visual `current` class immediately so the user
-      // sees the selection, even before the IFrame API actually
-      // switches tracks.
+      // Update the visual highlight right away, before the IFrame catches up.
       markCurrent(listEl, index);
       onPlay(index);
-      if (controller) controller.play(index);
+      if (controller) controller.play(index, videoId);
     });
   });
 }
@@ -192,8 +180,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       return false;
     }
   }
-  // Fallback for non-secure contexts (e.g. plain http://localhost in some
-  // setups, older browsers).
+  // Fallback for plain http://localhost or older browsers.
   if (typeof document === "undefined") return false;
   const ta = document.createElement("textarea");
   ta.value = text;
@@ -212,10 +199,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   return ok;
 }
 
-/**
- * Show a transient toast at the bottom of the screen. The caller is
- * expected to call this with a short string like "Link copied".
- */
+/** Show a transient toast at the bottom of the screen. */
 export function showToast(message: string, ttlMs = 1700): () => void {
   if (typeof document === "undefined") return () => {};
   const existing = document.getElementById("song-queue-toast");
@@ -232,26 +216,18 @@ export function showToast(message: string, ttlMs = 1700): () => void {
   };
 }
 
-/**
- * Format a song-playlist created-at timestamp for the public page header.
- * Returns a string like "Mar 12, 2026 at 14:07 UTC".
- */
+/** e.g. "Mar 12, 2026 at 14:07" in the viewer's local timezone. */
 export function formatPlaylistCreatedAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  // Force en-US so the date format is stable across the user's locale
-  // (jsdom defaults to ICU which puts day first). The exact "Mar 12, 2026"
-  // shape is what the public page contract advertises in the test.
-  const date = d.toLocaleDateString("en-US", {
+  const date = d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
-  const time = d.toLocaleTimeString("en-US", {
+  const time = d.toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
   });
-  return `${date} at ${time} UTC`;
+  return `${date} at ${time}`;
 }
