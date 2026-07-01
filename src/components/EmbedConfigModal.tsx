@@ -547,7 +547,10 @@ export default function EmbedConfigModal({
             <p className="embed-config-description embed-config-description--indented">
               When enabled, a <strong>Streamer tools</strong> button appears in
               the chat header while you are viewing your own channel. It
-              currently contains a <strong>Giveaway</strong> tool.
+              currently contains a <strong>Giveaway</strong> tool and a
+              <strong> Song Queue</strong> tool that lets chatters submit
+              YouTube links in chat and follow along on a shareable public
+              page.
             </p>
           </div>
         ),

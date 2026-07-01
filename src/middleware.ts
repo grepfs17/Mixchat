@@ -41,8 +41,8 @@ const STATIC_HEADERS: Record<string, string> = {
  */
 function buildCSP(nonce?: string): string {
   const scriptSrc = nonce
-    ? `script-src 'self' 'nonce-${nonce}' https://embed.twitch.tv`
-    : "script-src 'self' 'unsafe-inline' https://embed.twitch.tv";
+    ? `script-src 'self' 'nonce-${nonce}' https://embed.twitch.tv https://www.youtube.com`
+    : "script-src 'self' 'unsafe-inline' https://embed.twitch.tv https://www.youtube.com";
   return [
     "default-src 'self'",
     scriptSrc,
@@ -69,6 +69,7 @@ function buildCSP(nonce?: string): string {
       " https://video.twitch.tv" + // Twitch video CDN
       " https://www.googleapis.com" + // YouTube Data API
       " https://youtube.googleapis.com" + // YouTube API (alt)
+      " https://www.youtube.com" + // YouTube oEmbed (for Song Queue metadata)
       " https://recent-messages.robotty.de" + // Recent Twitch chat messages
       " https://7tv.io" + // 7TV emote API
       " https://api.betterttv.net" + // BTTV emote API
