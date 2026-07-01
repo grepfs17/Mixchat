@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import { FaTwitch, FaYoutube, FaTrash, FaStepForward, FaStepBackward, FaPlay } from "react-icons/fa";
 import {
-  DEFAULT_SONG_QUEUE_CONFIG,
+  FaTwitch,
+  FaYoutube,
+  FaTrash,
+  FaStepForward,
+  FaStepBackward,
+  FaPlay,
+} from "react-icons/fa";
+import {
   MAX_QUEUE_LENGTH_CEILING,
   MAX_SONG_DURATION_CEILING_SEC,
   type SongQueueConfig,
@@ -234,7 +240,8 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
                 type="button"
                 className="song-queue-btn song-queue-btn--small"
                 onClick={() => {
-                  if (typeof navigator === "undefined" || !navigator.clipboard) return;
+                  if (typeof navigator === "undefined" || !navigator.clipboard)
+                    return;
                   navigator.clipboard
                     .writeText(publicUrl)
                     .then(() => setLinkCopied(true))
@@ -282,9 +289,8 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
             <p>No songs queued yet.</p>
             <p className="song-queue-hint">
               Tell your chatters to type{" "}
-              <code>!songadd &lt;youtube link&gt;</code> in chat. Bare
-              YouTube links are ignored — the <code>!songadd</code> prefix
-              is required.
+              <code>!songadd &lt;youtube link&gt;</code> in chat. Bare YouTube
+              links are ignored — the <code>!songadd</code> prefix is required.
             </p>
           </div>
         ) : (
@@ -450,8 +456,8 @@ function SongQueueConfigForm({
           </span>
         )}
         <span className="song-queue-field-hint">
-          Songs over this duration will be skipped when they start. Current
-          cap: {maxDurMin} min.
+          Songs over this duration will be skipped when they start. Current cap:{" "}
+          {maxDurMin} min.
         </span>
       </label>
 
@@ -518,5 +524,3 @@ function SongQueueConfigForm({
     </>
   );
 }
-
-export { DEFAULT_SONG_QUEUE_CONFIG };
