@@ -628,10 +628,6 @@
     cursor: pointer;
 }
 
-.giveaway-radio input {
-    margin: 0;
-}
-
 .giveaway-error {
     margin: 0;
     font-size: 12px;
@@ -1018,6 +1014,43 @@
     font-size: 13px;
     color: #d1d5db;
     cursor: pointer;
+}
+
+/* Custom radio buttons that follow the active theme. The native input
+   is hidden behind a custom dot drawn with a pseudo-element. */
+.giveaway-radio input[type="radio"],
+.song-queue-radio input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--color-border-medium, #4b5563);
+    border-radius: 50%;
+    background: var(--color-bg-secondary, #141414);
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.12s ease, background 0.12s ease;
+    flex-shrink: 0;
+}
+
+.giveaway-radio input[type="radio"]:hover,
+.song-queue-radio input[type="radio"]:hover {
+    border-color: var(--color-accent, #6366f1);
+}
+
+.giveaway-radio input[type="radio"]:checked,
+.song-queue-radio input[type="radio"]:checked {
+    border-color: var(--color-accent, #6366f1);
+    background: var(--color-accent, #6366f1);
+    box-shadow: inset 0 0 0 3px var(--color-bg-secondary, #141414);
+}
+
+.giveaway-radio input[type="radio"]:focus-visible,
+.song-queue-radio input[type="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-bg-secondary, #141414),
+        0 0 0 4px var(--color-accent, #6366f1);
 }
 
 .song-queue-actions {
