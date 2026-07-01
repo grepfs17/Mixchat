@@ -278,10 +278,15 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
           </span>
         </h4>
         {pending.length === 0 ? (
-          <p className="song-queue-empty">
-            No songs queued. Viewers can submit by posting a YouTube link in
-            chat.
-          </p>
+          <div className="song-queue-empty">
+            <p>No songs queued yet.</p>
+            <p className="song-queue-hint">
+              Tell your chatters to type{" "}
+              <code>!songadd &lt;youtube link&gt;</code> in chat. Bare
+              YouTube links are ignored — the <code>!songadd</code> prefix
+              is required.
+            </p>
+          </div>
         ) : (
           <ul className="song-queue-list">
             {pending.map((item) => (

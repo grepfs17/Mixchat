@@ -1278,6 +1278,22 @@
     color: #6b7280;
     font-size: 12px;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.song-queue-hint {
+    margin: 0;
+    color: #9ca3af;
+}
+
+.song-queue-hint code {
+    background: rgba(99, 102, 241, 0.18);
+    color: #c7d2fe;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
 }
 
 /* Song Queue indicator (floats over the chat when the modal is closed) */
