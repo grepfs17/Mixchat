@@ -189,6 +189,10 @@ const SongQueuePlayerInner = (
   const lastListRef = useRef<string>("");
   const lastIndexRef = useRef<number>(-1);
   const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
+  // Set to true right after loadPlaylist is called; the onStateChange
+  // callback clears it and calls playVideo() once the player reports
+  // CUED or BUFFERING (i.e. the playlist is loaded enough to start).
+  const pendingPlayRef = useRef(false);
 
   useImperativeHandle(
     ref,
@@ -264,6 +268,20 @@ const SongQueuePlayerInner = (
                 if (current) onDurationKnown?.(current.id, dur);
               }
             }
+            // Deferred play: after loadPlaylist, the player transitions
+            // through CUED/BUFFERING before PLAYING. Once it reaches either
+            // of those states, explicitly call playVideo() to make sure
+            // playback starts even when the autoplay gesture context has
+            // expired (the player was created with no videoId initially).
+            if (pendingPlayRef.current) {
+              const isReady =
+                (window.YT?.PlayerState.CUED !== undefined && e.data === window.YT.PlayerState.CUED) ||
+                (window.YT?.PlayerState.BUFFERING !== undefined && e.data === window.YT.PlayerState.BUFFERING);
+              if (isReady) {
+                pendingPlayRef.current = false;
+                try { player.playVideo(); } catch { /* not ready yet */ }
+              }
+            }
           },
         },
       });
@@ -308,10 +326,11 @@ const SongQueuePlayerInner = (
       });
       // When the player was created empty (no videoId) and the first song
       // arrives, loadPlaylist loads it but autoplay may be blocked because
-      // the initial player creation wasn't user-gesture-adjacent. Explicitly
-      // call playVideo so playback starts immediately.
+      // the initial player creation wasn't user-gesture-adjacent. Defer
+      // playVideo() to the next CUED/BUFFERING state change so the playlist
+      // is actually loaded enough to play.
       if (hadNoItems && list) {
-        try { playerRef.current.playVideo(); } catch { /* not ready yet */ }
+        pendingPlayRef.current = true;
       }
     } else if (currentIndex !== lastIndexRef.current) {
       lastIndexRef.current = currentIndex;
