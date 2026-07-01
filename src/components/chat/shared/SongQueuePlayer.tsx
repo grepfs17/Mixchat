@@ -199,6 +199,17 @@ const SongQueuePlayerInner = (
   // callback clears it and calls playVideo() once the player reports
   // CUED or BUFFERING (i.e. the playlist is loaded enough to start).
   const pendingPlayRef = useRef(false);
+  // Refs to the latest callback props. The mount effect captures these
+  // once so the player isn't destroyed and recreated every render (the
+  // bar passes inline lambdas that get new references on each render).
+  const onAdvanceRef = useRef(onAdvance);
+  const onDurationKnownRef = useRef(onDurationKnown);
+  const onReadyRef = useRef(onReady);
+  const onStateChangeRef = useRef(onStateChange);
+  onAdvanceRef.current = onAdvance;
+  onDurationKnownRef.current = onDurationKnown;
+  onReadyRef.current = onReady;
+  onStateChangeRef.current = onStateChange;
 
   useImperativeHandle(
     ref,
@@ -262,23 +273,23 @@ const SongQueuePlayerInner = (
           onReady: () => {
             if (cancelled) return;
             setReady(true);
-            onReady?.();
+            onReadyRef.current?.();
           },
           onStateChange: (e) => {
             if (cancelled) return;
             const mapped = mapPlayerState(e.data);
             if (mapped !== lastStateRef.current) {
               lastStateRef.current = mapped;
-              onStateChange?.(mapped);
+              onStateChangeRef.current?.(mapped);
             }
             if (window.YT?.PlayerState.ENDED !== undefined && e.data === window.YT.PlayerState.ENDED) {
-              onAdvance?.();
+              onAdvanceRef.current?.();
             }
             if (window.YT?.PlayerState.PLAYING !== undefined && e.data === window.YT.PlayerState.PLAYING) {
               const dur = player.getDuration?.();
               if (typeof dur === "number" && dur > 0) {
                 const current = items[currentIndexRef.current];
-                if (current) onDurationKnown?.(current.id, dur);
+                if (current) onDurationKnownRef.current?.(current.id, dur);
               }
             }
             // Deferred play: after loadPlaylist, the player transitions
@@ -316,11 +327,12 @@ const SongQueuePlayerInner = (
       playerRef.current = null;
       createdRef.current = false;
     };
-    // Only re-run when the current videoId changes (or callbacks change).
-    // We intentionally exclude `items` — adding/removing items must NOT
-    // destroy the player; that's the sync effect's job.
+    // Only re-run when the current videoId changes. The callbacks are
+    // read via refs so the player isn't destroyed when the bar re-renders
+    // with new inline lambdas. `items` is also excluded — adding/removing
+    // items is the sync effect's job.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialVideoId, onAdvance, onDurationKnown, onReady, onStateChange]);
+  }, [initialVideoId]);
 
   // Keep a ref of the current index so async onStateChange closures can read
   // the latest value without re-binding.
