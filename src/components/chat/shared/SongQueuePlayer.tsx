@@ -189,6 +189,12 @@ const SongQueuePlayerInner = (
   const lastListRef = useRef<string>("");
   const lastIndexRef = useRef<number>(-1);
   const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
+  // True once we've called new YT.Player(...). Used to gate the mount
+  // effect so the player is only created once a valid videoId is
+  // available (creating it with undefined puts the IFrame in a broken
+  // state — loadPlaylist later throws "Invalid video id" and the iframe
+  // goes black until reload).
+  const createdRef = useRef(false);
   // Set to true right after loadPlaylist is called; the onStateChange
   // callback clears it and calls playVideo() once the player reports
   // CUED or BUFFERING (i.e. the playlist is loaded enough to start).
@@ -229,9 +235,16 @@ const SongQueuePlayerInner = (
     [],
   );
 
-  // Mount the player once.
+  // Mount the player once we have a valid videoId. The YouTube IFrame API
+  // breaks if you create a player with videoId: undefined and then call
+  // loadPlaylist later — the iframe goes black and throws "Invalid video
+  // id" until the page is reloaded. So we wait for the first item before
+  // instantiating the player.
+  const initialVideoId = items[currentIndex]?.videoId;
   useEffect(() => {
     if (!containerRef.current) return;
+    if (createdRef.current) return;
+    if (!initialVideoId) return;
     let cancelled = false;
     (async () => {
       await loadIFrameAPI();
@@ -239,7 +252,7 @@ const SongQueuePlayerInner = (
       const player = new window.YT.Player(containerRef.current, {
         height: "100%",
         width: "100%",
-        videoId: items[currentIndex]?.videoId,
+        videoId: initialVideoId,
         playerVars: {
           playsinline: 1,
           autoplay: 1,
@@ -272,7 +285,7 @@ const SongQueuePlayerInner = (
             // through CUED/BUFFERING before PLAYING. Once it reaches either
             // of those states, explicitly call playVideo() to make sure
             // playback starts even when the autoplay gesture context has
-            // expired (the player was created with no videoId initially).
+            // expired.
             if (pendingPlayRef.current) {
               const isReady =
                 (window.YT?.PlayerState.CUED !== undefined && e.data === window.YT.PlayerState.CUED) ||
@@ -286,6 +299,7 @@ const SongQueuePlayerInner = (
         },
       });
       playerRef.current = player;
+      createdRef.current = true;
       // Reset tracking refs so the sync effect always calls loadPlaylist
       // on the first render after a fresh player is created (important for
       // React 18 strict mode double-mount where refs survive cleanup).
@@ -300,10 +314,9 @@ const SongQueuePlayerInner = (
         // ignore
       }
       playerRef.current = null;
+      createdRef.current = false;
     };
-    // Mount once; subsequent renders sync via the effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initialVideoId, onAdvance, onDurationKnown, onReady, onStateChange, items]);
 
   // Keep a ref of the current index so async onStateChange closures can read
   // the latest value without re-binding.

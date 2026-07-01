@@ -109,20 +109,23 @@ describe("SongQueuePlayer", () => {
     });
   });
 
-  it("calls loadVideoById when only the currentIndex changes", async () => {
+  it("recreates the player when only the currentIndex changes", async () => {
     const created = installFakeYT();
     const items = [makeItem("a", "AAAAAAAAAAA"), makeItem("b", "BBBBBBBBBBB")];
     const { rerender } = render(
       <SongQueuePlayer items={items} currentIndex={0} />,
     );
     await new Promise((r) => setTimeout(r, 10));
+    expect(created).toHaveLength(1);
     expect(created[0].loadPlaylist).toHaveBeenCalledTimes(1);
     expect(created[0].loadVideoById).not.toHaveBeenCalled();
 
     rerender(<SongQueuePlayer items={items} currentIndex={1} />);
     await new Promise((r) => setTimeout(r, 10));
-    expect(created[0].loadPlaylist).toHaveBeenCalledTimes(1);
-    expect(created[0].loadVideoById).toHaveBeenCalledWith("BBBBBBBBBBB");
+    // A fresh player is created with the new videoId to avoid the
+    // "Invalid video id" error that occurs when loadVideoById is called
+    // on a player initially created with a different videoId.
+    expect(created).toHaveLength(2);
   });
 
   it("invokes onAdvance when the player reports ENDED", async () => {
