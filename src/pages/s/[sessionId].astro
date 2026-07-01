@@ -1,6 +1,6 @@
 ---
 import ContentLayout from "../../layouts/ContentLayout.astro";
-import { readPublic, getSession } from "../../server/songQueueStore";
+import { readPublic } from "../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../server/songQueueConfig";
 import type { SongQueuePublicView } from "../../lib/songQueue/types";
 
@@ -10,21 +10,16 @@ const storeOptions = getSongQueueStoreOptions();
 let initialView: SongQueuePublicView | null = null;
 let ended = false;
 let notFound = false;
-let notPublic = false;
 
 if (!sessionId) {
     notFound = true;
 } else {
     initialView = await readPublic(storeOptions, sessionId);
     if (!initialView) {
-        const session = await getSession(storeOptions, sessionId);
-        if (!session) {
-            notFound = true;
-        } else if (session.ended) {
-            ended = true;
-        } else {
-            notPublic = true;
-        }
+        // Collapse "missing" and "exists but not public" into a single state
+        // so unauthenticated visitors can't probe for the existence of
+        // private sessions by guessing sessionIds.
+        notFound = true;
     } else if (initialView.ended) {
         ended = true;
     }
@@ -46,9 +41,7 @@ const title = initialView?.title
       ? "Song Queue — Mixchat"
       : ended
         ? "Song Queue ended — Mixchat"
-        : notPublic
-          ? "Song Queue not shared — Mixchat"
-          : "Song Queue — Mixchat";
+        : "Song Queue — Mixchat";
 const description = initialView
     ? `Listen along with ${initialView.items.length} queued YouTube song${initialView.items.length === 1 ? "" : "s"}.`
     : "A read-only song queue powered by Mixchat.";
@@ -56,10 +49,7 @@ const description = initialView
 
 <ContentLayout {title} {description} ogUrl={publicUrl}>
     <Fragment slot="head">
-        <meta
-            name="robots"
-            content={notFound || ended || notPublic ? "noindex" : "index"}
-        />
+        <meta name="robots" content={notFound || ended ? "noindex" : "index"} />
         <style>
             body {
                 font-family:
@@ -308,15 +298,6 @@ const description = initialView
     }
 
     {
-        notPublic && (
-            <p class="state">
-                This song queue is private. The streamer hasn&apos;t shared a
-                public link yet. <a href="/">Back to Mixchat</a>
-            </p>
-        )
-    }
-
-    {
         ended && (
             <p class="state">
                 This song queue has ended. <a href="/">Back to Mixchat</a>
@@ -325,7 +306,7 @@ const description = initialView
     }
 
     {
-        initialView && !notFound && !notPublic && !ended && (
+        initialView && !notFound && !ended && (
             <>
                 <header class="header">
                     <h1 id="queue-title">

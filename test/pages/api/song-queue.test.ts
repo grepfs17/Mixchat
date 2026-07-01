@@ -457,7 +457,10 @@ describe("GET /api/song-queue/:sessionId/public", () => {
     expect(body.version).toBeGreaterThan(0);
   });
 
-  it("returns 403 for a private session", async () => {
+  it("returns 404 for a private session (existence not leaked)", async () => {
+    // The public endpoint deliberately collapses "missing" and "exists but
+    // not public" into a single 404 so unauthenticated callers cannot probe
+    // for the existence of private sessions by guessing sessionIds.
     const { sessionId } = await createTestSession(false);
     const res = await publicGet(
       makeContext(
@@ -465,7 +468,7 @@ describe("GET /api/song-queue/:sessionId/public", () => {
         { sessionId },
       ),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(404);
   });
 
   it("returns 404 for an unknown session", async () => {
@@ -478,7 +481,10 @@ describe("GET /api/song-queue/:sessionId/public", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 410 after the session is closed", async () => {
+  it("returns 404 after the session is closed (existence not leaked)", async () => {
+    // Same collapse as above: ended sessions also look like 404 to public
+    // callers. The owner-authenticated GET /api/song-queue/:sessionId still
+    // returns 410 to support client cache logic.
     const { sessionId, ownerToken } = await createTestSession(true);
     await closeSession(
       makeContext(
@@ -492,6 +498,6 @@ describe("GET /api/song-queue/:sessionId/public", () => {
         { sessionId },
       ),
     );
-    expect(res.status).toBe(410);
+    expect(res.status).toBe(404);
   });
 });
