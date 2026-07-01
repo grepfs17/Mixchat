@@ -465,7 +465,7 @@ const description = initialView
         type YTPlayerLite,
     } from "../../client/songQueuePublic";
 
-    type Player = YTPlayerLite & {
+    type PublicPlayer = YTPlayerLite & {
         loadPlaylist(opts: {
             list: string;
             listType: "playlist";
@@ -474,27 +474,6 @@ const description = initialView
         nextVideo(): void;
         destroy(): void;
     };
-    declare global {
-        interface Window {
-            YT?: {
-                Player: new (
-                    el: HTMLElement,
-                    opts: {
-                        height?: string | number;
-                        width?: string | number;
-                        videoId?: string;
-                        playerVars?: Record<string, string | number>;
-                        events?: {
-                            onReady?: (e: { target: Player }) => void;
-                            onStateChange?: (e: { data: number }) => void;
-                        };
-                    },
-                ) => Player;
-                PlayerState: { ENDED: 0 };
-            };
-            onYouTubeIframeAPIReady?: () => void;
-        }
-    }
 
     function loadAPI(): Promise<void> {
         if (typeof window === "undefined") return Promise.resolve();
@@ -612,7 +591,7 @@ const description = initialView
                     }
                 },
             },
-        });
+        }) as unknown as PublicPlayer;
 
         let lastVersion = bootstrap.version;
         let cancelled = false;
@@ -651,7 +630,7 @@ const description = initialView
                         });
                         if (Array.isArray(view.items)) {
                             applyListItems(
-                                listEl,
+                                listEl!,
                                 view.items,
                                 view.currentIndex,
                                 playController,
@@ -679,7 +658,9 @@ const description = initialView
     // out for a human-readable string on load. Re-run on every render so
     // Astro's view transitions also pick it up.
     function formatLocalTimes() {
-        const nodes = document.querySelectorAll<HTMLTimeElement>("time[data-created-at]");
+        const nodes = document.querySelectorAll<HTMLTimeElement>(
+            "time[data-created-at]",
+        );
         nodes.forEach((el) => {
             const iso = el.dataset.createdAt;
             if (!iso) return;
