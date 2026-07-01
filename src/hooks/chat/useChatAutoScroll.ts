@@ -63,7 +63,10 @@ export function useChatAutoScroll({
   useEffect(() => {
     if (!isAtBottom) {
       const diff = messages.length - prevCountRef.current;
-      if (diff > 0) setNewMessagesCount((p) => p + diff);
+      if (diff > 0) {
+        setNewMessagesCount((p) => p + diff);
+        prevCountRef.current = messages.length;
+      }
     } else {
       prevCountRef.current = messages.length;
     }
