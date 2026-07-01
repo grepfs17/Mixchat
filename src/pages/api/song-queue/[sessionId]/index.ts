@@ -39,7 +39,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     getSongQueueStoreOptions(),
     sessionId,
     token,
-    (s) => ({ session: { ...s, ...patch }, result: s }),
+    (s) => {
+      const updated = { ...s, ...patch };
+      return { session: updated, result: updated };
+    },
   );
   if (res.ok) return json(res.result);
   if (res.reason === "missing") return json({ error: "Not found" }, 404);
