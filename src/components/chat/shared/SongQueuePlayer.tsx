@@ -316,7 +316,11 @@ const SongQueuePlayerInner = (
       playerRef.current = null;
       createdRef.current = false;
     };
-  }, [initialVideoId, onAdvance, onDurationKnown, onReady, onStateChange, items]);
+    // Only re-run when the current videoId changes (or callbacks change).
+    // We intentionally exclude `items` — adding/removing items must NOT
+    // destroy the player; that's the sync effect's job.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialVideoId, onAdvance, onDurationKnown, onReady, onStateChange]);
 
   // Keep a ref of the current index so async onStateChange closures can read
   // the latest value without re-binding.
