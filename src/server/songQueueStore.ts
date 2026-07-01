@@ -62,16 +62,17 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   const prev = mutexes.get(key) || Promise.resolve();
   let release: () => void = () => {};
   const next = new Promise<void>((resolve) => (release = resolve));
-  mutexes.set(
-    key,
-    prev.then(() => next),
-  );
+  const chain = prev.then(() => next);
+  mutexes.set(key, chain);
   try {
     await prev;
     return await fn();
   } finally {
     release();
-    if (mutexes.get(key) === prev.then(() => next)) {
+    // Only remove the entry if no later caller has chained onto us.
+    // Comparing against the captured `chain` reference — not a fresh
+    // `prev.then(...)` — ensures the Map shrinks.
+    if (mutexes.get(key) === chain) {
       mutexes.delete(key);
     }
   }
@@ -121,7 +122,12 @@ async function writeSession(
 
 export async function createSession(
   opts: SongQueueStoreOptions,
-  input: { title?: string; isPublic?: boolean; channelName?: string; channelPlatform?: string } = {},
+  input: {
+    title?: string;
+    isPublic?: boolean;
+    channelName?: string;
+    channelPlatform?: string;
+  } = {},
 ): Promise<SongQueueOwnerBootstrap> {
   await ensureDir(opts.baseDir);
   const sessionId = genId(SESSION_ID_LEN, SESSION_ID_ALPHABET);
@@ -169,8 +175,15 @@ export async function mutateSession<T>(
   opts: SongQueueStoreOptions,
   sessionId: string,
   ownerToken: string,
-  fn: (session: SongQueueSession) => { session: SongQueueSession; result: T } | Promise<{ session: SongQueueSession; result: T }>,
-): Promise<{ ok: true; result: T; session: SongQueueSession } | { ok: false; reason: "missing" | "auth" | "ended" }> {
+  fn: (
+    session: SongQueueSession,
+  ) =>
+    | { session: SongQueueSession; result: T }
+    | Promise<{ session: SongQueueSession; result: T }>,
+): Promise<
+  | { ok: true; result: T; session: SongQueueSession }
+  | { ok: false; reason: "missing" | "auth" | "ended" }
+> {
   return withLock(sessionId, async () => {
     const session = await readSession(opts.baseDir, sessionId);
     if (!session) return { ok: false, reason: "missing" };
