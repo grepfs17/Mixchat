@@ -1,0 +1,664 @@
+---
+import ContentLayout from "../../layouts/ContentLayout.astro";
+import { readPublic } from "../../server/songQueueStore";
+import { getSongQueueStoreOptions } from "../../server/songQueueConfig";
+import type { SongQueuePublicView } from "../../lib/songQueue/types";
+
+const { sessionId } = Astro.params;
+const storeOptions = getSongQueueStoreOptions();
+
+let initialView: SongQueuePublicView | null = null;
+let ended = false;
+let notFound = false;
+
+if (!sessionId) {
+    notFound = true;
+} else {
+    initialView = await readPublic(storeOptions, sessionId);
+    if (!initialView) {
+        // Collapse "missing" and "exists but not public" into a single state
+        // so unauthenticated visitors can't probe for the existence of
+        // private sessions by guessing sessionIds.
+        notFound = true;
+    } else if (initialView.ended) {
+        ended = true;
+    }
+}
+
+const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
+
+function formatPlaylistDate(iso: string): string {
+    // Falls back to the raw ISO if formatting fails. The client-side
+    // script below replaces this text with the viewer's local timezone.
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toISOString();
+}
+const publicUrl = `${mainUrl}s/${sessionId ?? ""}`;
+const title = initialView?.title
+    ? `${initialView.title} — Mixchat Song Queue`
+    : notFound
+      ? "Song Queue — Mixchat"
+      : ended
+        ? "Song Queue ended — Mixchat"
+        : "Song Queue — Mixchat";
+const description = initialView
+    ? `Listen along with ${initialView.items.length} queued YouTube song${initialView.items.length === 1 ? "" : "s"}.`
+    : "A read-only song queue powered by Mixchat.";
+---
+
+<ContentLayout {title} {description} ogUrl={publicUrl}>
+    <Fragment slot="head">
+        <meta name="robots" content={notFound || ended ? "noindex" : "index"} />
+        <style>
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                max-width: 920px;
+                margin: 0 auto;
+                padding: 20px;
+                background: #0a0a0a;
+                color: #e0e0e0;
+            }
+            h1 {
+                color: #fff;
+                margin: 0 0 4px 0;
+                font-size: 22px;
+            }
+            .meta {
+                color: #999;
+                font-size: 13px;
+                margin-bottom: 18px;
+            }
+            a {
+                color: var(--color-accent, #818cf8);
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .layout {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+            @media (min-width: 720px) {
+                .layout {
+                    grid-template-columns: 1.4fr 1fr;
+                }
+            }
+            .player {
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                background: #000;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            .panel {
+                background: #141414;
+                border: 1px solid #262626;
+                border-radius: 8px;
+                padding: 14px;
+                max-height: 480px;
+                overflow-y: auto;
+            }
+            .panel h2 {
+                margin: 0 0 8px 0;
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #c5c5c5;
+            }
+            .panel ol {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .panel li {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 8px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid #2c2c2c;
+                border-radius: 6px;
+            }
+            .panel li.current {
+                border-color: #6366f1;
+                background: rgba(99, 102, 241, 0.12);
+            }
+            .panel li.played,
+            .panel li.skipped {
+                opacity: 0.55;
+            }
+            .panel li .thumb {
+                width: 56px;
+                height: 32px;
+                object-fit: cover;
+                border-radius: 4px;
+                background: #000;
+                flex-shrink: 0;
+            }
+            .panel li .meta {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                margin: 0;
+                flex: 1;
+                min-width: 0;
+            }
+            .panel li .title {
+                font-size: 13px;
+                color: #f3f4f6;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .panel li .sub {
+                font-size: 11px;
+                color: #9ca3af;
+            }
+            .state {
+                margin: 0;
+                padding: 16px;
+                background: #141414;
+                border: 1px solid #262626;
+                border-radius: 8px;
+                color: #c5c5c5;
+                text-align: center;
+            }
+            .state a {
+                display: inline-block;
+                margin-top: 12px;
+            }
+            .footer {
+                margin-top: 18px;
+                text-align: center;
+                color: #6b7280;
+                font-size: 12px;
+            }
+            .header {
+                margin-bottom: 18px;
+            }
+            .header h1 {
+                margin: 0 0 4px 0;
+                font-size: 22px;
+            }
+            .header .meta {
+                color: #9ca3af;
+                font-size: 12px;
+                margin: 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 10px;
+                align-items: center;
+            }
+            .header .meta-sep {
+                color: #4b5563;
+            }
+            .panel li .actions {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                flex-shrink: 0;
+            }
+            .panel li .action-btn {
+                background: transparent;
+                border: 1px solid #2c2c2c;
+                color: #9ca3af;
+                cursor: pointer;
+                font-family: inherit;
+                font-size: 11px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+                text-decoration: none;
+            }
+            .panel li .action-btn:hover {
+                background: rgba(255, 255, 255, 0.05);
+                color: #e5e7eb;
+                border-color: #3a3a3a;
+            }
+            .panel li .action-btn--copy.copied {
+                color: #6ee7b7;
+                border-color: rgba(110, 231, 183, 0.4);
+            }
+            .panel li .action-btn--play {
+                color: #c7d2fe;
+                border-color: rgba(99, 102, 241, 0.4);
+            }
+            .panel li .action-btn--play:hover {
+                background: rgba(99, 102, 241, 0.18);
+            }
+            .panel li.played .meta,
+            .panel li.skipped .meta {
+                opacity: 0.55;
+            }
+            .toast {
+                position: fixed;
+                bottom: 18px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(99, 102, 241, 0.95);
+                color: #fff;
+                padding: 8px 14px;
+                border-radius: 6px;
+                font-size: 13px;
+                z-index: 100;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+                animation: toast-pop 1.6s ease forwards;
+            }
+            @keyframes toast-pop {
+                0% {
+                    opacity: 0;
+                    transform: translate(-50%, 8px);
+                }
+                10% {
+                    opacity: 1;
+                    transform: translate(-50%, 0);
+                }
+                85% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                    transform: translate(-50%, 8px);
+                }
+            }
+        </style>
+    </Fragment>
+
+    <div style="text-align: center; margin-bottom: 18px;">
+        <a href="/">
+            <img
+                src="/logo.webp"
+                alt="Mixchat Logo"
+                width="60"
+                height="60"
+                style="width: auto; height: 60px;"
+            />
+        </a>
+    </div>
+
+    {
+        notFound && (
+            <p class="state">
+                This song queue doesn&apos;t exist.{" "}
+                <a href="/">Back to Mixchat</a>
+            </p>
+        )
+    }
+
+    {
+        ended && (
+            <p class="state">
+                This song queue has ended. <a href="/">Back to Mixchat</a>
+            </p>
+        )
+    }
+
+    {
+        initialView && !notFound && !ended && (
+            <>
+                <header class="header">
+                    <h1 id="queue-title">
+                        {initialView.title || "Song Queue"}
+                    </h1>
+                    <p class="meta">
+                        {initialView.channelName && (
+                            <>
+                                <span>
+                                    {initialView.channelPlatform ===
+                                    "twitch" ? (
+                                        <a
+                                            href={`https://twitch.tv/${initialView.channelName}`}
+                                            target="_blank"
+                                            rel="noopener"
+                                        >
+                                            {initialView.channelName}
+                                        </a>
+                                    ) : initialView.channelPlatform ===
+                                      "youtube" ? (
+                                        <a
+                                            href={`https://youtube.com/@${initialView.channelName}`}
+                                            target="_blank"
+                                            rel="noopener"
+                                        >
+                                            {initialView.channelName}
+                                        </a>
+                                    ) : (
+                                        <span>{initialView.channelName}</span>
+                                    )}
+                                </span>
+                                <span class="meta-sep">·</span>
+                            </>
+                        )}
+                        <span>
+                            Created{" "}
+                            <time
+                                datetime={initialView.createdAt}
+                                data-created-at={initialView.createdAt}
+                            >
+                                {formatPlaylistDate(initialView.createdAt)}
+                            </time>
+                        </span>
+                        <span class="meta-sep">·</span>
+                        <span>
+                            {initialView.items.length}
+                            {initialView.items.length === 1 ? "song" : "songs"}
+                        </span>
+                        <span class="meta-sep">·</span>
+                        <span>
+                            Powered by <a href="/">Mixchat</a>
+                        </span>
+                    </p>
+                </header>
+                <div class="layout">
+                    <div id="player" class="player" />
+                    <div class="panel" aria-label="Queue list">
+                        <h2>Queue</h2>
+                        <ol id="queue-list">
+                            {initialView.items.map((item, i) => (
+                                <li
+                                    data-id={item.id}
+                                    data-index={i}
+                                    data-video-id={item.videoId}
+                                    data-status={item.status}
+                                    class={
+                                        i === initialView.currentIndex
+                                            ? "current"
+                                            : ""
+                                    }
+                                >
+                                    <img
+                                        class="thumb"
+                                        src={item.thumbnail}
+                                        alt=""
+                                    />
+                                    <div class="meta">
+                                        <span class="title">{item.title}</span>
+                                        <span class="sub">
+                                            {item.submitter.author} ·{" "}
+                                            {item.channelTitle}
+                                        </span>
+                                    </div>
+                                    <div class="actions">
+                                        <button
+                                            type="button"
+                                            class="action-btn action-btn--play"
+                                            data-role="play"
+                                            data-index={i}
+                                            data-video-id={item.videoId}
+                                            title="Play this song in the queue"
+                                        >
+                                            ▶ Play
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="action-btn action-btn--copy"
+                                            data-role="copy"
+                                            data-video-url={`https://www.youtube.com/watch?v=${item.videoId}`}
+                                            title="Copy YouTube link"
+                                            aria-label={`Copy link to ${item.title}`}
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                </div>
+                <p class="footer">This page is read-only</p>
+                <script
+                    type="application/json"
+                    id="song-queue-bootstrap"
+                    set:html={JSON.stringify({
+                        sessionId,
+                        version: initialView.version,
+                        currentIndex: initialView.currentIndex,
+                        videoIds: initialView.items.map((it) => it.videoId),
+                        createdAt: initialView.createdAt,
+                    })}
+                />
+            </>
+        )
+    }
+</ContentLayout>
+
+<script>
+    import {
+        renderListHtml,
+        bindCopyHandlers,
+        bindPlayHandlers,
+        createPlayController,
+        markCurrent,
+        showToast,
+        type PublicListItem,
+        type YTPlayerLite,
+    } from "../../client/songQueuePublic";
+
+    type PublicPlayer = YTPlayerLite & {
+        loadPlaylist(opts: {
+            list: string;
+            listType: "playlist";
+            index: number;
+        }): void;
+        nextVideo(): void;
+        destroy(): void;
+    };
+
+    function loadAPI(): Promise<void> {
+        if (typeof window === "undefined") return Promise.resolve();
+        if (window.YT?.Player) return Promise.resolve();
+        return new Promise((resolve) => {
+            const previous = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = () => {
+                previous?.();
+                resolve();
+            };
+            const tag = document.createElement("script");
+            tag.src = "https://www.youtube.com/iframe_api";
+            tag.async = true;
+            document.head.appendChild(tag);
+        });
+    }
+
+    function applyListItems(
+        listEl: HTMLElement,
+        items: PublicListItem[],
+        currentIndex: number,
+        controller: ReturnType<typeof createPlayController>,
+    ) {
+        listEl.innerHTML = renderListHtml(items, currentIndex);
+        // Fill text slots via textContent so server strings can't break markup.
+        const lis = listEl.querySelectorAll("li");
+        lis.forEach((li, i) => {
+            const item = items[i];
+            const img = li.querySelector(
+                "img.thumb",
+            ) as HTMLImageElement | null;
+            if (img) img.src = item.thumbnail;
+            const titleEl = li.querySelector('[data-role="title"]');
+            const subEl = li.querySelector('[data-role="sub"]');
+            if (titleEl) titleEl.textContent = item.title;
+            if (subEl)
+                subEl.textContent = `${item.submitter.author} · ${item.channelTitle}`;
+        });
+        bindCopyHandlers(listEl, (ok) => {
+            if (ok) showToast("Link copied to clipboard");
+            else showToast("Could not copy. Hold ⌘/Ctrl and press C.");
+        });
+        bindPlayHandlers(listEl, controller, () => {
+            // markCurrent already ran inside bindPlayHandlers; the next poll
+            // will reconcile the real state from the server.
+        });
+    }
+
+    async function main() {
+        const el = document.getElementById("player");
+        const listEl = document.getElementById("queue-list");
+        const bootstrapEl = document.getElementById("song-queue-bootstrap");
+        if (!el || !listEl || !bootstrapEl) return;
+        const bootstrap = JSON.parse(bootstrapEl.textContent || "{}") as {
+            sessionId: string;
+            version: number;
+            currentIndex: number;
+            videoIds: string[];
+        };
+        if (!bootstrap.sessionId) return;
+
+        // The controller buffers play() calls until the player is ready,
+        // so we can wire up buttons before the IFrame API finishes loading.
+        const playController = createPlayController();
+
+        // Wire up buttons on the SSR-rendered list right away.
+        bindCopyHandlers(listEl, (ok) => {
+            if (ok) showToast("Link copied to clipboard");
+            else showToast("Could not copy. Hold ⌘/Ctrl and press C.");
+        });
+        bindPlayHandlers(listEl, playController, (index) => {
+            markCurrent(listEl, index);
+        });
+
+        await loadAPI();
+        if (!window.YT?.Player || bootstrap.videoIds.length === 0) return;
+
+        const player = new window.YT.Player(el, {
+            height: "100%",
+            width: "100%",
+            videoId: bootstrap.videoIds[bootstrap.currentIndex],
+            playerVars: {
+                playsinline: 1,
+                autoplay: 1,
+                rel: 0,
+            },
+            events: {
+                onReady: () => {
+                    playController.setPlayer(player as unknown as YTPlayerLite);
+                    // Load the playlist after the player is ready. Setting
+                    // list/listType in playerVars at construction time makes
+                    // YouTube show "This video is unavailable" for multi-item lists.
+                    if (bootstrap.videoIds.length > 1) {
+                        try {
+                            player.loadPlaylist({
+                                list: bootstrap.videoIds.join(","),
+                                listType: "playlist",
+                                index: bootstrap.currentIndex,
+                            });
+                        } catch {
+                            /* not ready yet */
+                        }
+                    }
+                },
+                onStateChange: (e) => {
+                    if (
+                        window.YT?.PlayerState.ENDED !== undefined &&
+                        e.data === window.YT.PlayerState.ENDED
+                    ) {
+                        try {
+                            player.nextVideo();
+                        } catch {
+                            /* player gone */
+                        }
+                    }
+                },
+            },
+        }) as unknown as PublicPlayer;
+
+        let lastVersion = bootstrap.version;
+        let cancelled = false;
+
+        async function poll() {
+            if (cancelled) return;
+            try {
+                const res = await fetch(
+                    `/api/song-queue/${encodeURIComponent(bootstrap.sessionId)}/public`,
+                );
+                if (!res.ok) {
+                    if (res.status === 410 || res.status === 404) {
+                        cancelled = true;
+                        window.location.reload();
+                        return;
+                    }
+                } else {
+                    const view = (await res.json()) as {
+                        version: number;
+                        currentIndex: number;
+                        videoIds: string[];
+                        items: PublicListItem[];
+                        ended: boolean;
+                    };
+                    if (view.ended) {
+                        cancelled = true;
+                        window.location.reload();
+                        return;
+                    }
+                    if (view.version !== lastVersion) {
+                        lastVersion = view.version;
+                        player.loadPlaylist({
+                            list: view.videoIds.join(","),
+                            listType: "playlist",
+                            index: view.currentIndex,
+                        });
+                        if (Array.isArray(view.items)) {
+                            applyListItems(
+                                listEl!,
+                                view.items,
+                                view.currentIndex,
+                                playController,
+                            );
+                        }
+                    }
+                }
+            } catch {}
+            if (!cancelled) setTimeout(poll, 5000);
+        }
+
+        setTimeout(poll, 5000);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => void main());
+    } else {
+        void main();
+    }
+</script>
+
+<script>
+    // Format the created-at timestamp in the viewer's local timezone.
+    // The server renders the raw ISO into the <time> element; we swap it
+    // out for a human-readable string on load. Re-run on every render so
+    // Astro's view transitions also pick it up.
+    function formatLocalTimes() {
+        const nodes = document.querySelectorAll<HTMLTimeElement>(
+            "time[data-created-at]",
+        );
+        nodes.forEach((el) => {
+            const iso = el.dataset.createdAt;
+            if (!iso) return;
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return;
+            const date = d.toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+            });
+            const time = d.toLocaleTimeString(undefined, {
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+            el.textContent = `${date} at ${time}`;
+        });
+    }
+    formatLocalTimes();
+    document.addEventListener("astro:page-load", formatLocalTimes);
+</script>

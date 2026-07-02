@@ -10,6 +10,13 @@ import {
   type GiveawayOwner,
   type GiveawayScope,
 } from "../../lib/streamerTools/giveaway";
+import {
+  isEligibleForSubscribers,
+  isOwnerMessage as isOwnerMessageShared,
+  isSkippableMessage,
+  messageContent as messageContentShared,
+  stableUserId,
+} from "../../lib/streamerTools/chatHelpers";
 import { appendGiveawayHistory } from "../../lib/streamerTools/history";
 
 const DEFAULT_DURATION = 180;
@@ -88,37 +95,15 @@ function validateDuration(duration: number): string | null {
 }
 
 function messageContent(item: GiveawayMessage): string {
-  if (item.platform === "twitch") return item.msg.content;
-  return item.msg.parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text || "")
-    .join("");
+  return messageContentShared(item);
 }
 
 function isSkippableItem(item: GiveawayMessage): boolean {
-  const m = item.msg;
-  if ("optimistic" in m && m.optimistic) return true;
-  if ("isPreloaded" in m && m.isPreloaded) return true;
-  if ("isDeleted" in m && m.isDeleted) return true;
-  if (m.messageType && m.messageType !== "chat") return true;
-  return false;
+  return isSkippableMessage(item.msg);
 }
 
 function isOwnerItem(item: GiveawayMessage, owner: GiveawayOwner): boolean {
-  if (item.platform === "twitch") {
-    if (item.msg.badges?.broadcaster) return true;
-    if (owner.twitchBroadcasterId) {
-      const id = (item.msg.userId || "").toLowerCase();
-      if (id && id === owner.twitchBroadcasterId.toLowerCase()) return true;
-    }
-    return false;
-  }
-  if (item.msg.authorIsOwner) return true;
-  if (owner.youtubeChannelId) {
-    const id = (item.msg.authorChannelId || "").toLowerCase();
-    if (id && id === owner.youtubeChannelId.toLowerCase()) return true;
-  }
-  return false;
+  return isOwnerMessageShared(item, owner);
 }
 
 function isEligibleItem(
@@ -126,10 +111,7 @@ function isEligibleItem(
   eligibility: GiveawayEligibility,
 ): boolean {
   if (eligibility === "everyone") return true;
-  if (item.platform === "twitch") {
-    return Boolean(item.msg.badges?.subscriber || item.msg.badges?.["founder"]);
-  }
-  return Boolean(item.msg.authorIsMember);
+  return isEligibleForSubscribers(item);
 }
 
 function inScope(
@@ -141,24 +123,21 @@ function inScope(
 }
 
 function toEntry(item: GiveawayMessage): GiveawayEntry | null {
+  const id = stableUserId(item);
+  if (!id) return null;
+  const author = item.msg.author;
   if (item.platform === "twitch") {
-    const m = item.msg;
-    const id = (m.userId || m.author).toLowerCase();
-    if (!id) return null;
     return {
       userId: id,
-      author: m.author,
-      authorAvatar: m.authorAvatar,
+      author,
+      authorAvatar: item.msg.authorAvatar,
       platform: "twitch",
     };
   }
-  const m = item.msg;
-  const id = (m.authorChannelId || m.author).toLowerCase();
-  if (!id) return null;
   return {
     userId: id,
-    author: m.author,
-    authorAvatar: m.authorAvatar,
+    author,
+    authorAvatar: item.msg.authorAvatar,
     platform: "youtube",
   };
 }
