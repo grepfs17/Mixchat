@@ -146,14 +146,6 @@ export function useLiveEvents({
     [setPendingRaid, setIsRaidInitiator],
   );
 
-  const onIncomingRaid = useCallback(
-    (raid: RaidOutEvent) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
-    [setPendingRaid, setIsRaidInitiator],
-  );
-
   const onOutgoingRaid = useCallback(
     (raid: RaidOutEvent) => {
       setPendingRaid(raid);
@@ -168,15 +160,6 @@ export function useLiveEvents({
     enabled: !!(accessToken && userId),
     isInitiator: true,
     onRaid: onUserRaid,
-    onScopeError: onRaidScopeError,
-  });
-
-  useRaidDetection({
-    subscribe,
-    channelId,
-    enabled: !!(accessToken && channelId && channelId !== userId),
-    isInitiator: false,
-    onRaid: onIncomingRaid,
     onScopeError: onRaidScopeError,
   });
 
