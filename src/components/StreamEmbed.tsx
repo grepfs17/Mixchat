@@ -127,21 +127,6 @@ function TwitchJSEmbed({
         });
 
         playerRef.current = embedInstance.getPlayer();
-
-        // The Twitch Embed SDK internally pauses the video when its iframe
-        // loses focus (e.g. clicking an emote menu outside the embed).
-        // Listen on both the Embed-level and Player-level pause events to
-        // catch it regardless of which fires, and immediately force resume.
-        const forceResume = () => {
-          if (!document.hidden && playerRef.current?.getPaused?.()) {
-            playerRef.current.play();
-          }
-        };
-        embedInstance.addEventListener(
-          window.Twitch.Embed.VIDEO_PAUSE,
-          forceResume,
-        );
-        playerRef.current.addEventListener("pause", forceResume);
       });
     };
 
@@ -178,68 +163,6 @@ function TwitchJSEmbed({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]);
-
-  // Heartbeat and visibility workaround
-  useEffect(() => {
-    let heartbeatId: ReturnType<typeof setInterval> | null = null;
-
-    const forceResume = () => {
-      if (!document.hidden && playerRef.current?.getPaused?.()) {
-        playerRef.current.play();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Auto-resume when coming back to the tab
-        setTimeout(forceResume, 100);
-      }
-    };
-
-    // Very fast heartbeat (100ms) to catch the SDK's pause-on-blur.
-    // The Twitch SDK pauses the video when its iframe loses focus
-    // (e.g. clicking the emote menu). The VIDEO_PAUSE listener above
-    // handles the first pause, but the SDK may re-pause immediately,
-    // so this heartbeat keeps kicking it back to life. At 100ms the
-    // pause is imperceptible to the user.
-    heartbeatId = setInterval(forceResume, 100);
-
-    // Chrome/Chromium workaround: Active (even silent) AudioContext prevents aggressive tab suspension.
-    let audioCtx: AudioContext | null = null;
-    try {
-      const AudioContextClass =
-        window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        audioCtx = new AudioContextClass();
-        const oscillator = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.0001; // Extremely low but non-zero
-        oscillator.connect(gain);
-        gain.connect(audioCtx.destination);
-        oscillator.start();
-
-        // Ensure the context doesn't get suspended
-        if (audioCtx.state === "suspended") {
-          const resume = () => {
-            audioCtx?.resume();
-            document.removeEventListener("click", resume);
-          };
-          document.addEventListener("click", resume);
-        }
-      }
-    } catch (e) {
-      console.warn("Keep-alive AudioContext failed:", e);
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      if (heartbeatId) clearInterval(heartbeatId);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (audioCtx && audioCtx.state !== "closed") {
-        audioCtx.close().catch(() => {});
-      }
-    };
-  }, []);
 
   // Channel switch: call setChannel() instead of remounting → session preserved
   useEffect(() => {
