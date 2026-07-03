@@ -9,7 +9,7 @@ import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
 const BACKUP_VERSION = 1;
 
 /** Keys that represent user preferences (not auth tokens, not caches). */
-const SETTINGS_KEYS = [
+export const SETTINGS_KEYS = [
   "mixchat_video_ratio",
   "mixchat_favorite_channels",
   "mixchat_embed_default_open",
@@ -18,11 +18,15 @@ const SETTINGS_KEYS = [
   "mixchat_use_youtube_embed",
   "mixchat_font_size",
   "mixchat_chat_font",
+  "mixchat_chat_theme",
   "mixchat_mention_sound",
   "mixchat_mention_volume",
   "mixchat_mention_sound_type",
   "mixchat_show_deleted_messages",
   "mixchat_compact_actions",
+  "mixchat_keep_mod_actions_visible",
+  "mixchat_mod_actions_first",
+  "mixchat_double_click_confirm_mod_actions",
   "mixchat_hide_viewer_count",
   "mixchat_hide_chat_timestamps",
   "mixchat_event_sound_volume",
@@ -30,6 +34,8 @@ const SETTINGS_KEYS = [
   "mixchat_watched_streamers",
   "mixchat_youtube_links",
   "mixchat_streamer_tools_enabled",
+  "mixchat_ignored_users",
+  "mixchat_mod_mode_targets",
   "disabled_emotes_v1",
 ] as const;
 

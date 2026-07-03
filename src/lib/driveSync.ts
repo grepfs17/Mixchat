@@ -1,31 +1,6 @@
 import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
 import { loadSettingsFromDrive, saveSettingsToDrive } from "./googleDrive";
-
-const SETTINGS_KEYS = [
-  "mixchat_video_ratio",
-  "mixchat_favorite_channels",
-  "mixchat_embed_default_open",
-  "mixchat_unify_chat",
-  "mixchat_split_chat",
-  "mixchat_use_youtube_embed",
-  "mixchat_font_size",
-  "mixchat_chat_font",
-  "mixchat_chat_theme",
-  "mixchat_mention_sound",
-  "mixchat_mention_volume",
-  "mixchat_mention_sound_type",
-  "mixchat_show_deleted_messages",
-  "mixchat_compact_actions",
-  "mixchat_hide_viewer_count",
-  "mixchat_disable_mod_mode_by_default",
-  "mixchat_hide_chat_timestamps",
-  "mixchat_event_sound_volume",
-  "mixchat_chat_split_ratio",
-  "mixchat_watched_streamers",
-  "mixchat_youtube_links",
-  "disabled_emotes_v1",
-  "mixchat_ignored_users",
-];
+import { SETTINGS_KEYS } from "./settingsBackup";
 
 const DRIVE_PERMISSION_HINT =
   'Drive access required. Click "Re-auth with Drive" below.';
