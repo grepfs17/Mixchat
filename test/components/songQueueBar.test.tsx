@@ -64,6 +64,7 @@ function makeQueue(overrides: Partial<UseSongQueueResult> = {}): UseSongQueueRes
     next: vi.fn().mockResolvedValue(undefined),
     previous: vi.fn().mockResolvedValue(undefined),
     reportDuration: vi.fn().mockResolvedValue(undefined),
+    notifyTooLong: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

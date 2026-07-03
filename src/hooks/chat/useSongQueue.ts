@@ -5,6 +5,7 @@ import {
   type SongQueueItem,
   type SongQueueMessage,
   type SongQueueOwnerBootstrap,
+  type SongQueuePlatform,
   type SongQueueSession,
   type SongQueueSubmitter,
 } from "../../lib/songQueue/types";
@@ -12,6 +13,10 @@ import {
   extractSubmissions,
   type SongQueueOwner,
 } from "../../lib/songQueue/extract";
+import {
+  formatMaxDuration,
+  probeVideoDuration,
+} from "../../lib/songQueue/durationProbe";
 import {
   SongQueueApiError,
   appendSongQueueItem,
@@ -43,6 +48,16 @@ export interface UseSongQueueOptions {
   /** Called when the current item changes (so the panel can announce it). */
   onAdvance?: (item: SongQueueItem | undefined) => void;
   /**
+   * Called when the hook wants to post a chat message back to the user who
+   * submitted a song (e.g. "song too long"). The replyToMessageId is the id
+   * of the user's original submission so the message appears as a reply.
+   */
+  onSendChat?: (
+    platform: SongQueuePlatform,
+    message: string,
+    replyToMessageId: string,
+  ) => Promise<void>;
+  /**
    * Optional chat feed. The hook does not subscribe to a chat source itself;
    * callers feed it messages via `ingestMessage`.
    */
@@ -69,6 +84,13 @@ export interface UseSongQueueResult {
   next: () => Promise<void>;
   previous: () => Promise<void>;
   reportDuration: (itemId: string, durationSec: number) => Promise<void>;
+  /**
+   * Reply in chat to the submitter of `item` telling them the song was
+   * too long. Used by the play-time fallback when the upfront probe
+   * couldn't determine the duration. No-op if no chat-send callback was
+   * provided to the hook.
+   */
+  notifyTooLong: (item: SongQueueItem) => Promise<void>;
 }
 
 const HISTORY_STATUSES = new Set(["played", "skipped"]);
@@ -100,6 +122,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     perSubmitterLimit,
     onError,
     onAdvance,
+    onSendChat,
   } = options;
 
   const [phase, setPhase] = useState<SongQueuePhase>("idle");
@@ -130,6 +153,13 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   useEffect(() => {
     perSubmitterRef.current = perSubmitterLimit;
   }, [perSubmitterLimit]);
+
+  // Keep latest onSendChat in a ref so flushIngest can post chat replies
+  // without re-binding on every render.
+  const onSendChatRef = useRef(onSendChat);
+  useEffect(() => {
+    onSendChatRef.current = onSendChat;
+  }, [onSendChat]);
 
   // ---- IDB hydration on mount (does not require a network call) ----
   useEffect(() => {
@@ -329,6 +359,42 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   const pendingMessagesRef = useRef<SongQueueMessage[]>([]);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
+  // Reply in chat to the submitter telling them the song was too long.
+  // Failure to send is non-fatal — the queue keeps working.
+  const notifyTooLong = useCallback(
+    async (
+      platform: SongQueuePlatform,
+      author: string,
+      replyToMessageId: string | undefined,
+      maxSec: number,
+    ) => {
+      const send = onSendChatRef.current;
+      if (!send) return;
+      const message = `the song can only be ${formatMaxDuration(maxSec)} long`;
+      try {
+        await send(platform, message, replyToMessageId ?? "");
+      } catch {
+        /* ignore — the streamer can see the rejection locally */
+      }
+    },
+    [],
+  );
+
+  // Public notify-too-long for already-queued items (play-time fallback).
+  // The item has no original-message reference, so we post a top-level
+  // mention rather than a reply.
+  const notifyTooLongForItem = useCallback(
+    async (item: SongQueueItem) => {
+      await notifyTooLong(
+        item.submitter.platform,
+        item.submitter.author,
+        undefined,
+        config.maxSongDurationSec,
+      );
+    },
+    [config.maxSongDurationSec, notifyTooLong],
+  );
+
   const flushIngest = useCallback(async () => {
     ingestFrameRef.current = null;
     if (!bootstrap || phase !== "open") return;
@@ -357,6 +423,34 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     // `session` snapshot captured at hook creation time.
     let runningItems: SongQueueItem[] = session ? [...session.items] : [];
     for (const submission of accepted) {
+      // Probe the video's duration *before* adding to the queue. The IFrame
+      // API is the only no-OAuth way to learn a YouTube video's length, and
+      // it requires loading metadata. If the song is over the cap, notify
+      // the submitter in chat (as a reply to their !songadd message) and
+      // skip the add. If the probe can't read the length (live stream,
+      // unavailable, timeout) we still add the song — the play-time check
+      // in SongQueueIndicator will catch it.
+      const probedDuration = await probeVideoDuration(submission.videoId);
+      if (
+        typeof probedDuration === "number" &&
+        probedDuration > cfg.maxSongDurationSec
+      ) {
+        console.info("[song-queue] rejecting over-length song", {
+          videoId: submission.videoId,
+          duration: probedDuration,
+          max: cfg.maxSongDurationSec,
+          submitter: submission.submitter.author,
+          platform: submission.submitter.platform,
+          messageId: submission.messageId,
+        });
+        void notifyTooLong(
+          submission.submitter.platform,
+          submission.submitter.author,
+          submission.messageId,
+          cfg.maxSongDurationSec,
+        );
+        continue;
+      }
       const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const tempItem: SongQueueItem = {
         id: tempId,
@@ -364,7 +458,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         title: "Validating…",
         channelTitle: "",
         thumbnail: `https://i.ytimg.com/vi/${submission.videoId}/hqdefault.jpg`,
-        durationSec: 0,
+        durationSec: probedDuration ?? 0,
         submitter: submission.submitter,
         submittedAt: submission.submittedAt,
         status: "pending",
@@ -414,7 +508,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         );
       }
     }
-  }, [bootstrap, channelKey, onError, phase, session]);
+  }, [bootstrap, channelKey, notifyTooLong, onError, phase, session]);
 
   const ingestMessage = useCallback(
     (item: SongQueueMessage) => {
@@ -647,5 +741,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     next,
     previous,
     reportDuration,
+    notifyTooLong: notifyTooLongForItem,
   };
 }

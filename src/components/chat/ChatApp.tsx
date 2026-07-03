@@ -31,6 +31,7 @@ import GiveawayIndicator from "./shared/GiveawayIndicator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
+import { sendHelixMessage } from "../../lib/twitch";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface YtConnectionState {
@@ -268,6 +269,69 @@ export default function ChatApp(props: ChatAppStateProps) {
     (msg: string) => setNotification({ message: msg, type: "error" }),
     [],
   );
+
+  // Send a chat reply from the song queue (e.g. "song too long" notice).
+  // We use `sendHelixMessage` directly rather than the wrapper
+  // `handleSendMessage` because the wrapper keys replies off of a
+  // `replyingTo` state variable (not its `_replyToId` argument) and
+  // also calls `setReplyingTo(undefined)` + scroll-into-view + sets
+  // `isLoading` — all side-effects we don't want for an automated
+  // reply. The message is sent as the authenticated streamer either
+  // way.
+  const onSongSendChat = useCallback(
+    async (platform: "twitch" | "youtube", message: string, replyToMessageId: string) => {
+      try {
+        if (platform === "twitch") {
+          if (!selectedTwitchChannel || !twitchSession?.userId) {
+            console.warn(
+              "[song-queue] cannot notify: twitch channel or session missing",
+              { selectedTwitchChannel, hasSession: !!twitchSession },
+            );
+            return;
+          }
+          const serverMessageId = await sendHelixMessage(
+            selectedTwitchChannel,
+            twitchSession.userId,
+            message,
+            replyToMessageId || undefined,
+          );
+          if (!serverMessageId) {
+            console.warn("[song-queue] Twitch send returned no message id");
+          }
+        } else if (platform === "youtube") {
+          if (!youtubeVideoId) {
+            console.warn(
+              "[song-queue] cannot notify: youtube video id missing",
+            );
+            return;
+          }
+          const res = await fetch("/api/youtube-chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ videoId: youtubeVideoId, message }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            showNotification(
+              data.error || "Failed to send song-queue message to YouTube",
+              "error",
+            );
+          }
+        }
+      } catch (err) {
+        // Best-effort; the rejection is still visible in the streamer UI.
+        console.warn("[song-queue] chat-send failed", err);
+        showNotification(
+          err instanceof Error
+            ? `Song queue reply failed: ${err.message}`
+            : "Song queue reply failed",
+          "error",
+        );
+      }
+    },
+    [selectedTwitchChannel, twitchSession?.userId, youtubeVideoId, showNotification],
+  );
+
   const songChannelKey = useMemo(() => {
     if (selectedTwitchChannelName) return `twitch:${selectedTwitchChannelName.toLowerCase()}`;
     if (youtubeSession?.userId) return `youtube:${youtubeSession.userId}`;
@@ -281,6 +345,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     },
     enabled: showModTools && Boolean(songChannelKey),
     onError: onSongError,
+    onSendChat: onSongSendChat,
   });
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
   useEffect(() => {

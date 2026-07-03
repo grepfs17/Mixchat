@@ -251,6 +251,8 @@ export default function SongQueueMinimizedBar({
             onStateChange={setPlayerState}
             onDurationKnown={(itemId, dur) => {
               if (dur > queue.config.maxSongDurationSec) {
+                const item = queue.items.find((it) => it.id === itemId);
+                if (item) void queue.notifyTooLong(item);
                 void queue.skip(itemId);
                 void queue.next();
               } else {
