@@ -76,6 +76,8 @@ export default function EmbedConfigModal({
   onKeepModActionsVisibleChange,
   modActionsFirst,
   onModActionsFirstChange,
+  doubleClickConfirmModActions,
+  onDoubleClickConfirmModActionsChange,
   splitChatEnabled,
   onSplitChatEnabledChange,
   chatTheme,
@@ -522,6 +524,32 @@ export default function EmbedConfigModal({
               the end, putting them before the timestamp, badges and author.
               Reply and copy buttons stay at the end. Only visible while
               moderator mode is on.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "double-click-confirm-mod-actions",
+        group: "chat",
+        label: "Double-click to confirm mod actions",
+        description:
+          "Require a double-click to confirm moderator actions (delete, timeout, ban, warn)",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-checkbox-label">
+              <input
+                type="checkbox"
+                checked={doubleClickConfirmModActions}
+                onChange={(e) =>
+                  onDoubleClickConfirmModActionsChange(e.target.checked)
+                }
+              />
+              <span>Double-click to confirm mod actions</span>
+            </label>
+            <p className="embed-config-description embed-config-description--indented">
+              When enabled, you must double-click moderator action buttons
+              (delete, timeout, ban, warn) to confirm the action. This helps
+              prevent accidental moderation actions.
             </p>
           </div>
         ),

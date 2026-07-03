@@ -99,6 +99,8 @@ export default function AppContainer() {
     setKeepModActionsVisible,
     modActionsFirst,
     setModActionsFirst,
+    doubleClickConfirmModActions,
+    setDoubleClickConfirmModActions,
     splitChatEnabled,
     setSplitChatEnabled,
     chatTheme,
@@ -322,6 +324,8 @@ export default function AppContainer() {
             onKeepModActionsVisibleChange={setKeepModActionsVisible}
             modActionsFirst={modActionsFirst}
             onModActionsFirstChange={setModActionsFirst}
+            doubleClickConfirmModActions={doubleClickConfirmModActions}
+            onDoubleClickConfirmModActionsChange={setDoubleClickConfirmModActions}
             splitChatEnabled={splitChatEnabled}
             onSplitChatEnabledChange={setSplitChatEnabled}
             chatTheme={chatTheme}
@@ -679,6 +683,7 @@ export default function AppContainer() {
                 compactActions={compactActions}
                 keepModActionsVisible={keepModActionsVisible}
                 modActionsFirst={modActionsFirst}
+                doubleClickConfirmModActions={doubleClickConfirmModActions}
                 splitChatEnabled={splitChatEnabled}
                 chatTheme={chatTheme}
                 hideViewerCount={shouldHideViewerCount}

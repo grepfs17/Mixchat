@@ -26,6 +26,8 @@ export interface SettingsProps {
   onKeepModActionsVisibleChange: (value: boolean) => void;
   modActionsFirst: boolean;
   onModActionsFirstChange: (value: boolean) => void;
+  doubleClickConfirmModActions: boolean;
+  onDoubleClickConfirmModActionsChange: (value: boolean) => void;
   splitChatEnabled: boolean;
   onSplitChatEnabledChange: (value: boolean) => void;
   chatTheme: ChatTheme;

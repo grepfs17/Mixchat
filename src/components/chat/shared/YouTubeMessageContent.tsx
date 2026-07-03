@@ -86,6 +86,7 @@ export function YouTubeMessageContent({
     youtubeModModeActive,
     youtubeOwnChannelId,
     modActionsFirst,
+    doubleClickConfirmModActions,
     onDeleteYouTubeMessage,
     onBanYouTubeUser,
     onTimeoutYouTubeUser,
@@ -121,6 +122,7 @@ export function YouTubeMessageContent({
         onBan={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
         banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
         showUserActions={!isUnmoderatable && Boolean(msg.authorChannelId)}
+        doubleClickConfirm={doubleClickConfirmModActions}
       />
     );
   };

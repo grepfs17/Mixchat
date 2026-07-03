@@ -91,6 +91,8 @@ function LoginPanel({
   onKeepModActionsVisibleChange,
   modActionsFirst = false,
   onModActionsFirstChange,
+  doubleClickConfirmModActions = false,
+  onDoubleClickConfirmModActionsChange,
   splitChatEnabled = false,
   onSplitChatEnabledChange,
   chatTheme = "default" as ChatTheme,
@@ -442,6 +444,11 @@ function LoginPanel({
           modActionsFirst={modActionsFirst}
           onModActionsFirstChange={(value) => {
             if (onModActionsFirstChange) onModActionsFirstChange(value);
+          }}
+          doubleClickConfirmModActions={doubleClickConfirmModActions}
+          onDoubleClickConfirmModActionsChange={(value) => {
+            if (onDoubleClickConfirmModActionsChange)
+              onDoubleClickConfirmModActionsChange(value);
           }}
           splitChatEnabled={splitChatEnabled}
           onSplitChatEnabledChange={(value) => {

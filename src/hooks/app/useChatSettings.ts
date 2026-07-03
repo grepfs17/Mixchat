@@ -54,6 +54,8 @@ export type UseChatSettingsResult = {
   setKeepModActionsVisible: React.Dispatch<React.SetStateAction<boolean>>;
   modActionsFirst: boolean;
   setModActionsFirst: React.Dispatch<React.SetStateAction<boolean>>;
+  doubleClickConfirmModActions: boolean;
+  setDoubleClickConfirmModActions: React.Dispatch<React.SetStateAction<boolean>>;
   splitChatEnabled: boolean;
   setSplitChatEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   chatTheme: ChatTheme;
@@ -132,6 +134,8 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_mod_actions_first",
     false,
   );
+  const [doubleClickConfirmModActions, setDoubleClickConfirmModActions] =
+    useLocalStorageState<boolean>("mixchat_double_click_confirm_mod_actions", false);
   const [splitChatEnabled, setSplitChatEnabled] = useLocalStorageState<boolean>(
     "mixchat_split_chat",
     false,
@@ -244,6 +248,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setKeepModActionsVisible,
     modActionsFirst,
     setModActionsFirst,
+    doubleClickConfirmModActions,
+    setDoubleClickConfirmModActions,
     splitChatEnabled,
     setSplitChatEnabled,
     chatTheme,

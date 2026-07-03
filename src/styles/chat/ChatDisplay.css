@@ -422,6 +422,19 @@
     color: var(--color-text-primary);
 }
 
+.mod-action--confirm {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--color-notification-error);
+    color: var(--color-notification-error);
+    animation: mod-action-pulse 0.3s ease;
+}
+
+@keyframes mod-action-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
 .timestamp {
     font-size: 0.7rem;
     color: var(--color-text-timestamp);

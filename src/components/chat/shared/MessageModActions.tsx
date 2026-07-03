@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from "react-icons/md";
 
@@ -12,6 +13,7 @@ interface BaseProps {
   banTitle?: string;
   warnTitle?: string;
   showUserActions?: boolean;
+  doubleClickConfirm?: boolean;
 }
 
 const btnStyle: React.CSSProperties = {
@@ -19,6 +21,8 @@ const btnStyle: React.CSSProperties = {
   alignItems: "center",
   gap: "4px",
 };
+
+type PendingAction = "ban" | "timeout" | "warn" | "delete" | null;
 
 /**
  * Renders the moderator action buttons (delete / timeout / ban / warn)
@@ -37,17 +41,64 @@ export function MessageModActions({
   banTitle = "Ban user",
   warnTitle = "Warn user",
   showUserActions = true,
+  doubleClickConfirm = false,
 }: BaseProps): ReactNode {
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+
+  const handleClick = useCallback(
+    (action: PendingAction, handler?: (() => void) | ((e: React.MouseEvent) => void)) => {
+      if (!handler) return;
+
+      if (!doubleClickConfirm) {
+        if (action === "timeout" && typeof handler === "function") {
+          (handler as (e: React.MouseEvent) => void)({} as React.MouseEvent);
+        } else if (typeof handler === "function") {
+          (handler as () => void)();
+        }
+        return;
+      }
+
+      if (pendingAction === action) {
+        if (action === "timeout" && typeof handler === "function") {
+          (handler as (e: React.MouseEvent) => void)({} as React.MouseEvent);
+        } else if (typeof handler === "function") {
+          (handler as () => void)();
+        }
+        setPendingAction(null);
+      } else {
+        setPendingAction(action);
+        setTimeout(() => setPendingAction(null), 2000);
+      }
+    },
+    [doubleClickConfirm, pendingAction]
+  );
+
   const hasAny =
     onDelete || (showUserActions && (onTimeout || onBan || onWarn));
   if (!hasAny) return null;
+
+  const getButtonClass = (action: PendingAction) => {
+    const baseClass = "action-button mod-action";
+    if (doubleClickConfirm && pendingAction === action) {
+      return `${baseClass} mod-action--confirm`;
+    }
+    return baseClass;
+  };
+
+  const getTitle = (action: PendingAction, baseTitle: string) => {
+    if (doubleClickConfirm && pendingAction === action) {
+      return `Click again to confirm: ${baseTitle}`;
+    }
+    return baseTitle;
+  };
+
   return (
     <div className="message-actions">
       {showUserActions && onBan && (
         <button
-          onClick={onBan}
-          className="action-button mod-action"
-          title={banTitle}
+          onClick={() => handleClick("ban", onBan)}
+          className={getButtonClass("ban")}
+          title={getTitle("ban", banTitle)}
           style={btnStyle}
         >
           <MdBlock size={12} />
@@ -55,10 +106,10 @@ export function MessageModActions({
       )}
       {showUserActions && onTimeout && (
         <button
-          onClick={onTimeout}
+          onClick={() => handleClick("timeout", onTimeout)}
           onContextMenu={onTimeoutContextMenu}
-          className="action-button mod-action"
-          title={timeoutTitle}
+          className={getButtonClass("timeout")}
+          title={getTitle("timeout", timeoutTitle)}
           style={btnStyle}
         >
           <MdHourglassEmpty size={12} />
@@ -66,9 +117,9 @@ export function MessageModActions({
       )}
       {showUserActions && onWarn && (
         <button
-          onClick={onWarn}
-          className="action-button mod-action"
-          title={warnTitle}
+          onClick={() => handleClick("warn", onWarn)}
+          className={getButtonClass("warn")}
+          title={getTitle("warn", warnTitle)}
           style={btnStyle}
         >
           <MdWarning size={12} />
@@ -76,9 +127,9 @@ export function MessageModActions({
       )}
       {onDelete && (
         <button
-          onClick={onDelete}
-          className="action-button mod-action"
-          title={deleteTitle}
+          onClick={() => handleClick("delete", onDelete)}
+          className={getButtonClass("delete")}
+          title={getTitle("delete", deleteTitle)}
           style={btnStyle}
         >
           <MdDelete size={12} />

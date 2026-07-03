@@ -51,6 +51,7 @@ export interface ChatAppStateProps {
   compactActions?: boolean;
   keepModActionsVisible?: boolean;
   modActionsFirst?: boolean;
+  doubleClickConfirmModActions?: boolean;
   useYoutubeEmbed?: boolean;
   fontSize?: number;
   chatFont?: ChatFont;

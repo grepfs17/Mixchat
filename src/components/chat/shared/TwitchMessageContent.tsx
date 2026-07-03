@@ -59,6 +59,7 @@ function TwitchMessageContentBase({
     compactActions,
     keepModActionsVisible,
     modActionsFirst,
+    doubleClickConfirmModActions,
     onDeleteMessage,
     onBanUser,
     onTimeoutUser,
@@ -198,6 +199,7 @@ function TwitchMessageContentBase({
         onBan={() => onBanUser?.(msg.userId || "", msg.author)}
         onWarn={() => onWarnUser?.(msg.author)}
         showUserActions={!isUnmoderatable}
+        doubleClickConfirm={doubleClickConfirmModActions}
       />
     );
   })();
