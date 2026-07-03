@@ -58,6 +58,13 @@ export interface UseSongQueueOptions {
     replyToMessageId: string,
   ) => Promise<void>;
   /**
+   * Called when a new item starts playing and `config.announceOnPlay` is
+   * true. The callback is responsible for actually posting the message
+   * (to whatever platform(s) the streamer is on). It is only invoked
+   * once per item, even if `version` ticks for unrelated reasons.
+   */
+  onAnnounceNowPlaying?: (item: SongQueueItem) => Promise<void>;
+  /**
    * Optional chat feed. The hook does not subscribe to a chat source itself;
    * callers feed it messages via `ingestMessage`.
    */
@@ -123,6 +130,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     onError,
     onAdvance,
     onSendChat,
+    onAnnounceNowPlaying,
   } = options;
 
   const [phase, setPhase] = useState<SongQueuePhase>("idle");
@@ -161,6 +169,16 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     onSendChatRef.current = onSendChat;
   }, [onSendChat]);
 
+  // Same for the announce callback.
+  const onAnnounceNowPlayingRef = useRef(onAnnounceNowPlaying);
+  useEffect(() => {
+    onAnnounceNowPlayingRef.current = onAnnounceNowPlaying;
+  }, [onAnnounceNowPlaying]);
+
+  // Track the last item we announced so we don't double-post when
+  // `version` ticks for unrelated reasons (item added, removed, etc.).
+  const lastAnnouncedItemIdRef = useRef<string | null>(null);
+
   // ---- IDB hydration on mount (does not require a network call) ----
   useEffect(() => {
     if (!enabled) return;
@@ -179,11 +197,23 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         createdAt: stored.session.createdAt,
       });
       setSession(stored.session);
-      setConfigState((prev) => ({
-        ...prev,
-        title: stored.session.title || prev.title,
-        isPublic: stored.session.isPublic,
-      }));
+      // Restore the full config from the session. Older sessions created
+      // before `config` was persisted fall back to defaults merged with
+      // the legacy `title` / `isPublic` fields.
+      const storedConfig = stored.session.config;
+      setConfigState(
+        storedConfig
+          ? {
+              ...storedConfig,
+              title: stored.session.title,
+              isPublic: stored.session.isPublic,
+            }
+          : {
+              ...DEFAULT_SONG_QUEUE_CONFIG,
+              title: stored.session.title,
+              isPublic: stored.session.isPublic,
+            },
+      );
       setPhase(stored.session.ended ? "ended" : "open");
     })();
     return () => {
@@ -201,6 +231,17 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         bootstrap.ownerToken,
       );
       setSession(server);
+      // The server is authoritative for the config; pull it in too so
+      // changes made on another device (or before the IDB record was
+      // written) survive a refresh.
+      if (server.config) {
+        setConfigState((prev) => ({
+          ...prev,
+          ...server.config,
+          title: server.title,
+          isPublic: server.isPublic,
+        }));
+      }
       await saveSongQueueSession(
         channelKey,
         bootstrap.sessionId,
@@ -240,6 +281,28 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (!session) return;
     const item = session.items[session.currentIndex];
     onAdvance?.(item);
+
+    // Fire the "now playing" announce at most once per item id. The
+    // effect also re-runs on every `version` bump (item add / remove /
+    // status change) so we must dedupe by id or we'd spam chat.
+    if (
+      config.announceOnPlay &&
+      item &&
+      item.id !== lastAnnouncedItemIdRef.current
+    ) {
+      lastAnnouncedItemIdRef.current = item.id;
+      const announce = onAnnounceNowPlayingRef.current;
+      if (announce) {
+        void announce(item).catch((err) => {
+          console.warn("[song-queue] announce failed", err);
+        });
+      }
+    }
+    // Reset the tracker if the item at this index disappears (e.g. the
+    // queue was emptied) so the next play still gets announced.
+    if (!item) {
+      lastAnnouncedItemIdRef.current = null;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.currentIndex, session?.version]);
 
@@ -247,45 +310,73 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   const setConfig = useCallback(
     async (next: Partial<SongQueueConfig>) => {
       setConfigState((prev) => ({ ...prev, ...next }));
-      // Persist isPublic changes to the server and IDB.
-      if (
-        bootstrap &&
-        next.isPublic !== undefined &&
-        next.isPublic !== bootstrap.isPublic
-      ) {
-        try {
-          const updated = await patchSongQueue(
-            bootstrap.sessionId,
-            bootstrap.ownerToken,
-            { isPublic: next.isPublic },
-          );
-          setBootstrap((prev) =>
-            prev ? { ...prev, isPublic: updated.isPublic } : prev,
-          );
-          setSession((prev) =>
-            prev ? { ...prev, isPublic: updated.isPublic } : prev,
-          );
-          if (session) {
-            await saveSongQueueSession(
-              channelKey,
-              bootstrap.sessionId,
-              bootstrap.ownerToken,
-              {
-                ...session,
-                isPublic: updated.isPublic,
-              },
-            );
-          }
-        } catch (err) {
-          onError?.(
-            err instanceof Error ? err.message : "Failed to update sharing",
-          );
-          // Revert the optimistic local update on failure.
-          setConfigState((prev) => ({ ...prev, isPublic: !next.isPublic }));
+      // Before a session exists (`idle`) or after it's been ended, the
+      // config is purely local — it gets sent to the server when the
+      // user clicks "Start queue" via `start()`. Trying to PATCH in
+      // those phases would 410 against the dead session and confuse
+      // the user with a spurious error notification.
+      if (!bootstrap || phase !== "open") return;
+
+      // Persist every change to the server so a reload picks up the
+      // latest values. The PATCH is best-effort: failures are surfaced
+      // via `onError` and the local state is reverted for the field
+      // that triggered the failure.
+      try {
+        const updated = await patchSongQueue(
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          { config: next },
+        );
+        const serverConfig = updated.config ?? {
+          ...DEFAULT_SONG_QUEUE_CONFIG,
+          title: updated.title,
+          isPublic: updated.isPublic,
+        };
+        setConfigState({
+          ...serverConfig,
+          title: updated.title,
+          isPublic: updated.isPublic,
+        });
+        setBootstrap((prev) =>
+          prev ? { ...prev, isPublic: updated.isPublic } : prev,
+        );
+        setSession((prev) => (prev ? { ...prev, ...updated } : prev));
+        // Mirror the new server state into IDB so the next reload is
+        // instant.
+        await saveSongQueueSession(
+          channelKey,
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          updated,
+        );
+      } catch (err) {
+        // 410 means the session was ended (possibly on another device).
+        // Flip the local phase to "ended" so the panel updates and stop
+        // trying to PATCH until a new session is started. Don't show
+        // an error — the streamer can see the session is over.
+        if (err instanceof SongQueueApiError && err.status === 410) {
+          setPhase("ended");
+          return;
         }
+        onError?.(
+          err instanceof Error ? err.message : "Failed to save settings",
+        );
+        // Revert the optimistic local update on failure.
+        setConfigState((prev) => {
+          const reverted: Partial<SongQueueConfig> = { ...prev };
+          for (const key of Object.keys(next) as (keyof SongQueueConfig)[]) {
+            if (key in reverted) {
+              (reverted as Record<string, unknown>)[key] =
+                (session?.config as Record<string, unknown> | undefined)?.[
+                  key
+                ] ?? DEFAULT_SONG_QUEUE_CONFIG[key];
+            }
+          }
+          return { ...prev, ...reverted };
+        });
       }
     },
-    [bootstrap, session, channelKey, onError],
+    [bootstrap, phase, session?.config, channelKey, onError],
   );
 
   const start = useCallback(async () => {
@@ -302,6 +393,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         isPublic: config.isPublic,
         channelName,
         channelPlatform,
+        // Send the whole config so the server has the source of truth
+        // for `perSubmitterLimit`, `maxQueueLength`, etc. from the very
+        // first request.
+        config: config,
       });
       setBootstrap(created);
       const initial = buildInitialSession(created);
@@ -325,7 +420,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     } finally {
       setLoading(false);
     }
-  }, [channelKey, config.isPublic, config.title, onError]);
+  }, [channelKey, config, onError]);
 
   const end = useCallback(async () => {
     if (!bootstrap) return;

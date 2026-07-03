@@ -7,6 +7,7 @@
  */
 
 import type {
+  SongQueueConfig,
   SongQueueItem,
   SongQueueItemStatus,
   SongQueueOwnerBootstrap,
@@ -52,7 +53,13 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 export async function createSongQueue(
-  input: { title?: string; isPublic?: boolean; channelName?: string; channelPlatform?: string } = {},
+  input: {
+    title?: string;
+    isPublic?: boolean;
+    channelName?: string;
+    channelPlatform?: string;
+    config?: SongQueueConfig;
+  } = {},
 ): Promise<SongQueueOwnerBootstrap> {
   const res = await fetch("/api/song-queue", {
     method: "POST",
@@ -86,7 +93,7 @@ export async function closeSongQueue(
 export async function patchSongQueue(
   sessionId: string,
   ownerToken: string,
-  patch: { isPublic?: boolean },
+  patch: { isPublic?: boolean; config?: Partial<SongQueueConfig> },
 ): Promise<SongQueueSession> {
   const res = await fetch(`/api/song-queue/${encodeURIComponent(sessionId)}`, {
     method: "PATCH",
@@ -99,7 +106,11 @@ export async function patchSongQueue(
 export async function appendSongQueueItem(
   sessionId: string,
   ownerToken: string,
-  input: { videoId: string; submitter: SongQueueSubmitter; maxQueueLength?: number },
+  input: {
+    videoId: string;
+    submitter: SongQueueSubmitter;
+    maxQueueLength?: number;
+  },
 ): Promise<SongQueueItem> {
   const res = await fetch(
     `/api/song-queue/${encodeURIComponent(sessionId)}/items`,
@@ -126,7 +137,7 @@ export async function updateSongQueueItem(
       body: JSON.stringify(patch),
     },
   );
-  const body = (await handle<{ item: SongQueueItem }>(res));
+  const body = await handle<{ item: SongQueueItem }>(res);
   return body.item;
 }
 
@@ -149,7 +160,10 @@ export async function setSongQueueIndex(
   sessionId: string,
   ownerToken: string,
   currentIndex: number,
-  extra: { durationSec?: number; status?: "playing" | "played" | "skipped" } = {},
+  extra: {
+    durationSec?: number;
+    status?: "playing" | "played" | "skipped";
+  } = {},
 ): Promise<void> {
   const res = await fetch(
     `/api/song-queue/${encodeURIComponent(sessionId)}/play`,

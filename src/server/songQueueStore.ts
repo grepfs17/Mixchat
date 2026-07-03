@@ -16,6 +16,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash, randomBytes } from "node:crypto";
 import {
+  type SongQueueConfig,
   type SongQueueItem,
   type SongQueueOwnerBootstrap,
   type SongQueuePublicView,
@@ -127,6 +128,7 @@ export async function createSession(
     isPublic?: boolean;
     channelName?: string;
     channelPlatform?: string;
+    config?: SongQueueConfig;
   } = {},
 ): Promise<SongQueueOwnerBootstrap> {
   await ensureDir(opts.baseDir);
@@ -142,6 +144,7 @@ export async function createSession(
     createdAt: now,
     lastSeenAt: now,
     isPublic: Boolean(input.isPublic),
+    ...(input.config ? { config: input.config } : {}),
     currentIndex: 0,
     version: 0,
     ended: false,

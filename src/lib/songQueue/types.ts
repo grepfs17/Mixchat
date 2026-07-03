@@ -71,6 +71,12 @@ export interface SongQueueSession {
   createdAt: string;
   lastSeenAt: string;
   isPublic: boolean;
+  /**
+   * Full streamer-side configuration for this session. Optional for
+   * backward compatibility with sessions created before this field was
+   * added; absent values fall back to `DEFAULT_SONG_QUEUE_CONFIG`.
+   */
+  config?: SongQueueConfig;
   currentIndex: number;
   /** Monotonic counter incremented on every mutation. Used by the public
    * page's polling loop to detect changes. */
@@ -110,7 +116,14 @@ export interface SongQueuePublicView {
   items: Array<
     Pick<
       SongQueueItem,
-      "id" | "videoId" | "title" | "channelTitle" | "thumbnail" | "status" | "submittedAt" | "durationSec"
+      | "id"
+      | "videoId"
+      | "title"
+      | "channelTitle"
+      | "thumbnail"
+      | "status"
+      | "submittedAt"
+      | "durationSec"
     > & {
       submitter: Pick<SongQueueSubmitter, "author" | "platform">;
     }
@@ -123,7 +136,10 @@ export interface SongQueuePublicView {
  */
 export type SongQueueMessage =
   | { platform: "twitch"; msg: import("../types").TwitchMessage }
-  | { platform: "youtube"; msg: import("../../components/chat/unified/types").YTMessage };
+  | {
+      platform: "youtube";
+      msg: import("../../components/chat/unified/types").YTMessage;
+    };
 
 export const DEFAULT_SONG_QUEUE_CONFIG: SongQueueConfig = {
   title: "",

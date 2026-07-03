@@ -29,6 +29,7 @@ import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import GiveawayIndicator from "./shared/GiveawayIndicator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
+import type { SongQueueItem } from "../../lib/songQueue/types";
 import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
@@ -332,6 +333,44 @@ export default function ChatApp(props: ChatAppStateProps) {
     [selectedTwitchChannel, twitchSession?.userId, youtubeVideoId, showNotification],
   );
 
+  // Post a "now playing" announcement in chat when a new song starts and
+  // `announceOnPlay` is enabled. Sends to whichever platform(s) the
+  // streamer is actively streaming on; if the streamer is on both (e.g.
+  // Twitch + YouTube restream), it fans out to both.
+  const onSongAnnounce = useCallback(
+    async (item: SongQueueItem) => {
+      const videoUrl = `https://youtu.be/${item.videoId}`;
+      const channelTitle = item.channelTitle ? ` by ${item.channelTitle}` : "";
+      const submitter = item.submitter?.author
+        ? ` (added by @${item.submitter.author})`
+        : "";
+      const message = `🎵 Now playing: ${item.title}${channelTitle}${submitter} — ${videoUrl}`;
+      const platforms: Platform[] = [];
+      if (selectedTwitchChannel && twitchSession) platforms.push("twitch");
+      if (youtubeVideoId && youtubeSession) platforms.push("youtube");
+      if (platforms.length === 0) return;
+      try {
+        await handleSendMessage(message, platforms);
+      } catch (err) {
+        console.warn("[song-queue] announce send failed", err);
+        showNotification(
+          err instanceof Error
+            ? `Now-playing announce failed: ${err.message}`
+            : "Now-playing announce failed",
+          "error",
+        );
+      }
+    },
+    [
+      selectedTwitchChannel,
+      twitchSession,
+      youtubeVideoId,
+      youtubeSession,
+      handleSendMessage,
+      showNotification,
+    ],
+  );
+
   const songChannelKey = useMemo(() => {
     if (selectedTwitchChannelName) return `twitch:${selectedTwitchChannelName.toLowerCase()}`;
     if (youtubeSession?.userId) return `youtube:${youtubeSession.userId}`;
@@ -346,6 +385,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     enabled: showModTools && Boolean(songChannelKey),
     onError: onSongError,
     onSendChat: onSongSendChat,
+    onAnnounceNowPlaying: onSongAnnounce,
   });
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
   useEffect(() => {
