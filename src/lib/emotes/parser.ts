@@ -161,32 +161,80 @@ function parseThirdPartyEmotes(text: string): string {
   // We use a capture group so the delimiter (img tag) is included in the result array
   const parts = text.split(/(<img[^>]*>)/);
 
-  const parsedParts = parts.map((part) => {
+  const parsedParts: string[] = [];
+  let i = 0;
+
+  while (i < parts.length) {
+    const part = parts[i];
+
     // Skip if it's already an HTML tag (our emote)
     if (part.startsWith("<img")) {
-      return part;
+      // Look ahead for 7TV zero-width overlays in the next text segment
+      const overlays: string[] = [];
+      if (i + 1 < parts.length && !parts[i + 1].startsWith("<img")) {
+        const nextText = parts[i + 1];
+        const words = nextText.split(" ");
+        let j = 0;
+        // Skip leading empty word if text starts with space
+        if (words[j] === "") j++;
+
+        while (j < words.length) {
+          const word = words[j];
+          if (word === "") break;
+          const nextUrl = emotes7tv[word];
+          if (nextUrl && isZeroWidthUrl(nextUrl)) {
+            overlays.push(
+              createZeroWidthEmoteImg(
+                getEmoteUrl(nextUrl),
+                word,
+                "7TV",
+                emoteAuthors[word],
+              ),
+            );
+            j++;
+          } else {
+            break;
+          }
+        }
+
+        if (overlays.length > 0) {
+          // Wrap the <img> with overlays
+          parsedParts.push(
+            `<span class="emote-overlay-container">${part}${overlays.join("")}</span>`,
+          );
+          // Remove consumed overlay words from the next text segment
+          const remainingWords = words.slice(j);
+          parts[i + 1] = remainingWords.join(" ");
+        } else {
+          parsedParts.push(part);
+        }
+      } else {
+        parsedParts.push(part);
+      }
+      i++;
+      continue;
     }
 
     // Process words with a while-loop so we can do lookahead for 7TV zero-width
     // (overlay) emotes that must be grouped with the preceding base emote.
     const words = part.split(" ");
     const output: string[] = [];
-    let i = 0;
-    while (i < words.length) {
-      const word = words[i];
+    let wi = 0;
+    while (wi < words.length) {
+      const word = words[wi];
 
       // Check for URLs first
       const linkified = linkifyUrl(word);
       if (linkified) {
         output.push(linkified);
-        i++;
+        wi++;
         continue;
       }
 
       // Check for @mention
       if (word.startsWith("@")) {
         output.push(`<strong>${escapeHtml(word)}</strong>`);
-        i++;
+        wi++;
         continue;
       }
 
@@ -204,7 +252,7 @@ function parseThirdPartyEmotes(text: string): string {
               match.author,
             ),
           );
-          i++;
+          wi++;
         } else {
           // Any emote from any provider can be a base.
           // Look ahead for 7TV zero-width overlays only.
@@ -216,7 +264,7 @@ function parseThirdPartyEmotes(text: string): string {
             match.author,
           );
           const overlays: string[] = [];
-          let j = i + 1;
+          let j = wi + 1;
           while (j < words.length) {
             const nextWord = words[j];
             const nextUrl = emotes7tv[nextWord];
@@ -238,10 +286,10 @@ function parseThirdPartyEmotes(text: string): string {
             output.push(
               `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`,
             );
-            i = j; // skip consumed zero-width words
+            wi = j; // skip consumed zero-width words
           } else {
             output.push(baseHtml);
-            i++;
+            wi++;
           }
         }
         continue;
@@ -249,11 +297,12 @@ function parseThirdPartyEmotes(text: string): string {
 
       // Plain text
       output.push(escapeHtml(word));
-      i++;
+      wi++;
     }
 
-    return output.join(" ");
-  });
+    parsedParts.push(output.join(" "));
+    i++;
+  }
 
   return parsedParts.join("");
 }

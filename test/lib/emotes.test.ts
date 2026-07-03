@@ -295,6 +295,55 @@ describe("emotes lib", () => {
     expect(result).toContain("SparkleOverlay");
   });
 
+  it("7TV zero-width emote overlays a Twitch emote resolved via IRC positions", async () => {
+    const ZERO_WIDTH_FLAG = 1 << 8;
+    vi.mocked(fetch).mockImplementation((url: any) => {
+      if (url.includes("7tv.io/v3/users/twitch/")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            username: "testuser",
+            emote_set: {
+              id: "set-tw-irc",
+              emotes: [
+                {
+                  id: "zw4",
+                  name: "HatOverlay",
+                  data: { flags: ZERO_WIDTH_FLAG },
+                },
+              ],
+            },
+          }),
+        } as Response);
+      }
+      if (url.includes("betterttv.net")) {
+        return Promise.resolve({ ok: true, json: async () => [] } as Response);
+      }
+      if (url.includes("frankerfacez.com")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ sets: {} }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ emotes: [] }),
+      } as Response);
+    });
+
+    await initializeEmotes("channelId", "channelName");
+
+    // Twitch emote "Kappa" at positions 0-4, followed by 7TV overlay "HatOverlay"
+    const text = "Kappa HatOverlay";
+    const twitchEmotes = { "25": ["0-4"] };
+    const result = parseMessageWithEmotes(text, twitchEmotes);
+    expect(result).toContain('class="emote-overlay-container"');
+    expect(result).toContain('class="emote-overlay"');
+    expect(result).toContain("HatOverlay");
+    // The Twitch emote should be the base
+    expect(result).toContain("25/default/dark/2.0");
+  });
+
   describe("Gigantify power-up (Twitch-only)", () => {
     it("renders Twitch emotes with the gigantified class and 4x source when gigantified", () => {
       const text = "Kappa";
