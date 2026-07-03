@@ -49,6 +49,7 @@ export interface ChatAppStateProps {
   youtubeSession?: PlatformSession;
   unifyChatEnabled?: boolean;
   compactActions?: boolean;
+  keepModActionsVisible?: boolean;
   modActionsFirst?: boolean;
   useYoutubeEmbed?: boolean;
   fontSize?: number;

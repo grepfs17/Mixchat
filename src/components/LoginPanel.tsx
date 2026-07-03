@@ -87,6 +87,8 @@ function LoginPanel({
   onShowDeletedMessagesChange,
   compactActions = false,
   onCompactActionsChange,
+  keepModActionsVisible = false,
+  onKeepModActionsVisibleChange,
   modActionsFirst = false,
   onModActionsFirstChange,
   splitChatEnabled = false,
@@ -431,6 +433,11 @@ function LoginPanel({
           compactActions={compactActions}
           onCompactActionsChange={(value) => {
             if (onCompactActionsChange) onCompactActionsChange(value);
+          }}
+          keepModActionsVisible={keepModActionsVisible}
+          onKeepModActionsVisibleChange={(value) => {
+            if (onKeepModActionsVisibleChange)
+              onKeepModActionsVisibleChange(value);
           }}
           modActionsFirst={modActionsFirst}
           onModActionsFirstChange={(value) => {

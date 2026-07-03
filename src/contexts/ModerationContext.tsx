@@ -6,6 +6,7 @@ export interface ModerationContextValue {
   isModerator: boolean;
   modModeActive: boolean;
   compactActions: boolean;
+  keepModActionsVisible?: boolean;
   modActionsFirst?: boolean;
   isYouTubeModerator?: boolean;
   youtubeModModeActive?: boolean;
@@ -34,6 +35,7 @@ export const ModerationContext = createContext<ModerationContextValue>({
   isModerator: false,
   modModeActive: false,
   compactActions: false,
+  keepModActionsVisible: false,
   modActionsFirst: false,
   isYouTubeModerator: false,
   youtubeModModeActive: false,

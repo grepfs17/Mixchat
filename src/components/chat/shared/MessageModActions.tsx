@@ -43,14 +43,14 @@ export function MessageModActions({
   if (!hasAny) return null;
   return (
     <div className="message-actions">
-      {onDelete && (
+      {showUserActions && onBan && (
         <button
-          onClick={onDelete}
+          onClick={onBan}
           className="action-button mod-action"
-          title={deleteTitle}
+          title={banTitle}
           style={btnStyle}
         >
-          <MdDelete size={12} />
+          <MdBlock size={12} />
         </button>
       )}
       {showUserActions && onTimeout && (
@@ -64,16 +64,6 @@ export function MessageModActions({
           <MdHourglassEmpty size={12} />
         </button>
       )}
-      {showUserActions && onBan && (
-        <button
-          onClick={onBan}
-          className="action-button mod-action"
-          title={banTitle}
-          style={btnStyle}
-        >
-          <MdBlock size={12} />
-        </button>
-      )}
       {showUserActions && onWarn && (
         <button
           onClick={onWarn}
@@ -82,6 +72,16 @@ export function MessageModActions({
           style={btnStyle}
         >
           <MdWarning size={12} />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="action-button mod-action"
+          title={deleteTitle}
+          style={btnStyle}
+        >
+          <MdDelete size={12} />
         </button>
       )}
     </div>

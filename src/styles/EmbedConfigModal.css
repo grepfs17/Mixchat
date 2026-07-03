@@ -339,6 +339,15 @@
     font-size: 14px;
 }
 
+.embed-config-checkbox-label--suboption {
+    margin-left: 30px;
+    margin-top: 12px;
+}
+
+.embed-config-checkbox-label--suboption span {
+    font-size: 13px;
+}
+
 /* Setting description */
 .embed-config-description {
     margin-top: 8px;

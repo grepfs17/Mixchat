@@ -22,6 +22,8 @@ export interface SettingsProps {
   onShowDeletedMessagesChange: (value: boolean) => void;
   compactActions: boolean;
   onCompactActionsChange: (value: boolean) => void;
+  keepModActionsVisible: boolean;
+  onKeepModActionsVisibleChange: (value: boolean) => void;
   modActionsFirst: boolean;
   onModActionsFirstChange: (value: boolean) => void;
   splitChatEnabled: boolean;

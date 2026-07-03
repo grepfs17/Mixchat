@@ -176,6 +176,43 @@ describe("TwitchMessageItem (Split Chat)", () => {
     expect(container.querySelector(".message-actions")).not.toBeInTheDocument();
   });
 
+  it("keeps mod actions visible in compact mode when keepModActionsVisible is true", () => {
+    render(
+      withModeration(<DisplayTwitchMessageItem {...baseProps} />, {
+        compactActions: true,
+        keepModActionsVisible: true,
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser: vi.fn(),
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
+    );
+    expect(screen.getByTitle("Delete message")).toBeInTheDocument();
+    expect(
+      screen.getByTitle("Timeout (10m) - Right-click for more"),
+    ).toBeInTheDocument();
+    expect(screen.getByTitle("Ban user")).toBeInTheDocument();
+    expect(screen.getByTitle("Warn user")).toBeInTheDocument();
+  });
+
+  it("hides mod actions in compact mode when keepModActionsVisible is false", () => {
+    const { container } = render(
+      withModeration(<DisplayTwitchMessageItem {...baseProps} />, {
+        compactActions: true,
+        keepModActionsVisible: false,
+        isModerator: true,
+        modModeActive: true,
+        onDeleteMessage: vi.fn(),
+        onTimeoutUser: vi.fn(),
+        onBanUser: vi.fn(),
+        onWarnUser: vi.fn(),
+      }),
+    );
+    expect(container.querySelector(".message-actions")).not.toBeInTheDocument();
+  });
+
   it("shows undo button for timeout messages", () => {
     const msg = makeTwitchMsg({
       messageType: "timeout",

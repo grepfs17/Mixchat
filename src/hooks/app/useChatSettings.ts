@@ -50,6 +50,8 @@ export type UseChatSettingsResult = {
   setShowDeletedMessages: React.Dispatch<React.SetStateAction<boolean>>;
   compactActions: boolean;
   setCompactActions: React.Dispatch<React.SetStateAction<boolean>>;
+  keepModActionsVisible: boolean;
+  setKeepModActionsVisible: React.Dispatch<React.SetStateAction<boolean>>;
   modActionsFirst: boolean;
   setModActionsFirst: React.Dispatch<React.SetStateAction<boolean>>;
   splitChatEnabled: boolean;
@@ -124,6 +126,8 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_compact_actions",
     false,
   );
+  const [keepModActionsVisible, setKeepModActionsVisible] =
+    useLocalStorageState<boolean>("mixchat_keep_mod_actions_visible", false);
   const [modActionsFirst, setModActionsFirst] = useLocalStorageState<boolean>(
     "mixchat_mod_actions_first",
     false,
@@ -236,6 +240,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setShowDeletedMessages,
     compactActions,
     setCompactActions,
+    keepModActionsVisible,
+    setKeepModActionsVisible,
     modActionsFirst,
     setModActionsFirst,
     splitChatEnabled,

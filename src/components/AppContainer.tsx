@@ -95,6 +95,8 @@ export default function AppContainer() {
     setShowDeletedMessages,
     compactActions,
     setCompactActions,
+    keepModActionsVisible,
+    setKeepModActionsVisible,
     modActionsFirst,
     setModActionsFirst,
     splitChatEnabled,
@@ -316,6 +318,8 @@ export default function AppContainer() {
             onShowDeletedMessagesChange={setShowDeletedMessages}
             compactActions={compactActions}
             onCompactActionsChange={setCompactActions}
+            keepModActionsVisible={keepModActionsVisible}
+            onKeepModActionsVisibleChange={setKeepModActionsVisible}
             modActionsFirst={modActionsFirst}
             onModActionsFirstChange={setModActionsFirst}
             splitChatEnabled={splitChatEnabled}
@@ -673,6 +677,7 @@ export default function AppContainer() {
                 mentionSoundType={mentionSoundType}
                 showDeletedMessages={showDeletedMessages}
                 compactActions={compactActions}
+                keepModActionsVisible={keepModActionsVisible}
                 modActionsFirst={modActionsFirst}
                 splitChatEnabled={splitChatEnabled}
                 chatTheme={chatTheme}

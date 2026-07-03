@@ -57,6 +57,7 @@ function TwitchMessageContentBase({
     isModerator,
     modModeActive,
     compactActions,
+    keepModActionsVisible,
     modActionsFirst,
     onDeleteMessage,
     onBanUser,
@@ -124,17 +125,19 @@ function TwitchMessageContentBase({
     : "#94a3b8";
 
   const showActionsStrip =
-    !compactActions &&
+    (!compactActions || keepModActionsVisible) &&
     (!msg.messageType ||
       msg.messageType === "chat" ||
       ((msg.messageType === "timeout" || msg.messageType === "ban") &&
         isModerator &&
         msg.targetUsername));
 
+  const showInlineActions = !compactActions;
+
   const isModAction =
     msg.messageType === "timeout" || msg.messageType === "ban";
 
-  const inlineActionButtons = showActionsStrip && !isModAction && (
+  const inlineActionButtons = showInlineActions && showActionsStrip && !isModAction && (
     <div className="message-actions">
       {onReply && (
         <button

@@ -72,6 +72,8 @@ export default function EmbedConfigModal({
   onShowDeletedMessagesChange,
   compactActions,
   onCompactActionsChange,
+  keepModActionsVisible,
+  onKeepModActionsVisibleChange,
   modActionsFirst,
   onModActionsFirstChange,
   splitChatEnabled,
@@ -477,6 +479,24 @@ export default function EmbedConfigModal({
               each message. You can still access all actions by right-clicking
               (long press on mobile) a message to open the context menu.
             </p>
+            {compactActions && (
+              <label className="embed-config-checkbox-label embed-config-checkbox-label--suboption">
+                <input
+                  type="checkbox"
+                  checked={keepModActionsVisible}
+                  onChange={(e) =>
+                    onKeepModActionsVisibleChange(e.target.checked)
+                  }
+                />
+                <span>Keep mod actions visible</span>
+              </label>
+            )}
+            {compactActions && (
+              <p className="embed-config-description embed-config-description--indented">
+                When enabled, moderator action buttons (delete, timeout, ban,
+                warn) remain visible even when inline action buttons are hidden.
+              </p>
+            )}
           </div>
         ),
       },
