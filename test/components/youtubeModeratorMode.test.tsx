@@ -346,6 +346,8 @@ describe("YouTube Moderator Mode", () => {
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteYouTubeMessage: vi.fn(),
             onTimeoutYouTubeUser: vi.fn(),
             onBanYouTubeUser: vi.fn(),
@@ -436,6 +438,8 @@ describe("YouTube Moderator Mode", () => {
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteYouTubeMessage: onDelete,
             onTimeoutYouTubeUser: vi.fn(),
             onBanYouTubeUser: vi.fn(),
@@ -460,6 +464,8 @@ describe("YouTube Moderator Mode", () => {
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteYouTubeMessage: vi.fn(),
             onTimeoutYouTubeUser: onTimeout,
             onBanYouTubeUser: vi.fn(),
@@ -486,6 +492,8 @@ describe("YouTube Moderator Mode", () => {
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteYouTubeMessage: vi.fn(),
             onTimeoutYouTubeUser: onTimeout,
             onBanYouTubeUser: vi.fn(),
@@ -512,6 +520,8 @@ describe("YouTube Moderator Mode", () => {
           {
             isYouTubeModerator: true,
             youtubeModModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteYouTubeMessage: vi.fn(),
             onTimeoutYouTubeUser: vi.fn(),
             onBanYouTubeUser: onBan,

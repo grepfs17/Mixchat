@@ -38,6 +38,8 @@ export default function MessageMenu({
   const {
     isModerator,
     modModeActive,
+    compactActions,
+    keepModActionsVisible,
     isYouTubeModerator,
     youtubeModModeActive,
     youtubeOwnChannelId,
@@ -109,16 +111,27 @@ export default function MessageMenu({
   }
 
   // Twitch moderation
+  const twitchModActionsVisibleInline =
+    isTwitch &&
+    !isSystemMessage &&
+    isModerator &&
+    modModeActive &&
+    chatMsg &&
+    !chatMsg.badges?.["broadcaster"] &&
+    !chatMsg.badges?.["moderator"] &&
+    !chatMsg.isCurrentUser &&
+    (!compactActions || keepModActionsVisible);
+
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
-    if (!isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser) {
+    if (!isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser && !twitchModActionsVisibleInline) {
       items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
-        key: "delete",
-        label: "Delete",
+        key: "ban",
+        label: "Ban",
         onClick: () => {
-          onDeleteMessage?.(chatMsg.id);
+          onBanUser?.(chatMsg.userId || "", chatMsg.author);
           onClose();
         },
       });
@@ -131,14 +144,6 @@ export default function MessageMenu({
         },
       });
       items.push({
-        key: "ban",
-        label: "Ban",
-        onClick: () => {
-          onBanUser?.(chatMsg.userId || "", chatMsg.author);
-          onClose();
-        },
-      });
-      items.push({
         key: "warn",
         label: "Warn",
         onClick: () => {
@@ -146,10 +151,31 @@ export default function MessageMenu({
           onClose();
         },
       });
+      items.push({
+        key: "delete",
+        label: "Delete",
+        onClick: () => {
+          onDeleteMessage?.(chatMsg.id);
+          onClose();
+        },
+      });
     }
   }
 
   // YouTube moderation
+  const youtubeModActionsVisibleInline =
+    isYouTube &&
+    ytMsg &&
+    isYouTubeModerator &&
+    youtubeModModeActive &&
+    ytMsg.authorChannelId &&
+    !ytMsg.authorIsModerator &&
+    !ytMsg.authorIsOwner &&
+    !(
+      youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
+    ) &&
+    (!compactActions || keepModActionsVisible);
+
   if (
     isYouTube &&
     ytMsg &&
@@ -160,14 +186,16 @@ export default function MessageMenu({
     !ytMsg.authorIsOwner &&
     !(
       youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
-    )
+    ) &&
+    !youtubeModActionsVisibleInline
   ) {
     items.push({ key: "mod-divider-youtube", divider: true });
     items.push({
-      key: "yt-delete",
-      label: "Delete",
+      key: "yt-ban",
+      label: "Ban (this chat)",
+      title: "Data API only supports per-broadcast bans",
       onClick: () => {
-        onDeleteYouTubeMessage?.(ytMsg.id);
+        onBanYouTubeUser?.(ytMsg.authorChannelId!, ytMsg.author);
         onClose();
       },
     });
@@ -184,11 +212,10 @@ export default function MessageMenu({
       },
     });
     items.push({
-      key: "yt-ban",
-      label: "Ban (this chat)",
-      title: "Data API only supports per-broadcast bans",
+      key: "yt-delete",
+      label: "Delete",
       onClick: () => {
-        onBanYouTubeUser?.(ytMsg.authorChannelId!, ytMsg.author);
+        onDeleteYouTubeMessage?.(ytMsg.id);
         onClose();
       },
     });

@@ -513,6 +513,8 @@ describe("Moderator Mode", () => {
           {
             isModerator: true,
             modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteMessage: vi.fn(),
             onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),
@@ -600,6 +602,8 @@ describe("Moderator Mode", () => {
           {
             isModerator: true,
             modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteMessage: onDelete,
             onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),
@@ -626,6 +630,8 @@ describe("Moderator Mode", () => {
           {
             isModerator: true,
             modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteMessage: vi.fn(),
             onTimeoutUser: onTimeout,
             onBanUser: vi.fn(),
@@ -652,6 +658,8 @@ describe("Moderator Mode", () => {
           {
             isModerator: true,
             modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteMessage: vi.fn(),
             onTimeoutUser: vi.fn(),
             onBanUser: onBan,
@@ -678,6 +686,8 @@ describe("Moderator Mode", () => {
           {
             isModerator: true,
             modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
             onDeleteMessage: vi.fn(),
             onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),

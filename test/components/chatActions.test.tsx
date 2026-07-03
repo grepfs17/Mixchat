@@ -558,6 +558,8 @@ describe("MessageMenu (Context Menu)", () => {
       withModeration(<MessageMenu {...baseProps} />, {
         isModerator: true,
         modModeActive: true,
+        compactActions: true,
+        keepModActionsVisible: false,
         onDeleteMessage: vi.fn(),
         onTimeoutUser: vi.fn(),
         onBanUser: vi.fn(),
