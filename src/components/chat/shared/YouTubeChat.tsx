@@ -29,6 +29,8 @@ interface YouTubeChatProps {
     author: string,
     avatar?: string,
   ) => void;
+  /** Called when a chat item is marked deleted by a moderator (or author). */
+  onMessageDeleted?: (messageId: string, deletedByText?: string) => void;
 }
 
 interface MessagePart {
@@ -53,6 +55,7 @@ interface ChatMessage {
   giftCount?: number;
   recipientName?: string;
   isDeleted?: boolean;
+  deletedByText?: string;
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
   superchat?: {
@@ -72,6 +75,7 @@ interface SSEMessageEvent {
 
 interface SSEDeleteEvent {
   messageId: string;
+  deletedByText?: string;
 }
 
 interface SSEErrorEvent {
@@ -87,12 +91,13 @@ export default function YouTubeChat({
   channel,
   onMessages,
   optimisticMessages,
-  fontSize = 14,
-  chatFont = "inter" as ChatFont,
-  splitChatEnabled = false,
+  fontSize,
+  chatFont,
+  splitChatEnabled,
   onConnectionChange,
   showDeletedMessages = false,
   onUsernameClick,
+  onMessageDeleted,
 }: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
     m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
@@ -310,10 +315,19 @@ export default function YouTubeChat({
       es.addEventListener("delete", (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEDeleteEvent;
+        if (onMessageDeleted) {
+          onMessageDeleted(data.messageId, data.deletedByText);
+        }
         setMessages((prev) => {
           if (showDeletedMessages) {
             return prev.map((m) =>
-              m.id === data.messageId ? { ...m, isDeleted: true } : m,
+              m.id === data.messageId
+                ? {
+                    ...m,
+                    isDeleted: true,
+                    deletedByText: data.deletedByText ?? m.deletedByText,
+                  }
+                : m,
             );
           }
           return prev.filter((m) => m.id !== data.messageId);
@@ -482,7 +496,7 @@ export default function YouTubeChat({
         style={
           {
             "--chat-font-size": `${fontSize}px`,
-            "--chat-font-family": FONT_FAMILY_MAP[chatFont],
+            "--chat-font-family": FONT_FAMILY_MAP[chatFont ?? "inter"],
           } as React.CSSProperties
         }
       >
@@ -501,6 +515,7 @@ export default function YouTubeChat({
             index={index}
             variant="standalone"
             onUsernameClick={onUsernameClick}
+            showDeletedMessages={showDeletedMessages}
           />
         ))}
       </div>

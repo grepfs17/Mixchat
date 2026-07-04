@@ -20,6 +20,7 @@ interface SplitChatProps {
   fontSize: number;
   chatFont: ChatFont;
   splitChatEnabled: boolean;
+  showDeletedMessages: boolean;
   onYtMessages: (messages: YTMessage[]) => void;
   youtubeSession?: PlatformSession;
   onOptimisticMessage: (id: string, text: string) => void;
@@ -56,6 +57,7 @@ export default function SplitChat({
   fontSize,
   chatFont,
   splitChatEnabled,
+  showDeletedMessages,
   onYtMessages,
   youtubeSession,
   onOptimisticMessage,
@@ -83,6 +85,7 @@ export default function SplitChat({
           fontSize={fontSize}
           chatFont={chatFont}
           splitChatEnabled={splitChatEnabled}
+          showDeletedMessages={showDeletedMessages}
           onYtMessages={onYtMessages}
           youtubeSession={youtubeSession}
           onOptimisticMessage={onOptimisticMessage}

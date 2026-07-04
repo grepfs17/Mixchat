@@ -484,7 +484,7 @@ describe("YouTubeMessageItem (Unified Chat)", () => {
     expect(screen.getByText("[$20.00]")).toBeInTheDocument();
   });
 
-  it("renders deleted notice for deleted messages", () => {
+  it("renders the YouTube-style deleted-by-moderator text", () => {
     const deletedMsg = makeYTMsg({ isDeleted: true });
     render(
       <YouTubeMessageItem
@@ -492,7 +492,9 @@ describe("YouTubeMessageItem (Unified Chat)", () => {
         entry={makeUnifiedYouTube(deletedMsg)}
       />,
     );
-    expect(screen.getByText("Deleted by a moderator")).toBeInTheDocument();
+    expect(
+      screen.getByText("Message deleted by a moderator"),
+    ).toBeInTheDocument();
   });
 });
 

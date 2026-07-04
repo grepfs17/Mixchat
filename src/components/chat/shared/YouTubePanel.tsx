@@ -20,6 +20,7 @@ interface YouTubePanelProps {
   fontSize: number;
   chatFont: ChatFont;
   splitChatEnabled: boolean;
+  showDeletedMessages: boolean;
   onYtMessages: (msgs: YTMessage[]) => void;
   youtubeSession?: PlatformSession;
   onOptimisticMessage: (id: string, text: string) => void;
@@ -52,6 +53,7 @@ export default function YouTubePanel({
   fontSize,
   chatFont,
   splitChatEnabled,
+  showDeletedMessages,
   onYtMessages,
   youtubeSession,
   onOptimisticMessage,
@@ -122,6 +124,7 @@ export default function YouTubePanel({
                 fontSize={fontSize}
                 chatFont={chatFont}
                 splitChatEnabled={splitChatEnabled}
+                showDeletedMessages={showDeletedMessages}
                 onConnectionChange={onConnectionChange}
                 onUsernameClick={handleUsernameClick}
               />

@@ -20,6 +20,7 @@ export interface YTMessage {
   giftCount?: number;
   recipientName?: string;
   isDeleted?: boolean;
+  deletedByText?: string;
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
   authorIsMember?: boolean;

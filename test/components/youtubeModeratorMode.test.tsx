@@ -178,21 +178,26 @@ describe("YouTube Moderator Mode", () => {
       expect(onDelete).toHaveBeenCalledWith("yt-1");
     });
 
-    it("calls onTimeoutYouTubeUser with channelId, 600s and author when timeout is clicked", () => {
+    it("clicking the timeout button invokes onTimeoutMenu (no auto-timeout)", () => {
       const onTimeout = vi.fn();
+      const onTimeoutMenu = vi.fn();
       render(
-        withModeration(<YouTubeMessageContent msg={makeYTMsg()} />, {
-          isYouTubeModerator: true,
-          youtubeModModeActive: true,
-          onDeleteYouTubeMessage: vi.fn(),
-          onTimeoutYouTubeUser: onTimeout,
-          onBanYouTubeUser: vi.fn(),
-        }),
+        withModeration(
+          <YouTubeMessageContent msg={makeYTMsg()} onTimeoutMenu={onTimeoutMenu} />,
+          {
+            isYouTubeModerator: true,
+            youtubeModModeActive: true,
+            onDeleteYouTubeMessage: vi.fn(),
+            onTimeoutYouTubeUser: onTimeout,
+            onBanYouTubeUser: vi.fn(),
+          },
+        ),
       );
       fireEvent.click(
         screen.getByTitle("Timeout (10m) - Right-click for more"),
       );
-      expect(onTimeout).toHaveBeenCalledWith("UCyt123", 600, "YTUser");
+      expect(onTimeout).not.toHaveBeenCalled();
+      expect(onTimeoutMenu).toHaveBeenCalledWith(expect.anything());
     });
 
     it("calls onBanYouTubeUser with channelId and author when ban is clicked", () => {
@@ -282,7 +287,7 @@ describe("YouTube Moderator Mode", () => {
       );
     });
 
-    it("right-click on timeout button invokes onTimeoutMenu with channelId", () => {
+    it("left-click on timeout button invokes onTimeoutMenu (no auto-timeout)", () => {
       const onTimeoutMenu = vi.fn();
       render(
         withModeration(
@@ -299,7 +304,7 @@ describe("YouTube Moderator Mode", () => {
       const timeoutBtn = screen.getByTitle(
         "Timeout (10m) - Right-click for more",
       );
-      fireEvent.contextMenu(timeoutBtn);
+      fireEvent.click(timeoutBtn);
       expect(onTimeoutMenu).toHaveBeenCalledWith(
         expect.any(Number),
         expect.any(Number),

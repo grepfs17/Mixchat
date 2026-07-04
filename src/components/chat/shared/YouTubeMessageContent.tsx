@@ -25,6 +25,8 @@ export interface YouTubeMessageContentProps {
     author: string,
     avatar?: string,
   ) => void;
+  /** When true, deleted messages are dimmed and clickable to reveal; otherwise they collapse. */
+  showDeletedMessages?: boolean;
 }
 
 const YT_EVENT_CONFIG: Record<
@@ -69,6 +71,19 @@ function formatTimestamp(timestamp: Date | string) {
   });
 }
 
+/**
+ * Format the "Message deleted by @..." line. YouTube's
+ * `deleted_state_message` already contains the full text in many cases
+ * ("Message deleted by @mod", "Message removed by author", etc.), so we
+ * trust it when present. Otherwise we fall back to "Message deleted by a
+ * moderator" so we never regress to the bare "click to see..." line.
+ */
+function formatDeletedByText(raw: string | undefined): string {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed) return trimmed;
+  return "Message deleted by a moderator";
+}
+
 export function YouTubeMessageContent({
   msg,
   index = 0,
@@ -80,6 +95,7 @@ export function YouTubeMessageContent({
   onContextMenu,
   onTimeoutMenu,
   onUsernameClick,
+  showDeletedMessages = false,
 }: YouTubeMessageContentProps) {
   const {
     isYouTubeModerator,
@@ -111,13 +127,13 @@ export function YouTubeMessageContent({
     return (
       <MessageModActions
         onDelete={() => onDeleteYouTubeMessage?.(msg.id)}
-        onTimeout={() =>
-          onTimeoutYouTubeUser?.(msg.authorChannelId!, 600, msg.author)
-        }
+        onTimeout={(e) => {
+          e?.preventDefault?.();
+          e?.stopPropagation?.();
+          onTimeoutMenu?.(e);
+        }}
         onTimeoutContextMenu={(e) => {
           e.preventDefault();
-          e.stopPropagation();
-          onTimeoutMenu?.(e);
         }}
         onBan={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
         banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
@@ -260,11 +276,17 @@ export function YouTubeMessageContent({
         </span>
         <span className="message-separator">:</span>
         {msg.isDeleted && !deletedRevealed ? (
-          <span
-            className="message-text deleted-clickable"
-            onClick={() => setDeletedRevealed(true)}
-          >
-            click to see the deleted message
+          <span className="message-text deleted-clickable">
+            {formatDeletedByText(msg.deletedByText)}{" "}
+            {showDeletedMessages ? (
+              <button
+                type="button"
+                className="yt-deleted-reveal"
+                onClick={() => setDeletedRevealed(true)}
+              >
+                View deleted message
+              </button>
+            ) : null}
           </span>
         ) : (
           <span className="message-text">
@@ -273,9 +295,6 @@ export function YouTubeMessageContent({
         )}
         {!modActionsFirst && renderModActions()}
       </div>
-      {msg.isDeleted && (
-        <div className="deleted-notice">Deleted by a moderator</div>
-      )}
     </div>
   );
 }
