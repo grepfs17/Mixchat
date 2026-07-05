@@ -397,11 +397,11 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           </a>{" "}
           &mdash; Licensed under{" "}
           <a
-            href="https://opensource.org/licenses/MIT"
+            href="https://www.gnu.org/licenses/agpl-3.0.html"
             target="_blank"
             rel="noopener noreferrer"
           >
-            MIT
+            AGPL-3.0
           </a>{" "}
           &mdash; {DISPLAY_VERSION}
         </span>

@@ -69,10 +69,10 @@ const description =
         the user logs out or clears their cache, session data is removed.
     </p>
     <p>
-        The one exception is the optional <strong>Song Queue</strong> streamer
-        tool, which creates a small server-side session record so the
-        streamer can share a read-only listening page with chatters. See
-        section 3.1 below for the full details.
+        The one exception is the optional <strong>Song Queue</strong> streamer tool,
+        which creates a small server-side session record so the streamer can share
+        a read-only listening page with chatters. See section 3.1 below for the full
+        details.
     </p>
 
     <h2>2. Data Collection</h2>
@@ -127,40 +127,37 @@ const description =
     <h2>3.1 Song Queue Sessions</h2>
     <p>
         When a streamer enables the Song Queue tool inside Streamer tools,
-        Mixchat creates a small server-side session record (a JSON file)
-        that contains:
+        Mixchat creates a small server-side session record (a JSON file) that
+        contains:
     </p>
     <ul>
         <li>The session title and a unique 24-character session id.</li>
         <li>
-            The list of queued YouTube videos, including the submitter's
-            display name (Twitch username or YouTube channel name) and
-            avatar URL.
+            The list of queued YouTube videos, including the submitter's display
+            name (Twitch username or YouTube channel name) and avatar URL.
         </li>
         <li>
-            A SHA-256 hash of the streamer's owner token. The owner token
-            itself is returned to the streamer once and never stored on
-            our servers.
+            A SHA-256 hash of the streamer's owner token. The owner token itself
+            is returned to the streamer once and never stored on our servers.
         </li>
     </ul>
     <p>
-        If the streamer toggles <strong>Public link</strong> on, anyone with
-        the link can read a stripped-down view of the queue (video ids,
-        titles, submitter display names) at <code>/s/&lt;id&gt;</code>.
-        Public viewers cannot see submitter user ids or the streamer's
-        account.
+        If the streamer toggles <strong>Public link</strong> on, anyone with the link
+        can read a stripped-down view of the queue (video ids, titles, submitter display
+        names) at <code>/s/&lt;id&gt;</code>. Public viewers cannot see
+        submitter user ids or the streamer's account.
     </p>
     <p>
-        No OAuth tokens, email addresses, or passwords are stored in the
-        song queue record. Ending the queue deletes it immediately.
+        No OAuth tokens, email addresses, or passwords are stored in the song
+        queue record. Ending the queue deletes it immediately.
     </p>
 
     <h2>4. Stateless and Database-Free (with One Exception)</h2>
     <p>
-        Mixchat's server/API is "stateless" for chat and OAuth data. This
-        means it doesn't remember sessions from one second to the next
-        without the browser sending its security key. There is no backend
-        database for messages, accounts, or emote data.
+        Mixchat's server/API is "stateless" for chat and OAuth data. This means
+        it doesn't remember sessions from one second to the next without the
+        browser sending its security key. There is no backend database for
+        messages, accounts, or emote data.
     </p>
     <p>
         The Song Queue feature (see section 3.1) is the one piece of stateful
@@ -195,7 +192,7 @@ const description =
     <p>
         If you have questions about any of this, open an issue on the
         <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
-            >GitHub repository</a
+            >Forgejo repository</a
         >.
     </p>
 
