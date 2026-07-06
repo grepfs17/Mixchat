@@ -21,15 +21,16 @@ import {
   EMOJI_LIST,
   type EmojiEntry,
 } from "../../../lib/emojiShortcodes";
-import { isMobileDevice } from "../../../lib/device";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { MOD_COMMANDS } from "../../../lib/constants";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
+import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
+import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
+import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 import { useSlowMode } from "../../../hooks/chat/useSlowMode";
 import { useEmotes } from "../../../hooks/chat/useEmotes";
-import "../../../styles/chat/MessageInput.css";
 
 interface YTMessage {
   id: string;
@@ -107,8 +108,6 @@ export default function UnifiedInput({
   const ytPickerBtnRef = useRef<HTMLButtonElement>(null);
   const ytPickerSearchRef = useRef<HTMLInputElement>(null);
 
-  // Menu rect for portal positioning
-  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
   const emojiMenuRef = useRef<HTMLDivElement>(null);
 
@@ -204,22 +203,8 @@ export default function UnifiedInput({
   ]);
 
   // --- Insert at cursor helper ---
-  const insertAtCursor = useCallback(
-    (before: string, after: string = " ") => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? message.length;
-      const textBefore = message.substring(0, cursor);
-      const textAfter = message.substring(cursor);
-      const newVal = textBefore + before + after + textAfter;
-      setMessage(newVal);
-      const newPos = (textBefore + before + after).length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(newPos, newPos);
-        inputRef.current?.focus();
-      }, 0);
-    },
-    [message],
-  );
+  const { insertWithPrefix, insertAtPosition, replaceCurrentWord } =
+    useInsertAtCursor({ message, setMessage, inputRef });
 
   // --- Autocomplete instances ---
   const emoteAutocomplete = useAutocomplete<{
@@ -228,57 +213,27 @@ export default function UnifiedInput({
     source: string;
   }>({
     onSelect: (emote) => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? message.length;
-      const before = message.substring(0, cursor);
-      const after = message.substring(cursor);
-      const lastSpace = before.lastIndexOf(" ");
-      const prefix = before.substring(0, lastSpace + 1);
-      const newVal = prefix + emote.name + " " + after;
-      setMessage(newVal);
+      insertWithPrefix(emote.name);
       setShowEmotePicker(false);
-      const pos = (prefix + emote.name + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
     },
     onSend: doSend,
   });
 
   const emojiAutocomplete = useAutocomplete<EmojiEntry>({
     onSelect: (entry) => {
-      if (!inputRef.current || colonPosRef.current === -1) return;
+      if (colonPosRef.current === -1) return;
       const before = message.substring(0, colonPosRef.current);
-      const cursor = inputRef.current.selectionStart ?? message.length;
+      const cursor = inputRef.current?.selectionStart ?? message.length;
       const after = message.substring(cursor);
-      const newVal = before + entry.char + " " + after;
-      setMessage(newVal);
+      insertAtPosition(before, entry.char);
       colonPosRef.current = -1;
-      const pos = (before + entry.char + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
     },
     onSend: doSend,
   });
 
   const usernameAutocomplete = useAutocomplete<string>({
     onSelect: (username) => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? message.length;
-      const before = message.substring(0, cursor);
-      const after = message.substring(cursor);
-      const lastSpace = before.lastIndexOf(" ");
-      const prefix = before.substring(0, lastSpace + 1);
-      const newVal = prefix + "@" + username + " " + after;
-      setMessage(newVal);
-      const pos = (prefix + "@" + username + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
+      insertWithPrefix(username, "@");
     },
     onSend: doSend,
   });
@@ -289,18 +244,20 @@ export default function UnifiedInput({
     description: string;
   }>({
     onSelect: (cmd) => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? message.length;
-      const after = message.substring(cursor);
-      const newVal = cmd.name + " " + after;
-      setMessage(newVal);
-      const pos = (cmd.name + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
+      replaceCurrentWord(cmd.name);
     },
     onSend: doSend,
+  });
+
+  // --- Autocomplete menu management ---
+  const { menuRect, closeAll } = useAutocompleteMenu({
+    inputRef,
+    autocompleteInstances: [
+      emoteAutocomplete,
+      emojiAutocomplete,
+      usernameAutocomplete,
+      commandAutocomplete,
+    ],
   });
 
   // --- Text change handler ---
@@ -312,14 +269,6 @@ export default function UnifiedInput({
       const textBeforeCursor = newMessage.substring(0, cursorPos);
       const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
       const currentWord = textBeforeCursor.substring(lastSpaceIndex + 1);
-
-      // Close all menus first
-      const closeAll = () => {
-        emoteAutocomplete.hide();
-        emojiAutocomplete.hide();
-        usernameAutocomplete.hide();
-        commandAutocomplete.hide();
-      };
 
       // YouTube emoji :shortcode:
       if (sendTarget === "youtube" || sendTarget === "both") {
@@ -398,6 +347,7 @@ export default function UnifiedInput({
       emojiAutocomplete,
       usernameAutocomplete,
       commandAutocomplete,
+      closeAll,
     ],
   );
 
@@ -459,56 +409,6 @@ export default function UnifiedInput({
     if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
   }, [youtubeAvailable, sendTarget]);
 
-  // Menu rect tracking
-  useEffect(() => {
-    const anyOpen =
-      emoteAutocomplete.isOpen ||
-      emojiAutocomplete.isOpen ||
-      usernameAutocomplete.isOpen ||
-      commandAutocomplete.isOpen;
-    if (!anyOpen || !inputRef.current) {
-      setMenuRect(null);
-      return;
-    }
-    setMenuRect(inputRef.current.getBoundingClientRect());
-  }, [
-    emoteAutocomplete.isOpen,
-    emojiAutocomplete.isOpen,
-    usernameAutocomplete.isOpen,
-    commandAutocomplete.isOpen,
-  ]);
-
-  // Scroll selected item into view
-  useEffect(() => {
-    if (
-      emoteAutocomplete.isOpen &&
-      emoteMenuRef.current &&
-      emoteAutocomplete.selectedIndex >= 0
-    ) {
-      const el = emoteMenuRef.current.children[
-        emoteAutocomplete.selectedIndex
-      ] as HTMLElement;
-      el?.scrollIntoView(
-        isMobileDevice()
-          ? { inline: "nearest", block: "nearest" }
-          : { block: "nearest" },
-      );
-    }
-  }, [emoteAutocomplete.selectedIndex, emoteAutocomplete.isOpen]);
-
-  useEffect(() => {
-    if (
-      emojiAutocomplete.isOpen &&
-      emojiMenuRef.current &&
-      emojiAutocomplete.selectedIndex >= 0
-    ) {
-      const el = emojiMenuRef.current.children[
-        emojiAutocomplete.selectedIndex
-      ] as HTMLElement;
-      el?.scrollIntoView({ block: "nearest" });
-    }
-  }, [emojiAutocomplete.selectedIndex, emojiAutocomplete.isOpen]);
-
   // YouTube picker
   useEffect(() => {
     if (showYtPicker) {
@@ -544,46 +444,15 @@ export default function UnifiedInput({
     return () => document.removeEventListener("mousedown", handler);
   }, [showYtPicker, showEmotePicker]);
 
-  // Close autocomplete on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        emoteMenuRef.current &&
-        !emoteMenuRef.current.contains(target) &&
-        inputRef.current &&
-        !inputRef.current.contains(target)
-      ) {
-        emoteAutocomplete.hide();
-        emojiAutocomplete.hide();
-        usernameAutocomplete.hide();
-        commandAutocomplete.hide();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [
-    emoteAutocomplete,
-    emojiAutocomplete,
-    usernameAutocomplete,
-    commandAutocomplete,
-  ]);
-
   // --- YouTube emoji insert from picker ---
   const insertEmojiFromPicker = useCallback(
     (char: string) => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? message.length;
+      const cursor = inputRef.current?.selectionStart ?? message.length;
       const before = message.substring(0, cursor);
       const after = message.substring(cursor);
-      setMessage(before + char + after);
-      const pos = cursor + char.length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
+      insertAtPosition(before, char, after);
     },
-    [message],
+    [message, insertAtPosition],
   );
 
   // --- Render ---
@@ -724,203 +593,123 @@ export default function UnifiedInput({
 
       {/* === PORTAL MENUS === */}
 
-      {emoteAutocomplete.isOpen &&
-        emoteAutocomplete.results.length > 0 &&
-        menuRect &&
-        createPortal(
-          <div
-            ref={emoteMenuRef}
-            className="autocomplete-menu"
-            style={{
-              position: "fixed",
-              bottom: window.innerHeight - menuRect.top + 6,
-              left: menuRect.left,
-              width: menuRect.width,
-              maxHeight: isMobileDevice() ? "60px" : "40vh",
-              ...(isMobileDevice()
-                ? {
-                    left: 0,
-                    right: 0,
-                    display: "flex",
-                    flexDirection: "row",
-                    overflowX: "auto",
-                    overflowY: "hidden",
-                    scrollbarWidth: "none",
-                    gap: 4,
-                    padding: "4px 8px",
-                    background: "var(--color-autocomplete-bg)",
-                    borderTop: "1px solid var(--color-autocomplete-border)",
-                    borderBottom: "1px solid var(--color-autocomplete-border)",
-                  }
-                : {}),
-            }}
+      <AutocompleteMenu
+        isOpen={emoteAutocomplete.isOpen}
+        results={emoteAutocomplete.results}
+        selectedIndex={emoteAutocomplete.selectedIndex}
+        menuRect={menuRect}
+        menuRef={emoteMenuRef}
+        onSelect={(i) => emoteAutocomplete.select(i)}
+        onMouseEnter={(i) => emoteAutocomplete.setSelectedIndex(i)}
+        renderItem={(emote, index, isSelected) => (
+          <MenuItem
+            key={`${emote.source}-${emote.name}`}
+            index={index}
+            isSelected={isSelected}
+            onSelect={(i) => emoteAutocomplete.select(i)}
+            onMouseEnter={(i) => emoteAutocomplete.setSelectedIndex(i)}
+            title={emote.name}
           >
-            {emoteAutocomplete.results.map((emote, index) =>
-              isMobileDevice() ? (
-                <div
-                  key={`${emote.source}-${emote.name}`}
-                  onClick={() => emoteAutocomplete.select(index)}
-                  className={`autocomplete-item${index === emoteAutocomplete.selectedIndex ? " selected" : ""}`}
-                  style={{
-                    flexShrink: 0,
-                    borderRadius: 6,
-                    border:
-                      index === emoteAutocomplete.selectedIndex
-                        ? "1px solid var(--color-accent)"
-                        : "1px solid transparent",
-                    padding: 4,
-                  }}
-                  title={emote.name}
-                >
-                  <img
-                    src={emote.url}
-                    alt={emote.name}
-                    style={{ width: 40, height: 40 }}
-                  />
-                </div>
-              ) : (
-                <div
-                  key={`${emote.source}-${emote.name}`}
-                  onClick={() => emoteAutocomplete.select(index)}
-                  className={`autocomplete-item${index === emoteAutocomplete.selectedIndex ? " selected" : ""}`}
-                  onMouseEnter={() => emoteAutocomplete.setSelectedIndex(index)}
-                >
-                  <img
-                    src={emote.url}
-                    alt={emote.name}
-                    style={{ width: 32, height: 32 }}
-                  />
-                  <div className="autocomplete-item-info">
-                    <span className="autocomplete-item-name">{emote.name}</span>
-                    <span className="autocomplete-item-type">
-                      {emote.source}
-                    </span>
-                  </div>
-                </div>
-              ),
-            )}
-          </div>,
-          document.body,
+            <img
+              src={emote.url}
+              alt={emote.name}
+              style={{ width: 32, height: 32 }}
+            />
+            <div className="autocomplete-item-info">
+              <span className="autocomplete-item-name">{emote.name}</span>
+              <span className="autocomplete-item-type">{emote.source}</span>
+            </div>
+          </MenuItem>
         )}
+      />
 
-      {emojiAutocomplete.isOpen &&
-        emojiAutocomplete.results.length > 0 &&
-        menuRect &&
-        createPortal(
-          <div
-            ref={emojiMenuRef}
-            className="autocomplete-menu"
-            style={{
-              position: "fixed",
-              bottom: window.innerHeight - menuRect.top + 6,
-              left: menuRect.left,
-              width: menuRect.width,
-              maxHeight: "260px",
-            }}
+      <AutocompleteMenu
+        isOpen={emojiAutocomplete.isOpen}
+        results={emojiAutocomplete.results}
+        selectedIndex={emojiAutocomplete.selectedIndex}
+        menuRect={menuRect}
+        menuRef={emojiMenuRef}
+        maxHeight="260px"
+        onSelect={(i) => emojiAutocomplete.select(i)}
+        onMouseEnter={(i) => emojiAutocomplete.setSelectedIndex(i)}
+        renderItem={(entry, idx, isSelected) => (
+          <MenuItem
+            key={entry.shortcode}
+            index={idx}
+            isSelected={isSelected}
+            onSelect={(i) => emojiAutocomplete.select(i)}
+            onMouseEnter={(i) => emojiAutocomplete.setSelectedIndex(i)}
           >
-            {emojiAutocomplete.results.map((entry, idx) => (
-              <div
-                key={entry.shortcode}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  emojiAutocomplete.select(idx);
-                }}
-                onMouseEnter={() => emojiAutocomplete.setSelectedIndex(idx)}
-                className={`emote-autocomplete-item${idx === emojiAutocomplete.selectedIndex ? " selected" : ""}`}
-              >
-                <span
-                  style={{
-                    fontSize: 22,
-                    lineHeight: 1,
-                    minWidth: 28,
-                    textAlign: "center",
-                  }}
-                >
-                  {entry.char}
-                </span>
-                <div className="emote-autocomplete-info">
-                  <span className="emote-autocomplete-name">
-                    :{entry.shortcode}:
-                  </span>
-                  <span className="emote-autocomplete-type">emoji</span>
-                </div>
-              </div>
-            ))}
-          </div>,
-          document.body,
+            <span
+              style={{
+                fontSize: 22,
+                lineHeight: 1,
+                minWidth: 28,
+                textAlign: "center",
+              }}
+            >
+              {entry.char}
+            </span>
+            <div className="autocomplete-item-info">
+              <span className="autocomplete-item-name">
+                :{entry.shortcode}:
+              </span>
+              <span className="autocomplete-item-type">emoji</span>
+            </div>
+          </MenuItem>
         )}
+      />
 
-      {usernameAutocomplete.isOpen &&
-        usernameAutocomplete.results.length > 0 &&
-        menuRect &&
-        createPortal(
-          <div
-            className="autocomplete-menu"
-            style={{
-              position: "fixed",
-              bottom: window.innerHeight - menuRect.top + 6,
-              left: menuRect.left,
-              width: menuRect.width,
-              maxHeight: "40vh",
-            }}
+      <AutocompleteMenu
+        isOpen={usernameAutocomplete.isOpen}
+        results={usernameAutocomplete.results}
+        selectedIndex={usernameAutocomplete.selectedIndex}
+        menuRect={menuRect}
+        onSelect={(i) => usernameAutocomplete.select(i)}
+        onMouseEnter={(i) => usernameAutocomplete.setSelectedIndex(i)}
+        renderItem={(username, index, isSelected) => (
+          <MenuItem
+            key={username}
+            index={index}
+            isSelected={isSelected}
+            onSelect={(i) => usernameAutocomplete.select(i)}
+            onMouseEnter={(i) => usernameAutocomplete.setSelectedIndex(i)}
+            style={{ fontSize: "0.95rem" }}
           >
-            {usernameAutocomplete.results.map((username, index) => (
-              <div
-                key={username}
-                onClick={() => usernameAutocomplete.select(index)}
-                className={`autocomplete-item${index === usernameAutocomplete.selectedIndex ? " selected" : ""}`}
-                style={{ fontSize: "0.95rem" }}
-                onMouseEnter={() =>
-                  usernameAutocomplete.setSelectedIndex(index)
-                }
-              >
-                @{username}
-              </div>
-            ))}
-          </div>,
-          document.body,
+            @{username}
+          </MenuItem>
         )}
+      />
 
-      {commandAutocomplete.isOpen &&
-        commandAutocomplete.results.length > 0 &&
-        menuRect &&
-        createPortal(
-          <div
-            className="autocomplete-menu"
-            style={{
-              position: "fixed",
-              bottom: window.innerHeight - menuRect.top + 6,
-              left: menuRect.left,
-              width: menuRect.width,
-              maxHeight: "40vh",
-            }}
+      <AutocompleteMenu
+        isOpen={commandAutocomplete.isOpen}
+        results={commandAutocomplete.results}
+        selectedIndex={commandAutocomplete.selectedIndex}
+        menuRect={menuRect}
+        onSelect={(i) => commandAutocomplete.select(i)}
+        onMouseEnter={(i) => commandAutocomplete.setSelectedIndex(i)}
+        renderItem={(cmd, index, isSelected) => (
+          <MenuItem
+            key={cmd.name}
+            index={index}
+            isSelected={isSelected}
+            onSelect={(i) => commandAutocomplete.select(i)}
+            onMouseEnter={(i) => commandAutocomplete.setSelectedIndex(i)}
+            className="autocomplete-command-item"
           >
-            {commandAutocomplete.results.map((cmd, index) => (
-              <div
-                key={cmd.name}
-                onClick={() => commandAutocomplete.select(index)}
-                className={`autocomplete-command-item${index === commandAutocomplete.selectedIndex ? " selected" : ""}`}
-                onMouseEnter={() => commandAutocomplete.setSelectedIndex(index)}
-              >
-                <div className="autocomplete-command-header">
-                  <span className="autocomplete-command-name">{cmd.name}</span>
-                  <span className="autocomplete-command-usage">
-                    {cmd.usage}
-                  </span>
-                </div>
-                <div className="autocomplete-command-desc">
-                  {cmd.description}
-                </div>
-              </div>
-            ))}
-          </div>,
-          document.body,
+            <div className="autocomplete-command-header">
+              <span className="autocomplete-command-name">{cmd.name}</span>
+              <span className="autocomplete-command-usage">{cmd.usage}</span>
+            </div>
+            <div className="autocomplete-command-desc">{cmd.description}</div>
+          </MenuItem>
         )}
+      />
 
       <EmoteMenu
         emotes={emotesOrganized}
         onSelectEmote={(name) => {
-          insertAtCursor(name);
+          insertWithPrefix(name);
           setShowEmotePicker(false);
         }}
         isOpen={showEmotePicker}

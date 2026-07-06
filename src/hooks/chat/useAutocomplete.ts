@@ -6,7 +6,7 @@ interface UseAutocompleteOptions<T> {
   onClose?: () => void;
 }
 
-interface UseAutocompleteReturn<T> {
+export interface UseAutocompleteReturn<T> {
   results: T[];
   selectedIndex: number;
   isOpen: boolean;
