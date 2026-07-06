@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { YTMessage } from "../../../components/chat/unified/types";
 
 export interface UseYouTubeSyncOptions {
@@ -32,6 +32,7 @@ export interface UseYouTubeSyncReturn {
   handleYtOptimisticMessage: (id: string, text: string) => void;
   handleYtOptimisticFailed: (id: string) => void;
   removeYtMessage: (id: string) => void;
+  markYtMessageDeleted: (id: string, deletedByText?: string) => void;
   getYtMessageText: (m: YTMessage) => string;
 }
 
@@ -53,6 +54,13 @@ export function useYouTubeSync({
   const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>(
     [],
   );
+  /**
+   * Sticky map of message id → deletedByText. Survives the periodic full
+   * replacement of `ytMessages` from the SSE `onMessages` callback, so a
+   * mod's delete keeps its tombstone even when InnerTube re-publishes the
+   * original (un-deleted) message on the next poll.
+   */
+  const deletedRef = useRef<Map<string, string>>(new Map());
 
   const youtubeVideoId = useMemo(() => {
     if (manualVideoId) return manualVideoId;
@@ -150,6 +158,7 @@ export function useYouTubeSync({
     setAutoChannelId(null);
     setYtError(null);
     setYtMessages([]);
+    deletedRef.current = new Map();
   }, [selectedTwitchChannelName]);
 
   const getYtMessageText = useCallback(
@@ -188,7 +197,18 @@ export function useYouTubeSync({
 
         return remaining.length === prev.length ? prev : remaining;
       });
-      setYtMessages(msgs);
+      const delMap = deletedRef.current;
+      if (delMap.size > 0) {
+        const patched = msgs.map((m) => {
+          const text = delMap.get(m.id);
+          if (text === undefined) return m;
+          if (m.isDeleted && m.deletedByText) return m;
+          return { ...m, isDeleted: true, deletedByText: text };
+        });
+        setYtMessages(patched);
+      } else {
+        setYtMessages(msgs);
+      }
     },
     [getYtMessageText],
   );
@@ -224,6 +244,27 @@ export function useYouTubeSync({
     });
   }, []);
 
+  const markYtMessageDeleted = useCallback(
+    (id: string, deletedByText?: string) => {
+      // Persist the deleted state so it survives full `ytMessages`
+      // replacements from the periodic SSE `onMessages` callback.
+      const text =
+        deletedByText ??
+        `Message deleted by @${youtubeSession?.displayName ?? "a moderator"}`;
+      deletedRef.current.set(id, text);
+      setYtMessages((prev) => {
+        const exists = prev.some((m) => m.id === id);
+        if (!exists) return prev;
+        return prev.map((m) =>
+          m.id === id
+            ? { ...m, isDeleted: true, deletedByText: text }
+            : m,
+        );
+      });
+    },
+    [youtubeSession?.displayName],
+  );
+
   return {
     youtubeVideoId,
     manualVideoId,
@@ -242,6 +283,7 @@ export function useYouTubeSync({
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
     removeYtMessage,
+    markYtMessageDeleted,
     getYtMessageText,
   };
 }

@@ -174,6 +174,7 @@ export function useChatAppState({
     handleYtOptimisticMessage,
     handleYtOptimisticFailed,
     removeYtMessage,
+    markYtMessageDeleted,
     getYtMessageText,
   } = useYouTubeSync({
     linkedYoutubeUrl,
@@ -781,6 +782,7 @@ export function useChatAppState({
     handleYtTimeout,
     handleToggleYoutubeModMode,
     getYtMessageText,
+    markYtMessageDeleted,
     sendTwitchMessage,
     slowModeWaitTime,
     followerModeMinutes,

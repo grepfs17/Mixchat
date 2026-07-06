@@ -24,6 +24,8 @@ interface ChatMessage {
   messageType?: string;
   giftCount?: number;
   recipientName?: string;
+  isDeleted?: boolean;
+  deletedByText?: string;
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
   authorIsMember?: boolean;
@@ -31,8 +33,8 @@ interface ChatMessage {
     amount: string;
     color: string;
     sticker?: {
-      url: string;
-      alt: string;
+      url?: string;
+      alt?: string;
     };
   };
 }
@@ -267,6 +269,54 @@ export function isAuthorMember(msg: any): boolean {
   });
 }
 
+/**
+ * Extracts plain text from a youtubei.js `Text` node (used for
+ * `deleted_state_message` on MarkChatItemAsDeletedAction and friends).
+ * The Text node exposes `.toString()` for simple text and `.runs` for
+ * styled segments; we concatenate both for a safe fallback.
+ */
+function extractDeletedByText(textNode: any): string | undefined {
+  if (!textNode) return undefined;
+  try {
+    if (typeof textNode.toString === "function") {
+      const s = textNode.toString();
+      if (s && typeof s === "string") return s;
+    }
+  } catch {}
+  if (Array.isArray(textNode.runs)) {
+    const out = textNode.runs
+      .map((r: any) => (typeof r?.text === "string" ? r.text : ""))
+      .join("");
+    if (out) return out;
+  }
+  if (typeof textNode.text === "string") return textNode.text;
+  return undefined;
+}
+
+/**
+ * Detects a "deleted" chat item delivered in the body of an
+ * AddChatItemAction or ReplaceChatItemAction. InnerTube sometimes ships
+ * a moderator-deleted message as a fresh LiveChatTextMessage whose
+ * `message` text is the "deleted by" placeholder. When that pattern is
+ * present we return the text; otherwise undefined.
+ */
+function detectDeletedReplacementText(item: any): string | undefined {
+  if (!item) return undefined;
+  // LiveChatTextMessage carries its content on `message` (a Text node).
+  const text = extractDeletedByText(item.message);
+  if (!text) return undefined;
+  const lower = text.toLowerCase();
+  if (
+    lower.startsWith("message deleted by") ||
+    lower.startsWith("message removed by") ||
+    lower === "this message was deleted by the author." ||
+    lower.includes("deleted by")
+  ) {
+    return text;
+  }
+  return undefined;
+}
+
 function parseTextMessageBase(item: any): ChatMessage {
   return {
     id: item.id,
@@ -434,6 +484,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
+  /**
+   * Sticky set of message ids that have been marked deleted by a moderator.
+   * Survives the FIFO shift of the bounded `messages` buffer, so a deleted
+   * message is never re-broadcast if InnerTube re-publishes it after the
+   * buffer has cycled past it.
+   */
+  const deletedIds = new Map<string, string>();
 
   let resolveReady: () => void;
   const ready = new Promise<void>((resolve) => {
@@ -448,17 +505,62 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     );
     if (initialData?.actions) {
       for (const action of initialData.actions) {
-        if (!action?.is?.(YTNodes.AddChatItemAction)) continue;
-        const item = action.as(YTNodes.AddChatItemAction)?.item;
-        if (!item) continue;
-        const msg = parse(item);
-        if (msg && !seenIds.has(msg.id)) {
-          seenIds.add(msg.id);
-          messages.push(msg);
-          if (messages.length > 200) {
-            const removed = messages.shift()!;
-            seenIds.delete(removed.id);
+        if (!action?.is) continue;
+        if (action.is(YTNodes.AddChatItemAction)) {
+          const item = action.as(YTNodes.AddChatItemAction)?.item;
+          if (!item) continue;
+          const msg = parse(item);
+          if (!msg) continue;
+          if (deletedIds.has(msg.id)) {
+            broadcast(session!, "delete", {
+              messageId: msg.id,
+              deletedByText: deletedIds.get(msg.id),
+            });
+            continue;
           }
+          const deletedByText = detectDeletedReplacementText(item);
+          if (deletedByText) {
+            deletedIds.set(msg.id, deletedByText);
+            broadcast(session!, "delete", {
+              messageId: msg.id,
+              deletedByText,
+            });
+            continue;
+          }
+          if (!seenIds.has(msg.id)) {
+            seenIds.add(msg.id);
+            messages.push(msg);
+            if (messages.length > 200) {
+              const removed = messages.shift()!;
+              seenIds.delete(removed.id);
+            }
+          }
+          continue;
+        }
+        if (action.is(YTNodes.MarkChatItemAsDeletedAction)) {
+          const targetId = action.target_item_id;
+          if (!targetId) continue;
+          const text = extractDeletedByText(action.deleted_state_message);
+          deletedIds.set(targetId, text ?? "Message deleted by a moderator");
+          broadcast(session!, "delete", {
+            messageId: targetId,
+            deletedByText: text,
+          });
+          continue;
+        }
+        if (action.is(YTNodes.ReplaceChatItemAction)) {
+          const targetId = action.target_item_id;
+          const replacement = action.replacement_item;
+          if (!targetId || !replacement) continue;
+          const text = detectDeletedReplacementText(replacement);
+          if (text) {
+            deletedIds.set(targetId, text);
+            broadcast(session!, "delete", {
+              messageId: targetId,
+              deletedByText: text,
+            });
+          }
+          continue;
         }
       }
     }
@@ -472,12 +574,39 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const item = action.as(YTNodes.AddChatItemAction)?.item;
         if (!item) return;
         const msg = parse(item);
-        if (msg && !seenIds.has(msg.id)) {
+        if (!msg) return;
+        if (deletedIds.has(msg.id)) {
+          // Re-published after a delete. Don't re-broadcast; if any client
+          // missed the original delete, send one now so they stay in sync.
+          broadcast(session!, "delete", {
+            messageId: msg.id,
+            deletedByText: deletedIds.get(msg.id),
+          });
+          return;
+        }
+        // InnerTube sometimes delivers a deleted message as a fresh
+        // LiveChatTextMessage whose `message` text is the "deleted by"
+        // placeholder and whose `author` is the moderator. Detect that
+        // shape and treat it as a delete event so the client tombstone
+        // sticks.
+        const deletedByText = detectDeletedReplacementText(item);
+        if (deletedByText) {
+          deletedIds.set(msg.id, deletedByText);
+          const idx = messages.findIndex((m) => m.id === msg.id);
+          if (idx !== -1) {
+            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText };
+          }
+          broadcast(session!, "delete", { messageId: msg.id, deletedByText });
+          return;
+        }
+        if (!seenIds.has(msg.id)) {
           seenIds.add(msg.id);
           messages.push(msg);
           if (messages.length > 200) {
             const removed = messages.shift()!;
             seenIds.delete(removed.id);
+            // The shifted message is still in deletedIds if it was
+            // marked deleted — leave the sticky entry in place.
           }
           broadcast(session!, "message", msg, msg.id);
         }
@@ -489,8 +618,60 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           const idx = messages.findIndex((m) => m.id === targetId);
           if (idx !== -1) messages.splice(idx, 1);
           seenIds.delete(targetId);
+          deletedIds.delete(targetId);
           broadcast(session!, "delete", { messageId: targetId });
         }
+        return;
+      }
+      if (action.is(YTNodes.MarkChatItemAsDeletedAction)) {
+        const targetId = action.target_item_id;
+        if (!targetId) return;
+        const text = extractDeletedByText(action.deleted_state_message);
+        deletedIds.set(targetId, text ?? "Message deleted by a moderator");
+        const idx = messages.findIndex((m) => m.id === targetId);
+        if (idx !== -1) {
+          messages[idx] = {
+            ...messages[idx],
+            isDeleted: true,
+            deletedByText: text,
+          };
+        }
+        broadcast(session!, "delete", {
+          messageId: targetId,
+          deletedByText: text,
+        });
+        return;
+      }
+      if (action.is(YTNodes.MarkChatItemsByAuthorAsDeletedAction)) {
+        const ids = Array.isArray(action.target_item_ids)
+          ? action.target_item_ids
+          : [];
+        const text = extractDeletedByText(action.deleted_state_message);
+        const deletedByText = text ?? "Message deleted by a moderator";
+        for (const id of ids) {
+          deletedIds.set(id, deletedByText);
+          const idx = messages.findIndex((m) => m.id === id);
+          if (idx !== -1) {
+            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText };
+          }
+          broadcast(session!, "delete", { messageId: id, deletedByText });
+        }
+        return;
+      }
+      if (action.is(YTNodes.ReplaceChatItemAction)) {
+        const targetId = action.target_item_id;
+        const replacement = action.replacement_item;
+        if (!targetId || !replacement) return;
+        const text = detectDeletedReplacementText(replacement);
+        if (text) {
+          deletedIds.set(targetId, text);
+          const idx = messages.findIndex((m) => m.id === targetId);
+          if (idx !== -1) {
+            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: text };
+          }
+          broadcast(session!, "delete", { messageId: targetId, deletedByText: text });
+        }
+        return;
       }
     } catch (e) {
       console.warn(

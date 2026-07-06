@@ -19,6 +19,7 @@ interface YouTubeMessageItemProps {
     author: string,
     avatar?: string,
   ) => void;
+  showDeletedMessages?: boolean;
 }
 
 export function YouTubeMessageItem({
@@ -30,6 +31,7 @@ export function YouTubeMessageItem({
   onContextMenu,
   onTimeoutMenu,
   onUsernameClick,
+  showDeletedMessages = false,
 }: YouTubeMessageItemProps) {
   const msg = entry.msg as YTMessage;
 
@@ -42,9 +44,11 @@ export function YouTubeMessageItem({
 
   const handleTimeoutMenu = (e: React.MouseEvent) => {
     if (!onTimeoutMenu || !msg.authorChannelId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    onTimeoutMenu(e.clientX, e.clientY, msg.authorChannelId, msg.author);
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const x = typeof e?.clientX === "number" ? e.clientX : 0;
+    const y = typeof e?.clientY === "number" ? e.clientY : 0;
+    onTimeoutMenu(x, y, msg.authorChannelId, msg.author);
   };
 
   return (
@@ -59,6 +63,7 @@ export function YouTubeMessageItem({
       onContextMenu={onContextMenu ? handleContextMenu : undefined}
       onTimeoutMenu={onTimeoutMenu ? handleTimeoutMenu : undefined}
       onUsernameClick={onUsernameClick}
+      showDeletedMessages={showDeletedMessages}
     />
   );
 }

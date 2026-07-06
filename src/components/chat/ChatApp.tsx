@@ -106,6 +106,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     handleYtBan,
     handleYtTimeout,
     getYtMessageText,
+    markYtMessageDeleted,
     slowModeWaitTime,
     followerModeMinutes,
     ignoredUsers,
@@ -131,6 +132,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     fontSize = 14,
     chatFont = "inter" as ChatFont,
     splitChatEnabled = false,
+    showDeletedMessages = true,
     hideViewerCount = false,
     compactActions = false,
     keepModActionsVisible = false,
@@ -531,10 +533,12 @@ export default function ChatApp(props: ChatAppStateProps) {
                   videoId={youtubeVideoId}
                   channel={selectedTwitchChannelName}
                   onMessages={handleYtMessages}
+                  onMessageDeleted={markYtMessageDeleted}
                   onConnectionChange={handleYtConnectionChange}
                   fontSize={fontSize}
                   chatFont={chatFont}
                   splitChatEnabled={splitChatEnabled}
+                  showDeletedMessages={true}
                 />
               </div>
             )}
@@ -624,6 +628,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     chatFont={chatFont}
                     splitChatEnabled={splitChatEnabled}
                     ignoredUsers={ignoredUsers}
+                    showDeletedMessages={showDeletedMessages}
                   />
                 }
               />
@@ -758,6 +763,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             fontSize={fontSize}
             chatFont={chatFont}
             splitChatEnabled={splitChatEnabled}
+            showDeletedMessages={showDeletedMessages}
             onYtMessages={handleYtMessages}
             youtubeSession={youtubeSession}
             onOptimisticMessage={handleYtOptimisticMessage}

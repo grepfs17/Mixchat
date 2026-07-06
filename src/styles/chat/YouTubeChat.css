@@ -207,27 +207,26 @@
 }
 
 .deleted-clickable {
-    cursor: pointer;
     color: #94a3b8;
-    text-decoration: underline;
-    font-style: italic;
     font-size: 0.78rem;
     padding-left: 2px;
     letter-spacing: 0.01em;
     user-select: none;
 }
 
-.deleted-clickable:hover {
-    color: #cbd5e1;
+.yt-deleted-reveal {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 4px;
+    cursor: pointer;
+    color: #94a3b8;
+    text-decoration: underline;
+    font: inherit;
 }
 
-.deleted-notice {
-    font-size: 0.68rem;
-    color: #e57373;
-    font-style: italic;
-    margin-top: 2px;
-    padding-left: 2px;
-    letter-spacing: 0.01em;
+.yt-deleted-reveal:hover {
+    color: #cbd5e1;
 }
 
 /* Clickable author names */

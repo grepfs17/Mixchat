@@ -134,24 +134,41 @@ describe("YouTubeMessageContent", () => {
   });
 
   describe("deleted messages", () => {
-    it("renders deleted notice for deleted messages", () => {
-      const msg = makeYTMsg({ isDeleted: true });
-      render(<YouTubeMessageContent msg={msg} />);
-      expect(screen.getByText("Deleted by a moderator")).toBeInTheDocument();
-    });
-
-    it("shows click to reveal for deleted messages", () => {
+    it("renders fallback deleted-by-moderator text when no deletedByText is set", () => {
       const msg = makeYTMsg({ isDeleted: true });
       render(<YouTubeMessageContent msg={msg} />);
       expect(
-        screen.getByText("click to see the deleted message"),
+        screen.getByText("Message deleted by a moderator"),
       ).toBeInTheDocument();
     });
 
-    it("reveals deleted message content on click", () => {
-      const msg = makeYTMsg({ isDeleted: true });
+    it("uses the deletedByText from the stream when present", () => {
+      const msg = makeYTMsg({
+        isDeleted: true,
+        deletedByText: "Message deleted by @mod",
+      });
       render(<YouTubeMessageContent msg={msg} />);
-      fireEvent.click(screen.getByText("click to see the deleted message"));
+      expect(
+        screen.getByText("Message deleted by @mod"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows View deleted message button only when showDeletedMessages is true", () => {
+      const msg = makeYTMsg({ isDeleted: true });
+      const { rerender } = render(
+        <YouTubeMessageContent msg={msg} showDeletedMessages={false} />,
+      );
+      expect(
+        screen.queryByText("View deleted message"),
+      ).not.toBeInTheDocument();
+      rerender(<YouTubeMessageContent msg={msg} showDeletedMessages={true} />);
+      expect(screen.getByText("View deleted message")).toBeInTheDocument();
+    });
+
+    it("reveals deleted message content on click of View deleted message", () => {
+      const msg = makeYTMsg({ isDeleted: true });
+      render(<YouTubeMessageContent msg={msg} showDeletedMessages={true} />);
+      fireEvent.click(screen.getByText("View deleted message"));
       expect(screen.getByText("Hello from YouTube")).toBeInTheDocument();
     });
   });
@@ -347,19 +364,31 @@ describe("YouTubeMessageContent", () => {
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
     });
 
-    it("clicking the timeout button fires onTimeoutYouTubeUser with 600s for a viewer", () => {
+    it("clicking the timeout button opens the YouTube timeout dialog (no auto-timeout)", () => {
       const onTimeout = vi.fn();
+      const onTimeoutMenu = vi.fn();
       const msg = makeYTMsg({ authorChannelId: VIEWER_CHANNEL });
-      renderWithModeration(msg, {
-        isYouTubeModerator: true,
-        youtubeModModeActive: true,
-        youtubeOwnChannelId: ME,
-        onTimeoutYouTubeUser: onTimeout,
-      });
+      render(
+        <ModerationContext.Provider
+          value={{
+            isModerator: false,
+            modModeActive: false,
+            compactActions: false,
+            isYouTubeModerator: true,
+            youtubeModModeActive: true,
+            youtubeVideoId: null,
+            youtubeOwnChannelId: ME,
+            onTimeoutYouTubeUser: onTimeout,
+          }}
+        >
+          <YouTubeMessageContent msg={msg} onTimeoutMenu={onTimeoutMenu} />
+        </ModerationContext.Provider>,
+      );
       fireEvent.click(
         screen.getByTitle(/Timeout \(10m\) - Right-click for more/),
       );
-      expect(onTimeout).toHaveBeenCalledWith(VIEWER_CHANNEL, 600, "YTUser");
+      expect(onTimeout).not.toHaveBeenCalled();
+      expect(onTimeoutMenu).toHaveBeenCalledWith(expect.anything());
     });
   });
 });

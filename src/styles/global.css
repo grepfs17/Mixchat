@@ -288,3 +288,173 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     background: var(--color-border, rgba(255, 255, 255, 0.12));
     pointer-events: none;
 }
+
+/* YouTube-style Timeout Modal */
+.yt-timeout-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: tooltipFade 0.12s ease-out;
+}
+
+.yt-timeout-dialog {
+    background: #1f1f23;
+    color: var(--color-text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    padding: 24px 24px 20px;
+    min-width: 360px;
+    max-width: 92vw;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    font-family: inherit;
+}
+
+.yt-timeout-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.yt-timeout-subtitle {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: -8px;
+}
+
+.yt-timeout-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.yt-timeout-preset {
+    background: #2a2a30;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+
+.yt-timeout-preset:hover {
+    background: #353540;
+}
+
+.yt-timeout-preset.is-selected {
+    background: var(--color-accent, #3ea6ff);
+    border-color: var(--color-accent, #3ea6ff);
+    color: #fff;
+    font-weight: 600;
+}
+
+.yt-timeout-preset:active {
+    transform: scale(0.98);
+}
+
+.yt-timeout-custom {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+}
+
+.yt-timeout-link {
+    background: none;
+    border: none;
+    color: var(--color-accent, #3ea6ff);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.yt-timeout-link:hover {
+    text-decoration: underline;
+}
+
+.yt-timeout-custom-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.yt-timeout-input {
+    background: #2a2a30;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 100px;
+    outline: none;
+}
+
+.yt-timeout-input:focus {
+    border-color: var(--color-accent, #3ea6ff);
+}
+
+.yt-timeout-unit {
+    background: #2a2a30;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    outline: none;
+}
+
+.yt-timeout-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.yt-timeout-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+}
+
+.yt-timeout-btn:active {
+    transform: scale(0.98);
+}
+
+.yt-timeout-btn--cancel {
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.yt-timeout-btn--cancel:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.yt-timeout-btn--ok {
+    background: var(--color-accent, #3ea6ff);
+    color: #fff;
+    font-weight: 700;
+}
+
+.yt-timeout-btn--ok:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.yt-timeout-btn--ok:disabled {
+    background: #3a3a42;
+    color: #777;
+    cursor: not-allowed;
+}

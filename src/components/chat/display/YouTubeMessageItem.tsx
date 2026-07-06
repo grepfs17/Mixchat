@@ -12,6 +12,7 @@ interface YouTubeMessageItemProps {
     author: string,
     avatar?: string,
   ) => void;
+  showDeletedMessages?: boolean;
 }
 
 export function YouTubeMessageItem({
@@ -21,6 +22,7 @@ export function YouTubeMessageItem({
   onTouchEnd,
   onTouchMove,
   onUsernameClick,
+  showDeletedMessages = false,
 }: YouTubeMessageItemProps) {
   return (
     <YouTubeMessageContent
@@ -31,6 +33,7 @@ export function YouTubeMessageItem({
       onTouchEnd={() => onTouchEnd(msg)}
       onTouchMove={onTouchMove}
       onUsernameClick={onUsernameClick}
+      showDeletedMessages={showDeletedMessages}
     />
   );
 }
