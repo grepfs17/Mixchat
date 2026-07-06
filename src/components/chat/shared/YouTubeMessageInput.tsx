@@ -12,7 +12,10 @@ import {
   EMOJI_LIST,
   type EmojiEntry,
 } from "../../../lib/emojiShortcodes";
+import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
+import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
+import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 
 interface YTMessage {
   id: string;
@@ -45,7 +48,6 @@ export default function YouTubeMessageInput({
   const colonPosRef = useRef(-1);
   const mentionPosRef = useRef(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
 
   // Emoji picker
   const [showPicker, setShowPicker] = useState(false);
@@ -62,6 +64,13 @@ export default function YouTubeMessageInput({
     });
     return Array.from(authors);
   }, [chatMessages]);
+
+  // --- Insert at cursor helper ---
+  const { insertAtPosition } = useInsertAtCursor({
+    message: ytMessage,
+    setMessage: setYtMessage,
+    inputRef,
+  });
 
   // --- Send ---
   const handleSend = useCallback(async () => {
@@ -102,53 +111,37 @@ export default function YouTubeMessageInput({
   // --- Insert helpers ---
   const insertEmoji = useCallback(
     (entry: EmojiEntry) => {
-      if (!inputRef.current || colonPosRef.current === -1) return;
+      if (colonPosRef.current === -1) return;
       const before = ytMessage.substring(0, colonPosRef.current);
-      const cursor = inputRef.current.selectionStart ?? ytMessage.length;
+      const cursor = inputRef.current?.selectionStart ?? ytMessage.length;
       const after = ytMessage.substring(cursor);
-      setYtMessage(before + entry.char + " " + after);
+      insertAtPosition(before, entry.char, after);
       colonPosRef.current = -1;
-      const pos = (before + entry.char + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
     },
-    [ytMessage],
+    [ytMessage, insertAtPosition],
   );
 
   const insertMention = useCallback(
     (author: string) => {
-      if (!inputRef.current || mentionPosRef.current === -1) return;
+      if (mentionPosRef.current === -1) return;
       const before = ytMessage.substring(0, mentionPosRef.current);
-      const cursor = inputRef.current.selectionStart ?? ytMessage.length;
+      const cursor = inputRef.current?.selectionStart ?? ytMessage.length;
       const after = ytMessage.substring(cursor);
       const prefix = author.startsWith("@") ? "" : "@";
-      setYtMessage(before + prefix + author + " " + after);
+      insertAtPosition(before, prefix + author, after);
       mentionPosRef.current = -1;
-      const pos = (before + prefix + author + " ").length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
     },
-    [ytMessage],
+    [ytMessage, insertAtPosition],
   );
 
   const insertEmojiFromPicker = useCallback(
     (char: string) => {
-      if (!inputRef.current) return;
-      const cursor = inputRef.current.selectionStart ?? ytMessage.length;
+      const cursor = inputRef.current?.selectionStart ?? ytMessage.length;
       const before = ytMessage.substring(0, cursor);
       const after = ytMessage.substring(cursor);
-      setYtMessage(before + char + after);
-      const pos = cursor + char.length;
-      setTimeout(() => {
-        inputRef.current?.setSelectionRange(pos, pos);
-        inputRef.current?.focus();
-      }, 0);
+      insertAtPosition(before, char, after);
     },
-    [ytMessage],
+    [ytMessage, insertAtPosition],
   );
 
   // --- Autocomplete instances ---
@@ -162,6 +155,12 @@ export default function YouTubeMessageInput({
     onSend: handleSend,
   });
 
+  // --- Autocomplete menu management ---
+  const { menuRect, closeAll } = useAutocompleteMenu({
+    inputRef,
+    autocompleteInstances: [emojiAC, mentionAC],
+  });
+
   // --- Text change ---
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,11 +168,6 @@ export default function YouTubeMessageInput({
       setYtMessage(val);
       const cursor = e.target.selectionStart ?? val.length;
       const beforeCursor = val.substring(0, cursor);
-
-      const closeAll = () => {
-        emojiAC.hide();
-        mentionAC.hide();
-      };
 
       // Emoji :shortcode:
       const lastColon = beforeCursor.lastIndexOf(":");
@@ -212,7 +206,7 @@ export default function YouTubeMessageInput({
 
       closeAll();
     },
-    [chatAuthors, emojiAC, mentionAC],
+    [chatAuthors, emojiAC, mentionAC, closeAll],
   );
 
   // --- Keyboard ---
@@ -245,24 +239,6 @@ export default function YouTubeMessageInput({
   }, [showPicker]);
 
   useEffect(() => {
-    const anyOpen = emojiAC.isOpen || mentionAC.isOpen;
-    if (!anyOpen || !inputRef.current) {
-      setMenuRect(null);
-      return;
-    }
-    setMenuRect(inputRef.current.getBoundingClientRect());
-  }, [emojiAC.isOpen, mentionAC.isOpen]);
-
-  useEffect(() => {
-    if (emojiAC.isOpen && emojiAC.selectedIndex >= 0) {
-      const menu = document.querySelector(
-        `.autocomplete-menu .emote-autocomplete-item:nth-child(${emojiAC.selectedIndex + 1})`,
-      );
-      menu?.scrollIntoView({ block: "nearest" });
-    }
-  }, [emojiAC.selectedIndex, emojiAC.isOpen]);
-
-  useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -281,86 +257,66 @@ export default function YouTubeMessageInput({
   return (
     <div className="message-input">
       <div className="input-group youtube">
-        {emojiAC.isOpen &&
-          emojiAC.results.length > 0 &&
-          menuRect &&
-          createPortal(
-            <div
-              className="autocomplete-menu"
-              style={{
-                position: "fixed",
-                bottom: window.innerHeight - menuRect.top + 6,
-                left: menuRect.left,
-                width: menuRect.width,
-                maxHeight: "260px",
-              }}
+        <AutocompleteMenu
+          isOpen={emojiAC.isOpen}
+          results={emojiAC.results}
+          selectedIndex={emojiAC.selectedIndex}
+          menuRect={menuRect}
+          maxHeight="260px"
+          onSelect={(i) => emojiAC.select(i)}
+          onMouseEnter={(i) => emojiAC.setSelectedIndex(i)}
+          renderItem={(entry, idx, isSelected) => (
+            <MenuItem
+              key={entry.shortcode}
+              index={idx}
+              isSelected={isSelected}
+              onSelect={(i) => emojiAC.select(i)}
+              onMouseEnter={(i) => emojiAC.setSelectedIndex(i)}
             >
-              {emojiAC.results.map((entry, idx) => (
-                <div
-                  key={entry.shortcode}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    emojiAC.select(idx);
-                  }}
-                  onMouseEnter={() => emojiAC.setSelectedIndex(idx)}
-                  className={`emote-autocomplete-item${idx === emojiAC.selectedIndex ? " selected" : ""}`}
-                >
-                  <span
-                    style={{
-                      fontSize: "22px",
-                      lineHeight: 1,
-                      minWidth: "28px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {entry.char}
-                  </span>
-                  <div className="emote-autocomplete-info">
-                    <span className="emote-autocomplete-name">
-                      :{entry.shortcode}:
-                    </span>
-                    <span className="emote-autocomplete-type">emoji</span>
-                  </div>
-                </div>
-              ))}
-            </div>,
-            document.body,
+              <span
+                style={{
+                  fontSize: 22,
+                  lineHeight: 1,
+                  minWidth: 28,
+                  textAlign: "center",
+                }}
+              >
+                {entry.char}
+              </span>
+              <div className="autocomplete-item-info">
+                <span className="autocomplete-item-name">
+                  :{entry.shortcode}:
+                </span>
+                <span className="autocomplete-item-type">emoji</span>
+              </div>
+            </MenuItem>
           )}
+        />
 
-        {mentionAC.isOpen &&
-          mentionAC.results.length > 0 &&
-          menuRect &&
-          createPortal(
-            <div
-              className="autocomplete-menu"
-              style={{
-                position: "fixed",
-                bottom: window.innerHeight - menuRect.top + 6,
-                left: menuRect.left,
-                width: menuRect.width,
-                maxHeight: "260px",
-              }}
+        <AutocompleteMenu
+          isOpen={mentionAC.isOpen}
+          results={mentionAC.results}
+          selectedIndex={mentionAC.selectedIndex}
+          menuRect={menuRect}
+          maxHeight="260px"
+          onSelect={(i) => mentionAC.select(i)}
+          onMouseEnter={(i) => mentionAC.setSelectedIndex(i)}
+          renderItem={(author, idx, isSelected) => (
+            <MenuItem
+              key={author}
+              index={idx}
+              isSelected={isSelected}
+              onSelect={(i) => mentionAC.select(i)}
+              onMouseEnter={(i) => mentionAC.setSelectedIndex(i)}
             >
-              {mentionAC.results.map((author, idx) => (
-                <div
-                  key={author}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    mentionAC.select(idx);
-                  }}
-                  onMouseEnter={() => mentionAC.setSelectedIndex(idx)}
-                  className={`emote-autocomplete-item${idx === mentionAC.selectedIndex ? " selected" : ""}`}
-                >
-                  <div className="emote-autocomplete-info">
-                    <span className="emote-autocomplete-name">
-                      {author.startsWith("@") ? author : `@${author}`}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>,
-            document.body,
+              <div className="autocomplete-item-info">
+                <span className="autocomplete-item-name">
+                  {author.startsWith("@") ? author : `@${author}`}
+                </span>
+              </div>
+            </MenuItem>
           )}
+        />
 
         <button
           ref={pickerBtnRef}

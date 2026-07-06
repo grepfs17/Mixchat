@@ -3,12 +3,14 @@ import { createPortal } from "react-dom";
 import { FaTimes, FaSmile } from "react-icons/fa";
 import type { Platform, TwitchMessage } from "../../../lib/types";
 import { searchEmotes } from "../../../lib/emotes";
-import { isMobileDevice } from "../../../lib/device";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { MOD_COMMANDS } from "../../../lib/constants";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
+import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
+import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
+import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 import { useSlowMode } from "../../../hooks/chat/useSlowMode";
 import { useEmotes } from "../../../hooks/chat/useEmotes";
 
@@ -51,11 +53,17 @@ function MessageInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
   const shouldRefocusRef = useRef(false);
-  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
 
   const emotesOrganized = useEmotes();
   const { cooldown: slowModeCooldown, startCooldown } = useSlowMode();
+
+  // --- Insert at cursor helper ---
+  const { insertWithPrefix, replaceCurrentWord } = useInsertAtCursor({
+    message,
+    setMessage,
+    inputRef: textareaRef,
+  });
 
   // --- Authors for @mention ---
   const allAuthors = (() => {
@@ -101,50 +109,21 @@ function MessageInput({
   ]);
 
   // --- Autocomplete instances ---
-  const insertEmote = useCallback(
-    (name: string) => {
-      if (!textareaRef.current) return;
-      const cursorPos = textareaRef.current.selectionStart;
-      const textBeforeCursor = message.substring(0, cursorPos);
-      const textAfterCursor = message.substring(cursorPos);
-      const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
-      const beforeWord = textBeforeCursor.substring(0, lastSpaceIndex + 1);
-      const newMessage = beforeWord + name + " " + textAfterCursor;
-      setMessage(newMessage);
-      setShowEmotePicker(false);
-      const newPos = (beforeWord + name + " ").length;
-      setTimeout(() => {
-        textareaRef.current?.setSelectionRange(newPos, newPos);
-        textareaRef.current?.focus();
-      }, 0);
-    },
-    [message],
-  );
-
   const emoteAC = useAutocomplete<{
     name: string;
     url: string;
     source: string;
   }>({
-    onSelect: (emote) => insertEmote(emote.name),
+    onSelect: (emote) => {
+      insertWithPrefix(emote.name);
+      setShowEmotePicker(false);
+    },
     onSend: handleSend,
   });
 
   const usernameAC = useAutocomplete<string>({
     onSelect: (username) => {
-      if (!textareaRef.current) return;
-      const cursorPos = textareaRef.current.selectionStart;
-      const textBeforeCursor = message.substring(0, cursorPos);
-      const textAfterCursor = message.substring(cursorPos);
-      const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
-      const beforeMention = textBeforeCursor.substring(0, lastSpaceIndex + 1);
-      const newMessage = beforeMention + "@" + username + " " + textAfterCursor;
-      setMessage(newMessage);
-      const newPos = (beforeMention + "@" + username + " ").length;
-      setTimeout(() => {
-        textareaRef.current?.setSelectionRange(newPos, newPos);
-        textareaRef.current?.focus();
-      }, 0);
+      insertWithPrefix(username, "@");
     },
     onSend: handleSend,
   });
@@ -155,18 +134,15 @@ function MessageInput({
     description: string;
   }>({
     onSelect: (cmd) => {
-      if (!textareaRef.current) return;
-      const cursorPos = textareaRef.current.selectionStart;
-      const textAfterCursor = message.substring(cursorPos);
-      const newMessage = cmd.name + " " + textAfterCursor;
-      setMessage(newMessage);
-      const newPos = (cmd.name + " ").length;
-      setTimeout(() => {
-        textareaRef.current?.setSelectionRange(newPos, newPos);
-        textareaRef.current?.focus();
-      }, 0);
+      replaceCurrentWord(cmd.name);
     },
     onSend: handleSend,
+  });
+
+  // --- Autocomplete menu management ---
+  const { menuRect, closeAll } = useAutocompleteMenu({
+    inputRef: textareaRef,
+    autocompleteInstances: [emoteAC, usernameAC, commandAC],
   });
 
   // --- Text change handler ---
@@ -178,12 +154,6 @@ function MessageInput({
       const textBeforeCursor = newMessage.substring(0, cursorPos);
       const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
       const currentWord = textBeforeCursor.substring(lastSpaceIndex + 1);
-
-      const closeAll = () => {
-        emoteAC.hide();
-        usernameAC.hide();
-        commandAC.hide();
-      };
 
       // @mention
       if (currentWord.startsWith("@") && currentWord.length > 1) {
@@ -230,7 +200,15 @@ function MessageInput({
 
       closeAll();
     },
-    [allAuthors, currentUsername, isModerator, emoteAC, usernameAC, commandAC],
+    [
+      allAuthors,
+      currentUsername,
+      isModerator,
+      emoteAC,
+      usernameAC,
+      commandAC,
+      closeAll,
+    ],
   );
 
   // --- Keyboard handler ---
@@ -274,46 +252,6 @@ function MessageInput({
   useEffect(() => {
     if (replyingTo && textareaRef.current) textareaRef.current.focus();
   }, [replyingTo]);
-
-  useEffect(() => {
-    const anyOpen = emoteAC.isOpen || usernameAC.isOpen || commandAC.isOpen;
-    if (!anyOpen || !textareaRef.current) {
-      setMenuRect(null);
-      return;
-    }
-    setMenuRect(textareaRef.current.getBoundingClientRect());
-  }, [emoteAC.isOpen, usernameAC.isOpen, commandAC.isOpen]);
-
-  useEffect(() => {
-    if (emoteAC.isOpen && emoteMenuRef.current && emoteAC.selectedIndex >= 0) {
-      const el = emoteMenuRef.current.children[
-        emoteAC.selectedIndex
-      ] as HTMLElement;
-      el?.scrollIntoView(
-        isMobileDevice()
-          ? { inline: "nearest", block: "nearest" }
-          : { block: "nearest" },
-      );
-    }
-  }, [emoteAC.selectedIndex, emoteAC.isOpen]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        emoteMenuRef.current &&
-        !emoteMenuRef.current.contains(target) &&
-        textareaRef.current &&
-        !textareaRef.current.contains(target)
-      ) {
-        emoteAC.hide();
-        usernameAC.hide();
-        commandAC.hide();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [emoteAC, usernameAC, commandAC]);
 
   return (
     <div className="message-input">
@@ -388,171 +326,89 @@ function MessageInput({
           autoCapitalize="off"
         />
 
-        {emoteAC.isOpen &&
-          emoteAC.results.length > 0 &&
-          menuRect &&
-          createPortal(
-            <div
-              ref={emoteMenuRef}
-              className={
-                isMobileDevice()
-                  ? "emote-autocomplete-mobile-strip"
-                  : "autocomplete-menu"
-              }
-              style={
-                isMobileDevice()
-                  ? {
-                      position: "fixed",
-                      bottom: window.innerHeight - menuRect.top + 6,
-                      left: 0,
-                      right: 0,
-                      height: "60px",
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: "4px",
-                      padding: "4px 8px",
-                      overflowX: "auto",
-                      overflowY: "hidden",
-                      background: "var(--color-autocomplete-bg)",
-                      borderTop: "1px solid var(--color-autocomplete-border)",
-                      borderBottom:
-                        "1px solid var(--color-autocomplete-border)",
-                      zIndex: 99999,
-                      boxShadow: "var(--shadow-lg)",
-                      scrollbarWidth: "none",
-                    }
-                  : {
-                      position: "fixed",
-                      bottom: window.innerHeight - menuRect.top + 6,
-                      left: menuRect.left,
-                      width: menuRect.width,
-                      maxHeight: "40vh",
-                    }
-              }
+        <AutocompleteMenu
+          isOpen={emoteAC.isOpen}
+          results={emoteAC.results}
+          selectedIndex={emoteAC.selectedIndex}
+          menuRect={menuRect}
+          menuRef={emoteMenuRef}
+          onSelect={(i) => emoteAC.select(i)}
+          onMouseEnter={(i) => emoteAC.setSelectedIndex(i)}
+          renderItem={(emote, index, isSelected) => (
+            <MenuItem
+              key={`${emote.source}-${emote.name}`}
+              index={index}
+              isSelected={isSelected}
+              onSelect={(i) => emoteAC.select(i)}
+              onMouseEnter={(i) => emoteAC.setSelectedIndex(i)}
+              title={emote.name}
             >
-              {emoteAC.results.map((emote, index) =>
-                isMobileDevice() ? (
-                  <div
-                    key={`${emote.source}-${emote.name}`}
-                    onClick={() => emoteAC.select(index)}
-                    className={`autocomplete-item${index === emoteAC.selectedIndex ? " selected" : ""}`}
-                    style={{
-                      flexShrink: 0,
-                      borderRadius: "6px",
-                      border:
-                        index === emoteAC.selectedIndex
-                          ? "1px solid var(--color-accent)"
-                          : "1px solid transparent",
-                      padding: "4px",
-                    }}
-                    title={emote.name}
-                    onTouchStart={() => emoteAC.setSelectedIndex(index)}
-                  >
-                    <img
-                      src={emote.url}
-                      alt={emote.name}
-                      style={{ width: "40px", height: "40px" }}
-                    />
-                  </div>
-                ) : (
-                  <div
-                    key={`${emote.source}-${emote.name}`}
-                    onClick={() => emoteAC.select(index)}
-                    className={`autocomplete-item${index === emoteAC.selectedIndex ? " selected" : ""}`}
-                    onMouseEnter={() => emoteAC.setSelectedIndex(index)}
-                  >
-                    <img
-                      src={emote.url}
-                      alt={emote.name}
-                      style={{ width: "32px", height: "32px" }}
-                    />
-                    <div className="autocomplete-item-info">
-                      <span className="autocomplete-item-name">
-                        {emote.name}
-                      </span>
-                      <span className="autocomplete-item-type">
-                        {emote.source}
-                      </span>
-                    </div>
-                  </div>
-                ),
-              )}
-            </div>,
-            document.body,
+              <img
+                src={emote.url}
+                alt={emote.name}
+                style={{ width: 32, height: 32 }}
+              />
+              <div className="autocomplete-item-info">
+                <span className="autocomplete-item-name">{emote.name}</span>
+                <span className="autocomplete-item-type">{emote.source}</span>
+              </div>
+            </MenuItem>
           )}
+        />
 
-        {usernameAC.isOpen &&
-          usernameAC.results.length > 0 &&
-          menuRect &&
-          createPortal(
-            <div
-              className="autocomplete-menu"
-              style={{
-                position: "fixed",
-                bottom: window.innerHeight - menuRect.top + 6,
-                left: menuRect.left,
-                width: menuRect.width,
-                maxHeight: "40vh",
-              }}
+        <AutocompleteMenu
+          isOpen={usernameAC.isOpen}
+          results={usernameAC.results}
+          selectedIndex={usernameAC.selectedIndex}
+          menuRect={menuRect}
+          onSelect={(i) => usernameAC.select(i)}
+          onMouseEnter={(i) => usernameAC.setSelectedIndex(i)}
+          renderItem={(username, index, isSelected) => (
+            <MenuItem
+              key={username}
+              index={index}
+              isSelected={isSelected}
+              onSelect={(i) => usernameAC.select(i)}
+              onMouseEnter={(i) => usernameAC.setSelectedIndex(i)}
+              style={{ fontSize: "0.95rem" }}
             >
-              {usernameAC.results.map((username, index) => (
-                <div
-                  key={username}
-                  onClick={() => usernameAC.select(index)}
-                  className={`autocomplete-item${index === usernameAC.selectedIndex ? " selected" : ""}`}
-                  style={{ fontSize: "0.95rem" }}
-                  onMouseEnter={() => usernameAC.setSelectedIndex(index)}
-                >
-                  @{username}
-                </div>
-              ))}
-            </div>,
-            document.body,
+              @{username}
+            </MenuItem>
           )}
+        />
 
-        {commandAC.isOpen &&
-          commandAC.results.length > 0 &&
-          menuRect &&
-          createPortal(
-            <div
-              className="autocomplete-menu"
-              style={{
-                position: "fixed",
-                bottom: window.innerHeight - menuRect.top + 6,
-                left: menuRect.left,
-                width: menuRect.width,
-                maxHeight: "40vh",
-              }}
+        <AutocompleteMenu
+          isOpen={commandAC.isOpen}
+          results={commandAC.results}
+          selectedIndex={commandAC.selectedIndex}
+          menuRect={menuRect}
+          onSelect={(i) => commandAC.select(i)}
+          onMouseEnter={(i) => commandAC.setSelectedIndex(i)}
+          renderItem={(cmd, index, isSelected) => (
+            <MenuItem
+              key={cmd.name}
+              index={index}
+              isSelected={isSelected}
+              onSelect={(i) => commandAC.select(i)}
+              onMouseEnter={(i) => commandAC.setSelectedIndex(i)}
+              className="autocomplete-command-item"
             >
-              {commandAC.results.map((cmd, index) => (
-                <div
-                  key={cmd.name}
-                  onClick={() => commandAC.select(index)}
-                  className={`autocomplete-command-item${index === commandAC.selectedIndex ? " selected" : ""}`}
-                  onMouseEnter={() => commandAC.setSelectedIndex(index)}
-                >
-                  <div className="autocomplete-command-header">
-                    <span className="autocomplete-command-name">
-                      {cmd.name}
-                    </span>
-                    <span className="autocomplete-command-usage">
-                      {cmd.usage}
-                    </span>
-                  </div>
-                  <div className="autocomplete-command-desc">
-                    {cmd.description}
-                  </div>
-                </div>
-              ))}
-            </div>,
-            document.body,
+              <div className="autocomplete-command-header">
+                <span className="autocomplete-command-name">{cmd.name}</span>
+                <span className="autocomplete-command-usage">{cmd.usage}</span>
+              </div>
+              <div className="autocomplete-command-desc">{cmd.description}</div>
+            </MenuItem>
           )}
+        />
       </div>
 
       <EmoteMenu
         emotes={emotesOrganized}
-        onSelectEmote={insertEmote}
+        onSelectEmote={(name) => {
+          insertWithPrefix(name);
+          setShowEmotePicker(false);
+        }}
         isOpen={showEmotePicker}
         onClose={() => setShowEmotePicker(false)}
       />
