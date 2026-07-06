@@ -108,9 +108,9 @@ function TwitchMessageContentBase({
     const activeCfg = cfg || powerUpCfg || gigantifiedCfg;
     return activeCfg
       ? ({
-          "--event-color": activeCfg.color,
-          "--event-bg": activeCfg.bg,
-        } as React.CSSProperties)
+        "--event-color": activeCfg.color,
+        "--event-bg": activeCfg.bg,
+      } as React.CSSProperties)
       : undefined;
   })();
 
@@ -122,7 +122,7 @@ function TwitchMessageContentBase({
 
   const replyAuthorColor = authorColorById
     ? getReadableUsernameColor(authorColorById.get(msg.replyTo?.id ?? "")) ||
-      "#94a3b8"
+    "#94a3b8"
     : "#94a3b8";
 
   const showActionsStrip =
@@ -138,28 +138,30 @@ function TwitchMessageContentBase({
   const isModAction =
     msg.messageType === "timeout" || msg.messageType === "ban";
 
-  const inlineActionButtons = showInlineActions && showActionsStrip && !isModAction && (
-    <div className="message-actions">
-      {onReply && (
+  const inlineActionButtons = showInlineActions &&
+    showActionsStrip &&
+    !isModAction && (
+      <div className="message-actions">
+        {onReply && (
+          <button
+            onClick={() => onReply(msg)}
+            className="action-button"
+            title="Reply to this message"
+            style={{ display: "flex", alignItems: "center", gap: "4px" }}
+          >
+            <MdReply size={12} />
+          </button>
+        )}
         <button
-          onClick={() => onReply(msg)}
+          onClick={() => onCopy(msg)}
           className="action-button"
-          title="Reply to this message"
+          title="Copy message"
           style={{ display: "flex", alignItems: "center", gap: "4px" }}
         >
-          <MdReply size={12} />
+          <MdContentCopy size={12} />
         </button>
-      )}
-      <button
-        onClick={() => onCopy(msg)}
-        className="action-button"
-        title="Copy message"
-        style={{ display: "flex", alignItems: "center", gap: "4px" }}
-      >
-        <MdContentCopy size={12} />
-      </button>
-    </div>
-  );
+      </div>
+    );
 
   const modActionButtons = (() => {
     if (!showActionsStrip) return null;
@@ -190,12 +192,7 @@ function TwitchMessageContentBase({
     return (
       <MessageModActions
         onDelete={() => onDeleteMessage?.(msg.id)}
-        onTimeout={() => onTimeoutUser?.(msg.userId || "", 600, msg.author)}
-        onTimeoutContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onTimeoutMenu(e.clientX, e.clientY, msg.userId || "", msg.author);
-        }}
+        onTimeout={(e) => onTimeoutMenu(e?.clientX || 0, e?.clientY || 0, msg.userId || "", msg.author)}
         onBan={() => onBanUser?.(msg.userId || "", msg.author)}
         onWarn={() => onWarnUser?.(msg.author)}
         showUserActions={!isUnmoderatable}

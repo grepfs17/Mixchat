@@ -237,7 +237,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       ).toBeInTheDocument();
       expect(screen.getByTitle("Ban user")).toBeInTheDocument();
       expect(screen.getByTitle("Warn user")).toBeInTheDocument();
@@ -263,7 +263,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Warn user")).not.toBeInTheDocument();
@@ -310,7 +310,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Warn user")).not.toBeInTheDocument();
@@ -336,7 +336,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
       expect(screen.queryByTitle("Warn user")).not.toBeInTheDocument();
@@ -362,7 +362,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
     });
@@ -390,8 +390,7 @@ describe("Moderator Mode", () => {
       expect(onDelete).toHaveBeenCalledWith("msg-1");
     });
 
-    it("calls onTimeoutUser when timeout is clicked", () => {
-      const onTimeout = vi.fn();
+    it("opens timeout dialog when timeout is clicked", () => {
       render(
         withModeration(
           <ChatDisplay
@@ -403,16 +402,17 @@ describe("Moderator Mode", () => {
             isModerator: true,
             modModeActive: true,
             onDeleteMessage: vi.fn(),
-            onTimeoutUser: onTimeout,
+            onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),
             onWarnUser: vi.fn(),
           },
         ),
       );
       fireEvent.click(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       );
-      expect(onTimeout).toHaveBeenCalledWith("user-1", 600, "TestUser");
+      expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+      expect(screen.getByText("5 minutes")).toBeInTheDocument();
     });
 
     it("calls onBanUser when ban is clicked", () => {
@@ -528,7 +528,7 @@ describe("Moderator Mode", () => {
       fireEvent.contextMenu(messageEl!);
 
       expect(screen.getByText("Delete")).toBeInTheDocument();
-      expect(screen.getByText("Timeout (10m)")).toBeInTheDocument();
+      expect(screen.getByText("Timeout...")).toBeInTheDocument();
       expect(screen.getByText("Ban")).toBeInTheDocument();
       expect(screen.getByText("Warn")).toBeInTheDocument();
     });
@@ -557,7 +557,7 @@ describe("Moderator Mode", () => {
       fireEvent.contextMenu(messageEl!);
 
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
-      expect(screen.queryByText("Timeout (10m)")).not.toBeInTheDocument();
+      expect(screen.queryByText("Timeout...")).not.toBeInTheDocument();
       expect(screen.queryByText("Ban")).not.toBeInTheDocument();
       expect(screen.queryByText("Warn")).not.toBeInTheDocument();
     });
@@ -586,7 +586,7 @@ describe("Moderator Mode", () => {
       fireEvent.contextMenu(messageEl!);
 
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
-      expect(screen.queryByText("Timeout (10m)")).not.toBeInTheDocument();
+      expect(screen.queryByText("Timeout...")).not.toBeInTheDocument();
       expect(screen.queryByText("Ban")).not.toBeInTheDocument();
     });
 
@@ -618,8 +618,7 @@ describe("Moderator Mode", () => {
       expect(onDelete).toHaveBeenCalledWith("msg-1");
     });
 
-    it("calls onTimeoutUser from context menu", () => {
-      const onTimeout = vi.fn();
+    it("opens timeout dialog from context menu", () => {
       const { container } = render(
         withModeration(
           <ChatDisplay
@@ -633,7 +632,7 @@ describe("Moderator Mode", () => {
             compactActions: true,
             keepModActionsVisible: false,
             onDeleteMessage: vi.fn(),
-            onTimeoutUser: onTimeout,
+            onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),
             onWarnUser: vi.fn(),
           },
@@ -642,8 +641,9 @@ describe("Moderator Mode", () => {
 
       const messageEl = container.querySelector('[data-message-id="msg-1"]');
       fireEvent.contextMenu(messageEl!);
-      fireEvent.click(screen.getByText("Timeout (10m)"));
-      expect(onTimeout).toHaveBeenCalledWith("user-1", 600, "TestUser");
+      fireEvent.click(screen.getByText("Timeout..."));
+      expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+      expect(screen.getByText("5 minutes")).toBeInTheDocument();
     });
 
     it("calls onBanUser from context menu", () => {
@@ -731,7 +731,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       ).toBeInTheDocument();
       expect(screen.getByTitle("Ban user")).toBeInTheDocument();
       expect(screen.getByTitle("Warn user")).toBeInTheDocument();
@@ -757,7 +757,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
     });
 
@@ -781,7 +781,7 @@ describe("Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
     });

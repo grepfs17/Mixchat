@@ -16,13 +16,12 @@ import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
 import { TwitchMessageItem } from "./TwitchMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
-import TimeoutMenu from "../shared/TimeoutMenu";
+import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import MessageMenu from "../shared/MessageMenu";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
 import type {
   EmoteTooltipState,
-  TimeoutMenuState,
   MessageMenuState,
 } from "./types";
 
@@ -117,9 +116,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     const [emoteTooltip, setEmoteTooltip] = useState<EmoteTooltipState | null>(
       null,
     );
-    const [timeoutMenu, setTimeoutMenu] = useState<TimeoutMenuState | null>(
-      null,
-    );
+    const [twitchTimeoutDialog, setTwitchTimeoutDialog] = useState<{
+      userId: string;
+      username: string;
+    } | null>(null);
     const [messageMenu, setMessageMenu] = useState<MessageMenuState | null>(
       null,
     );
@@ -155,8 +155,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     );
 
     useEffect(() => {
-      const handleClick = () => setTimeoutMenu(null);
-      if (timeoutMenu) {
+      const handleClick = (e: MouseEvent) => {
+        if (
+          (e.target as HTMLElement | null)?.closest(
+            ".yt-timeout-dialog, .yt-timeout-overlay, .tw-timeout-dialog, .tw-timeout-overlay",
+          )
+        ) {
+          return;
+        }
+        setTwitchTimeoutDialog(null);
+      };
+      if (twitchTimeoutDialog) {
         window.addEventListener("click", handleClick);
         window.addEventListener("contextmenu", handleClick);
       }
@@ -164,7 +173,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         window.removeEventListener("click", handleClick);
         window.removeEventListener("contextmenu", handleClick);
       };
-    }, [timeoutMenu]);
+    }, [twitchTimeoutDialog]);
 
     useEffect(() => {
       const handleClick = () => setMessageMenu(null);
@@ -421,7 +430,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
                     )
                   }
                   fontSize={fontSize}
-                  onTimeoutMenu={setTimeoutMenu}
+                  onTimeoutMenu={(state) =>
+                    setTwitchTimeoutDialog({ userId: state.userId, username: state.username })
+                  }
                   onScrollToMessage={scrollToMessage}
                   onTouchStart={handleTouchStart}
                   onTouchEnd={handleTouchEnd}
@@ -458,14 +469,15 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           />
         )}
 
-        {timeoutMenu && (
-          <TimeoutMenu
-            userId={timeoutMenu.userId}
-            username={timeoutMenu.username}
-            x={timeoutMenu.x}
-            y={timeoutMenu.y}
-            onTimeout={onTimeoutUser || (() => {})}
-            onClose={() => setTimeoutMenu(null)}
+        {twitchTimeoutDialog && (
+          <TwitchTimeoutDialog
+            userId={twitchTimeoutDialog.userId}
+            username={twitchTimeoutDialog.username}
+            onConfirm={(userId, seconds, username) => {
+              onTimeoutUser?.(userId, seconds, username);
+              setTwitchTimeoutDialog(null);
+            }}
+            onClose={() => setTwitchTimeoutDialog(null)}
           />
         )}
 
@@ -478,6 +490,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
             onCopy={handleCopy}
             onViewHistory={(author) =>
               handleViewHistory(author, messageMenu.message.platform)
+            }
+            onOpenTwitchTimeoutMenu={(userId, username) =>
+              setTwitchTimeoutDialog({ userId, username })
             }
             onClose={() => setMessageMenu(null)}
           />

@@ -121,7 +121,7 @@ import ChatDisplay from "../../src/components/chat/display";
 import { TwitchMessageItem as UnifiedTwitchMessageItem } from "../../src/components/chat/unified/TwitchMessageItem";
 import { YouTubeMessageItem } from "../../src/components/chat/unified/YouTubeMessageItem";
 import MessageMenu from "../../src/components/chat/shared/MessageMenu";
-import TimeoutMenu from "../../src/components/chat/shared/TimeoutMenu";
+import TwitchTimeoutDialog from "../../src/components/chat/shared/TwitchTimeoutDialog";
 import UnifiedChat from "../../src/components/chat/unified";
 
 //  DisplayTwitchMessageItem (used in Split / display chat)
@@ -190,9 +190,7 @@ describe("TwitchMessageItem (Split Chat)", () => {
       }),
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
-    expect(
-      screen.getByTitle("Timeout (10m) - Right-click for more"),
-    ).toBeInTheDocument();
+    expect(screen.getByTitle("Timeout")).toBeInTheDocument();
     expect(screen.getByTitle("Ban user")).toBeInTheDocument();
     expect(screen.getByTitle("Warn user")).toBeInTheDocument();
   });
@@ -252,9 +250,7 @@ describe("TwitchMessageItem (Split Chat)", () => {
       }),
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
-    expect(
-      screen.getByTitle("Timeout (10m) - Right-click for more"),
-    ).toBeInTheDocument();
+    expect(screen.getByTitle("Timeout")).toBeInTheDocument();
     expect(screen.getByTitle("Ban user")).toBeInTheDocument();
     expect(screen.getByTitle("Warn user")).toBeInTheDocument();
   });
@@ -356,9 +352,7 @@ describe("TwitchMessageItem (Unified Chat)", () => {
       }),
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
-    expect(
-      screen.getByTitle("Timeout (10m) - Right-click for more"),
-    ).toBeInTheDocument();
+    expect(screen.getByTitle("Timeout")).toBeInTheDocument();
     expect(screen.getByTitle("Ban user")).toBeInTheDocument();
     expect(screen.getByTitle("Warn user")).toBeInTheDocument();
   });
@@ -395,13 +389,13 @@ describe("TwitchMessageItem (Unified Chat)", () => {
     );
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
     expect(
-      screen.queryByTitle("Timeout (10m) - Right-click for more"),
+      screen.queryByTitle("Timeout"),
     ).not.toBeInTheDocument();
     expect(screen.queryByTitle("Ban user")).not.toBeInTheDocument();
     expect(screen.queryByTitle("Warn user")).not.toBeInTheDocument();
   });
 
-  it("opens timeout submenu on right-click of timeout button", () => {
+  it("opens timeout dialog on left-click of timeout button", () => {
     const onTimeoutMenu = vi.fn();
     render(
       withModeration(
@@ -417,9 +411,9 @@ describe("TwitchMessageItem (Unified Chat)", () => {
       ),
     );
     const timeoutBtn = screen.getByTitle(
-      "Timeout (10m) - Right-click for more",
+      "Timeout",
     );
-    fireEvent.contextMenu(timeoutBtn);
+    fireEvent.click(timeoutBtn);
     expect(onTimeoutMenu).toHaveBeenCalledWith(
       expect.any(Number),
       expect.any(Number),
@@ -569,7 +563,7 @@ describe("MessageMenu (Context Menu)", () => {
       }),
     );
     expect(screen.getByText("Delete")).toBeInTheDocument();
-    expect(screen.getByText("Timeout (10m)")).toBeInTheDocument();
+    expect(screen.getByText("Timeout...")).toBeInTheDocument();
     expect(screen.getByText("Ban")).toBeInTheDocument();
     expect(screen.getByText("Warn")).toBeInTheDocument();
   });
@@ -628,7 +622,7 @@ describe("MessageMenu (Context Menu)", () => {
       ),
     );
     expect(screen.queryByText("Delete")).not.toBeInTheDocument();
-    expect(screen.queryByText("Timeout (10m)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Timeout...")).not.toBeInTheDocument();
   });
 
   it("renders author header", () => {
@@ -653,40 +647,52 @@ describe("MessageMenu (Context Menu)", () => {
   });
 });
 
-//  TimeoutMenu
-describe("TimeoutMenu", () => {
-  it("renders timeout options", () => {
+//  TwitchTimeoutDialog
+describe("TwitchTimeoutDialog", () => {
+  it("renders dialog with preset options", () => {
     render(
-      <TimeoutMenu
+      <TwitchTimeoutDialog
         userId="user-1"
         username="BadUser"
-        x={100}
-        y={200}
-        onTimeout={vi.fn()}
+        onConfirm={vi.fn()}
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByText("Timeout BadUser")).toBeInTheDocument();
-    expect(screen.getByText("10 Seconds")).toBeInTheDocument();
-    expect(screen.getByText("10 Minutes")).toBeInTheDocument();
-    expect(screen.getByText("1 Day")).toBeInTheDocument();
+    expect(screen.getByText("Timeout BadUser?")).toBeInTheDocument();
+    expect(screen.getByText("10 seconds")).toBeInTheDocument();
+    expect(screen.getByText("5 minutes")).toBeInTheDocument();
+    expect(screen.getByText("24 hours")).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Timeout 5m/ })).toBeInTheDocument();
   });
 
-  it("calls onTimeout and onClose when an option is clicked", () => {
-    const onTimeout = vi.fn();
+  it("calls onConfirm and closes when OK is clicked", () => {
+    const onConfirm = vi.fn();
     const onClose = vi.fn();
     render(
-      <TimeoutMenu
+      <TwitchTimeoutDialog
         userId="user-1"
         username="BadUser"
-        x={100}
-        y={200}
-        onTimeout={onTimeout}
+        onConfirm={onConfirm}
         onClose={onClose}
       />,
     );
-    fireEvent.click(screen.getByText("1 Day"));
-    expect(onTimeout).toHaveBeenCalledWith("user-1", 86400, "BadUser");
+    fireEvent.click(screen.getByText("10 seconds"));
+    fireEvent.click(screen.getByRole("button", { name: /Timeout 10s/ }));
+    expect(onConfirm).toHaveBeenCalledWith("user-1", 10, "BadUser");
+  });
+
+  it("calls onClose when Cancel is clicked", () => {
+    const onClose = vi.fn();
+    render(
+      <TwitchTimeoutDialog
+        userId="user-1"
+        username="BadUser"
+        onConfirm={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    fireEvent.click(screen.getByText("Cancel"));
     expect(onClose).toHaveBeenCalled();
   });
 });
@@ -726,7 +732,7 @@ describe("ChatDisplay Integration — Actions", () => {
     expect(onReply).toHaveBeenCalledWith(msg);
   });
 
-  it("opens TimeoutMenu on right-click of timeout inline button", () => {
+  it("opens TimeoutDialog on click of timeout inline button", () => {
     const msg = makeTwitchMsg();
     const onTimeoutUser = vi.fn();
     render(
@@ -741,14 +747,15 @@ describe("ChatDisplay Integration — Actions", () => {
     );
 
     const timeoutBtn = screen.getByTitle(
-      "Timeout (10m) - Right-click for more",
+      "Timeout",
     );
-    fireEvent.contextMenu(timeoutBtn);
+    fireEvent.click(timeoutBtn);
 
-    expect(screen.getByText("Timeout TestUser")).toBeInTheDocument();
-    expect(screen.getByText("10 Seconds")).toBeInTheDocument();
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+    expect(screen.getByText("10 seconds")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("10 Seconds"));
+    fireEvent.click(screen.getByText("10 seconds"));
+    fireEvent.click(screen.getByRole("button", { name: /Timeout 10s/ }));
     expect(onTimeoutUser).toHaveBeenCalledWith("user-1", 10, "TestUser");
   });
 
@@ -785,22 +792,60 @@ describe("ChatDisplay Integration — Actions", () => {
     expect(onUntimeoutUser).toHaveBeenCalledWith("BadUser");
   });
 
-  it("calls inline timeout on left-click", () => {
+  it("opens timeout dialog on left-click", () => {
     const msg = makeTwitchMsg();
-    const onTimeoutUser = vi.fn();
     render(
       withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
         isModerator: true,
         modModeActive: true,
-        onTimeoutUser,
+        onTimeoutUser: vi.fn(),
       }),
     );
 
     const timeoutBtn = screen.getByTitle(
-      "Timeout (10m) - Right-click for more",
+      "Timeout",
     );
     fireEvent.click(timeoutBtn);
-    expect(onTimeoutUser).toHaveBeenCalledWith("user-1", 600, "TestUser");
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+    expect(screen.getByText("5 minutes")).toBeInTheDocument();
+  });
+
+  it("keeps timeout dialog open when clicking inside it", () => {
+    const msg = makeTwitchMsg();
+    render(
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onTimeoutUser: vi.fn(),
+      }),
+    );
+
+    fireEvent.click(screen.getByTitle("Timeout"));
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("10 seconds"));
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Timeout 10s/ }));
+    expect(screen.queryByText("Timeout TestUser?")).not.toBeInTheDocument();
+  });
+
+  it("closes timeout dialog when clicking outside", () => {
+    const msg = makeTwitchMsg();
+    const { container } = render(
+      withModeration(<ChatDisplay {...defaultProps} messages={[msg]} />, {
+        isModerator: true,
+        modModeActive: true,
+        onTimeoutUser: vi.fn(),
+      }),
+    );
+
+    fireEvent.click(screen.getByTitle("Timeout"));
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+
+    const chatContainer = container.querySelector(".messages-container")!;
+    fireEvent.click(chatContainer);
+    expect(screen.queryByText("Timeout TestUser?")).not.toBeInTheDocument();
   });
 
   it("calls inline ban on click", () => {
@@ -862,7 +907,7 @@ describe("UnifiedChat Integration — Actions", () => {
     expect(onReply).toHaveBeenCalledWith(twitchMsgs[0]);
   });
 
-  it("opens TimeoutMenu on right-click of timeout inline button", () => {
+  it("opens TimeoutDialog on click of timeout inline button", () => {
     const twitchMsgs = [makeTwitchMsg()];
     const onTimeoutUser = vi.fn();
     render(
@@ -884,14 +929,15 @@ describe("UnifiedChat Integration — Actions", () => {
     );
 
     const timeoutBtn = screen.getByTitle(
-      "Timeout (10m) - Right-click for more",
+      "Timeout",
     );
-    fireEvent.contextMenu(timeoutBtn);
+    fireEvent.click(timeoutBtn);
 
-    expect(screen.getByText("Timeout TestUser")).toBeInTheDocument();
-    expect(screen.getByText("10 Seconds")).toBeInTheDocument();
+    expect(screen.getByText("Timeout TestUser?")).toBeInTheDocument();
+    expect(screen.getByText("24 hours")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("1 Day"));
+    fireEvent.click(screen.getByText("24 hours"));
+    fireEvent.click(screen.getByRole("button", { name: /Timeout 1d/ }));
     expect(onTimeoutUser).toHaveBeenCalledWith("user-1", 86400, "TestUser");
   });
 
@@ -982,7 +1028,7 @@ describe("UnifiedChat Integration — Actions", () => {
 
     expect(screen.getByTitle("Delete message")).toBeInTheDocument();
     expect(
-      screen.getByTitle("Timeout (10m) - Right-click for more"),
+      screen.getByTitle("Timeout"),
     ).toBeInTheDocument();
     expect(screen.getByTitle("Ban user")).toBeInTheDocument();
     expect(screen.getByTitle("Warn user")).toBeInTheDocument();

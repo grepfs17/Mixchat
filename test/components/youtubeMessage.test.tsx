@@ -286,7 +286,7 @@ describe("YouTubeMessageContent", () => {
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       // Timeout + Ban are gated on !isUnmoderatable.
       expect(
-        screen.getByTitle(/Timeout \(10m\) - Right-click for more/),
+        screen.getByTitle(/Timeout/),
       ).toBeInTheDocument();
       expect(
         screen.getByTitle(/Ban \(this chat\)/),
@@ -385,7 +385,7 @@ describe("YouTubeMessageContent", () => {
         </ModerationContext.Provider>,
       );
       fireEvent.click(
-        screen.getByTitle(/Timeout \(10m\) - Right-click for more/),
+        screen.getByTitle(/Timeout/),
       );
       expect(onTimeout).not.toHaveBeenCalled();
       expect(onTimeoutMenu).toHaveBeenCalledWith(expect.anything());
