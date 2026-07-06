@@ -16,7 +16,7 @@ import { useModerationContext } from "../../../contexts/ModerationContext";
 import { TwitchMessageItem } from "./TwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";
-import TimeoutMenu from "../shared/TimeoutMenu";
+import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import YouTubeTimeoutMenu from "../shared/YouTubeTimeoutMenu";
 import YouTubeTimeoutDialog from "../shared/YouTubeTimeoutDialog";
 import EmoteTooltip from "../shared/EmoteTooltip";
@@ -95,9 +95,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       x: number;
       y: number;
     } | null>(null);
-    const [timeoutMenu, setTimeoutMenu] = useState<{
-      x: number;
-      y: number;
+    const [twitchTimeoutDialog, setTwitchTimeoutDialog] = useState<{
       userId: string;
       username: string;
     } | null>(null);
@@ -146,16 +144,16 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       const handleClick = (e: MouseEvent) => {
         if (
           (e.target as HTMLElement | null)?.closest(
-            ".mod-context-menu, .yt-timeout-dialog, .yt-timeout-overlay",
+            ".mod-context-menu, .yt-timeout-dialog, .yt-timeout-overlay, .tw-timeout-dialog, .tw-timeout-overlay",
           )
         ) {
           return;
         }
-        setTimeoutMenu(null);
+        setTwitchTimeoutDialog(null);
         setYtTimeoutMenu(null);
         setMessageMenu(null);
       };
-      if (timeoutMenu || messageMenu || ytTimeoutMenu) {
+      if (messageMenu || ytTimeoutMenu || twitchTimeoutDialog) {
         window.addEventListener("click", handleClick);
         window.addEventListener("contextmenu", handleClick);
       }
@@ -163,7 +161,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
         window.removeEventListener("click", handleClick);
         window.removeEventListener("contextmenu", handleClick);
       };
-    }, [timeoutMenu, messageMenu, ytTimeoutMenu]);
+    }, [messageMenu, ytTimeoutMenu, twitchTimeoutDialog]);
 
     const ignoredSet = useMemo(
       () => new Set(ignoredUsers.map((u) => u.toLowerCase())),
@@ -215,7 +213,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
           const emoteName = target.getAttribute("data-emote-name") || "Emote";
           const emoteSource =
             target.getAttribute("data-emote-source") || "Twitch";
-          const emoteAuthor = target.getAttribute("data-emote-author") || undefined;
+          const emoteAuthor =
+            target.getAttribute("data-emote-author") || undefined;
           if (tooltipUrl) {
             const rect = target.getBoundingClientRect();
             setEmoteTooltip((prev) => {
@@ -293,41 +292,42 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
               <span className="platform-status-dot" />
               <span className="platform-status-text">Twitch</span>
             </span>
-            {ytState && (() => {
-              const isLive = ytState.connected;
-              const isSseLoading = ytState.loading && !isLive;
-              const isSearching = ytLoading && !isLive && !isSseLoading;
-              const hasError = ytState.error || ytError;
+            {ytState &&
+              (() => {
+                const isLive = ytState.connected;
+                const isSseLoading = ytState.loading && !isLive;
+                const isSearching = ytLoading && !isLive && !isSseLoading;
+                const hasError = ytState.error || ytError;
 
-              let statusClass = "platform-status";
-              let statusText = "YouTube";
-              let dotClass = "platform-status-dot";
+                let statusClass = "platform-status";
+                let statusText = "YouTube";
+                let dotClass = "platform-status-dot";
 
-              if (isLive) {
-                statusClass += " platform-status--connected";
-                statusText = "YouTube Live";
-              } else if (isSseLoading) {
-                statusClass += " platform-status--loading";
-                statusText = "YouTube: Connecting\u2026";
-                dotClass += " platform-status-dot--loading";
-              } else if (isSearching) {
-                statusClass += " platform-status--searching";
-                statusText = "YouTube: Searching\u2026";
-                dotClass += " platform-status-dot--loading";
-              } else if (hasError) {
-                statusClass += " platform-status--error";
-                statusText = `YouTube: ${hasError}`;
-              } else {
-                statusClass += " platform-status--disconnected";
-              }
+                if (isLive) {
+                  statusClass += " platform-status--connected";
+                  statusText = "YouTube Live";
+                } else if (isSseLoading) {
+                  statusClass += " platform-status--loading";
+                  statusText = "YouTube: Connecting\u2026";
+                  dotClass += " platform-status-dot--loading";
+                } else if (isSearching) {
+                  statusClass += " platform-status--searching";
+                  statusText = "YouTube: Searching\u2026";
+                  dotClass += " platform-status-dot--loading";
+                } else if (hasError) {
+                  statusClass += " platform-status--error";
+                  statusText = `YouTube: ${hasError}`;
+                } else {
+                  statusClass += " platform-status--disconnected";
+                }
 
-              return (
-                <span className={statusClass}>
-                  <span className={dotClass} />
-                  <span className="platform-status-text">{statusText}</span>
-                </span>
-              );
-            })()}
+                return (
+                  <span className={statusClass}>
+                    <span className={dotClass} />
+                    <span className="platform-status-text">{statusText}</span>
+                  </span>
+                );
+              })()}
           </div>
         )}
         <div
@@ -357,7 +357,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   onReply={onReply}
                   onCopyMessage={onCopyMessage}
                   onTimeoutMenu={(x, y, userId, username) =>
-                    setTimeoutMenu({ x, y, userId, username })
+                    setTwitchTimeoutDialog({ userId, username })
                   }
                   onMessageMenu={(x, y, e) =>
                     setMessageMenu({ x, y, entry: e })
@@ -383,12 +383,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchMove}
-            onContextMenu={(x, y, e) =>
-              setMessageMenu({ x, y, entry: e })
-            }
-            onTimeoutMenu={(x, y, channelId, username) =>
-              setYtTimeoutDialog({ channelId, username })
-            }
+                onContextMenu={(x, y, e) => setMessageMenu({ x, y, entry: e })}
+                onTimeoutMenu={(x, y, channelId, username) =>
+                  setYtTimeoutDialog({ channelId, username })
+                }
                 onUsernameClick={(e, author, avatar) =>
                   handleUsernameClick(e, author, "youtube", avatar)
                 }
@@ -420,6 +418,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             onOpenYouTubeTimeoutMenu={(x, y, channelId, username) =>
               setYtTimeoutDialog({ channelId, username })
             }
+            onOpenTwitchTimeoutMenu={(userId, username) =>
+              setTwitchTimeoutDialog({ userId, username })
+            }
             onClose={() => setMessageMenu(null)}
           />
         )}
@@ -434,16 +435,15 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
           />
         )}
 
-        {timeoutMenu && (
-          <TimeoutMenu
-            userId={timeoutMenu.userId}
-            username={timeoutMenu.username}
-            x={timeoutMenu.x}
-            y={timeoutMenu.y}
-            onTimeout={(userId, seconds, username) =>
-              onTimeoutUser?.(userId, seconds, username)
-            }
-            onClose={() => setTimeoutMenu(null)}
+        {twitchTimeoutDialog && (
+          <TwitchTimeoutDialog
+            userId={twitchTimeoutDialog.userId}
+            username={twitchTimeoutDialog.username}
+            onConfirm={(userId, seconds, username) => {
+              onTimeoutUser?.(userId, seconds, username);
+              setTwitchTimeoutDialog(null);
+            }}
+            onClose={() => setTwitchTimeoutDialog(null)}
           />
         )}
 

@@ -37,7 +37,7 @@ export function MessageModActions({
   onBan,
   onWarn,
   deleteTitle = "Delete message",
-  timeoutTitle = "Timeout (10m) - Right-click for more",
+  timeoutTitle = "Timeout",
   banTitle = "Ban user",
   warnTitle = "Warn user",
   showUserActions = true,
@@ -46,12 +46,19 @@ export function MessageModActions({
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const handleClick = useCallback(
-    (action: PendingAction, handler?: (() => void) | ((e: React.MouseEvent) => void)) => {
+    (
+      e: React.MouseEvent,
+      action: PendingAction,
+      handler?: (() => void) | ((e: React.MouseEvent) => void),
+    ) => {
+      e.stopPropagation();
+      e.preventDefault();
+
       if (!handler) return;
 
       if (!doubleClickConfirm) {
         if (action === "timeout" && typeof handler === "function") {
-          (handler as (e: React.MouseEvent) => void)({} as React.MouseEvent);
+          (handler as (e: React.MouseEvent) => void)(e);
         } else if (typeof handler === "function") {
           (handler as () => void)();
         }
@@ -60,7 +67,7 @@ export function MessageModActions({
 
       if (pendingAction === action) {
         if (action === "timeout" && typeof handler === "function") {
-          (handler as (e: React.MouseEvent) => void)({} as React.MouseEvent);
+          (handler as (e: React.MouseEvent) => void)(e);
         } else if (typeof handler === "function") {
           (handler as () => void)();
         }
@@ -70,7 +77,7 @@ export function MessageModActions({
         setTimeout(() => setPendingAction(null), 2000);
       }
     },
-    [doubleClickConfirm, pendingAction]
+    [doubleClickConfirm, pendingAction],
   );
 
   const hasAny =
@@ -96,7 +103,7 @@ export function MessageModActions({
     <div className="message-actions">
       {showUserActions && onBan && (
         <button
-          onClick={() => handleClick("ban", onBan)}
+          onClick={(e) => handleClick(e, "ban", onBan)}
           className={getButtonClass("ban")}
           title={getTitle("ban", banTitle)}
           style={btnStyle}
@@ -106,7 +113,7 @@ export function MessageModActions({
       )}
       {showUserActions && onTimeout && (
         <button
-          onClick={() => handleClick("timeout", onTimeout)}
+          onClick={(e) => handleClick(e, "timeout", onTimeout)}
           onContextMenu={onTimeoutContextMenu}
           className={getButtonClass("timeout")}
           title={getTitle("timeout", timeoutTitle)}
@@ -117,7 +124,7 @@ export function MessageModActions({
       )}
       {showUserActions && onWarn && (
         <button
-          onClick={() => handleClick("warn", onWarn)}
+          onClick={(e) => handleClick(e, "warn", onWarn)}
           className={getButtonClass("warn")}
           title={getTitle("warn", warnTitle)}
           style={btnStyle}
@@ -127,7 +134,7 @@ export function MessageModActions({
       )}
       {onDelete && (
         <button
-          onClick={() => handleClick("delete", onDelete)}
+          onClick={(e) => handleClick(e, "delete", onDelete)}
           className={getButtonClass("delete")}
           title={getTitle("delete", deleteTitle)}
           style={btnStyle}

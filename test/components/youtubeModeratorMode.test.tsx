@@ -65,7 +65,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       ).toBeInTheDocument();
       expect(screen.getByTitle(/Ban \(this chat\)/)).toBeInTheDocument();
     });
@@ -79,7 +79,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.queryByTitle("Delete message")).not.toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
@@ -110,7 +110,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
@@ -128,7 +128,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
@@ -147,7 +147,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
       expect(screen.queryByTitle(/Ban \(this chat\)/)).not.toBeInTheDocument();
     });
@@ -194,7 +194,7 @@ describe("YouTube Moderator Mode", () => {
         ),
       );
       fireEvent.click(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       );
       expect(onTimeout).not.toHaveBeenCalled();
       expect(onTimeoutMenu).toHaveBeenCalledWith(expect.anything());
@@ -268,7 +268,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.getByTitle("Timeout (10m) - Right-click for more"),
+        screen.getByTitle("Timeout"),
       ).toBeInTheDocument();
       expect(screen.getByTitle(/Ban \(this chat\)/)).toBeInTheDocument();
     });
@@ -302,7 +302,7 @@ describe("YouTube Moderator Mode", () => {
         ),
       );
       const timeoutBtn = screen.getByTitle(
-        "Timeout (10m) - Right-click for more",
+        "Timeout",
       );
       fireEvent.click(timeoutBtn);
       expect(onTimeoutMenu).toHaveBeenCalledWith(
@@ -328,7 +328,7 @@ describe("YouTube Moderator Mode", () => {
       );
       expect(screen.getByTitle("Delete message")).toBeInTheDocument();
       expect(
-        screen.queryByTitle("Timeout (10m) - Right-click for more"),
+        screen.queryByTitle("Timeout"),
       ).not.toBeInTheDocument();
     });
   });

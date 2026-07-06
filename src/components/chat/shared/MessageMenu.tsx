@@ -22,6 +22,10 @@ interface MessageMenuProps {
     channelId: string,
     username: string,
   ) => void;
+  /**
+   * Opens the Twitch timeout duration picker dialog for the given user.
+   */
+  onOpenTwitchTimeoutMenu?: (userId: string, username: string) => void;
   onClose: () => void;
 }
 
@@ -33,6 +37,7 @@ export default function MessageMenu({
   onCopy,
   onViewHistory,
   onOpenYouTubeTimeoutMenu,
+  onOpenTwitchTimeoutMenu,
   onClose,
 }: MessageMenuProps) {
   const {
@@ -125,7 +130,12 @@ export default function MessageMenu({
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
-    if (!isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser && !twitchModActionsVisibleInline) {
+    if (
+      !isBroadcaster &&
+      !isModeratorMsg &&
+      !chatMsg.isCurrentUser &&
+      !twitchModActionsVisibleInline
+    ) {
       items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
         key: "ban",
@@ -137,9 +147,13 @@ export default function MessageMenu({
       });
       items.push({
         key: "timeout",
-        label: "Timeout (10m)",
+        label: "Timeout...",
         onClick: () => {
-          onTimeoutUser?.(chatMsg.userId || "", 600, chatMsg.author);
+          if (onOpenTwitchTimeoutMenu && chatMsg.userId) {
+            onOpenTwitchTimeoutMenu(chatMsg.userId, chatMsg.author);
+          } else {
+            onTimeoutUser?.(chatMsg.userId || "", 600, chatMsg.author);
+          }
           onClose();
         },
       });
@@ -171,9 +185,7 @@ export default function MessageMenu({
     ytMsg.authorChannelId &&
     !ytMsg.authorIsModerator &&
     !ytMsg.authorIsOwner &&
-    !(
-      youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
-    ) &&
+    !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId) &&
     (!compactActions || keepModActionsVisible);
 
   if (
@@ -184,9 +196,7 @@ export default function MessageMenu({
     ytMsg.authorChannelId &&
     !ytMsg.authorIsModerator &&
     !ytMsg.authorIsOwner &&
-    !(
-      youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId
-    ) &&
+    !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId) &&
     !youtubeModActionsVisibleInline
   ) {
     items.push({ key: "mod-divider-youtube", divider: true });
@@ -226,11 +236,7 @@ export default function MessageMenu({
       <div className="context-menu-header">@{author}</div>
       {items.map((it) =>
         "divider" in it ? (
-          <div
-            key={it.key}
-            role="separator"
-            className="context-menu-divider"
-          />
+          <div key={it.key} role="separator" className="context-menu-divider" />
         ) : (
           <button
             key={it.key}
