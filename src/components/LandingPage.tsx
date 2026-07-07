@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DISPLAY_VERSION } from "../lib/version";
 import ThemeCarousel, { type CarouselSlide } from "./ThemeCarousel";
+import FloatingEmotes from "./FloatingEmotes";
 
 interface LandingPageProps {
   onTwitchLogin: () => void;
@@ -57,7 +58,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     {
       title: "Emote Autocomplete",
       description:
-        "Start typing and instantly search through 7TV, BTTV, and FFZ emotes — no browser extensions required.",
+        "Start typing and instantly search through 7TV, BTTV, and FFZ emotes, no browser extensions required.",
       images: [
         {
           src: "/demo/autocompleteemotes.webp",
@@ -69,7 +70,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     {
       title: "Mobile Friendly",
       description:
-        "Full chat experience on the go — optimized for responsive layout.",
+        "Full chat experience on the go, optimized for responsive layout.",
       images: [
         {
           src: "/demo/mobile-capture-1.webp",
@@ -134,7 +135,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     {
       title: "Theme Selector",
       description:
-        "Pick from several built-in themes to recolor the entire chat. The screenshots show a small sample — switch between them in Settings.",
+        "Pick from several built-in themes to recolor the entire chat. Switch between them in Settings.",
       images: [
         {
           src: "/demo/themes/default_theme.webp",
@@ -177,7 +178,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     {
       title: "Full Feature Set",
       description:
-        "Live stream embeds, watchlist notifications, raid detection, and more — all without browser extensions.",
+        "Live stream embeds, watchlist notifications, mod tools, and more. All without browser extensions.",
       images: [
         {
           src: "/demo/complete.webp",
@@ -197,6 +198,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           transform: heroLoaded ? "translateY(0)" : "translateY(20px)",
         }}
       >
+        <FloatingEmotes />
         <img src="/logo.webp" alt="Mixchat" className="landing-hero-logo" />
         <h1 className="landing-hero-title">
           Watch streams. Use emotes easily.
@@ -421,7 +423,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       <section className="landing-cta landing-reveal">
         <h2 className="landing-cta-title">Ready to chat?</h2>
         <p className="landing-cta-subtitle">
-          Log in with your Twitch account to get started — it takes seconds.
+          Log in with your Twitch account to get started.
         </p>
         <button
           className="landing-cta-button landing-cta-button--large"
