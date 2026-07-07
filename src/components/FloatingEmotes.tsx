@@ -3,12 +3,13 @@ import { fetch7TVGlobalEmotes } from "../lib/emotes/7tv";
 import type { EmoteMap } from "../lib/emotes/types";
 import "../styles/FloatingEmotes.css";
 
-const MAX_EMOTES = 18;
+const MAX_EMOTES = 30;
 const MOUSE_RADIUS = 160;
 const MOUSE_REPEL_STRENGTH = 2.2;
 const SPEED_MIN = 0.35;
 const SPEED_MAX = 0.65;
 const MAX_SPEED = 4.5;
+const COLLISION_PUSH = 0.5;
 
 interface EmoteState {
   x: number;
@@ -27,12 +28,11 @@ interface EmoteItem {
   img: HTMLImageElement | null;
 }
 
-function pickRandomEmotes(emotes: EmoteMap, count: number) {
+function pickTopEmotes(emotes: EmoteMap, count: number) {
   const entries = Object.entries(emotes);
   if (entries.length === 0) return [];
 
-  const shuffled = entries.sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, count);
+  const selected = entries.slice(0, count);
 
   return selected.map(([name, rawUrl]) => {
     const url = rawUrl.startsWith("ZW:") ? rawUrl.slice(3) : rawUrl;
@@ -66,7 +66,7 @@ export default function FloatingEmotes() {
     ).matches;
 
     fetch7TVGlobalEmotes().then((emotes) => {
-      const picked = pickRandomEmotes(emotes, MAX_EMOTES);
+      const picked = pickTopEmotes(emotes, MAX_EMOTES);
       itemsRef.current = picked.map((s) => ({
         url: s.url,
         name: s.name,
@@ -112,10 +112,11 @@ export default function FloatingEmotes() {
     const mouseInBounds =
       mouseX >= 0 && mouseX <= w && mouseY >= 0 && mouseY <= h;
 
-    for (const item of itemsRef.current) {
-      const s = item.state;
-      const img = item.img;
-      if (!img) continue;
+    const items = itemsRef.current;
+    const n = items.length;
+
+    for (let i = 0; i < n; i++) {
+      const s = items[i].state;
 
       let px = (s.x / 100) * w;
       let py = (s.y / 100) * h;
@@ -147,9 +148,8 @@ export default function FloatingEmotes() {
         s.vx = (s.vx / speed) * MAX_SPEED;
         s.vy = (s.vy / speed) * MAX_SPEED;
       } else if (!mouseInBounds && speed > SPEED_MAX) {
-        const drag = 0.98;
-        s.vx *= drag;
-        s.vy *= drag;
+        s.vx *= 0.98;
+        s.vy *= 0.98;
       } else if (speed < SPEED_MIN * 0.5 && !mouseInBounds) {
         const boost = (SPEED_MIN * 0.6) / speed;
         s.vx *= boost;
@@ -185,16 +185,74 @@ export default function FloatingEmotes() {
         s.rotation += (Math.random() - 0.5) * 15;
       }
 
-      s.x = (px / w) * 100;
-      s.y = (py / h) * 100;
+      // Store pixel positions for collision pass
+      (s as any)._px = px;
+      (s as any)._py = py;
+      (s as any)._scale = scale;
+      (s as any)._opacity = opacity;
+      (s as any)._blur = blur;
+    }
+
+    // Pairwise collision
+    for (let a = 0; a < n; a++) {
+      for (let b = a + 1; b < n; b++) {
+        const sa = items[a].state;
+        const sb = items[b].state;
+        const ax = (sa as any)._px;
+        const ay = (sa as any)._py;
+        const bx = (sb as any)._px;
+        const by = (sb as any)._py;
+        const ra = (sa.size * (sa as any)._scale) / 2;
+        const rb = (sb.size * (sb as any)._scale) / 2;
+        const minDist = ra + rb;
+
+        const cdx = bx - ax;
+        const cdy = by - ay;
+        const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+
+        if (cdist < minDist && cdist > 0.01) {
+          const overlap = minDist - cdist;
+          const nx = cdx / cdist;
+          const ny = cdy / cdist;
+
+          (sa as any)._px -= nx * overlap * 0.5;
+          (sa as any)._py -= ny * overlap * 0.5;
+          (sb as any)._px += nx * overlap * 0.5;
+          (sb as any)._py += ny * overlap * 0.5;
+
+          sa.vx -= nx * COLLISION_PUSH;
+          sa.vy -= ny * COLLISION_PUSH;
+          sb.vx += nx * COLLISION_PUSH;
+          sb.vy += ny * COLLISION_PUSH;
+        }
+      }
+    }
+
+    // Write to DOM
+    for (let i = 0; i < n; i++) {
+      const item = items[i];
+      const s = item.state;
+      const img = item.img;
+      if (!img) continue;
+
+      const px = (s as any)._px;
+      const py = (s as any)._py;
+
+      // Clamp to bounds after collision adjustments
+      const halfSize = (s.size * (s as any)._scale) / 2;
+      const clampedX = Math.max(halfSize, Math.min(w - halfSize, px));
+      const clampedY = Math.max(halfSize, Math.min(h - halfSize, py));
+
+      s.x = (clampedX / w) * 100;
+      s.y = (clampedY / h) * 100;
 
       img.style.left = `${s.x}%`;
       img.style.top = `${s.y}%`;
       img.style.width = `${s.size}px`;
       img.style.height = `${s.size}px`;
-      img.style.transform = `translate(-50%, -50%) rotate(${s.rotation}deg) scale(${scale})`;
-      img.style.opacity = String(opacity);
-      img.style.filter = `blur(${blur}px)`;
+      img.style.transform = `translate(-50%, -50%) rotate(${s.rotation}deg) scale(${(s as any)._scale})`;
+      img.style.opacity = String((s as any)._opacity);
+      img.style.filter = `blur(${(s as any)._blur}px)`;
     }
 
     rafRef.current = requestAnimationFrame(animate);
