@@ -137,7 +137,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         "Pick from several built-in themes to recolor the entire chat. The screenshots show a small sample — switch between them in Settings.",
       images: [
         {
-          src: "/demo/themes/default_theme.png",
+          src: "/demo/themes/default_theme.webp",
           alt: "Default theme preview",
           caption: "Default",
           captionSub: "Magenta accent",
@@ -145,7 +145,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           aspectRatio: "2 / 1",
         },
         {
-          src: "/demo/themes/twitched_theme.png",
+          src: "/demo/themes/twitched_theme.webp",
           alt: "Twitched theme preview",
           caption: "Twitched",
           captionSub: "Twitch purple",
@@ -153,7 +153,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           aspectRatio: "2 / 1",
         },
         {
-          src: "/demo/themes/one_dark_theme.png",
+          src: "/demo/themes/one_dark_theme.webp",
           alt: "One Dark theme preview",
           caption: "One Dark",
           captionSub: "Atom-inspired",
@@ -161,7 +161,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           aspectRatio: "2 / 1",
         },
         {
-          src: "/demo/themes/theme_menu.png",
+          src: "/demo/themes/theme_menu.webp",
           alt: "Theme settings menu",
           caption: "Settings → Appearance",
           captionSub: "Pick and apply",
