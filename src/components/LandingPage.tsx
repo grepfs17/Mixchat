@@ -1,8 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { DISPLAY_VERSION } from "../lib/version";
+import ThemeCarousel, { type CarouselSlide } from "./ThemeCarousel";
 
 interface LandingPageProps {
   onTwitchLogin: () => void;
+}
+
+interface FeatureImage {
+  src: string;
+  alt: string;
+  caption?: string;
+  captionSub?: string;
+  captionAccent?: string;
+  objectFit?: "cover" | "contain";
+  objectPosition?: string;
+  aspectRatio?: string;
 }
 
 export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
@@ -35,7 +47,13 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     };
   }, []);
 
-  const features = [
+  const features: {
+    title: string;
+    description: string;
+    images: FeatureImage[];
+    badge: string;
+    useCarousel?: boolean;
+  }[] = [
     {
       title: "Emote Autocomplete",
       description:
@@ -72,6 +90,8 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         {
           src: "/demo/link-youtube-channels.webp",
           alt: "YouTube channel linking interface",
+          objectFit: "contain",
+          objectPosition: "center",
         },
       ],
       badge: "Cross-Platform",
@@ -110,6 +130,49 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         },
       ],
       badge: "Mod Friendly",
+    },
+    {
+      title: "Theme Selector",
+      description:
+        "Pick from several built-in themes to recolor the entire chat. The screenshots show a small sample — switch between them in Settings.",
+      images: [
+        {
+          src: "/demo/themes/default_theme.png",
+          alt: "Default theme preview",
+          caption: "Default",
+          captionSub: "Magenta accent",
+          captionAccent: "#9e4073",
+          aspectRatio: "2 / 1",
+        },
+        {
+          src: "/demo/themes/twitched_theme.png",
+          alt: "Twitched theme preview",
+          caption: "Twitched",
+          captionSub: "Twitch purple",
+          captionAccent: "#9146ff",
+          aspectRatio: "2 / 1",
+        },
+        {
+          src: "/demo/themes/one_dark_theme.png",
+          alt: "One Dark theme preview",
+          caption: "One Dark",
+          captionSub: "Atom-inspired",
+          captionAccent: "#56b6c2",
+          aspectRatio: "2 / 1",
+        },
+        {
+          src: "/demo/themes/theme_menu.png",
+          alt: "Theme settings menu",
+          caption: "Settings → Appearance",
+          captionSub: "Pick and apply",
+          captionAccent: "var(--color-accent)",
+          aspectRatio: "2 / 1",
+          objectFit: "contain",
+          objectPosition: "center",
+        },
+      ],
+      badge: "9 Built-in Themes",
+      useCarousel: true,
     },
     {
       title: "Full Feature Set",
@@ -208,20 +271,45 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
                 {feature.description}
               </p>
             </div>
-            <div
-              className={`landing-feature-image-container ${feature.images.length > 1 ? "landing-feature-image-container--dual" : ""}`}
-            >
-              <span className="landing-feature-badge">{feature.badge}</span>
-              {feature.images.map((img, j) => (
-                <img
-                  key={j}
-                  src={img.src}
-                  alt={img.alt}
-                  className="landing-feature-image"
-                  loading="lazy"
+            {feature.useCarousel ? (
+              <div className="landing-feature-image-container landing-feature-image-container--single">
+                <ThemeCarousel
+                  slides={feature.images as CarouselSlide[]}
+                  badge={feature.badge}
                 />
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div
+                className={`landing-feature-image-container ${
+                  feature.images.length === 2
+                    ? "landing-feature-image-container--dual"
+                    : ""
+                }`}
+              >
+                <span className="landing-feature-badge">{feature.badge}</span>
+                {feature.images.map((img, j) => (
+                  <img
+                    key={j}
+                    src={img.src}
+                    alt={img.alt}
+                    className={`landing-feature-image${img.objectFit === "contain" ? " landing-feature-image--contain" : ""}`}
+                    loading="lazy"
+                    style={
+                      img.objectFit || img.objectPosition
+                        ? {
+                            ...(img.objectFit
+                              ? { objectFit: img.objectFit }
+                              : {}),
+                            ...(img.objectPosition
+                              ? { objectPosition: img.objectPosition }
+                              : {}),
+                          }
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            )}
           </section>
         ))}
       </div>

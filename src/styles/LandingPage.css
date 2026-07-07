@@ -221,6 +221,8 @@ html:has(.landing-page) {
 
 .landing-feature-image-container {
     position: relative;
+    width: 100%;
+    max-width: 1083px;
     border-radius: var(--radius-2xl);
     overflow: hidden;
     border: 1px solid var(--color-border-medium);
@@ -235,20 +237,50 @@ html:has(.landing-page) {
     max-width: 1083px;
 }
 
+.landing-feature-image-container--single {
+    max-width: 1200px;
+}
+
 .landing-feature-badge {
     position: absolute;
     top: 12px;
     left: 12px;
     z-index: 2;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(
+        135deg,
+        rgba(15, 15, 20, 0.7) 0%,
+        rgba(10, 5, 15, 0.78) 100%
+    );
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    color: rgba(255, 255, 255, 0.92);
     font-size: 11px;
     font-weight: 600;
-    padding: 4px 10px;
-    border-radius: var(--radius-pill);
-    letter-spacing: 0.03em;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 14px 6px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.55),
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 0 24px rgba(158, 64, 115, 0.18);
+    pointer-events: none;
+    user-select: none;
+}
+
+.landing-feature-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow:
+        0 0 6px var(--color-accent),
+        0 0 14px var(--color-accent);
+    flex-shrink: 0;
 }
 
 .landing-feature-image {
@@ -256,6 +288,23 @@ html:has(.landing-page) {
     height: auto;
     display: block;
     border-radius: var(--radius-2xl);
+}
+
+/* Single-image container: image fills edge-to-edge, container owns the radius */
+.landing-feature-image-container--single .landing-feature-image {
+    border-radius: 0;
+}
+
+.landing-feature-image--contain {
+    width: auto;
+    max-width: 100%;
+    max-height: 900px;
+    margin: 0 auto;
+}
+
+.landing-feature-image-container:has(.landing-feature-image--contain) {
+    width: fit-content;
+    margin: 0 auto;
 }
 
 .landing-feature-text {
@@ -277,8 +326,6 @@ html:has(.landing-page) {
     line-height: 1.65;
     margin: 0;
 }
-
-/* ===== Privacy Section ===== */
 
 .landing-privacy {
     max-width: 800px;
