@@ -115,6 +115,8 @@ function LoginPanel({
   onStreamerToolsEnabledChange,
   defaultPlayerType = "embed" as "embed" | "m3u8",
   onDefaultPlayerTypeChange,
+  defaultHlsQuality = "highest",
+  onDefaultHlsQualityChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -490,7 +492,10 @@ function LoginPanel({
           defaultPlayerType={defaultPlayerType}
           onDefaultPlayerTypeChange={(value) => {
             if (onDefaultPlayerTypeChange) onDefaultPlayerTypeChange(value);
-            window.location.reload();
+          }}
+          defaultHlsQuality={defaultHlsQuality}
+          onDefaultHlsQualityChange={(value) => {
+            if (onDefaultHlsQualityChange) onDefaultHlsQualityChange(value);
           }}
           onClose={() => setShowEmbedConfig(false)}
         />

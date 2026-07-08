@@ -48,4 +48,6 @@ export interface SettingsProps {
   onStreamerToolsEnabledChange: (value: boolean) => void;
   defaultPlayerType: "embed" | "m3u8";
   onDefaultPlayerTypeChange: (value: "embed" | "m3u8") => void;
+  defaultHlsQuality: string;
+  onDefaultHlsQualityChange: (value: string) => void;
 }

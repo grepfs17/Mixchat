@@ -1036,3 +1036,46 @@
         height: 26px;
     }
 }
+
+/* ── Reload banner ────────────────────────────────────────────────────── */
+.embed-config-reload-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    margin: 0 16px 8px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: #a5b4fc;
+}
+
+.embed-config-reload-banner span {
+    flex: 1;
+}
+
+.embed-config-reload-banner button {
+    padding: 4px 12px;
+    border: 1px solid rgba(99, 102, 241, 0.5);
+    border-radius: 4px;
+    background: rgba(99, 102, 241, 0.25);
+    color: #e0e7ff;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.embed-config-reload-banner button:hover {
+    background: rgba(99, 102, 241, 0.4);
+}
+
+.embed-config-reload-dismiss {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #999 !important;
+}
+
+.embed-config-reload-dismiss:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+}

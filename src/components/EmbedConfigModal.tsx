@@ -98,6 +98,8 @@ export default function EmbedConfigModal({
   onStreamerToolsEnabledChange,
   defaultPlayerType,
   onDefaultPlayerTypeChange,
+  defaultHlsQuality,
+  onDefaultHlsQualityChange,
   onClose,
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,6 +115,7 @@ export default function EmbedConfigModal({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [ignoredUserInput, setIgnoredUserInput] = useState("");
+  const [needsReload, setNeedsReload] = useState(false);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -589,11 +592,12 @@ export default function EmbedConfigModal({
             <label className="embed-config-label">Default player</label>
             <select
               value={defaultPlayerType}
-              onChange={(e) =>
+              onChange={(e) => {
                 onDefaultPlayerTypeChange(
                   e.target.value as "embed" | "m3u8",
-                )
-              }
+                );
+                setNeedsReload(true);
+              }}
               className="embed-config-select"
             >
               <option value="embed">Twitch</option>
@@ -602,6 +606,35 @@ export default function EmbedConfigModal({
             <p className="embed-config-description">
               Twitch uses the official embed player. M3U8 plays the raw video
               stream directly and uses less bandwidth, but is experimental.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "default-hls-quality",
+        group: "layout",
+        label: "Default HLS resolution",
+        description:
+          "When using the M3U8 player, start with this resolution.",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-label">Default HLS resolution</label>
+            <select
+              value={defaultHlsQuality}
+              onChange={(e) => onDefaultHlsQualityChange(e.target.value)}
+              className="embed-config-select"
+            >
+              <option value="highest">Highest available</option>
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+              <option value="480p">480p</option>
+              <option value="360p">360p</option>
+              <option value="160p">160p</option>
+              <option value="audio_only">Audio only</option>
+            </select>
+            <p className="embed-config-description">
+              Default resolution for the M3U8 player. Falls back to the closest
+              available quality if the exact resolution is not available.
             </p>
           </div>
         ),
@@ -1095,6 +1128,8 @@ export default function EmbedConfigModal({
       onStreamerToolsEnabledChange,
       defaultPlayerType,
       onDefaultPlayerTypeChange,
+      defaultHlsQuality,
+      onDefaultHlsQualityChange,
     ],
   );
 
@@ -1162,6 +1197,14 @@ export default function EmbedConfigModal({
             </button>
           </div>
         </div>
+
+        {needsReload && (
+          <div className="embed-config-reload-banner">
+            <span>Default player changed — reload the page to apply.</span>
+            <button onClick={() => window.location.reload()}>Reload now</button>
+            <button className="embed-config-reload-dismiss" onClick={() => setNeedsReload(false)}>Dismiss</button>
+          </div>
+        )}
 
         <div className="embed-config-layout">
           <nav className="embed-config-sidebar">

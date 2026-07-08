@@ -121,6 +121,8 @@ export default function AppContainer() {
     setStreamerToolsEnabled,
     defaultPlayerType,
     setDefaultPlayerType,
+    defaultHlsQuality,
+    setDefaultHlsQuality,
   } = useChatSettings();
   const {
     linkedYoutubeUrl,
@@ -153,6 +155,7 @@ export default function AppContainer() {
     twitchAccessToken: sessions.twitch?.accessToken,
     linkedYoutubeUrl,
     defaultPlayerType,
+    defaultHlsQuality,
   });
   const {
     leftColumnVisible,
@@ -348,6 +351,8 @@ export default function AppContainer() {
             onStreamerToolsEnabledChange={setStreamerToolsEnabled}
             defaultPlayerType={defaultPlayerType}
             onDefaultPlayerTypeChange={setDefaultPlayerType}
+            defaultHlsQuality={defaultHlsQuality}
+            onDefaultHlsQualityChange={setDefaultHlsQuality}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();

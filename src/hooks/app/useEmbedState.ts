@@ -9,6 +9,15 @@ const VIEWER_COUNT_REFRESH_MS = 30000;
 
 export type PlayerType = "embed" | "m3u8" | "youtube";
 
+export type HlsQualityPreference =
+  | "highest"
+  | "1080p"
+  | "720p"
+  | "480p"
+  | "360p"
+  | "160p"
+  | "audio_only";
+
 export type HlsQuality = { label: string; url: string };
 
 export type UseEmbedStateOptions = {
@@ -19,6 +28,7 @@ export type UseEmbedStateOptions = {
    * goes away we have to fall back to the Twitch embed. */
   linkedYoutubeUrl: string | null;
   defaultPlayerType?: "embed" | "m3u8";
+  defaultHlsQuality?: string;
 };
 
 export type UseEmbedStateResult = {
@@ -47,6 +57,7 @@ export function useEmbedState(
     twitchAccessToken,
     linkedYoutubeUrl,
     defaultPlayerType,
+    defaultHlsQuality,
   } = options;
 
   const [videoRatio, setVideoRatioRaw] = useState<number>(() => {
@@ -80,6 +91,43 @@ export function useEmbedState(
     setSelectedHlsQualityIdx(0);
     setShowHlsQualityMenu(false);
   }, [selectedTwitchChannelName, playerType]);
+
+  // Apply the user's default quality preference when the quality list is
+  // loaded.  Only fires once per channel change (the reset above empties
+  // the list and then this fills it).  Manual quality changes during a
+  // session are respected until the next channel change.
+  const prevQualitiesLenRef = useRef(0);
+  useEffect(() => {
+    if (hlsQualities.length === 0) {
+      prevQualitiesLenRef.current = 0;
+      return;
+    }
+    // Only apply on initial load, not on internal hls.js playlist refreshes
+    if (prevQualitiesLenRef.current > 0) return;
+    prevQualitiesLenRef.current = hlsQualities.length;
+
+    if (!defaultHlsQuality || defaultHlsQuality === "highest") {
+      setSelectedHlsQualityIdx(0);
+      return;
+    }
+
+    const target = defaultHlsQuality;
+    let idx = 0;
+
+    if (target === "audio_only") {
+      const found = hlsQualities.findIndex((q) => q.label === "audio_only");
+      if (found >= 0) idx = found;
+    } else {
+      for (let i = 0; i < hlsQualities.length; i++) {
+        if (hlsQualities[i].label.includes(target)) {
+          idx = i;
+          break;
+        }
+      }
+    }
+
+    setSelectedHlsQualityIdx(idx);
+  }, [hlsQualities, defaultHlsQuality]);
 
   // If the user is in YouTube-embed mode but the link has been removed
   // (channel change, link deleted from YouTubeLinker), fall back gracefully.

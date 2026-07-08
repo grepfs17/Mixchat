@@ -79,6 +79,8 @@ export type UseChatSettingsResult = {
   setStreamerToolsEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   defaultPlayerType: "embed" | "m3u8";
   setDefaultPlayerType: React.Dispatch<React.SetStateAction<"embed" | "m3u8">>;
+  defaultHlsQuality: string;
+  setDefaultHlsQuality: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -198,6 +200,10 @@ export function useChatSettings(): UseChatSettingsResult {
   const [defaultPlayerType, setDefaultPlayerType] = useLocalStorageState<
     "embed" | "m3u8"
   >("mixchat_default_player_type", "embed");
+  const [defaultHlsQuality, setDefaultHlsQuality] = useLocalStorageState<string>(
+    "mixchat_default_hls_quality",
+    "highest",
+  );
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -275,5 +281,7 @@ export function useChatSettings(): UseChatSettingsResult {
     setStreamerToolsEnabled,
     defaultPlayerType,
     setDefaultPlayerType,
+    defaultHlsQuality,
+    setDefaultHlsQuality,
   };
 }
