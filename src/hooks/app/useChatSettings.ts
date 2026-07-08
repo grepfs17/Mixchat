@@ -77,6 +77,8 @@ export type UseChatSettingsResult = {
   ) => void;
   streamerToolsEnabled: boolean;
   setStreamerToolsEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  defaultPlayerType: "embed" | "m3u8";
+  setDefaultPlayerType: React.Dispatch<React.SetStateAction<"embed" | "m3u8">>;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -193,6 +195,9 @@ export function useChatSettings(): UseChatSettingsResult {
   >("mixchat_mod_mode_targets", {});
   const [streamerToolsEnabled, setStreamerToolsEnabled] =
     useLocalStorageState<boolean>("mixchat_streamer_tools_enabled", true);
+  const [defaultPlayerType, setDefaultPlayerType] = useLocalStorageState<
+    "embed" | "m3u8"
+  >("mixchat_default_player_type", "embed");
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -268,5 +273,7 @@ export function useChatSettings(): UseChatSettingsResult {
     setModModeTargetForChannel,
     streamerToolsEnabled,
     setStreamerToolsEnabled,
+    defaultPlayerType,
+    setDefaultPlayerType,
   };
 }

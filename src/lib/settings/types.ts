@@ -46,4 +46,6 @@ export interface SettingsProps {
   onReauthYoutube: () => void;
   streamerToolsEnabled: boolean;
   onStreamerToolsEnabledChange: (value: boolean) => void;
+  defaultPlayerType: "embed" | "m3u8";
+  onDefaultPlayerTypeChange: (value: "embed" | "m3u8") => void;
 }

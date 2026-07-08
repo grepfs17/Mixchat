@@ -18,6 +18,7 @@ export type UseEmbedStateOptions = {
   /** Resolved linked YouTube URL; when the player is in YouTube mode and this
    * goes away we have to fall back to the Twitch embed. */
   linkedYoutubeUrl: string | null;
+  defaultPlayerType?: "embed" | "m3u8";
 };
 
 export type UseEmbedStateResult = {
@@ -45,6 +46,7 @@ export function useEmbedState(
     selectedTwitchChannelName,
     twitchAccessToken,
     linkedYoutubeUrl,
+    defaultPlayerType,
   } = options;
 
   const [videoRatio, setVideoRatioRaw] = useState<number>(() => {
@@ -60,7 +62,9 @@ export function useEmbedState(
   const setVideoRatio = setVideoRatioRaw;
 
   const [isDragging, setIsDragging] = useState(false);
-  const [playerType, setPlayerType] = useState<PlayerType>("embed");
+  const [playerType, setPlayerType] = useState<PlayerType>(
+    defaultPlayerType ?? "embed",
+  );
   const [hlsQualities, setHlsQualities] = useState<HlsQuality[]>([]);
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);

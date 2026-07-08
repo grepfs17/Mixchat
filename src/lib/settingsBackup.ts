@@ -36,6 +36,7 @@ export const SETTINGS_KEYS = [
   "mixchat_streamer_tools_enabled",
   "mixchat_ignored_users",
   "mixchat_mod_mode_targets",
+  "mixchat_default_player_type",
   "disabled_emotes_v1",
 ] as const;
 

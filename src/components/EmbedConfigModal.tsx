@@ -96,6 +96,8 @@ export default function EmbedConfigModal({
   onReauthYoutube,
   streamerToolsEnabled,
   onStreamerToolsEnabledChange,
+  defaultPlayerType,
+  onDefaultPlayerTypeChange,
   onClose,
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -572,6 +574,34 @@ export default function EmbedConfigModal({
             <p className="embed-config-description embed-config-description--indented">
               If enabled, the stream embed will be visible when you open
               Mixchat. If disabled, the chat will take up the full width.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "default-player",
+        group: "layout",
+        label: "Default player",
+        description:
+          "Choose which player to use for Twitch streams. M3U8 (HLS) uses less bandwidth and avoids third-party cookies.",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-label">Default player</label>
+            <select
+              value={defaultPlayerType}
+              onChange={(e) =>
+                onDefaultPlayerTypeChange(
+                  e.target.value as "embed" | "m3u8",
+                )
+              }
+              className="embed-config-select"
+            >
+              <option value="embed">Twitch</option>
+              <option value="m3u8">M3U8 (experimental)</option>
+            </select>
+            <p className="embed-config-description">
+              Twitch uses the official embed player. M3U8 plays the raw video
+              stream directly and uses less bandwidth, but is experimental.
             </p>
           </div>
         ),
@@ -1063,6 +1093,8 @@ export default function EmbedConfigModal({
       ignoredUserInput,
       streamerToolsEnabled,
       onStreamerToolsEnabledChange,
+      defaultPlayerType,
+      onDefaultPlayerTypeChange,
     ],
   );
 

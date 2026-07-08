@@ -119,6 +119,8 @@ export default function AppContainer() {
     setModModeTargetForChannel,
     streamerToolsEnabled,
     setStreamerToolsEnabled,
+    defaultPlayerType,
+    setDefaultPlayerType,
   } = useChatSettings();
   const {
     linkedYoutubeUrl,
@@ -150,6 +152,7 @@ export default function AppContainer() {
     selectedTwitchChannelName,
     twitchAccessToken: sessions.twitch?.accessToken,
     linkedYoutubeUrl,
+    defaultPlayerType,
   });
   const {
     leftColumnVisible,
@@ -343,6 +346,8 @@ export default function AppContainer() {
             hasYoutubeSession={!!sessions.youtube}
             streamerToolsEnabled={streamerToolsEnabled}
             onStreamerToolsEnabledChange={setStreamerToolsEnabled}
+            defaultPlayerType={defaultPlayerType}
+            onDefaultPlayerTypeChange={setDefaultPlayerType}
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();

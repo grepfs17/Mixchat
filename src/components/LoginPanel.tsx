@@ -113,6 +113,8 @@ function LoginPanel({
   onIgnoredUsersChange,
   streamerToolsEnabled = false,
   onStreamerToolsEnabledChange,
+  defaultPlayerType = "embed" as "embed" | "m3u8",
+  onDefaultPlayerTypeChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -484,6 +486,11 @@ function LoginPanel({
           onStreamerToolsEnabledChange={(value) => {
             if (onStreamerToolsEnabledChange)
               onStreamerToolsEnabledChange(value);
+          }}
+          defaultPlayerType={defaultPlayerType}
+          onDefaultPlayerTypeChange={(value) => {
+            if (onDefaultPlayerTypeChange) onDefaultPlayerTypeChange(value);
+            window.location.reload();
           }}
           onClose={() => setShowEmbedConfig(false)}
         />
