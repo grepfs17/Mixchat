@@ -232,9 +232,8 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     };
     qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
 
-    // The user's OAuth token is sent to the usher endpoint so Twitch can
-    // identify the viewer and skip ads for subscribers / Turbo users.
-    const authenticated = !!twitchToken;
+    // Auth status is now determined client-side via a Helix subscription check.
+    const authenticated = false;
 
     // Return all qualities to the browser.
     // Variant playlist URLs (*.playlist.ttvnw.net) are IP-locked to the server

@@ -337,8 +337,6 @@ export default function StreamEmbed({
 
         if (cancelled) return;
 
-        setStreamAuthenticated(!!playlistData.authenticated);
-
         const fetchedQualities: Array<{ label: string; url: string }> =
           playlistData.qualities;
         setQualities(fetchedQualities);
@@ -405,6 +403,46 @@ export default function StreamEmbed({
       }
     };
   }, [channelName, playerType]);
+
+  // Check if the user is subscribed to the current channel — only when in
+  // m3u8 mode and Twitch is connected.  Resets to grey on channel change;
+  // turns purple only after Helix confirms an active subscription.
+  useEffect(() => {
+    setStreamAuthenticated(false);
+
+    if (playerType !== "m3u8" || !channelName || !twitchConnected) return;
+
+    let cancelled = false;
+
+    const checkSubscription = async () => {
+      try {
+        const usersRes = await fetch(
+          `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelName)}`,
+        );
+        if (!usersRes.ok || cancelled) return;
+        const usersData = await usersRes.json();
+        const broadcasterId = usersData?.data?.[0]?.id;
+        if (!broadcasterId) return;
+
+        const subRes = await fetch(
+          `/api/twitch-proxy?path=/helix/subscriptions/user?broadcaster_id=${broadcasterId}`,
+        );
+        if (!subRes.ok || cancelled) return;
+        const subData = await subRes.json();
+
+        const isSubscribed =
+          Array.isArray(subData?.data) && subData.data.length > 0;
+        if (!cancelled) setStreamAuthenticated(isSubscribed);
+      } catch {
+        // Silently fail — badge stays grey if we can't verify.
+      }
+    };
+
+    checkSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, [channelName, playerType, twitchConnected]);
 
   if (playerType === "embed") {
     // Wait for the parent domain to resolve before mounting the player.
