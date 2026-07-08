@@ -69,7 +69,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       "Content-Type": "application/json",
       Accept: "application/json",
       "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
-      ...(twitchToken ? { Authorization: `OAuth ${twitchToken}` } : {}),
     };
 
     let gqlRes = await fetch("https://gql.twitch.tv/gql", {
@@ -80,6 +79,9 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
 
     // If Twitch requires a client-integrity token (401/403), try acquiring it
     // from /integrity and retry the GQL request with Device-Id + Client-Integrity.
+    // The user's OAuth token is intentionally NOT used here because it was
+    // issued for a different Client-ID than the GQL endpoint expects.  Ads are
+    // controlled by passing oauth_token to the usher URL instead.
     if (!gqlRes.ok && (gqlRes.status === 401 || gqlRes.status === 403)) {
       try {
         const integrityRes = await fetch("https://gql.twitch.tv/integrity", {
@@ -89,27 +91,18 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
         if (integrityRes.ok) {
           const integrityData = await integrityRes.json();
           const clientIntegrity = integrityData?.token;
-          // Try to capture any cookies/headers set by the integrity response
-          // and replay them when calling the GQL endpoint (mirrors browser flow).
           const setCookie = integrityRes.headers?.get?.("set-cookie");
           const kpsdkCt = integrityRes.headers?.get?.("x-kpsdk-ct");
           let cookieHeader: Record<string, string> = {};
           if (kpsdkCt) {
-            // The integrity response typically sets KP_UIDz and KP_UIDz-ssn
-            // to the same value as X-Kpsdk-Ct. Reuse that value for Cookie.
             cookieHeader = {
               Cookie: `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}`,
             };
           } else if (setCookie) {
-            // Fallback: use raw Set-Cookie header(s) if available.
             cookieHeader = { Cookie: setCookie.split(/\r?\n/).join("; ") };
           }
           if (clientIntegrity) {
             const deviceId = Math.random().toString(36).slice(2, 34);
-            // Retry the GQL request but drop any Authorization header that
-            // might contain an expired/invalid OAuth token. Twitch will
-            // accept the client-integrity flow without Authorization for
-            // public playback tokens.
             const retryHeaders: Record<string, string> = {
               ...baseGqlHeaders,
               "Device-Id": deviceId,
@@ -165,6 +158,12 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       fast_bread: "true",
       p: String(Math.floor(Math.random() * 999999)),
     });
+
+    // Pass the user's OAuth token so Twitch can identify the viewer and skip
+    // ads for subscribers / Turbo users.
+    if (twitchToken) {
+      usherParams.set("oauth_token", twitchToken);
+    }
 
     const usherUrl = `https://usher.ttvnw.net/api/channel/hls/${encodeURIComponent(channel)}.m3u8?${usherParams}`;
     const masterRes = await fetch(usherUrl);
@@ -233,6 +232,10 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     };
     qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
 
+    // The user's OAuth token is sent to the usher endpoint so Twitch can
+    // identify the viewer and skip ads for subscribers / Turbo users.
+    const authenticated = !!twitchToken;
+
     // Return all qualities to the browser.
     // Variant playlist URLs (*.playlist.ttvnw.net) are IP-locked to the server
     // that requested the GQL access token, so they are routed through
@@ -240,7 +243,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     // relative URLs to absolute CDN paths. Actual .ts segments on
     // video-weaver.*.hls.twitchsvc.net are not IP-locked, so HLS.js fetches
     // them directly from the CDN without going through the proxy.
-    return new Response(JSON.stringify({ qualities }), {
+    return new Response(JSON.stringify({ qualities, authenticated }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

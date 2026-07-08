@@ -203,6 +203,7 @@ export default function StreamEmbed({
   );
   const [placeholderFading, setPlaceholderFading] = useState(false);
   const [parentDomain, setParentDomain] = useState<string | null>(null);
+  const [streamAuthenticated, setStreamAuthenticated] = useState(false);
 
   // Fade out and remove the placeholder when stream starts playing
   useEffect(() => {
@@ -335,6 +336,8 @@ export default function StreamEmbed({
         if (playlistData.error) throw new Error(playlistData.error);
 
         if (cancelled) return;
+
+        setStreamAuthenticated(!!playlistData.authenticated);
 
         const fetchedQualities: Array<{ label: string; url: string }> =
           playlistData.qualities;
@@ -529,6 +532,26 @@ export default function StreamEmbed({
   return (
     <div className="stream-player">
       <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
+      <div
+        className={`stream-auth-badge${streamAuthenticated ? "" : " stream-auth-badge--guest"}`}
+        title={streamAuthenticated ? "Stream authenticated — ads skipped for subscribers" : "Not authenticated — stream may include ads"}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          {streamAuthenticated ? (
+            <>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="m9 12 2 2 4-4"/>
+            </>
+          ) : (
+            <>
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+            </>
+          )}
+        </svg>
+        {streamAuthenticated ? "Ad-free" : "Ads"}
+      </div>
       {showPlaceholder && placeholderThumbnailUrl && (
         <div
           className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}

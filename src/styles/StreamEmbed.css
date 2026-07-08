@@ -120,3 +120,36 @@
         transform: rotate(360deg);
     }
 }
+
+/* ── Auth indicator badge ──────────────────────────────────────────────────── */
+.stream-auth-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(99, 102, 241, 0.85);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px 3px 6px;
+    border-radius: 12px;
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(4px);
+}
+
+.stream-auth-badge svg {
+    flex-shrink: 0;
+    opacity: 0.9;
+}
+
+/* Grey variant — user is not authenticated, stream may include ads */
+.stream-auth-badge--guest {
+    background: rgba(128, 128, 128, 0.65);
+    color: #e0e0e0;
+}
