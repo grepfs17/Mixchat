@@ -459,7 +459,7 @@ export default function StreamEmbed({
 
         // Check subscription: requires both user_id (me) and broadcaster_id (channel)
         const subRes = await fetch(
-          `/api/twitch-proxy?path=/helix/subscriptions/user?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+          `/api/twitch-proxy?path=/helix/subscriptions/user&broadcaster_id=${broadcasterId}&user_id=${userId}`,
         );
         console.log("[ads] /subscriptions response status:", subRes.status);
         if (!subRes.ok || cancelled) {
