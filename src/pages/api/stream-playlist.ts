@@ -163,9 +163,13 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     // ads for subscribers / Turbo users.
     if (twitchToken) {
       usherParams.set("oauth_token", twitchToken);
+      console.log("[hls:server] Passing oauth_token to usher — ads will be skipped for subscribers/Turbo (channel:", channel, ")");
+    } else {
+      console.log("[hls:server] No oauth_token available — stream may include ads (channel:", channel, ")");
     }
 
     const usherUrl = `https://usher.ttvnw.net/api/channel/hls/${encodeURIComponent(channel)}.m3u8?${usherParams}`;
+    console.log("[hls:server] Fetching usher playlist for channel:", channel);
     const masterRes = await fetch(usherUrl);
 
     if (!masterRes.ok) {
@@ -232,8 +236,50 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     };
     qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
 
-    // Auth status is now determined client-side via a Helix subscription check.
-    const authenticated = false;
+    // Check if the user is subscribed (ad-free). We do this server-side
+    // because the Helix subscriptions endpoint requires user:read:subscriptions
+    // scope, and the server already holds the token from the httpOnly cookie.
+    let authenticated = false;
+    if (twitchToken) {
+      try {
+        const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+        if (clientId) {
+          // Get the authenticated user's ID
+          const selfRes = await fetch("https://api.twitch.tv/helix/users", {
+            headers: {
+              "Client-Id": clientId,
+              Authorization: `Bearer ${twitchToken}`,
+            },
+          });
+          if (selfRes.ok) {
+            const selfData = await selfRes.json();
+            const userId = selfData?.data?.[0]?.id;
+            // Get the broadcaster's ID
+            const chanRes = await fetch(
+              `https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`,
+              { headers: { "Client-Id": clientId, Authorization: `Bearer ${twitchToken}` } },
+            );
+            if (chanRes.ok && userId) {
+              const chanData = await chanRes.json();
+              const broadcasterId = chanData?.data?.[0]?.id;
+              if (broadcasterId) {
+                const subRes = await fetch(
+                  `https://api.twitch.tv/helix/subscriptions/user?broadcaster_id=${broadcasterId}&user_id=${userId}`,
+                  { headers: { "Client-Id": clientId, Authorization: `Bearer ${twitchToken}` } },
+                );
+                if (subRes.ok) {
+                  const subData = await subRes.json();
+                  authenticated = Array.isArray(subData?.data) && subData.data.length > 0;
+                }
+                console.log("[hls:server] Subscription check:", { channel, userId, broadcasterId, authenticated, subStatus: subRes.status });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[hls:server] Subscription check error (non-fatal):", err);
+      }
+    }
 
     // Return all qualities to the browser.
     // Variant playlist URLs (*.playlist.ttvnw.net) are IP-locked to the server

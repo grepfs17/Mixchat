@@ -341,6 +341,13 @@ export default function StreamEmbed({
           playlistData.qualities;
         setQualities(fetchedQualities);
         onQualitiesLoaded?.(fetchedQualities);
+
+        // Use server-side subscription check result (more reliable: token has full scopes)
+        if (typeof playlistData.authenticated === "boolean") {
+          console.log("[ads] Server reports authenticated:", playlistData.authenticated);
+          setStreamAuthenticated(playlistData.authenticated);
+        }
+
         const playlistUrl = fetchedQualities[0].url;
 
         if (HLS.isSupported()) {
@@ -358,6 +365,9 @@ export default function StreamEmbed({
               hls.destroy();
               return;
             }
+            console.log("[hls] Manifest parsed — stream loaded for:", channelName);
+            console.log("[hls] Quality:", fetchedQualities[0]?.label ?? "unknown", "URL:", playlistUrl);
+            console.log("[hls] Ad-free via usher oauth_token: ads are controlled server-side, not by this badge");
             setLoading(false);
             videoRef.current?.play().catch(() => {
               // Auto-play failed — user will need to click play
@@ -410,31 +420,64 @@ export default function StreamEmbed({
   useEffect(() => {
     setStreamAuthenticated(false);
 
-    if (playerType !== "m3u8" || !channelName || !twitchConnected) return;
+    if (playerType !== "m3u8" || !channelName || !twitchConnected) {
+      console.log("[ads] Skipping subscription check", {
+        playerType,
+        hasChannel: !!channelName,
+        twitchConnected,
+      });
+      return;
+    }
 
     let cancelled = false;
 
     const checkSubscription = async () => {
       try {
+        console.log("[ads] Checking subscription for channel:", channelName);
+
+        // Resolve the authenticated user's ID (GET /users with no params returns the token owner)
+        const selfRes = await fetch("/api/twitch-proxy?path=/helix/users");
+        if (!selfRes.ok || cancelled) return;
+        const selfData = await selfRes.json();
+        const userId = selfData?.data?.[0]?.id;
+        console.log("[ads] Authenticated user ID:", userId);
+        if (!userId) return;
+
+        // Resolve the broadcaster's ID from their login name
         const usersRes = await fetch(
           `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelName)}`,
         );
-        if (!usersRes.ok || cancelled) return;
+        console.log("[ads] /users response status:", usersRes.status);
+        if (!usersRes.ok || cancelled) {
+          if (!usersRes.ok) console.warn("[ads] /users request failed:", usersRes.status);
+          return;
+        }
         const usersData = await usersRes.json();
         const broadcasterId = usersData?.data?.[0]?.id;
+        console.log("[ads] Broadcaster ID:", broadcasterId);
         if (!broadcasterId) return;
 
+        // Check subscription: requires both user_id (me) and broadcaster_id (channel)
         const subRes = await fetch(
-          `/api/twitch-proxy?path=/helix/subscriptions/user?broadcaster_id=${broadcasterId}`,
+          `/api/twitch-proxy?path=/helix/subscriptions/user?broadcaster_id=${broadcasterId}&user_id=${userId}`,
         );
-        if (!subRes.ok || cancelled) return;
+        console.log("[ads] /subscriptions response status:", subRes.status);
+        if (!subRes.ok || cancelled) {
+          if (!subRes.ok) {
+            const errText = await subRes.text().catch(() => "");
+            console.warn("[ads] /subscriptions check failed:", subRes.status, errText.slice(0, 200));
+          }
+          return;
+        }
         const subData = await subRes.json();
+        console.log("[ads] Subscription data:", subData);
 
         const isSubscribed =
           Array.isArray(subData?.data) && subData.data.length > 0;
+        console.log("[ads] Is subscribed:", isSubscribed);
         if (!cancelled) setStreamAuthenticated(isSubscribed);
-      } catch {
-        // Silently fail — badge stays grey if we can't verify.
+      } catch (err) {
+        console.error("[ads] Subscription check error:", err);
       }
     };
 
@@ -570,26 +613,28 @@ export default function StreamEmbed({
   return (
     <div className="stream-player">
       <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
-      <div
-        className={`stream-auth-badge${streamAuthenticated ? "" : " stream-auth-badge--guest"}`}
-        title={streamAuthenticated ? "Stream authenticated — ads skipped for subscribers" : "Not authenticated — stream may include ads"}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          {streamAuthenticated ? (
-            <>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="m9 12 2 2 4-4"/>
-            </>
-          ) : (
-            <>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
-            </>
-          )}
-        </svg>
-        {streamAuthenticated ? "Ad-free" : "Ads"}
-      </div>
+      {twitchConnected && (
+        <div
+          className={`stream-auth-badge${streamAuthenticated ? "" : " stream-auth-badge--guest"}`}
+          title={streamAuthenticated ? "Stream authenticated — ads skipped for subscribers" : "Not authenticated — stream may include ads"}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {streamAuthenticated ? (
+              <>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+              </>
+            ) : (
+              <>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+              </>
+            )}
+          </svg>
+          {streamAuthenticated ? "Ad-free" : "Ads"}
+        </div>
+      )}
       {showPlaceholder && placeholderThumbnailUrl && (
         <div
           className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
