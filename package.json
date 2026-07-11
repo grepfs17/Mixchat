@@ -1,6 +1,7 @@
 {
   "name": "mixchat",
   "version": "0.9.8.7-beta",
+  "license": "AGPL-3.0",
   "description": "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.",
   "type": "module",
   "scripts": {
