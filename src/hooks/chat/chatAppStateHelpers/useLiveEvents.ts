@@ -138,7 +138,7 @@ export function useLiveEvents({
     });
   }, [setNotification, notificationIdRef]);
 
-  const onUserRaid = useCallback(
+  const onInitiatorRaid = useCallback(
     (raid: RaidOutEvent) => {
       setPendingRaid(raid);
       setIsRaidInitiator(true);
@@ -146,7 +146,7 @@ export function useLiveEvents({
     [setPendingRaid, setIsRaidInitiator],
   );
 
-  const onOutgoingRaid = useCallback(
+  const onIncomingRaid = useCallback(
     (raid: RaidOutEvent) => {
       setPendingRaid(raid);
       setIsRaidInitiator(false);
@@ -159,7 +159,7 @@ export function useLiveEvents({
     channelId: userId || "",
     enabled: !!(accessToken && userId),
     isInitiator: true,
-    onRaid: onUserRaid,
+    onRaid: onInitiatorRaid,
     onScopeError: onRaidScopeError,
   });
 
@@ -167,8 +167,8 @@ export function useLiveEvents({
     subscribe,
     channelId,
     enabled: !!(accessToken && channelId && channelId !== userId),
-    isInitiator: true,
-    onRaid: onOutgoingRaid,
+    isInitiator: false,
+    onRaid: onIncomingRaid,
     onScopeError: onRaidScopeError,
   });
 
