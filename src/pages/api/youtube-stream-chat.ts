@@ -154,17 +154,14 @@ function ARGBtoHex(argb: number): string {
   return `#${hex}`;
 }
 
-function parseMessageRuns(msg: any): MessagePart[] {
+function parseRuns(runs: any[]): MessagePart[] {
   const parts: MessagePart[] = [];
-  const message = msg.message || msg.header_subtext;
-  if (!message?.runs) return parts;
-
-  for (const run of message.runs) {
+  for (const run of runs) {
     if (run.emoji) {
       const emoji = run.emoji;
       const name = emoji.shortcuts?.[0] || emoji.emoji_id || "emoji";
       const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
-      const isCustom = !!emoji.is_custom;
+      const isCustom = !!(emoji.is_custom ?? emoji.isCustomEmoji);
       if (!isCustom) {
         if (emoji.emoji_id) parts.push({ type: "text", text: emoji.emoji_id });
         continue;
@@ -182,6 +179,12 @@ function parseMessageRuns(msg: any): MessagePart[] {
     }
   }
   return parts;
+}
+
+function parseMessageRuns(msg: any): MessagePart[] {
+  const message = msg.message || msg.header_subtext;
+  if (!message?.runs) return [];
+  return parseRuns(message.runs);
 }
 
 function parseTimestamp(msg: any): Date {
@@ -401,6 +404,38 @@ function parseChatItem(item: any): ChatMessage | null {
   return null;
 }
 
+function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
+  const contents = banner.contents;
+  if (!contents?.is?.(YTNodes.LiveChatBannerRedirect)) return null;
+
+  const parts: MessagePart[] = [];
+  if (headerText) {
+    parts.push({ type: "text", text: headerText });
+  }
+  if (contents.banner_message?.runs) {
+    parts.push(...parseRuns(contents.banner_message.runs));
+  } else if (contents.banner_message?.toString()) {
+    parts.push({ type: "text", text: contents.banner_message.toString() });
+  }
+
+  const authorAvatar = Array.isArray(contents.author_photo)
+    ? contents.author_photo[0]?.url
+    : undefined;
+
+  return {
+    id: banner.action_id || `redirect-${Date.now()}`,
+    author: "System",
+    authorAvatar,
+    parts,
+    timestamp: new Date(),
+    messageType: "redirect",
+    superchat: {
+      amount: contents.inline_action_button?.text || "Redirect",
+      color: "#ff9800",
+    },
+  };
+}
+
 // Session management
 
 function reapIdleSessions() {
@@ -562,6 +597,22 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           }
           continue;
         }
+        if (action.is(YTNodes.AddBannerToLiveChatCommand)) {
+          const banner = action.banner;
+          if (!banner) continue;
+          const headerText = banner.header?.text?.toString();
+          const msg = parseBannerRedirect(banner, headerText);
+          if (!msg) continue;
+          if (!seenIds.has(msg.id)) {
+            seenIds.add(msg.id);
+            messages.push(msg);
+            if (messages.length > 200) {
+              const removed = messages.shift()!;
+              seenIds.delete(removed.id);
+            }
+          }
+          continue;
+        }
       }
     }
     resolveReady();
@@ -670,6 +721,23 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: text };
           }
           broadcast(session!, "delete", { messageId: targetId, deletedByText: text });
+        }
+        return;
+      }
+      if (action.is(YTNodes.AddBannerToLiveChatCommand)) {
+        const banner = action.banner;
+        if (!banner) return;
+        const headerText = banner.header?.text?.toString();
+        const msg = parseBannerRedirect(banner, headerText);
+        if (!msg) return;
+        if (!seenIds.has(msg.id)) {
+          seenIds.add(msg.id);
+          messages.push(msg);
+          if (messages.length > 200) {
+            const removed = messages.shift()!;
+            seenIds.delete(removed.id);
+          }
+          broadcast(session!, "message", msg, msg.id);
         }
         return;
       }

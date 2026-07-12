@@ -48,6 +48,11 @@ const YT_EVENT_CONFIG: Record<
     color: "#4caf50",
     bg: "rgba(76, 80, 0.15)",
   },
+  redirect: {
+    label: "RAID / REDIRECT",
+    color: "#ff9800",
+    bg: "rgba(255, 152, 0, 0.15)",
+  },
 };
 
 function getConfig(msg: YTMessage) {
@@ -209,6 +214,9 @@ export function YouTubeMessageContent({
             )}
             {msg.messageType === "gift-redemption" && (
               <>Received a gift membership</>
+            )}
+            {msg.messageType === "redirect" && (
+              <YTMessageParts parts={msg.parts} variant={variant} />
             )}
             {msg.superchat && !msg.messageType && (
               <>
