@@ -93,7 +93,7 @@ export function useChatSettings(): UseChatSettingsResult {
   const [showStreamEmbed, setShowStreamEmbed] = useState(embedDefaultOpen);
 
   const [unifyChatEnabled, setUnifyChatEnabledRaw] =
-    useLocalStorageState<boolean>("mixchat_unify_chat", false);
+    useLocalStorageState<boolean>("mixchat_unify_chat", true);
   const [useYoutubeEmbed, setUseYoutubeEmbedRaw] =
     useLocalStorageState<boolean>("mixchat_use_youtube_embed", true);
   // unifyChat and youtubeEmbed are mutually exclusive — turning one on forces
@@ -116,7 +116,7 @@ export function useChatSettings(): UseChatSettingsResult {
     "inter",
   );
   const [mentionSoundEnabled, setMentionSoundEnabled] =
-    useLocalStorageState<boolean>("mixchat_mention_sound", true);
+    useLocalStorageState<boolean>("mixchat_mention_sound", false);
   const [mentionVolume, setMentionVolume] = useLocalStorageState<number>(
     "mixchat_mention_volume",
     0.2,
