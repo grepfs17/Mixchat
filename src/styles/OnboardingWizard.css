@@ -154,11 +154,42 @@
 
 /* === Theme step === */
 
+.onboarding-preview {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    font-family: var(--chat-font-family, inherit);
+    font-size: var(--chat-font-size, 14px);
+    line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition:
+        background 0.2s,
+        border-color 0.2s,
+        font-size 0.15s;
+}
+
+.onboarding-preview .messages-container {
+    background: var(--color-bg-primary);
+    padding: 4px 0;
+    min-height: 160px;
+    overflow: visible;
+}
+
+.onboarding-preview .message {
+    cursor: default;
+}
+
+.onboarding-preview .message:hover {
+    background: transparent;
+    border-left-color: transparent;
+}
+
 .onboarding-theme-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
-    margin-top: 4px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 18px;
 }
 
 .onboarding-theme-section {
@@ -594,6 +625,95 @@
     color: var(--color-text-primary);
 }
 
+/* === Typography controls === */
+
+.onboarding-typography {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-border-medium);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.onboarding-typography-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.onboarding-typography-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.onboarding-typography-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-indigo);
+    background: rgba(99, 102, 241, 0.1);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+}
+
+.onboarding-typography-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.onboarding-typography-bound {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.onboarding-typography-bound--large {
+    font-size: 16px;
+}
+
+.onboarding-typography-range {
+    flex: 1;
+    height: 4px;
+    cursor: pointer;
+    accent-color: var(--color-indigo);
+}
+
+.onboarding-typography-fonts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.onboarding-typography-font {
+    padding: 7px 12px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.onboarding-typography-font:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-lighter);
+}
+
+.onboarding-typography-font--active {
+    border-color: var(--color-indigo);
+    background: rgba(99, 102, 241, 0.12);
+    color: #c7d2fe;
+}
+
 /* === Responsive === */
 
 @media (max-width: 720px) {
@@ -626,7 +746,16 @@
     }
 
     .onboarding-theme-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .onboarding-typography-fonts {
+        gap: 4px;
+    }
+
+    .onboarding-typography-font {
+        padding: 6px 10px;
+        font-size: 12px;
     }
 
     .onboarding-types {

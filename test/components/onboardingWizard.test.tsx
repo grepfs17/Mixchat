@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import OnboardingWizard from "../../src/components/OnboardingWizard";
-import type { ChatTheme } from "../../src/lib/types";
+import type { ChatFont, ChatTheme } from "../../src/lib/types";
 
 function makeProps(overrides: Partial<React.ComponentProps<typeof OnboardingWizard>> = {}) {
   return {
     chatTheme: "default" as const,
     onChatThemeChange: vi.fn(),
+    fontSize: 14,
+    onFontSizeChange: vi.fn(),
+    chatFont: "inter" as const,
+    onChatFontChange: vi.fn(),
     streamerToolsEnabled: false,
     onStreamerToolsEnabledChange: vi.fn(),
     hideViewerCount: false,
@@ -36,6 +40,8 @@ function makeProps(overrides: Partial<React.ComponentProps<typeof OnboardingWiza
 
 interface HarnessState {
   chatTheme: ChatTheme;
+  fontSize: number;
+  chatFont: ChatFont;
   streamerToolsEnabled: boolean;
   hideViewerCount: boolean;
   unifyChatEnabled: boolean;
@@ -55,6 +61,8 @@ function StatefulHarness({
 }) {
   const [state, setState] = useState<HarnessState>({
     chatTheme: "default",
+    fontSize: 14,
+    chatFont: "inter",
     streamerToolsEnabled: false,
     hideViewerCount: false,
     unifyChatEnabled: true,
@@ -74,6 +82,10 @@ function StatefulHarness({
     <OnboardingWizard
       chatTheme={state.chatTheme}
       onChatThemeChange={update("chatTheme")}
+      fontSize={state.fontSize}
+      onFontSizeChange={update("fontSize")}
+      chatFont={state.chatFont}
+      onChatFontChange={update("chatFont")}
       streamerToolsEnabled={state.streamerToolsEnabled}
       onStreamerToolsEnabledChange={update("streamerToolsEnabled")}
       hideViewerCount={state.hideViewerCount}
@@ -330,5 +342,168 @@ describe("OnboardingWizard component", () => {
     expect(pill).not.toBeNull();
     expect(pill!.textContent).toMatch(/On/);
     expect(pill!.textContent).not.toMatch(/Off/);
+  });
+
+  it("renders a chat preview on the theme step", () => {
+    render(<StatefulHarness />);
+    expect(
+      document.querySelector(".onboarding-preview"),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelectorAll(".onboarding-preview .message").length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows the example usernames in the chat preview", () => {
+    render(<StatefulHarness />);
+    expect(screen.getByText("notmasterofpupis")).toBeInTheDocument();
+    expect(screen.getByText("nothelder")).toBeInTheDocument();
+    expect(screen.getByText("shokastion")).toBeInTheDocument();
+    expect(screen.getByText("youtube_avg_chatter")).toBeInTheDocument();
+  });
+
+  it("renders 7TV emotes in the chat preview", () => {
+    render(<StatefulHarness />);
+    const emotes = document.querySelectorAll(
+      ".onboarding-preview .message .chat-emote",
+    );
+    expect(emotes.length).toBeGreaterThanOrEqual(1);
+    emotes.forEach((img) => {
+      const src = (img as HTMLImageElement).src;
+      expect(src).toMatch(/^https:\/\/cdn\.7tv\.app\/emote\//);
+      expect(src).toMatch(/\/2x\.(avif|webp)$/);
+    });
+  });
+
+  it("renders emotes at the same size as the real chat", () => {
+    render(<StatefulHarness />);
+    const emotes = document.querySelectorAll(
+      ".onboarding-preview .message .chat-emote",
+    );
+    expect(emotes.length).toBeGreaterThanOrEqual(1);
+    emotes.forEach((img) => {
+      const el = img as HTMLImageElement;
+      expect(el.style.height).toBe("2em");
+      expect(el.style.verticalAlign).toBe("middle");
+      expect(el.style.margin).toBe("0px 2px");
+    });
+  });
+
+  it("uses the real chat message structure (message/message-single-line classes)", () => {
+    render(<StatefulHarness />);
+    expect(
+      document.querySelector(
+        ".onboarding-preview .messages-container",
+      ),
+    ).toBeInTheDocument();
+    const messages = document.querySelectorAll(
+      ".onboarding-preview .message",
+    );
+    expect(messages.length).toBeGreaterThanOrEqual(4);
+    messages.forEach((m) => {
+      expect(m.querySelector(".message-single-line")).not.toBeNull();
+    });
+  });
+
+  it("renders each preview part with the real chat classes", () => {
+    render(<StatefulHarness />);
+    const first = document.querySelector(
+      ".onboarding-preview .message",
+    );
+    expect(first).not.toBeNull();
+    expect(first!.querySelector(".timestamp")).not.toBeNull();
+    expect(first!.querySelector(".author.author-link")).not.toBeNull();
+    expect(first!.querySelector(".message-separator")).not.toBeNull();
+    expect(first!.querySelector(".message-text")).not.toBeNull();
+  });
+
+  it("marks the mention message with the real mention class", () => {
+    render(<StatefulHarness />);
+    const mention = document.querySelector(
+      ".onboarding-preview .message.mention",
+    );
+    expect(mention).not.toBeNull();
+  });
+
+  it("marks the YouTube message with the real yt-event class and platform tag", () => {
+    render(<StatefulHarness />);
+    const yt = document.querySelector(
+      ".onboarding-preview .message.yt-event",
+    );
+    expect(yt).not.toBeNull();
+    expect(yt!.querySelector(".platform-tag.youtube")).not.toBeNull();
+    expect(yt!.querySelector(".avatar")).toBeNull();
+  });
+
+  it("adds a Twitch platform tag to Twitch messages", () => {
+    render(<StatefulHarness />);
+    const twitchTags = document.querySelectorAll(
+      ".onboarding-preview .message:not(.yt-event) .platform-tag.twitch",
+    );
+    expect(twitchTags.length).toBe(3);
+  });
+
+  it("exposes embed default open as a toggle for moderators", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a moderator"));
+
+    const setting = screen
+      .getByText("Open stream embed by default")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    expect(setting!.querySelector(".onboarding-toggle")).toBeInTheDocument();
+  });
+
+  it("locks embed default open for streamers (no toggle)", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a streamer"));
+
+    const setting = screen
+      .getByText("Open stream embed by default")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    expect(
+      setting!.querySelector(".onboarding-toggle"),
+    ).not.toBeInTheDocument();
+    const pill = setting!.querySelector(".onboarding-state-pill");
+    expect(pill).not.toBeNull();
+  });
+
+  it("does not render the windowed header on the preview", () => {
+    render(<StatefulHarness />);
+    expect(
+      document.querySelector(".onboarding-preview-header"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("updates font size when the slider is moved", async () => {
+    const onFontSizeChange = vi.fn();
+    render(<OnboardingWizard {...makeProps({ onFontSizeChange })} />);
+    const range = screen.getByRole("slider");
+    await userEvent.click(range);
+    fireEvent.change(range, { target: { value: "18" } });
+    expect(onFontSizeChange).toHaveBeenCalledWith(18);
+  });
+
+  it("switches the active font when a font button is clicked", async () => {
+    const onChatFontChange = vi.fn();
+    render(<OnboardingWizard {...makeProps({ onChatFontChange })} />);
+    await userEvent.click(screen.getByText("Roboto"));
+    expect(onChatFontChange).toHaveBeenCalledWith("roboto");
+  });
+
+  it("marks the currently selected font as active", () => {
+    render(
+      <OnboardingWizard
+        {...makeProps({ chatFont: "rubik" })}
+      />,
+    );
+    const active = document.querySelector(
+      ".onboarding-typography-font--active",
+    );
+    expect(active).not.toBeNull();
+    expect(active!.textContent).toMatch(/Rubik/);
   });
 });

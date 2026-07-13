@@ -800,6 +800,10 @@ export default function AppContainer() {
         <OnboardingWizard
           chatTheme={chatTheme}
           onChatThemeChange={setChatTheme}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
+          chatFont={chatFont}
+          onChatFontChange={setChatFont}
           streamerToolsEnabled={streamerToolsEnabled}
           onStreamerToolsEnabledChange={setStreamerToolsEnabled}
           hideViewerCount={hideViewerCount}

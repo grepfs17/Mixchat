@@ -8,9 +8,15 @@ import {
   FaShieldAlt,
   FaTimes,
   FaInfoCircle,
+  FaTwitch,
+  FaYoutube,
 } from "react-icons/fa";
-import type { ChatTheme } from "../lib/types";
-import { THEME_OPTIONS } from "../lib/types";
+import type { ChatFont, ChatTheme } from "../lib/types";
+import {
+  CHAT_FONT_OPTIONS,
+  FONT_FAMILY_MAP,
+  THEME_OPTIONS,
+} from "../lib/types";
 import "../styles/OnboardingWizard.css";
 
 type UserType = "streamer" | "mod" | "viewer";
@@ -18,6 +24,10 @@ type UserType = "streamer" | "mod" | "viewer";
 interface OnboardingWizardProps {
   chatTheme: ChatTheme;
   onChatThemeChange: (value: ChatTheme) => void;
+  fontSize: number;
+  onFontSizeChange: (value: number) => void;
+  chatFont: ChatFont;
+  onChatFontChange: (value: ChatFont) => void;
   streamerToolsEnabled: boolean;
   onStreamerToolsEnabledChange: (value: boolean) => void;
   hideViewerCount: boolean;
@@ -133,7 +143,7 @@ const BASE_SETTINGS: SettingDef[] = [
     label: "Open stream embed by default",
     description:
       "If enabled, the stream player shows alongside the chat when you open Mixchat. If disabled, chat takes the full width.",
-    choosableFor: [],
+    choosableFor: ["mod"],
     icon: <FaInfoCircle size={13} />,
   },
   {
@@ -197,6 +207,10 @@ const BASE_SETTINGS: SettingDef[] = [
 export default function OnboardingWizard({
   chatTheme,
   onChatThemeChange,
+  fontSize,
+  onFontSizeChange,
+  chatFont,
+  onChatFontChange,
   streamerToolsEnabled,
   onStreamerToolsEnabledChange,
   hideViewerCount,
@@ -409,40 +423,221 @@ export default function OnboardingWizard({
 
         <div className="onboarding-body">
           {step === 1 ? (
-            <div className="onboarding-theme-grid">
-              {THEME_OPTIONS.map(({ value, label, preview, section }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onChatThemeChange(value as ChatTheme)}
-                  className={`onboarding-theme-btn${
-                    chatTheme === value ? " onboarding-theme-btn--active" : ""
-                  }`}
-                >
-                  {section && (
-                    <div className="onboarding-theme-section">{section}</div>
-                  )}
-                  <div className="onboarding-theme-preview">
-                    <div
-                      className="onboarding-theme-preview-bg"
-                      style={{ backgroundColor: preview.bg }}
-                    />
-                    <div
-                      className="onboarding-theme-preview-hover"
-                      style={{ backgroundColor: preview.hover }}
-                    />
-                    <div
-                      className="onboarding-theme-preview-accent"
-                      style={{ backgroundColor: preview.accent }}
-                    />
+            <>
+              <div
+                className="onboarding-preview"
+                style={{
+                  "--chat-font-size": `${fontSize}px`,
+                  "--chat-font-family": FONT_FAMILY_MAP[chatFont],
+                } as React.CSSProperties}
+              >
+                <div className="messages-container">
+                  <div className="message chat">
+                    <div className="message-single-line">
+                      <span className="timestamp">14:02</span>
+                      <span
+                        className="platform-tag twitch"
+                        title="Twitch"
+                      >
+                        <FaTwitch size={14} />
+                      </span>
+                      <a
+                        href="#"
+                        className="author author-link"
+                        style={{ color: "#c084fc" }}
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        notmasterofpupis
+                      </a>
+                      <span className="message-separator">:</span>
+                      <span className="message-text">
+                        hey @streamer loving the new layout{" "}
+                        <img
+                          className="chat-emote"
+                          src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
+                          alt="Clap"
+                          title="Clap"
+                          loading="lazy"
+                          style={{
+                            height: "2em",
+                            verticalAlign: "middle",
+                            margin: "0 2px",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </span>
+                    </div>
                   </div>
-                  <span className="onboarding-theme-label">{label}</span>
-                  {chatTheme === value && (
-                    <span className="onboarding-theme-check">✓</span>
-                  )}
-                </button>
-              ))}
-            </div>
+                  <div className="message chat mention">
+                    <div className="message-single-line">
+                      <span className="timestamp">14:03</span>
+                      <span
+                        className="platform-tag twitch"
+                        title="Twitch"
+                      >
+                        <FaTwitch size={14} />
+                      </span>
+                      <a
+                        href="#"
+                        className="author author-link"
+                        style={{ color: "#34d399" }}
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        nothelder
+                      </a>
+                      <span className="message-separator">:</span>
+                      <span className="message-text">
+                        just hit 100 followers, let's gooo{" "}
+                        <img
+                          className="chat-emote"
+                          src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
+                          alt="Pog"
+                          title="Pog"
+                          loading="lazy"
+                          style={{
+                            height: "2em",
+                            verticalAlign: "middle",
+                            margin: "0 2px",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </span>
+                    </div>
+                  </div>
+                  <div className="message chat">
+                    <div className="message-single-line">
+                      <span className="timestamp">14:04</span>
+                      <span
+                        className="platform-tag twitch"
+                        title="Twitch"
+                      >
+                        <FaTwitch size={14} />
+                      </span>
+                      <a
+                        href="#"
+                        className="author author-link"
+                        style={{ color: "#fbbf24" }}
+                        onClick={(e) => e.preventDefault()}
+                      >
+                        shokastion
+                      </a>
+                      <span className="message-separator">:</span>
+                      <span className="message-text">
+                        this theme looks really clean
+                      </span>
+                    </div>
+                  </div>
+                  <div className="message chat yt-event">
+                    <div className="message-single-line">
+                      <span className="timestamp">14:05</span>
+                      <span
+                        className="platform-tag youtube"
+                        title="YouTube"
+                      >
+                        <FaYoutube size={14} />
+                      </span>
+                      <span
+                        className="author"
+                        style={{ color: "#f87171" }}
+                      >
+                        youtube_avg_chatter
+                      </span>
+                      <span className="message-separator">:</span>
+                      <span className="message-text">
+                        first time here, this client is fire
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="onboarding-theme-grid">
+                {THEME_OPTIONS.map(({ value, label, preview, section }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => onChatThemeChange(value as ChatTheme)}
+                    className={`onboarding-theme-btn${
+                      chatTheme === value
+                        ? " onboarding-theme-btn--active"
+                        : ""
+                    }`}
+                  >
+                    {section && (
+                      <div className="onboarding-theme-section">
+                        {section}
+                      </div>
+                    )}
+                    <div className="onboarding-theme-preview">
+                      <div
+                        className="onboarding-theme-preview-bg"
+                        style={{ backgroundColor: preview.bg }}
+                      />
+                      <div
+                        className="onboarding-theme-preview-hover"
+                        style={{ backgroundColor: preview.hover }}
+                      />
+                      <div
+                        className="onboarding-theme-preview-accent"
+                        style={{ backgroundColor: preview.accent }}
+                      />
+                    </div>
+                    <span className="onboarding-theme-label">{label}</span>
+                    {chatTheme === value && (
+                      <span className="onboarding-theme-check">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="onboarding-typography">
+                <div className="onboarding-typography-row">
+                  <label className="onboarding-typography-label">
+                    Font size
+                    <span className="onboarding-typography-value">
+                      {fontSize}px
+                    </span>
+                  </label>
+                  <div className="onboarding-typography-controls">
+                    <span className="onboarding-typography-bound">A</span>
+                    <input
+                      type="range"
+                      min="12"
+                      max="22"
+                      step="1"
+                      value={fontSize}
+                      onChange={(e) =>
+                        onFontSizeChange(parseInt(e.target.value))
+                      }
+                      className="onboarding-typography-range"
+                    />
+                    <span className="onboarding-typography-bound onboarding-typography-bound--large">
+                      A
+                    </span>
+                  </div>
+                </div>
+                <div className="onboarding-typography-row">
+                  <label className="onboarding-typography-label">Font</label>
+                  <div className="onboarding-typography-fonts">
+                    {CHAT_FONT_OPTIONS.map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => onChatFontChange(value)}
+                        className={`onboarding-typography-font${
+                          chatFont === value
+                            ? " onboarding-typography-font--active"
+                            : ""
+                        }`}
+                        style={{ fontFamily: FONT_FAMILY_MAP[value] }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <>
               <div className="onboarding-types" role="radiogroup" aria-label="Select your role">
