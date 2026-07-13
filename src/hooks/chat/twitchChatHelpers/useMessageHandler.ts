@@ -108,6 +108,7 @@ export function useTwitchChatMessageHandler({
         platform: "twitch",
         author:
           msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
+        userName: msg.userInfo.userName,
         content: message,
         timestamp: msg.date,
         userId: msg.userInfo.userId,

@@ -2,6 +2,7 @@ import React, { memo, useState } from "react";
 import { MdReply, MdContentCopy } from "react-icons/md";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
+import { renderAuthorLabel } from "../../../lib/twitchAuthorLabel";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "./AutomodActions";
@@ -274,7 +275,7 @@ function TwitchMessageContentBase({
             }}
             onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
           >
-            {msg.author}
+            {renderAuthorLabel(msg.author, msg.userName)}
           </a>
           <span className="message-separator">:</span>
           {msg.isDeleted && !deletedRevealed ? (

@@ -86,6 +86,7 @@ export function buildUserTwitchMessage(
     id: msg.id,
     platform: "twitch",
     author: msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
+    userName: msg.userInfo.userName,
     content,
     timestamp: msg.date,
     userId: msg.userInfo.userId,

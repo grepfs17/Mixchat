@@ -29,6 +29,8 @@ export interface TwitchMessage {
   id: string;
   platform: Platform;
   author: string;
+  /** Twitch login (lowercase, ASCII). Only populated for Twitch messages. */
+  userName?: string;
   content: string;
   timestamp: Date;
   authorAvatar?: string;
