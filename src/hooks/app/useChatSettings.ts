@@ -88,7 +88,7 @@ export function useChatSettings(): UseChatSettingsResult {
   // toggle is initialised from it on first render and then lives independently.
   const [embedDefaultOpen, setEmbedDefaultOpen] = useLocalStorageState<boolean>(
     "mixchat_embed_default_open",
-    true,
+    false,
   );
   const [showStreamEmbed, setShowStreamEmbed] = useState(embedDefaultOpen);
 
