@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { FaTimes, FaStar } from "react-icons/fa";
+import { FaStar } from "react-icons/fa";
 import "../../../styles/chat/CelebrationBanner.css";
+import "../../../styles/chat/BannerShell.css";
+import BannerShell from "./BannerShell";
+import { useCountdownTimer } from "../../../hooks/ui/useCountdownTimer";
 import type { CelebrationState } from "./bannerTypes";
 
 export type { CelebrationState };
@@ -10,73 +12,42 @@ interface CelebrationBannerProps {
   onDismiss: () => void;
 }
 
+/**
+ * Display-mode celebration banner. Renders when a viewer cheers enough
+ * bits to trigger a Twitch celebration. Self-dismisses when the timer
+ * expires, or after a double-click on the close button.
+ */
 export default function CelebrationBanner({
   celebration,
   onDismiss,
 }: CelebrationBannerProps) {
-  const [timeLeft, setTimeLeft] = useState<number>(() => {
-    const diff = celebration.endsAt.getTime() - Date.now();
-    return Math.max(0, Math.floor(diff / 1000));
+  const { timeLeft } = useCountdownTimer(celebration.endsAt, {
+    onExpire: onDismiss,
   });
 
-  const [confirmClose, setConfirmClose] = useState(false);
-
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      onDismiss();
-      return;
-    }
-    const timer = setTimeout(
-      () => setTimeLeft((t) => Math.max(0, t - 1)),
-      1000,
-    );
-    return () => clearTimeout(timer);
-  }, [timeLeft, onDismiss]);
-
   return (
-    <div className="celebration-banner" role="alert" aria-live="assertive">
-      <div className="celebration-confetti" aria-hidden="true" />
-
-      <div className="celebration-header">
-        <div className="celebration-title">
-          <span className="celebration-badge">CELEBRATION</span>
-          <FaStar className="celebration-icon" size={16} />
-          <span className="celebration-user">
-            {celebration.userDisplayName}
-          </span>
-        </div>
-        <div className="celebration-close-wrapper">
-          {confirmClose && (
-            <span className="celebration-close-tooltip">
-              Press again to close
-            </span>
-          )}
-          <button
-            className="celebration-close"
-            onClick={() => {
-              if (confirmClose) {
-                onDismiss();
-              } else {
-                setConfirmClose(true);
-              }
-            }}
-            onBlur={() => setConfirmClose(false)}
-            aria-label="Dismiss celebration notification"
-          >
-            <FaTimes size={14} />
-          </button>
-        </div>
-      </div>
-
+    <BannerShell
+      tone="celebration"
+      ariaLive="assertive"
+      closeAriaLabel="Dismiss celebration notification"
+      beforeChildren={
+        <div className="celebration-confetti" aria-hidden="true" />
+      }
+      badge={<span className="celebration-badge">CELEBRATION</span>}
+      icon={<FaStar className="celebration-icon" size={16} />}
+      title={
+        <span className="celebration-user">
+          {celebration.userDisplayName}
+        </span>
+      }
+      onDismiss={onDismiss}
+      footer={<span className="celebration-timer">{timeLeft}s</span>}
+    >
       <div className="celebration-body">
         <span className="celebration-bits">
           {celebration.bitsUsed.toLocaleString()} bits
         </span>
       </div>
-
-      <div className="celebration-footer">
-        <span className="celebration-timer">{timeLeft}s</span>
-      </div>
-    </div>
+    </BannerShell>
   );
 }

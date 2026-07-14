@@ -1,154 +1,14 @@
 @import "../vars.css";
 
-.poll-banner {
-    background: var(--color-bg-twitch-event);
-    border: 1px solid var(--color-border-twitch-event);
-    border-radius: var(--radius-lg);
-    padding: 10px 14px;
-    margin: 8px;
-    box-shadow: var(--shadow-glow-twitch);
-    animation: pollBannerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    flex-shrink: 0;
-}
-
-@keyframes pollBannerSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.poll-banner-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    gap: 10px;
-}
-
-.poll-banner-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-}
-
-.poll-banner-icon {
-    color: var(--color-twitch);
-    animation: pollBannerIconPulse 1s ease-in-out infinite;
-    flex-shrink: 0;
-}
-
-@keyframes pollBannerIconPulse {
-    0%, 100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.12);
-        opacity: 0.85;
-    }
-}
-
-.poll-banner-badge {
-    background: var(--color-twitch);
-    color: #fff;
-    font-weight: 700;
-    font-size: 11px;
-    padding: 3px 7px;
-    border-radius: var(--radius-md);
-    white-space: nowrap;
-    letter-spacing: 0.06em;
-    animation: pollBadgePulse 1.2s ease-in-out infinite;
-    flex-shrink: 0;
-}
-
-.poll-banner-badge--ended {
-    background: var(--color-green);
-    animation: none;
-}
-
-@keyframes pollBadgePulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
-}
-
-.poll-banner-question {
-    color: var(--color-text-primary);
-    font-weight: 600;
-    font-size: 14px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.poll-banner-close-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.poll-banner-close-tooltip {
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--color-text-primary);
-    color: var(--color-bg-primary);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: var(--radius-md);
-    white-space: nowrap;
-    margin-right: 6px;
-    pointer-events: none;
-    animation: pollTooltipIn 0.15s ease-out;
-}
-
-@keyframes pollTooltipIn {
-    from {
-        opacity: 0;
-        transform: translateY(-50%) translateX(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(-50%) translateX(0);
-    }
-}
-
-.poll-banner-close {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    font-size: 14px;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    border-radius: var(--radius-md);
-    transition: color 0.15s;
-    flex-shrink: 0;
-}
-
-.poll-banner-close:hover {
-    color: var(--color-text-primary);
-}
+/* Tone-specific styles for PollBanner.
+ * Frame, keyframes, badge variants, close button, and timer colour
+ * variants are defined in BannerShell.css. Only the choice-bar layout
+ * is unique to PollBanner. */
 
 .poll-banner-choices {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-bottom: 10px;
 }
 
 .poll-banner-choice {
@@ -215,26 +75,4 @@
     font-size: 11px;
     white-space: nowrap;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-}
-
-.poll-banner-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.poll-banner-total {
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.poll-banner-timer {
-    color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.poll-banner-timer--ended {
-    color: var(--color-green);
 }

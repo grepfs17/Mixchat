@@ -1,6 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
-import { FaTimes, FaPoll } from "react-icons/fa";
+import { useEffect, useMemo } from "react";
+import { FaPoll } from "react-icons/fa";
 import "../../../styles/chat/PollBanner.css";
+import "../../../styles/chat/BannerShell.css";
+import BannerShell from "./BannerShell";
+import { useCountdownTimer } from "../../../hooks/ui/useCountdownTimer";
 import type { PollChoice, PollState } from "./bannerTypes";
 
 export type { PollChoice, PollState };
@@ -10,45 +13,31 @@ interface PollBannerProps {
   onDismiss: () => void;
 }
 
+const ENDED_STATUSES = new Set(["completed", "archived", "terminated"]);
+
+/**
+ * Display-mode poll banner. Renders choices with vote bars; once a
+ * choice wins (status flips to completed/archived/terminated), it gets
+ * a green ring. Self-dismisses 5s after the timer expires (when the
+ * poll is still active) or 8s after the status flips to ended.
+ */
 export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
-  const [timeLeft, setTimeLeft] = useState<number>(() => {
-    const diff = poll.endsAt.getTime() - Date.now();
-    return Math.max(0, Math.floor(diff / 1000));
+  const isEnded = poll.status !== undefined && ENDED_STATUSES.has(poll.status);
+
+  const { timeDisplay } = useCountdownTimer(poll.endsAt, {
+    // Linger 5s after the timer hits zero (only while still active).
+    // When the status flips to ended, the useEffect below takes over
+    // and sets the longer 8s linger.
+    autoDismissAfter: isEnded ? undefined : 5000,
+    onAutoDismiss: isEnded ? undefined : onDismiss,
   });
 
-  const [confirmClose, setConfirmClose] = useState(false);
-
-  const isEnded =
-    poll.status === "completed" ||
-    poll.status === "archived" ||
-    poll.status === "terminated";
-
+  // Independent 8s auto-dismiss once the poll ends.
   useEffect(() => {
-    if (timeLeft <= 0) {
-      if (!isEnded) {
-        const timer = setTimeout(() => onDismiss(), 5000);
-        return () => clearTimeout(timer);
-      }
-      return;
-    }
-    const timer = setTimeout(
-      () => setTimeLeft((t) => Math.max(0, t - 1)),
-      1000,
-    );
+    if (!isEnded) return;
+    const timer = setTimeout(onDismiss, 8000);
     return () => clearTimeout(timer);
-  }, [timeLeft, onDismiss, isEnded]);
-
-  useEffect(() => {
-    if (isEnded) {
-      const timer = setTimeout(() => onDismiss(), 8000);
-      return () => clearTimeout(timer);
-    }
   }, [isEnded, onDismiss]);
-
-  const minutesLeft = Math.floor(timeLeft / 60);
-  const secondsLeft = timeLeft % 60;
-  const timeDisplay =
-    minutesLeft > 0 ? `${minutesLeft}m ${secondsLeft}s` : `${secondsLeft}s`;
 
   const maxVotes = useMemo(
     () => Math.max(1, ...poll.choices.map((c) => c.votes)),
@@ -77,40 +66,36 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
     : "Live Poll";
 
   return (
-    <div className="poll-banner" role="alert" aria-live="polite">
-      <div className="poll-banner-header">
-        <div className="poll-banner-title">
-          <span
-            className={`poll-banner-badge${isEnded ? " poll-banner-badge--ended" : ""}`}
-          >
-            {statusLabel}
+    <BannerShell
+      tone="poll"
+      ariaLive="polite"
+      closeAriaLabel="Dismiss poll notification"
+      badge={
+        <span
+          className={`poll-banner-badge${isEnded ? " poll-banner-badge--ended" : ""}`}
+        >
+          {statusLabel}
+        </span>
+      }
+      icon={<FaPoll className="poll-banner-icon" size={14} />}
+      title={<span className="poll-banner-question">{poll.title}</span>}
+      onDismiss={onDismiss}
+      footer={
+        <>
+          <span className="poll-banner-total">
+            {poll.totalVotes.toLocaleString()} total votes
           </span>
-          <FaPoll className="poll-banner-icon" size={14} />
-          <span className="poll-banner-question">{poll.title}</span>
-        </div>
-        <div className="poll-banner-close-wrapper">
-          {confirmClose && (
-            <span className="poll-banner-close-tooltip">
-              Press again to close
+          {!isEnded && (
+            <span className="poll-banner-timer">Ends in {timeDisplay}</span>
+          )}
+          {isEnded && (
+            <span className="poll-banner-timer poll-banner-timer--ended">
+              Final results
             </span>
           )}
-          <button
-            className="poll-banner-close"
-            onClick={() => {
-              if (confirmClose) {
-                onDismiss();
-              } else {
-                setConfirmClose(true);
-              }
-            }}
-            onBlur={() => setConfirmClose(false)}
-            aria-label="Dismiss poll notification"
-          >
-            <FaTimes size={14} />
-          </button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className="poll-banner-choices">
         {poll.choices.map((choice) => {
           const pct =
@@ -142,20 +127,6 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
           );
         })}
       </div>
-
-      <div className="poll-banner-footer">
-        <span className="poll-banner-total">
-          {poll.totalVotes.toLocaleString()} total votes
-        </span>
-        {!isEnded && (
-          <span className="poll-banner-timer">Ends in {timeDisplay}</span>
-        )}
-        {isEnded && (
-          <span className="poll-banner-timer poll-banner-timer--ended">
-            Final results
-          </span>
-        )}
-      </div>
-    </div>
+    </BannerShell>
   );
 }

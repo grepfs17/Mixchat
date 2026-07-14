@@ -1,0 +1,314 @@
+@import "../vars.css";
+
+/* === Shared banner shell ===
+ * Frame, keyframes, and close-button styles used by CelebrationBanner,
+ * HypeTrainBanner, PollBanner, and PredictionBanner. Per-tone CSS files
+ * keep only tone-specific color tokens and any tone-unique elements
+ * (e.g. `.celebration-confetti`, `.hype-train-progress-bar`).
+ */
+
+.banner-shell {
+    background: var(--color-bg-twitch-event);
+    border: 1px solid var(--color-border-twitch-event);
+    border-radius: var(--radius-lg);
+    padding: 10px 14px;
+    margin: 8px;
+    box-shadow: var(--shadow-glow-twitch);
+    animation: bannerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+@keyframes bannerSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.banner-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Subtitle text inside the title slot varies per banner
+ * (.celebration-user, .hype-train-level, .hype-train-points,
+ * .poll-banner-question, .prediction-banner-question) so it inherits
+ * the project font/colour tokens and needs no rule here. */
+
+.banner-body {
+    margin-bottom: 8px;
+}
+
+.banner-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Default badge styling — per-tone files override the background. */
+.banner-title > .banner-badge,
+.banner-title > [class*="-badge"] {
+    background: var(--color-twitch);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 7px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    letter-spacing: 0.06em;
+    flex-shrink: 0;
+    animation: bannerBadgePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bannerBadgePulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Default icon styling — per-tone files override the color. */
+.banner-title > [class*="-icon"] {
+    flex-shrink: 0;
+    animation: bannerIconPulse 1s ease-in-out infinite;
+}
+
+@keyframes bannerIconPulse {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.12);
+        opacity: 0.85;
+    }
+}
+
+/* === Close button (confirm-tooltip pattern) === */
+
+.banner-close-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.banner-close-tooltip {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-text-primary);
+    color: var(--color-bg-primary);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-md);
+    white-space: nowrap;
+    margin-right: 6px;
+    pointer-events: none;
+    animation: bannerTooltipIn 0.15s ease-out;
+}
+
+@keyframes bannerTooltipIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50%) translateX(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(-50%) translateX(0);
+    }
+}
+
+.banner-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius-md);
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.banner-close:hover {
+    color: var(--color-text-primary);
+}
+
+/* Per-tone overrides that previously lived in each banner's CSS file.
+ * These keep the tone-specific colour tokens without re-declaring frame
+ * styles. */
+
+.celebration-icon {
+    color: #ffd93d;
+}
+
+.celebration-banner .celebration-badge {
+    background: linear-gradient(135deg, #ff6b9d, #ff9f43);
+    animation: none;
+}
+
+.celebration-banner .celebration-user {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.celebration-banner .celebration-bits {
+    color: #ff9f43;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.celebration-banner .celebration-timer {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.hype-train-icon {
+    color: var(--color-twitch);
+}
+
+.hype-train-banner .hype-train-badge {
+    background: var(--color-twitch);
+    animation: bannerBadgePulse 1.2s ease-in-out infinite;
+}
+
+.hype-train-banner .hype-train-level {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.hype-train-banner .hype-train-points {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hype-train-banner .hype-train-timer {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.poll-banner .poll-banner-icon {
+    color: var(--color-twitch);
+}
+
+.poll-banner .poll-banner-question {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.poll-banner .poll-banner-badge--ended {
+    background: var(--color-green);
+    animation: none;
+}
+
+.poll-banner .poll-banner-total {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.poll-banner .poll-banner-timer {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.poll-banner .poll-banner-timer--ended {
+    color: var(--color-green);
+}
+
+.prediction-banner .prediction-banner-icon {
+    color: var(--color-accent);
+}
+
+.prediction-banner .prediction-banner-badge {
+    background: var(--color-accent);
+    animation: bannerBadgePulse 1.2s ease-in-out infinite;
+}
+
+.prediction-banner .prediction-banner-badge--ended {
+    background: var(--color-green);
+    animation: none;
+}
+
+.prediction-banner .prediction-banner-badge--locked {
+    background: var(--color-warning-text);
+    animation: none;
+    color: #000;
+}
+
+.prediction-banner .prediction-banner-question {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prediction-banner .prediction-banner-timer {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.prediction-banner .prediction-banner-timer--locked {
+    color: var(--color-warning-text);
+}
+
+.prediction-banner .prediction-banner-timer--ended {
+    color: var(--color-green);
+}
+
+/* Per-tone header margin overrides (poll/prediction have larger gaps) */
+.poll-banner .poll-banner-header,
+.prediction-banner .prediction-banner-header {
+    margin-bottom: 10px;
+}
+
+.poll-banner .poll-banner-body,
+.prediction-banner .prediction-banner-body {
+    margin-bottom: 10px;
+}
