@@ -248,9 +248,7 @@ export function useYouTubeSync({
     (id: string, deletedByText?: string) => {
       // Persist the deleted state so it survives full `ytMessages`
       // replacements from the periodic SSE `onMessages` callback.
-      const text =
-        deletedByText ??
-        `Message deleted by @${youtubeSession?.displayName ?? "a moderator"}`;
+      const text = deletedByText ?? "Message deleted by a moderator";
       deletedRef.current.set(id, text);
       setYtMessages((prev) => {
         const exists = prev.some((m) => m.id === id);
@@ -262,7 +260,7 @@ export function useYouTubeSync({
         );
       });
     },
-    [youtubeSession?.displayName],
+    [],
   );
 
   return {
