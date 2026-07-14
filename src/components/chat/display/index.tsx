@@ -14,7 +14,7 @@ import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
-import { DisplayTwitchMessageItem } from "./TwitchMessageItem";
+import { DisplayTwitchMessageItem } from "./DisplayTwitchMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
 import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import MessageMenu from "../shared/MessageMenu";

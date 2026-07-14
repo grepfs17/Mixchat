@@ -13,7 +13,7 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useModerationContext } from "../../../contexts/ModerationContext";
-import { UnifiedTwitchMessageItem } from "./TwitchMessageItem";
+import { UnifiedTwitchMessageItem } from "./UnifiedTwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";
 import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
@@ -361,9 +361,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   }
                   onMessageMenu={(x, y, e) =>
                     setMessageMenu({ x, y, entry: e })
-                  }
-                  onViewHistory={(author, avatar) =>
-                    handleViewHistory(author, "twitch", avatar)
                   }
                   onUsernameClick={(e, author, avatar) =>
                     handleUsernameClick(e, author, "twitch", avatar)

@@ -11,7 +11,6 @@ interface TwitchMessageItemProps {
   currentUserDisplayName?: string;
   onReply?: (msg: TwitchMessage) => void;
   onCopyMessage?: () => void;
-  onViewHistory?: (author: string, avatar?: string) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
     author: string,
@@ -37,7 +36,6 @@ function UnifiedTwitchMessageItemBase({
   currentUserDisplayName,
   onReply,
   onCopyMessage,
-  onViewHistory,
   onUsernameClick,
   onTimeoutMenu,
   onMessageMenu,
@@ -81,8 +79,8 @@ function UnifiedTwitchMessageItemBase({
 /**
  * Unified-mode Twitch message item. Renders inside the merged Twitch+YouTube
  * chat surface with a `PlatformTag` so the source platform is visible.
- * Renamed from `TwitchMessageItem` to disambiguate from the legacy
- * display-mode variant under src/components/chat/display/.
+ * The runtime toggle `unifyChatEnabled` picks between this variant and the
+ * split-chat `DisplayTwitchMessageItem`.
  */
 export const UnifiedTwitchMessageItem = memo(UnifiedTwitchMessageItemBase, (prev, next) => {
   return (
