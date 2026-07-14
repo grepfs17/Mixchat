@@ -11,7 +11,13 @@ import { useEffect, useRef } from "react";
 import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
 
-interface PollChoice {
+/**
+ * Rich, event-shaped Poll choice — superset of the slim display variant in
+ * bannerTypes.PollChoice. The transform from this shape to the display shape
+ * happens in useLiveEvents, so this is intentionally NOT exported under the
+ * same name as the banner type.
+ */
+interface EventPollChoice {
   id: string;
   title: string;
   bitsVotes?: number;
@@ -24,7 +30,7 @@ interface PollEvent {
   broadcasterUserId: string;
   broadcasterUserName: string;
   title: string;
-  choices: PollChoice[];
+  choices: EventPollChoice[];
   bitsVoting: { isEnabled: boolean; amountPerVote: number };
   channelPointsVoting: { isEnabled: boolean; amountPerVote: number };
   startedAt: string;
@@ -43,7 +49,7 @@ interface UsePollEventSubOptions {
   onScopeError?: () => void;
 }
 
-function parsePollChoice(c: any): PollChoice {
+function parsePollChoice(c: any): EventPollChoice {
   return {
     id: c.id,
     title: c.title,
@@ -75,7 +81,7 @@ function parsePollEvent(ev: any): PollEvent {
   };
 }
 
-export type { PollEvent, PollChoice };
+export type { PollEvent };
 
 export function usePollEventSub({
   subscribe,

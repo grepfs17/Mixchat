@@ -12,7 +12,13 @@ import { useEffect, useRef } from "react";
 import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
 
-interface PredictionOutcome {
+/**
+ * Rich, event-shaped prediction outcome — superset of the slim display
+ * variant in bannerTypes.PredictionOutcome. The transform from this shape to
+ * the display shape happens in useLiveEvents, so this is intentionally NOT
+ * exported under the same name as the banner type.
+ */
+interface EventPredictionOutcome {
   id: string;
   title: string;
   color: string;
@@ -32,7 +38,7 @@ interface PredictionEvent {
   broadcasterUserId: string;
   broadcasterUserName: string;
   title: string;
-  outcomes: PredictionOutcome[];
+  outcomes: EventPredictionOutcome[];
   startedAt: string;
   locksAt?: string;
   lockedAt?: string;
@@ -52,7 +58,7 @@ interface UsePredictionEventSubOptions {
   onScopeError?: () => void;
 }
 
-function parseOutcome(o: any): PredictionOutcome {
+function parseOutcome(o: any): EventPredictionOutcome {
   return {
     id: o.id,
     title: o.title,
@@ -85,7 +91,7 @@ function parsePredictionEvent(ev: any): PredictionEvent {
   };
 }
 
-export type { PredictionEvent, PredictionOutcome };
+export type { PredictionEvent };
 
 export function usePredictionEventSub({
   subscribe,

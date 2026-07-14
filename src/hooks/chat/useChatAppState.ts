@@ -5,7 +5,6 @@ import { useEventSub } from "./useEventSub";
 import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
 import {
   initializeEmotes,
-  clearEmoteCache,
   clearEmoteCacheStorage,
   subscribeTo7TVUpdates,
 } from "../../lib/emotes";

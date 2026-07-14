@@ -5,7 +5,6 @@ import {
   bindCopyHandlers,
   bindPlayHandlers,
   createPlayController,
-  markCurrent,
   showToast,
   copyToClipboard,
   formatPlaylistCreatedAt,

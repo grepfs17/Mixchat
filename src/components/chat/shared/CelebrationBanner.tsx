@@ -1,16 +1,9 @@
 import { useEffect, useState } from "react";
 import { FaTimes, FaStar } from "react-icons/fa";
 import "../../../styles/chat/CelebrationBanner.css";
+import type { CelebrationState } from "./bannerTypes";
 
-export interface CelebrationState {
-  id: string;
-  userName: string;
-  userDisplayName: string;
-  bitsUsed: number;
-  totalBitsUsed: number;
-  messageEffectId: string | null;
-  endsAt: Date;
-}
+export type { CelebrationState };
 
 interface CelebrationBannerProps {
   celebration: CelebrationState;

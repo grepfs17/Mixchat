@@ -30,7 +30,7 @@ interface TwitchMessageItemProps {
   onScrollToMessage?: (id: string) => void;
 }
 
-function TwitchMessageItemBase({
+function UnifiedTwitchMessageItemBase({
   entry,
   index,
   entries,
@@ -78,7 +78,13 @@ function TwitchMessageItemBase({
   );
 }
 
-export const TwitchMessageItem = memo(TwitchMessageItemBase, (prev, next) => {
+/**
+ * Unified-mode Twitch message item. Renders inside the merged Twitch+YouTube
+ * chat surface with a `PlatformTag` so the source platform is visible.
+ * Renamed from `TwitchMessageItem` to disambiguate from the legacy
+ * display-mode variant under src/components/chat/display/.
+ */
+export const UnifiedTwitchMessageItem = memo(UnifiedTwitchMessageItemBase, (prev, next) => {
   return (
     prev.entry === next.entry &&
     prev.entry.msg.id === next.entry.msg.id &&

@@ -10,16 +10,7 @@
 import { useEffect, useRef } from "react";
 import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
-
-export interface CelebrationState {
-  id: string;
-  userName: string;
-  userDisplayName: string;
-  bitsUsed: number;
-  totalBitsUsed: number;
-  messageEffectId: string | null;
-  endsAt: Date;
-}
+import type { CelebrationState } from "../../../components/chat/shared/bannerTypes";
 
 interface BitsUseEvent {
   id: string;

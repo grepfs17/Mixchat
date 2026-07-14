@@ -20,7 +20,7 @@ import {
   fetchTwitchChannelEmotes,
   fetchUserEmotesByChannel,
 } from "./twitch";
-import { subscribeTo7TVUpdates as subscribeTo7TVUpdatesRaw } from "./7tv";
+import { subscribeTo7TVChannelUpdates } from "./7tv";
 import { migrateEmoteCachesFromLocalStorage } from "./emoteStorage";
 
 export type {
@@ -42,7 +42,7 @@ export {
   getAllEmotesOrganized,
 } from "./search";
 
-export { clearEmoteCache, clearEmoteCacheStorage } from "./state";
+export { clearEmoteCacheStorage } from "./state";
 
 /**
  * Initialize emotes for a given channel.
@@ -121,10 +121,14 @@ export async function initializeEmotes(
   });
 }
 
-// Re-export 7TV real-time subscription with the same public signature.
+// Re-export 7TV real-time subscription with a fixed two-argument signature.
+// The internal three-argument opening-event-source implementation lives in
+// ./7tv under the name `subscribeTo7TVChannelUpdates`; this wrapper injects
+// `initializeEmotes` as the reinitialize callback so consumers don't have to
+// thread it through themselves.
 export function subscribeTo7TVUpdates(
   channelId: string,
   channelName: string,
 ): () => void {
-  return subscribeTo7TVUpdatesRaw(channelId, channelName, initializeEmotes);
+  return subscribeTo7TVChannelUpdates(channelId, channelName, initializeEmotes);
 }

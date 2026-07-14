@@ -13,7 +13,7 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useModerationContext } from "../../../contexts/ModerationContext";
-import { TwitchMessageItem } from "./TwitchMessageItem";
+import { UnifiedTwitchMessageItem } from "./TwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
 import MessageMenu from "../shared/MessageMenu";
 import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
@@ -348,7 +348,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
           {entries.map((entry, index) => {
             if (entry.source === "twitch") {
               return (
-                <TwitchMessageItem
+                <UnifiedTwitchMessageItem
                   key={getKey(entry)}
                   entry={entry}
                   index={index}

@@ -179,7 +179,7 @@ export async function getCachedAuthors(
 /**
  * Clear all emote caches
  */
-export async function clearEmoteCache(): Promise<void> {
+async function clearEmoteCache(): Promise<void> {
   await clearAllEmoteCaches();
 
   emotes7tv = {};

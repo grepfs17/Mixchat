@@ -163,7 +163,12 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
 }
 
 // Subscribe to real-time 7TV emote updates for the active channel.
-export function subscribeTo7TVUpdates(
+//
+// This is the internal implementation that opens the EventSource, manages
+// reconnect-on-error, and exposes the cleanup handler. The public API
+// (src/lib/emotes/index.ts) wraps this with a fixed two-argument signature
+// that injects `initializeEmotes` as the reinitialize callback.
+export function subscribeTo7TVChannelUpdates(
   channelId: string,
   channelName: string,
   reinitialize: (channelId: string, channelName: string) => Promise<void>,
@@ -263,7 +268,7 @@ export function subscribeTo7TVUpdates(
         setReconnect7tvDelay(
           Math.min(reconnect7tvDelay * 2, RECONNECT_7TV_MAX),
         );
-        subscribeTo7TVUpdates(channelId, channelName, reinitialize);
+        subscribeTo7TVChannelUpdates(channelId, channelName, reinitialize);
       }, reconnect7tvDelay),
     );
   };

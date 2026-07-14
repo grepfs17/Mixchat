@@ -93,7 +93,7 @@ function SharedChatSource({ msg }: { msg: TwitchMessage }) {
   );
 }
 
-function TwitchMessageItemBase({
+function DisplayTwitchMessageItemBase({
   msg,
   index,
   filteredMessages,
@@ -135,7 +135,13 @@ function TwitchMessageItemBase({
   );
 }
 
-export const TwitchMessageItem = memo(TwitchMessageItemBase, (prev, next) => {
+/**
+ * Display-mode Twitch message item. Renders inside the legacy ChatDisplay
+ * surface (no platform tag), with a Shared Chat source avatar when applicable.
+ * Renamed from `TwitchMessageItem` to disambiguate from the unified-chat
+ * variant under src/components/chat/unified/.
+ */
+export const DisplayTwitchMessageItem = memo(DisplayTwitchMessageItemBase, (prev, next) => {
   return (
     prev.msg.id === next.msg.id &&
     prev.msg === next.msg &&

@@ -1,26 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { FaTimes, FaMagic } from "react-icons/fa";
 import "../../../styles/chat/PredictionBanner.css";
+import type { PredictionOutcome, PredictionState } from "./bannerTypes";
 
-export interface PredictionOutcome {
-  id: string;
-  title: string;
-  color: string;
-  users: number;
-  channelPoints: number;
-}
-
-export interface PredictionState {
-  id: string;
-  title: string;
-  outcomes: PredictionOutcome[];
-  totalPoints: number;
-  totalUsers: number;
-  status: "active" | "locked" | "resolved" | "canceled";
-  winningOutcomeId?: string;
-  endsAt?: Date;
-  lockedAt?: Date;
-}
+export type { PredictionOutcome, PredictionState };
 
 interface PredictionBannerProps {
   prediction: PredictionState;

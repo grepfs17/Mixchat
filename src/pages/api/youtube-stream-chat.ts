@@ -258,7 +258,7 @@ export function isAuthorOwner(msg: any): boolean {
   });
 }
 
-export function isAuthorMember(msg: any): boolean {
+function isAuthorMember(msg: any): boolean {
   // The YouTube member badge is identified by its icon_type ("MEMBER" for new
   // streams, "SPONSOR" for legacy). Channel-level membership cannot be derived
   // from regular chat events — only from the badges YouTube attaches to the

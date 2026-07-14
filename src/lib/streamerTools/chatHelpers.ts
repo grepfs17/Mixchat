@@ -44,15 +44,15 @@ export function isSkippableMessage(msg: {
   return false;
 }
 
-export function twitchIsBroadcaster(msg: TwitchMessage): boolean {
+function twitchIsBroadcaster(msg: TwitchMessage): boolean {
   return Boolean(msg.badges?.broadcaster);
 }
 
-export function twitchIsSubscriber(msg: TwitchMessage): boolean {
+function twitchIsSubscriber(msg: TwitchMessage): boolean {
   return Boolean(msg.badges?.subscriber || msg.badges?.["founder"]);
 }
 
-export function youtubeIsMember(msg: YTMessage): boolean {
+function youtubeIsMember(msg: YTMessage): boolean {
   return Boolean(msg.authorIsMember);
 }
 
@@ -118,7 +118,7 @@ export function stableUserId(item: StreamerToolsMessage): string | null {
 }
 
 /** Convenience: filter to a single platform when scope restricts it. */
-export function isInScope(
+function isInScope(
   item: StreamerToolsMessage,
   scope: "twitch" | "youtube" | "both",
 ): boolean {

@@ -159,7 +159,7 @@ export function bindPlayHandlers(
 }
 
 /** Mark the <li> at `index` as the current item. */
-export function markCurrent(listEl: HTMLElement, index: number): void {
+function markCurrent(listEl: HTMLElement, index: number): void {
   const items = listEl.querySelectorAll<HTMLLIElement>("li");
   items.forEach((li, i) => {
     li.classList.toggle("current", i === index);

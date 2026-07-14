@@ -14,7 +14,7 @@ import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
-import { TwitchMessageItem } from "./TwitchMessageItem";
+import { DisplayTwitchMessageItem } from "./TwitchMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
 import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import MessageMenu from "../shared/MessageMenu";
@@ -412,7 +412,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
               </div>
             ) : (
               filteredMessages.map((msg, index) => (
-                <TwitchMessageItem
+                <DisplayTwitchMessageItem
                   key={msg.id}
                   msg={msg}
                   index={index}

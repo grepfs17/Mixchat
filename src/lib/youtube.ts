@@ -10,7 +10,7 @@ Parser.setParserErrorHandler(({ error_type }) => {
   if (error_type === "class_not_found") return;
 });
 
-export function invalidateInnertube(): void {
+function invalidateInnertube(): void {
   yt = null;
   if (!YT_PROXIES.length) {
     invalidatePoToken();

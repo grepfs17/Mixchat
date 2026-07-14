@@ -1,15 +1,9 @@
 import { useEffect, useState } from "react";
 import { FaTimes, FaTrain } from "react-icons/fa";
 import "../../../styles/chat/HypeTrainBanner.css";
+import type { HypeTrainState } from "./bannerTypes";
 
-export interface HypeTrainState {
-  level: number;
-  progress: number;
-  goal: number;
-  totalPoints: number;
-  topContributors: Array<{ displayName: string; points: number }>;
-  endsAt: Date;
-}
+export type { HypeTrainState };
 
 interface HypeTrainBannerProps {
   hypeTrain: HypeTrainState;

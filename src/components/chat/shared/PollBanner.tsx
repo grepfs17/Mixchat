@@ -1,21 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
 import { FaTimes, FaPoll } from "react-icons/fa";
 import "../../../styles/chat/PollBanner.css";
+import type { PollChoice, PollState } from "./bannerTypes";
 
-export interface PollChoice {
-  id: string;
-  title: string;
-  votes: number;
-}
-
-export interface PollState {
-  id: string;
-  title: string;
-  choices: PollChoice[];
-  totalVotes: number;
-  endsAt: Date;
-  status?: string;
-}
+export type { PollChoice, PollState };
 
 interface PollBannerProps {
   poll: PollState;

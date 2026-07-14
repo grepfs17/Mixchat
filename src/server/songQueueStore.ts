@@ -321,4 +321,3 @@ export async function gcSessions(
   return removed;
 }
 
-export { FILE_VERSION };

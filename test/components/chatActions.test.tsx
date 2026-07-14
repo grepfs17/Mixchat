@@ -116,9 +116,9 @@ function makeUnifiedYouTube(msg?: YTMessage): UnifiedEntry {
 
 // Components
 
-import { TwitchMessageItem as DisplayTwitchMessageItem } from "../../src/components/chat/display/TwitchMessageItem";
+import { DisplayTwitchMessageItem } from "../../src/components/chat/display/TwitchMessageItem";
 import ChatDisplay from "../../src/components/chat/display";
-import { TwitchMessageItem as UnifiedTwitchMessageItem } from "../../src/components/chat/unified/TwitchMessageItem";
+import { UnifiedTwitchMessageItem } from "../../src/components/chat/unified/TwitchMessageItem";
 import { YouTubeMessageItem } from "../../src/components/chat/unified/YouTubeMessageItem";
 import MessageMenu from "../../src/components/chat/shared/MessageMenu";
 import TwitchTimeoutDialog from "../../src/components/chat/shared/TwitchTimeoutDialog";
