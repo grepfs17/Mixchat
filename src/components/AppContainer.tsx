@@ -5,6 +5,7 @@ import {
   FaChevronRight,
   FaTwitch,
   FaYoutube,
+  FaStar,
 } from "react-icons/fa";
 import LoginPanel from "./LoginPanel";
 import ChatApp from "./chat/ChatApp";
@@ -28,6 +29,7 @@ import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
 import LandingPage from "./LandingPage";
 import OnboardingWizard from "./OnboardingWizard";
+import FavoriteChannelsModal from "./FavoriteChannelsModal";
 
 const ONBOARDING_COMPLETE_KEY = "mixchat_onboarding_complete";
 
@@ -171,6 +173,7 @@ export default function AppContainer() {
   const myChannelInfo = useMyChannelInfo(sessions.twitch);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showFavoriteChannels, setShowFavoriteChannels] = useState(false);
   useEffect(() => {
     if (!sessions.twitch) return;
     if (typeof localStorage === "undefined") return;
@@ -461,6 +464,13 @@ export default function AppContainer() {
                 </div>
               )}
               <div className="your-channel-actions">
+                <button
+                  className="your-channel-btn your-channel-btn--favorites"
+                  onClick={() => setShowFavoriteChannels(true)}
+                >
+                  <FaStar size={14} />
+                  Favorites
+                </button>
                 <button
                   className="your-channel-btn"
                   onClick={() => setChannelData(sessions.twitch!.userId)}
@@ -770,6 +780,17 @@ export default function AppContainer() {
           availableChannels={allTwitchChannels}
           onClose={() => setShowYoutubeLinker(false)}
           onLinksChanged={notifyLinksChanged}
+        />
+      )}
+
+      {/* Favorite Channels Modal */}
+      {showFavoriteChannels && (
+        <FavoriteChannelsModal
+          allChannels={allTwitchChannels}
+          favoriteChannels={favoriteChannels}
+          onToggleFavorite={toggleFavorite}
+          onChannelSelect={(id) => setChannelData(id)}
+          onClose={() => setShowFavoriteChannels(false)}
         />
       )}
 

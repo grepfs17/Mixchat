@@ -735,6 +735,18 @@ StreamGrid stream cards list
     color: var(--color-text-primary);
 }
 
+.your-channel-btn--favorites {
+    border-color: var(--color-favorite);
+    color: var(--color-favorite);
+    background: color-mix(in srgb, var(--color-favorite) 8%, transparent);
+}
+
+.your-channel-btn--favorites:hover {
+    background: var(--color-favorite);
+    border-color: var(--color-favorite);
+    color: #1a1a1a;
+}
+
 @media (max-width: 600px) {
     .your-channel-banner {
         padding: 10px 12px;
