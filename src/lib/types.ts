@@ -174,5 +174,6 @@ export const THEME_OPTIONS: {
     value: "lunita",
     label: "Lunita",
     preview: { bg: "#1e2a1e", hover: "#2d4a2d", accent: "#d4a54a" },
+    section: "Custom",
   },
 ];

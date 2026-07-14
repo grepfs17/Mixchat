@@ -169,6 +169,91 @@
         font-size 0.15s;
 }
 
+/* === Welcome step === */
+
+.onboarding-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 8px 12px 4px;
+    gap: 12px;
+}
+
+.onboarding-welcome-logo {
+    width: clamp(120px, 28vw, 160px);
+    height: auto;
+    opacity: 0.95;
+    margin-bottom: 4px;
+}
+
+.onboarding-welcome-lead {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.onboarding-welcome-detail {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.55;
+    max-width: 460px;
+}
+
+.onboarding-welcome-list {
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 380px;
+    text-align: left;
+}
+
+.onboarding-welcome-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    color: var(--color-text-primary);
+}
+
+.onboarding-welcome-list li::before {
+    content: "";
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-indigo);
+    box-shadow: 0 0 6px rgba(99, 102, 241, 0.6);
+}
+
+.onboarding-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-dark);
+}
+
+.onboarding-preview-header-text {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+}
+
 .onboarding-preview .messages-container {
     background: var(--color-bg-primary);
     padding: 4px 0;
@@ -183,6 +268,10 @@
 .onboarding-preview .message:hover {
     background: transparent;
     border-left-color: transparent;
+}
+
+.onboarding-preview .timestamp {
+    display: inline !important;
 }
 
 .onboarding-theme-grid {

@@ -233,7 +233,7 @@ export default function OnboardingWizard({
   onHideChatTimestampsChange,
   onComplete,
 }: OnboardingWizardProps) {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [userType, setUserType] = useState<UserType | null>(null);
 
   useEffect(() => {
@@ -367,10 +367,12 @@ export default function OnboardingWizard({
 
   const goNext = useCallback(() => {
     if (step === 1) setStep(2);
+    else if (step === 2) setStep(3);
   }, [step]);
 
   const goBack = useCallback(() => {
-    if (step === 2) setStep(1);
+    if (step === 3) setStep(2);
+    else if (step === 2) setStep(1);
   }, [step]);
 
   const handleFinish = useCallback(() => {
@@ -390,16 +392,27 @@ export default function OnboardingWizard({
             <div className="onboarding-step-indicator" aria-hidden="true">
               <span
                 className={`onboarding-step-dot${
-                  step > 1 ? " onboarding-step-dot--done" : " onboarding-step-dot--active"
+                  step > 1
+                    ? " onboarding-step-dot--done"
+                    : " onboarding-step-dot--active"
                 }`}
               />
               <span
                 className={`onboarding-step-dot${
-                  step === 2 ? " onboarding-step-dot--active" : ""
+                  step > 2
+                    ? " onboarding-step-dot--done"
+                    : step === 2
+                      ? " onboarding-step-dot--active"
+                      : ""
+                }`}
+              />
+              <span
+                className={`onboarding-step-dot${
+                  step === 3 ? " onboarding-step-dot--active" : ""
                 }`}
               />
               <span style={{ marginLeft: "6px" }}>
-                Step {step} of 2
+                Step {step} of 3
               </span>
             </div>
             <button
@@ -412,17 +425,44 @@ export default function OnboardingWizard({
             </button>
           </div>
           <h2 className="onboarding-title" id="onboarding-title">
-            {step === 1 ? "Pick a theme" : "How will you use Mixchat?"}
+            {step === 1
+              ? "Do you want help to configure Mixchat?"
+              : step === 2
+                ? "Pick a theme"
+                : "How will you use Mixchat?"}
           </h2>
           <p className="onboarding-subtitle">
             {step === 1
-              ? "Choose how Mixchat looks for you. You can switch any time from Settings."
-              : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
+              ? "If you already configured it to your liking, you can skip this setup.Every option is also available later in Settings."
+              : step === 2
+                ? "Choose how Mixchat looks for you. You can switch any time from Settings."
+                : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
           </p>
         </div>
 
         <div className="onboarding-body">
           {step === 1 ? (
+            <div className="onboarding-welcome">
+              <img
+                src="/logo.webp"
+                alt="Mixchat"
+                className="onboarding-welcome-logo"
+              />
+              <p className="onboarding-welcome-lead">
+                You're logged in and ready to go.
+              </p>
+              <p className="onboarding-welcome-detail">
+                This short setup will help us pick a theme, font, and chat
+                defaults that match how you use Mixchat. It only takes a
+                moment.
+              </p>
+              <ul className="onboarding-welcome-list">
+                <li>Pick a theme and font for the chat</li>
+                <li>Choose your role (streamer, moderator, or viewer)</li>
+                <li>Review the recommended settings before we apply them</li>
+              </ul>
+            </div>
+          ) : step === 2 ? (
             <>
               <div
                 className="onboarding-preview"
@@ -431,10 +471,15 @@ export default function OnboardingWizard({
                   "--chat-font-family": FONT_FAMILY_MAP[chatFont],
                 } as React.CSSProperties}
               >
+                <div className="onboarding-preview-header">
+                  <span className="onboarding-preview-header-text">
+                    Chat preview
+                  </span>
+                </div>
                 <div className="messages-container">
                   <div className="message chat">
                     <div className="message-single-line">
-                      <span className="timestamp">14:02</span>
+                      <span className="timestamp">14:03:52</span>
                       <span
                         className="platform-tag twitch"
                         title="Twitch"
@@ -451,7 +496,7 @@ export default function OnboardingWizard({
                       </a>
                       <span className="message-separator">:</span>
                       <span className="message-text">
-                        hey @streamer loving the new layout{" "}
+                        Where Am I?{" "}
                         <img
                           className="chat-emote"
                           src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
@@ -470,7 +515,7 @@ export default function OnboardingWizard({
                   </div>
                   <div className="message chat mention">
                     <div className="message-single-line">
-                      <span className="timestamp">14:03</span>
+                      <span className="timestamp">14:03:53</span>
                       <span
                         className="platform-tag twitch"
                         title="Twitch"
@@ -487,7 +532,7 @@ export default function OnboardingWizard({
                       </a>
                       <span className="message-separator">:</span>
                       <span className="message-text">
-                        just hit 100 followers, let's gooo{" "}
+                        I just realized that my cousin drunk my beverage{" "}
                         <img
                           className="chat-emote"
                           src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
@@ -506,7 +551,7 @@ export default function OnboardingWizard({
                   </div>
                   <div className="message chat">
                     <div className="message-single-line">
-                      <span className="timestamp">14:04</span>
+                      <span className="timestamp">14:04:11</span>
                       <span
                         className="platform-tag twitch"
                         title="Twitch"
@@ -523,13 +568,26 @@ export default function OnboardingWizard({
                       </a>
                       <span className="message-separator">:</span>
                       <span className="message-text">
-                        this theme looks really clean
+                        In your head, in your head{" "}
+                        <img
+                          className="chat-emote"
+                          src="https://cdn.7tv.app/emote/01H1V70JZR000CVRT9DGWR9563/2x.avif"
+                          alt="emote"
+                          title="emote"
+                          loading="lazy"
+                          style={{
+                            height: "2em",
+                            verticalAlign: "middle",
+                            margin: "0 2px",
+                            cursor: "pointer",
+                          }}
+                        />
                       </span>
                     </div>
                   </div>
                   <div className="message chat yt-event">
                     <div className="message-single-line">
-                      <span className="timestamp">14:05</span>
+                      <span className="timestamp">14:05:27</span>
                       <span
                         className="platform-tag youtube"
                         title="YouTube"
@@ -544,7 +602,7 @@ export default function OnboardingWizard({
                       </span>
                       <span className="message-separator">:</span>
                       <span className="message-text">
-                        first time here, this client is fire
+                        I love your Irish accent
                       </span>
                     </div>
                   </div>
@@ -744,7 +802,7 @@ export default function OnboardingWizard({
             Everything you set here can be changed later in Settings.
           </div>
           <div className="onboarding-footer-actions">
-            {step === 2 && (
+            {step > 1 && (
               <button
                 type="button"
                 className="onboarding-btn onboarding-btn--back"
@@ -754,6 +812,24 @@ export default function OnboardingWizard({
               </button>
             )}
             {step === 1 ? (
+              <>
+                <button
+                  type="button"
+                  className="onboarding-btn onboarding-btn--ghost"
+                  onClick={onComplete}
+                  title="Skip the setup wizard"
+                >
+                  Skip setup
+                </button>
+                <button
+                  type="button"
+                  className="onboarding-btn onboarding-btn--primary"
+                  onClick={goNext}
+                >
+                  Continue <FaArrowRight size={12} />
+                </button>
+              </>
+            ) : step === 2 ? (
               <button
                 type="button"
                 className="onboarding-btn onboarding-btn--primary"

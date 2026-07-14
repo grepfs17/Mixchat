@@ -177,6 +177,17 @@ export default function AppContainer() {
     if (localStorage.getItem(ONBOARDING_COMPLETE_KEY) === "1") return;
     setShowOnboarding(true);
   }, [sessions.twitch]);
+  useEffect(() => {
+    const handler = () => {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      }
+      setShowOnboarding(true);
+    };
+    window.addEventListener("mixchat:show-onboarding", handler);
+    return () =>
+      window.removeEventListener("mixchat:show-onboarding", handler);
+  }, []);
   const handleOnboardingComplete = useCallback(() => {
     if (typeof localStorage !== "undefined") {
       localStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
