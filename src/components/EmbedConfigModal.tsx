@@ -35,6 +35,7 @@ const GROUPS = [
   "streamer",
   "notifications",
   "backup",
+  "help",
 ] as const;
 type GroupKey = (typeof GROUPS)[number];
 
@@ -45,6 +46,7 @@ const GROUP_LABELS: Record<GroupKey, string> = {
   streamer: "Streamer",
   notifications: "Notifications",
   backup: "Backup & Restore",
+  help: "Help",
 };
 
 interface EmbedConfigModalProps extends SettingsProps {
@@ -1071,6 +1073,43 @@ export default function EmbedConfigModal({
                 Sign in with Google
               </button>
             )}
+          </div>
+        ),
+      },
+      {
+        id: "help-wizards",
+        group: "help",
+        label: "Guided wizards",
+        description:
+          "Re-open the onboarding wizards at any time to revisit their choices",
+        render: () => (
+          <div className="embed-config-backup-section">
+            <p className="embed-config-backup-description">
+              Re-open any of the guided wizards to revisit their choices. They
+              don't change your existing settings unless you finish them.
+            </p>
+            <div className="embed-config-backup-buttons">
+              <button
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent("mixchat:show-onboarding"))
+                }
+                className="embed-config-backup-btn"
+                type="button"
+              >
+                <FaPlay size={12} /> Show setup wizard
+              </button>
+              <button
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("mixchat:show-mobile-hint"),
+                  )
+                }
+                className="embed-config-backup-btn"
+                type="button"
+              >
+                <FaPlay size={12} /> Show mobile controls wizard
+              </button>
+            </div>
           </div>
         ),
       },

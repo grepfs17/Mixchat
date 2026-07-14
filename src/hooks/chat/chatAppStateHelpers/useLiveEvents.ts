@@ -146,29 +146,16 @@ export function useLiveEvents({
     [setPendingRaid, setIsRaidInitiator],
   );
 
-  const onIncomingRaid = useCallback(
-    (raid: RaidOutEvent) => {
-      setPendingRaid(raid);
-      setIsRaidInitiator(false);
-    },
-    [setPendingRaid, setIsRaidInitiator],
-  );
-
-  useRaidDetection({
-    subscribe,
-    channelId: userId || "",
-    enabled: !!(accessToken && userId),
-    isInitiator: true,
-    onRaid: onInitiatorRaid,
-    onScopeError: onRaidScopeError,
-  });
-
+  // Incoming raids are already surfaced as a chat message by the IRC
+  // onRaid handler in useEventHandlers, so the popup is intentionally
+  // suppressed here. The EventSub subscription is still set up so scope
+  // errors are reported consistently.
   useRaidDetection({
     subscribe,
     channelId,
     enabled: !!(accessToken && channelId && channelId !== userId),
     isInitiator: false,
-    onRaid: onIncomingRaid,
+    onRaid: () => {},
     onScopeError: onRaidScopeError,
   });
 

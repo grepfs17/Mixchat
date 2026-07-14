@@ -21,6 +21,13 @@ export default function MobileTouchHintModal({
     setVisible(true);
   }, [twitchConnected]);
 
+  useEffect(() => {
+    const handler = () => setVisible(true);
+    window.addEventListener("mixchat:show-mobile-hint", handler);
+    return () =>
+      window.removeEventListener("mixchat:show-mobile-hint", handler);
+  }, []);
+
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1");
     setVisible(false);

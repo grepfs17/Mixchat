@@ -27,6 +27,9 @@ import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
 import LandingPage from "./LandingPage";
+import OnboardingWizard from "./OnboardingWizard";
+
+const ONBOARDING_COMPLETE_KEY = "mixchat_onboarding_complete";
 
 export interface TwitchChannel {
   id: string;
@@ -166,6 +169,31 @@ export default function AppContainer() {
     setShowYoutubeLinker,
   } = useUiState();
   const myChannelInfo = useMyChannelInfo(sessions.twitch);
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (!sessions.twitch) return;
+    if (typeof localStorage === "undefined") return;
+    if (localStorage.getItem(ONBOARDING_COMPLETE_KEY) === "1") return;
+    setShowOnboarding(true);
+  }, [sessions.twitch]);
+  useEffect(() => {
+    const handler = () => {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(ONBOARDING_COMPLETE_KEY);
+      }
+      setShowOnboarding(true);
+    };
+    window.addEventListener("mixchat:show-onboarding", handler);
+    return () =>
+      window.removeEventListener("mixchat:show-onboarding", handler);
+  }, []);
+  const handleOnboardingComplete = useCallback(() => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(ONBOARDING_COMPLETE_KEY, "1");
+    }
+    setShowOnboarding(false);
+  }, []);
 
   const isOnOwnChannel = !!(
     sessions.twitch &&
@@ -776,6 +804,38 @@ export default function AppContainer() {
           transitionInfo={streamTransition}
           targetRef={embedRef}
           onAnimationComplete={() => setStreamTransition(null)}
+        />
+      )}
+
+      {showOnboarding && (
+        <OnboardingWizard
+          chatTheme={chatTheme}
+          onChatThemeChange={setChatTheme}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
+          chatFont={chatFont}
+          onChatFontChange={setChatFont}
+          streamerToolsEnabled={streamerToolsEnabled}
+          onStreamerToolsEnabledChange={setStreamerToolsEnabled}
+          hideViewerCount={hideViewerCount}
+          onHideViewerCountChange={setHideViewerCount}
+          unifyChatEnabled={unifyChatEnabled}
+          onUnifyChatEnabledChange={setUnifyChatEnabled}
+          showDeletedMessages={showDeletedMessages}
+          onShowDeletedMessagesChange={setShowDeletedMessages}
+          compactActions={compactActions}
+          onCompactActionsChange={setCompactActions}
+          keepModActionsVisible={keepModActionsVisible}
+          onKeepModActionsVisibleChange={setKeepModActionsVisible}
+          modActionsFirst={modActionsFirst}
+          onModActionsFirstChange={setModActionsFirst}
+          doubleClickConfirmModActions={doubleClickConfirmModActions}
+          onDoubleClickConfirmModActionsChange={setDoubleClickConfirmModActions}
+          embedDefaultOpen={embedDefaultOpen}
+          onEmbedDefaultOpenChange={setEmbedDefaultOpen}
+          hideChatTimestamps={hideChatTimestamps}
+          onHideChatTimestampsChange={setHideChatTimestamps}
+          onComplete={handleOnboardingComplete}
         />
       )}
     </div>
