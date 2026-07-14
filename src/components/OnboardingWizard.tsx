@@ -433,7 +433,7 @@ export default function OnboardingWizard({
           </h2>
           <p className="onboarding-subtitle">
             {step === 1
-              ? "If you already configured it to your liking, you can skip this setup.Every option is also available later in Settings."
+              ? "If you already configured it to your liking, you can skip this setup. Every option is also available later in Settings."
               : step === 2
                 ? "Choose how Mixchat looks for you. You can switch any time from Settings."
                 : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
