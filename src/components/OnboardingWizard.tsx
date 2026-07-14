@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -610,42 +610,50 @@ export default function OnboardingWizard({
               </div>
 
               <div className="onboarding-theme-grid">
-                {THEME_OPTIONS.map(({ value, label, preview, section }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => onChatThemeChange(value as ChatTheme)}
-                    className={`onboarding-theme-btn${
-                      chatTheme === value
-                        ? " onboarding-theme-btn--active"
-                        : ""
-                    }`}
-                  >
-                    {section && (
-                      <div className="onboarding-theme-section">
-                        {section}
-                      </div>
-                    )}
-                    <div className="onboarding-theme-preview">
-                      <div
-                        className="onboarding-theme-preview-bg"
-                        style={{ backgroundColor: preview.bg }}
-                      />
-                      <div
-                        className="onboarding-theme-preview-hover"
-                        style={{ backgroundColor: preview.hover }}
-                      />
-                      <div
-                        className="onboarding-theme-preview-accent"
-                        style={{ backgroundColor: preview.accent }}
-                      />
-                    </div>
-                    <span className="onboarding-theme-label">{label}</span>
-                    {chatTheme === value && (
-                      <span className="onboarding-theme-check">✓</span>
-                    )}
-                  </button>
-                ))}
+                {(() => {
+                  let lastSection = "";
+                  return THEME_OPTIONS.map(({ value, label, preview, section }) => {
+                    const showSection = section && section !== lastSection;
+                    lastSection = section || lastSection;
+                    return (
+                      <Fragment key={value}>
+                        {showSection && (
+                          <div className="onboarding-theme-section">
+                            {section}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onChatThemeChange(value as ChatTheme)}
+                          className={`onboarding-theme-btn${
+                            chatTheme === value
+                              ? " onboarding-theme-btn--active"
+                              : ""
+                          }`}
+                        >
+                          <div className="onboarding-theme-preview">
+                            <div
+                              className="onboarding-theme-preview-bg"
+                              style={{ backgroundColor: preview.bg }}
+                            />
+                            <div
+                              className="onboarding-theme-preview-hover"
+                              style={{ backgroundColor: preview.hover }}
+                            />
+                            <div
+                              className="onboarding-theme-preview-accent"
+                              style={{ backgroundColor: preview.accent }}
+                            />
+                          </div>
+                          <span className="onboarding-theme-label">{label}</span>
+                          {chatTheme === value && (
+                            <span className="onboarding-theme-check">✓</span>
+                          )}
+                        </button>
+                      </Fragment>
+                    );
+                  });
+                })()}
               </div>
 
               <div className="onboarding-typography">

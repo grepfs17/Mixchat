@@ -315,36 +315,43 @@ export default function EmbedConfigModal({
           <div className="embed-config-section">
             <label className="embed-config-label">Chat Theme</label>
             <div className="embed-config-theme-grid">
-              {THEME_OPTIONS.map(({ value, label, preview, section }) => (
-                <React.Fragment key={value}>
-                  {section && (
-                    <div className="embed-config-theme-section">{section}</div>
+        {(() => {
+          let lastSection = "";
+          return THEME_OPTIONS.map(({ value, label, preview, section }) => {
+            const showSection = section && section !== lastSection;
+            lastSection = section || lastSection;
+            return (
+              <React.Fragment key={value}>
+                {showSection && (
+                  <div className="embed-config-theme-section">{section}</div>
+                )}
+                <button
+                  onClick={() => onChatThemeChange(value as ChatTheme)}
+                  className={`embed-config-theme-btn${chatTheme === value ? " embed-config-theme-btn--active" : ""}`}
+                >
+                  <div className="embed-config-theme-preview">
+                    <div
+                      className="embed-config-theme-preview-bg"
+                      style={{ backgroundColor: preview.bg }}
+                    />
+                    <div
+                      className="embed-config-theme-preview-hover"
+                      style={{ backgroundColor: preview.hover }}
+                    />
+                    <div
+                      className="embed-config-theme-preview-accent"
+                      style={{ backgroundColor: preview.accent }}
+                    />
+                  </div>
+                  <span className="embed-config-theme-label">{label}</span>
+                  {chatTheme === value && (
+                    <span className="embed-config-theme-check">✓</span>
                   )}
-                  <button
-                    onClick={() => onChatThemeChange(value as ChatTheme)}
-                    className={`embed-config-theme-btn${chatTheme === value ? " embed-config-theme-btn--active" : ""}`}
-                  >
-                    <div className="embed-config-theme-preview">
-                      <div
-                        className="embed-config-theme-preview-bg"
-                        style={{ backgroundColor: preview.bg }}
-                      />
-                      <div
-                        className="embed-config-theme-preview-hover"
-                        style={{ backgroundColor: preview.hover }}
-                      />
-                      <div
-                        className="embed-config-theme-preview-accent"
-                        style={{ backgroundColor: preview.accent }}
-                      />
-                    </div>
-                    <span className="embed-config-theme-label">{label}</span>
-                    {chatTheme === value && (
-                      <span className="embed-config-theme-check">✓</span>
-                    )}
-                  </button>
-                </React.Fragment>
-              ))}
+                </button>
+              </React.Fragment>
+            );
+          });
+        })()}
             </div>
             <p className="embed-config-description">
               Choose the background and hover colors for chat messages.
