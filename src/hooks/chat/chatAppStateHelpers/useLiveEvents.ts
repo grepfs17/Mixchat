@@ -159,15 +159,6 @@ export function useLiveEvents({
     onScopeError: onRaidScopeError,
   });
 
-  useRaidDetection({
-    subscribe,
-    channelId,
-    enabled: !!(accessToken && channelId && channelId !== userId),
-    isInitiator: false,
-    onRaid: onIncomingRaid,
-    onScopeError: onRaidScopeError,
-  });
-
   // --- Channel Point Redemptions ---
   const handleRedemptionEvent = useCallback(
     (message: TwitchMessage) => {
