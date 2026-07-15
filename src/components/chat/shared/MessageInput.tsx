@@ -4,6 +4,7 @@ import { FaTimes, FaSmile } from "react-icons/fa";
 import type { Platform, TwitchMessage } from "../../../lib/types";
 import { searchEmotes } from "../../../lib/emotes";
 import { useModerationContext } from "../../../contexts/ModerationContext";
+import { isMobileDevice } from "../../../lib/device";
 import { MOD_COMMANDS } from "../../../lib/constants";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
@@ -86,7 +87,7 @@ function MessageInput({
   const handleSend = useCallback(async () => {
     if (!message.trim() || selectedPlatforms.length === 0) return;
     try {
-      shouldRefocusRef.current = true;
+      if (!isMobileDevice()) shouldRefocusRef.current = true;
       await onSendMessage(message, selectedPlatforms, replyingTo?.id);
       setMessage("");
       emoteAC.hide();

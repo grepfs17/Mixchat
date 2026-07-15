@@ -31,6 +31,7 @@ import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
 import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 import { useSlowMode } from "../../../hooks/chat/useSlowMode";
 import { useEmotes } from "../../../hooks/chat/useEmotes";
+import { isMobileDevice } from "../../../lib/device";
 
 interface YTMessage {
   id: string;
@@ -143,7 +144,7 @@ export default function UnifiedInput({
       slowModeCooldown <= 0
     ) {
       try {
-        shouldRefocusRef.current = true;
+        if (!isMobileDevice()) shouldRefocusRef.current = true;
         await onSendMessage(text, ["twitch"], replyingTo?.id);
       } catch (err) {
         console.error("Twitch send failed:", err);
