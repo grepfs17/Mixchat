@@ -1,6 +1,7 @@
 import type { TwitchMessage } from "../../../lib/types";
 import type { UnifiedEntry, YTMessage } from "../unified/types";
 import { useModerationContext } from "../../../contexts/ModerationContext";
+import { isMobileDevice } from "../../../lib/device";
 import { ContextMenuShell } from "./ContextMenuShell";
 
 interface MessageMenuProps {
@@ -116,6 +117,7 @@ export default function MessageMenu({
   }
 
   // Twitch moderation
+  const isMobile = isMobileDevice();
   const twitchModActionsVisibleInline =
     isTwitch &&
     !isSystemMessage &&
@@ -125,7 +127,7 @@ export default function MessageMenu({
     !chatMsg.badges?.["broadcaster"] &&
     !chatMsg.badges?.["moderator"] &&
     !chatMsg.isCurrentUser &&
-    (!compactActions || keepModActionsVisible);
+    (isMobile || !compactActions || keepModActionsVisible);
 
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
@@ -186,7 +188,7 @@ export default function MessageMenu({
     !ytMsg.authorIsModerator &&
     !ytMsg.authorIsOwner &&
     !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId) &&
-    (!compactActions || keepModActionsVisible);
+    (isMobile || !compactActions || keepModActionsVisible);
 
   if (
     isYouTube &&

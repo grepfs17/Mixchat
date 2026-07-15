@@ -4,6 +4,7 @@ import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { getReadableUsernameColor } from "../../../lib/chatColors";
 import { renderAuthorLabel } from "../../../lib/twitchAuthorLabel";
 import { useModerationContext } from "../../../contexts/ModerationContext";
+import { isMobileDevice } from "../../../lib/device";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "./AutomodActions";
 import { MessageModActions } from "./MessageModActions";
@@ -126,15 +127,18 @@ function TwitchMessageContentBase({
     "#94a3b8"
     : "#94a3b8";
 
+  const isMobile = isMobileDevice();
+  const modActionsAlwaysVisible = isMobile && modModeActive;
+
   const showActionsStrip =
-    (!compactActions || keepModActionsVisible) &&
+    (modActionsAlwaysVisible || !compactActions || keepModActionsVisible) &&
     (!msg.messageType ||
       msg.messageType === "chat" ||
       ((msg.messageType === "timeout" || msg.messageType === "ban") &&
         isModerator &&
         msg.targetUsername));
 
-  const showInlineActions = !compactActions;
+  const showInlineActions = !compactActions && !modActionsAlwaysVisible;
 
   const isModAction =
     msg.messageType === "timeout" || msg.messageType === "ban";
