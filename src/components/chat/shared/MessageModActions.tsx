@@ -14,6 +14,7 @@ interface BaseProps {
   warnTitle?: string;
   showUserActions?: boolean;
   doubleClickConfirm?: boolean;
+  forceVisible?: boolean;
 }
 
 const btnStyle: React.CSSProperties = {
@@ -42,6 +43,7 @@ export function MessageModActions({
   warnTitle = "Warn user",
   showUserActions = true,
   doubleClickConfirm = false,
+  forceVisible = false,
 }: BaseProps): ReactNode {
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
@@ -100,7 +102,7 @@ export function MessageModActions({
   };
 
   return (
-    <div className="message-actions">
+    <div className={`message-actions${forceVisible ? " message-actions--mod-active" : ""}`}>
       {showUserActions && onBan && (
         <button
           onClick={(e) => handleClick(e, "ban", onBan)}

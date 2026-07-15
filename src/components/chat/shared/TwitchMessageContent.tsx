@@ -172,7 +172,7 @@ function TwitchMessageContentBase({
     if (!showActionsStrip) return null;
     if (isModAction) {
       return (
-        <div className="message-actions">
+        <div className={`message-actions${modActionsAlwaysVisible ? " message-actions--mod-active" : ""}`}>
           <button
             onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
             className="action-button mod-action"
@@ -202,6 +202,7 @@ function TwitchMessageContentBase({
         onWarn={() => onWarnUser?.(msg.author)}
         showUserActions={!isUnmoderatable}
         doubleClickConfirm={doubleClickConfirmModActions}
+        forceVisible={modActionsAlwaysVisible}
       />
     );
   })();

@@ -5,6 +5,7 @@ import {
   getReadableUsernameColor,
 } from "../../../lib/chatColors";
 import { useModerationContext } from "../../../contexts/ModerationContext";
+import { isMobileDevice } from "../../../lib/device";
 import YTMessageParts from "../../YTMessageParts";
 import { PlatformTag } from "../unified/PlatformTag";
 import { MessageModActions } from "./MessageModActions";
@@ -121,6 +122,7 @@ export function YouTubeMessageContent({
     youtubeOwnChannelId && msg.authorChannelId === youtubeOwnChannelId,
   );
   const isUnmoderatable = isMod || isOwner || isCurrentUser;
+  const isMobile = isMobileDevice();
   const showModActions =
     isYouTubeModerator &&
     youtubeModModeActive &&
@@ -144,6 +146,7 @@ export function YouTubeMessageContent({
         banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
         showUserActions={!isUnmoderatable && Boolean(msg.authorChannelId)}
         doubleClickConfirm={doubleClickConfirmModActions}
+        forceVisible={isMobile && youtubeModModeActive}
       />
     );
   };

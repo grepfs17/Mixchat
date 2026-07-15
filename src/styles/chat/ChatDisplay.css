@@ -1294,6 +1294,10 @@
     .message-actions {
         display: none;
     }
+
+    .message-actions--mod-active {
+        display: flex !important;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1328,6 +1332,10 @@
 
     .message-actions {
         display: none;
+    }
+
+    .message-actions--mod-active {
+        display: flex !important;
     }
 
     .action-button {
