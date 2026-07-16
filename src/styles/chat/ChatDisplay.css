@@ -1332,10 +1332,12 @@
 
     .message-actions {
         display: none;
+        margin-left: 0;
     }
 
     .message-actions--mod-active {
         display: flex !important;
+        margin-left: 0;
     }
 
     .action-button {
