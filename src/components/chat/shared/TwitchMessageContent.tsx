@@ -229,14 +229,13 @@ function TwitchMessageContentBase({
             onClick={() => onScrollToMessage(msg.replyTo!.id)}
             title="Jump to original message"
           >
-            <span>
-              response to{" "}
+            <span className="reply-info-label">
+              <span>response to <span>&nbsp;</span></span>
               <span style={{ color: replyAuthorColor }}>
-                @{msg.replyTo.author}
+                @{msg.replyTo.author}:
               </span>
               {msg.replyTo.content && (
                 <>
-                  {": "}
                   <span
                     className="reply-target-content"
                     dangerouslySetInnerHTML={{

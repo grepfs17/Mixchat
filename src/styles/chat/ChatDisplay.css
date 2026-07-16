@@ -1158,6 +1158,14 @@
     gap: 4px;
 }
 
+.reply-info-label {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
 .reply-info-clickable {
     cursor: pointer;
     border-radius: var(--radius-sm);
@@ -1194,9 +1202,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 400px;
+    min-width: 0;
+    flex: 1 1 auto;
     display: inline-block;
     vertical-align: bottom;
     padding-left: 5px;
+    overflow: hidden;
 }
 
 .reply-target-content .chat-emote {
