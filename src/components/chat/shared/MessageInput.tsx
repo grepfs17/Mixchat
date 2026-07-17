@@ -52,7 +52,7 @@ function MessageInput({
   const [message, setMessage] = useState("");
   const selectedPlatforms: Platform[] = ["twitch"];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const emoteMenuRef = useRef<HTMLDivElement>(null);
+
   const shouldRefocusRef = useRef(false);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
 
@@ -141,7 +141,7 @@ function MessageInput({
   });
 
   // --- Autocomplete menu management ---
-  const { menuRect, closeAll } = useAutocompleteMenu({
+  const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
     inputRef: textareaRef,
     autocompleteInstances: [emoteAC, usernameAC, commandAC],
   });
@@ -332,7 +332,7 @@ function MessageInput({
           results={emoteAC.results}
           selectedIndex={emoteAC.selectedIndex}
           menuRect={menuRect}
-          menuRef={emoteMenuRef}
+          menuRef={menuRef}
           onSelect={(i) => emoteAC.select(i)}
           onMouseEnter={(i) => emoteAC.setSelectedIndex(i)}
           renderItem={(emote, index, isSelected) => (

@@ -156,7 +156,7 @@ export default function YouTubeMessageInput({
   });
 
   // --- Autocomplete menu management ---
-  const { menuRect, closeAll } = useAutocompleteMenu({
+  const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
     inputRef,
     autocompleteInstances: [emojiAC, mentionAC],
   });
@@ -262,6 +262,7 @@ export default function YouTubeMessageInput({
           results={emojiAC.results}
           selectedIndex={emojiAC.selectedIndex}
           menuRect={menuRect}
+          menuRef={menuRef}
           maxHeight="260px"
           onSelect={(i) => emojiAC.select(i)}
           onMouseEnter={(i) => emojiAC.setSelectedIndex(i)}
@@ -298,6 +299,7 @@ export default function YouTubeMessageInput({
           results={mentionAC.results}
           selectedIndex={mentionAC.selectedIndex}
           menuRect={menuRect}
+          menuRef={menuRef}
           maxHeight="260px"
           onSelect={(i) => mentionAC.select(i)}
           onMouseEnter={(i) => mentionAC.setSelectedIndex(i)}

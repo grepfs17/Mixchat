@@ -109,8 +109,7 @@ export default function UnifiedInput({
   const ytPickerBtnRef = useRef<HTMLButtonElement>(null);
   const ytPickerSearchRef = useRef<HTMLInputElement>(null);
 
-  const emoteMenuRef = useRef<HTMLDivElement>(null);
-  const emojiMenuRef = useRef<HTMLDivElement>(null);
+
 
   // --- Authors for @mention ---
   const allAuthors = useMemo(() => {
@@ -251,7 +250,7 @@ export default function UnifiedInput({
   });
 
   // --- Autocomplete menu management ---
-  const { menuRect, closeAll } = useAutocompleteMenu({
+  const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
     inputRef,
     autocompleteInstances: [
       emoteAutocomplete,
@@ -432,18 +431,10 @@ export default function UnifiedInput({
         !ytPickerBtnRef.current.contains(target)
       )
         setShowYtPicker(false);
-      if (
-        showEmotePicker &&
-        emoteMenuRef.current &&
-        !emoteMenuRef.current.contains(target) &&
-        inputRef.current &&
-        !inputRef.current.contains(target)
-      )
-        setShowEmotePicker(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showYtPicker, showEmotePicker]);
+  }, [showYtPicker]);
 
   // --- YouTube emoji insert from picker ---
   const insertEmojiFromPicker = useCallback(
@@ -599,7 +590,7 @@ export default function UnifiedInput({
         results={emoteAutocomplete.results}
         selectedIndex={emoteAutocomplete.selectedIndex}
         menuRect={menuRect}
-        menuRef={emoteMenuRef}
+        menuRef={menuRef}
         onSelect={(i) => emoteAutocomplete.select(i)}
         onMouseEnter={(i) => emoteAutocomplete.setSelectedIndex(i)}
         renderItem={(emote, index, isSelected) => (
@@ -629,7 +620,7 @@ export default function UnifiedInput({
         results={emojiAutocomplete.results}
         selectedIndex={emojiAutocomplete.selectedIndex}
         menuRect={menuRect}
-        menuRef={emojiMenuRef}
+        menuRef={menuRef}
         maxHeight="260px"
         onSelect={(i) => emojiAutocomplete.select(i)}
         onMouseEnter={(i) => emojiAutocomplete.setSelectedIndex(i)}
