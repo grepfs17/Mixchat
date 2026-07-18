@@ -15,6 +15,8 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 const SUBSCRIPTION_STAGGER_MS = 250;
 const POST_429_COOLDOWN_MS = 5000;
 
+export type SubscriptionStatus = "pending" | "connected" | "error" | "scope_error";
+
 /** Module-level cache: subscription keys → session ID they were registered with.
  *  Survives component remounts — prevents re-POSTing within the same session,
  *  but re-registers when the WebSocket session changes. */
@@ -79,6 +81,9 @@ export function useEventSub({
   enabled,
 }: UseEventSubOptions) {
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [subscriptionStatuses, setSubscriptionStatuses] = useState<
+    Map<string, SubscriptionStatus>
+  >(new Map());
   const subscriptionsRef = useRef(new Map<string, Subscription>());
   const accessTokenRef = useRef(accessToken);
   const clientIdRef = useRef(clientId);
@@ -115,6 +120,14 @@ export function useEventSub({
         onScopeError,
       });
 
+      if (!subscribedKeys.has(key)) {
+        setSubscriptionStatuses((prev) => {
+          const next = new Map(prev);
+          next.set(key, "pending");
+          return next;
+        });
+      }
+
       const currentSid = sessionIdRef.current;
       if (currentSid && subscribedKeys.get(key) !== currentSid) {
         triggerResubscribeRef.current?.([key]);
@@ -122,6 +135,11 @@ export function useEventSub({
 
       return () => {
         subscriptionsRef.current.delete(key);
+        setSubscriptionStatuses((prev) => {
+          const next = new Map(prev);
+          next.delete(key);
+          return next;
+        });
       };
     },
     [],
@@ -201,19 +219,41 @@ export function useEventSub({
             }
             if (res.ok || res.status === 409) {
               subscribedKeys.set(key, sid);
+              setSubscriptionStatuses((prev) => {
+                const next = new Map(prev);
+                next.set(key, "connected");
+                return next;
+              });
             }
             if (
               !res.ok &&
               res.status !== 409 &&
               (res.status === 401 || res.status === 403)
             ) {
+              setSubscriptionStatuses((prev) => {
+                const next = new Map(prev);
+                next.set(key, "scope_error");
+                return next;
+              });
               sub.onScopeError?.();
+            }
+            if (!res.ok && res.status !== 409 && res.status !== 401 && res.status !== 403) {
+              setSubscriptionStatuses((prev) => {
+                const next = new Map(prev);
+                next.set(key, "error");
+                return next;
+              });
             }
           } catch (err) {
             console.error(
               `[useEventSub] Subscription error for ${sub.type}:`,
               err,
             );
+            setSubscriptionStatuses((prev) => {
+              const next = new Map(prev);
+              next.set(key, "error");
+              return next;
+            });
           }
           if (i < entries.length - 1) {
             await sleep(SUBSCRIPTION_STAGGER_MS);
@@ -296,6 +336,7 @@ export function useEventSub({
           setSessionId(sid);
           sessionIdRef.current = sid;
           subscribedKeys.clear();
+          setSubscriptionStatuses(new Map());
           resetKeepalive(keepaliveTimeout);
           await subscribeAll(sid);
         } else if (msgType === "session_keepalive") {
@@ -325,6 +366,13 @@ export function useEventSub({
         sessionIdRef.current = null;
         setSessionId(null);
         if (evt.code !== 1000) {
+          setSubscriptionStatuses((prev) => {
+            const next = new Map(prev);
+            for (const [key] of next) {
+              next.set(key, "error");
+            }
+            return next;
+          });
           const delay = Math.min(reconnectDelay, MAX_RECONNECT_DELAY_MS);
           reconnectTimer = setTimeout(() => {
             reconnectDelay *= 2;
@@ -359,7 +407,7 @@ export function useEventSub({
     };
   }, [accessToken, clientId, enabled]);
 
-  return { subscribe, sessionId };
+  return { subscribe, sessionId, subscriptionStatuses };
 }
 
 /**

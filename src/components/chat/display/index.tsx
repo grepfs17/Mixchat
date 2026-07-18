@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from "react";
 import type { TwitchMessage, Platform, ChatFont } from "../../../lib/types";
+import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
@@ -59,6 +60,8 @@ interface ChatDisplayProps {
   ) => Promise<Array<{ id: string; name: string }>>;
   showModTools?: boolean;
   onOpenModTools?: () => void;
+  subscriptionStatuses?: Map<string, SubscriptionStatus>;
+  isOnOwnChannel?: boolean;
 }
 
 export interface ChatDisplayHandle {
@@ -99,6 +102,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       onSearchCategories,
       showModTools = false,
       onOpenModTools,
+      subscriptionStatuses,
+      isOnOwnChannel = false,
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
   ) {
@@ -391,6 +396,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           }
           showModTools={showModTools}
           onOpenModTools={onOpenModTools}
+          subscriptionStatuses={subscriptionStatuses}
+          isOnOwnChannel={isOnOwnChannel}
         />
 
         {unifiedChatSlot ? (

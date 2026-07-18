@@ -96,6 +96,7 @@ export function useChatAppState({
   eventSounds = {},
   eventSoundVolume = 1,
   ignoredUsers = [],
+  isOnOwnChannel = false,
 }: ChatAppStateProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
@@ -276,7 +277,7 @@ export function useChatAppState({
     setAutomodIds(twitchSession?.userId || "", selectedTwitchChannel);
   }, [twitchSession?.userId, selectedTwitchChannel]);
 
-  const { subscribe } = useEventSub({
+  const { subscribe, subscriptionStatuses } = useEventSub({
     accessToken: twitchSession?.accessToken || "",
     clientId: import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
     enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
@@ -288,6 +289,7 @@ export function useChatAppState({
     twitchSession,
     badgesReady,
     isModerator,
+    isOnOwnChannel,
     selectedTwitchChannelName,
     setHypeTrain,
     setPoll,
@@ -737,6 +739,7 @@ export function useChatAppState({
     ytChannelId,
     badgesReady,
     isModerator,
+    subscriptionStatuses,
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,

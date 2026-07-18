@@ -20,6 +20,7 @@ import { useModerationContext } from "../../../contexts/ModerationContext";
 import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
 import type { Platform } from "../../../lib/types";
+import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 
 interface ChatHeaderProps {
   channelName?: string;
@@ -56,6 +57,8 @@ interface ChatHeaderProps {
   ) => void;
   showModTools?: boolean;
   onOpenModTools?: () => void;
+  subscriptionStatuses?: Map<string, SubscriptionStatus>;
+  isOnOwnChannel?: boolean;
 }
 
 export default function ChatHeader({
@@ -81,6 +84,8 @@ export default function ChatHeader({
   onOpenIgnoredUserOverlay,
   showModTools = false,
   onOpenModTools,
+  subscriptionStatuses,
+  isOnOwnChannel = false,
 }: ChatHeaderProps) {
   const {
     isModerator,
@@ -109,6 +114,8 @@ export default function ChatHeader({
   const [modModeDropdownOpen, setModModeDropdownOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!editingCategory) return;
@@ -154,6 +161,17 @@ export default function ChatHeader({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!statusDropdownRef.current?.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [statusDropdownOpen]);
+
   const handleSaveTitle = useCallback(() => {
     setSavingTitle(true);
     onUpdateTitle?.(titleInput).finally(() => {
@@ -174,6 +192,93 @@ export default function ChatHeader({
     },
     [onUpdateCategory],
   );
+
+  const getOverallStatus = (
+    statuses: Map<string, SubscriptionStatus>,
+    keys: string[] | null,
+  ): SubscriptionStatus | "disconnected" => {
+    if (keys === null) {
+      return statuses.size > 0 ? "connected" : "disconnected";
+    }
+    const relevant = Array.from(statuses.entries()).filter(([k]) =>
+      keys.some((prefix) => k.startsWith(prefix + ":")),
+    );
+    if (relevant.length === 0) return "disconnected";
+    if (relevant.every(([, s]) => s === "connected")) return "connected";
+    if (relevant.some(([, s]) => s === "error")) return "error";
+    if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
+    return "pending";
+  };
+
+  const statusLabel = (s: SubscriptionStatus | "disconnected") => {
+    switch (s) {
+      case "connected":
+        return "connected";
+      case "pending":
+        return "connecting";
+      case "error":
+        return "error";
+      case "scope_error":
+        return "scope missing";
+      case "disconnected":
+        return "disabled";
+    }
+  };
+
+  const FRIENDLY_NAMES: Record<string, string> = {
+    "automod.message.hold": "Message Held",
+    "automod.message.update": "Message Resolved",
+    "channel.raid": "Incoming Raid",
+    "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
+    "channel.hype_train.begin": "Train Started",
+    "channel.hype_train.progress": "Train Progress",
+    "channel.hype_train.end": "Train Ended",
+    "channel.poll.begin": "Poll Started",
+    "channel.poll.progress": "Poll Progress",
+    "channel.poll.end": "Poll Ended",
+    "channel.prediction.begin": "Prediction Started",
+    "channel.prediction.progress": "Prediction Progress",
+    "channel.prediction.lock": "Prediction Locked",
+    "channel.prediction.end": "Prediction Resolved",
+    "channel.bits.use": "Bits Used",
+  };
+
+  const renderStatusSection = (
+    label: string,
+    statuses: Map<string, SubscriptionStatus>,
+    keys: string[] | null,
+  ) => {
+    const overall = getOverallStatus(statuses, keys);
+    return (
+      <div className="eventsub-status-section">
+        <div className={`eventsub-status-row eventsub-status--${overall}`}>
+          <span className="eventsub-status-dot" />
+          <span className="eventsub-status-label">{label}</span>
+          <span className="eventsub-status-value">{statusLabel(overall)}</span>
+        </div>
+        {keys &&
+          keys.map((typePrefix) => {
+            const entry = Array.from(statuses.entries()).find(([k]) =>
+              k.startsWith(typePrefix + ":"),
+            );
+            const status = entry?.[1];
+            const label = FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
+            return (
+              <div
+                key={typePrefix}
+                className={`eventsub-status-item eventsub-status--${status ?? "disconnected"}`}
+              >
+                <span className="eventsub-status-dot" />
+                <span className="eventsub-status-item-label">{label}</span>
+                <span className="eventsub-status-value">
+                  {status ? statusLabel(status) : "disabled"}
+                </span>
+              </div>
+            );
+          })}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -198,17 +303,68 @@ export default function ChatHeader({
             </button>
           )}
           <h2>
-            {isStreamLive ? (
-              <span className="status-badge-live">
-                <span className="status-dot pulse" />
-                <span className="status-badge-live-text">LIVE</span>
+            <span className="status-badge-container" ref={statusDropdownRef}>
+              <span
+                className="status-badge-button"
+                role="button"
+                tabIndex={0}
+                onClick={() => setStatusDropdownOpen((v) => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setStatusDropdownOpen((v) => !v);
+                  }
+                }}
+                title="EventSub connection status"
+              >
+                {isStreamLive ? (
+                  <span className="status-badge-live">
+                    <span className="status-dot pulse" />
+                    <span className="status-badge-live-text">LIVE</span>
+                  </span>
+                ) : (
+                  <span className="status-badge-offline">
+                    <span className="status-dot" />
+                    <span className="status-badge-offline-text">OFFLINE</span>
+                  </span>
+                )}
               </span>
-            ) : (
-              <span className="status-badge-offline">
-                <span className="status-dot" />
-                <span className="status-badge-offline-text">OFFLINE</span>
-              </span>
-            )}
+              {statusDropdownOpen && subscriptionStatuses && (
+                <div className="eventsub-status-dropdown">
+                  <div className="eventsub-status-header">EventSub Connections</div>
+                  {renderStatusSection("WebSocket", subscriptionStatuses, null)}
+                  {renderStatusSection("Automod", subscriptionStatuses, [
+                    "automod.message.hold",
+                    "automod.message.update",
+                  ])}
+                  {renderStatusSection("Raids", subscriptionStatuses, [
+                    "channel.raid",
+                  ])}
+                  {renderStatusSection("Channel Points", subscriptionStatuses, [
+                    "channel.channel_points_custom_reward_redemption.add",
+                  ])}
+                  {renderStatusSection("Hype Train", subscriptionStatuses, [
+                    "channel.hype_train.begin",
+                    "channel.hype_train.progress",
+                    "channel.hype_train.end",
+                  ])}
+                  {renderStatusSection("Polls", subscriptionStatuses, [
+                    "channel.poll.begin",
+                    "channel.poll.progress",
+                    "channel.poll.end",
+                  ])}
+                  {renderStatusSection("Predictions", subscriptionStatuses, [
+                    "channel.prediction.begin",
+                    "channel.prediction.progress",
+                    "channel.prediction.lock",
+                    "channel.prediction.end",
+                  ])}
+                  {renderStatusSection("Bits", subscriptionStatuses, [
+                    "channel.bits.use",
+                  ])}
+                </div>
+              )}
+            </span>
             <a
               href={`https://twitch.tv/${channelName}`}
               target="_blank"

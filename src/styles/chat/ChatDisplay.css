@@ -858,6 +858,160 @@
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Status badge container + dropdown */
+.status-badge-container {
+    position: relative;
+    display: inline-block;
+}
+
+.status-badge-button {
+    display: inline-flex;
+    align-items: center;
+}
+
+.status-badge-button[role="button"] {
+    cursor: pointer;
+}
+
+.status-badge-button:focus-visible {
+    outline: 2px solid var(--color-twitch, #9146ff);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.eventsub-status-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 100;
+    min-width: 220px;
+    background-color: var(--color-bg-secondary, #1a1a2e);
+    border: 1px solid var(--color-border, #2a2a3e);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    padding: 6px 0;
+    font-size: 0.8em;
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border, #2a2a3e) transparent;
+}
+
+.eventsub-status-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.eventsub-status-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.eventsub-status-dropdown::-webkit-scrollbar-thumb {
+    background-color: var(--color-border, #2a2a3e);
+    border-radius: 3px;
+}
+
+.eventsub-status-dropdown::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-text-muted, #6b7280);
+}
+
+.eventsub-status-header {
+    padding: 6px 12px 4px;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border, #2a2a3e);
+    margin-bottom: 4px;
+}
+
+.eventsub-status-section {
+    padding: 2px 0;
+}
+
+.eventsub-status-section + .eventsub-status-section {
+    border-top: 1px solid var(--color-border, #2a2a3e);
+}
+
+.eventsub-status-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+}
+
+.eventsub-status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 12px 2px 24px;
+    font-size: 0.9em;
+}
+
+.eventsub-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--color-offline, #6b7280);
+}
+
+.eventsub-status--connected .eventsub-status-dot {
+    background-color: #22c55e;
+}
+
+.eventsub-status--pending .eventsub-status-dot {
+    background-color: #f59e0b;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.eventsub-status--error .eventsub-status-dot {
+    background-color: #ef4444;
+}
+
+.eventsub-status--scope_error .eventsub-status-dot {
+    background-color: #f97316;
+}
+
+.eventsub-status--disconnected .eventsub-status-dot {
+    background-color: var(--color-offline, #6b7280);
+}
+
+.eventsub-status-label {
+    flex: 1;
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.eventsub-status-item-label {
+    flex: 1;
+    color: var(--color-text-secondary, #a0a0b0);
+}
+
+.eventsub-status-value {
+    color: var(--color-text-muted, #6b7280);
+    font-size: 0.85em;
+    text-transform: lowercase;
+}
+
+.eventsub-status--connected .eventsub-status-value {
+    color: #22c55e;
+}
+
+.eventsub-status--pending .eventsub-status-value {
+    color: #f59e0b;
+}
+
+.eventsub-status--error .eventsub-status-value {
+    color: #ef4444;
+}
+
+.eventsub-status--scope_error .eventsub-status-value {
+    color: #f97316;
+}
+
+.eventsub-status--disconnected .eventsub-status-value {
+    color: var(--color-text-muted, #6b7280);
+}
+
 .channel-link {
     color: var(--color-text-primary);
     text-decoration: none;
@@ -1251,6 +1405,12 @@
 
     .status-badge-live-text {
         display: none;
+    }
+
+    .eventsub-status-dropdown {
+        left: -8px;
+        min-width: 200px;
+        font-size: 0.75em;
     }
 
     .header-button {

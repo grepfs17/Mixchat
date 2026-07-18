@@ -16,6 +16,7 @@ import {
   useChatAppState,
   type ChatAppStateProps,
 } from "../../hooks/chat/useChatAppState";
+import type { SubscriptionStatus } from "../../hooks/chat/useEventSub";
 import { ModerationContext } from "../../contexts/ModerationContext";
 import type { ModModeTarget } from "../../contexts/ModerationContext";
 import type {
@@ -110,6 +111,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     slowModeWaitTime,
     followerModeMinutes,
     ignoredUsers,
+    subscriptionStatuses,
   } = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
@@ -585,6 +587,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                 ytMessages={ytMessages}
                 showModTools={showModTools}
                 onOpenModTools={() => openStreamerTools()}
+                subscriptionStatuses={subscriptionStatuses}
+                isOnOwnChannel={isOnOwnChannel}
                 /* Override messages area with UnifiedChat */
                 unifiedChatSlot={
                   <UnifiedChat
@@ -729,6 +733,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                     ytMessages={ytMessages}
                     showModTools={showModTools}
                     onOpenModTools={() => openStreamerTools()}
+                    subscriptionStatuses={subscriptionStatuses}
+                    isOnOwnChannel={isOnOwnChannel}
                   />
                 </div>
                 <MessageInput

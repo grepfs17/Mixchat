@@ -30,6 +30,7 @@ interface UseLiveEventsOptions {
   };
   badgesReady: boolean;
   isModerator: boolean;
+  isOnOwnChannel: boolean;
   selectedTwitchChannelName: string;
   setHypeTrain: React.Dispatch<React.SetStateAction<HypeTrainState | null>>;
   setPoll: React.Dispatch<React.SetStateAction<PollState | null>>;
@@ -59,6 +60,7 @@ export function useLiveEvents({
   twitchSession,
   badgesReady,
   isModerator,
+  isOnOwnChannel,
   selectedTwitchChannelName,
   setHypeTrain,
   setPoll,
@@ -194,7 +196,7 @@ export function useLiveEvents({
   useChannelPointRedemptions({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady),
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
     onRedemption: handleRedemptionEvent,
     onScopeError: onRedemptionScopeError,
   });
@@ -213,6 +215,7 @@ export function useLiveEvents({
       accessToken &&
       channelId &&
       badgesReady &&
+      isOnOwnChannel &&
       isPartnerOrAffiliate
     ),
     onHypeTrainBegin: (event) => {
@@ -257,7 +260,7 @@ export function useLiveEvents({
   usePollEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady),
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
     onPollBegin: (event) => {
       setPoll({
         id: event.id,
@@ -319,7 +322,7 @@ export function useLiveEvents({
   usePredictionEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady),
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
     onPredictionBegin: (event) => {
       setPrediction({
         id: event.id,
@@ -438,7 +441,7 @@ export function useLiveEvents({
   useBitsPowerUpEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady),
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
     onCelebration: (event) => {
       setCelebration(event);
     },
