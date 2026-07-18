@@ -143,9 +143,9 @@ export function useLiveEvents({
   const onInitiatorRaid = useCallback(
     (raid: RaidOutEvent) => {
       setPendingRaid(raid);
-      setIsRaidInitiator(true);
+      setIsRaidInitiator(isOnOwnChannel);
     },
-    [setPendingRaid, setIsRaidInitiator],
+    [setPendingRaid, setIsRaidInitiator, isOnOwnChannel],
   );
 
   // Incoming raids are already surfaced as a chat message by the IRC
@@ -158,6 +158,16 @@ export function useLiveEvents({
     enabled: !!(accessToken && channelId && channelId !== userId),
     isInitiator: false,
     onRaid: () => {},
+    onScopeError: onRaidScopeError,
+  });
+
+  // Outgoing raids — subscribe with our own user ID as the initiator
+  useRaidDetection({
+    subscribe,
+    channelId: userId || "",
+    enabled: !!(accessToken && userId),
+    isInitiator: true,
+    onRaid: onInitiatorRaid,
     onScopeError: onRaidScopeError,
   });
 
