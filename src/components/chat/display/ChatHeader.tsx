@@ -232,6 +232,8 @@ export default function ChatHeader({
     "automod.message.hold": "Message Held",
     "automod.message.update": "Message Resolved",
     "channel.raid": "Incoming Raid",
+    "channel.raid:to_broadcaster": "Incoming Raid",
+    "channel.raid:from_broadcaster": "Outgoing Raid",
     "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
     "channel.hype_train.begin": "Train Started",
     "channel.hype_train.progress": "Train Progress",
@@ -268,7 +270,10 @@ export default function ChatHeader({
               return true;
             });
             const status = entry?.[1];
-            const label = FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
+            const nameKey = conditionFilter
+              ? `${typePrefix}:${conditionFilter}`
+              : typePrefix;
+            const label = FRIENDLY_NAMES[nameKey] || FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
             return (
               <div
                 key={typePrefix}
