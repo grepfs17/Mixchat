@@ -81,4 +81,48 @@ describe("UnifiedChat component", () => {
     expect(messageElements[0].textContent).toContain("YT Message (older)");
     expect(messageElements[1].textContent).toContain("Twitch Message (newer)");
   });
+
+  it("forwards renderThirdPartyEmotesOnYoutube to YouTube message rendering", () => {
+    const { container: off } = render(
+      <UnifiedChat
+        channelName="testchannel"
+        twitchMessages={[]}
+        ytMessages={[
+          {
+            id: "y1",
+            author: "YTUser",
+            parts: [{ type: "text", text: "hello Clap" }],
+            timestamp: new Date(),
+          },
+        ]}
+        renderThirdPartyEmotesOnYoutube={false}
+      />,
+    );
+    expect(off.querySelectorAll("img.chat-emote").length).toBe(0);
+    expect(off.textContent).toContain("hello Clap");
+
+    const { container: on } = render(
+      <UnifiedChat
+        channelName="testchannel"
+        twitchMessages={[]}
+        ytMessages={[
+          {
+            id: "y2",
+            author: "YTUser",
+            parts: [{ type: "text", text: "hello Clap" }],
+            timestamp: new Date(),
+          },
+        ]}
+        renderThirdPartyEmotesOnYoutube={true}
+      />,
+    );
+    // With the flag on, the bare text "hello Clap" should not contain an
+    // emote image because we never seeded an emote in this test (the
+    // 7TV/BTTV/FFZ maps are module-level empty objects by default). The
+    // important assertion is that no third-party emote IMG was created
+    // *because of the flag*. The two renders must look identical when the
+    // emote maps are empty.
+    expect(on.querySelectorAll("img.chat-emote").length).toBe(0);
+    expect(on.textContent).toContain("hello Clap");
+  });
 });

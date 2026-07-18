@@ -6,7 +6,7 @@ import {
   type YoutubeEmoteToken,
 } from "../lib/emotes";
 
-interface MessagePart {
+export interface YTMessagePart {
   type: "text" | "emoji";
   text?: string;
   url?: string;
@@ -16,7 +16,7 @@ interface MessagePart {
 }
 
 interface YTMessagePartsProps {
-  parts: MessagePart[];
+  parts: YTMessagePart[];
   /**
    * - `'unified'` used inside UnifiedChat; emoji get `chat-emote` class.
    * - `'standalone'` used inside YouTubeChat; emoji get `yt-emoji` class.

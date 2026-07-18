@@ -499,7 +499,7 @@ export default function EmbedConfigModal({
               7TV, BTTV, or FFZ emote name is rendered as an image. Uses the
               same emote set as the currently selected Twitch channel, so the
               scope is global + channel-specific just like Twitch chat. Only
-              Mixchat users will see the emotes — the message is still sent as
+              Mixchat users will see the emotes. The message is still sent as
               plain text on YouTube and other viewers see the raw names.
             </p>
           </div>

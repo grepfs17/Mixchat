@@ -749,6 +749,7 @@ export default function AppContainer() {
                 onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
                 streamerToolsEnabled={streamerToolsEnabled}
                 isOnOwnChannel={isOnOwnChannel}
+                renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
               />
             </div>
           </>
