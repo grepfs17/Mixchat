@@ -84,8 +84,11 @@ export async function closeSongQueue(
   ownerToken: string,
 ): Promise<void> {
   const res = await fetch(`/api/song-queue/${encodeURIComponent(sessionId)}`, {
-    method: "DELETE",
-    headers: baseHeaders(ownerToken),
+    method: "POST",
+    headers: {
+      ...baseHeaders(ownerToken),
+      "X-HTTP-Method-Override": "DELETE",
+    },
   });
   if (!res.ok) await handle(res);
 }
@@ -149,8 +152,11 @@ export async function removeSongQueueItem(
   const res = await fetch(
     `/api/song-queue/${encodeURIComponent(sessionId)}/items/${encodeURIComponent(itemId)}`,
     {
-      method: "DELETE",
-      headers: baseHeaders(ownerToken),
+      method: "POST",
+      headers: {
+        ...baseHeaders(ownerToken),
+        "X-HTTP-Method-Override": "DELETE",
+      },
     },
   );
   if (!res.ok) await handle(res);
@@ -241,7 +247,10 @@ export async function deletePastSongQueue(input: {
   });
   const res = await fetch(
     `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
-    { method: "DELETE" },
+    {
+      method: "POST",
+      headers: { "X-HTTP-Method-Override": "DELETE" },
+    },
   );
   if (!res.ok) await handle(res);
 }

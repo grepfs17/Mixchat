@@ -91,7 +91,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   return json({ item: res.result.item });
 };
 
-export const DELETE: APIRoute = async ({ request, params }) => {
+const removeItemHandler: APIRoute = async ({ request, params }) => {
   const sessionId = params.sessionId || "";
   const itemId = params.itemId || "";
   const token = ownerTokenFromRequest(request);
@@ -125,4 +125,15 @@ export const DELETE: APIRoute = async ({ request, params }) => {
   }
   if (res.result.kind === "missing") return json({ error: "Item not found" }, 404);
   return json({ ok: true });
+};
+
+export const DELETE: APIRoute = removeItemHandler;
+
+/** POST fallback — accepts X-HTTP-Method-Override: DELETE for proxies that
+ *  block the DELETE verb (e.g. Cloudflare WAF). */
+export const POST: APIRoute = async (ctx) => {
+  if (ctx.request.headers.get("x-http-method-override")?.toUpperCase() !== "DELETE") {
+    return json({ error: "Use X-HTTP-Method-Override: DELETE" }, 400);
+  }
+  return removeItemHandler(ctx);
 };

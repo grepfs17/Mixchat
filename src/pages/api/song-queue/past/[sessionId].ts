@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ request, params }) => {
   return json(publicView(session));
 };
 
-export const DELETE: APIRoute = async ({ request, params }) => {
+const deleteHandler: APIRoute = async ({ request, params }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-past-delete`,
@@ -76,6 +76,17 @@ export const DELETE: APIRoute = async ({ request, params }) => {
   );
   if (res === "ok") return json({ ok: true });
   return json({ error: "Not found" }, 404);
+};
+
+export const DELETE: APIRoute = deleteHandler;
+
+/** POST fallback — accepts X-HTTP-Method-Override: DELETE for proxies that
+ *  block the DELETE verb (e.g. Cloudflare WAF). */
+export const POST: APIRoute = async (ctx) => {
+  if (ctx.request.headers.get("x-http-method-override")?.toUpperCase() !== "DELETE") {
+    return json({ error: "Use X-HTTP-Method-Override: DELETE" }, 400);
+  }
+  return deleteHandler(ctx);
 };
 
 export const PATCH: APIRoute = async ({ request, params }) => {
