@@ -385,6 +385,29 @@ export async function deleteSessionByChannel(
 }
 
 /**
+ * Bulk channel-trust delete. Returns the count of files removed and the
+ * count that were already missing. Each session is verified against the
+ * channel identity before unlinking.
+ */
+export async function deleteSessionsByChannel(
+  opts: SongQueueStoreOptions,
+  sessionIds: string[],
+  channel: { channelName: string; channelPlatform: string },
+): Promise<{ deleted: number; missing: number }> {
+  let deleted = 0;
+  let missing = 0;
+  for (const sessionId of sessionIds) {
+    const result = await deleteSessionByChannel(opts, sessionId, channel);
+    if (result === "ok") {
+      deleted += 1;
+    } else {
+      missing += 1;
+    }
+  }
+  return { deleted, missing };
+}
+
+/**
  * Channel-trust isPublic flip for a past session. Live queues must go
  * through the per-session PATCH (ownerToken + version-bump) instead.
  */

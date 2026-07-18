@@ -28,6 +28,7 @@ import {
 } from "../../../lib/streamerTools/pastPlaylists";
 import {
   deletePastSongQueue,
+  deletePastSongQueues,
   getPastSongQueue,
   listPastSongQueues,
   setPastSongQueuePublic,
@@ -395,11 +396,17 @@ function PastPlaylistsSection({
     refreshLocal();
     if (channelParts) {
       const ids = serverEntries.map((e) => e.sessionId);
-      await Promise.all(
-        ids.map((sessionId) =>
-          deletePastSongQueue({ sessionId, ...channelParts }).catch(() => {}),
-        ),
-      );
+      if (ids.length > 0) {
+        try {
+          await deletePastSongQueues({ sessionIds: ids, ...channelParts });
+        } catch (err) {
+          if (typeof window !== "undefined") {
+            window.alert(
+              `Failed to clear server playlists: ${err instanceof Error ? err.message : "unknown error"}`,
+            );
+          }
+        }
+      }
       refreshServer();
       setOpenKey(null);
       setServerDetail(null);

@@ -34,6 +34,7 @@ import {
   POST as pastDelete,
   PATCH as pastPatch,
 } from "../../../src/pages/api/song-queue/past/[sessionId]";
+import { POST as bulkDelete } from "../../../src/pages/api/song-queue/past/delete";
 
 const mockedFetchVideoMeta = fetchVideoMeta as unknown as ReturnType<typeof vi.fn>;
 
@@ -242,5 +243,81 @@ describe("PATCH /api/song-queue/past/:sessionId", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.session.ended).toBe(true);
+  });
+});
+
+describe("POST /api/song-queue/past/delete", () => {
+  it("deletes multiple matching ended sessions", async () => {
+    const sessions: Array<{ sessionId: string; ownerToken: string }> = [];
+    for (let i = 0; i < 3; i += 1) {
+      const { sessionId, ownerToken } = await createTestSession(true);
+      await closeAndEnd(sessionId, ownerToken);
+      sessions.push({ sessionId, ownerToken });
+    }
+
+    const res = await bulkDelete(
+      makeContext(
+        new Request("http://localhost/api/song-queue/past/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionIds: sessions.map((s) => s.sessionId),
+            channelName: "streamer",
+            channelPlatform: "twitch",
+          }),
+        }),
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.deleted).toBe(3);
+    expect(body.missing).toBe(0);
+
+    for (const { sessionId } of sessions) {
+      const getRes = await pastGet(
+        makeContext(
+          new Request(
+            `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
+          ),
+          { sessionId },
+        ),
+      );
+      expect(getRes.status).toBe(404);
+    }
+  });
+
+  it("returns 400 when channel is missing", async () => {
+    const res = await bulkDelete(
+      makeContext(
+        new Request("http://localhost/api/song-queue/past/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionIds: ["abc"],
+            channelName: "",
+            channelPlatform: "twitch",
+          }),
+        }),
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when sessionIds is empty", async () => {
+    const res = await bulkDelete(
+      makeContext(
+        new Request("http://localhost/api/song-queue/past/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionIds: [],
+            channelName: "streamer",
+            channelPlatform: "twitch",
+          }),
+        }),
+      ),
+    );
+    expect(res.status).toBe(400);
   });
 });

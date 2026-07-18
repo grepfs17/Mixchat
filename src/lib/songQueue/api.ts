@@ -254,6 +254,24 @@ export async function deletePastSongQueue(input: {
   if (!res.ok) await handle(res);
 }
 
+/** Bulk-delete past session files on the server. */
+export async function deletePastSongQueues(input: {
+  sessionIds: string[];
+  channelName: string;
+  channelPlatform: string;
+}): Promise<{ deleted: number; missing: number }> {
+  const res = await fetch("/api/song-queue/past/delete", {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify({
+      sessionIds: input.sessionIds,
+      channelName: input.channelName,
+      channelPlatform: input.channelPlatform,
+    }),
+  });
+  return handle<{ deleted: number; missing: number }>(res);
+}
+
 /**
  * Flip the `isPublic` flag on an ended session. Live queues go through
  * the per-session PATCH (ownerToken + version-bump).
