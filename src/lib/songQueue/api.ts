@@ -249,7 +249,6 @@ export async function deletePastSongQueue(input: {
     `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
     {
       method: "POST",
-      headers: { "X-HTTP-Method-Override": "DELETE" },
     },
   );
   if (!res.ok) await handle(res);

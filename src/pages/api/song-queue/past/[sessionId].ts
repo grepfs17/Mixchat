@@ -80,14 +80,8 @@ const deleteHandler: APIRoute = async ({ request, params }) => {
 
 export const DELETE: APIRoute = deleteHandler;
 
-/** POST fallback — accepts X-HTTP-Method-Override: DELETE for proxies that
- *  block the DELETE verb (e.g. Cloudflare WAF). */
-export const POST: APIRoute = async (ctx) => {
-  if (ctx.request.headers.get("x-http-method-override")?.toUpperCase() !== "DELETE") {
-    return json({ error: "Use X-HTTP-Method-Override: DELETE" }, 400);
-  }
-  return deleteHandler(ctx);
-};
+/** POST fallback for proxies that block the DELETE verb (e.g. Cloudflare WAF). */
+export const POST: APIRoute = deleteHandler;
 
 export const PATCH: APIRoute = async ({ request, params }) => {
   if (
