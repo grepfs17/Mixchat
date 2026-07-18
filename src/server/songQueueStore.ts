@@ -219,6 +219,20 @@ export async function readSessionWithToken(
 }
 
 export function publicView(session: SongQueueSession): SongQueuePublicView {
+  const items = reconcileEndedItems(session).map((item) => ({
+    id: item.id,
+    videoId: item.videoId,
+    title: item.title,
+    channelTitle: item.channelTitle,
+    thumbnail: item.thumbnail,
+    status: item.status,
+    submittedAt: item.submittedAt,
+    durationSec: item.durationSec,
+    submitter: {
+      author: item.submitter.author,
+      platform: item.submitter.platform,
+    },
+  }));
   return {
     title: session.title,
     channelName: session.channelName || "",
@@ -227,21 +241,22 @@ export function publicView(session: SongQueueSession): SongQueuePublicView {
     version: session.version ?? 0,
     ended: Boolean(session.ended),
     createdAt: session.createdAt,
-    items: session.items.map((item) => ({
-      id: item.id,
-      videoId: item.videoId,
-      title: item.title,
-      channelTitle: item.channelTitle,
-      thumbnail: item.thumbnail,
-      status: item.status,
-      submittedAt: item.submittedAt,
-      durationSec: item.durationSec,
-      submitter: {
-        author: item.submitter.author,
-        platform: item.submitter.platform,
-      },
-    })),
+    items,
   };
+}
+
+/** In-memory version of the close-time reconciliation for legacy sessions. */
+export function reconcileEndedItems(
+  session: SongQueueSession,
+): SongQueueSession["items"] {
+  if (!session.ended) return session.items;
+  return session.items.map((it, i) => {
+    if (it.status !== "playing") return it;
+    if (i === session.currentIndex) {
+      return { ...it, status: "played" as const };
+    }
+    return { ...it, status: "skipped" as const };
+  });
 }
 
 export async function readPublic(
@@ -252,6 +267,162 @@ export async function readPublic(
   if (!session) return null;
   if (!session.isPublic) return null;
   return publicView(session);
+}
+
+/** Channel-scoped session listing for the past-playlists UI. Newest first. */
+export async function listSessionsForChannel(
+  opts: SongQueueStoreOptions,
+  channelName: string,
+  channelPlatform: string,
+): Promise<string[]> {
+  const want = {
+    name: channelName.trim().toLowerCase(),
+    platform: channelPlatform.trim().toLowerCase(),
+  };
+  let entries: string[];
+  try {
+    entries = await fs.readdir(opts.baseDir);
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: string }).code === "ENOENT"
+    ) {
+      return [];
+    }
+    throw err;
+  }
+  const matches: Array<{ id: string; lastSeenAt: string }> = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    const sessionId = entry.slice(0, -".json".length);
+    const session = await readSession(opts.baseDir, sessionId);
+    if (!session) continue;
+    if (
+      (session.channelName || "").trim().toLowerCase() !== want.name ||
+      (session.channelPlatform || "").trim().toLowerCase() !== want.platform
+    ) {
+      continue;
+    }
+    matches.push({ id: sessionId, lastSeenAt: session.lastSeenAt });
+  }
+  matches.sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+  return matches.map((m) => m.id);
+}
+
+/**
+ * Owner-only delete. Verifies the bearer token against the stored hash and
+ * removes the session file. Returns one of:
+ *   - "ok"     — file removed
+ *   - "missing" — no such session
+ *   - "auth"   — token didn't match
+ */
+export async function deleteSession(
+  opts: SongQueueStoreOptions,
+  sessionId: string,
+  ownerToken: string,
+): Promise<"ok" | "missing" | "auth"> {
+  return withLock(sessionId, async () => {
+    const session = await readSession(opts.baseDir, sessionId);
+    if (!session) return "missing" as const;
+    if (hashToken(ownerToken) !== session.ownerTokenHash) {
+      return "auth" as const;
+    }
+    try {
+      await fs.unlink(sessionPath(opts.baseDir, sessionId));
+    } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: string }).code === "ENOENT"
+      ) {
+        return "missing" as const;
+      }
+      throw err;
+    }
+    return "ok" as const;
+  });
+}
+
+/**
+ * Channel-trust delete for past sessions. The client no longer holds the
+ * per-session ownerToken once the queue is ended, so the route re-verifies
+ * the channel identity before unlinking the file.
+ */
+export async function deleteSessionByChannel(
+  opts: SongQueueStoreOptions,
+  sessionId: string,
+  channel: { channelName: string; channelPlatform: string },
+): Promise<"ok" | "missing"> {
+  return withLock(sessionId, async () => {
+    const session = await readSession(opts.baseDir, sessionId);
+    if (!session) return "missing" as const;
+    if (
+      (session.channelName || "").trim().toLowerCase() !==
+        channel.channelName.trim().toLowerCase() ||
+      (session.channelPlatform || "").trim().toLowerCase() !==
+        channel.channelPlatform.trim().toLowerCase()
+    ) {
+      return "missing" as const;
+    }
+    try {
+      await fs.unlink(sessionPath(opts.baseDir, sessionId));
+    } catch (err) {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: string }).code === "ENOENT"
+      ) {
+        return "missing" as const;
+      }
+      throw err;
+    }
+    return "ok" as const;
+  });
+}
+
+/**
+ * Channel-trust isPublic flip for a past session. Live queues must go
+ * through the per-session PATCH (ownerToken + version-bump) instead.
+ */
+export async function setSessionPublicByChannel(
+  opts: SongQueueStoreOptions,
+  sessionId: string,
+  channel: { channelName: string; channelPlatform: string },
+  isPublic: boolean,
+): Promise<
+  | { kind: "ok"; session: SongQueueSession }
+  | { kind: "missing" }
+  | { kind: "not-ended" }
+  | { kind: "noop"; session: SongQueueSession }
+> {
+  return withLock(sessionId, async () => {
+    const session = await readSession(opts.baseDir, sessionId);
+    if (!session) return { kind: "missing" as const };
+    if (
+      (session.channelName || "").trim().toLowerCase() !==
+        channel.channelName.trim().toLowerCase() ||
+      (session.channelPlatform || "").trim().toLowerCase() !==
+        channel.channelPlatform.trim().toLowerCase()
+    ) {
+      return { kind: "missing" as const };
+    }
+    if (!session.ended) return { kind: "not-ended" as const };
+    if (Boolean(session.isPublic) === Boolean(isPublic)) {
+      return { kind: "noop" as const, session };
+    }
+    const next: SongQueueSession = {
+      ...session,
+      isPublic: Boolean(isPublic),
+      lastSeenAt: new Date().toISOString(),
+      version: (session.version ?? 0) + 1,
+    };
+    await writeSession(opts.baseDir, next);
+    return { kind: "ok" as const, session: next };
+  });
 }
 
 export function newItemId(): string {

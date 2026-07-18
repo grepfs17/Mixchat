@@ -184,3 +184,90 @@ export async function getPublicSongQueue(
   );
   return handle<SongQueuePublicView>(res);
 }
+
+export interface PastPlaylistSummary {
+  sessionId: string;
+  title: string;
+  createdAt: string;
+  lastSeenAt: string;
+  ended: boolean;
+  isPublic: boolean;
+  itemCount: number;
+  playedCount: number;
+  skippedCount: number;
+  firstThumbnail: string | null;
+  firstTitle: string | null;
+}
+
+/** List past sessions for a channel. Channel-trust is enforced server-side. */
+export async function listPastSongQueues(input: {
+  channelName: string;
+  channelPlatform: string;
+}): Promise<PastPlaylistSummary[]> {
+  const params = new URLSearchParams({
+    channelName: input.channelName,
+    channelPlatform: input.channelPlatform,
+  });
+  const res = await fetch(`/api/song-queue?${params.toString()}`);
+  const body = await handle<{ sessions: PastPlaylistSummary[] }>(res);
+  return body.sessions;
+}
+
+/** Fetch the public projection of a past session (no submitter `userId`). */
+export async function getPastSongQueue(input: {
+  sessionId: string;
+  channelName: string;
+  channelPlatform: string;
+}): Promise<SongQueuePublicView> {
+  const params = new URLSearchParams({
+    channelName: input.channelName,
+    channelPlatform: input.channelPlatform,
+  });
+  const res = await fetch(
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+  );
+  return handle<SongQueuePublicView>(res);
+}
+
+/** Delete a past session file on the server. */
+export async function deletePastSongQueue(input: {
+  sessionId: string;
+  channelName: string;
+  channelPlatform: string;
+}): Promise<void> {
+  const params = new URLSearchParams({
+    channelName: input.channelName,
+    channelPlatform: input.channelPlatform,
+  });
+  const res = await fetch(
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+    { method: "DELETE" },
+  );
+  if (!res.ok) await handle(res);
+}
+
+/**
+ * Flip the `isPublic` flag on an ended session. Live queues go through
+ * the per-session PATCH (ownerToken + version-bump).
+ */
+export async function setPastSongQueuePublic(input: {
+  sessionId: string;
+  channelName: string;
+  channelPlatform: string;
+  isPublic: boolean;
+}): Promise<SongQueuePublicView> {
+  const params = new URLSearchParams({
+    channelName: input.channelName,
+    channelPlatform: input.channelPlatform,
+  });
+  const res = await fetch(
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: input.isPublic }),
+    },
+  );
+  const body = await handle<{ ok: true; session: SongQueuePublicView }>(res);
+  return body.session;
+}

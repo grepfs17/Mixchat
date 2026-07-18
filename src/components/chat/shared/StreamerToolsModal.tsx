@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowLeft,
+  FaCopy,
+  FaShareSquare,
   FaTimes,
+  FaTrash,
   FaTwitch,
   FaWindowMinimize,
   FaWrench,
@@ -17,6 +20,20 @@ import {
   getGiveawayHistory,
   type GiveawayHistoryEntry,
 } from "../../../lib/streamerTools/history";
+import {
+  clearPastPlaylists,
+  getPastPlaylists,
+  removePastPlaylist,
+  type PastPlaylistEntry,
+} from "../../../lib/streamerTools/pastPlaylists";
+import {
+  deletePastSongQueue,
+  getPastSongQueue,
+  listPastSongQueues,
+  setPastSongQueuePublic,
+  type PastPlaylistSummary,
+} from "../../../lib/songQueue/api";
+import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
@@ -30,6 +47,8 @@ interface StreamerToolsModalProps {
   youtubeConnected?: boolean;
   /** Public origin used to build the song-queue share link. */
   publicOrigin?: string;
+  /** Channel key (e.g. "twitch:streamerlogin") used to list past playlists. */
+  channelKey?: string | null;
 }
 
 type ToolId = "giveaway" | "song-queue";
@@ -170,6 +189,566 @@ function HistorySection({ onChanged }: { onChanged: () => void }) {
   );
 }
 
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return "0:00";
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function PastPlaylistsSection({
+  channelKey,
+  publicOrigin = "",
+}: {
+  channelKey: string | null;
+  publicOrigin?: string;
+}) {
+  const [localEntries, setLocalEntries] = useState<PastPlaylistEntry[]>(() =>
+    getPastPlaylists(),
+  );
+  const [serverEntries, setServerEntries] = useState<PastPlaylistSummary[]>(
+    [],
+  );
+  const [loadingServer, setLoadingServer] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [serverDetail, setServerDetail] =
+    useState<SongQueuePublicView | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [copiedItemId, setCopiedItemId] = useState<string | null>(null);
+  const [makingPublic, setMakingPublic] = useState(false);
+  const [publicError, setPublicError] = useState<string | null>(null);
+
+  const channelParts = useMemo(() => {
+    if (!channelKey || !channelKey.includes(":")) return null;
+    const [platform, ...rest] = channelKey.split(":");
+    return { channelName: rest.join(":"), channelPlatform: platform };
+  }, [channelKey]);
+
+  const refreshLocal = useCallback(() => {
+    setLocalEntries(getPastPlaylists());
+  }, []);
+
+  const refreshServer = useCallback(async () => {
+    if (!channelParts) {
+      setServerEntries([]);
+      return;
+    }
+    setLoadingServer(true);
+    setServerError(null);
+    try {
+      const list = await listPastSongQueues(channelParts);
+      setServerEntries(list);
+    } catch (err) {
+      setServerError(
+        err instanceof Error ? err.message : "Failed to load past queues",
+      );
+    } finally {
+      setLoadingServer(false);
+    }
+  }, [channelParts]);
+
+  useEffect(() => {
+    refreshLocal();
+  }, [refreshLocal]);
+
+  useEffect(() => {
+    refreshServer();
+  }, [refreshServer]);
+
+  // Lazy-fetch full contents when opening a server entry.
+  useEffect(() => {
+    if (!openKey || !channelParts) return;
+    if (openKey.startsWith("local:")) {
+      setServerDetail(null);
+      setDetailError(null);
+      return;
+    }
+    if (!openKey.startsWith("server:")) return;
+    const sessionId = openKey.slice("server:".length);
+    setLoadingDetail(true);
+    setDetailError(null);
+    setServerDetail(null);
+    void (async () => {
+      try {
+        const view = await getPastSongQueue({
+          sessionId,
+          ...channelParts,
+        });
+        setServerDetail(view);
+      } catch (err) {
+        setDetailError(
+          err instanceof Error ? err.message : "Failed to load playlist",
+        );
+      } finally {
+        setLoadingDetail(false);
+      }
+    })();
+  }, [openKey, channelParts]);
+
+  type CombinedItem = {
+    key: string;
+    source: "local" | "server";
+    sessionId: string;
+    title: string;
+    endedAt: string;
+    itemCount: number;
+    playedCount: number;
+    skippedCount: number;
+    thumbnail: string | null;
+    isPublic: boolean;
+  };
+
+  const combined = useMemo<CombinedItem[]>(() => {
+    const items: CombinedItem[] = [];
+    for (const e of serverEntries) {
+      items.push({
+        key: `server:${e.sessionId}`,
+        source: "server",
+        sessionId: e.sessionId,
+        title: e.title,
+        endedAt: e.lastSeenAt,
+        itemCount: e.itemCount,
+        playedCount: e.playedCount,
+        skippedCount: e.skippedCount,
+        thumbnail: e.firstThumbnail,
+        isPublic: e.isPublic,
+      });
+    }
+    for (const e of localEntries) {
+      items.push({
+        key: `local:${e.id}`,
+        source: "local",
+        sessionId: "",
+        title: e.title,
+        endedAt: e.endedAt,
+        itemCount: e.itemCount,
+        playedCount: e.playedCount,
+        skippedCount: e.skippedCount,
+        thumbnail: e.items[0]?.thumbnail || null,
+        isPublic: false,
+      });
+    }
+    items.sort((a, b) => b.endedAt.localeCompare(a.endedAt));
+    return items;
+  }, [localEntries, serverEntries]);
+
+  useEffect(() => {
+    if (openKey && !combined.some((c) => c.key === openKey)) {
+      setOpenKey(null);
+    }
+  }, [openKey, combined]);
+
+  useEffect(() => {
+    setLinkCopied(false);
+    setCopiedItemId(null);
+    setPublicError(null);
+  }, [openKey]);
+
+  const handleDelete = async (key: string) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Delete this past playlist? This cannot be undone.")
+    ) {
+      return;
+    }
+    if (key.startsWith("local:")) {
+      removePastPlaylist(key.slice("local:".length));
+      refreshLocal();
+      return;
+    }
+    if (!channelParts) return;
+    const sessionId = key.slice("server:".length);
+    try {
+      await deletePastSongQueue({ sessionId, ...channelParts });
+      refreshServer();
+      if (openKey === key) {
+        setOpenKey(null);
+        setServerDetail(null);
+      }
+    } catch (err) {
+      if (typeof window !== "undefined") {
+        window.alert(
+          `Failed to delete: ${err instanceof Error ? err.message : "unknown error"}`,
+        );
+      }
+    }
+  };
+
+  const handleClear = async () => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Clear all past song-queue playlists? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    clearPastPlaylists();
+    refreshLocal();
+    if (channelParts) {
+      const ids = serverEntries.map((e) => e.sessionId);
+      await Promise.all(
+        ids.map((sessionId) =>
+          deletePastSongQueue({ sessionId, ...channelParts }).catch(() => {}),
+        ),
+      );
+      refreshServer();
+      setOpenKey(null);
+      setServerDetail(null);
+    }
+  };
+
+  if (combined.length === 0 && !loadingServer) {
+    return (
+      <div className="past-playlists past-playlists--empty">
+        <span>
+          {serverError
+            ? `Couldn't load past queues: ${serverError}`
+            : "No past song queues yet. End a queue and it will show here."}
+        </span>
+      </div>
+    );
+  }
+
+  const openMeta = openKey
+    ? combined.find((c) => c.key === openKey) ?? null
+    : null;
+
+  const openPublicUrl =
+    openMeta && openMeta.source === "server" && openMeta.isPublic
+      ? `${publicOrigin}/s/${openMeta.sessionId}`
+      : null;
+
+  const handleCopyPublicUrl = () => {
+    if (!openPublicUrl) return;
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    navigator.clipboard
+      .writeText(openPublicUrl)
+      .then(() => {
+        setLinkCopied(true);
+        window.setTimeout(() => setLinkCopied(false), 1500);
+      })
+      .catch(() => {
+        // Clipboard write can fail in insecure contexts — just skip the flash.
+      });
+  };
+
+  const handleCopySongUrl = (itemId: string, videoId: string) => {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setCopiedItemId(itemId);
+        window.setTimeout(
+          () =>
+            setCopiedItemId((current) =>
+              current === itemId ? null : current,
+            ),
+          1500,
+        );
+      })
+      .catch(() => undefined);
+  };
+
+  const handleMakePublic = async (sessionId: string) => {
+    if (!channelParts) return;
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Make this past playlist public? A read-only share link will be created.",
+      )
+    ) {
+      return;
+    }
+    setMakingPublic(true);
+    setPublicError(null);
+    try {
+      await setPastSongQueuePublic({
+        sessionId,
+        ...channelParts,
+        isPublic: true,
+      });
+      setServerEntries((prev) =>
+        prev.map((e) =>
+          e.sessionId === sessionId ? { ...e, isPublic: true } : e,
+        ),
+      );
+    } catch (err) {
+      setPublicError(
+        err instanceof Error ? err.message : "Failed to make playlist public",
+      );
+    } finally {
+      setMakingPublic(false);
+    }
+  };
+
+  if (openMeta) {
+    const localDetail =
+      openMeta.source === "local"
+        ? localEntries.find((e) => `local:${e.id}` === openKey) ?? null
+        : null;
+    const items =
+      openMeta.source === "local" && localDetail
+        ? localDetail.items
+        : (serverDetail?.items ?? null);
+
+    return (
+      <div className="past-playlists past-playlists--detail">
+        <div className="past-playlists-detail-header">
+          <button
+            className="past-playlists-back"
+            onClick={() => setOpenKey(null)}
+            title="Back to past playlists"
+          >
+            <FaArrowLeft size={12} />
+            <span>Back</span>
+          </button>
+          <div className="past-playlists-detail-actions">
+            {openMeta.source === "server" && !openMeta.isPublic ? (
+              <button
+                className="past-playlists-share"
+                onClick={() => handleMakePublic(openMeta.sessionId)}
+                disabled={makingPublic}
+                title="Make this playlist public and create a shareable link"
+                aria-label="Make playlist public"
+              >
+                <FaShareSquare size={11} />
+                <span>{makingPublic ? "Sharing…" : "Make public"}</span>
+              </button>
+            ) : null}
+            {openPublicUrl ? (
+              <button
+                className="past-playlists-copy"
+                onClick={handleCopyPublicUrl}
+                title={`Copy ${openPublicUrl}`}
+                aria-label="Copy public URL"
+              >
+                <FaCopy size={11} />
+                <span>{linkCopied ? "Copied" : "Copy link"}</span>
+              </button>
+            ) : (
+              <span
+                className="past-playlists-copy past-playlists-copy--disabled"
+                title="This queue was never shared publicly"
+              >
+                <FaCopy size={11} />
+                <span>Not shared</span>
+              </span>
+            )}
+            <button
+              className="past-playlists-delete"
+              onClick={() => handleDelete(openMeta.key)}
+              title="Delete this playlist"
+              aria-label="Delete playlist"
+            >
+              <FaTrash size={11} />
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+        {publicError ? (
+          <div className="past-playlists-server-error">
+            {publicError}
+          </div>
+        ) : null}
+        <div className="past-playlists-detail-meta">
+          <span className="past-playlists-detail-title">
+            {openMeta.title || "Untitled queue"}
+          </span>
+          <span className="past-playlists-detail-stats">
+            {openMeta.itemCount} song{openMeta.itemCount === 1 ? "" : "s"} ·{" "}
+            {openMeta.playedCount} played · {openMeta.skippedCount} skipped
+          </span>
+          <span className="past-playlists-detail-date">
+            {openMeta.source === "local" ? "Ended " : "Last seen "}
+            {formatDate(openMeta.endedAt)}
+          </span>
+        </div>
+        {loadingDetail ? (
+          <div className="past-playlists-detail-loading">Loading…</div>
+        ) : detailError ? (
+          <div className="past-playlists-detail-loading">
+            Failed to load: {detailError}
+          </div>
+        ) : !items || items.length === 0 ? (
+          <div className="past-playlists-detail-loading">
+            No songs in this queue.
+          </div>
+        ) : (
+          <ul className="past-playlists-detail-list">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="past-playlists-detail-item"
+                data-status={item.status}
+              >
+                <a
+                  className="past-playlists-detail-thumb"
+                  href={`https://www.youtube.com/watch?v=${item.videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open on YouTube"
+                >
+                  <img src={item.thumbnail} alt="" loading="lazy" />
+                  <span className="past-playlists-detail-duration">
+                    {formatDuration(item.durationSec)}
+                  </span>
+                </a>
+                <div className="past-playlists-detail-info">
+                  <span className="past-playlists-detail-song-title">
+                    {item.title}
+                  </span>
+                  <span className="past-playlists-detail-song-channel">
+                    {item.channelTitle}
+                  </span>
+                  <span className="past-playlists-detail-submitter">
+                    by {item.submitter.author}
+                    {item.submitter.platform === "twitch" ? (
+                      <FaTwitch
+                        size={10}
+                        className="past-playlists-detail-platform"
+                      />
+                    ) : (
+                      <FaYoutube
+                        size={10}
+                        className="past-playlists-detail-platform"
+                      />
+                    )}
+                  </span>
+                </div>
+                <button
+                  className="past-playlists-detail-copy"
+                  onClick={() => handleCopySongUrl(item.id, item.videoId)}
+                  title={`Copy https://www.youtube.com/watch?v=${item.videoId}`}
+                  aria-label="Copy song URL"
+                >
+                  <FaCopy size={11} />
+                  <span>
+                    {copiedItemId === item.id ? "Copied" : "Copy URL"}
+                  </span>
+                </button>
+                <span className="past-playlists-detail-status">
+                  {item.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="past-playlists">
+      <div className="past-playlists-header">
+        <span className="past-playlists-title">
+          Past song queues{loadingServer ? " (loading…)" : ""}
+        </span>
+        <button
+          className="past-playlists-clear"
+          onClick={handleClear}
+          title="Clear all past playlists"
+        >
+          Clear
+        </button>
+      </div>
+      {serverError ? (
+        <div className="past-playlists-server-error">
+          Server history unavailable: {serverError}
+        </div>
+      ) : null}
+      <ul className="past-playlists-list">
+        {combined.map((entry) => {
+          const entryUrl =
+            entry.source === "server" && entry.isPublic
+              ? `${publicOrigin}/s/${entry.sessionId}`
+              : null;
+          return (
+            <li
+              key={entry.key}
+              className="past-playlists-item"
+              data-source={entry.source}
+            >
+              <button
+                className="past-playlists-item-button"
+                onClick={() => setOpenKey(entry.key)}
+                title="View playlist"
+              >
+                <span className="past-playlists-item-thumb-wrap">
+                  {entry.thumbnail ? (
+                    <img
+                      src={entry.thumbnail}
+                      alt=""
+                      className="past-playlists-item-thumb"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="past-playlists-item-thumb past-playlists-item-thumb--empty" />
+                  )}
+                </span>
+                <span className="past-playlists-item-main">
+                  <span className="past-playlists-item-title">
+                    {entry.title || "Untitled queue"}
+                  </span>
+                  <span className="past-playlists-item-sub">
+                    {entry.itemCount} song{entry.itemCount === 1 ? "" : "s"} ·{" "}
+                    {entry.playedCount} played · {entry.skippedCount} skipped
+                  </span>
+                </span>
+                <span className="past-playlists-item-meta">
+                  <span className="past-playlists-item-source">
+                    {entry.source === "server" ? "Server" : "Local"}
+                  </span>
+                  <span className="past-playlists-item-date">
+                    {formatDate(entry.endedAt)}
+                  </span>
+                </span>
+              </button>
+              {entryUrl ? (
+                <button
+                  className="past-playlists-item-copy"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof navigator === "undefined" || !navigator.clipboard)
+                      return;
+                    navigator.clipboard
+                      .writeText(entryUrl)
+                      .then(() => {
+                        setLinkCopied(false);
+                      })
+                      .catch(() => undefined);
+                  }}
+                  title={`Copy ${entryUrl}`}
+                  aria-label="Copy public URL"
+                >
+                  <FaCopy size={11} />
+                </button>
+              ) : null}
+              <button
+                className="past-playlists-item-delete"
+                onClick={() => handleDelete(entry.key)}
+                title="Delete this playlist"
+                aria-label="Delete playlist"
+              >
+                <FaTrash size={11} />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function StreamerToolsModal({
   giveaway,
   songQueue,
@@ -179,6 +758,7 @@ export default function StreamerToolsModal({
   initialTool = null,
   youtubeConnected = false,
   publicOrigin = "",
+  channelKey = null,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(initialTool);
   const [announcing, setAnnouncing] = useState(false);
@@ -271,6 +851,10 @@ export default function StreamerToolsModal({
                 ))}
               </ul>
               <HistorySection onChanged={() => {}} />
+              <PastPlaylistsSection
+                channelKey={channelKey}
+                publicOrigin={publicOrigin}
+              />
             </>
           ) : (
             <div className="streamer-tools-active">

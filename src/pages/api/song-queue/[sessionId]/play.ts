@@ -52,13 +52,27 @@ export const POST: APIRoute = async ({ request, params }) => {
     sessionId,
     token,
     (s) => {
-      const idx = Math.max(0, Math.min(body.currentIndex, Math.max(0, s.items.length - 1)));
+      const maxIdx = Math.max(0, s.items.length - 1);
+      const idx = Math.max(0, Math.min(body.currentIndex, maxIdx));
+      // Backfill the previous currentIndex so a session that gets ended
+      // (or GC'd) while paused reflects what was actually played. Without
+      // this, every item stays "playing" on disk because the player only
+      // ever sends one index at a time. Explicit skips via PATCH /items
+      // are already "skipped" and pass through unchanged.
+      const prevIdx = s.currentIndex;
       let items = s.items;
+      if (idx !== prevIdx && prevIdx >= 0 && prevIdx <= maxIdx) {
+        if (s.items[prevIdx]?.status === "playing") {
+          items = items.map((it, i) =>
+            i === prevIdx ? { ...it, status: "played" as const } : it,
+          );
+        }
+      }
       if (
         body.status !== undefined ||
         (body.durationSec !== undefined && body.durationSec > 0)
       ) {
-        items = s.items.map((it, i) => {
+        items = items.map((it, i) => {
           if (i !== idx) return it;
           const next = { ...it };
           if (body.status !== undefined) next.status = body.status;

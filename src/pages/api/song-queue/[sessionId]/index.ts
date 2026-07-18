@@ -127,11 +127,16 @@ export const PATCH: APIRoute = async ({ request, params }) => {
         isPublic: s.isPublic,
       };
       const next = configPatch ? clampConfig(base, configPatch) : base;
+      // The streamer-side toggle writes through `config.isPublic`. The
+      // public read path (and the public page) gates on the top-level
+      // `isPublic`, so mirror the config value up to keep both in sync.
+      const topLevelIsPublic =
+        b.isPublic !== undefined
+          ? (b.isPublic as boolean)
+          : (next.isPublic ?? s.isPublic);
       const updated = {
         ...s,
-        ...(b.isPublic !== undefined
-          ? { isPublic: b.isPublic as boolean }
-          : {}),
+        isPublic: topLevelIsPublic,
         config: next,
       };
       return { session: updated, result: updated };
@@ -156,10 +161,22 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     getSongQueueStoreOptions(),
     sessionId,
     token,
-    (s) => ({
-      session: { ...s, isPublic: false, ended: true },
-      result: undefined,
-    }),
+    (s) => {
+      // Final pass over item statuses: anything still "playing" is either
+      // the item the streamer stopped on (→ "played") or a stale entry
+      // from a jump/crash (→ "skipped").
+      const reconciled = s.items.map((it, i) => {
+        if (it.status !== "playing") return it;
+        if (i === s.currentIndex) {
+          return { ...it, status: "played" as const };
+        }
+        return { ...it, status: "skipped" as const };
+      });
+      return {
+        session: { ...s, isPublic: false, ended: true, items: reconciled },
+        result: undefined,
+      };
+    },
   );
   if (res.ok) return json({ ok: true });
   if (res.reason === "missing") return json({ error: "Not found" }, 404);

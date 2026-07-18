@@ -1,7 +1,19 @@
 import type { APIRoute } from "astro";
-import { createSession } from "../../../server/songQueueStore";
+import {
+  createSession,
+  deleteSession,
+  getSession,
+  listSessionsForChannel,
+  publicView,
+  reconcileEndedItems,
+} from "../../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../../server/songQueueConfig";
-import { json } from "../../../server/songQueueApi";
+import {
+  clientAddress,
+  json,
+  ownerTokenFromRequest,
+} from "../../../server/songQueueApi";
+import { checkRateLimit } from "../../../lib/rateLimit";
 import {
   DEFAULT_SONG_QUEUE_CONFIG,
   MAX_QUEUE_LENGTH_CEILING,
@@ -89,4 +101,70 @@ export const POST: APIRoute = async ({ request }) => {
     config,
   });
   return json(bootstrap, 201);
+};
+
+interface PastPlaylistSummary {
+  sessionId: string;
+  title: string;
+  createdAt: string;
+  lastSeenAt: string;
+  ended: boolean;
+  isPublic: boolean;
+  itemCount: number;
+  playedCount: number;
+  skippedCount: number;
+  firstThumbnail: string | null;
+  firstTitle: string | null;
+}
+
+/** Past-playlist summary list for the streamer's UI. See the past/[sessionId] route for the trust model. */
+export const GET: APIRoute = async ({ request }) => {
+  if (
+    !checkRateLimit(
+      `${clientAddress(request)}:song-queue-past-list`,
+      60,
+      60_000,
+    )
+  ) {
+    return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
+  }
+  const url = new URL(request.url);
+  const channelName = url.searchParams.get("channelName")?.trim() || "";
+  const channelPlatform =
+    url.searchParams.get("channelPlatform")?.trim() || "";
+  if (!channelName || !channelPlatform) {
+    return json({ error: "Missing channel" }, 400);
+  }
+  const ids = await listSessionsForChannel(
+    getSongQueueStoreOptions(),
+    channelName,
+    channelPlatform,
+  );
+  const summaries: PastPlaylistSummary[] = [];
+  for (const sessionId of ids) {
+    const session = await getSession(getSongQueueStoreOptions(), sessionId);
+    if (!session) continue;
+    const reconciled = reconcileEndedItems(session);
+    const playedCount = reconciled.filter(
+      (it) => it.status === "played",
+    ).length;
+    const skippedCount = reconciled.filter(
+      (it) => it.status === "skipped",
+    ).length;
+    const first = reconciled[0];
+    summaries.push({
+      sessionId,
+      title: session.title,
+      createdAt: session.createdAt,
+      lastSeenAt: session.lastSeenAt,
+      ended: Boolean(session.ended),
+      isPublic: Boolean(session.isPublic),
+      itemCount: reconciled.length,
+      playedCount,
+      skippedCount,
+      firstThumbnail: first?.thumbnail || null,
+      firstTitle: first?.title || null,
+    });
+  }
+  return json({ sessions: summaries });
 };

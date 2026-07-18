@@ -505,6 +505,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             publicOrigin={
               typeof window !== "undefined" ? window.location.origin : ""
             }
+            channelKey={songChannelKey}
           />
         )}
 

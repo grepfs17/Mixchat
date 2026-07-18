@@ -33,6 +33,8 @@ import {
   loadSongQueueSession,
   saveSongQueueSession,
 } from "../../lib/songQueue/idb";
+import { appendPastPlaylist } from "../../lib/streamerTools/pastPlaylists";
+import { reconcileEndedItemsClient } from "../../lib/songQueue/reconcile";
 
 export type SongQueuePhase = "idle" | "open" | "ended";
 
@@ -426,10 +428,54 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (!bootstrap) return;
     setLoading(true);
     try {
+      // Snapshot to localStorage *before* the server closes the session,
+      // so the streamer can still browse it after the server file is GC'd.
+      if (session && session.items.length > 0) {
+        // Apply the same final-state reconciliation the close endpoint
+        // writes to disk, so the local counts are accurate.
+        const reconciledItems = reconcileEndedItemsClient(
+          session.items,
+          session.currentIndex,
+        );
+        const playedCount = reconciledItems.filter(
+          (it) => it.status === "played",
+        ).length;
+        const skippedCount = reconciledItems.filter(
+          (it) => it.status === "skipped",
+        ).length;
+        appendPastPlaylist({
+          createdAt: session.createdAt,
+          title: session.title || config.title,
+          channelName: session.channelName,
+          channelPlatform: session.channelPlatform,
+          itemCount: reconciledItems.length,
+          playedCount,
+          skippedCount,
+          items: reconciledItems.map((it) => ({
+            id: it.id,
+            videoId: it.videoId,
+            title: it.title,
+            channelTitle: it.channelTitle,
+            thumbnail: it.thumbnail,
+            status: it.status,
+            submittedAt: it.submittedAt,
+            durationSec: it.durationSec,
+            submitter: {
+              author: it.submitter.author,
+              platform: it.submitter.platform,
+            },
+          })),
+        });
+      }
       await closeSongQueue(bootstrap.sessionId, bootstrap.ownerToken);
       setPhase("ended");
       if (session) {
-        const updated = { ...session, ended: true, isPublic: false };
+        const updated = {
+          ...session,
+          ended: true,
+          isPublic: false,
+          items: reconcileEndedItemsClient(session.items, session.currentIndex),
+        };
         setSession(updated);
         await saveSongQueueSession(
           channelKey,
@@ -445,7 +491,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     } finally {
       setLoading(false);
     }
-  }, [bootstrap, channelKey, onError, session]);
+  }, [bootstrap, channelKey, config.title, onError, session]);
 
   // ---- Chat ingestion ----
   // Debounced by animation frame so a burst of messages produces a single

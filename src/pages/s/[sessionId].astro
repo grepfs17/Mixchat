@@ -25,6 +25,12 @@ if (!sessionId) {
     }
 }
 
+// For ended-but-public sessions (made public after the fact via the
+// past-playlists UI) we still show the list and player. The Play button
+// only swaps the local IFrame, so it's safe on frozen sessions too —
+// the only thing we skip for ended sessions is the live poll.
+const showList = Boolean(initialView) && !notFound;
+
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 
 function formatPlaylistDate(iso: string): string {
@@ -176,6 +182,32 @@ const description = initialView
                 display: inline-block;
                 margin-top: 12px;
             }
+            .state--ended {
+                text-align: left;
+                border-color: #3a2a2a;
+                background: linear-gradient(
+                    180deg,
+                    rgba(99, 102, 241, 0.05) 0%,
+                    #141414 100%
+                );
+            }
+            .state--ended a {
+                margin-top: 0;
+                margin-left: 6px;
+            }
+            .thumb-link {
+                display: block;
+                flex-shrink: 0;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .thumb-link:hover .thumb {
+                opacity: 0.85;
+            }
+            .panel li[data-status="played"] .thumb,
+            .panel li[data-status="skipped"] .thumb {
+                opacity: 0.55;
+            }
             .footer {
                 margin-top: 18px;
                 text-align: center;
@@ -299,14 +331,16 @@ const description = initialView
 
     {
         ended && (
-            <p class="state">
-                This song queue has ended. <a href="/">Back to Mixchat</a>
+            <p class="state state--ended">
+                <strong>Ended.</strong> This song queue is read-only — you can
+                still browse and copy the songs below.{" "}
+                <a href="/">Back to Mixchat</a>
             </p>
         )
     }
 
     {
-        initialView && !notFound && !ended && (
+        showList && (
             <>
                 <header class="header">
                     <h1 id="queue-title">
@@ -365,7 +399,7 @@ const description = initialView
                     <div id="player" class="player" />
                     <div class="panel" aria-label="Queue list">
                         <h2>Queue</h2>
-                        <ol id="queue-list">
+                        <ol id="queue-list" data-ended={ended ? "1" : "0"}>
                             {initialView.items.map((item, i) => (
                                 <li
                                     data-id={item.id}
@@ -378,11 +412,19 @@ const description = initialView
                                             : ""
                                     }
                                 >
-                                    <img
-                                        class="thumb"
-                                        src={item.thumbnail}
-                                        alt=""
-                                    />
+                                    <a
+                                        class="thumb-link"
+                                        href={`https://www.youtube.com/watch?v=${item.videoId}`}
+                                        target="_blank"
+                                        rel="noopener"
+                                        aria-label={`Open ${item.title} on YouTube`}
+                                    >
+                                        <img
+                                            class="thumb"
+                                            src={item.thumbnail}
+                                            alt=""
+                                        />
+                                    </a>
                                     <div class="meta">
                                         <span class="title">{item.title}</span>
                                         <span class="sub">
@@ -427,6 +469,7 @@ const description = initialView
                         currentIndex: initialView.currentIndex,
                         videoIds: initialView.items.map((it) => it.videoId),
                         createdAt: initialView.createdAt,
+                        ended,
                     })}
                 />
             </>
@@ -513,14 +556,15 @@ const description = initialView
             version: number;
             currentIndex: number;
             videoIds: string[];
+            ended: boolean;
         };
         if (!bootstrap.sessionId) return;
 
         // The controller buffers play() calls until the player is ready,
         // so we can wire up buttons before the IFrame API finishes loading.
         const playController = createPlayController();
+        const isEnded = bootstrap.ended === true;
 
-        // Wire up buttons on the SSR-rendered list right away.
         bindCopyHandlers(listEl, (ok) => {
             if (ok) showToast("Link copied to clipboard");
             else showToast("Could not copy. Hold ⌘/Ctrl and press C.");
@@ -538,7 +582,7 @@ const description = initialView
             videoId: bootstrap.videoIds[bootstrap.currentIndex],
             playerVars: {
                 playsinline: 1,
-                autoplay: 1,
+                autoplay: isEnded ? 0 : 1,
                 rel: 0,
             },
             events: {
@@ -573,6 +617,10 @@ const description = initialView
                 },
             },
         }) as unknown as PublicPlayer;
+
+        // Live polling is only useful for open sessions; ended sessions
+        // are a frozen snapshot with nothing to bump.
+        if (isEnded) return;
 
         let lastVersion = bootstrap.version;
         let cancelled = false;
