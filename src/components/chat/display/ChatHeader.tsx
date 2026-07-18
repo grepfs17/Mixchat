@@ -196,13 +196,16 @@ export default function ChatHeader({
   const getOverallStatus = (
     statuses: Map<string, SubscriptionStatus>,
     keys: string[] | null,
+    conditionFilter?: string,
   ): SubscriptionStatus | "disconnected" => {
     if (keys === null) {
       return statuses.size > 0 ? "connected" : "disconnected";
     }
-    const relevant = Array.from(statuses.entries()).filter(([k]) =>
-      keys.some((prefix) => k.startsWith(prefix + ":")),
-    );
+    const relevant = Array.from(statuses.entries()).filter(([k]) => {
+      if (!keys.some((prefix) => k.startsWith(prefix + ":"))) return false;
+      if (conditionFilter) return k.includes(conditionFilter);
+      return true;
+    });
     if (relevant.length === 0) return "disconnected";
     if (relevant.every(([, s]) => s === "connected")) return "connected";
     if (relevant.some(([, s]) => s === "error")) return "error";
@@ -247,8 +250,9 @@ export default function ChatHeader({
     label: string,
     statuses: Map<string, SubscriptionStatus>,
     keys: string[] | null,
+    conditionFilter?: string,
   ) => {
-    const overall = getOverallStatus(statuses, keys);
+    const overall = getOverallStatus(statuses, keys, conditionFilter);
     return (
       <div className="eventsub-status-section">
         <div className={`eventsub-status-row eventsub-status--${overall}`}>
@@ -258,9 +262,11 @@ export default function ChatHeader({
         </div>
         {keys &&
           keys.map((typePrefix) => {
-            const entry = Array.from(statuses.entries()).find(([k]) =>
-              k.startsWith(typePrefix + ":"),
-            );
+            const entry = Array.from(statuses.entries()).find(([k]) => {
+              if (!k.startsWith(typePrefix + ":")) return false;
+              if (conditionFilter) return k.includes(conditionFilter);
+              return true;
+            });
             const status = entry?.[1];
             const label = FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
             return (
@@ -337,9 +343,12 @@ export default function ChatHeader({
                     "automod.message.hold",
                     "automod.message.update",
                   ])}
-                  {renderStatusSection("Raids", subscriptionStatuses, [
+                  {renderStatusSection("Incoming Raids", subscriptionStatuses, [
                     "channel.raid",
-                  ])}
+                  ], "to_broadcaster")}
+                  {renderStatusSection("Outgoing Raids", subscriptionStatuses, [
+                    "channel.raid",
+                  ], "from_broadcaster")}
                   {renderStatusSection("Channel Points", subscriptionStatuses, [
                     "channel.channel_points_custom_reward_redemption.add",
                   ])}
