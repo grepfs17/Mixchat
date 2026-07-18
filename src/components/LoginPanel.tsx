@@ -117,6 +117,8 @@ function LoginPanel({
   onDefaultPlayerTypeChange,
   defaultHlsQuality = "highest",
   onDefaultHlsQualityChange,
+  renderThirdPartyEmotesOnYoutube = false,
+  onRenderThirdPartyEmotesOnYoutubeChange,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -496,6 +498,11 @@ function LoginPanel({
           defaultHlsQuality={defaultHlsQuality}
           onDefaultHlsQualityChange={(value) => {
             if (onDefaultHlsQualityChange) onDefaultHlsQualityChange(value);
+          }}
+          renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+          onRenderThirdPartyEmotesOnYoutubeChange={(value) => {
+            if (onRenderThirdPartyEmotesOnYoutubeChange)
+              onRenderThirdPartyEmotesOnYoutubeChange(value);
           }}
           onClose={() => setShowEmbedConfig(false)}
         />

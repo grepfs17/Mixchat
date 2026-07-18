@@ -128,6 +128,8 @@ export default function AppContainer() {
     setDefaultPlayerType,
     defaultHlsQuality,
     setDefaultHlsQuality,
+    renderThirdPartyEmotesOnYoutube,
+    setRenderThirdPartyEmotesOnYoutube,
   } = useChatSettings();
   const {
     linkedYoutubeUrl,
@@ -384,6 +386,10 @@ export default function AppContainer() {
             onDefaultPlayerTypeChange={setDefaultPlayerType}
             defaultHlsQuality={defaultHlsQuality}
             onDefaultHlsQualityChange={setDefaultHlsQuality}
+            renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+            onRenderThirdPartyEmotesOnYoutubeChange={
+              setRenderThirdPartyEmotesOnYoutube
+            }
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();
@@ -856,6 +862,10 @@ export default function AppContainer() {
           onEmbedDefaultOpenChange={setEmbedDefaultOpen}
           hideChatTimestamps={hideChatTimestamps}
           onHideChatTimestampsChange={setHideChatTimestamps}
+          renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+          onRenderThirdPartyEmotesOnYoutubeChange={
+            setRenderThirdPartyEmotesOnYoutube
+          }
           onComplete={handleOnboardingComplete}
         />
       )}

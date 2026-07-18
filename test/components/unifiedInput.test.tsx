@@ -4,16 +4,22 @@ import React from "react";
 import UnifiedInput from "../../src/components/chat/shared/UnifiedInput";
 import { ModerationContext } from "../../src/contexts/ModerationContext";
 
-vi.mock("../../src/lib/emotes", () => ({
-  searchEmotes: () => [],
-  getAllEmotesOrganized: () => ({
-    twitchGlobal: [],
-    twitchChannels: [],
-    "7tv": [],
-    bttv: [],
-    ffz: [],
-  }),
-}));
+vi.mock("../../src/lib/emotes", async () => {
+  const actual = await vi.importActual<typeof import("../../src/lib/emotes")>(
+    "../../src/lib/emotes",
+  );
+  return {
+    ...actual,
+    searchEmotes: () => [],
+    getAllEmotesOrganized: () => ({
+      twitchGlobal: [],
+      twitchChannels: [],
+      "7tv": [],
+      bttv: [],
+      ffz: [],
+    }),
+  };
+});
 
 vi.mock("../../src/lib/emojiShortcodes", () => ({
   searchEmojis: () => [],

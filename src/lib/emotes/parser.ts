@@ -118,7 +118,7 @@ export function parseMessageWithEmotes(
  * Look up a word across all emote providers (7TV > BTTV > FFZ > Twitch).
  * Returns the emote URL and provider name, or null if not found.
  */
-function lookupEmote(
+export function lookupEmote(
   word: string,
 ): { url: string; provider: string; author?: string } | null {
   if (emotes7tv[word])
@@ -305,4 +305,131 @@ function parseThirdPartyEmotes(text: string): string {
   }
 
   return parsedParts.join("");
+}
+
+/**
+ * Look up a word in the third-party (non-Twitch) emote providers only:
+ * 7TV, then BTTV, then FFZ. Returns the emote URL and provider name, or
+ * null if the word is not a known third-party emote name.
+ *
+ * Twitch emotes are intentionally excluded — they're irrelevant on YouTube
+ * chat and would cause false matches against any channel-specific sub emote.
+ */
+export function lookupThirdPartyEmote(
+  word: string,
+):
+  | { url: string; provider: "7TV" | "BTTV" | "FFZ"; author?: string }
+  | null {
+  if (emotes7tv[word])
+    return {
+      url: emotes7tv[word],
+      provider: "7TV",
+      author: emoteAuthors[word],
+    };
+  if (emotesBttv[word])
+    return {
+      url: emotesBttv[word],
+      provider: "BTTV",
+      author: emoteAuthors[word],
+    };
+  if (emotesFfz[word])
+    return {
+      url: emotesFfz[word],
+      provider: "FFZ",
+      author: emoteAuthors[word],
+    };
+  return null;
+}
+
+export interface YoutubeEmoteToken {
+  type: "text" | "emote";
+  text?: string;
+  /** Emote URL (without the ZW: prefix) for `type === "emote"`. */
+  url?: string;
+  /** Emote name. */
+  name?: string;
+  /** Provider name ("7TV" | "BTTV" | "FFZ"). */
+  provider?: "7TV" | "BTTV" | "FFZ";
+  /** Emote author, if known. */
+  author?: string;
+  /**
+   * 7TV zero-width overlays that follow the base emote and should be stacked
+   * on top of it. Empty for non-base tokens. Each entry contains the overlay
+   * name and resolved CDN URL (no ZW: prefix).
+   */
+  overlays?: { name: string; url: string }[];
+}
+
+/**
+ * Tokenize a YouTube message text part into a flat list of text and emote
+ * tokens, applying 7TV zero-width overlay grouping. The same scope as the
+ * Twitch emote set is used (whatever is currently loaded in
+ * `emotes7tv` / `emotesBttv` / `emotesFfz`), matching how Twitch chat resolves
+ * third-party emotes. Disabled emotes are passed through as plain text.
+ *
+ * Pure function with no React/DOM dependencies so it can be tested in Node.
+ */
+export function tokenizeThirdPartyEmotesForYoutube(
+  text: string,
+  disabledSet?: Set<string>,
+): YoutubeEmoteToken[] {
+  if (!text) return [];
+  const tokens: YoutubeEmoteToken[] = [];
+  const words = text.split(" ");
+  let wi = 0;
+  while (wi < words.length) {
+    const word = words[wi];
+    if (word === "") {
+      wi++;
+      continue;
+    }
+
+    if (disabledSet?.has(word)) {
+      tokens.push({ type: "text", text: word });
+      wi++;
+      continue;
+    }
+
+    const match = lookupThirdPartyEmote(word);
+    if (match) {
+      if (isZeroWidthUrl(match.url)) {
+        tokens.push({
+          type: "emote",
+          url: getEmoteUrl(match.url),
+          name: word,
+          provider: match.provider,
+          author: match.author,
+        });
+        wi++;
+        continue;
+      }
+      const overlays: { name: string; url: string }[] = [];
+      let j = wi + 1;
+      while (j < words.length) {
+        const nextWord = words[j];
+        if (disabledSet?.has(nextWord)) break;
+        const nextUrl = emotes7tv[nextWord];
+        if (nextUrl && isZeroWidthUrl(nextUrl)) {
+          overlays.push({ name: nextWord, url: getEmoteUrl(nextUrl) });
+          j++;
+        } else {
+          break;
+        }
+      }
+      tokens.push({
+        type: "emote",
+        url: getEmoteUrl(match.url),
+        name: word,
+        provider: match.provider,
+        author: match.author,
+        overlays: overlays.length ? overlays : undefined,
+      });
+      wi = j;
+      continue;
+    }
+
+    tokens.push({ type: "text", text: word });
+    wi++;
+  }
+  return tokens;
 }

@@ -20,6 +20,7 @@ interface YouTubeMessageItemProps {
     avatar?: string,
   ) => void;
   showDeletedMessages?: boolean;
+  renderThirdPartyEmotes?: boolean;
 }
 
 export function YouTubeMessageItem({
@@ -32,6 +33,7 @@ export function YouTubeMessageItem({
   onTimeoutMenu,
   onUsernameClick,
   showDeletedMessages = false,
+  renderThirdPartyEmotes = false,
 }: YouTubeMessageItemProps) {
   const msg = entry.msg as YTMessage;
 
@@ -64,6 +66,7 @@ export function YouTubeMessageItem({
       onTimeoutMenu={onTimeoutMenu ? handleTimeoutMenu : undefined}
       onUsernameClick={onUsernameClick}
       showDeletedMessages={showDeletedMessages}
+      renderThirdPartyEmotes={renderThirdPartyEmotes}
     />
   );
 }

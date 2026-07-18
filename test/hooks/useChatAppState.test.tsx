@@ -15,11 +15,17 @@ vi.mock("../../src/hooks/chat/useRaidDetection", () => ({
   useRaidDetection: vi.fn(),
 }));
 
-vi.mock("../../src/lib/emotes", () => ({
-  initializeEmotes: vi.fn().mockResolvedValue(undefined),
-  clearEmoteCache: vi.fn(),
-  subscribeTo7TVUpdates: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../src/lib/emotes", async () => {
+  const actual = await vi.importActual<typeof import("../../src/lib/emotes")>(
+    "../../src/lib/emotes",
+  );
+  return {
+    ...actual,
+    initializeEmotes: vi.fn().mockResolvedValue(undefined),
+    clearEmoteCache: vi.fn(),
+    subscribeTo7TVUpdates: vi.fn().mockReturnValue(vi.fn()),
+  };
+});
 
 vi.mock("../../src/lib/badges", () => ({
   initializeBadges: vi.fn().mockResolvedValue(undefined),

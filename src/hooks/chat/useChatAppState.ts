@@ -78,6 +78,7 @@ export interface ChatAppStateProps {
   onToggleStreamEmbed?: () => void;
   streamerToolsEnabled?: boolean;
   isOnOwnChannel?: boolean;
+  renderThirdPartyEmotesOnYoutube?: boolean;
 }
 
 export function useChatAppState({

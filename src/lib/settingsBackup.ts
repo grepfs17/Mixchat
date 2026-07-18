@@ -38,6 +38,7 @@ export const SETTINGS_KEYS = [
   "mixchat_mod_mode_targets",
   "mixchat_default_player_type",
   "mixchat_default_hls_quality",
+  "mixchat_render_thirdparty_on_youtube",
   "disabled_emotes_v1",
 ] as const;
 

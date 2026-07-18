@@ -50,4 +50,6 @@ export interface SettingsProps {
   onDefaultPlayerTypeChange: (value: "embed" | "m3u8") => void;
   defaultHlsQuality: string;
   onDefaultHlsQualityChange: (value: string) => void;
+  renderThirdPartyEmotesOnYoutube: boolean;
+  onRenderThirdPartyEmotesOnYoutubeChange: (value: boolean) => void;
 }

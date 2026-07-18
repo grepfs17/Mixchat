@@ -13,11 +13,17 @@ vi.mock("react-dom", async () => {
   };
 });
 
-vi.mock("../../src/lib/emotes", () => ({
-  parseMessageWithEmotes: (text: string) => text,
-  searchEmotes: () => [],
-  getAllEmotesOrganized: () => ({}),
-}));
+vi.mock("../../src/lib/emotes", async () => {
+  const actual = await vi.importActual<typeof import("../../src/lib/emotes")>(
+    "../../src/lib/emotes",
+  );
+  return {
+    ...actual,
+    parseMessageWithEmotes: (text: string) => text,
+    searchEmotes: () => [],
+    getAllEmotesOrganized: () => ({}),
+  };
+});
 
 vi.mock("../../src/hooks/chat/useChatTouchGestures", () => ({
   useChatTouchGestures: () => ({}),

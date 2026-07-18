@@ -81,7 +81,7 @@ export function searchEmotes(
 /**
  * Disabled emotes management (stored in localStorage as array of names)
  */
-const DISABLED_EMOTES_KEY = "disabled_emotes_v1";
+export const DISABLED_EMOTES_KEY = "disabled_emotes_v1";
 
 export function getDisabledEmotes(): Set<string> {
   try {

@@ -48,6 +48,8 @@ interface OnboardingWizardProps {
   onEmbedDefaultOpenChange: (value: boolean) => void;
   hideChatTimestamps: boolean;
   onHideChatTimestampsChange: (value: boolean) => void;
+  renderThirdPartyEmotesOnYoutube: boolean;
+  onRenderThirdPartyEmotesOnYoutubeChange: (value: boolean) => void;
   onComplete: () => void;
 }
 
@@ -62,7 +64,8 @@ interface SettingDef {
     | "modActionsFirst"
     | "doubleClickConfirmModActions"
     | "embedDefaultOpen"
-    | "hideChatTimestamps";
+    | "hideChatTimestamps"
+    | "renderThirdPartyEmotesOnYoutube";
   label: string;
   description: string;
   choosableFor: UserType[];
@@ -80,6 +83,7 @@ const STREAMER_MOD_DEFAULTS: Record<string, boolean> = {
   doubleClickConfirmModActions: true,
   embedDefaultOpen: false,
   hideChatTimestamps: true,
+  renderThirdPartyEmotesOnYoutube: false,
 };
 
 const VIEWER_DEFAULTS: Record<string, boolean> = {
@@ -93,6 +97,7 @@ const VIEWER_DEFAULTS: Record<string, boolean> = {
   doubleClickConfirmModActions: false,
   embedDefaultOpen: true,
   hideChatTimestamps: false,
+  renderThirdPartyEmotesOnYoutube: false,
 };
 
 const USER_TYPES: {
@@ -202,6 +207,14 @@ const BASE_SETTINGS: SettingDef[] = [
     choosableFor: ["streamer", "mod", "viewer"],
     icon: <FaInfoCircle size={13} />,
   },
+  {
+    key: "renderThirdPartyEmotesOnYoutube",
+    label: "Render 7TV / BTTV / FFZ emotes in YouTube chat",
+    description:
+      "Resolve third-party emote names inside YouTube live chat messages as images. Uses the same emote set as Twitch chat (global + channel-specific). Only Mixchat users will see the emotes — the message is still sent as plain text on YouTube and other viewers see the raw names.",
+    choosableFor: ["streamer", "mod", "viewer"],
+    icon: <FaInfoCircle size={13} />,
+  },
 ];
 
 export default function OnboardingWizard({
@@ -231,6 +244,8 @@ export default function OnboardingWizard({
   onEmbedDefaultOpenChange,
   hideChatTimestamps,
   onHideChatTimestampsChange,
+  renderThirdPartyEmotesOnYoutube,
+  onRenderThirdPartyEmotesOnYoutubeChange,
   onComplete,
 }: OnboardingWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -259,6 +274,7 @@ export default function OnboardingWizard({
       doubleClickConfirmModActions,
       embedDefaultOpen,
       hideChatTimestamps,
+      renderThirdPartyEmotesOnYoutube,
     }),
     [
       streamerToolsEnabled,
@@ -271,6 +287,7 @@ export default function OnboardingWizard({
       doubleClickConfirmModActions,
       embedDefaultOpen,
       hideChatTimestamps,
+      renderThirdPartyEmotesOnYoutube,
     ],
   );
 
@@ -307,6 +324,11 @@ export default function OnboardingWizard({
         case "hideChatTimestamps":
           onHideChatTimestampsChange(!hideChatTimestamps);
           break;
+        case "renderThirdPartyEmotesOnYoutube":
+          onRenderThirdPartyEmotesOnYoutubeChange(
+            !renderThirdPartyEmotesOnYoutube,
+          );
+          break;
       }
     },
     [
@@ -320,6 +342,7 @@ export default function OnboardingWizard({
       doubleClickConfirmModActions,
       embedDefaultOpen,
       hideChatTimestamps,
+      renderThirdPartyEmotesOnYoutube,
       onStreamerToolsEnabledChange,
       onHideViewerCountChange,
       onUnifyChatEnabledChange,
@@ -330,6 +353,7 @@ export default function OnboardingWizard({
       onDoubleClickConfirmModActionsChange,
       onEmbedDefaultOpenChange,
       onHideChatTimestampsChange,
+      onRenderThirdPartyEmotesOnYoutubeChange,
     ],
   );
 
@@ -350,6 +374,9 @@ export default function OnboardingWizard({
       );
       onEmbedDefaultOpenChange(defaults.embedDefaultOpen);
       onHideChatTimestampsChange(defaults.hideChatTimestamps);
+      onRenderThirdPartyEmotesOnYoutubeChange(
+        defaults.renderThirdPartyEmotesOnYoutube,
+      );
     },
     [
       onStreamerToolsEnabledChange,
@@ -362,6 +389,7 @@ export default function OnboardingWizard({
       onDoubleClickConfirmModActionsChange,
       onEmbedDefaultOpenChange,
       onHideChatTimestampsChange,
+      onRenderThirdPartyEmotesOnYoutubeChange,
     ],
   );
 

@@ -37,6 +37,7 @@ interface SplitChatProps {
     avatar?: string,
   ) => void;
   channelName?: string;
+  renderThirdPartyEmotesOnYoutube?: boolean;
 }
 
 export default function SplitChat({
@@ -66,6 +67,7 @@ export default function SplitChat({
   onYtConnectionChange,
   onUsernameClick,
   channelName,
+  renderThirdPartyEmotesOnYoutube,
 }: SplitChatProps) {
   return (
     <>
@@ -93,6 +95,7 @@ export default function SplitChat({
           onError={onShowError}
           onConnectionChange={onYtConnectionChange}
           onUsernameClick={onUsernameClick}
+          renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
         />
       )}
 

@@ -102,6 +102,8 @@ export default function EmbedConfigModal({
   onDefaultPlayerTypeChange,
   defaultHlsQuality,
   onDefaultHlsQualityChange,
+  renderThirdPartyEmotesOnYoutube,
+  onRenderThirdPartyEmotesOnYoutubeChange,
   onClose,
 }: EmbedConfigModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -470,6 +472,35 @@ export default function EmbedConfigModal({
             <p className="embed-config-description embed-config-description--indented">
               When enabled, deleted messages are hidden behind a click-to-reveal
               link. When disabled, they are removed from chat entirely.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: "render-third-party-emotes-on-youtube",
+        group: "chat",
+        label: "Render 7TV / BTTV / FFZ emotes in YouTube chat",
+        description:
+          "Resolve third-party emote names inside YouTube live chat messages as images",
+        render: () => (
+          <div className="embed-config-section">
+            <label className="embed-config-checkbox-label">
+              <input
+                type="checkbox"
+                checked={renderThirdPartyEmotesOnYoutube}
+                onChange={(e) =>
+                  onRenderThirdPartyEmotesOnYoutubeChange(e.target.checked)
+                }
+              />
+              <span>Render 7TV / BTTV / FFZ emotes in YouTube chat</span>
+            </label>
+            <p className="embed-config-description embed-config-description--indented">
+              When enabled, any word in a YouTube chat message that matches a
+              7TV, BTTV, or FFZ emote name is rendered as an image. Uses the
+              same emote set as the currently selected Twitch channel, so the
+              scope is global + channel-specific just like Twitch chat. Only
+              Mixchat users will see the emotes — the message is still sent as
+              plain text on YouTube and other viewers see the raw names.
             </p>
           </div>
         ),
@@ -1176,6 +1207,8 @@ export default function EmbedConfigModal({
       onDefaultPlayerTypeChange,
       defaultHlsQuality,
       onDefaultHlsQualityChange,
+      renderThirdPartyEmotesOnYoutube,
+      onRenderThirdPartyEmotesOnYoutubeChange,
     ],
   );
 

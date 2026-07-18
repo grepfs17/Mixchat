@@ -81,6 +81,10 @@ export type UseChatSettingsResult = {
   setDefaultPlayerType: React.Dispatch<React.SetStateAction<"embed" | "m3u8">>;
   defaultHlsQuality: string;
   setDefaultHlsQuality: React.Dispatch<React.SetStateAction<string>>;
+  renderThirdPartyEmotesOnYoutube: boolean;
+  setRenderThirdPartyEmotesOnYoutube: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -204,6 +208,11 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_default_hls_quality",
     "highest",
   );
+  const [renderThirdPartyEmotesOnYoutube, setRenderThirdPartyEmotesOnYoutube] =
+    useLocalStorageState<boolean>(
+      "mixchat_render_thirdparty_on_youtube",
+      false,
+    );
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -283,5 +292,7 @@ export function useChatSettings(): UseChatSettingsResult {
     setDefaultPlayerType,
     defaultHlsQuality,
     setDefaultHlsQuality,
+    renderThirdPartyEmotesOnYoutube,
+    setRenderThirdPartyEmotesOnYoutube,
   };
 }

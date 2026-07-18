@@ -33,6 +33,8 @@ function makeProps(overrides: Partial<React.ComponentProps<typeof OnboardingWiza
     onEmbedDefaultOpenChange: vi.fn(),
     hideChatTimestamps: false,
     onHideChatTimestampsChange: vi.fn(),
+    renderThirdPartyEmotesOnYoutube: false,
+    onRenderThirdPartyEmotesOnYoutubeChange: vi.fn(),
     onComplete: vi.fn(),
     ...overrides,
   };
@@ -52,6 +54,7 @@ interface HarnessState {
   doubleClickConfirmModActions: boolean;
   embedDefaultOpen: boolean;
   hideChatTimestamps: boolean;
+  renderThirdPartyEmotesOnYoutube: boolean;
 }
 
 function StatefulHarness({
@@ -73,6 +76,7 @@ function StatefulHarness({
     doubleClickConfirmModActions: false,
     embedDefaultOpen: false,
     hideChatTimestamps: false,
+    renderThirdPartyEmotesOnYoutube: false,
   });
   const update =
     <K extends keyof HarnessState>(key: K) =>
@@ -108,6 +112,10 @@ function StatefulHarness({
       onEmbedDefaultOpenChange={update("embedDefaultOpen")}
       hideChatTimestamps={state.hideChatTimestamps}
       onHideChatTimestampsChange={update("hideChatTimestamps")}
+      renderThirdPartyEmotesOnYoutube={state.renderThirdPartyEmotesOnYoutube}
+      onRenderThirdPartyEmotesOnYoutubeChange={update(
+        "renderThirdPartyEmotesOnYoutube",
+      )}
       onComplete={vi.fn()}
       {...initial}
     />
@@ -588,5 +596,89 @@ describe("OnboardingWizard component", () => {
     );
     expect(active).not.toBeNull();
     expect(active!.textContent).toMatch(/Rubik/);
+  });
+
+  it("exposes the YT third-party emote setting as a toggle for streamers", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a streamer"));
+
+    const setting = screen
+      .getByText("Render 7TV / BTTV / FFZ emotes in YouTube chat")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    expect(setting!.querySelector(".onboarding-toggle")).toBeInTheDocument();
+  });
+
+  it("exposes the YT third-party emote setting as a toggle for moderators", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a moderator"));
+
+    const setting = screen
+      .getByText("Render 7TV / BTTV / FFZ emotes in YouTube chat")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    expect(setting!.querySelector(".onboarding-toggle")).toBeInTheDocument();
+  });
+
+  it("exposes the YT third-party emote setting as a toggle for viewers", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a viewer"));
+
+    const setting = screen
+      .getByText("Render 7TV / BTTV / FFZ emotes in YouTube chat")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    expect(setting!.querySelector(".onboarding-toggle")).toBeInTheDocument();
+  });
+
+  it("invokes the YT third-party emote setter when the toggle is clicked", async () => {
+    const onRenderThirdPartyEmotesOnYoutubeChange = vi.fn();
+    render(
+      <OnboardingWizard
+        {...makeProps({
+          onRenderThirdPartyEmotesOnYoutubeChange,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a viewer"));
+
+    const setting = screen
+      .getByText("Render 7TV / BTTV / FFZ emotes in YouTube chat")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    const checkbox = setting!.querySelector<HTMLInputElement>(
+      '.onboarding-toggle input[type="checkbox"]',
+    );
+    expect(checkbox).not.toBeNull();
+    await userEvent.click(checkbox!);
+    expect(
+      onRenderThirdPartyEmotesOnYoutubeChange,
+    ).toHaveBeenCalledWith(true);
+  });
+
+  it("applies the streamer default (off) for the YT third-party emote setting", async () => {
+    const onRenderThirdPartyEmotesOnYoutubeChange = vi.fn();
+    render(
+      <OnboardingWizard
+        {...makeProps({
+          onRenderThirdPartyEmotesOnYoutubeChange,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a streamer"));
+
+    expect(
+      onRenderThirdPartyEmotesOnYoutubeChange,
+    ).toHaveBeenCalledWith(false);
   });
 });

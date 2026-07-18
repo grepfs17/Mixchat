@@ -34,6 +34,8 @@ export type {
 } from "./types";
 
 export { parseMessageWithEmotes } from "./parser";
+export { lookupEmote, lookupThirdPartyEmote, tokenizeThirdPartyEmotesForYoutube } from "./parser";
+export type { YoutubeEmoteToken } from "./parser";
 
 export {
   searchEmotes,
@@ -43,6 +45,18 @@ export {
 } from "./search";
 
 export { clearEmoteCacheStorage } from "./state";
+
+export {
+  emoteMapVersion,
+  setEmotes7tv,
+  setEmotesBttv,
+  setEmotesFfz,
+  setEmoteAuthors,
+  bumpEmoteMapVersion,
+  notifyEmotesReloaded,
+} from "./state";
+
+export { useEmoteMapVersion, useDisabledEmotes } from "./hooks";
 
 /**
  * Initialize emotes for a given channel.

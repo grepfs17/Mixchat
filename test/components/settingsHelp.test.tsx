@@ -63,6 +63,8 @@ function makeProps() {
     onDefaultPlayerTypeChange: vi.fn(),
     defaultHlsQuality: "highest",
     onDefaultHlsQualityChange: vi.fn(),
+    renderThirdPartyEmotesOnYoutube: false,
+    onRenderThirdPartyEmotesOnYoutubeChange: vi.fn(),
     onClose: vi.fn(),
   };
 }

@@ -28,6 +28,11 @@ export interface YouTubeMessageContentProps {
   ) => void;
   /** When true, deleted messages are dimmed and clickable to reveal; otherwise they collapse. */
   showDeletedMessages?: boolean;
+  /**
+   * When true, render 7TV / BTTV / FFZ emote names in the message body as
+   * images. Uses the same emote set as Twitch chat.
+   */
+  renderThirdPartyEmotes?: boolean;
 }
 
 const YT_EVENT_CONFIG: Record<
@@ -102,6 +107,7 @@ export function YouTubeMessageContent({
   onTimeoutMenu,
   onUsernameClick,
   showDeletedMessages = false,
+  renderThirdPartyEmotes = false,
 }: YouTubeMessageContentProps) {
   const {
     isYouTubeModerator,
@@ -205,7 +211,11 @@ export function YouTubeMessageContent({
                   [{msg.superchat!.amount}]
                 </span>
                 {msg.parts.length > 0 && (
-                  <YTMessageParts parts={msg.parts} variant={variant} />
+                  <YTMessageParts
+                    parts={msg.parts}
+                    variant={variant}
+                    renderThirdPartyEmotes={renderThirdPartyEmotes}
+                  />
                 )}
               </>
             )}
@@ -219,7 +229,11 @@ export function YouTubeMessageContent({
               <>Received a gift membership</>
             )}
             {msg.messageType === "redirect" && (
-              <YTMessageParts parts={msg.parts} variant={variant} />
+              <YTMessageParts
+                parts={msg.parts}
+                variant={variant}
+                renderThirdPartyEmotes={renderThirdPartyEmotes}
+              />
             )}
             {msg.superchat && !msg.messageType && (
               <>
@@ -230,7 +244,11 @@ export function YouTubeMessageContent({
                   [{msg.superchat.amount}]
                 </span>
                 {msg.parts.length > 0 && (
-                  <YTMessageParts parts={msg.parts} variant={variant} />
+                  <YTMessageParts
+                    parts={msg.parts}
+                    variant={variant}
+                    renderThirdPartyEmotes={renderThirdPartyEmotes}
+                  />
                 )}
               </>
             )}
@@ -301,7 +319,11 @@ export function YouTubeMessageContent({
           </span>
         ) : (
           <span className="message-text">
-            <YTMessageParts parts={msg.parts} variant={variant} />
+            <YTMessageParts
+              parts={msg.parts}
+              variant={variant}
+              renderThirdPartyEmotes={renderThirdPartyEmotes}
+            />
           </span>
         )}
         {!modActionsFirst && renderModActions()}

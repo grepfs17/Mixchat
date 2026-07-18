@@ -31,6 +31,11 @@ interface YouTubeChatProps {
   ) => void;
   /** Called when a chat item is marked deleted by a moderator (or author). */
   onMessageDeleted?: (messageId: string, deletedByText?: string) => void;
+  /**
+   * When true, render 7TV / BTTV / FFZ emote names in YouTube messages as
+   * images, using the same emote set the Twitch side is currently using.
+   */
+  renderThirdPartyEmotes?: boolean;
 }
 
 interface MessagePart {
@@ -98,6 +103,7 @@ export default function YouTubeChat({
   showDeletedMessages = false,
   onUsernameClick,
   onMessageDeleted,
+  renderThirdPartyEmotes = false,
 }: YouTubeChatProps) {
   const getTextContent = (m: ChatMessage) =>
     m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
@@ -516,6 +522,7 @@ export default function YouTubeChat({
             variant="standalone"
             onUsernameClick={onUsernameClick}
             showDeletedMessages={showDeletedMessages}
+            renderThirdPartyEmotes={renderThirdPartyEmotes}
           />
         ))}
       </div>

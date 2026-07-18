@@ -45,6 +45,7 @@ interface UnifiedChatProps {
   splitChatEnabled?: boolean;
   ignoredUsers?: string[];
   showDeletedMessages?: boolean;
+  renderThirdPartyEmotesOnYoutube?: boolean;
 }
 
 export interface UnifiedChatHandle {
@@ -69,6 +70,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       splitChatEnabled = false,
       ignoredUsers = [],
       showDeletedMessages = false,
+      renderThirdPartyEmotesOnYoutube = false,
     }: UnifiedChatProps,
     ref: React.ForwardedRef<UnifiedChatHandle>,
   ) {
@@ -388,6 +390,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   handleUsernameClick(e, author, "youtube", avatar)
                 }
                 showDeletedMessages={showDeletedMessages}
+                renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
               />
             );
           })}

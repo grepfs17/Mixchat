@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { initializeEmotes, parseMessageWithEmotes } from "../../src/lib/emotes";
+import {
+  initializeEmotes,
+  parseMessageWithEmotes,
+  setEmotes7tv,
+  setEmotesBttv,
+  setEmotesFfz,
+  tokenizeThirdPartyEmotesForYoutube,
+} from "../../src/lib/emotes";
 
 describe("emotes lib", () => {
   beforeEach(() => {
@@ -380,6 +387,125 @@ describe("emotes lib", () => {
       expect(normal).not.toBe(giant);
       expect(normal).not.toContain("chat-emote--gigantified");
       expect(giant).toContain("chat-emote--gigantified");
+    });
+  });
+
+  describe("tokenizeThirdPartyEmotesForYoutube", () => {
+    beforeEach(() => {
+      setEmotes7tv({});
+      setEmotesBttv({});
+      setEmotesFfz({});
+    });
+
+    it("returns the original text as a single text token when no emote matches", () => {
+      const tokens = tokenizeThirdPartyEmotesForYoutube("Hello world");
+      expect(tokens).toEqual([
+        { type: "text", text: "Hello" },
+        { type: "text", text: "world" },
+      ]);
+    });
+
+    it("returns an empty array for empty input", () => {
+      expect(tokenizeThirdPartyEmotesForYoutube("")).toEqual([]);
+    });
+
+    it("matches 7TV emotes", () => {
+      setEmotes7tv({ Cool: "https://cdn.7tv.app/emote/cool/1x.webp" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("Wow Cool");
+      expect(tokens).toEqual([
+        { type: "text", text: "Wow" },
+        {
+          type: "emote",
+          url: "https://cdn.7tv.app/emote/cool/1x.webp",
+          name: "Cool",
+          provider: "7TV",
+          author: undefined,
+          overlays: undefined,
+        },
+      ]);
+    });
+
+    it("matches BTTV emotes", () => {
+      setEmotesBttv({ BTTVHype: "https://cdn.bttv.gg/emote/hype/1x.webp" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("hype BTTVHype train");
+      expect(tokens[1]).toMatchObject({
+        type: "emote",
+        url: "https://cdn.bttv.gg/emote/hype/1x.webp",
+        name: "BTTVHype",
+        provider: "BTTV",
+      });
+    });
+
+    it("matches FFZ emotes", () => {
+      setEmotesFfz({ FFZMod: "https://cdn.frankerfacez.com/emote/mod/1.webp" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("go FFZMod go");
+      expect(tokens[1]).toMatchObject({
+        type: "emote",
+        url: "https://cdn.frankerfacez.com/emote/mod/1.webp",
+        name: "FFZMod",
+        provider: "FFZ",
+      });
+    });
+
+    it("prefers 7TV over BTTV over FFZ when the same name exists in multiple providers", () => {
+      setEmotes7tv({ Shared: "https://cdn.7tv.app/emote/shared/1x.webp" });
+      setEmotesBttv({ Shared: "https://cdn.bttv.gg/emote/shared/1x.webp" });
+      setEmotesFfz({ Shared: "https://cdn.frankerfacez.com/emote/shared/1.webp" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("hi Shared bye");
+      expect(tokens[1]).toMatchObject({ provider: "7TV" });
+    });
+
+    it("skips emotes present in the disabled set", () => {
+      setEmotes7tv({ Cool: "https://cdn.7tv.app/emote/cool/1x.webp" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("wow Cool", new Set(["Cool"]));
+      expect(tokens).toEqual([
+        { type: "text", text: "wow" },
+        { type: "text", text: "Cool" },
+      ]);
+    });
+
+    it("groups a 7TV zero-width overlay onto the preceding base emote", () => {
+      setEmotes7tv({
+        Base: "https://cdn.7tv.app/emote/base/1x.webp",
+        Overlay: "ZW:https://cdn.7tv.app/emote/overlay/1x.webp",
+      });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("Base Overlay");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0]).toMatchObject({
+        type: "emote",
+        name: "Base",
+        provider: "7TV",
+        overlays: [
+          {
+            name: "Overlay",
+            url: "https://cdn.7tv.app/emote/overlay/1x.webp",
+          },
+        ],
+      });
+    });
+
+    it("stops collecting overlays at a non-overlay word", () => {
+      setEmotes7tv({
+        Base: "https://cdn.7tv.app/emote/base/1x.webp",
+        Overlay: "ZW:https://cdn.7tv.app/emote/overlay/1x.webp",
+        Plain: "https://cdn.7tv.app/emote/plain/1x.webp",
+      });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("Base Overlay Plain");
+      expect(tokens).toHaveLength(2);
+      expect(tokens[0]).toMatchObject({ name: "Base", overlays: [{ name: "Overlay" }] });
+      expect(tokens[1]).toMatchObject({ name: "Plain" });
+    });
+
+    it("passes through the bare zero-width emote when it has no preceding base", () => {
+      setEmotes7tv({
+        Solo: "ZW:https://cdn.7tv.app/emote/solo/1x.webp",
+      });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("hello Solo");
+      expect(tokens[1]).toMatchObject({
+        type: "emote",
+        name: "Solo",
+        url: "https://cdn.7tv.app/emote/solo/1x.webp",
+      });
     });
   });
 });

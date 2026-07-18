@@ -37,6 +37,7 @@ interface YouTubePanelProps {
     avatar?: string,
   ) => void;
   style?: CSSProperties;
+  renderThirdPartyEmotes?: boolean;
 }
 
 export default function YouTubePanel({
@@ -62,6 +63,7 @@ export default function YouTubePanel({
   onConnectionChange,
   onUsernameClick,
   style,
+  renderThirdPartyEmotes,
 }: YouTubePanelProps) {
   const [chatterHistory, setChatterHistory] = useState<{
     author: string;
@@ -127,6 +129,7 @@ export default function YouTubePanel({
                 showDeletedMessages={showDeletedMessages}
                 onConnectionChange={onConnectionChange}
                 onUsernameClick={handleUsernameClick}
+                renderThirdPartyEmotes={renderThirdPartyEmotes}
               />
             )}
             {chatterHistory && (

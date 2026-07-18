@@ -149,6 +149,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     onFollowRaid,
     streamerToolsEnabled = false,
     isOnOwnChannel = false,
+    renderThirdPartyEmotesOnYoutube = false,
   } = props;
 
   useEffect(() => {
@@ -541,6 +542,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   chatFont={chatFont}
                   splitChatEnabled={splitChatEnabled}
                   showDeletedMessages={true}
+                  renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
                 />
               </div>
             )}
@@ -633,6 +635,9 @@ export default function ChatApp(props: ChatAppStateProps) {
                     splitChatEnabled={splitChatEnabled}
                     ignoredUsers={ignoredUsers}
                     showDeletedMessages={showDeletedMessages}
+                    renderThirdPartyEmotesOnYoutube={
+                      renderThirdPartyEmotesOnYoutube
+                    }
                   />
                 }
               />
@@ -777,6 +782,7 @@ export default function ChatApp(props: ChatAppStateProps) {
             onShowError={(msg) => showNotification(msg, "error")}
             onYtConnectionChange={handleYtConnectionChange}
             channelName={selectedTwitchChannelName}
+            renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
           />
         )}
 
