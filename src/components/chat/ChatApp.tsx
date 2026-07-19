@@ -712,7 +712,6 @@ export default function ChatApp(props: ChatAppStateProps) {
                 !!(
                   linkedYoutubeUrl &&
                   youtubeVideoId &&
-                  !useYoutubeEmbed &&
                   youtubeSession
                 )
               }
