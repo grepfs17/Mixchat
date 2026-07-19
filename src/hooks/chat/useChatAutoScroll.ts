@@ -12,10 +12,16 @@ export function useChatAutoScroll({
 }: UseChatAutoScrollOptions) {
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
-  const prevCountRef = useRef(0);
-  const messagesLengthRef = useRef(messages.length);
-  messagesLengthRef.current = messages.length;
 
+  // Track the last message identity to detect new messages even when the
+  // array length is capped (e.g. MAX_DISPLAYED_MESSAGES). Comparing lengths
+  // fails when old messages are sliced off the front as new ones are appended.
+  const prevLastItemRef = useRef<unknown>(null);
+  const lastItemRef = useRef<unknown>(null);
+  lastItemRef.current =
+    messages.length > 0 ? messages[messages.length - 1] : undefined;
+
+  // Auto-scroll when at bottom
   useEffect(() => {
     if (containerRef.current && isAtBottom) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -24,52 +30,42 @@ export function useChatAutoScroll({
 
   useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
 
+  // Detect scroll position
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY < 0) setIsAtBottom(false);
-    };
-    const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      const prev = (el as HTMLDivElement & { __lastTouchY?: number })
-        .__lastTouchY;
-      if (prev !== undefined && touch.clientY > prev) setIsAtBottom(false);
-      (el as HTMLDivElement & { __lastTouchY?: number }).__lastTouchY =
-        touch.clientY;
-    };
-    const handleTouchEnd = () => {
-      delete (el as HTMLDivElement & { __lastTouchY?: number }).__lastTouchY;
-    };
     const handleScroll = () => {
-      if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
-        setIsAtBottom(true);
+      const atBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      setIsAtBottom(atBottom);
+      if (atBottom) {
         setNewMessagesCount(0);
-        prevCountRef.current = messagesLengthRef.current;
+        prevLastItemRef.current = lastItemRef.current;
       }
     };
-    el.addEventListener("wheel", handleWheel, { passive: true });
-    el.addEventListener("touchmove", handleTouchMove, { passive: true });
-    el.addEventListener("touchend", handleTouchEnd, { passive: true });
     el.addEventListener("scroll", handleScroll);
     return () => {
-      el.removeEventListener("wheel", handleWheel);
-      el.removeEventListener("touchmove", handleTouchMove);
-      el.removeEventListener("touchend", handleTouchEnd);
       el.removeEventListener("scroll", handleScroll);
     };
   }, [containerRef]);
 
+  // Count new messages when scrolled up
   useEffect(() => {
-    if (!isAtBottom) {
-      const diff = messages.length - prevCountRef.current;
+    const lastItem =
+      messages.length > 0 ? messages[messages.length - 1] : undefined;
+    const prev = prevLastItemRef.current;
+
+    if (!isAtBottom && prev != null && lastItem !== prev) {
+      // Find where the previous last item sits in the new array.
+      // Everything after it is a new message.
+      const idx = messages.indexOf(prev);
+      const diff = idx >= 0 ? messages.length - 1 - idx : 1;
       if (diff > 0) {
         setNewMessagesCount((p) => p + diff);
-        prevCountRef.current = messages.length;
       }
-    } else {
-      prevCountRef.current = messages.length;
     }
+
+    prevLastItemRef.current = lastItem;
   }, [messages, isAtBottom]);
 
   const scrollToBottom = useCallback(() => {
@@ -77,7 +73,7 @@ export function useChatAutoScroll({
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
       setIsAtBottom(true);
       setNewMessagesCount(0);
-      prevCountRef.current = messagesLengthRef.current;
+      prevLastItemRef.current = lastItemRef.current;
     }
   }, [containerRef]);
 
