@@ -334,14 +334,12 @@ function MessageInput({
           menuRect={menuRect}
           menuRef={menuRef}
           onSelect={(i) => emoteAC.select(i)}
-          onMouseEnter={(i) => emoteAC.setSelectedIndex(i)}
           renderItem={(emote, index, isSelected) => (
             <MenuItem
               key={`${emote.source}-${emote.name}`}
               index={index}
               isSelected={isSelected}
               onSelect={(i) => emoteAC.select(i)}
-              onMouseEnter={(i) => emoteAC.setSelectedIndex(i)}
               title={emote.name}
             >
               <img
@@ -363,14 +361,12 @@ function MessageInput({
           selectedIndex={usernameAC.selectedIndex}
           menuRect={menuRect}
           onSelect={(i) => usernameAC.select(i)}
-          onMouseEnter={(i) => usernameAC.setSelectedIndex(i)}
           renderItem={(username, index, isSelected) => (
             <MenuItem
               key={username}
               index={index}
               isSelected={isSelected}
               onSelect={(i) => usernameAC.select(i)}
-              onMouseEnter={(i) => usernameAC.setSelectedIndex(i)}
               style={{ fontSize: "0.95rem" }}
             >
               @{username}
@@ -384,14 +380,12 @@ function MessageInput({
           selectedIndex={commandAC.selectedIndex}
           menuRect={menuRect}
           onSelect={(i) => commandAC.select(i)}
-          onMouseEnter={(i) => commandAC.setSelectedIndex(i)}
           renderItem={(cmd, index, isSelected) => (
             <MenuItem
               key={cmd.name}
               index={index}
               isSelected={isSelected}
               onSelect={(i) => commandAC.select(i)}
-              onMouseEnter={(i) => commandAC.setSelectedIndex(i)}
               className="autocomplete-command-item"
             >
               <div className="autocomplete-command-header">

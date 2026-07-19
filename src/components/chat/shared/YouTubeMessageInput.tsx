@@ -265,14 +265,12 @@ export default function YouTubeMessageInput({
           menuRef={menuRef}
           maxHeight="260px"
           onSelect={(i) => emojiAC.select(i)}
-          onMouseEnter={(i) => emojiAC.setSelectedIndex(i)}
           renderItem={(entry, idx, isSelected) => (
             <MenuItem
               key={entry.shortcode}
               index={idx}
               isSelected={isSelected}
               onSelect={(i) => emojiAC.select(i)}
-              onMouseEnter={(i) => emojiAC.setSelectedIndex(i)}
             >
               <span
                 style={{
@@ -302,14 +300,12 @@ export default function YouTubeMessageInput({
           menuRef={menuRef}
           maxHeight="260px"
           onSelect={(i) => mentionAC.select(i)}
-          onMouseEnter={(i) => mentionAC.setSelectedIndex(i)}
           renderItem={(author, idx, isSelected) => (
             <MenuItem
               key={author}
               index={idx}
               isSelected={isSelected}
               onSelect={(i) => mentionAC.select(i)}
-              onMouseEnter={(i) => mentionAC.setSelectedIndex(i)}
             >
               <div className="autocomplete-item-info">
                 <span className="autocomplete-item-name">

@@ -592,14 +592,12 @@ export default function UnifiedInput({
         menuRect={menuRect}
         menuRef={menuRef}
         onSelect={(i) => emoteAutocomplete.select(i)}
-        onMouseEnter={(i) => emoteAutocomplete.setSelectedIndex(i)}
         renderItem={(emote, index, isSelected) => (
           <MenuItem
             key={`${emote.source}-${emote.name}`}
             index={index}
             isSelected={isSelected}
             onSelect={(i) => emoteAutocomplete.select(i)}
-            onMouseEnter={(i) => emoteAutocomplete.setSelectedIndex(i)}
             title={emote.name}
           >
             <img
@@ -623,14 +621,12 @@ export default function UnifiedInput({
         menuRef={menuRef}
         maxHeight="260px"
         onSelect={(i) => emojiAutocomplete.select(i)}
-        onMouseEnter={(i) => emojiAutocomplete.setSelectedIndex(i)}
         renderItem={(entry, idx, isSelected) => (
           <MenuItem
             key={entry.shortcode}
             index={idx}
             isSelected={isSelected}
             onSelect={(i) => emojiAutocomplete.select(i)}
-            onMouseEnter={(i) => emojiAutocomplete.setSelectedIndex(i)}
           >
             <span
               style={{
@@ -658,14 +654,12 @@ export default function UnifiedInput({
         selectedIndex={usernameAutocomplete.selectedIndex}
         menuRect={menuRect}
         onSelect={(i) => usernameAutocomplete.select(i)}
-        onMouseEnter={(i) => usernameAutocomplete.setSelectedIndex(i)}
         renderItem={(username, index, isSelected) => (
           <MenuItem
             key={username}
             index={index}
             isSelected={isSelected}
             onSelect={(i) => usernameAutocomplete.select(i)}
-            onMouseEnter={(i) => usernameAutocomplete.setSelectedIndex(i)}
             style={{ fontSize: "0.95rem" }}
           >
             @{username}
@@ -679,14 +673,12 @@ export default function UnifiedInput({
         selectedIndex={commandAutocomplete.selectedIndex}
         menuRect={menuRect}
         onSelect={(i) => commandAutocomplete.select(i)}
-        onMouseEnter={(i) => commandAutocomplete.setSelectedIndex(i)}
         renderItem={(cmd, index, isSelected) => (
           <MenuItem
             key={cmd.name}
             index={index}
             isSelected={isSelected}
             onSelect={(i) => commandAutocomplete.select(i)}
-            onMouseEnter={(i) => commandAutocomplete.setSelectedIndex(i)}
             className="autocomplete-command-item"
           >
             <div className="autocomplete-command-header">

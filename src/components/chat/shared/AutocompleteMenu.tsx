@@ -10,7 +10,6 @@ interface AutocompleteMenuProps<T> {
   maxHeight?: string;
   menuRef?: React.RefObject<HTMLDivElement | null>;
   onSelect: (index: number) => void;
-  onMouseEnter: (index: number) => void;
   renderItem: (item: T, index: number, isSelected: boolean) => React.ReactNode;
   className?: string;
 }
@@ -23,7 +22,6 @@ export default function AutocompleteMenu<T>({
   maxHeight = "40vh",
   menuRef,
   onSelect,
-  onMouseEnter,
   renderItem,
   className = "autocomplete-menu",
 }: AutocompleteMenuProps<T>) {
@@ -69,7 +67,6 @@ interface MenuItemProps {
   index: number;
   isSelected: boolean;
   onSelect: (index: number) => void;
-  onMouseEnter: (index: number) => void;
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -81,7 +78,6 @@ export function MenuItem({
   index,
   isSelected,
   onSelect,
-  onMouseEnter,
   children,
   className = "autocomplete-item",
   style,
@@ -91,7 +87,6 @@ export function MenuItem({
   return (
     <div
       onClick={() => onSelect(index)}
-      onMouseEnter={() => onMouseEnter(index)}
       className={`${className}${isSelected ? " selected" : ""}`}
       title={title}
       style={{
