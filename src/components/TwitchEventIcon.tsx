@@ -79,12 +79,18 @@ export const EVENT_CONFIG: Record<
     color: "#f97316",
     bg: "rgba(249, 115, 22, 0.15)",
   },
+  "first-message": {
+    title: "First Message",
+    color: "#2dd4bf",
+    bg: "rgba(45, 212, 191, 0.12)",
+  },
 };
 
 interface TwitchEventLabelProps {
   messageType?: string;
   powerUpType?: "message_effect" | "celebration";
   isGigantifiedEmote?: boolean;
+  isFirstMessage?: boolean;
 }
 
 /**
@@ -96,7 +102,24 @@ export default function TwitchEventIcon({
   messageType,
   powerUpType,
   isGigantifiedEmote,
+  isFirstMessage,
 }: TwitchEventLabelProps) {
+  if (isFirstMessage) {
+    const cfg = EVENT_CONFIG["first-message"];
+    return (
+      <div
+        className="twitch-event-label"
+        style={{
+          color: cfg.color,
+          background: cfg.bg,
+          borderColor: cfg.color,
+        }}
+      >
+        {cfg.title}
+      </div>
+    );
+  }
+
   if (isGigantifiedEmote) {
     const cfg = EVENT_CONFIG["gigantified-emote"];
     return (

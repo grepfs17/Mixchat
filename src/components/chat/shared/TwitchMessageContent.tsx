@@ -90,6 +90,7 @@ function TwitchMessageContentBase({
     msg.isDeleted ? "deleted" : "",
     msg.isBot ? "bot" : "",
     (msg.mentionsUser || isMentioned) && !msg.isBot ? "mention" : "",
+    msg.isFirstMessage ? "first-message" : "",
     parityClass,
   ]
     .filter(Boolean)
@@ -252,6 +253,7 @@ function TwitchMessageContentBase({
           messageType={msg.messageType}
           powerUpType={msg.powerUpType}
           isGigantifiedEmote={msg.isGigantifiedEmote}
+          isFirstMessage={msg.isFirstMessage}
         />
 
         <div className="message-single-line">

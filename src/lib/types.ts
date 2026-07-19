@@ -67,6 +67,8 @@ export interface TwitchMessage {
   powerUpType?: "message_effect" | "celebration";
   /** Twitch Power-up message effect ID (e.g. "slide-in", "bouncy") when powerUpType is message_effect. */
   messageEffectId?: string;
+  /** True when this message is the user's first message in the channel (from the first-msg IRC tag). */
+  isFirstMessage?: boolean;
 }
 
 export interface PlatformSession {

@@ -94,6 +94,7 @@ export function useTwitchChatMessageHandler({
         msg.isRedemption && msg.rewardId
           ? getCachedRewardInfo(msg.rewardId)
           : undefined;
+      const isFirstMessage = rawTags?.get("first-msg") === "1";
       const isSharedChat = Boolean(
         sourceRoomId && msg.channelId && sourceRoomId !== msg.channelId,
       );
@@ -140,6 +141,7 @@ export function useTwitchChatMessageHandler({
         powerUpType,
         messageEffectId:
           powerUpType === "message_effect" ? messageEffectId : undefined,
+        isFirstMessage,
       };
 
       const needsUserInfo = !authorAvatar && !!msg.userInfo.userId;

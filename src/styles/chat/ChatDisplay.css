@@ -1295,6 +1295,43 @@
     border-left: 2px solid var(--color-border-mention);
 }
 
+.message.first-message {
+    background: linear-gradient(
+        90deg,
+        rgba(45, 212, 191, 0.1) 0%,
+        rgba(45, 212, 191, 0.03) 100%
+    );
+    border-left: 3px solid #2dd4bf;
+    animation: firstMessageFade 3s ease forwards;
+}
+
+@keyframes firstMessageFade {
+    0% {
+        background: linear-gradient(
+            90deg,
+            rgba(45, 212, 191, 0.2) 0%,
+            rgba(45, 212, 191, 0.06) 100%
+        );
+        box-shadow: inset 3px 0 10px -3px rgba(45, 212, 191, 0.3),
+                    0 0 6px rgba(45, 212, 191, 0.15);
+    }
+    60% {
+        background: linear-gradient(
+            90deg,
+            rgba(45, 212, 191, 0.12) 0%,
+            rgba(45, 212, 191, 0.04) 100%
+        );
+    }
+    100% {
+        background: linear-gradient(
+            90deg,
+            rgba(45, 212, 191, 0.1) 0%,
+            rgba(45, 212, 191, 0.03) 100%
+        );
+        box-shadow: none;
+    }
+}
+
 .message.notice .message-text {
     font-style: italic;
     color: var(--color-text-secondary);
@@ -1565,7 +1602,7 @@
         .highlight
     ):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(
         .watch-streak
-    ):not(.raid):not(.notice):not(.yt-event) {
+    ):not(.raid):not(.notice):not(.yt-event):not(.first-message) {
     background-color: var(--color-bg-hover);
 }
 
@@ -1574,7 +1611,7 @@
         .highlight
     ):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(
         .watch-streak
-    ):not(.raid):not(.notice):not(.yt-event) {
+    ):not(.raid):not(.notice):not(.yt-event):not(.first-message) {
     background-color: transparent;
 }
 
@@ -1587,7 +1624,7 @@
         .highlight
     ):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(
         .watch-streak
-    ):not(.raid):not(.notice):not(.yt-event) {
+    ):not(.raid):not(.notice):not(.yt-event):not(.first-message) {
     background-color: var(--color-bg-hover);
 }
 
@@ -1596,7 +1633,7 @@
         .highlight
     ):not(.subscription):not(.resub):not(.subgift):not(.cheer):not(
         .watch-streak
-    ):not(.raid):not(.notice):not(.yt-event) {
+    ):not(.raid):not(.notice):not(.yt-event):not(.first-message) {
     background-color: transparent;
 }
 
