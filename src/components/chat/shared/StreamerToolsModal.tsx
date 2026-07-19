@@ -12,9 +12,11 @@ import {
 } from "react-icons/fa";
 import GiveawayPanel from "./GiveawayPanel";
 import SongQueuePanel from "./SongQueuePanel";
+import MusicPlayerPanel from "./MusicPlayerPanel";
 import type { GiveawayEntry } from "../../../lib/streamerTools/giveaway";
 import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
 import type { UseSongQueueResult } from "../../../hooks/chat/useSongQueue";
+import type { UseMusicPlayerResult } from "../../../hooks/chat/useMusicPlayer";
 import {
   clearGiveawayHistory,
   getGiveawayHistory,
@@ -39,6 +41,7 @@ import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
   songQueue: UseSongQueueResult;
+  musicPlayer: UseMusicPlayerResult;
   onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
   onMinimize: () => void;
   onClose: () => void;
@@ -50,9 +53,17 @@ interface StreamerToolsModalProps {
   publicOrigin?: string;
   /** Channel key (e.g. "twitch:streamerlogin") used to list past playlists. */
   channelKey?: string | null;
+  /** Current Twitch category id — for playlist auto-select. */
+  streamGameId?: string;
+  /** Current Twitch category name — for playlist auto-select hint. */
+  streamGameName?: string;
+  /** Search Twitch categories (same API as stream-info category picker). */
+  onSearchCategories?: (
+    query: string,
+  ) => Promise<Array<{ id: string; name: string }>>;
 }
 
-type ToolId = "giveaway" | "song-queue";
+type ToolId = "music-player" | "giveaway" | "song-queue";
 
 interface ToolDescriptor {
   id: ToolId;
@@ -61,6 +72,12 @@ interface ToolDescriptor {
 }
 
 const TOOLS: ToolDescriptor[] = [
+  {
+    id: "music-player",
+    label: "Music Player",
+    description:
+      "Build YouTube playlists for stream and play them in a mini bar.",
+  },
   {
     id: "giveaway",
     label: "Giveaway",
@@ -759,6 +776,7 @@ function PastPlaylistsSection({
 export default function StreamerToolsModal({
   giveaway,
   songQueue,
+  musicPlayer,
   onAnnounce,
   onMinimize,
   onClose,
@@ -766,6 +784,9 @@ export default function StreamerToolsModal({
   youtubeConnected = false,
   publicOrigin = "",
   channelKey = null,
+  streamGameId = "",
+  streamGameName = "",
+  onSearchCategories,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(initialTool);
   const [announcing, setAnnouncing] = useState(false);
@@ -781,10 +802,16 @@ export default function StreamerToolsModal({
 
   // Minimize is allowed whenever the active tool has something to keep
   // running. The giveaway is minimizable while running or revealed; the
-  // song queue is minimizable while open.
+  // song queue is minimizable while open; the music player is minimizable
+  // as soon as it has at least one track loaded so the mini bar keeps
+  // playing while the streamer chats/edit elsewhere.
+  const musicHasItems =
+    !!musicPlayer.activePlaylist &&
+    musicPlayer.activePlaylist.items.length > 0;
   const canMinimize =
     (activeTool === "giveaway" && giveaway.phase !== "config") ||
-    (activeTool === "song-queue" && songQueue.phase === "open");
+    (activeTool === "song-queue" && songQueue.phase === "open") ||
+    (activeTool === "music-player" && musicHasItems);
   const minimizeTitle = canMinimize
     ? "Minimize (the tool keeps running in the corner)"
     : "Nothing to minimize in this state";
@@ -887,6 +914,14 @@ export default function StreamerToolsModal({
                     }
                   }}
                   announcing={announcing}
+                />
+              )}
+              {tool.id === "music-player" && (
+                <MusicPlayerPanel
+                  player={musicPlayer}
+                  streamGameId={streamGameId}
+                  streamGameName={streamGameName}
+                  onSearchCategories={onSearchCategories}
                 />
               )}
               {tool.id === "song-queue" && (

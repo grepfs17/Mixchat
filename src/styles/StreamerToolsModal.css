@@ -2395,3 +2395,376 @@
 .song-queue-bar-item--active .song-queue-bar-item-title {
     color: #a5b4fc;
 }
+
+/* Music Player mini bar — streamer-only mini player live in the chat.
+   Mirrors the song-queue-bar layout but a different palette (purple) so
+   the streamer can keep both tools open at once without confusion. */
+.music-player-bar {
+    position: relative;
+    background: linear-gradient(
+        135deg,
+        rgba(99, 102, 241, 0.18) 0%,
+        rgba(168, 85, 247, 0.18) 100%
+    );
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    border-radius: 8px;
+    color: #f1f1f1;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    margin: 0 12px 8px;
+}
+
+.music-player-bar--hidden {
+    display: none;
+}
+
+.music-player-bar--collapsed .music-player-bar-body {
+    max-height: 0;
+    padding: 0;
+}
+
+.music-player-bar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+}
+
+.music-player-bar-toggle {
+    background: none;
+    border: 1px solid transparent;
+    color: #c5c8ff;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.music-player-bar-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.music-player-bar-title {
+    flex: 1;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.music-player-bar-icon {
+    color: #c5c8ff;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+}
+
+.music-player-bar-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    min-width: 0;
+}
+
+.music-player-bar-title-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f1f1f1;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-sub {
+    font-size: 11px;
+    color: #b8b8b8;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.music-player-bar-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: #c5c8ff;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.music-player-bar-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.music-player-bar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.music-player-bar-btn--primary {
+    background: #6366f1;
+    color: #fff;
+    border: 1px solid #6366f1;
+}
+
+.music-player-bar-btn--primary:hover:not(:disabled) {
+    background: #7c7ff5;
+    border-color: #7c7ff5;
+    color: #fff;
+}
+
+.music-player-bar-btn--close {
+    color: #9a9a9a;
+}
+
+.music-player-bar-btn--close:hover:not(:disabled) {
+    background: rgba(255, 90, 90, 0.15);
+    color: #ff8888;
+    border-color: rgba(255, 90, 90, 0.4);
+}
+
+.music-player-bar-volume {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 4px;
+}
+
+.music-player-bar-volume-icon {
+    color: #c5c8ff;
+}
+
+.music-player-bar-volume-slider {
+    width: 56px;
+    height: 4px;
+    accent-color: #6366f1;
+}
+
+.music-player-bar-body {
+    max-height: min(60vh, 360px);
+    overflow: hidden;
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px 10px;
+    transition: max-height 0.2s ease-out;
+}
+
+.music-player-bar-player-wrap {
+    flex-shrink: 0;
+    width: 160px;
+    aspect-ratio: 16 / 9;
+    background: #0a0a0a;
+    border-radius: 6px;
+    overflow: hidden;
+    align-self: flex-start;
+}
+
+.music-player-bar-player {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.music-player-bar-player iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+}
+
+.music-player-bar-list-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.music-player-bar-now-playing {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.music-player-bar-now-playing-channel {
+    font-size: 10px;
+    color: #9a9a9a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-now-playing-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f1f1f1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: min(40vh, 220px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+.music-player-bar-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.music-player-bar-list::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: var(--radius-md);
+}
+
+.music-player-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.music-player-bar-item--active {
+    border-color: rgba(168, 85, 247, 0.6);
+    background: rgba(168, 85, 247, 0.15);
+}
+
+.music-player-bar-item-thumb {
+    width: 32px;
+    height: 18px;
+    object-fit: cover;
+    border-radius: 3px;
+    background: #1a1a1a;
+    flex-shrink: 0;
+}
+
+.music-player-bar-item-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.music-player-bar-item-title {
+    font-size: 11px;
+    color: #f1f1f1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-item-sub {
+    font-size: 10px;
+    color: #9a9a9a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.music-player-bar-item-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #c5c8ff;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+
+.music-player-bar-item-btn:hover {
+    background: rgba(99, 102, 241, 0.18);
+    color: #fff;
+}
+
+/* Time progress bar — sits directly below the player iframe in the
+   mini bar, mirroring the volume slider pattern. */
+.music-player-bar-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 2px;
+    width: 100%;
+}
+
+/* Inline variant for the header row — shrinks to fit between
+   the title button and controls. */
+.music-player-bar-time--inline {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 100px;
+    margin-top: 0;
+    padding: 0 4px;
+}
+
+.music-player-bar-time-current,
+.music-player-bar-time-duration {
+    font-size: 10px;
+    color: #a0a0a0;
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.music-player-bar-time-current {
+    text-align: right;
+}
+
+.music-player-bar-time-duration {
+    text-align: left;
+}
+
+.music-player-bar-time-slider {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    accent-color: #6366f1;
+    cursor: pointer;
+}
+
+.music-player-bar-time-slider::-webkit-slider-thumb {
+    width: 10px;
+    height: 10px;
+}
+

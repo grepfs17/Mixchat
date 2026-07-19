@@ -5,7 +5,13 @@ import {
   useRef,
   useState,
 } from "react";
-import type { SongQueueItem } from "../../../lib/songQueue/types";
+// Minimal shape any item stream must satisfy. Both `SongQueueItem` and
+// `MusicPlayerItem` structurally satisfy this — we only read `id` and
+// `videoId` inside the component.
+export interface SongQueuePlayerItem {
+  id: string;
+  videoId: string;
+}
 
 /**
  * Shape of `window.YT.Player` we use. The IFrame Player API is loaded
@@ -14,19 +20,14 @@ import type { SongQueueItem } from "../../../lib/songQueue/types";
  * assert calls without a network round-trip.
  */
 interface YTPlayer {
-  loadPlaylist(opts: {
-    list: string;
-    listType: "playlist";
-    index: number;
-  }): void;
   loadVideoById(videoId: string): void;
   playVideo(): void;
   pauseVideo(): void;
-  nextVideo(): void;
   getDuration(): number;
   getCurrentTime(): number;
   getVolume(): number;
   setVolume(percent: number): void;
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
   destroy(): void;
 }
 
@@ -76,10 +77,16 @@ export interface SongQueuePlayerHandle {
   getVolume(): number;
   /** Set volume (0–100). No-op if the player isn't ready yet. */
   setVolume(percent: number): void;
+  /** Get current playback time in seconds. Returns 0 if player isn't ready. */
+  getCurrentTime(): number;
+  /** Get current video duration in seconds. Returns 0 if player isn't ready. */
+  getDuration(): number;
+  /** Seek to a position in seconds. No-op if the player isn't ready yet. */
+  seekTo(seconds: number): void;
 }
 
 export interface SongQueuePlayerProps {
-  items: SongQueueItem[];
+  items: SongQueuePlayerItem[];
   currentIndex: number;
   onReady?: () => void;
   /** Called when a video reports ENDED. The host should advance the queue. */
@@ -186,7 +193,7 @@ const SongQueuePlayerInner = (
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
-  const lastListRef = useRef<string>("");
+  const lastItemsKeyRef = useRef<string>("");
   const lastIndexRef = useRef<number>(-1);
   const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
   // True once we've called new YT.Player(...). Used to gate the mount
@@ -238,6 +245,27 @@ const SongQueuePlayerInner = (
       setVolume: (percent: number) => {
         try {
           playerRef.current?.setVolume(percent);
+        } catch {
+          /* not ready yet */
+        }
+      },
+      getCurrentTime: () => {
+        try {
+          return playerRef.current?.getCurrentTime() ?? 0;
+        } catch {
+          return 0;
+        }
+      },
+      getDuration: () => {
+        try {
+          return playerRef.current?.getDuration() ?? 0;
+        } catch {
+          return 0;
+        }
+      },
+      seekTo: (seconds: number) => {
+        try {
+          playerRef.current?.seekTo(seconds, true);
         } catch {
           /* not ready yet */
         }
@@ -311,10 +339,10 @@ const SongQueuePlayerInner = (
       });
       playerRef.current = player;
       createdRef.current = true;
-      // Reset tracking refs so the sync effect always calls loadPlaylist
+      // Reset tracking refs so the sync effect always calls loadVideoById
       // on the first render after a fresh player is created (important for
       // React 18 strict mode double-mount where refs survive cleanup).
-      lastListRef.current = "";
+      lastItemsKeyRef.current = "";
       lastIndexRef.current = -1;
     })();
     return () => {
@@ -342,28 +370,39 @@ const SongQueuePlayerInner = (
   }, [currentIndex]);
 
   // Sync the player when the items / currentIndex change.
+  // We use loadVideoById rather than loadPlaylist because the YouTube
+  // IFrame Player API does not reliably expose loadPlaylist as a method
+  // on the player instance (it is a URL/playerVars parameter). Queue
+  // advancement is handled via the onAdvance callback triggered by the
+  // ENDED state change.
   useEffect(() => {
     if (!ready || !playerRef.current) return;
-    const list = items.map((it) => it.videoId).join(",");
-    if (list !== lastListRef.current) {
-      const hadNoItems = !lastListRef.current;
-      lastListRef.current = list;
-      playerRef.current.loadPlaylist({
-        list: list || items[currentIndex]?.videoId || "",
-        listType: "playlist",
-        index: Math.max(0, Math.min(currentIndex, Math.max(0, items.length - 1))),
-      });
+    const currentVideoId = items[currentIndex]?.videoId || "";
+    const itemsKey = items.map((it) => it.videoId).join(",");
+    if (itemsKey !== lastItemsKeyRef.current) {
+      const hadNoItems = !lastItemsKeyRef.current;
+      lastItemsKeyRef.current = itemsKey;
+      lastIndexRef.current = currentIndex;
+      if (currentVideoId) {
+        try {
+          playerRef.current.loadVideoById(currentVideoId);
+        } catch {
+          /* not ready yet */
+        }
+      }
       // When the player was created empty (no videoId) and the first song
-      // arrives, loadPlaylist loads it but autoplay may be blocked because
-      // the initial player creation wasn't user-gesture-adjacent. Defer
-      // playVideo() to the next CUED/BUFFERING state change so the playlist
-      // is actually loaded enough to play.
-      if (hadNoItems && list) {
+      // arrives, defer playVideo() to the next CUED/BUFFERING state
+      // change so playback actually starts.
+      if (hadNoItems && currentVideoId) {
         pendingPlayRef.current = true;
       }
     } else if (currentIndex !== lastIndexRef.current) {
       lastIndexRef.current = currentIndex;
-      playerRef.current.loadVideoById(items[currentIndex]?.videoId || "");
+      try {
+        playerRef.current.loadVideoById(currentVideoId);
+      } catch {
+        /* not ready yet */
+      }
     }
   }, [items, currentIndex, ready]);
 

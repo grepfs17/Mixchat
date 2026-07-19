@@ -30,9 +30,11 @@ import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import GiveawayIndicator from "./shared/GiveawayIndicator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
+import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { SongQueueItem } from "../../lib/songQueue/types";
 import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
+import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -59,6 +61,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     streamIsLive,
     streamUptime,
     streamTitle,
+    streamGameId,
     streamGameName,
     notification,
     chatDisplayRef,
@@ -176,12 +179,16 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
-    "giveaway" | "song-queue" | null
+    "giveaway" | "song-queue" | "music-player" | null
   >(null);
   const showModTools = streamerToolsEnabled && isOnOwnChannel;
 
   const openStreamerTools = (
-    initialTool: "giveaway" | "song-queue" | null = null,
+    initialTool:
+      | "giveaway"
+      | "song-queue"
+      | "music-player"
+      | null = null,
   ) => {
     setStreamerToolsInitialTool(initialTool);
     setStreamerToolsOpen(true);
@@ -393,6 +400,16 @@ export default function ChatApp(props: ChatAppStateProps) {
     onAnnounceNowPlaying: onSongAnnounce,
   });
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
+
+  // Music Player is purely client-side (IndexedDB). The hook is always
+  // created (React hooks can't be conditional), but the visual components
+  // are only rendered when the user is on their own channel with streamer
+  // tools enabled.
+  const musicPlayer = useMusicPlayer();
+  const musicHasItems =
+    !!musicPlayer.activePlaylist &&
+    musicPlayer.activePlaylist.items.length > 0;
+  const showMusicBar = musicHasItems && !musicPlayer.miniBarHidden;
   useEffect(() => {
     if (songPhase !== "open") return;
     for (const m of messages) {
@@ -497,6 +514,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           <StreamerToolsModal
             giveaway={giveaway}
             songQueue={songQueue}
+            musicPlayer={musicPlayer}
             onAnnounce={handleAnnounceWinner}
             onMinimize={closeStreamerTools}
             onClose={closeStreamerTools}
@@ -506,6 +524,12 @@ export default function ChatApp(props: ChatAppStateProps) {
               typeof window !== "undefined" ? window.location.origin : ""
             }
             channelKey={songChannelKey}
+            streamGameId={
+              // Only expose the category id when on own channel (privacy).
+              isOnOwnChannel ? streamGameId : ""
+            }
+            streamGameName={streamGameName}
+            onSearchCategories={handleSearchCategories}
           />
         )}
 
@@ -524,6 +548,14 @@ export default function ChatApp(props: ChatAppStateProps) {
             onEnd={async () => {
               await songQueue.end();
             }}
+          />
+        )}
+
+        {showModTools && showMusicBar && (
+          <MusicPlayerMinimizedBar
+            player={musicPlayer}
+            hidden={streamerToolsOpen}
+            onOpen={() => openStreamerTools("music-player")}
           />
         )}
 

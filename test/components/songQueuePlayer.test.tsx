@@ -18,11 +18,9 @@ function makeItem(id: string, videoId: string): SongQueueItem {
 }
 
 interface FakePlayer {
-  loadPlaylist: ReturnType<typeof vi.fn>;
   loadVideoById: ReturnType<typeof vi.fn>;
   playVideo: ReturnType<typeof vi.fn>;
   pauseVideo: ReturnType<typeof vi.fn>;
-  nextVideo: ReturnType<typeof vi.fn>;
   getDuration: ReturnType<typeof vi.fn>;
   getCurrentTime: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
@@ -52,11 +50,9 @@ function installFakeYT() {
       },
     ) {
       const player: FakePlayer = {
-        loadPlaylist: vi.fn(),
         loadVideoById: vi.fn(),
         playVideo: vi.fn(),
         pauseVideo: vi.fn(),
-        nextVideo: vi.fn(),
         getDuration: vi.fn().mockReturnValue(0),
         getCurrentTime: vi.fn().mockReturnValue(0),
         destroy: vi.fn(),
@@ -95,18 +91,14 @@ afterEach(() => {
 });
 
 describe("SongQueuePlayer", () => {
-    it("calls YT.Player.loadPlaylist with the list of video ids", async () => {
+    it("calls loadVideoById for the current item when items change", async () => {
     const created = installFakeYT();
     const items = [makeItem("a", "AAAAAAAAAAA"), makeItem("b", "BBBBBBBBBBB")];
     render(<SongQueuePlayer items={items} currentIndex={0} />);
     // Allow the async loadIFrameAPI + the second sync effect to settle.
     await new Promise((r) => setTimeout(r, 10));
     expect(created).toHaveLength(1);
-    expect(created[0].loadPlaylist).toHaveBeenCalledWith({
-      list: "AAAAAAAAAAA,BBBBBBBBBBB",
-      listType: "playlist",
-      index: 0,
-    });
+    expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
   });
 
   it("recreates the player when only the currentIndex changes", async () => {
@@ -117,14 +109,12 @@ describe("SongQueuePlayer", () => {
     );
     await new Promise((r) => setTimeout(r, 10));
     expect(created).toHaveLength(1);
-    expect(created[0].loadPlaylist).toHaveBeenCalledTimes(1);
-    expect(created[0].loadVideoById).not.toHaveBeenCalled();
+    expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
 
     rerender(<SongQueuePlayer items={items} currentIndex={1} />);
     await new Promise((r) => setTimeout(r, 10));
-    // A fresh player is created with the new videoId to avoid the
-    // "Invalid video id" error that occurs when loadVideoById is called
-    // on a player initially created with a different videoId.
+    // A fresh player is created with the new videoId because initialVideoId
+    // changed — the mount effect depends on it.
     expect(created).toHaveLength(2);
   });
 
@@ -137,11 +127,7 @@ describe("SongQueuePlayer", () => {
     );
     await new Promise((r) => setTimeout(r, 10));
     const player = created[0];
-    expect(player.loadPlaylist).toHaveBeenCalledWith({
-      list: "AAAAAAAAAAA",
-      listType: "playlist",
-      index: 0,
-    });
+    expect(player.loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
     player._fireStateChange(0); // YT.PlayerState.ENDED
     expect(onAdvance).toHaveBeenCalledTimes(1);
   });
