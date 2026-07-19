@@ -1296,40 +1296,8 @@
 }
 
 .message.first-message {
-    background: linear-gradient(
-        90deg,
-        rgba(45, 212, 191, 0.1) 0%,
-        rgba(45, 212, 191, 0.03) 100%
-    );
-    border-left: 3px solid #2dd4bf;
-    animation: firstMessageFade 3s ease forwards;
-}
-
-@keyframes firstMessageFade {
-    0% {
-        background: linear-gradient(
-            90deg,
-            rgba(45, 212, 191, 0.2) 0%,
-            rgba(45, 212, 191, 0.06) 100%
-        );
-        box-shadow: inset 3px 0 10px -3px rgba(45, 212, 191, 0.3),
-                    0 0 6px rgba(45, 212, 191, 0.15);
-    }
-    60% {
-        background: linear-gradient(
-            90deg,
-            rgba(45, 212, 191, 0.12) 0%,
-            rgba(45, 212, 191, 0.04) 100%
-        );
-    }
-    100% {
-        background: linear-gradient(
-            90deg,
-            rgba(45, 212, 191, 0.1) 0%,
-            rgba(45, 212, 191, 0.03) 100%
-        );
-        box-shadow: none;
-    }
+    background: var(--event-bg);
+    border-left: 3px solid var(--event-color);
 }
 
 .message.notice .message-text {

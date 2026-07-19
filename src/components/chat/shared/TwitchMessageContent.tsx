@@ -108,7 +108,10 @@ function TwitchMessageContentBase({
     const gigantifiedCfg = msg.isGigantifiedEmote
       ? EVENT_CONFIG["gigantified-emote"]
       : undefined;
-    const activeCfg = cfg || powerUpCfg || gigantifiedCfg;
+    const firstMessageCfg = msg.isFirstMessage
+      ? EVENT_CONFIG["first-message"]
+      : undefined;
+    const activeCfg = cfg || powerUpCfg || gigantifiedCfg || firstMessageCfg;
     return activeCfg
       ? ({
         "--event-color": activeCfg.color,
