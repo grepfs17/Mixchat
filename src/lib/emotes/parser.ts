@@ -16,6 +16,7 @@ import {
   getEmoteUrl,
   isZeroWidthUrl,
   linkifyUrl,
+  renderUnicodeEmojis,
 } from "./utils";
 
 /**
@@ -32,6 +33,7 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
     "class",
     "style",
     "loading",
+    "draggable",
     "data-emote-name",
     "data-emote-source",
     "data-emote-author",
@@ -295,8 +297,8 @@ function parseThirdPartyEmotes(text: string): string {
         continue;
       }
 
-      // Plain text
-      output.push(escapeHtml(word));
+      // Plain text — escape HTML then replace Unicode emoji with Twemoji images
+      output.push(renderUnicodeEmojis(escapeHtml(word)));
       wi++;
     }
 

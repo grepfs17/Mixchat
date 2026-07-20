@@ -1,10 +1,11 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import {
   tokenizeThirdPartyEmotesForYoutube,
   useDisabledEmotes,
   useEmoteMapVersion,
   type YoutubeEmoteToken,
 } from "../lib/emotes";
+import { renderUnicodeEmojis } from "../lib/emotes/utils";
 
 export interface YTMessagePart {
   type: "text" | "emoji";
@@ -183,5 +184,16 @@ export default function YTMessageParts({
     [parts, variant, renderText],
   );
 
-  return <>{rendered}</>;
+  // After React renders text nodes, convert any Unicode emoji characters
+  // (e.g. 🇨🇦) into Twemoji <img> tags for consistent cross-platform display.
+  // Twemoji only touches text content — existing <img> elements (YouTube
+  // custom emojis, 7TV/BTTV/FFZ emotes) are left untouched.
+  const containerRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    if (containerRef.current) {
+      renderUnicodeEmojis(containerRef.current);
+    }
+  }, [rendered]);
+
+  return <span ref={containerRef}>{rendered}</span>;
 }

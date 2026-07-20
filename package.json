@@ -23,6 +23,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-icons": "^5.7.0",
+    "twemoji": "^14.0.2",
     "youtubei.js": "^17.2.0"
   },
   "devDependencies": {

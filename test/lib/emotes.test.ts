@@ -7,6 +7,7 @@ import {
   setEmotesFfz,
   tokenizeThirdPartyEmotesForYoutube,
 } from "../../src/lib/emotes";
+import { renderUnicodeEmojis } from "../../src/lib/emotes/utils";
 
 describe("emotes lib", () => {
   beforeEach(() => {
@@ -387,6 +388,73 @@ describe("emotes lib", () => {
       expect(normal).not.toBe(giant);
       expect(normal).not.toContain("chat-emote--gigantified");
       expect(giant).toContain("chat-emote--gigantified");
+    });
+  });
+
+  describe("renderUnicodeEmojis (string → HTML)", () => {
+    it("converts a flag emoji to a Twemoji <img>", () => {
+      const result = renderUnicodeEmojis("🇨🇦");
+      expect(result).toContain('<img class="emoji"');
+      expect(result).toContain("cdnjs.cloudflare.com/ajax/libs/twemoji/");
+      expect(result).toContain("1f1e8-1f1e6.svg"); // Canada flag codepoint
+    });
+
+    it("converts a common emoji to a Twemoji <img>", () => {
+      const result = renderUnicodeEmojis("😀");
+      expect(result).toContain('<img class="emoji"');
+      expect(result).toContain("1f600.svg"); // grinning face codepoint
+    });
+
+    it("preserves plain text around emojis", () => {
+      const result = renderUnicodeEmojis("Hello 🇨🇦 World");
+      expect(result).toContain("Hello");
+      expect(result).toContain("World");
+      expect(result).toContain('<img class="emoji"');
+    });
+
+    it("does not modify text without emojis", () => {
+      const result = renderUnicodeEmojis("Hello World");
+      expect(result).toBe("Hello World");
+      expect(result).not.toContain("<img");
+    });
+
+    it("does not modify existing <img> tags", () => {
+      const html = '<img src="https://example.com/emote.webp" alt="Kappa" />';
+      const result = renderUnicodeEmojis(html);
+      expect(result).toContain('src="https://example.com/emote.webp"');
+      expect(result).not.toContain('class="emoji"'); // No twemoji img added
+    });
+
+    it("converts multiple emojis in the same string", () => {
+      const result = renderUnicodeEmojis("😀❤️🇨🇦");
+      const imgCount = (result.match(/<img class="emoji"/g) || []).length;
+      expect(imgCount).toBe(3);
+    });
+  });
+
+  describe("Unicode emoji rendering in parseMessageWithEmotes (Twitch path)", () => {
+    it("converts flag emojis in a plain message to Twemoji images", () => {
+      const result = parseMessageWithEmotes("Josh🇨🇦🇨🇦");
+      expect(result).toContain('<img class="emoji"');
+      expect(result).toContain("1f1e8-1f1e6.svg");
+    });
+
+    it("converts Unicode emojis alongside Twitch emotes", () => {
+      const text = "Kappa 😀 test";
+      const twitchEmotes = { "25": ["0-4"] };
+      const result = parseMessageWithEmotes(text, twitchEmotes);
+      // Twitch emote should be present
+      expect(result).toContain("25/default/dark/2.0");
+      // Unicode emoji should also be converted
+      expect(result).toContain('<img class="emoji"');
+      expect(result).toContain("1f600.svg");
+    });
+
+    it("does not break HTML escaping of special characters", () => {
+      const result = parseMessageWithEmotes("<script>😀</script>");
+      expect(result).not.toContain("<script>");
+      expect(result).toContain('&lt;script&gt;');
+      expect(result).toContain('<img class="emoji"');
     });
   });
 

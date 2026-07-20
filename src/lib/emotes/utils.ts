@@ -1,3 +1,5 @@
+import twemoji from "twemoji";
+
 export const EMOTE_SIZE = "2";
 
 /** URL prefix that marks a 7TV emote as zero-width (overlay). */
@@ -88,6 +90,27 @@ export function linkifyUrl(word: string): string {
   }
 
   return "";
+}
+
+/**
+ * Replace Unicode emoji characters (e.g. \uD83C\uDDE8\uD83C\uDDE6 for 🇨🇦)
+ * with Twemoji `<img>` tags so they render consistently across all platforms.
+ *
+ * - When called with a **string**, returns the processed HTML (call AFTER
+ *   `escapeHtml`; existing `<img>` tags are left untouched because Twemoji
+ *   only matches Unicode emoji code-points).
+ * - When called with an **HTMLElement**, mutates the element's text nodes
+ *   in-place (used by React components via useEffect/useLayoutEffect).
+ */
+export function renderUnicodeEmojis(target: string): string;
+export function renderUnicodeEmojis(target: HTMLElement): void;
+export function renderUnicodeEmojis(target: string | HTMLElement) {
+  return twemoji.parse(target, {
+    base: "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/",
+    folder: "svg",
+    ext: ".svg",
+    className: "emoji",
+  });
 }
 
 /**

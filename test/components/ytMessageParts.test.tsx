@@ -180,5 +180,82 @@ describe("YTMessageParts third-party emote rendering", () => {
   });
 });
 
+describe("YTMessageParts Twemoji rendering (Unicode emojis)", () => {
+  it("converts flag emojis in text parts to Twemoji <img> tags", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Josh🇨🇦🇨🇦" }]}
+        variant="standalone"
+      />,
+    );
+    const emojiImgs = container.querySelectorAll('img.emoji');
+    expect(emojiImgs.length).toBe(2);
+    expect(emojiImgs[0].getAttribute("src")).toContain("1f1e8-1f1e6.svg");
+  });
+
+  it("converts common emojis (😀) to Twemoji <img> tags", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Hello 😀 World" }]}
+        variant="standalone"
+      />,
+    );
+    const emojiImgs = container.querySelectorAll('img.emoji');
+    expect(emojiImgs.length).toBe(1);
+    expect(emojiImgs[0].getAttribute("src")).toContain("1f600.svg");
+    expect(container.textContent).toContain("Hello");
+    expect(container.textContent).toContain("World");
+  });
+
+  it("does not affect YouTube custom emoji <img> elements", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[
+          { type: "text", text: "Hello " },
+          {
+            type: "emoji",
+            url: "https://yt.emoji/custom.webp",
+            alt: ":smile:",
+            emojiText: ":smile:",
+            isCustomEmoji: true,
+          },
+          { type: "text", text: " 😀" },
+        ]}
+        variant="standalone"
+      />,
+    );
+    // YouTube custom emoji should remain unchanged
+    const ytEmoji = container.querySelector('.yt-emoji');
+    expect(ytEmoji).toBeTruthy();
+    expect(ytEmoji!.getAttribute("src")).toBe("https://yt.emoji/custom.webp");
+    // The Unicode emoji should be converted
+    const twemojiImgs = container.querySelectorAll('img.emoji');
+    expect(twemojiImgs.length).toBe(1);
+  });
+
+  it("applies Twemoji in unified variant too", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Go 🇨🇦!" }]}
+        variant="unified"
+      />,
+    );
+    const emojiImgs = container.querySelectorAll('img.emoji');
+    expect(emojiImgs.length).toBe(1);
+    expect(emojiImgs[0].getAttribute("src")).toContain("1f1e8-1f1e6.svg");
+  });
+
+  it("leaves plain text parts without emojis untouched", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Hello World" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll('img.emoji').length).toBe(0);
+    expect(container.textContent).toBe("Hello World");
+  });
+});
+
 // keep vi import live for global mocks
 void vi;

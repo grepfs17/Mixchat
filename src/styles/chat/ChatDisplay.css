@@ -479,6 +479,22 @@
     position: relative;
 }
 
+/* Twemoji-rendered Unicode emoji images */
+img.emoji {
+    height: 1.2em;
+    width: 1.2em;
+    vertical-align: -0.2em;
+    margin: 0 1px;
+    display: inline;
+    object-fit: contain;
+}
+
+/* In reply preview, match emote sizing */
+.reply-target-content img.emoji {
+    height: 1.1em !important;
+    width: 1.1em !important;
+}
+
 /* Twitch "Gigantify an Emote" power-up (100 bits). Renders the emote at the
    same display size twitch.tv uses (~112px / 7em). The em keeps the rule
    responsive to --chat-font-size; max-height caps it for large font users. */
