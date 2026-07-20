@@ -22,7 +22,7 @@ vi.mock("../../src/lib/emotes", async () => {
   return {
     ...actual,
     initializeEmotes: vi.fn().mockResolvedValue(undefined),
-    clearEmoteCache: vi.fn(),
+    clearEmoteCacheStorage: vi.fn(),
     subscribeTo7TVUpdates: vi.fn().mockReturnValue(vi.fn()),
   };
 });
