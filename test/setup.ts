@@ -1,20 +1,4 @@
-import { expect } from "vitest";
-import * as matchers from "@testing-library/jest-dom/matchers";
-import { type TestingLibraryMatchers } from "@testing-library/jest-dom/matchers";
-import "@testing-library/jest-dom";
-
-declare module "vitest" {
-  interface Assertion<T = any> extends TestingLibraryMatchers<
-    typeof expect.stringContaining,
-    T
-  > {}
-  interface AsymmetricMatchersContaining extends TestingLibraryMatchers<
-    any,
-    any
-  > {}
-}
-
-expect.extend(matchers);
+import "@testing-library/jest-dom/vitest";
 
 // In Node 20 / Vitest environment, Response and Headers are already
 // defined globally. Polyfilling them from node-fetch is no longer
