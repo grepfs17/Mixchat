@@ -7,6 +7,7 @@ import {
   MdWarning,
 } from "react-icons/md";
 import { FaYoutube, FaTwitch } from "react-icons/fa";
+import { resolveBroadcasterId } from "../../../lib/twitch";
 import type { TwitchMessage, Platform } from "../../../lib/types";
 import { getUserHistory } from "../../../lib/chatHistoryStorage";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
@@ -107,19 +108,17 @@ export default function ChatterHistoryOverlay({
     // If not found and we are on Twitch, resolve it via API
     if (platform === "twitch") {
       console.log(`[ChatterHistory] Resolving userId via API for ${author}...`);
-      import("../../../lib/twitch").then(({ resolveBroadcasterId }) => {
-        resolveBroadcasterId(author).then((id) => {
-          if (id && (id !== author || /^\d+$/.test(id))) {
-            console.log(
-              `[ChatterHistory] Resolved userId via API for ${author}: ${id}`,
-            );
-            setResolvedUserId(id);
-          } else {
-            console.warn(
-              `[ChatterHistory] Failed to resolve userId for ${author}`,
-            );
-          }
-        });
+      resolveBroadcasterId(author).then((id) => {
+        if (id && (id !== author || /^\d+$/.test(id))) {
+          console.log(
+            `[ChatterHistory] Resolved userId via API for ${author}: ${id}`,
+          );
+          setResolvedUserId(id);
+        } else {
+          console.warn(
+            `[ChatterHistory] Failed to resolve userId for ${author}`,
+          );
+        }
       });
     }
   }, [loading, history, author, platform]);

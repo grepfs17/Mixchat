@@ -3,7 +3,11 @@ import {
   MdBlock,
   MdWarning,
 } from "react-icons/md";
-import { createBan, warnChatUser } from "../../../lib/twitch";
+import {
+  createBan,
+  warnChatUser,
+  manageHeldAutomodMessage,
+} from "../../../lib/twitch";
 import { getAutomodIds } from "../../../hooks/chat/automodIds";
 
 interface AutomodActionsProps {
@@ -47,7 +51,6 @@ export default function AutomodActions({
   const handleApprove = async () => {
     try {
       const { moderatorId } = getAutomodIds();
-      const { manageHeldAutomodMessage } = await import("../../../lib/twitch");
       await manageHeldAutomodMessage(moderatorId, heldMsgId, "ALLOW");
       window.dispatchEvent(
         new CustomEvent("automod-message-resolved", {
@@ -62,7 +65,6 @@ export default function AutomodActions({
   const handleDeny = async () => {
     try {
       const { moderatorId } = getAutomodIds();
-      const { manageHeldAutomodMessage } = await import("../../../lib/twitch");
       await manageHeldAutomodMessage(moderatorId, heldMsgId, "DENY");
       window.dispatchEvent(
         new CustomEvent("automod-message-resolved", {

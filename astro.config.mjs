@@ -30,6 +30,21 @@ export default defineConfig({
               id.includes("\\node_modules\\react-icons\\")
             )
               return "icons";
+            if (
+              id.includes("/node_modules/youtubei.js/") ||
+              id.includes("\\node_modules\\youtubei.js\\")
+            )
+              return "youtubei";
+            if (
+              id.includes("/node_modules/@twurple/") ||
+              id.includes("\\node_modules\\@twurple\\")
+            )
+              return "twurple";
+            if (
+              id.includes("/node_modules/hls.js/") ||
+              id.includes("\\node_modules\\hls.js\\")
+            )
+              return "hls";
           },
         },
       },
