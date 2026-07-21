@@ -132,6 +132,32 @@ describe("SongQueuePlayer", () => {
     expect(onAdvance).toHaveBeenCalledTimes(1);
   });
 
+  it("does NOT call loadVideoById when a new item is appended but the current song is unchanged", async () => {
+    const created = installFakeYT();
+    const itemA = makeItem("a", "AAAAAAAAAAA");
+    const itemB = makeItem("b", "BBBBBBBBBBB");
+    const { rerender } = render(
+      <SongQueuePlayer items={[itemA]} currentIndex={0} />,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    expect(created).toHaveLength(1);
+    const player = created[0];
+    // Initial load.
+    expect(player.loadVideoById).toHaveBeenCalledTimes(1);
+    expect(player.loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    player.loadVideoById.mockClear();
+
+    // Simulate !songadd: a new item is appended at index 1 while index 0
+    // is still playing. loadVideoById must NOT be called again.
+    rerender(
+      <SongQueuePlayer items={[itemA, itemB]} currentIndex={0} />,
+    );
+    await new Promise((r) => setTimeout(r, 10));
+    expect(player.loadVideoById).not.toHaveBeenCalled();
+    // Only one player should exist (no remount).
+    expect(created).toHaveLength(1);
+  });
+
   it("calls destroy on unmount", async () => {
     const created = installFakeYT();
     const items = [makeItem("a", "AAAAAAAAAAA")];

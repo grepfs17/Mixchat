@@ -196,6 +196,10 @@ const SongQueuePlayerInner = (
   const lastItemsKeyRef = useRef<string>("");
   const lastIndexRef = useRef<number>(-1);
   const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
+  // Track the videoId that is currently loaded in the player so we can
+  // avoid calling loadVideoById when the items array changes but the
+  // current song hasn't.
+  const lastVideoIdRef = useRef<string>("");
   // True once we've called new YT.Player(...). Used to gate the mount
   // effect so the player is only created once a valid videoId is
   // available (creating it with undefined puts the IFrame in a broken
@@ -344,6 +348,7 @@ const SongQueuePlayerInner = (
       // React 18 strict mode double-mount where refs survive cleanup).
       lastItemsKeyRef.current = "";
       lastIndexRef.current = -1;
+      lastVideoIdRef.current = "";
     })();
     return () => {
       cancelled = true;
@@ -383,7 +388,11 @@ const SongQueuePlayerInner = (
       const hadNoItems = !lastItemsKeyRef.current;
       lastItemsKeyRef.current = itemsKey;
       lastIndexRef.current = currentIndex;
-      if (currentVideoId) {
+      // Only reload the video if the current videoId actually changed.
+      // When items merely grow, the current song stays the
+      // same and should NOT be restarted.
+      if (currentVideoId && currentVideoId !== lastVideoIdRef.current) {
+        lastVideoIdRef.current = currentVideoId;
         try {
           playerRef.current.loadVideoById(currentVideoId);
         } catch {
@@ -398,10 +407,13 @@ const SongQueuePlayerInner = (
       }
     } else if (currentIndex !== lastIndexRef.current) {
       lastIndexRef.current = currentIndex;
-      try {
-        playerRef.current.loadVideoById(currentVideoId);
-      } catch {
-        /* not ready yet */
+      if (currentVideoId !== lastVideoIdRef.current) {
+        lastVideoIdRef.current = currentVideoId;
+        try {
+          playerRef.current.loadVideoById(currentVideoId);
+        } catch {
+          /* not ready yet */
+        }
       }
     }
   }, [items, currentIndex, ready]);
