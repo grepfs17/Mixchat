@@ -13,8 +13,8 @@ Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emot
 
 ## Technical Foundation
 
-- **Framework**: Astro 6.x
-- **UI Library**: React 18.x
+- **Framework**: Astro 7.x
+- **UI Library**: React 19.x
 - **Adapter**: Node.js (Server-side rendering)
 - **APIs**: Twurple (Twitch), youtube-chat (YouTube)
 
