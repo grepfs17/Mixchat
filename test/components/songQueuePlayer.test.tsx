@@ -95,10 +95,11 @@ describe("SongQueuePlayer", () => {
     const created = installFakeYT();
     const items = [makeItem("a", "AAAAAAAAAAA"), makeItem("b", "BBBBBBBBBBB")];
     render(<SongQueuePlayer items={items} currentIndex={0} />);
-    // Allow the async loadIFrameAPI + the second sync effect to settle.
-    await new Promise((r) => setTimeout(r, 10));
-    expect(created).toHaveLength(1);
-    expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    // Race-safe polling in place of a fixed delay.
+    await vi.waitFor(() => {
+      expect(created).toHaveLength(1);
+      expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    });
   });
 
   it("recreates the player when only the currentIndex changes", async () => {
@@ -107,15 +108,17 @@ describe("SongQueuePlayer", () => {
     const { rerender } = render(
       <SongQueuePlayer items={items} currentIndex={0} />,
     );
-    await new Promise((r) => setTimeout(r, 10));
-    expect(created).toHaveLength(1);
-    expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    await vi.waitFor(() => {
+      expect(created).toHaveLength(1);
+      expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    });
 
     rerender(<SongQueuePlayer items={items} currentIndex={1} />);
-    await new Promise((r) => setTimeout(r, 10));
-    // A fresh player is created with the new videoId because initialVideoId
-    // changed — the mount effect depends on it.
-    expect(created).toHaveLength(2);
+    await vi.waitFor(() => {
+      // A fresh player is created with the new videoId because initialVideoId
+      // changed — the mount effect depends on it.
+      expect(created).toHaveLength(2);
+    });
   });
 
   it("invokes onAdvance when the player reports ENDED", async () => {
@@ -125,9 +128,10 @@ describe("SongQueuePlayer", () => {
     render(
       <SongQueuePlayer items={items} currentIndex={0} onAdvance={onAdvance} />,
     );
-    await new Promise((r) => setTimeout(r, 10));
+    await vi.waitFor(() => {
+      expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    });
     const player = created[0];
-    expect(player.loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
     player._fireStateChange(0); // YT.PlayerState.ENDED
     expect(onAdvance).toHaveBeenCalledTimes(1);
   });
@@ -139,12 +143,13 @@ describe("SongQueuePlayer", () => {
     const { rerender } = render(
       <SongQueuePlayer items={[itemA]} currentIndex={0} />,
     );
-    await new Promise((r) => setTimeout(r, 10));
-    expect(created).toHaveLength(1);
+    await vi.waitFor(() => {
+      expect(created).toHaveLength(1);
+      expect(created[0].loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
+    });
     const player = created[0];
     // Initial load.
     expect(player.loadVideoById).toHaveBeenCalledTimes(1);
-    expect(player.loadVideoById).toHaveBeenCalledWith("AAAAAAAAAAA");
     player.loadVideoById.mockClear();
 
     // Simulate !songadd: a new item is appended at index 1 while index 0
@@ -152,10 +157,12 @@ describe("SongQueuePlayer", () => {
     rerender(
       <SongQueuePlayer items={[itemA, itemB]} currentIndex={0} />,
     );
-    await new Promise((r) => setTimeout(r, 10));
+    // Race-safe: positively verify stability before the negative check
+    // (vi.waitFor cannot retry on a never-failing toHaveBeenCalled).
+    await vi.waitFor(() => {
+      expect(created).toHaveLength(1);
+    });
     expect(player.loadVideoById).not.toHaveBeenCalled();
-    // Only one player should exist (no remount).
-    expect(created).toHaveLength(1);
   });
 
   it("calls destroy on unmount", async () => {

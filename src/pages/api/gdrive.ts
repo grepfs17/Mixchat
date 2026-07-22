@@ -5,9 +5,93 @@ import { checkRateLimit } from "../../lib/rateLimit";
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 
+/**
+ * Shared cookie-set options for access tokens. Extracted to avoid duplication
+ * between the normal refresh path and the migration fallback.
+ */
+function driveTokenCookieOptions(expiresIn: number | undefined) {
+  const isSecure = import.meta.env.MODE !== "development";
+  return {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: "lax" as const,
+    maxAge: expiresIn || 3600,
+    path: "/",
+  };
+}
+
+/**
+ * One-time migration: when the new `drive_token` cookie is absent but the
+ * old combined-scope `youtube_token` cookie still exists (pre-split users),
+ * reuse the existing token with Drive scope. The token is copied to the new
+ * cookie name so subsequent requests find it directly.
+ */
+async function migrateFromYoutubeToken(
+  cookies: any,
+  clientId: string,
+  clientSecret: string,
+): Promise<string | null> {
+  // Try the existing YouTube access token first (may still be valid).
+  const ytToken = cookies.get("youtube_token")?.value;
+  if (ytToken) {
+    const checkRes = await fetch(`${DRIVE_API}/about?fields=user`, {
+      headers: { Authorization: `Bearer ${ytToken}` },
+    });
+    if (checkRes.ok) {
+      cookies.set("drive_token", ytToken, driveTokenCookieOptions(3600));
+      // Also copy the refresh token so future expired-token refreshes
+      // hit the fast path in getAccessToken directly.
+      const ytRefresh = cookies.get("youtube_refresh_token")?.value;
+      if (ytRefresh) {
+        cookies.set("drive_refresh_token", ytRefresh, {
+          httpOnly: true,
+          secure: import.meta.env.MODE !== "development",
+          sameSite: "strict",
+          maxAge: 365 * 24 * 60 * 60,
+          path: "/",
+        });
+      }
+      return ytToken;
+    }
+  }
+
+  // YouTube access token is expired — try refreshing with the YouTube
+  // refresh token (which was obtained with the combined YouTube+Drive scope).
+  const ytRefresh = cookies.get("youtube_refresh_token")?.value;
+  if (!ytRefresh) return null;
+
+  const tokenData = await refreshYoutubeToken(
+    ytRefresh,
+    clientId,
+    clientSecret,
+  );
+  const accessToken = tokenData.access_token;
+  if (!accessToken) return null;
+
+  cookies.set(
+    "drive_token",
+    accessToken,
+    driveTokenCookieOptions(tokenData.expires_in),
+  );
+  // If Google returned a new refresh token, persist it under the Drive
+  // cookie name so future refreshes don't need to fall back again.
+  if (tokenData.refresh_token) {
+    cookies.set("drive_refresh_token", tokenData.refresh_token, {
+      httpOnly: true,
+      secure: import.meta.env.MODE !== "development",
+      sameSite: "strict",
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+    });
+  }
+
+  return accessToken;
+}
+
 async function getAccessToken(cookies: any, request: any): Promise<string> {
-  // Try the httpOnly cookie first (set during OAuth callback)
-  const cookieToken = cookies.get("youtube_token")?.value;
+  // Drive uses its own separate OAuth token (stored in drive_token cookie).
+  // YouTube and Drive scopes cannot be combined in a single token.
+  const cookieToken = cookies.get("drive_token")?.value;
   if (cookieToken) {
     // Verify the token is still valid by making a lightweight API call
     const checkRes = await fetch(`${DRIVE_API}/about?fields=user`, {
@@ -17,42 +101,51 @@ async function getAccessToken(cookies: any, request: any): Promise<string> {
     // Token expired — fall through to refresh
   }
 
-  // Try to refresh using the refresh token cookie
-  const refreshToken = cookies.get("youtube_refresh_token")?.value;
-  if (!refreshToken) {
-    throw new Error(
-      "No Google authentication found. Please sign in with Google first.",
+  // Try to refresh using the Drive refresh token cookie
+  const refreshToken = cookies.get("drive_refresh_token")?.value;
+  if (refreshToken) {
+    const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
+    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      throw new Error("Server configuration error: missing Google credentials.");
+    }
+
+    const tokenData = await refreshYoutubeToken(
+      refreshToken,
+      clientId,
+      clientSecret,
     );
+    const accessToken = tokenData.access_token;
+    if (!accessToken) {
+      throw new Error("Failed to refresh Drive access token.");
+    }
+
+    cookies.set(
+      "drive_token",
+      accessToken,
+      driveTokenCookieOptions(tokenData.expires_in),
+    );
+
+    return accessToken;
   }
 
+  // Migration: before the split, the YouTube OAuth flow included the
+  // drive.file scope, so the youtube_token cookie can serve Drive requests.
+  // Copy it to the new cookie name so future requests hit the fast path.
   const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
   const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error("Server configuration error: missing Google credentials.");
+  if (clientId && clientSecret) {
+    const migrated = await migrateFromYoutubeToken(
+      cookies,
+      clientId,
+      clientSecret,
+    );
+    if (migrated) return migrated;
   }
 
-  const tokenData = await refreshYoutubeToken(
-    refreshToken,
-    clientId,
-    clientSecret,
+  throw new Error(
+    "No Drive access granted. Please click 'Grant Drive Access' in settings.",
   );
-  const accessToken = tokenData.access_token;
-  if (!accessToken) {
-    throw new Error("Failed to refresh Google access token.");
-  }
-
-  // Update the cookie
-  const isDev = import.meta.env.MODE === "development";
-  const isSecure = !isDev;
-  cookies.set("youtube_token", accessToken, {
-    httpOnly: true,
-    secure: isSecure,
-    sameSite: "lax",
-    maxAge: tokenData.expires_in || 3600,
-    path: "/",
-  });
-
-  return accessToken;
 }
 
 async function driveFetch(
@@ -85,7 +178,7 @@ async function driveFetch(
       body.includes("Request had insufficient authentication scopes")
     ) {
       const err = new Error(
-        "Google Drive permission not granted. Please sign in again to grant Drive access.",
+        "Google Drive permission not granted. Please click 'Grant Drive Access' in settings.",
       );
       (err as any).status = 403;
       (err as any).needsReauth = true;

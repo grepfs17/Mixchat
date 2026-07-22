@@ -5,6 +5,74 @@ import { useTokenRefresh } from "./useTokenRefresh";
 
 const SESSIONS_KEY = "mixchat_sessions";
 
+/**
+ * Safe wrapper around `popup.closed`.
+ * Browsers warn when accessing `.closed` on a cross-origin popup whose
+ * server sent a `Cross-Origin-Opener-Policy` header (e.g. Google OAuth).
+ * This suppresses the console spam while still detecting closed popups.
+ */
+function isPopupClosed(popup: Window | null): boolean {
+  try {
+    return !popup || popup.closed;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Build the Google OAuth request URL including the CSRF `state`.
+ * For the Drive flow the state is suffixed with `:drive` so the
+ * server-side callback can detect which OAuth flow it is serving.
+ * The full state (with suffix) is persisted to sessionStorage so the
+ * popup's CSRF check matches.
+ *
+ * Module-scope: no closure dependencies on the hook, so useCallback
+ * would only add React noise.
+ */
+function buildGoogleAuthUrl(scope: string, drive: boolean): string {
+  const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
+  const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
+  const state = drive
+    ? `${crypto.randomUUID()}:drive`
+    : crypto.randomUUID();
+  try {
+    sessionStorage.setItem("youtube_oauth_state", state);
+  } catch (_) {
+    // sessionStorage may be unavailable in private browsing mode or when
+    // the quota is exhausted. Without this write the popup's CSRF check
+    // would later fail with "invalid state" — log here so devtools makes
+    // the cause obvious.
+    console.warn("sessionStorage unavailable for OAuth CSRF state");
+  }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope,
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+/**
+ * Open an OAuth popup, centred over the main window. Returns `null` if
+ * the browser blocked the popup. Module-scope for the same reason as
+ * `buildGoogleAuthUrl`.
+ */
+function openCenteredPopup(target: string, url: string): Window | null {
+  const width = 600;
+  const height = 700;
+  const left = window.screenX + (window.outerWidth - width) / 2;
+  const top = window.screenY + (window.outerHeight - height) / 2;
+  return window.open(
+    url,
+    target,
+    `width=${width},height=${height},left=${left},top=${top}`,
+  );
+}
+
 export type AuthSessions = {
   twitch?: PlatformSession;
   youtube?: PlatformSession;
@@ -38,6 +106,7 @@ export type UseAuthSessionsResult = {
   twitchLogin: () => void;
   twitchLogout: () => void;
   youtubeLogin: () => void;
+  youtubeDriveLogin: () => void;
   youtubeLogout: () => void;
   clearTwitchSession: () => void;
 };
@@ -76,7 +145,15 @@ export function useAuthSessions(): UseAuthSessionsResult {
 
   const handleYoutubeSessionUpdate = useCallback(
     (updatedSession: PlatformSession) => {
-      setSessions((prev) => ({ ...prev, youtube: updatedSession }));
+      setSessions((prev) => ({
+        ...prev,
+        youtube: {
+          ...updatedSession,
+          // Preserve hasDriveScope across token refreshes — the refreshed
+          // session from the API doesn't include this client-side flag.
+          hasDriveScope: prev.youtube?.hasDriveScope,
+        },
+      }));
     },
     [],
   );
@@ -196,7 +273,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
       `width=${width},height=${height},left=${left},top=${top}`,
     );
 
-    if (!popup || popup.closed) {
+    if (isPopupClosed(popup)) {
       window.location.href = authUrl;
       return;
     }
@@ -234,7 +311,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           if (parsed && parsed.twitch) {
             setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
             setIsLoggingIn(false);
-            if (popup && !popup.closed) popup.close();
+            if (!isPopupClosed(popup)) popup!.close();
             removeMessageListener();
             window.removeEventListener("storage", onStorage);
           }
@@ -246,8 +323,10 @@ export function useAuthSessions(): UseAuthSessionsResult {
     window.addEventListener("storage", onStorage);
 
     // Clean up if popup is closed without completing auth.
+    // Wrapped in try-catch via isPopupClosed to suppress COOP warnings
+    // from Google's OAuth pages which set Cross-Origin-Opener-Policy.
     const pollClosed = setInterval(() => {
-      if (popup && popup.closed) {
+      if (isPopupClosed(popup)) {
         clearInterval(pollClosed);
         setIsLoggingIn(false);
         removeMessageListener();
@@ -262,49 +341,54 @@ export function useAuthSessions(): UseAuthSessionsResult {
     };
   }, []);
 
+  /**
+   * Fire-and-forget POST to /api/auth/logout so the server clears the
+   * httpOnly auth cookies for the given platforms. Uses `keepalive: true`
+   * so the request still completes if the user navigates away immediately
+   * after clicking sign out. The trailing `.catch` neutralises the async
+   * rejection so it isn't logged as an unhandled promise warning.
+   */
+  const postLogout = useCallback((platforms: string[]) => {
+    fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ platforms }),
+      keepalive: true,
+    }).catch(() => {
+      /* network unavailable — local state still clears */
+    });
+  }, []);
+
   const twitchLogout = useCallback(() => {
     setSessions((prev) => {
       const next = { ...prev };
       delete next.twitch;
       return next;
     });
-  }, []);
+    postLogout(["twitch"]);
+  }, [postLogout]);
 
-  const youtubeLogin = useCallback(() => {
-    const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-    const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
-
-    if (!clientId) {
+  /**
+   * Open the YouTube OAuth popup. Falls back to a full-page redirect when
+   * the popup is blocked. The popup posts `mixchat_session` back to the
+   * opener, which `listenForOAuthSession` handles and is the canonical
+   * trigger for `setIsLoggingIn(false)`.
+   */
+  const openYoutubeOAuth = useCallback(() => {
+    if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
       alert("YouTube Client ID not configured");
       return;
     }
-
-    const state = crypto.randomUUID();
-    sessionStorage.setItem("youtube_oauth_state", state);
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope:
-        "https://www.googleapis.com/auth/youtube.force-ssl https://www.googleapis.com/auth/drive.file",
-      access_type: "offline",
-      prompt: "consent",
-      state,
-    });
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-
-    const width = 600;
-    const height = 700;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      authUrl,
-      "youtube_oauth",
-      `width=${width},height=${height},left=${left},top=${top}`,
+    const url = buildGoogleAuthUrl(
+      "https://www.googleapis.com/auth/youtube.force-ssl",
+      false,
     );
+    const popup = openCenteredPopup("youtube_oauth", url);
+
+    if (isPopupClosed(popup)) {
+      window.location.href = url;
+      return;
+    }
 
     setIsLoggingIn(true);
 
@@ -319,14 +403,101 @@ export function useAuthSessions(): UseAuthSessionsResult {
       () => setIsLoggingIn(false),
     );
 
-    // Clean up listener if popup is closed without completing auth.
     const pollClosed = setInterval(() => {
-      if (popup && popup.closed) {
+      if (isPopupClosed(popup)) {
         clearInterval(pollClosed);
         setIsLoggingIn(false);
         removeMessageListener();
       }
     }, 500);
+  }, []);
+
+  /**
+   * Open the Drive-only OAuth popup. Falls back to a full-page redirect
+   * when the popup is blocked. Intentionally does NOT register
+   * `listenForOAuthSession("youtube", …)` because Drive posts
+   * `mixchat_drive_granted` (handled by the top-level useEffect below),
+   * and that listener would never fire for this flow. `isLoggingIn` is
+   * cleared by the postMessage handler on success or by the close
+   * poller if the user abandons the popup.
+   */
+  const openDriveOAuth = useCallback(() => {
+    if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
+      alert("YouTube Client ID not configured");
+      return;
+    }
+    const url = buildGoogleAuthUrl(
+      "https://www.googleapis.com/auth/drive.file",
+      true,
+    );
+    const popup = openCenteredPopup("youtube_drive_oauth", url);
+
+    if (isPopupClosed(popup)) {
+      window.location.href = url;
+      return;
+    }
+
+    setIsLoggingIn(true);
+
+    const pollClosed = setInterval(() => {
+      if (isPopupClosed(popup)) {
+        clearInterval(pollClosed);
+        setIsLoggingIn(false);
+      }
+    }, 500);
+  }, []);
+
+  const youtubeLogin = useCallback(
+    () => openYoutubeOAuth(),
+    [openYoutubeOAuth],
+  );
+
+  const youtubeDriveLogin = useCallback(
+    () => openDriveOAuth(),
+    [openDriveOAuth],
+  );
+
+  // Listen for the Drive OAuth popup completing. The callback sends a
+  // 'mixchat_drive_granted' postMessage so we can update hasDriveScope
+  // without requiring a full YouTube re-auth.
+  useEffect(() => {
+    const onMessage = (ev: MessageEvent) => {
+      if (ev.origin !== window.location.origin) return;
+      if (ev.data?.type === "mixchat_drive_granted") {
+        setSessions((prev) => {
+          if (!prev.youtube) return prev;
+          return {
+            ...prev,
+            youtube: { ...prev.youtube, hasDriveScope: true },
+          };
+        });
+        setIsLoggingIn(false);
+      }
+    };
+    window.addEventListener("message", onMessage);
+
+    // Also handle storage event fallback for mobile/new-tab flows.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "mixchat_drive_granted" && e.newValue) {
+        setSessions((prev) => {
+          if (!prev.youtube) return prev;
+          return {
+            ...prev,
+            youtube: { ...prev.youtube, hasDriveScope: true },
+          };
+        });
+        setIsLoggingIn(false);
+        try {
+          localStorage.removeItem("mixchat_drive_granted");
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const youtubeLogout = useCallback(() => {
@@ -335,7 +506,13 @@ export function useAuthSessions(): UseAuthSessionsResult {
       delete next.youtube;
       return next;
     });
-  }, []);
+    // Drive tokens are tied to the same Google account as the YouTube
+    // tokens, so signing out of YouTube must also clear the Drive
+    // cookies — otherwise a stale drive_token could be applied to a
+    // future Drive request when the same browser signs in to a
+    // *different* Google account on a later date.
+    postLogout(["youtube", "drive"]);
+  }, [postLogout]);
 
   const clearTwitchSession = useCallback(() => {
     setSessions({});
@@ -350,6 +527,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     twitchLogin,
     twitchLogout,
     youtubeLogin,
+    youtubeDriveLogin,
     youtubeLogout,
     clearTwitchSession,
   };

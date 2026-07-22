@@ -106,7 +106,9 @@ function LoginPanel({
   eventSoundVolume = 1,
   onEventSoundVolumeChange,
   hasYoutubeSession = false,
+  hasDriveScope = false,
   onReauthYoutube,
+  onYoutubeDriveLogin = () => {},
   onGoHome,
   onRequestClose,
   ignoredUsers = [],
@@ -485,7 +487,9 @@ function LoginPanel({
             if (onIgnoredUsersChange) onIgnoredUsersChange(users);
           }}
           hasYoutubeSession={hasYoutubeSession}
+          hasDriveScope={hasDriveScope}
           onReauthYoutube={onReauthYoutube || (() => {})}
+          onYoutubeDriveLogin={onYoutubeDriveLogin}
           streamerToolsEnabled={streamerToolsEnabled}
           onStreamerToolsEnabledChange={(value) => {
             if (onStreamerToolsEnabledChange)

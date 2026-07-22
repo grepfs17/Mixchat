@@ -95,7 +95,9 @@ export default function EmbedConfigModal({
   ignoredUsers,
   onIgnoredUsersChange,
   hasYoutubeSession,
+  hasDriveScope,
   onReauthYoutube,
+  onYoutubeDriveLogin,
   streamerToolsEnabled,
   onStreamerToolsEnabledChange,
   defaultPlayerType,
@@ -1046,15 +1048,17 @@ export default function EmbedConfigModal({
         render: () => (
           <div className="embed-config-backup-section">
             <p className="embed-config-backup-description">
-              {hasYoutubeSession
+              {hasYoutubeSession && hasDriveScope
                 ? "Save and load your settings directly from your Google Drive. Requires Google sign-in with Drive access."
-                : "Sign in with Google to save and load settings from Google Drive."}
+                : hasYoutubeSession
+                  ? "Grant Drive access to save and load settings from Google Drive."
+                  : "Sign in with Google to save and load settings from Google Drive."}
             </p>
             <div className="embed-config-backup-buttons">
               <button
                 onClick={handleDriveSave}
                 className="embed-config-backup-btn embed-config-drive-btn"
-                disabled={driveLoading !== null || !hasYoutubeSession}
+                disabled={driveLoading !== null || !hasYoutubeSession || !hasDriveScope}
               >
                 {driveLoading === "save" ? (
                   <>
@@ -1069,7 +1073,7 @@ export default function EmbedConfigModal({
               <button
                 onClick={handleDriveLoad}
                 className="embed-config-backup-btn embed-config-drive-btn"
-                disabled={driveLoading !== null || !hasYoutubeSession}
+                disabled={driveLoading !== null || !hasYoutubeSession || !hasDriveScope}
               >
                 {driveLoading === "load" ? (
                   <>
@@ -1109,6 +1113,14 @@ export default function EmbedConfigModal({
                 className="embed-config-backup-btn embed-config-reauth-btn"
               >
                 Sign in with Google
+              </button>
+            )}
+            {hasYoutubeSession && !hasDriveScope && (
+              <button
+                onClick={onYoutubeDriveLogin}
+                className="embed-config-backup-btn embed-config-reauth-btn"
+              >
+                Grant Drive Access
               </button>
             )}
           </div>
@@ -1171,6 +1183,8 @@ export default function EmbedConfigModal({
       mentionVolume,
       mentionSoundType,
       hasYoutubeSession,
+      hasDriveScope,
+      onYoutubeDriveLogin,
       driveLoading,
       shareLink,
       linkCopied,

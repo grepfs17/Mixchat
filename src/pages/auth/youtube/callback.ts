@@ -29,6 +29,85 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       redirectUri,
     );
 
+    // Detect which OAuth flow this callback belongs to. The flow type is
+    // encoded in the state parameter as "<uuid>:drive" or "<uuid>" (YouTube).
+    const driveFlow = returnedState.endsWith(":drive");
+    const flow: "youtube" | "drive" = driveFlow ? "drive" : "youtube";
+
+    if (flow === "drive") {
+      // --- Drive-only flow: store tokens in separate cookies ---
+      cookies.set("drive_token", tokenData.access_token, {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: "lax",
+        maxAge: tokenData.expires_in || 3600,
+        path: "/",
+      });
+
+      if (tokenData.refresh_token) {
+        cookies.set("drive_refresh_token", tokenData.refresh_token, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: "strict",
+          maxAge: 365 * 24 * 60 * 60,
+          path: "/",
+        });
+      }
+
+      // Signal the opener that Drive access was granted so the YouTube
+      // session can update its hasDriveScope flag.
+      const driveReturnedStateJson = JSON.stringify(returnedState);
+
+      return new Response(
+        `<!DOCTYPE html>
+<html>
+<head><title>Drive Access Granted</title></head>
+<body>
+<script nonce="${locals.nonce}">
+  (function () {
+    var returnedState = ${driveReturnedStateJson};
+
+    // --- CSRF state validation ---
+    var expectedState = null;
+    try {
+      if (window.opener && window.opener.sessionStorage) {
+        expectedState = window.opener.sessionStorage.getItem('youtube_oauth_state');
+        window.opener.sessionStorage.removeItem('youtube_oauth_state');
+      }
+    } catch (e) { /* opener may be cross-origin or inaccessible */ }
+    if (!expectedState) {
+      expectedState = sessionStorage.getItem('youtube_oauth_state');
+      sessionStorage.removeItem('youtube_oauth_state');
+    }
+    if (!expectedState || expectedState !== returnedState) {
+      document.body.innerText = 'Authentication failed: invalid state. Possible CSRF attack.';
+      return;
+    }
+    // --- End CSRF check ---
+
+    try {
+      localStorage.setItem('mixchat_drive_granted', JSON.stringify({ ts: Date.now() }));
+    } catch (e) {}
+    try {
+      if (window.opener && window.opener.postMessage) {
+        window.opener.postMessage({ type: 'mixchat_drive_granted' }, window.location.origin);
+      }
+    } catch (e) {}
+    if (window.opener) {
+      try { window.close(); } catch (e) {}
+      window.location.href = '/';
+    } else {
+      window.location.href = '/';
+    }
+  })();
+<\/script>
+</body>
+</html>`,
+        { status: 200, headers: { "Content-Type": "text/html" } },
+      );
+    }
+
+    // --- YouTube flow: existing behavior ---
     const user = await getYoutubeUser(tokenData.access_token);
 
     // Store token in secure cookie. Align settings with the refresh endpoint

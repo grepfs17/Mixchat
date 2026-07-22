@@ -19,7 +19,7 @@ export function listenForOAuthSession(
       ) {
         onSession(data.session);
         onComplete();
-        if (popup && !popup.closed) popup.close();
+        try { if (popup && !popup.closed) popup.close(); } catch { /* COOP may block .closed */ }
         window.removeEventListener("message", onMessage);
       }
     } catch (e) {

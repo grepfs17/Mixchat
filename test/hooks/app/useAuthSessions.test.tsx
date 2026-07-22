@@ -1,0 +1,194 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+
+// Mocks first so the hook imports see them.
+vi.mock("../../../src/lib/oauthSession", () => ({
+  listenForOAuthSession: vi.fn(() => () => undefined),
+}));
+
+vi.mock("../../../src/hooks/app/useTokenRefresh", () => ({
+  useTokenRefresh: vi.fn(),
+}));
+
+async function loadHook() {
+  const mod = await import("../../../src/hooks/app/useAuthSessions");
+  return mod.useAuthSessions;
+}
+
+function seedYoutubeSession(hasDriveScope = false) {
+  localStorage.setItem(
+    "mixchat_sessions",
+    JSON.stringify({
+      youtube: {
+        platform: "youtube",
+        userId: "u1",
+        displayName: "Alice",
+        expiresAt: Date.now() + 60_000,
+        hasDriveScope,
+      },
+    }),
+  );
+}
+
+/**
+ * Dispatch a `message` event synchronously via `window.dispatchEvent` rather
+ * than `window.postMessage`. Same-origin `postMessage` queues the dispatch
+ * via an async microtask in jsdom, so `act()` returns before the listener
+ * fires — making the test timing-dependent. Dispatching a real MessageEvent
+ * synchronously invokes the listener inside `act()`.
+ */
+function dispatchMessageEvent(data: unknown, origin = window.location.origin) {
+  window.dispatchEvent(new MessageEvent("message", { data, origin }));
+}
+
+describe("useAuthSessions — mixchat_drive_granted listener", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("sets youtube.hasDriveScope=true on a same-origin mixchat_drive_granted message", async () => {
+    seedYoutubeSession(false);
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    });
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(false);
+
+    act(() => {
+      dispatchMessageEvent({ type: "mixchat_drive_granted" });
+    });
+
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(true);
+  });
+
+  it("ignores mixchat_drive_granted messages from a different origin", async () => {
+    seedYoutubeSession(false);
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    });
+
+    act(() => {
+      dispatchMessageEvent(
+        { type: "mixchat_drive_granted" },
+        "https://evil.example.com",
+      );
+    });
+
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(false);
+  });
+
+  it("ignores same-origin messages whose type is not mixchat_drive_granted", async () => {
+    seedYoutubeSession(false);
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    });
+
+    act(() => {
+      dispatchMessageEvent({
+        type: "mixchat_session",
+        session: { platform: "youtube" },
+      });
+    });
+
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(false);
+  });
+
+  it("sets hasDriveScope=true on a same-origin storage event (cross-tab fallback)", async () => {
+    seedYoutubeSession(false);
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    });
+
+    act(() => {
+      const evt = new StorageEvent("storage", {
+        key: "mixchat_drive_granted",
+        newValue: JSON.stringify({ ts: Date.now() }),
+        storageArea: localStorage,
+        url: window.location.href,
+      });
+      window.dispatchEvent(evt);
+    });
+
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(true);
+    // The listener cleans up the storage key after consuming it.
+    expect(localStorage.getItem("mixchat_drive_granted")).toBeNull();
+  });
+
+  it("is a no-op when no YouTube session is present", async () => {
+    // No youtube entry in localStorage. Drive grant is meaningless without it.
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    // The mount-effect has run inside renderHook (wrapped in act). With
+    // localStorage cleared in beforeEach, sessions stays empty.
+    expect(result.current.sessions.youtube).toBeUndefined();
+
+    expect(() => {
+      act(() => {
+        dispatchMessageEvent({ type: "mixchat_drive_granted" });
+      });
+    }).not.toThrow();
+
+    expect(result.current.sessions.youtube).toBeUndefined();
+  });
+
+  it("preserves hasDriveScope across token refreshes", async () => {
+    seedYoutubeSession(true);
+
+    // Capture the session-update callback that useTokenRefresh receives
+    // so we can simulate a token-refresh cycle.
+    const { useTokenRefresh } = await import(
+      "../../../src/hooks/app/useTokenRefresh"
+    );
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.youtube?.hasDriveScope).toBe(true);
+    });
+
+    // Extract the handleYoutubeSessionUpdate callback from the second
+    // useTokenRefresh call (index 1 = YouTube; index 0 = Twitch).
+    const calls = vi.mocked(useTokenRefresh).mock.calls;
+    const youtubeCall = calls.find(
+      ([, , , opts]) => opts?.checkInterval === 120_000,
+    );
+    expect(youtubeCall).toBeDefined();
+    const updateCb = youtubeCall![1] as (s: { platform: string }) => void;
+
+    // Simulate a token refresh that returns a session WITHOUT hasDriveScope.
+    act(() => {
+      updateCb({
+        platform: "youtube",
+        userId: "u1",
+        displayName: "Alice",
+        accessToken: "fresh-token",
+        expiresAt: Date.now() + 60_000,
+      } as any);
+    });
+
+    expect(result.current.sessions.youtube?.hasDriveScope).toBe(true);
+    // accessToken is never persisted to localStorage, so after the save
+    // effect runs it's stripped from the serialised copy — but hasDriveScope
+    // is a client-side flag that survives the strip + refresh cycle.
+    expect(result.current.sessions.youtube?.accessToken).toBeUndefined();
+  });
+});

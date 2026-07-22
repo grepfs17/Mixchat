@@ -53,6 +53,7 @@ export default function AppContainer() {
     twitchLogin: handleTwitchLogin,
     twitchLogout,
     youtubeLogin: handleYoutubeLogin,
+    youtubeDriveLogin: handleYoutubeDriveLogin,
     youtubeLogout: handleYoutubeLogout,
     clearTwitchSession,
   } = useAuthSessions();
@@ -380,6 +381,8 @@ export default function AppContainer() {
             ignoredUsers={ignoredUsers}
             onIgnoredUsersChange={setIgnoredUsers}
             hasYoutubeSession={!!sessions.youtube}
+            hasDriveScope={!!sessions.youtube?.hasDriveScope}
+            onYoutubeDriveLogin={handleYoutubeDriveLogin}
             streamerToolsEnabled={streamerToolsEnabled}
             onStreamerToolsEnabledChange={setStreamerToolsEnabled}
             defaultPlayerType={defaultPlayerType}

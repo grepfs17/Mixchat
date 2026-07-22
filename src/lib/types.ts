@@ -83,6 +83,8 @@ export interface PlatformSession {
   broadcasterType?: string;
   badges?: Record<string, string>; // badgeName -> imageUrl
   badgeDetails?: Record<string, { url: string; title: string }>; // detailed badge info
+  /** Whether this Google session includes the drive.file scope. */
+  hasDriveScope?: boolean;
 }
 
 export type ChatFont =

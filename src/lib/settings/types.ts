@@ -43,7 +43,9 @@ export interface SettingsProps {
   ignoredUsers: string[];
   onIgnoredUsersChange: (users: string[]) => void;
   hasYoutubeSession: boolean;
+  hasDriveScope: boolean;
   onReauthYoutube: () => void;
+  onYoutubeDriveLogin: () => void;
   streamerToolsEnabled: boolean;
   onStreamerToolsEnabledChange: (value: boolean) => void;
   defaultPlayerType: "embed" | "m3u8";
