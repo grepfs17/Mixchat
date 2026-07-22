@@ -1,6 +1,9 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { useEventSub } from "../../../src/hooks/chat/useEventSub";
+import {
+  useEventSub,
+  __resetSubscribedKeysForTests,
+} from "../../../src/hooks/chat/useEventSub";
 
 // --- Mocks ---
 
@@ -48,8 +51,12 @@ const mockFetch = vi.fn();
 beforeEach(() => {
   vi.useFakeTimers();
   wsInstances = [];
+  __resetSubscribedKeysForTests();
   vi.stubGlobal("WebSocket", MockWebSocket as any);
   vi.stubGlobal("fetch", mockFetch);
+  // Reset the shared fetch mock completely so each test starts with a clean
+  // call history and no leftover mockResolvedValueOnce entries.
+  mockFetch.mockReset();
   mockFetch.mockResolvedValue({
     ok: true,
     status: 200,
@@ -386,6 +393,148 @@ describe("useEventSub", () => {
     expect(wsInstances[1].url).toBe(
       "wss://eventsub.wss.twitch.tv/ws?reconnect=test",
     );
+  });
+
+  it("does not let a stale socket's onclose wipe the new session after a Twitch reconnect", async () => {
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    const ws1 = wsInstances[0];
+    act(() => ws1.simulateOpen());
+    act(() => ws1.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Request reconnect
+    act(() =>
+      ws1.simulateMessage(
+        sessionReconnect("wss://eventsub.wss.twitch.tv/ws?reconnect=test"),
+      ),
+    );
+
+    const ws2 = wsInstances[1];
+    act(() => ws2.simulateOpen());
+    act(() => ws2.simulateMessage(sessionWelcome("sess-2")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(result.current.sessionId).toBe("sess-2");
+
+    // Now the old socket finally closes. It should not reset the new session.
+    // Trigger the onclose handler on the stale socket by invoking close,
+    // simulating the delayed close from the server.
+    ws1.close(1000, "stale close");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Session should still be the new one, not null.
+    expect(result.current.sessionId).toBe("sess-2");
+  });
+
+  it("retries failed subscriptions with exponential backoff", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: "Server Error" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [{ id: "sub-1" }] }),
+      });
+
+    const callback = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    act(() => {
+      result.current.subscribe(
+        "automod.message.hold",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callback,
+      );
+    });
+
+    const ws = wsInstances[0];
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // First attempt should fail
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Advance to the first retry window (2s base)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    // Second attempt should succeed
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not resubscribe after a Twitch-managed reconnect", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ id: "sub-1" }] }),
+    });
+
+    const callback = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    act(() => {
+      result.current.subscribe(
+        "automod.message.hold",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callback,
+      );
+    });
+
+    const ws1 = wsInstances[0];
+    act(() => ws1.simulateOpen());
+    act(() => ws1.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    // Twitch requests reconnect
+    act(() =>
+      ws1.simulateMessage(
+        sessionReconnect("wss://eventsub.wss.twitch.tv/ws?reconnect=test"),
+      ),
+    );
+
+    const ws2 = wsInstances[1];
+    act(() => ws2.simulateOpen());
+    act(() => ws2.simulateMessage(sessionWelcome("sess-2")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Should not have made a second subscription request
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it("cleans up on unmount", () => {

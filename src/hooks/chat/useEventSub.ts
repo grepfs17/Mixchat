@@ -14,10 +14,12 @@ const KEEPALIVE_GRACE_S = 5;
 const MAX_RECONNECT_DELAY_MS = 30000;
 const SUBSCRIPTION_STAGGER_MS = 250;
 const POST_429_COOLDOWN_MS = 5000;
+const SUBSCRIPTION_RETRY_BASE_MS = 2000;
+const SUBSCRIPTION_RETRY_MAX_MS = 30000;
 
 export type SubscriptionStatus = "pending" | "connected" | "error" | "scope_error";
 
-/** Module-level cache: subscription keys → session ID they were registered with.
+/** Module-level cache: subscription key → session ID they were registered with.
  *  Survives component remounts — prevents re-POSTing within the same session,
  *  but re-registers when the WebSocket session changes. */
 const subscribedKeys = new Map<string, string>();
@@ -74,6 +76,10 @@ export type SubscribeFn = (
   onNotification: (event: unknown) => void,
   onScopeError?: () => void,
 ) => () => void;
+
+export function __resetSubscribedKeysForTests() {
+  subscribedKeys.clear();
+}
 
 export function useEventSub({
   accessToken,
@@ -151,17 +157,26 @@ export function useEventSub({
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectDelay = 1000;
     let pendingSubscribes = false;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let pendingKeysQueue: string[] = [];
+    let activeSocketId = 0;
+    const retryQueue = new Map<string, number>(); // key -> timestamp when it can be retried
+    const retryBackoff = new Map<string, number>(); // key -> current delay
 
-    const resetKeepalive = (timeoutSeconds: number) => {
+    const sleep = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+
+    const resetKeepalive = (timeoutSeconds: number, socketId: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
       const raw = Number(timeoutSeconds);
       const fallback = Number.isFinite(raw) && raw > 0 ? raw : 10;
       keepaliveTimer = setTimeout(
         () => {
+          if (!active) return;
+          if (activeSocketId !== socketId) return;
           console.warn("[useEventSub] Keepalive timeout — reconnecting");
           ws?.close();
         },
@@ -169,8 +184,54 @@ export function useEventSub({
       );
     };
 
-    const sleep = (ms: number) =>
-      new Promise((resolve) => setTimeout(resolve, ms));
+    const queueRetry = (key: string) => {
+      const previous = retryBackoff.get(key);
+      const nextDelay =
+        previous === undefined
+          ? SUBSCRIPTION_RETRY_BASE_MS
+          : Math.min(previous * 2, SUBSCRIPTION_RETRY_MAX_MS);
+      retryBackoff.set(key, nextDelay);
+      retryQueue.set(key, Date.now() + nextDelay);
+    };
+
+    const scheduleRetries = () => {
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      if (!active) return;
+      const sid = sessionIdRef.current;
+      if (!sid) return;
+
+      const now = Date.now();
+      const readyKeys: string[] = [];
+      let nextTs: number | null = null;
+
+      for (const [key, ts] of retryQueue) {
+        if (subscribedKeys.get(key) === sid) {
+          retryQueue.delete(key);
+          continue;
+        }
+        if (ts <= now) {
+          readyKeys.push(key);
+        } else if (nextTs === null || ts < nextTs) {
+          nextTs = ts;
+        }
+      }
+
+      for (const key of readyKeys) {
+        retryQueue.delete(key);
+      }
+
+      if (readyKeys.length > 0) {
+        void subscribeAll(sid, readyKeys);
+      } else if (nextTs !== null) {
+        retryTimer = setTimeout(() => {
+          retryTimer = null;
+          scheduleRetries();
+        }, Math.max(0, nextTs - Date.now()));
+      }
+    };
 
     const subscribeAll = async (sid: string, keys?: string[]) => {
       if (pendingSubscribes) {
@@ -199,7 +260,10 @@ export function useEventSub({
             if (!active || sessionIdRef.current !== sid) return;
           }
           const [key, sub] = entries[i];
-          if (subscribedKeys.get(key) === sid) continue;
+          if (subscribedKeys.get(key) === sid) {
+            retryQueue.delete(key);
+            continue;
+          }
           try {
             const res = await subscribeEventSub(
               accessTokenRef.current,
@@ -219,41 +283,33 @@ export function useEventSub({
             }
             if (res.ok || res.status === 409) {
               subscribedKeys.set(key, sid);
+              retryQueue.delete(key);
+              retryBackoff.delete(key);
               setSubscriptionStatuses((prev) => {
                 const next = new Map(prev);
                 next.set(key, "connected");
                 return next;
               });
-            }
-            if (
-              !res.ok &&
-              res.status !== 409 &&
-              (res.status === 401 || res.status === 403)
-            ) {
+            } else if (res.status === 401 || res.status === 403) {
+              // Permanent scope/auth failure — don't waste retries.
+              retryQueue.delete(key);
+              retryBackoff.delete(key);
               setSubscriptionStatuses((prev) => {
                 const next = new Map(prev);
                 next.set(key, "scope_error");
                 return next;
               });
               sub.onScopeError?.();
-            }
-            if (!res.ok && res.status !== 409 && res.status !== 401 && res.status !== 403) {
-              setSubscriptionStatuses((prev) => {
-                const next = new Map(prev);
-                next.set(key, "error");
-                return next;
-              });
+            } else {
+              // Retriable (5xx, 429 after internal cooldown, etc.)
+              queueRetry(key);
             }
           } catch (err) {
             console.error(
               `[useEventSub] Subscription error for ${sub.type}:`,
               err,
             );
-            setSubscriptionStatuses((prev) => {
-              const next = new Map(prev);
-              next.set(key, "error");
-              return next;
-            });
+            queueRetry(key);
           }
           if (i < entries.length - 1) {
             await sleep(SUBSCRIPTION_STAGGER_MS);
@@ -269,20 +325,25 @@ export function useEventSub({
           const queued = [...pendingKeysQueue];
           pendingKeysQueue = [];
           void subscribeAll(sid, queued);
+        } else {
+          scheduleRetries();
         }
       }
     };
 
-    const connect = (targetUrl: string) => {
+    const connect = (targetUrl: string, isTwitchReconnect = false) => {
       if (!active) return;
-      ws = new WebSocket(targetUrl);
+      const socketId = ++activeSocketId;
+      const currentWs = new WebSocket(targetUrl);
+      ws = currentWs;
 
-      ws.onopen = () => {
+      currentWs.onopen = () => {
         reconnectDelay = 1000;
       };
 
-      ws.onmessage = async (event) => {
+      currentWs.onmessage = async (event) => {
         if (!active) return;
+        if (ws !== currentWs) return;
         let data: any;
         try {
           data = JSON.parse(event.data as string);
@@ -293,7 +354,7 @@ export function useEventSub({
         const msgType: string | undefined = data?.metadata?.message_type;
 
         if (msgType === "notification") {
-          resetKeepalive(10);
+          resetKeepalive(10, socketId);
           const subType: string | undefined = data?.payload?.subscription?.type;
           if (subType) {
             const incomingCondition =
@@ -335,19 +396,36 @@ export function useEventSub({
           if (!sid) return;
           setSessionId(sid);
           sessionIdRef.current = sid;
-          subscribedKeys.clear();
-          setSubscriptionStatuses(new Map());
-          resetKeepalive(keepaliveTimeout);
+
+          if (isTwitchReconnect) {
+            // Twitch migrates existing subscriptions to the new session.
+            // Keep our local tracking in sync instead of resubscribing.
+            for (const [key] of subscribedKeys) {
+              subscribedKeys.set(key, sid);
+            }
+            setSubscriptionStatuses((prev) => {
+              const next = new Map(prev);
+              for (const [key] of next) {
+                next.set(key, "connected");
+              }
+              return next;
+            });
+          } else {
+            subscribedKeys.clear();
+            setSubscriptionStatuses(new Map());
+          }
+
+          resetKeepalive(keepaliveTimeout, socketId);
           await subscribeAll(sid);
         } else if (msgType === "session_keepalive") {
           const keepaliveTimeout: number =
             data.payload?.session?.keepalive_timeout_seconds ?? 10;
-          resetKeepalive(keepaliveTimeout);
+          resetKeepalive(keepaliveTimeout, socketId);
         } else if (msgType === "session_reconnect") {
           const reconnectUrl: string | undefined =
-            data.payload?.session?.reconnect_url;
-          ws?.close(1000, "reconnect requested by server");
-          if (active) connect(reconnectUrl ?? WS_URL);
+            data?.payload?.session?.reconnect_url;
+          currentWs.close(1000, "reconnect requested by server");
+          if (active) connect(reconnectUrl ?? WS_URL, true);
         } else if (msgType === "revocation") {
           console.warn(
             "[useEventSub] Subscription revoked:",
@@ -356,11 +434,15 @@ export function useEventSub({
         }
       };
 
-      ws.onerror = () => {
+      currentWs.onerror = () => {
         console.error("[useEventSub] WebSocket error");
       };
 
-      ws.onclose = (evt) => {
+      currentWs.onclose = (evt) => {
+        // Ignore events from a socket that has already been replaced by a
+        // newer one. This prevents an old socket from clearing the new session
+        // state after a Twitch-managed reconnect.
+        if (ws !== currentWs) return;
         if (keepaliveTimer) clearTimeout(keepaliveTimer);
         if (!active) return;
         sessionIdRef.current = null;
@@ -376,13 +458,13 @@ export function useEventSub({
           const delay = Math.min(reconnectDelay, MAX_RECONNECT_DELAY_MS);
           reconnectTimer = setTimeout(() => {
             reconnectDelay *= 2;
-            connect(targetUrl);
+            connect(targetUrl, false);
           }, delay);
         }
       };
     };
 
-    connect(WS_URL);
+    connect(WS_URL, false);
 
     triggerResubscribeRef.current = (keys?: string[]) => {
       const sid = sessionIdRef.current;
@@ -400,6 +482,7 @@ export function useEventSub({
       active = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
+      if (retryTimer) clearTimeout(retryTimer);
       if (debounceTimer) clearTimeout(debounceTimer);
       triggerResubscribeRef.current = null;
       sessionIdRef.current = null;

@@ -118,10 +118,11 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     });
 
     act(() => {
+      // `storageArea` is omitted because jsdom's StorageEvent rejects the
+      // mock localStorage; the hook only reads `key` and `newValue`.
       const evt = new StorageEvent("storage", {
         key: "mixchat_drive_granted",
         newValue: JSON.stringify({ ts: Date.now() }),
-        storageArea: localStorage,
         url: window.location.href,
       });
       window.dispatchEvent(evt);
