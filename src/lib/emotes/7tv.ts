@@ -172,6 +172,7 @@ export function subscribeTo7TVChannelUpdates(
   channelId: string,
   channelName: string,
   reinitialize: (channelId: string, channelName: string) => Promise<void>,
+  _isReconnect = false,
 ): () => void {
   if (typeof window === "undefined") return () => {};
 
@@ -202,7 +203,12 @@ export function subscribeTo7TVChannelUpdates(
 
   es.addEventListener("hello", () => {
     console.log("[7TV] EventAPI: Handshake successful (hello received)");
-    setReconnect7tvDelay(RECONNECT_7TV_MIN);
+    // Only reset backoff delay on initial connect; on reconnection the delay
+    // was already increased by the error handler and must be preserved so
+    // exponential backoff actually works.
+    if (!_isReconnect) {
+      setReconnect7tvDelay(RECONNECT_7TV_MIN);
+    }
   });
 
   es.addEventListener("heartbeat", () => {
@@ -268,7 +274,7 @@ export function subscribeTo7TVChannelUpdates(
         setReconnect7tvDelay(
           Math.min(reconnect7tvDelay * 2, RECONNECT_7TV_MAX),
         );
-        subscribeTo7TVChannelUpdates(channelId, channelName, reinitialize);
+        subscribeTo7TVChannelUpdates(channelId, channelName, reinitialize, true);
       }, reconnect7tvDelay),
     );
   };

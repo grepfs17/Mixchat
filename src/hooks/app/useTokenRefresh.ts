@@ -31,6 +31,7 @@ export const useTokenRefresh = (
   const retryCountRef = useRef(0);
   const isRefreshingRef = useRef(false);
   const retryAfterRef = useRef(0); // epoch ms after which we may retry (429 backoff)
+  const initialCheckDoneRef = useRef(false);
 
   const refreshToken = useCallback(async () => {
     // We need at least a session to refresh. The actual refresh token is read
@@ -161,8 +162,11 @@ export const useTokenRefresh = (
       return;
     }
 
-    // Initial check
-    checkAndRefresh();
+    // Run an initial check only once (skip on React StrictMode remount).
+    if (!initialCheckDoneRef.current) {
+      initialCheckDoneRef.current = true;
+      checkAndRefresh();
+    }
 
     // Set up periodic check
     intervalRef.current = setInterval(checkAndRefresh, checkInterval);
