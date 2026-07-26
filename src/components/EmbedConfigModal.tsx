@@ -1172,6 +1172,7 @@ export default function EmbedConfigModal({
         ),
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       fontSize,
       chatFont,

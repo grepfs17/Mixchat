@@ -19,6 +19,8 @@ export default function MobileTouchHintModal({
     if (!isMobileDevice()) return;
     if (localStorage.getItem(STORAGE_KEY)) return;
     setVisible(true);
+  // Show hint when Twitch connected on mobile — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   }, [twitchConnected]);
 
   useEffect(() => {

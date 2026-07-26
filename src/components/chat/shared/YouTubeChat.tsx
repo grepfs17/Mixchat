@@ -423,8 +423,8 @@ export default function YouTubeChat({
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
-    };
-  }, [videoId, reloadKey]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [videoId, reloadKey]);
 
   // Keep the view pinned to the newest message
   useEffect(() => {

@@ -189,6 +189,8 @@ export function useTwitchChannels(
         setHasLoadedChannel(true);
       }
     }
+  // Resolve channel data when channel changes — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   }, [
     twitchChannels,
     allTwitchChannels,

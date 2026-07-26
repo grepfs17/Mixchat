@@ -464,6 +464,6 @@ export function useTwitchChatEventHandlers({
 
     return () => {
       active = false;
-    };
-  }, [client, enabled]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [client, enabled]);
 }

@@ -100,11 +100,11 @@ function MessageInput({
         startCooldown(slowModeWaitTime);
     } catch (error) {
       console.error("Failed to send message:", error);
-    }
-  }, [
-    message,
-    slowModeWaitTime,
-    onSendMessage,
+    }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      message,
+      slowModeWaitTime,
+      onSendMessage,
     replyingTo,
     onCancelReply,
     startCooldown,

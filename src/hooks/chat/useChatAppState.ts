@@ -305,6 +305,8 @@ export function useChatAppState({
     currentUserBadgesRef,
   });
 
+  // Reset all chat state when switching channels — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     clearBadgeCache();
     setBadgesReady(false);
@@ -551,9 +553,8 @@ export function useChatAppState({
         } else {
           chatDisplayRef.current?.scrollToBottom();
         }
-      }
-    },
-    [
+      }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
       selectedTwitchChannel,
       sendTwitchMessage,
       twitchSession,

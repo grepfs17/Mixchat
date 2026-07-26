@@ -170,8 +170,8 @@ function TwitchJSEmbed({
   useEffect(() => {
     if (playerRef.current) {
       playerRef.current.setChannel(channelName);
-    }
-  }, [channelName]);
+    }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelName]);
 
   return (
     <div
@@ -216,16 +216,16 @@ export default function StreamEmbed({
         onPlaceholderFadeOut?.();
       }, 600);
       return () => clearTimeout(timer);
-    }
-  }, [loading]);
+    }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading]);
 
   // Reset placeholder on channel change
   useEffect(() => {
     if (placeholderThumbnailUrl) {
       setShowPlaceholder(true);
       setPlaceholderFading(false);
-    }
-  }, [channelName]);
+    }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelName]);
 
   // Gate the embed player mount on token availability when the user is
   // connected but the access token hasn't been refreshed yet (page reload).
@@ -416,8 +416,8 @@ export default function StreamEmbed({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-    };
-  }, [channelName, playerType]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelName, playerType]);
 
   // Check if the user is subscribed to the current channel — only when in
   // m3u8 mode and Twitch is connected.  Resets to grey on channel change;

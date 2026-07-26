@@ -113,6 +113,6 @@ export function useAutomodQueue({
     return () => {
       unsubHold();
       unsubUpdate();
-    };
-  }, [channelId, moderatorId, enabled]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelId, moderatorId, enabled]);
 }

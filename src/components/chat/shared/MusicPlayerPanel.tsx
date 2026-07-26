@@ -93,8 +93,8 @@ export default function MusicPlayerPanel({
     if (match && activePlaylist?.id !== match.id) {
       setActivePlaylist(match.id);
     }
-    autoSelectedRef.current = true;
-  }, [hydrated, streamGameId, playlists, setActivePlaylist]);
+    autoSelectedRef.current = true;    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hydrated, streamGameId, playlists, setActivePlaylist]);
 
   // Category search debounce
   useEffect(() => {

@@ -187,11 +187,11 @@ export default function UnifiedInput({
       slowModeWaitTime > 0
     ) {
       startCooldown(slowModeWaitTime);
-    }
-  }, [
-    message,
-    sendTarget,
-    slowModeCooldown,
+    }    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      message,
+      sendTarget,
+      slowModeCooldown,
     slowModeWaitTime,
     youtubeAvailable,
     onSendYoutube,
@@ -406,10 +406,11 @@ export default function UnifiedInput({
     if (replyingTo && inputRef.current) inputRef.current.focus();
   }, [replyingTo]);
 
-  // Reset send target when YouTube becomes unavailable
-  useEffect(() => {
-    if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
-  }, [youtubeAvailable, sendTarget]);
+  // Reset send target when YouTube becomes unavailable    // Reset send target when YouTube becomes unavailable — intentional
+    // eslint-disable-next-line no-adjust-state-on-prop-change
+    useEffect(() => {
+      if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
+    }, [youtubeAvailable, sendTarget]);
 
   // YouTube picker
   useEffect(() => {

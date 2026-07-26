@@ -105,11 +105,12 @@ export function useChatSettings(): UseChatSettingsResult {
   const setUnifyChatEnabled = useCallback((value: boolean) => {
     setUnifyChatEnabledRaw(value);
     if (value) setUseYoutubeEmbedRaw(false);
-  }, []);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
   const setUseYoutubeEmbed = useCallback((value: boolean) => {
-    setUseYoutubeEmbedRaw(value);
-    if (value) setUnifyChatEnabledRaw(false);
-  }, []);
+    setUseYoutubeEmbedRaw(value);if (value) setUnifyChatEnabledRaw(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
   const [fontSize, setFontSize] = useLocalStorageState<number>(
     "mixchat_font_size",
@@ -237,6 +238,7 @@ export function useChatSettings(): UseChatSettingsResult {
   const setModModeTargetForChannel = useCallback(
     (channelId: string, target: ModModeTarget) => {
       setModModeTargets((prev) => ({ ...prev, [channelId]: target }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [],
   );

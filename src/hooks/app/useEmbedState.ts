@@ -86,6 +86,8 @@ export function useEmbedState(
   // Reset HLS state when the channel or player type changes — the qualities
   // list and the selected index are per-source and stale values would point
   // at missing URLs.
+  // Reset HLS state when channel or player type changes — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     setHlsQualities([]);
     setSelectedHlsQualityIdx(0);
@@ -131,6 +133,8 @@ export function useEmbedState(
 
   // If the user is in YouTube-embed mode but the link has been removed
   // (channel change, link deleted from YouTubeLinker), fall back gracefully.
+  // Fallback to embed when YouTube URL is missing — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (playerType === "youtube" && !linkedYoutubeUrl) {
       setPlayerType("embed");

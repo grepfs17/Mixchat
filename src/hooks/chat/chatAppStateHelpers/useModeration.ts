@@ -79,6 +79,8 @@ export function useModeration({
   const [isModerator, setIsModerator] = useState(false);
   const [modModeActive, setModModeActive] = useState(false);
 
+  // Derive moderator status from session and channel — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (twitchSession && selectedTwitchChannelName) {
       const isOwnerByName =

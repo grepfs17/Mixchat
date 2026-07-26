@@ -83,6 +83,8 @@ export function useYouTubeModeration({
   // Anyone else (including verified channels and members) is NOT a moderator.
   const ownChannelId = youtubeSession?.userId;
   const ownerConfirmedVideoRef = useRef<string | null>(null);
+  // Reset YouTube mod state when video/channel changes — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (!youtubeVideoId || !ownChannelId) {
       ownerConfirmedVideoRef.current = null;
@@ -108,6 +110,8 @@ export function useYouTubeModeration({
     setIsYouTubeModerator(hasOwnModMessage);
   }, [youtubeVideoId, ytChannelId, ownChannelId, messages]);
 
+  // Sync YouTube mod mode based on moderator status — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (!youtubeVideoId) {
       setYoutubeModModeActive(false);

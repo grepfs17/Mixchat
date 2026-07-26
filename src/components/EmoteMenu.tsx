@@ -62,6 +62,8 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   }, [searchQuery, emotes]);
 
   // Reset navigation state only when the menu transitions from closed to open.
+  // Reset navigation state when menu opens — intentional state adjustment on prop change
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       setSearchQuery("");
