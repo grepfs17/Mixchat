@@ -88,6 +88,7 @@ export function MenuItem({
     <div
       role="option"
       aria-selected={isSelected}
+      tabIndex={-1}
       onClick={() => onSelect(index)}
       className={`${className}${isSelected ? " selected" : ""}`}
       title={title}
