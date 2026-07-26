@@ -1096,11 +1096,11 @@ export const getRecentMessages = async (
                 const adjusted: Record<string, string[]> = {};
                 for (const [id, positions] of Object.entries(emotes)) {
                   const shiftedPositions = positions
-                    .map((pos) => {
+                    .flatMap((pos) => {
                       const [s, e] = pos.split("-").map(Number);
-                      return `${s - emoteOffset}-${e - emoteOffset}`;
-                    })
-                    .filter((pos) => Number(pos.split("-")[0]) >= 0);
+                      const shifted = `${s - emoteOffset}-${e - emoteOffset}`;
+                      return Number(shifted.split("-")[0]) >= 0 ? [shifted] : [];
+                    });
                   if (shiftedPositions.length > 0)
                     adjusted[id] = shiftedPositions;
                 }

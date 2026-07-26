@@ -20,6 +20,7 @@ export async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
     const response = await fetch(
       "/api/twitch-proxy?path=/helix/chat/emotes/global",
     );
+    if (!response.ok) return {};
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -52,6 +53,7 @@ export async function fetchTwitchChannelEmotes(
     const response = await fetch(
       `/api/twitch-proxy?path=/helix/chat/emotes&broadcaster_id=${encodeURIComponent(channelId)}`,
     );
+    if (!response.ok) return {};
     const data = await response.json();
 
     const emotes: EmoteMap = {};
@@ -193,7 +195,8 @@ export async function fetchUserEmotesByChannel(
       if (!groupMap.has(emote.ownerId)) {
         groupMap.set(emote.ownerId, {});
       }
-      groupMap.get(emote.ownerId)![emote.name] = emote.url;
+      const group = groupMap.get(emote.ownerId);
+      if (group) group[emote.name] = emote.url;
     }
 
     // Resolve owner IDs → display names + profile images

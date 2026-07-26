@@ -175,11 +175,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
     // Merge and sort messages
     const entries: UnifiedEntry[] = useMemo(() => {
       const tw: UnifiedEntry[] = twitchMessages
-        .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
-        .map((m) => ({ source: "twitch" as const, msg: m }));
+        .flatMap((m) => (!ignoredSet.has(m.author.toLowerCase()) ? [{ source: "twitch" as const, msg: m }] : []));
       const yt: UnifiedEntry[] = ytMessages
-        .filter((m) => !ignoredSet.has(m.author.toLowerCase()))
-        .map((m) => ({ source: "youtube" as const, msg: m }));
+        .flatMap((m) => (!ignoredSet.has(m.author.toLowerCase()) ? [{ source: "youtube" as const, msg: m }] : []));
       const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
       return merged.length > MAX_DISPLAYED_MESSAGES
         ? merged.slice(-MAX_DISPLAYED_MESSAGES)
