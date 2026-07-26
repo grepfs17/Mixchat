@@ -211,10 +211,10 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         return !hasReal;
       });
 
-      if (selectedPlatforms.length > 0) {
-        filtered = filtered.filter((msg) =>
-          selectedPlatforms.includes(msg.platform),
-        );
+      if (selectedPlatforms.length > 0) {        const platformSet = new Set(selectedPlatforms);
+          filtered = filtered.filter((msg) =>
+            platformSet.has(msg.platform),
+          );
       }
 
       const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));

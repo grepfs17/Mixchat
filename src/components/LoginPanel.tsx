@@ -181,15 +181,17 @@ function LoginPanel({
         {twitchConnected && twitchUser ? (
           <div className="connected-info">
             <div className="user-profile-container">
-              <div
-                className="user-profile-link"
-                onClick={() => {
-                  if (twitchUserId || twitchUserName) {
-                    onChannelChange?.(twitchUserId || twitchUserName!);
-                    onRequestClose?.();
-                  }
-                }}
-                title={`Switch to ${twitchUser}'s channel`}
+        <div  role="button"
+          tabIndex={0}
+          className="user-profile-link"
+          onClick={() => {
+          if (twitchUserId || twitchUserName) {
+            onChannelChange?.(twitchUserId || twitchUserName!);
+            onRequestClose?.();
+          }
+        }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } } }}
+        title={`Switch to ${twitchUser}'s channel`}
               >
                 {twitchProfileImage && (
                   <img
@@ -237,12 +239,14 @@ function LoginPanel({
 
             {twitchChannels && twitchChannels.length > 0 && (
               <div className="channels-section">
-                <label className="section-label">
+                <label className="section-label" htmlFor="login-channel-search">
                   Channels ({filteredChannels.length})
                 </label>
                 <input
+                  id="login-channel-search"
                   type="text"
                   placeholder="Search channels..."
+                  aria-label="Search channels"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="channel-search-input"
@@ -251,11 +255,14 @@ function LoginPanel({
                   {filteredChannels.map((channel) => (
                     <div
                       key={channel.id}
+                      role="button"
+                      tabIndex={0}
                       className={`channel-item ${selectedTwitchChannel === channel.id ? "selected" : ""}`}
                       onClick={() => {
                         onChannelChange?.(channel.id);
                         onRequestClose?.();
                       }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onChannelChange?.(channel.id); onRequestClose?.(); } }}
                       title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
                     >
                       {channel.profileImageUrl ? (
@@ -265,7 +272,7 @@ function LoginPanel({
                             alt={channel.displayName}
                             className="channel-item-image"
                           />
-                          {linkedYoutubeChannelIds.includes(channel.id) && (
+                          {new Set(linkedYoutubeChannelIds).has(channel.id) && (
                             <FaYoutube
                               size={13}
                               className="channel-item-yt-badge"
@@ -273,7 +280,7 @@ function LoginPanel({
                             />
                           )}
                         </span>
-                      ) : linkedYoutubeChannelIds.includes(channel.id) ? (
+                      ) : new Set(linkedYoutubeChannelIds).has(channel.id) ? (
                         <span className="channel-item-avatar-wrap">
                           <span className="channel-item-image channel-item-image--placeholder" />
                           <FaYoutube
@@ -305,14 +312,14 @@ function LoginPanel({
                           e.stopPropagation(); // Don't also select the channel when toggling a favorite
                           onToggleFavorite?.(channel.id);
                         }}
-                        className={`favorite-button ${favoriteChannels.includes(channel.id) ? "active" : ""}`}
+                        className={`favorite-button ${new Set(favoriteChannels).has(channel.id) ? "active" : ""}`}
                         title={
-                          favoriteChannels.includes(channel.id)
+                          new Set(favoriteChannels).has(channel.id)
                             ? "Remove from favorites"
                             : "Add to favorites"
                         }
                       >
-                        {favoriteChannels.includes(channel.id) ? (
+                        {new Set(favoriteChannels).has(channel.id) ? (
                           <FaStar size={16} />
                         ) : (
                           <FaRegStar size={16} />
@@ -322,15 +329,15 @@ function LoginPanel({
                   ))}
                 </div>
 
-                <div className="manual-join-section">
-                  <label className="section-label">Or join manually</label>
+                <div className="manual-join-section">                  <label className="section-label" htmlFor="login-manual-join">Or join manually</label>
                   <form onSubmit={handleManualJoin} className="join-form">
                     <input
+                      id="login-manual-join"
                       type="text"
                       value={manualChannel}
                       onChange={(e) => setManualChannel(e.target.value)}
-                    placeholder="Enter channel name"
-                    aria-label="Channel name"
+                      placeholder="Enter channel name"
+                      aria-label="Channel name"
                     className="join-input"
                     />
                     <button

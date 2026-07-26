@@ -23,7 +23,7 @@ export default function FavoriteChannelsModal({
     const favs: TwitchChannel[] = [];
     const others: TwitchChannel[] = [];
     for (const ch of allChannels) {
-      if (favoriteChannels.includes(ch.id)) {
+      if (new Set(favoriteChannels).has(ch.id)) {
         favs.push(ch);
       } else {
         others.push(ch);
@@ -91,6 +91,7 @@ export default function FavoriteChannelsModal({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="favorites-search-input"
+            aria-label="Search all followed channels"
           />
           {searchQuery && (
             <button type="button"
@@ -112,9 +113,12 @@ export default function FavoriteChannelsModal({
               </div>
               {filteredFavorites.map((channel) => (
                 <div key={channel.id} className="favorites-channel-item favorites-channel-item--active">
-                  <div
-                    className="favorites-channel-info"
-                    onClick={() => handleSelect(channel.id)}
+        <div
+          role="button"
+          tabIndex={0}
+          className="favorites-channel-info"
+          onClick={() => handleSelect(channel.id)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(channel.id); } }}
                   >
                     {channel.profileImageUrl && (
                       <img
@@ -151,9 +155,12 @@ export default function FavoriteChannelsModal({
               </div>
               {filteredOthers.map((channel) => (
                 <div key={channel.id} className="favorites-channel-item">
-                  <div
-                    className="favorites-channel-info"
-                    onClick={() => handleSelect(channel.id)}
+        <div
+          role="button"
+          tabIndex={0}
+          className="favorites-channel-info"
+          onClick={() => handleSelect(channel.id)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(channel.id); } }}
                   >
                     {channel.profileImageUrl && (
                       <img

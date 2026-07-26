@@ -28,6 +28,7 @@ export function ContextMenuShell({
   return createPortal(
     <div
       ref={menuRef}
+      role="menu"
       className={["context-menu", extraClass].filter(Boolean).join(" ")}
       onContextMenu={onContextMenu ?? ((e) => e.stopPropagation())}
       onClick={onClick ?? ((e) => e.stopPropagation())}

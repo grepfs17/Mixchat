@@ -373,14 +373,10 @@ function PresetMessages({
         )}
 
       {showModal &&
-        createPortal(
-          <div
-            className="preset-modal-overlay"
-            onClick={() => {
-              setShowModal(false);
-              setEditingPreset(null);
-            }}
-          >
+        createPortal(        <div className="preset-modal-overlay" role="presentation" onClick={() => {
+          setShowModal(false);
+          setEditingPreset(null);
+        }}>
             <div
               className="preset-modal"
               ref={modalRef}
@@ -388,8 +384,9 @@ function PresetMessages({
             >
               <div className="preset-modal-header">
                 <h2>{editingPreset ? "Edit Preset" : "Preset Messages"}</h2>
-                <button type="button"
-                  className="preset-modal-close"
+        <button type="button"
+          className="preset-modal-close"
+          aria-label="Close preset messages"
                   onClick={() => {
                     setShowModal(false);
                     setEditingPreset(null);
@@ -401,8 +398,9 @@ function PresetMessages({
 
               <div className="preset-modal-form">
                 <div className="preset-modal-field">
-                  <label className="preset-modal-label">Name</label>
+                  <label className="preset-modal-label" htmlFor="preset-name-input">Name</label>
                   <input
+                    id="preset-name-input"
                     type="text"
                     className="preset-modal-input"
                     placeholder="e.g. Welcome message"
@@ -416,8 +414,9 @@ function PresetMessages({
                   className="preset-modal-field"
                   style={{ position: "relative" }}
                 >
-                  <label className="preset-modal-label">Message</label>
+                  <label className="preset-modal-label" htmlFor="preset-message-input">Message</label>
                   <textarea
+                    id="preset-message-input"
                     ref={textareaRef}
                     className="preset-modal-textarea"
                     placeholder="Type the message content... (emote autocomplete available)"

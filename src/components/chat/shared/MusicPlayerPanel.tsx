@@ -176,9 +176,10 @@ export default function MusicPlayerPanel({
           ))}
         </select>
         {renamingId === activePlaylist.id ? (
-          <input
-            autoFocus
-            className="music-player-input music-player-rename"
+  <input
+    autoFocus
+    className="music-player-input music-player-rename"
+    aria-label="Rename playlist"
             value={renameDraft}
             onChange={(e) => setRenameDraft(e.target.value)}
             onBlur={() => {

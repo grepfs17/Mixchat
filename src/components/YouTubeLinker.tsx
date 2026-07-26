@@ -149,10 +149,12 @@ export default function YouTubeLinker({
         <div className="ytlinker-add-section">
           <div className="ytlinker-inputs">
             <div className="ytlinker-channel-select">
-              <label className="ytlinker-label">Twitch Channel</label>
+              <label className="ytlinker-label" htmlFor="yt-linker-channel-search">Twitch Channel</label>
               <input
+                id="yt-linker-channel-search"
                 type="text"
                 placeholder="Search followed channels..."
+                aria-label="Search followed channels"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -206,10 +208,12 @@ export default function YouTubeLinker({
             </div>
 
             <div className="ytlinker-url-input">
-              <label className="ytlinker-label">YouTube Channel URL</label>
+              <label className="ytlinker-label" htmlFor="yt-linker-url">YouTube Channel URL</label>
               <input
+                id="yt-linker-url"
                 type="text"
                 placeholder="https://www.youtube.com/@channelname"
+                aria-label="YouTube channel URL"
                 value={youtubeUrl}
                 onChange={(e) => {
                   setYoutubeUrl(e.target.value);
@@ -259,19 +263,19 @@ export default function YouTubeLinker({
                         {link.twitchDisplayName}
                       </div>
                       {isEditing ? (
-                        <div className="ytlinker-edit-row">
-                          <input
-                            type="text"
-                            value={editUrl}
-                            onChange={(e) => {
-                              setEditUrl(e.target.value);
-                              setEditError("");
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleEditSave();
-                              if (e.key === "Escape") handleEditCancel();
-                            }}
-                            className="ytlinker-edit-input"
+                        <div className="ytlinker-edit-row">  <input
+    type="text"
+    value={editUrl}
+    onChange={(e) => {
+      setEditUrl(e.target.value);
+      setEditError("");
+    }}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") handleEditSave();
+      if (e.key === "Escape") handleEditCancel();
+    }}
+    className="ytlinker-edit-input"
+    aria-label="Edit video URL"
                             autoFocus
                           />
                           {editError && (

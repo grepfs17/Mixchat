@@ -312,6 +312,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             ref={searchInputRef}
             type="text"
             placeholder="Search all emotes..."
+            aria-label="Search all emotes"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="emote-search-input"

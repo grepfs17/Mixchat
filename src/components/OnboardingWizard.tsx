@@ -686,15 +686,15 @@ export default function OnboardingWizard({
 
               <div className="onboarding-typography">
                 <div className="onboarding-typography-row">
-                  <label className="onboarding-typography-label">
+                  <label className="onboarding-typography-label" htmlFor="onboarding-font-size">
                     Font size
                     <span className="onboarding-typography-value">
                       {fontSize}px
                     </span>
-                  </label>
-                  <div className="onboarding-typography-controls">
+                  </label>                  <div className="onboarding-typography-controls">
                     <span className="onboarding-typography-bound">A</span>
                     <input
+                      id="onboarding-font-size"
                       type="range"
                       min="12"
                       max="22"
@@ -711,8 +711,8 @@ export default function OnboardingWizard({
                   </div>
                 </div>
                 <div className="onboarding-typography-row">
-                  <label className="onboarding-typography-label">Font</label>
-                  <div className="onboarding-typography-fonts">
+                  <label className="onboarding-typography-label" id="onboarding-font-label">Font</label>
+                  <div className="onboarding-typography-fonts" role="radiogroup" aria-labelledby="onboarding-font-label">
                     {CHAT_FONT_OPTIONS.map(({ value, label }) => (
                       <button
                         key={value}
@@ -799,6 +799,7 @@ export default function OnboardingWizard({
                                   type="checkbox"
                                   checked={value}
                                   onChange={() => handleSettingToggle(s.key)}
+                                  aria-label={s.label}
                                 />
                                 <span className="onboarding-toggle-slider" />
                               </label>

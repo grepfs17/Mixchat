@@ -271,6 +271,7 @@ export default function YouTubePanel({
                   type="text"
                   placeholder="e.g. zFQFquAw74o"
                   className="channel-search"
+                  aria-label="YouTube video ID or URL"
                   style={{
                     padding: "6px 10px",
                     fontSize: "13px",

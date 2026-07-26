@@ -721,6 +721,7 @@ export default function UnifiedInput({
                 placeholder="Search emoji..."
                 value={ytPickerSearch}
                 onChange={(e) => setYtPickerSearch(e.target.value)}
+                aria-label="Search emoji"
                 className="yt-emoji-picker-search-input"
               />
             </div>

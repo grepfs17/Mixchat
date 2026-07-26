@@ -109,7 +109,9 @@ export default function SplitChat({
             zIndex: 10,
             transition: isDraggingChatSplit ? "none" : "background-color 0.2s",
           }}
-          onMouseDown={() => onSetIsDraggingChatSplit(true)}
+          role="separator"
+        aria-orientation="vertical"
+        onMouseDown={() => onSetIsDraggingChatSplit(true)}
           onMouseEnter={(e) =>
             !isDraggingChatSplit &&
             (e.currentTarget.style.backgroundColor = "#6366f1")

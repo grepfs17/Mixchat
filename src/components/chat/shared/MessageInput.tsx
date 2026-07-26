@@ -50,7 +50,7 @@ function MessageInput({
 }: MessageInputProps) {
   const { isModerator } = useModerationContext();
   const [message, setMessage] = useState("");
-  const selectedPlatforms: Platform[] = ["twitch"];
+const SELECTED_PLATFORMS: Platform[] = ["twitch"];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const shouldRefocusRef = useRef(false);
@@ -85,10 +85,10 @@ function MessageInput({
 
   // --- Shared send ---
   const handleSend = useCallback(async () => {
-    if (!message.trim() || selectedPlatforms.length === 0) return;
+    if (!message.trim() || SELECTED_PLATFORMS.length === 0) return;
     try {
       if (!isMobileDevice()) shouldRefocusRef.current = true;
-      await onSendMessage(message, selectedPlatforms, replyingTo?.id);
+      await onSendMessage(message, SELECTED_PLATFORMS, replyingTo?.id);
       setMessage("");
       emoteAC.hide();
       usernameAC.hide();
@@ -302,13 +302,13 @@ function MessageInput({
         <PresetMessages
           onSendMessage={onSendMessage}
           isLoading={isLoading}
-          selectedPlatforms={selectedPlatforms}
+          selectedPlatforms={SELECTED_PLATFORMS}
           replyingTo={replyingTo}
           onCancelReply={onCancelReply}
         />
         <button type="button"
           onClick={() => setShowEmotePicker(!showEmotePicker)}
-          disabled={selectedPlatforms.length === 0 || isLoading}
+          disabled={SELECTED_PLATFORMS.length === 0 || isLoading}
           className="emote-picker-button"
           title="Browse emotes"
         >
@@ -321,7 +321,8 @@ function MessageInput({
           onKeyDown={handleKeyPress}
           onFocus={onInputFocus}
           placeholder="Send to Twitch..."
-          disabled={selectedPlatforms.length === 0 || isLoading}
+          aria-label="Send message to Twitch"
+          disabled={SELECTED_PLATFORMS.length === 0 || isLoading}
           className="message-textarea"
           autoComplete="off"
           autoCapitalize="off"
@@ -433,7 +434,7 @@ function MessageInput({
           </div>
         )}
 
-      {selectedPlatforms.length === 0 && (
+      {SELECTED_PLATFORMS.length === 0 && (
         <div className="warning">
           Select at least one platform to send messages
         </div>

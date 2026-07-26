@@ -823,6 +823,7 @@ export default function StreamerToolsModal({
 
   return (
     <div
+      role="presentation"
       className="embed-config-overlay"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose();

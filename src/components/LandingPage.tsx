@@ -264,8 +264,8 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       </div>
 
       <div className="landing-features">
-        {features.map((feature, i) => (
-          <section key={i} className="landing-feature landing-reveal">
+        {features.map((feature) => (
+          <section key={feature.title} className="landing-feature landing-reveal">
             <div className="landing-feature-text">
               <h2 className="landing-feature-title">{feature.title}</h2>
               <p className="landing-feature-description">

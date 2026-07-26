@@ -70,8 +70,8 @@ export default function HypeTrainBanner({
         {hypeTrain.topContributors.length > 0 && (
           <div className="hype-train-contributors">
             <span className="hype-train-contributors-label">Top:</span>
-            {hypeTrain.topContributors.slice(0, 3).map((contributor, idx) => (
-              <span key={idx} className="hype-train-contributor">
+            {hypeTrain.topContributors.slice(0, 3).map((contributor) => (
+              <span key={contributor.displayName} className="hype-train-contributor">
                 {contributor.displayName} ({contributor.points.toLocaleString()}
                 )
               </span>
