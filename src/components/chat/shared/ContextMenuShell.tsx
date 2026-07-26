@@ -29,9 +29,11 @@ export function ContextMenuShell({
     <div
       ref={menuRef}
       role="menu"
+      tabIndex={-1}
       className={["context-menu", extraClass].filter(Boolean).join(" ")}
       onContextMenu={onContextMenu ?? ((e) => e.stopPropagation())}
       onClick={onClick ?? ((e) => e.stopPropagation())}
+      onKeyDown={(e) => { if (e.key === "Escape") e.stopPropagation(); }}
       style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
     >
       {children}

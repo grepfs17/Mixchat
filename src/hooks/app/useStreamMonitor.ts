@@ -79,8 +79,9 @@ export function useStreamMonitor({
       }
 
       // Check for streamers that went offline
+      const liveIds = new Set(nowLive.map((s) => s.id));
       for (const streamerId of notifiedStreamers) {
-        if (!nowLive.find((s) => s.id === streamerId)) {
+        if (!liveIds.has(streamerId)) {
           markStreamerOffline(streamerId);
         }
       }

@@ -66,8 +66,8 @@ function ThirdPartyEmoteNode({
   return (
     <span className="emote-overlay-container">
       {img}
-      {token.overlays.map((ov, i) => (
-        <span className="emote-overlay" key={`${ov.name}-${i}`}>
+      {token.overlays.map((ov) => (
+        <span className="emote-overlay" key={ov.name}>
           <img
             src={ov.url}
             alt={ov.name}

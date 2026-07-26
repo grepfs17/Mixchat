@@ -694,6 +694,7 @@ export default function AppContainer() {
                 }}
                 role="separator"
         aria-orientation="vertical"
+        tabIndex={0}
         onMouseDown={() => setIsDragging(true)}
                 onMouseEnter={(e) =>
                   !isDragging &&

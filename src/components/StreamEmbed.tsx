@@ -244,7 +244,7 @@ export default function StreamEmbed({
 
   useEffect(() => {
     fetch("/api/parent-domain")
-      .then((res) => res.json())
+      .then((res) => (res.ok ? res.json() : { parentDomain: "localhost" }))
       .then((data) => setParentDomain(data.parentDomain ?? "localhost"))
       .catch(() => setParentDomain("localhost"));
   }, []);
