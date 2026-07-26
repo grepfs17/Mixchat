@@ -68,6 +68,8 @@ export interface ChatDisplayHandle {
   scrollToBottom: () => void;
 }
 
+const EMPTY_STRING_ARRAY: string[] = [];
+
 const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
   function ChatDisplay(
     {
@@ -96,7 +98,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       unifiedChatSlot,
       splitChatEnabled = false,
       hideViewerCount = false,
-      ignoredUsers = [],
+      ignoredUsers = EMPTY_STRING_ARRAY,
       onUpdateTitle,
       onUpdateCategory,
       onSearchCategories,

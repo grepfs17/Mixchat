@@ -718,6 +718,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
                   else if (e.key === "Escape") setEditingTitle(false);
                 }}
                 placeholder="Stream title"
+                aria-label="Stream title"
                 autoFocus
                 disabled={savingTitle}
               />
@@ -804,6 +805,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
                     });
                 }}
                 placeholder="Search category..."
+                aria-label="Search category"
                 autoFocus
                 disabled={savingCategory}
               />

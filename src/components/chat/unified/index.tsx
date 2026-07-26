@@ -52,6 +52,8 @@ export interface UnifiedChatHandle {
   scrollToBottom: () => void;
 }
 
+const EMPTY_STRING_ARRAY: string[] = [];
+
 const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
   function UnifiedChat(
     {
@@ -68,7 +70,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       fontSize = 14,
       chatFont = "inter" as ChatFont,
       splitChatEnabled = false,
-      ignoredUsers = [],
+      ignoredUsers = EMPTY_STRING_ARRAY,
       showDeletedMessages = false,
       renderThirdPartyEmotesOnYoutube = false,
     }: UnifiedChatProps,

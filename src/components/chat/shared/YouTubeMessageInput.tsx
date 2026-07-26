@@ -36,9 +36,11 @@ interface YouTubeMessageInputProps {
   onOptimisticFailed?: (id: string) => void;
 }
 
+const EMPTY_YT_MESSAGES: YTMessage[] = [];
+
 export default function YouTubeMessageInput({
   youtubeVideoId,
-  chatMessages = [],
+  chatMessages = [] as YTMessage[],
   onError,
   onOptimisticMessage,
   onOptimisticFailed,

@@ -23,6 +23,8 @@ interface TwitchChannel {
   gameName?: string;
 }
 
+const EMPTY_STRING_ARRAY: string[] = [];
+
 interface LoginPanelProps extends Partial<SettingsProps> {
   twitchConnected: boolean;
   twitchUser?: string;
@@ -53,9 +55,9 @@ function LoginPanel({
   twitchProfileImage,
   twitchUserName,
   twitchUserId,
-  twitchChannels = [],
+  twitchChannels = EMPTY_STRING_ARRAY as unknown as TwitchChannel[],
   selectedTwitchChannel = "",
-  favoriteChannels = [],
+  favoriteChannels = EMPTY_STRING_ARRAY,
   onChannelChange,
   onToggleFavorite,
   onTwitchLogin,
@@ -66,7 +68,7 @@ function LoginPanel({
   onYoutubeLogout,
   onManageWatchlist,
   onManageYoutubeLinks,
-  linkedYoutubeChannelIds = [],
+  linkedYoutubeChannelIds = EMPTY_STRING_ARRAY,
   embedDefaultOpen = true,
   onEmbedDefaultOpenChange,
   unifyChatEnabled = false,
@@ -111,7 +113,7 @@ function LoginPanel({
   onYoutubeDriveLogin = () => {},
   onGoHome,
   onRequestClose,
-  ignoredUsers = [],
+  ignoredUsers = EMPTY_STRING_ARRAY,
   onIgnoredUsersChange,
   streamerToolsEnabled = false,
   onStreamerToolsEnabledChange,
@@ -327,8 +329,9 @@ function LoginPanel({
                       type="text"
                       value={manualChannel}
                       onChange={(e) => setManualChannel(e.target.value)}
-                      placeholder="Enter channel name"
-                      className="join-input"
+                    placeholder="Enter channel name"
+                    aria-label="Channel name"
+                    className="join-input"
                     />
                     <button
                       type="submit"

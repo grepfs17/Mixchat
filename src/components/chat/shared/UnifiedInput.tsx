@@ -68,12 +68,14 @@ interface UnifiedInputProps {
   youtubeAvailable?: boolean;
 }
 
+const EMPTY_YT_MSG_ARRAY: YTMessage[] = [];
+
 export default function UnifiedInput({
   onSendMessage,
   isLoading,
   replyingTo,
   onCancelReply,
-  chatMessages = [],
+  chatMessages = EMPTY_YT_MSG_ARRAY as any,
   currentUsername = "",
   onInputFocus,
   slowModeWaitTime = null,
@@ -81,7 +83,7 @@ export default function UnifiedInput({
   isFollowing = null,
   channelName = "",
   youtubeVideoId = null,
-  ytChatMessages = [],
+  ytChatMessages = EMPTY_YT_MSG_ARRAY,
   onSendYoutube,
   onOptimisticYoutube,
   onOptimisticYoutubeFailed,
