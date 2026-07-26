@@ -189,6 +189,9 @@ export default function YTMessageParts({
   // Twemoji only touches text content — existing <img> elements (YouTube
   // custom emojis, 7TV/BTTV/FFZ emotes) are left untouched.
   const containerRef = useRef<HTMLSpanElement>(null);
+  // renderUnicodeEmojis is a stable imported helper; adding it to deps would
+  // be redundant and trigger an unnecessary re-layout on every emote-map bump.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (containerRef.current) {
       renderUnicodeEmojis(containerRef.current);

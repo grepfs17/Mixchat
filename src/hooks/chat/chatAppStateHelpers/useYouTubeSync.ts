@@ -153,6 +153,12 @@ export function useYouTubeSync({
     };
   }, [linkedYoutubeUrl, showYoutubeSection]);
 
+  // Reset all YouTube state when the user switches Twitch channels. This is
+  // intentional — stale video IDs, messages, and error state from the previous
+  // channel must be cleared before the new channel's data loads. Deriving
+  // these values during render is not feasible because they include mutable
+  // refs (deletedRef) and async-fetched data (autoVideoId, ytMessages).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setManualVideoId("");
     setAutoVideoId(null);
