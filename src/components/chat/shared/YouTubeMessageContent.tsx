@@ -193,9 +193,21 @@ export function YouTubeMessageContent({
           <span
             className="author"
             style={{ color: config.color }}
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               e.stopPropagation();
               onUsernameClick?.(e, msg.author, msg.authorAvatar);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onUsernameClick?.(
+                  e as unknown as React.MouseEvent,
+                  msg.author,
+                  msg.authorAvatar,
+                );
+              }
             }}
           >
             {msg.author}
@@ -296,15 +308,26 @@ export function YouTubeMessageContent({
           style={{
             color: getReadableUsernameColor(getColorFromName(msg.author)),
           }}
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.stopPropagation();
             onUsernameClick?.(e, msg.author, msg.authorAvatar);
-          }}
-        >
-          {msg.author}
-        </span>
-        <span className="message-separator">:</span>
-        {msg.isDeleted && !deletedRevealed ? (
+          }}            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onUsernameClick?.(
+                  e as unknown as React.MouseEvent,
+                  msg.author,
+                  msg.authorAvatar,
+                );
+              }
+            }}
+          >
+            {msg.author}
+          </span>
+          <span className="message-separator">:</span>
+          {msg.isDeleted && !deletedRevealed ? (
           <span className="message-text deleted-clickable">
             {formatDeletedByText(msg.deletedByText)}{" "}
             {showDeletedMessages ? (

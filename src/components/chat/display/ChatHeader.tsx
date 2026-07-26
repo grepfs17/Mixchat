@@ -742,9 +742,18 @@ const FRIENDLY_NAMES: Record<string, string> = {
           ) : (
             <span
               className="stream-info-title"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 setTitleInput(streamTitle || "");
                 setEditingTitle(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setTitleInput(streamTitle || "");
+                  setEditingTitle(true);
+                }
               }}
               title="Click to edit title"
             >
@@ -825,12 +834,21 @@ const FRIENDLY_NAMES: Record<string, string> = {
           ) : (
             <span
               className="stream-info-category"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 setCategoryInput(streamGameName || "");
                 setEditingCategory(true);
                 onSearchCategories?.(streamGameName || "").then((results) =>
                   setCategoryResults(results),
                 );
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setCategoryInput(streamGameName || "");
+                  setEditingCategory(true);
+                }
               }}
               title="Click to change category"
             >

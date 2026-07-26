@@ -227,12 +227,19 @@ function TwitchMessageContentBase({
         onTouchMove={onTouchMove}
         onContextMenu={handleCtx}
       >
-        {msg.replyTo && (
-          <div
-            className="reply-info reply-info-clickable"
-            onClick={() => onScrollToMessage(msg.replyTo!.id)}
-            title="Jump to original message"
-          >
+        {msg.replyTo && (            <div
+              className="reply-info reply-info-clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => onScrollToMessage(msg.replyTo!.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onScrollToMessage(msg.replyTo!.id);
+                }
+              }}
+              title="Jump to original message"
+            >
             <span className="reply-info-label">
               <span>response to <span>&nbsp;</span></span>
               <span style={{ color: replyAuthorColor }}>
@@ -288,10 +295,13 @@ function TwitchMessageContentBase({
           </a>
           <span className="message-separator">:</span>
           {msg.isDeleted && !deletedRevealed ? (
-            <span
-              className="message-text deleted-clickable"
-              onClick={() => setDeletedRevealed(true)}
-            >
+        <span
+          className="message-text deleted-clickable"
+          role="button"
+          tabIndex={0}
+          onClick={() => setDeletedRevealed(true)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDeletedRevealed(true); } }}
+        >
               click to see the deleted message
             </span>
           ) : (

@@ -86,6 +86,8 @@ export function MenuItem({
 }: MenuItemProps) {
   return (
     <div
+      role="option"
+      aria-selected={isSelected}
       onClick={() => onSelect(index)}
       className={`${className}${isSelected ? " selected" : ""}`}
       title={title}

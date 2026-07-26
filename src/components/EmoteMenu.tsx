@@ -115,6 +115,14 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             setSearchQuery("");
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (!isDisabled) onSelectEmote(emote.name);
+          }
+        }}
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
         title={emote.name}
       >
         <button type="button"

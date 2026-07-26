@@ -347,11 +347,13 @@ function PresetMessages({
                 </button>
               </div>
             ) : (
-              presets.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="preset-dropdown-item"
-                  onClick={() => handleSendPreset(preset)}
+              presets.map((preset) => (                    <div
+                      key={preset.id}
+                      role="button"
+                      tabIndex={0}
+                      className="preset-dropdown-item"
+                      onClick={() => handleSendPreset(preset)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSendPreset(preset); } }}
                 >
                   <div className="preset-dropdown-item-info">
                     <span className="preset-dropdown-item-name">
@@ -439,11 +441,13 @@ function PresetMessages({
                           maxHeight: "40vh",
                         }}
                       >
-                        {emoteResults.map((emote, index) => (
-                          <div
-                            key={`${emote.source}-${emote.name}`}
-                            onClick={() => insertEmote(emote.name)}
-                            className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
+                        {emoteResults.map((emote, index) => (    <div
+      key={`${emote.source}-${emote.name}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => insertEmote(emote.name)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); insertEmote(emote.name); } }}
+      className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
                             onMouseEnter={() => {
                               setSelectedEmoteIndex(index);
                               setHasEmoteSelection(true);
