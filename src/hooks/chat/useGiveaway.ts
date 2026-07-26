@@ -164,10 +164,7 @@ export function useGiveaway({
   const bufferRef = useRef<Map<string, GiveawayEntry>>(new Map());
   const ingestedIdsRef = useRef<Set<string>>(new Set());
 
-  const config: GiveawayConfig = useMemo(
-    () => ({ keyword, durationSeconds: duration, scope, eligibility }),
-    [keyword, duration, scope, eligibility],
-  );
+  const config: GiveawayConfig = { keyword, durationSeconds: duration, scope, eligibility };
 
   const liveEntries = useMemo<GiveawayEntry[]>(() => {
     if (phase !== "running" && phase !== "revealed") return [];

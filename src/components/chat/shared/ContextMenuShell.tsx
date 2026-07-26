@@ -30,6 +30,7 @@ export function ContextMenuShell({
       ref={menuRef}
       role="menu"
       tabIndex={-1}
+      aria-label="Context menu"
       className={["context-menu", extraClass].filter(Boolean).join(" ")}
       onContextMenu={onContextMenu ?? ((e) => e.stopPropagation())}
       onClick={onClick ?? ((e) => e.stopPropagation())}

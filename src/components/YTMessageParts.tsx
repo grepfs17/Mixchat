@@ -131,7 +131,7 @@ export default function YTMessageParts({
           needSpace = Boolean(tok.text);
         } else {
           out.push(
-            <React.Fragment key={`${key}-e-${i}`}>
+            <React.Fragment key={`${key}-e-${tok.name ?? tok.text ?? i}`}>
               {needSpace ? " " : ""}
               <ThirdPartyEmoteNode token={tok} variant={variant} />
             </React.Fragment>,

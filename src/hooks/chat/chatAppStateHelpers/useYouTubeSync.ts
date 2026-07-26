@@ -105,12 +105,13 @@ export function useYouTubeSync({
       try {
         const params = new URLSearchParams();
         params.append("channelUrl", linkedYoutubeUrl);
-        const res = await fetch(`/api/youtube-live?${params.toString()}`, {
-          signal: abortController.signal,
-        });
-        const data = await res.json();
-        if (cancelled) return;
-        if (res.ok && data.videoId) {
+    const res = await fetch(`/api/youtube-live?${params.toString()}`, {
+      signal: abortController.signal,
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (cancelled) return;
+    if (data.videoId) {
           setAutoVideoId((prev) =>
             prev !== data.videoId ? data.videoId : prev,
           );
