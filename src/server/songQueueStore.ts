@@ -294,10 +294,14 @@ export async function listSessionsForChannel(
     throw err;
   }
   const matches: Array<{ id: string; lastSeenAt: string }> = [];
-  for (const entry of entries) {
-    if (!entry.endsWith(".json")) continue;
-    const sessionId = entry.slice(0, -".json".length);
-    const session = await readSession(opts.baseDir, sessionId);
+  const jsonEntries = entries.filter((e) => e.endsWith(".json"));
+  const sessionResults = await Promise.all(
+    jsonEntries.map(async (e) => {
+      const id = e.slice(0, -".json".length);
+      return { id, session: await readSession(opts.baseDir, id) };
+    }),
+  );
+  for (const { id: sessionId, session } of sessionResults) {
     if (!session) continue;
     if (
       (session.channelName || "").trim().toLowerCase() !== want.name ||
@@ -394,15 +398,16 @@ export async function deleteSessionsByChannel(
   sessionIds: string[],
   channel: { channelName: string; channelPlatform: string },
 ): Promise<{ deleted: number; missing: number }> {
+  const results = await Promise.all(
+    sessionIds.map((sessionId) =>
+      deleteSessionByChannel(opts, sessionId, channel),
+    ),
+  );
   let deleted = 0;
   let missing = 0;
-  for (const sessionId of sessionIds) {
-    const result = await deleteSessionByChannel(opts, sessionId, channel);
-    if (result === "ok") {
-      deleted += 1;
-    } else {
-      missing += 1;
-    }
+  for (const result of results) {
+    if (result === "ok") deleted += 1;
+    else missing += 1;
   }
   return { deleted, missing };
 }

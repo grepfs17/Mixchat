@@ -30,7 +30,13 @@ export function useEmoteMapVersion(): number {
  *
  * The expensive `JSON.parse(localStorage.getItem(...))` is therefore paid at
  * most once per change rather than on every chat re-render.
+ *
+ * Note: useSyncExternalStore would be preferred here but getDisabledEmotes()
+ * returns a new Set on every call, which breaks Object.is referential stability
+ * and causes cascading re-renders. The useState+useEffect pattern with targeted
+ * event listeners is the correct approach for this case.
  */
+// eslint-disable-next-line react/prefer-use-sync-external-store
 export function useDisabledEmotes(): Set<string> {
   const [disabled, setDisabled] = useState<Set<string>>(
     () => getDisabledEmotes(),

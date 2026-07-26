@@ -4,6 +4,12 @@ import { checkRateLimit } from "../../lib/rateLimit";
 // Use configured client id, or fall back to Streamlink's public client id.
 // The public client id is used by many clients and is safe for playback token
 // requests when no private client id is provided.
+function qualityRank(label: string): number {
+  if (label === "audio_only") return -1;
+  const match = label.match(/^(\d+)p/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
 const GQL_CLIENT_ID =
   import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
@@ -228,12 +234,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     }
 
     // Sort highest resolution first, audio_only last.
-    // Labels look like "1080p60 (source)", "720p60", "480p30", "audio_only".
-    const qualityRank = (label: string): number => {
-      if (label === "audio_only") return -1;
-      const match = label.match(/^(\d+)p/);
-      return match ? parseInt(match[1], 10) : 0;
-    };
     qualities.sort((a, b) => qualityRank(b.label) - qualityRank(a.label));
 
     // Check if the user is subscribed (ad-free). We do this server-side
