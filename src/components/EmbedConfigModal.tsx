@@ -50,6 +50,18 @@ const GROUP_LABELS: Record<GroupKey, string> = {
   help: "Help",
 };
 
+const EVENT_SOUND_TYPES = [
+  { key: "subscription", label: "New Subscription" },
+  { key: "resub", label: "Resubscription" },
+  { key: "subgift", label: "Gift Subscription" },
+  { key: "redemption", label: "Channel Points Redemption" },
+  { key: "highlight", label: "Highlighted Message" },
+  { key: "raid", label: "Raid" },
+  { key: "watch-streak", label: "Watch Streak" },
+  { key: "announcement", label: "Announcement" },
+  { key: "reward-gift", label: "Reward Gift" },
+];
+
 interface EmbedConfigModalProps extends SettingsProps {
   onClose: () => void;
 }
@@ -180,17 +192,7 @@ export default function EmbedConfigModal({
     }
   }, [shareLink]);
 
-  const EVENT_SOUND_TYPES = [
-    { key: "subscription", label: "New Subscription" },
-    { key: "resub", label: "Resubscription" },
-    { key: "subgift", label: "Gift Subscription" },
-    { key: "redemption", label: "Channel Points Redemption" },
-    { key: "highlight", label: "Highlighted Message" },
-    { key: "raid", label: "Raid" },
-    { key: "watch-streak", label: "Watch Streak" },
-    { key: "announcement", label: "Announcement" },
-    { key: "reward-gift", label: "Reward Gift" },
-  ];
+
 
   const soundFileInputRef = useRef<HTMLInputElement>(null);
   const [currentEventType, setCurrentEventType] = useState<string>("");
@@ -330,7 +332,7 @@ export default function EmbedConfigModal({
                 {showSection && (
                   <div className="embed-config-theme-section">{section}</div>
                 )}
-                <button
+                <button type="button"
                   onClick={() => onChatThemeChange(value as ChatTheme)}
                   className={`embed-config-theme-btn${chatTheme === value ? " embed-config-theme-btn--active" : ""}`}
                 >
@@ -758,7 +760,7 @@ export default function EmbedConfigModal({
                   }
                 }}
               />
-              <button
+              <button type="button"
                 className="embed-config-ignored-users-add-btn"
                 disabled={!ignoredUserInput.trim()}
                 onClick={() => {
@@ -785,7 +787,7 @@ export default function EmbedConfigModal({
                     <span className="embed-config-ignored-user-name">
                       {user}
                     </span>
-                    <button
+                    <button type="button"
                       className="embed-config-ignored-user-remove"
                       onClick={() =>
                         onIgnoredUsersChange(
@@ -810,7 +812,7 @@ export default function EmbedConfigModal({
         description: "Upload custom sounds for different chat events",
         render: () => (
           <div className="embed-config-section">
-            <button
+            <button type="button"
               className="embed-config-event-sounds-header"
               onClick={() => setEventSoundsCollapsed((v) => !v)}
             >
@@ -885,14 +887,14 @@ export default function EmbedConfigModal({
                       <div className="embed-config-event-sound-actions">
                         {hasSound ? (
                           <>
-                            <button
+                            <button type="button"
                               onClick={() => playEventSound(key)}
                               className="embed-config-event-sound-btn embed-config-event-sound-btn--play"
                               title="Play sound"
                             >
                               <FaPlay size={10} />
                             </button>
-                            <button
+                            <button type="button"
                               onClick={() => removeEventSound(key)}
                               className="embed-config-event-sound-btn embed-config-event-sound-btn--remove"
                               title="Remove sound"
@@ -901,7 +903,7 @@ export default function EmbedConfigModal({
                             </button>
                           </>
                         ) : (
-                          <button
+                          <button type="button"
                             onClick={() => {
                               setCurrentEventType(key);
                               soundFileInputRef.current?.click();
@@ -976,7 +978,7 @@ export default function EmbedConfigModal({
                   <label className="embed-config-sound-label">Sound</label>
                   <div className="embed-config-sound-options">
                     {MENTION_SOUND_OPTIONS.map((opt) => (
-                      <button
+                      <button type="button"
                         key={opt.value}
                         onClick={() => {
                           onMentionSoundTypeChange(opt.value);
@@ -1010,13 +1012,13 @@ export default function EmbedConfigModal({
               device.
             </p>
             <div className="embed-config-backup-buttons">
-              <button
+              <button type="button"
                 onClick={exportSettings}
                 className="embed-config-backup-btn"
               >
                 <FaDownload size={13} /> Export
               </button>
-              <button
+              <button type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="embed-config-backup-btn"
               >
@@ -1056,7 +1058,7 @@ export default function EmbedConfigModal({
                   : "Sign in with Google to save and load settings from Google Drive."}
             </p>
             <div className="embed-config-backup-buttons">
-              <button
+              <button type="button"
                 onClick={handleDriveSave}
                 className="embed-config-backup-btn embed-config-drive-btn"
                 disabled={driveLoading !== null || !hasYoutubeSession || !hasDriveScope}
@@ -1071,7 +1073,7 @@ export default function EmbedConfigModal({
                   </>
                 )}
               </button>
-              <button
+              <button type="button"
                 onClick={handleDriveLoad}
                 className="embed-config-backup-btn embed-config-drive-btn"
                 disabled={driveLoading !== null || !hasYoutubeSession || !hasDriveScope}
@@ -1099,7 +1101,7 @@ export default function EmbedConfigModal({
                 <span className="embed-config-share-link-url" title={shareLink}>
                   {shareLink}
                 </span>
-                <button
+                <button type="button"
                   onClick={handleCopyLink}
                   className="embed-config-share-link-copy"
                   title="Copy link"
@@ -1109,7 +1111,7 @@ export default function EmbedConfigModal({
               </div>
             )}
             {!hasYoutubeSession && (
-              <button
+              <button type="button"
                 onClick={onReauthYoutube}
                 className="embed-config-backup-btn embed-config-reauth-btn"
               >
@@ -1117,7 +1119,7 @@ export default function EmbedConfigModal({
               </button>
             )}
             {hasYoutubeSession && !hasDriveScope && (
-              <button
+              <button type="button"
                 onClick={onYoutubeDriveLogin}
                 className="embed-config-backup-btn embed-config-reauth-btn"
               >
@@ -1140,23 +1142,21 @@ export default function EmbedConfigModal({
               don't change your existing settings unless you finish them.
             </p>
             <div className="embed-config-backup-buttons">
-              <button
+              <button type="button"
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent("mixchat:show-onboarding"))
                 }
                 className="embed-config-backup-btn"
-                type="button"
               >
                 <FaPlay size={12} /> Show setup wizard
               </button>
-              <button
+              <button type="button"
                 onClick={() =>
                   window.dispatchEvent(
                     new CustomEvent("mixchat:show-mobile-hint"),
                   )
                 }
                 className="embed-config-backup-btn"
-                type="button"
               >
                 <FaPlay size={12} /> Show mobile controls wizard
               </button>
@@ -1273,7 +1273,7 @@ export default function EmbedConfigModal({
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button
+                <button type="button"
                   className="embed-config-search-clear"
                   onClick={() => setSearchQuery("")}
                   title="Clear search"
@@ -1282,7 +1282,7 @@ export default function EmbedConfigModal({
                 </button>
               )}
             </div>
-            <button
+            <button type="button"
               className="embed-config-close-btn"
               onClick={onClose}
               title="Close"
@@ -1295,15 +1295,15 @@ export default function EmbedConfigModal({
         {needsReload && (
           <div className="embed-config-reload-banner">
             <span>Default player changed — reload the page to apply.</span>
-            <button onClick={() => window.location.reload()}>Reload now</button>
-            <button className="embed-config-reload-dismiss" onClick={() => setNeedsReload(false)}>Dismiss</button>
+            <button type="button" onClick={() => window.location.reload()}>Reload now</button>
+            <button type="button" className="embed-config-reload-dismiss" onClick={() => setNeedsReload(false)}>Dismiss</button>
           </div>
         )}
 
         <div className="embed-config-layout">
           <nav className="embed-config-sidebar">
             {GROUPS.map((group) => (
-              <button
+              <button type="button"
                 key={group}
                 className={`embed-config-sidebar-item${activeTab === group ? " embed-config-sidebar-item--active" : ""}`}
                 onClick={() => setActiveTab(group)}
@@ -1322,7 +1322,7 @@ export default function EmbedConfigModal({
                       key={item.id}
                       className="embed-config-search-result-item"
                     >
-                      <button
+                      <button type="button"
                         className="embed-config-search-result-group"
                         onClick={() => handleSearchResultClick(item.group)}
                       >
@@ -1356,7 +1356,7 @@ export default function EmbedConfigModal({
         </div>
 
         <div className="embed-config-footer">
-          <button onClick={onClose} className="embed-config-footer-btn">
+          <button type="button" onClick={onClose} className="embed-config-footer-btn">
             Close
           </button>
         </div>

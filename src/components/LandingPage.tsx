@@ -207,7 +207,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
           extensions needed. Link streamer's YouTube channel to view both chats
           together.
         </p>
-        <button className="landing-cta-button" onClick={onTwitchLogin}>
+        <button type="button" className="landing-cta-button" onClick={onTwitchLogin}>
           <svg
             width="18"
             height="18"
@@ -424,7 +424,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         <p className="landing-cta-subtitle">
           Log in with your Twitch account to get started.
         </p>
-        <button
+        <button type="button"
           className="landing-cta-button landing-cta-button--large"
           onClick={onTwitchLogin}
         >

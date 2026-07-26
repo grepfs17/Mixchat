@@ -8,7 +8,7 @@ export default function ScrollToBottomButton({
   onClick,
 }: ScrollToBottomButtonProps) {
   return (
-    <button
+    <button type="button"
       className="go-to-bottom-button"
       title="Go to latest messages"
       onClick={onClick}

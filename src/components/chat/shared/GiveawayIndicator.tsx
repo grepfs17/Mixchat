@@ -34,7 +34,7 @@ export default function GiveawayIndicator({
     ) : null;
 
   return (
-    <button
+    <button type="button"
       className={`giveaway-indicator giveaway-indicator--${phase}`}
       onClick={onOpen}
       title="Click to open giveaway tool"

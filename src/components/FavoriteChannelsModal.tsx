@@ -65,7 +65,7 @@ export default function FavoriteChannelsModal({
             <FaStar size={18} style={{ color: "var(--color-favorite)" }} />
             Favorite Channels
           </h2>
-          <button
+          <button type="button"
             className="favorites-modal-close"
             onClick={onClose}
             title="Close"
@@ -87,7 +87,7 @@ export default function FavoriteChannelsModal({
             className="favorites-search-input"
           />
           {searchQuery && (
-            <button
+            <button type="button"
               className="favorites-search-clear"
               onClick={() => setSearchQuery("")}
               title="Clear search"
@@ -126,7 +126,7 @@ export default function FavoriteChannelsModal({
                       </span>
                     </div>
                   </div>
-                  <button
+                  <button type="button"
                     className="favorites-star-btn favorites-star-btn--active"
                     onClick={() => onToggleFavorite(channel.id)}
                     title="Remove from favorites"
@@ -165,7 +165,7 @@ export default function FavoriteChannelsModal({
                       </span>
                     </div>
                   </div>
-                  <button
+                  <button type="button"
                     className="favorites-star-btn"
                     onClick={() => onToggleFavorite(channel.id)}
                     title="Add to favorites"
@@ -192,7 +192,7 @@ export default function FavoriteChannelsModal({
             {" \u00b7 "}
             {allChannels.length} followed channel{allChannels.length !== 1 ? "s" : ""}
           </span>
-          <button className="favorites-close-btn" onClick={onClose}>
+          <button type="button" className="favorites-close-btn" onClick={onClose}>
             Close
           </button>
         </div>

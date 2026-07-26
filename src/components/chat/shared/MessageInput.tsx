@@ -279,7 +279,7 @@ function MessageInput({
             </span>
           </div>
           {onCancelReply && (
-            <button
+            <button type="button"
               onClick={onCancelReply}
               style={{
                 background: "transparent",
@@ -306,7 +306,7 @@ function MessageInput({
           replyingTo={replyingTo}
           onCancelReply={onCancelReply}
         />
-        <button
+        <button type="button"
           onClick={() => setShowEmotePicker(!showEmotePicker)}
           disabled={selectedPlatforms.length === 0 || isLoading}
           className="emote-picker-button"

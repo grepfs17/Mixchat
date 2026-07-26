@@ -140,7 +140,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
         {error && <p className="song-queue-error">{error}</p>}
 
         <div className="song-queue-actions">
-          <button
+          <button type="button"
             className="song-queue-btn song-queue-btn--primary"
             onClick={start}
             disabled={loading}
@@ -203,7 +203,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
       </div>
 
       <div className="song-queue-controls">
-        <button
+        <button type="button"
           className="song-queue-btn song-queue-btn--secondary"
           onClick={end}
           disabled={loading}

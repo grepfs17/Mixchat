@@ -104,7 +104,7 @@ export function MessageModActions({
   return (
     <div className={`message-actions${forceVisible ? " message-actions--mod-active" : ""}`}>
       {showUserActions && onBan && (
-        <button
+        <button type="button"
           onClick={(e) => handleClick(e, "ban", onBan)}
           className={getButtonClass("ban")}
           title={getTitle("ban", banTitle)}
@@ -114,7 +114,7 @@ export function MessageModActions({
         </button>
       )}
       {showUserActions && onTimeout && (
-        <button
+        <button type="button"
           onClick={(e) => handleClick(e, "timeout", onTimeout)}
           onContextMenu={onTimeoutContextMenu}
           className={getButtonClass("timeout")}
@@ -125,7 +125,7 @@ export function MessageModActions({
         </button>
       )}
       {showUserActions && onWarn && (
-        <button
+        <button type="button"
           onClick={(e) => handleClick(e, "warn", onWarn)}
           className={getButtonClass("warn")}
           title={getTitle("warn", warnTitle)}
@@ -135,7 +135,7 @@ export function MessageModActions({
         </button>
       )}
       {onDelete && (
-        <button
+        <button type="button"
           onClick={(e) => handleClick(e, "delete", onDelete)}
           className={getButtonClass("delete")}
           title={getTitle("delete", deleteTitle)}

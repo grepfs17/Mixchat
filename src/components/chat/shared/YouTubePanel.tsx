@@ -150,7 +150,7 @@ export default function YouTubePanel({
                 gap: "4px",
               }}
             >
-              <button
+              <button type="button"
                 onClick={() => {
                   onSetManualVideoId("");
                 }}
@@ -166,7 +166,7 @@ export default function YouTubePanel({
               >
                 Change Video
               </button>
-              <button
+              <button type="button"
                 onClick={() => onSetShowYoutubeSection(false)}
                 style={{
                   background: "rgba(0,0,0,0.6)",
@@ -202,7 +202,7 @@ export default function YouTubePanel({
                   backgroundColor: "#0f0f0f",
                 }}
               >
-                <button
+                <button type="button"
                   onClick={() =>
                     (
                       document.querySelector<HTMLElement>(
@@ -286,7 +286,7 @@ export default function YouTubePanel({
                     }
                   }}
                 />
-                <button
+                <button type="button"
                   onClick={(e) => {
                     const input = e.currentTarget
                       .previousElementSibling as HTMLInputElement;
@@ -303,7 +303,7 @@ export default function YouTubePanel({
                 >
                   Load
                 </button>
-                <button
+                <button type="button"
                   onClick={() => onSetShowYoutubeSection(false)}
                   style={{
                     background: "#333",

@@ -90,7 +90,7 @@ export default function WatchlistManager({
               </div>
             ) : (
               filteredChannels.map((channel) => (
-                <button
+                <button type="button"
                   key={channel.id}
                   className="channel-list-item"
                   onClick={() => {
@@ -123,7 +123,7 @@ export default function WatchlistManager({
               }
             </div>
           )}
-          <button
+          <button type="button"
             className="add-button"
             onClick={handleAddStreamer}
             disabled={!selectedChannelId}
@@ -144,7 +144,7 @@ export default function WatchlistManager({
                 <FaInfoCircle size={12} />
               </span>
             </span>
-            <button
+            <button type="button"
               className={`watchlist-toggle-switch${systemNotifications ? " active" : ""}`}
               onClick={() => {
                 const next = !systemNotifications;
@@ -178,7 +178,7 @@ export default function WatchlistManager({
                     <div className="item-username">@{streamer.name}</div>
                   </div>
                 </div>
-                <button
+                <button type="button"
                   className="remove-button"
                   onClick={() => handleRemoveStreamer(streamer.id)}
                   title="Remove from watchlist"
@@ -195,7 +195,7 @@ export default function WatchlistManager({
             <FaEye style={{ marginRight: "6px" }} />
             You'll be notified once per session when each streamer goes live
           </p>
-          <button className="close-button" onClick={onClose}>
+          <button type="button" className="close-button" onClick={onClose}>
             Close
           </button>
         </div>

@@ -169,7 +169,7 @@ export default function YouTubeLinker({
                   </div>
                 ) : (
                   filteredChannels.map((channel) => (
-                    <button
+                    <button type="button"
                       key={channel.id}
                       className="ytlinker-channel-item"
                       onClick={() => {
@@ -222,7 +222,7 @@ export default function YouTubeLinker({
 
           {error && <div className="ytlinker-error">{error}</div>}
 
-          <button
+          <button type="button"
             className="ytlinker-add-button"
             onClick={handleAddLink}
             disabled={!selectedChannelId || !youtubeUrl.trim()}
@@ -293,14 +293,14 @@ export default function YouTubeLinker({
                   <div className="ytlinker-item-actions">
                     {isEditing ? (
                       <>
-                        <button
+                        <button type="button"
                           className="ytlinker-edit-save"
                           onClick={handleEditSave}
                           title="Save changes"
                         >
                           ✓
                         </button>
-                        <button
+                        <button type="button"
                           className="ytlinker-edit-cancel"
                           onClick={handleEditCancel}
                           title="Cancel edit"
@@ -310,7 +310,7 @@ export default function YouTubeLinker({
                       </>
                     ) : (
                       <>
-                        <button
+                        <button type="button"
                           className="ytlinker-edit-button"
                           onClick={() =>
                             handleEditStart(
@@ -322,7 +322,7 @@ export default function YouTubeLinker({
                         >
                           <FaPencilAlt />
                         </button>
-                        <button
+                        <button type="button"
                           className={`ytlinker-toggle${isActive ? " ytlinker-toggle--active" : ""}`}
                           onClick={() =>
                             handleToggleActive(link.twitchChannelId)
@@ -338,7 +338,7 @@ export default function YouTubeLinker({
                             <span className="ytlinker-toggle-thumb" />
                           </span>
                         </button>
-                        <button
+                        <button type="button"
                           className="ytlinker-remove-button"
                           onClick={() => handleRemoveLink(link.twitchChannelId)}
                           title="Remove YouTube link"
@@ -360,7 +360,7 @@ export default function YouTubeLinker({
             When viewing a linked channel, YouTube live chat will appear above
             the Twitch chat
           </p>
-          <button className="ytlinker-close-button" onClick={onClose}>
+          <button type="button" className="ytlinker-close-button" onClick={onClose}>
             Close
           </button>
         </div>

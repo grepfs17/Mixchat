@@ -152,7 +152,7 @@ function TwitchMessageContentBase({
     !isModAction && (
       <div className="message-actions">
         {onReply && (
-          <button
+          <button type="button"
             onClick={() => onReply(msg)}
             className="action-button"
             title="Reply to this message"
@@ -161,7 +161,7 @@ function TwitchMessageContentBase({
             <MdReply size={12} />
           </button>
         )}
-        <button
+        <button type="button"
           onClick={() => onCopy(msg)}
           className="action-button"
           title="Copy message"
@@ -177,7 +177,7 @@ function TwitchMessageContentBase({
     if (isModAction) {
       return (
         <div className={`message-actions${modActionsAlwaysVisible ? " message-actions--mod-active" : ""}`}>
-          <button
+          <button type="button"
             onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
             className="action-button mod-action"
             title="Undo moderation action"

@@ -110,7 +110,7 @@ export default function MobileTouchHintModal({
           />
         </div>
 
-        <button
+        <button type="button"
           onClick={dismiss}
           style={{
             background: "var(--color-twitch)",

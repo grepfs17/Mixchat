@@ -26,7 +26,7 @@ export default function LiveNotification({
           )}
           <span className="streamer-name">{streamer.displayName}</span>
         </div>
-        <button
+        <button type="button"
           className="live-notification-close"
           onClick={onClose}
           aria-label="Close"
@@ -41,7 +41,7 @@ export default function LiveNotification({
 
       {streamer.title && <div className="stream-title">{streamer.title}</div>}
 
-      <button className="view-now-button" onClick={onViewNow}>
+      <button type="button" className="view-now-button" onClick={onViewNow}>
         View Now
       </button>
     </div>

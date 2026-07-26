@@ -194,7 +194,7 @@ export default function GiveawayPanel({
           {error && <p className="giveaway-error">{error}</p>}
 
           <div className="giveaway-actions">
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--primary"
               onClick={start}
             >
@@ -272,13 +272,13 @@ export default function GiveawayPanel({
             </ul>
           )}
           <div className="giveaway-actions">
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--secondary"
               onClick={cancel}
             >
               Cancel
             </button>
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--primary"
               onClick={reveal}
               disabled={liveEntries.length === 0}
@@ -334,13 +334,13 @@ export default function GiveawayPanel({
                 go to the winner&apos;s platform
               </p>
               <div className="giveaway-actions">
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--secondary"
                   onClick={startNew}
                 >
                   New giveaway
                 </button>
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--primary"
                   onClick={async () => {
                     await onAnnounce(
@@ -365,7 +365,7 @@ export default function GiveawayPanel({
                 keyword or eligibility.
               </p>
               <div className="giveaway-actions">
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--primary"
                   onClick={startNew}
                 >

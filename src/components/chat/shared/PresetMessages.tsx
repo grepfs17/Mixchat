@@ -301,7 +301,7 @@ function PresetMessages({
   return (
     <>
       <div className="preset-split-button" ref={buttonRef}>
-        <button
+        <button type="button"
           className="preset-split-left"
           onClick={handleOpenModal}
           disabled={false}
@@ -309,7 +309,7 @@ function PresetMessages({
         >
           <FaBookmark size={14} />
         </button>
-        <button
+        <button type="button"
           className="preset-split-right"
           onClick={() => setShowDropdown(!showDropdown)}
           disabled={isDisabled}
@@ -336,7 +336,7 @@ function PresetMessages({
             {presets.length === 0 ? (
               <div className="preset-dropdown-empty">
                 <span>No preset messages yet</span>
-                <button
+                <button type="button"
                   className="preset-dropdown-create-btn"
                   onClick={() => {
                     setShowDropdown(false);
@@ -386,7 +386,7 @@ function PresetMessages({
             >
               <div className="preset-modal-header">
                 <h2>{editingPreset ? "Edit Preset" : "Preset Messages"}</h2>
-                <button
+                <button type="button"
                   className="preset-modal-close"
                   onClick={() => {
                     setShowModal(false);
@@ -468,7 +468,7 @@ function PresetMessages({
                       document.body,
                     )}
                 </div>
-                <button
+                <button type="button"
                   className="preset-modal-save"
                   onClick={handleSavePreset}
                   disabled={!formName.trim() || !formContent.trim()}
@@ -495,14 +495,14 @@ function PresetMessages({
                       </span>
                     </div>
                     <div className="preset-modal-item-actions">
-                      <button
+                      <button type="button"
                         className="preset-modal-item-btn preset-modal-item-btn--edit"
                         onClick={() => handleEditPreset(preset)}
                         title="Edit"
                       >
                         <FaPen size={10} />
                       </button>
-                      <button
+                      <button type="button"
                         className="preset-modal-item-btn preset-modal-item-btn--delete"
                         onClick={() => handleDeletePreset(preset.id)}
                         title="Delete"

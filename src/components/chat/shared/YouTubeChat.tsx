@@ -466,7 +466,7 @@ export default function YouTubeChat({
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
-        <button
+        <button type="button"
           className="yt-chat-reload-btn"
           onClick={() => {
             setReloadKey((k) => k + 1);
@@ -484,7 +484,7 @@ export default function YouTubeChat({
       {error && !isEnded && (
         <div className="yt-chat-error-banner">
           <span>⚠️ {error}</span>
-          <button
+          <button type="button"
             className="yt-chat-reload-btn"
             onClick={() => {
               setReloadKey((k) => k + 1);
