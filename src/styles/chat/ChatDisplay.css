@@ -370,6 +370,57 @@
     flex-shrink: 0;
 }
 
+/* Reset default button styles for elements converted from <span> to <button>
+   for prefer-tag-over-role accessibility compliance */
+button.author,
+button.deleted-clickable,
+button.reply-info-clickable {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+button.status-badge-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+button.stream-info-title {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+button.stream-info-category {
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    padding: 2px 8px;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 .message-separator {
     color: var(--color-text-timestamp);
     flex-shrink: 0;
