@@ -15,6 +15,8 @@ import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 import { useSlowMode } from "../../../hooks/chat/useSlowMode";
 import { useEmotes } from "../../../hooks/chat/useEmotes";
 
+const SELECTED_PLATFORMS: Platform[] = ["twitch"];
+
 interface MessageInputProps {
   onSendMessage: (
     message: string,
@@ -50,7 +52,6 @@ function MessageInput({
 }: MessageInputProps) {
   const { isModerator } = useModerationContext();
   const [message, setMessage] = useState("");
-const SELECTED_PLATFORMS: Platform[] = ["twitch"];
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const shouldRefocusRef = useRef(false);

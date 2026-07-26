@@ -18,42 +18,13 @@ interface FeatureImage {
   aspectRatio?: string;
 }
 
-export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
-  const [heroLoaded, setHeroLoaded] = useState(false);
-  const pageRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = pageRef.current;
-    if (!el) return () => {};
-    const heroTimer = setTimeout(() => setHeroLoaded(true), 100);
-
-    const targets = el.querySelectorAll(".landing-reveal");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("landing-reveal--visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 },
-    );
-    targets.forEach((t) => observer.observe(t));
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(heroTimer);
-    };
-  }, []);
-
-  const features: {
-    title: string;
-    description: string;
-    images: FeatureImage[];
-    badge: string;
-    useCarousel?: boolean;
-  }[] = [
+const FEATURES: {
+  title: string;
+  description: string;
+  images: FeatureImage[];
+  badge: string;
+  useCarousel?: boolean;
+}[] = [
     {
       title: "Emote Autocomplete",
       description:
@@ -188,6 +159,35 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
     },
   ];
 
+export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
+  const [heroLoaded, setHeroLoaded] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!el) return () => {};
+    const heroTimer = setTimeout(() => setHeroLoaded(true), 100);
+
+    const targets = el.querySelectorAll(".landing-reveal");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("landing-reveal--visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+    targets.forEach((t) => observer.observe(t));
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(heroTimer);
+    };
+  }, []);
+
   return (
     <div className="landing-page" ref={pageRef}>
       <div
@@ -264,7 +264,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
       </div>
 
       <div className="landing-features">
-        {features.map((feature) => (
+        {FEATURES.map((feature) => (
           <section key={feature.title} className="landing-feature landing-reveal">
             <div className="landing-feature-text">
               <h2 className="landing-feature-title">{feature.title}</h2>

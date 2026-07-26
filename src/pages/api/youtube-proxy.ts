@@ -28,20 +28,21 @@ function getChannelParam(url: URL | URLSearchParams): string | null {
  */
 const ALLOWED_ACTIONS = new Set(["getLiveVideo", "getChannelInfo"]);
 
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "Cache-Control": "public, max-age=60",
+};
+const RATE_LIMIT_HEADERS = { "Content-Type": "application/json", "Retry-After": "60" };
+
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
-  const headers = {
-    "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=60",
-  };
-
   if (!checkRateLimit(`${clientAddress}:youtube-proxy`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
-      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+      headers: RATE_LIMIT_HEADERS,
     });
   }
 
@@ -52,7 +53,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     if (!action) {
       return new Response(
         JSON.stringify({ error: "action parameter is required" }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
@@ -60,7 +61,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     if (!ALLOWED_ACTIONS.has(action)) {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}` }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
@@ -106,7 +107,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     } else {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}` }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
   } catch (error) {

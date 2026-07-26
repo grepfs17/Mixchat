@@ -13,5 +13,8 @@ minimumReleaseAgeExclude:
 onlyBuiltDependencies:
   - '@parcel/watcher'
   - esbuild
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+
 overrides:
   esbuild: 0.25.0

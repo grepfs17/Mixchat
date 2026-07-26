@@ -193,6 +193,26 @@ export default function ChatHeader({
     [onUpdateCategory],
   );
 
+const FRIENDLY_NAMES: Record<string, string> = {
+    "automod.message.hold": "Message Held",
+    "automod.message.update": "Message Resolved",
+    "channel.raid": "Incoming Raid",
+    "channel.raid:to_broadcaster": "Incoming Raid",
+    "channel.raid:from_broadcaster": "Outgoing Raid",
+    "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
+    "channel.hype_train.begin": "Train Started",
+    "channel.hype_train.progress": "Train Progress",
+    "channel.hype_train.end": "Train Ended",
+    "channel.poll.begin": "Poll Started",
+    "channel.poll.progress": "Poll Progress",
+    "channel.poll.end": "Poll Ended",
+    "channel.prediction.begin": "Prediction Started",
+    "channel.prediction.progress": "Prediction Progress",
+    "channel.prediction.lock": "Prediction Locked",
+    "channel.prediction.end": "Prediction Resolved",
+    "channel.bits.use": "Bits Used",
+};
+
 function getOverallStatus(
   statuses: Map<string, SubscriptionStatus>,
   keys: string[] | null,
@@ -227,26 +247,6 @@ function statusLabel(s: SubscriptionStatus | "disconnected") {
       return "disabled";
   }
 }
-
-const FRIENDLY_NAMES: Record<string, string> = {
-    "automod.message.hold": "Message Held",
-    "automod.message.update": "Message Resolved",
-    "channel.raid": "Incoming Raid",
-    "channel.raid:to_broadcaster": "Incoming Raid",
-    "channel.raid:from_broadcaster": "Outgoing Raid",
-    "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
-    "channel.hype_train.begin": "Train Started",
-    "channel.hype_train.progress": "Train Progress",
-    "channel.hype_train.end": "Train Ended",
-    "channel.poll.begin": "Poll Started",
-    "channel.poll.progress": "Poll Progress",
-    "channel.poll.end": "Poll Ended",
-    "channel.prediction.begin": "Prediction Started",
-    "channel.prediction.progress": "Prediction Progress",
-    "channel.prediction.lock": "Prediction Locked",
-    "channel.prediction.end": "Prediction Resolved",
-  "channel.bits.use": "Bits Used",
-};
 
   const renderStatusSection = (
     label: string,
