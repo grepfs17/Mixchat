@@ -100,9 +100,9 @@ export function useYouTubeSync({
     let cancelled = false;
     const abortController = new AbortController();
     const fetchLiveVideoId = async () => {
-      setYtLoading(true);
-      setYtError(null);
       try {
+        setYtLoading(true);
+        setYtError(null);
         const params = new URLSearchParams();
         params.append("channelUrl", linkedYoutubeUrl);
     const res = await fetch(`/api/youtube-live?${params.toString()}`, {
@@ -153,20 +153,19 @@ export function useYouTubeSync({
     };
   }, [linkedYoutubeUrl, showYoutubeSection]);
 
-  // Reset all YouTube state when the user switches Twitch channels. This is
-  // intentional — stale video IDs, messages, and error state from the previous
-  // channel must be cleared before the new channel's data loads. Deriving
-  // these values during render is not feasible because they include mutable
-  // refs (deletedRef) and async-fetched data (autoVideoId, ytMessages).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+  // Reset all YouTube state when the user switches Twitch channels. Using the
+  // recommended "adjusting state during render" pattern from React docs so the
+  // reset is applied synchronously rather than in a deferred effect.
+  const prevChannelRef = useRef(selectedTwitchChannelName);
+  if (prevChannelRef.current !== selectedTwitchChannelName) {
+    prevChannelRef.current = selectedTwitchChannelName;
     setManualVideoId("");
     setAutoVideoId(null);
     setAutoChannelId(null);
     setYtError(null);
     setYtMessages([]);
     deletedRef.current = new Map();
-  }, [selectedTwitchChannelName]);
+  }
 
   const getYtMessageText = useCallback(
     (m: YTMessage) =>

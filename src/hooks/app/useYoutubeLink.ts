@@ -81,6 +81,7 @@ export function useYoutubeLink(
   // For channel URLs, poll the proxy every 10 minutes to resolve the live
   // video ID. This is a legitimate useEffect for periodic async work —
   // not derivable during render because it depends on a remote API.
+  // eslint-disable-next-line react/no-fetch-in-effect, react/no-set-state-after-await-in-effect
   useEffect(() => {
     if (!linkedYoutubeUrl || directVideoId) {
       setYoutubeStreamVideoId(directVideoId);
@@ -112,7 +113,7 @@ export function useYoutubeLink(
       cancelled = true;
       clearInterval(interval);
     };
-  }, [linkedYoutubeUrl]);
+  }, [linkedYoutubeUrl, directVideoId]);
 
   const linkedYoutubeChannelIds = useMemo(
     () =>
