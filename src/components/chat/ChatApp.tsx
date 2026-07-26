@@ -153,18 +153,19 @@ export default function ChatApp(props: ChatAppStateProps) {
     streamerToolsEnabled = false,
     isOnOwnChannel = false,
     renderThirdPartyEmotesOnYoutube = false,
-  } = props;
-
-  useEffect(() => {
-    if (!linkedYoutubeUrl || !youtubeVideoId) {
-      setYtConnectionState({ connected: false, loading: false, error: null });
-    }
-  }, [linkedYoutubeUrl, youtubeVideoId]);
+  } = props;    // Reset YouTube connection when URL/video changes — intentional
+    // eslint-disable-next-line no-adjust-state-on-prop-change
+    useEffect(() => {
+      if (!linkedYoutubeUrl || !youtubeVideoId) {
+        setYtConnectionState({ connected: false, loading: false, error: null });
+      }
+    }, [linkedYoutubeUrl, youtubeVideoId]);
 
   const showNotification = useCallback(
     (message: string, type: "success" | "error" | "info") => {
       setNotification({ message, type });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -280,6 +281,7 @@ export default function ChatApp(props: ChatAppStateProps) {
   // every render without worry.
   const onSongError = useCallback(
     (msg: string) => setNotification({ message: msg, type: "error" }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 

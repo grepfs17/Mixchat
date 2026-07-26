@@ -141,6 +141,7 @@ export default function YTMessageParts({
       }
       return <React.Fragment key={key}>{out}</React.Fragment>;
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [renderThirdPartyEmotes, variant, disabledEmotes, emoteVersion],
   );
 
@@ -191,11 +192,13 @@ export default function YTMessageParts({
   // Twemoji only touches text content — existing <img> elements (YouTube
   // custom emojis, 7TV/BTTV/FFZ emotes) are left untouched.
   const containerRef = useRef<HTMLSpanElement>(null);
+  // renderUnicodeEmojis is a stable imported helper
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (containerRef.current) {
       renderUnicodeEmojis(containerRef.current);
     }
-  }, [rendered, renderUnicodeEmojis]);
+  }, [rendered]);
 
   return <span ref={containerRef}>{rendered}</span>;
 }

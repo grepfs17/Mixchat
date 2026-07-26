@@ -21,8 +21,8 @@ export default function Notification({
       onClose?.();
     }, duration);
 
-    return () => clearTimeout(timer);
-  }, [duration]);
+    return () => clearTimeout(timer);    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [duration]);
 
   if (!isVisible) return null;
 

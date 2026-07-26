@@ -47,6 +47,8 @@ export function useChatMessages({
     return () => clearInterval(interval);
   }, []);
 
+  // Clear messages when switching channels — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     setMessages([]);
     preloadedMessagesRef.current.clear();

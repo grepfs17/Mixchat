@@ -153,8 +153,8 @@ export function useTwitchChatConnection({
       if (newClient) {
         newClient.quit();
       }
-    };
-  }, [channelName, enabled, clientId]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [channelName, enabled, clientId]);
 
   return {
     client,

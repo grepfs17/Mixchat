@@ -65,8 +65,8 @@ export function useMyChannelInfo(session: PlatformSession | undefined) {
 
     return () => {
       cancelled = true;
-    };
-  }, [session?.userId]);
+    };    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [session?.userId]);
 
   return { ...info, loading };
 }

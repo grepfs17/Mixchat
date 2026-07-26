@@ -79,6 +79,7 @@ export function useChatTouchGestures<T>({
         }, 500);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [onReply, canReply],
   );
 
