@@ -64,7 +64,7 @@ describe("giveaway history", () => {
   });
 
   it("ignores malformed stored data", () => {
-    localStorage.setItem("mixchat_giveaway_history", "not json");
+    localStorage.setItem("mixchat_giveaway_history:v1", "not json");
     expect(getGiveawayHistory()).toEqual([]);
   });
 
@@ -83,7 +83,7 @@ describe("giveaway history", () => {
       { id: "2", revealedAt: "x", keyword: "BAD" }, // missing winner
       null,
     ];
-    localStorage.setItem("mixchat_giveaway_history", JSON.stringify(mixed));
+    localStorage.setItem("mixchat_giveaway_history:v1", JSON.stringify(mixed));
     const all = getGiveawayHistory();
     expect(all).toHaveLength(1);
     expect(all[0].keyword).toBe("GOOD");

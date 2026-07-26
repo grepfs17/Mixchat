@@ -4,7 +4,7 @@ import { getAllFollowedChannels } from "../../lib/twitch";
 import type { TwitchChannel } from "../../components/AppContainer";
 import type { StreamTransitionInfo } from "../../components/StreamGrid";
 
-const FAVORITES_KEY = "mixchat_favorite_channels";
+const FAVORITES_KEY = "mixchat_favorite_channels:v1";
 const CHANNEL_REFRESH_MS = 120000;
 
 export type UseTwitchChannelsOptions = {

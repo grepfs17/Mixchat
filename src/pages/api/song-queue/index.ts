@@ -141,8 +141,10 @@ export const GET: APIRoute = async ({ request }) => {
     channelPlatform,
   );
   const summaries: PastPlaylistSummary[] = [];
-  for (const sessionId of ids) {
-    const session = await getSession(getSongQueueStoreOptions(), sessionId);
+  const sessionResults = await Promise.all(
+    ids.map(async (id) => ({ id, session: await getSession(getSongQueueStoreOptions(), id) })),
+  );
+  for (const { id, session } of sessionResults) {
     if (!session) continue;
     const reconciled = reconcileEndedItems(session);
     const playedCount = reconciled.filter(
@@ -153,7 +155,7 @@ export const GET: APIRoute = async ({ request }) => {
     ).length;
     const first = reconciled[0];
     summaries.push({
-      sessionId,
+      sessionId: id,
       title: session.title,
       createdAt: session.createdAt,
       lastSeenAt: session.lastSeenAt,

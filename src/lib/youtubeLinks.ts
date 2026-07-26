@@ -3,7 +3,7 @@
  * Stores a mapping of Twitch channel ID -> YouTube channel URL in localStorage.
  */
 
-const STORAGE_KEY = "mixchat_youtube_links";
+const STORAGE_KEY = "mixchat_youtube_links:v1";
 
 export interface YouTubeLink {
   twitchChannelId: string;

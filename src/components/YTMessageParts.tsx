@@ -178,6 +178,8 @@ export default function YTMessageParts({
             />
           )
         ) : (
+          // Message parts never reorder, so array index is a safe key.
+          // eslint-disable-next-line no-array-index-as-key
           renderText(part.text ?? "", i)
         ),
       ),
@@ -193,7 +195,7 @@ export default function YTMessageParts({
     if (containerRef.current) {
       renderUnicodeEmojis(containerRef.current);
     }
-  }, [rendered]);
+  }, [rendered, renderUnicodeEmojis]);
 
   return <span ref={containerRef}>{rendered}</span>;
 }

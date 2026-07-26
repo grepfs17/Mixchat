@@ -47,7 +47,7 @@ describe("WatchlistManager component", () => {
 
     // localStorage should contain the saved streamer
     const saved = JSON.parse(
-      localStorage.getItem("mixchat_watched_streamers") || "[]",
+      localStorage.getItem("mixchat_watched_streamers:v1") || "[]",
     );
     expect(saved).toHaveLength(1);
     expect(saved[0].id).toBe("1");
@@ -59,7 +59,7 @@ describe("WatchlistManager component", () => {
     // Should be empty again (wait for DOM update)
     await screen.findByText("No streamers being watched yet");
     const savedAfter = JSON.parse(
-      localStorage.getItem("mixchat_watched_streamers") || "[]",
+      localStorage.getItem("mixchat_watched_streamers:v1") || "[]",
     );
     expect(savedAfter).toHaveLength(0);
   });

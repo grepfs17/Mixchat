@@ -696,7 +696,7 @@ export default function OnboardingWizard({
                   </div>
                 </div>
                 <div className="onboarding-typography-row">
-                  <label className="onboarding-typography-label" id="onboarding-font-label">Font</label>
+                  <span className="onboarding-typography-label" id="onboarding-font-label">Font</span>
                   <div className="onboarding-typography-fonts" role="radiogroup" aria-labelledby="onboarding-font-label">
                     {CHAT_FONT_OPTIONS.map(({ value, label }) => (
                       <button

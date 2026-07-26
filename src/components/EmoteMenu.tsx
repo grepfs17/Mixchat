@@ -12,6 +12,14 @@ interface EmoteMenuProps {
 
 const TWITCH_GLOBAL_KEY = "__global";
 
+const THIRD_PARTY_SOURCES = [
+  { key: "7tv" as const, label: "7TV", color: "#00d4ff" },
+  { key: "bttv" as const, label: "BTTV", color: "#34ae7b" },
+  { key: "ffz" as const, label: "FFZ", color: "#faa61a" },
+] as const;
+
+const TWITCH_COLOR = "#9146ff";
+
 function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredEmotes, setFilteredEmotes] = useState<EmotesBySource>(emotes);
@@ -94,13 +102,6 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
 
   if (!isOpen) return null;
 
-const THIRD_PARTY_SOURCES = [
-  { key: "7tv" as const, label: "7TV", color: "#00d4ff" },
-  { key: "bttv" as const, label: "BTTV", color: "#34ae7b" },
-  { key: "ffz" as const, label: "FFZ", color: "#faa61a" },
-] as const;
-
-const TWITCH_COLOR = "#9146ff";
   const isSearching = searchQuery.trim().length > 0;
 
   const renderEmoteItem = (emote: { name: string; url: string }) => {

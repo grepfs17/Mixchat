@@ -22,20 +22,21 @@ setInterval(() => {
 const DEBUG_YT =
   process.env.YT_DEBUG === "1" || import.meta.env?.MODE === "development";
 
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "Cache-Control": "public, max-age=60",
+};
+const RATE_LIMIT_HEADERS = { "Content-Type": "application/json", "Retry-After": "60" };
+
 export const GET: APIRoute = async ({ request, url }) => {
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
-  const headers = {
-    "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=60",
-  };
-
   if (!checkRateLimit(`${clientAddress}:youtube-live`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
-      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+      headers: RATE_LIMIT_HEADERS,
     });
   }
 
@@ -44,14 +45,14 @@ export const GET: APIRoute = async ({ request, url }) => {
     if (!channelUrl) {
       return new Response(
         JSON.stringify({ error: "channelUrl parameter is required" }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
     if (!isValidYouTubeParam(channelUrl)) {
       return new Response(JSON.stringify({ error: "Invalid channelUrl" }), {
         status: 400,
-        headers,
+        headers: JSON_HEADERS,
       });
     }
 
@@ -67,7 +68,7 @@ export const GET: APIRoute = async ({ request, url }) => {
           videoId: cached.videoId,
           channelId: cached.channelId || "",
         }),
-        { status: 200, headers },
+        { status: 200, headers: JSON_HEADERS },
       );
     }
 
@@ -86,7 +87,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         videoId: result.videoId,
         channelId: result.channelId || "",
       }),
-      { status: 200, headers },
+      { status: 200, headers: JSON_HEADERS },
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -102,7 +103,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         error: DEBUG_YT ? errorMessage : "Failed to look up live video",
         details: DEBUG_YT ? errorStack : undefined,
       }),
-      { status: 500, headers },
+      { status: 500, headers: JSON_HEADERS },
     );
   }
 };

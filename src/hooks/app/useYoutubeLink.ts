@@ -44,51 +44,47 @@ export function useYoutubeLink(
 ): UseYoutubeLinkResult {
   const { selectedTwitchChannel, twitchSession, youtubeSession } = options;
 
-  const [linkedYoutubeUrl, setLinkedYoutubeUrl] = useState<string | null>(null);
   // Version counter that the YouTubeLinker modal bumps after creating/deleting
-  // links so the lookup effect re-runs without us having to expose the
+  // links so the derived value re-computes without us having to expose the
   // underlying storage.
   const [ytLinksVersion, setYtLinksVersion] = useState(0);
   const [youtubeStreamVideoId, setYoutubeStreamVideoId] = useState<
     string | null
   >(null);
 
-  // Look up the linked YouTube URL for the selected Twitch channel. Falls
+  // Derive the linked YouTube URL for the selected Twitch channel. Falls
   // back to the viewer's own YouTube channel if they're watching themselves.
-  useEffect(() => {
-    if (selectedTwitchChannel) {
-      const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
-      if (storedLink) {
-        setLinkedYoutubeUrl(storedLink);
-      } else if (
-        youtubeSession &&
-        twitchSession &&
-        (selectedTwitchChannel === twitchSession.userId ||
-          selectedTwitchChannel === twitchSession.username)
-      ) {
-        setLinkedYoutubeUrl(
-          `https://www.youtube.com/channel/${youtubeSession.userId}`,
-        );
-      } else {
-        setLinkedYoutubeUrl(null);
-      }
-    } else {
-      setLinkedYoutubeUrl(null);
+  // Computed during render (not in an effect) to avoid unnecessary state
+  // updates and the stale-closure issues they introduce.
+  const linkedYoutubeUrl = useMemo(() => {
+    if (!selectedTwitchChannel) return null;
+    const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
+    if (storedLink) return storedLink;
+    if (
+      youtubeSession &&
+      twitchSession &&
+      (selectedTwitchChannel === twitchSession.userId ||
+        selectedTwitchChannel === twitchSession.username)
+    ) {
+      return `https://www.youtube.com/channel/${youtubeSession.userId}`;
     }
+    return null;
   }, [selectedTwitchChannel, ytLinksVersion, youtubeSession, twitchSession]);
 
-  // Resolve the live video ID for the linked YouTube URL. Direct video URLs
-  // parse synchronously; channel URLs go through the proxy on a 10-minute
-  // refresh (the stream may rotate in/out of "live" while the user watches).
-  useEffect(() => {
-    if (!linkedYoutubeUrl) {
-      setYoutubeStreamVideoId(null);
-      return;
-    }
+  // Derive the video ID from direct URLs synchronously during render.
+  // Channel URLs require an async proxy call which stays in the effect below.
+  const directVideoId = useMemo(() => {
+    if (!linkedYoutubeUrl) return null;
+    return parseDirectVideoId(linkedYoutubeUrl);
+  }, [linkedYoutubeUrl]);
 
-    const directId = parseDirectVideoId(linkedYoutubeUrl);
-    if (directId) {
-      setYoutubeStreamVideoId(directId);
+  // For channel URLs, poll the proxy every 10 minutes to resolve the live
+  // video ID. This is a legitimate useEffect for periodic async work —
+  // not derivable during render because it depends on a remote API.
+  // eslint-disable-next-line react/no-fetch-in-effect, react/no-set-state-after-await-in-effect
+  useEffect(() => {
+    if (!linkedYoutubeUrl || directVideoId) {
+      setYoutubeStreamVideoId(directVideoId);
       return;
     }
 
@@ -117,7 +113,7 @@ export function useYoutubeLink(
       cancelled = true;
       clearInterval(interval);
     };
-  }, [linkedYoutubeUrl]);
+  }, [linkedYoutubeUrl, directVideoId]);
 
   const linkedYoutubeChannelIds = useMemo(
     () =>

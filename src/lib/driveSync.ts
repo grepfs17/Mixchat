@@ -63,12 +63,15 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
   try {
     const result = await loadSettingsFromDrive();
     let count = 0;
+    // Collect async saveEventSounds calls for parallel execution
+    const soundPromises: Promise<void>[] = [];
     for (const [key, value] of Object.entries(result.settings)) {
       if (key === "mixchat_event_sounds") {
         try {
           const sounds = JSON.parse(value);
-          await saveEventSounds(sounds);
-          count++;
+          soundPromises.push(
+            saveEventSounds(sounds).then(() => { count++; }),
+          );
         } catch {
           /* ignore */
         }
@@ -77,6 +80,7 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
         count++;
       }
     }
+    await Promise.all(soundPromises);
     return { ok: true, count };
   } catch (err) {
     return {

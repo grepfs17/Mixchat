@@ -39,7 +39,7 @@ describe("YouTube callback route", () => {
     expect(res.headers.get("Content-Type")).toBe("text/html");
 
     const body = await res.text();
-    expect(body).toContain("mixchat_sessions");
+    expect(body).toContain("mixchat_sessions:v1");
     expect(body).toContain("user123");
     expect(body).toContain("access123");
 
@@ -167,7 +167,7 @@ describe("YouTube callback route", () => {
 
     expect(res.status).toBe(200);
     const body = await res.text();
-    expect(body).toContain("mixchat_sessions");
+    expect(body).toContain("mixchat_sessions:v1");
     expect(body).toContain("user123");
 
     // YouTube cookies are written by the YouTube branch.

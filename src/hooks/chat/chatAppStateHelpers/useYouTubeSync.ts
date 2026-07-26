@@ -100,9 +100,9 @@ export function useYouTubeSync({
     let cancelled = false;
     const abortController = new AbortController();
     const fetchLiveVideoId = async () => {
-      setYtLoading(true);
-      setYtError(null);
       try {
+        setYtLoading(true);
+        setYtError(null);
         const params = new URLSearchParams();
         params.append("channelUrl", linkedYoutubeUrl);
     const res = await fetch(`/api/youtube-live?${params.toString()}`, {
@@ -153,14 +153,19 @@ export function useYouTubeSync({
     };
   }, [linkedYoutubeUrl, showYoutubeSection]);
 
-  useEffect(() => {
+  // Reset all YouTube state when the user switches Twitch channels. Using the
+  // recommended "adjusting state during render" pattern from React docs so the
+  // reset is applied synchronously rather than in a deferred effect.
+  const prevChannelRef = useRef(selectedTwitchChannelName);
+  if (prevChannelRef.current !== selectedTwitchChannelName) {
+    prevChannelRef.current = selectedTwitchChannelName;
     setManualVideoId("");
     setAutoVideoId(null);
     setAutoChannelId(null);
     setYtError(null);
     setYtMessages([]);
     deletedRef.current = new Map();
-  }, [selectedTwitchChannelName]);
+  }
 
   const getYtMessageText = useCallback(
     (m: YTMessage) =>

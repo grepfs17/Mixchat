@@ -53,7 +53,7 @@ describe("YouTubeLinker component", () => {
     // Now the empty message should be shown
     await screen.findByText("No YouTube channels linked yet");
     const saved = JSON.parse(
-      localStorage.getItem("mixchat_youtube_links") || "[]",
+      localStorage.getItem("mixchat_youtube_links:v1") || "[]",
     );
     expect(saved).toHaveLength(0);
   });
@@ -106,7 +106,7 @@ describe("YouTubeLinker component", () => {
   it("defaults old links without active field to active", () => {
     // Simulate old format link (no active field)
     localStorage.setItem(
-      "mixchat_youtube_links",
+      "mixchat_youtube_links:v1",
       JSON.stringify([
         {
           twitchChannelId: "a",

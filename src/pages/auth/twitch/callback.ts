@@ -163,11 +163,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     console.log('[twitch-callback] session ok, user:', session.username, 'redirecting to:', returnUrl);
 
     try {
-      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
+      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions:v1') || '{}');
       var persisted = Object.assign({}, session);
       delete persisted.accessToken;
       sessions.twitch = persisted;
-      localStorage.setItem('mixchat_sessions', JSON.stringify(sessions));
+      localStorage.setItem('mixchat_sessions:v1', JSON.stringify(sessions));
       console.log('[twitch-callback] session written to localStorage');
     } catch (e) {
       console.error('[twitch-callback] localStorage write error:', e);

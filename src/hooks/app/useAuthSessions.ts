@@ -3,7 +3,7 @@ import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
 import { useTokenRefresh } from "./useTokenRefresh";
 
-const SESSIONS_KEY = "mixchat_sessions";
+const SESSIONS_KEY = "mixchat_sessions:v1";
 
 /**
  * Safe wrapper around `popup.closed`.
@@ -317,7 +317,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           console.error("Failed to parse youtube auth storage event", err);
         }
       }
-      if (e.key === "mixchat_sessions" && e.newValue) {
+      if (e.key === "mixchat_sessions:v1" && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           if (parsed && parsed.twitch) {

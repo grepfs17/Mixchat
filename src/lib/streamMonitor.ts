@@ -59,7 +59,7 @@ export async function checkLiveStreamers(
  * Get watched streamers from localStorage
  */
 export function getWatchedStreamers(): StreamerToWatch[] {
-  const saved = localStorage.getItem("mixchat_watched_streamers");
+  const saved = localStorage.getItem("mixchat_watched_streamers:v1");
   if (!saved) return [];
   try {
     return JSON.parse(saved);
@@ -73,7 +73,7 @@ export function getWatchedStreamers(): StreamerToWatch[] {
  * Save watched streamers to localStorage
  */
 function saveWatchedStreamers(streamers: StreamerToWatch[]): void {
-  localStorage.setItem("mixchat_watched_streamers", JSON.stringify(streamers));
+  localStorage.setItem("mixchat_watched_streamers:v1", JSON.stringify(streamers));
 }
 
 /**
@@ -98,7 +98,7 @@ export function removeWatchedStreamer(streamerId: string): void {
  * Check which streamers have already been notified for
  */
 export function getNotifiedStreamers(): Set<string> {
-  const saved = localStorage.getItem("mixchat_notified_streamers");
+  const saved = localStorage.getItem("mixchat_notified_streamers:v1");
   if (!saved) return new Set();
   try {
     return new Set(JSON.parse(saved));
@@ -115,7 +115,7 @@ export function markStreamerNotified(streamerId: string): void {
   const notified = getNotifiedStreamers();
   notified.add(streamerId);
   localStorage.setItem(
-    "mixchat_notified_streamers",
+    "mixchat_notified_streamers:v1",
     JSON.stringify(Array.from(notified)),
   );
 }
@@ -127,7 +127,7 @@ export function markStreamerOffline(streamerId: string): void {
   const notified = getNotifiedStreamers();
   notified.delete(streamerId);
   localStorage.setItem(
-    "mixchat_notified_streamers",
+    "mixchat_notified_streamers:v1",
     JSON.stringify(Array.from(notified)),
   );
 }

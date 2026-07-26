@@ -17,7 +17,7 @@ async function loadHook() {
 
 function seedYoutubeSession(hasDriveScope = false) {
   localStorage.setItem(
-    "mixchat_sessions",
+    "mixchat_sessions:v1",
     JSON.stringify({
       youtube: {
         platform: "youtube",

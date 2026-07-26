@@ -13,6 +13,8 @@ import {
  * `session.signIn()` expects its own internal OAuth flow and it wouldn't let us use
  * the httpOnly cookie.
  */
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -25,8 +27,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   }
 
-  const headers = { "Content-Type": "application/json" };
-
   try {
     const body = await request.json();
     const { videoId, message } = body as {
@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!videoId || !message) {
       return new Response(
         JSON.stringify({ error: "videoId and message are required" }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!accessToken) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
         status: 401,
-        headers,
+        headers: JSON_HEADERS,
       });
     }
 
@@ -55,7 +55,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         JSON.stringify({
           error: "This video does not have an active live chat",
         }),
-        { status: 400, headers },
+        { status: 400, headers: JSON_HEADERS },
       );
     }
 
@@ -99,13 +99,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
               ? (e?.body ?? String(e))
               : undefined,
         }),
-        { status, headers },
+        { status, headers: JSON_HEADERS },
       );
     }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers,
+      headers: JSON_HEADERS,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         details:
           import.meta.env.MODE === "development" ? errorStack : undefined,
       }),
-      { status: 500, headers },
+      { status: 500, headers: JSON_HEADERS },
     );
   }
 };

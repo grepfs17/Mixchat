@@ -322,7 +322,7 @@ export default function EmbedConfigModal({
         description: "Choose the background and hover colors for chat messages",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label" id="embed-chat-theme-label">Chat Theme</label>
+            <span className="embed-config-label" id="embed-chat-theme-label">Chat Theme</span>
             <div className="embed-config-theme-grid" role="radiogroup" aria-labelledby="embed-chat-theme-label">
         {(() => {
           let lastSection = "";
@@ -824,9 +824,9 @@ export default function EmbedConfigModal({
             >
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              ><label className="embed-config-label embed-config-label--clickable" id="embed-event-sounds-label">
+              ><span className="embed-config-label embed-config-label--clickable" id="embed-event-sounds-label">
     Event Sounds
-  </label>
+  </span>
                 {Object.keys(eventSounds).length > 0 && (
                   <span className="embed-config-event-sounds-count">
                     {Object.keys(eventSounds).length}
@@ -982,7 +982,7 @@ export default function EmbedConfigModal({
                   </div>
                 </div>
                 <div>
-                  <label className="embed-config-sound-label" id="embed-sound-label">Sound</label>
+                  <span className="embed-config-sound-label" id="embed-sound-label">Sound</span>
                   <div className="embed-config-sound-options" role="radiogroup" aria-labelledby="embed-sound-label">
                     {MENTION_SOUND_OPTIONS.map((opt) => (
                       <button type="button"
