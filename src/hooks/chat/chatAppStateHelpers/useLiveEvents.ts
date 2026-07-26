@@ -9,8 +9,10 @@ import type {
   ResolvedMessage,
 } from "../eventSubHelpers/useAutomodQueue";
 import { usePollEventSub } from "../eventSubHelpers/usePollEventSub";
+import type { PollEvent } from "../eventSubHelpers/usePollEventSub";
 import type { PollState } from "../../../components/chat/shared/PollBanner";
 import { usePredictionEventSub } from "../eventSubHelpers/usePredictionEventSub";
+import type { PredictionEvent } from "../eventSubHelpers/usePredictionEventSub";
 import type { PredictionState } from "../../../components/chat/shared/PredictionBanner";
 import { useBitsPowerUpEventSub } from "../eventSubHelpers/useBitsPowerUpEventSub";
 import type { CelebrationState } from "../../../components/chat/shared/CelebrationBanner";
@@ -122,11 +124,11 @@ export function useLiveEvents({
       },
       [setMessages],
     ),
-    onScopeError: () => {
+    onScopeError: useCallback(() => {
       console.info(
         "[useLiveEvents] Automod EventSub subscription rejected — this is expected when not a moderator or missing moderator:manage:automod scope.",
       );
-    },
+    }, []),
   });
 
   // --- Raids ---
@@ -157,7 +159,7 @@ export function useLiveEvents({
     channelId,
     enabled: !!(accessToken && channelId && channelId !== userId),
     isInitiator: false,
-    onRaid: () => {},
+    onRaid: useCallback(() => {}, []),
     onScopeError: onRaidScopeError,
   });
 
@@ -226,6 +228,44 @@ export function useLiveEvents({
     );
   }, []);
 
+  const handleHypeTrainBegin = useCallback(
+    (event: { level: number; progress: number; goal: number; total: number; topContributions: Array<{ displayName: string; total: number }>; expiresAt: string }) => {
+      setHypeTrain({
+        level: event.level,
+        progress: event.progress,
+        goal: event.goal,
+        totalPoints: event.total,
+        topContributors: event.topContributions.slice(0, 3).map((c) => ({
+          displayName: c.displayName,
+          points: c.total,
+        })),
+        endsAt: new Date(event.expiresAt),
+      });
+    },
+    [setHypeTrain],
+  );
+
+  const handleHypeTrainProgress = useCallback(
+    (event: { level: number; progress: number; goal: number; total: number; topContributions: Array<{ displayName: string; total: number }>; expiresAt: string }) => {
+      setHypeTrain({
+        level: event.level,
+        progress: event.progress,
+        goal: event.goal,
+        totalPoints: event.total,
+        topContributors: event.topContributions.slice(0, 3).map((c) => ({
+          displayName: c.displayName,
+          points: c.total,
+        })),
+        endsAt: new Date(event.expiresAt),
+      });
+    },
+    [setHypeTrain],
+  );
+
+  const handleHypeTrainEnd = useCallback(() => {
+    setHypeTrain(null);
+  }, [setHypeTrain]);
+
   useHypeTrainEventSub({
     subscribe,
     channelId,
@@ -236,35 +276,9 @@ export function useLiveEvents({
       isOnOwnChannel &&
       isPartnerOrAffiliate
     ),
-    onHypeTrainBegin: (event) => {
-      setHypeTrain({
-        level: event.level,
-        progress: event.progress,
-        goal: event.goal,
-        totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map((c) => ({
-          displayName: c.displayName,
-          points: c.total,
-        })),
-        endsAt: new Date(event.expiresAt),
-      });
-    },
-    onHypeTrainProgress: (event) => {
-      setHypeTrain({
-        level: event.level,
-        progress: event.progress,
-        goal: event.goal,
-        totalPoints: event.total,
-        topContributors: event.topContributions.slice(0, 3).map((c) => ({
-          displayName: c.displayName,
-          points: c.total,
-        })),
-        endsAt: new Date(event.expiresAt),
-      });
-    },
-    onHypeTrainEnd: () => {
-      setHypeTrain(null);
-    },
+    onHypeTrainBegin: handleHypeTrainBegin,
+    onHypeTrainProgress: handleHypeTrainProgress,
+    onHypeTrainEnd: handleHypeTrainEnd,
     onScopeError: onHypeTrainScopeError,
   });
 
@@ -275,11 +289,8 @@ export function useLiveEvents({
     );
   }, []);
 
-  usePollEventSub({
-    subscribe,
-    channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
-    onPollBegin: (event) => {
+  const handlePollBegin = useCallback(
+    (event: PollEvent) => {
       setPoll({
         id: event.id,
         title: event.title,
@@ -292,7 +303,11 @@ export function useLiveEvents({
         endsAt: new Date(event.endsAt || event.startedAt),
       });
     },
-    onPollProgress: (event) => {
+    [setPoll],
+  );
+
+  const handlePollProgress = useCallback(
+    (event: PollEvent) => {
       setPoll((prev) => {
         if (prev && prev.id !== event.id) return prev;
         return {
@@ -309,7 +324,11 @@ export function useLiveEvents({
         };
       });
     },
-    onPollEnd: (event) => {
+    [setPoll],
+  );
+
+  const handlePollEnd = useCallback(
+    (event: PollEvent) => {
       setPoll((prev) => {
         if (prev && prev.id !== event.id) return prev;
         return {
@@ -327,6 +346,16 @@ export function useLiveEvents({
         };
       });
     },
+    [setPoll],
+  );
+
+  usePollEventSub({
+    subscribe,
+    channelId,
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    onPollBegin: handlePollBegin,
+    onPollProgress: handlePollProgress,
+    onPollEnd: handlePollEnd,
     onScopeError: onPollScopeError,
   });
 
@@ -337,11 +366,8 @@ export function useLiveEvents({
     );
   }, []);
 
-  usePredictionEventSub({
-    subscribe,
-    channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
-    onPredictionBegin: (event) => {
+  const handlePredictionBegin = useCallback(
+    (event: PredictionEvent) => {
       setPrediction({
         id: event.id,
         title: event.title,
@@ -361,7 +387,11 @@ export function useLiveEvents({
         endsAt: event.locksAt ? new Date(event.locksAt) : undefined,
       });
     },
-    onPredictionProgress: (event) => {
+    [setPrediction],
+  );
+
+  const handlePredictionProgress = useCallback(
+    (event: PredictionEvent) => {
       setPrediction((prev) => {
         if (prev && prev.id !== event.id) return prev;
         return {
@@ -390,7 +420,11 @@ export function useLiveEvents({
         };
       });
     },
-    onPredictionLock: (event) => {
+    [setPrediction],
+  );
+
+  const handlePredictionLock = useCallback(
+    (event: PredictionEvent) => {
       setPrediction((prev) => {
         if (prev && prev.id !== event.id) return prev;
         return {
@@ -418,7 +452,11 @@ export function useLiveEvents({
         };
       });
     },
-    onPredictionEnd: (event) => {
+    [setPrediction],
+  );
+
+  const handlePredictionEnd = useCallback(
+    (event: PredictionEvent) => {
       setPrediction((prev) => {
         if (prev && prev.id !== event.id) return prev;
         return {
@@ -446,6 +484,17 @@ export function useLiveEvents({
         };
       });
     },
+    [setPrediction],
+  );
+
+  usePredictionEventSub({
+    subscribe,
+    channelId,
+    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    onPredictionBegin: handlePredictionBegin,
+    onPredictionProgress: handlePredictionProgress,
+    onPredictionLock: handlePredictionLock,
+    onPredictionEnd: handlePredictionEnd,
     onScopeError: onPredictionScopeError,
   });
 
@@ -456,13 +505,18 @@ export function useLiveEvents({
     );
   }, []);
 
+  const handleCelebration = useCallback(
+    (event: CelebrationState) => {
+      setCelebration(event);
+    },
+    [setCelebration],
+  );
+
   useBitsPowerUpEventSub({
     subscribe,
     channelId,
     enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
-    onCelebration: (event) => {
-      setCelebration(event);
-    },
+    onCelebration: handleCelebration,
     onScopeError: onCelebrationScopeError,
   });
 }

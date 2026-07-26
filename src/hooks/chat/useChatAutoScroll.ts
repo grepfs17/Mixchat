@@ -18,8 +18,10 @@ export function useChatAutoScroll({
   // fails when old messages are sliced off the front as new ones are appended.
   const prevLastItemRef = useRef<unknown>(null);
   const lastItemRef = useRef<unknown>(null);
-  lastItemRef.current =
-    messages.length > 0 ? messages[messages.length - 1] : undefined;
+  useEffect(() => {
+    lastItemRef.current =
+      messages.length > 0 ? messages[messages.length - 1] : undefined;
+  }, [messages]);
 
   // Auto-scroll when at bottom
   useEffect(() => {

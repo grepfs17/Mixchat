@@ -15,7 +15,9 @@ export default function StreamTransitionOverlay({
   const overlayRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCompleteRef = useRef(onAnimationComplete);
-  onCompleteRef.current = onAnimationComplete;
+  useEffect(() => {
+    onCompleteRef.current = onAnimationComplete;
+  }, [onAnimationComplete]);
 
   useEffect(() => {
     const target = targetRef.current;
