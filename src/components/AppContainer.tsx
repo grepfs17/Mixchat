@@ -582,9 +582,9 @@ export default function AppContainer() {
                     {playerType === "m3u8" && hlsQualities.length > 1 && (
                       <div className="quality-selector quality-selector--header">
                         {showHlsQualityMenu && (
-                          <div
-                            className="quality-selector__backdrop"
-                            onClick={() => setShowHlsQualityMenu(false)}
+                          <div          role="presentation"
+          className="quality-selector__backdrop"
+          onClick={() => setShowHlsQualityMenu(false)}
                           />
                         )}
                         <div className="quality-selector__inner">
@@ -692,7 +692,9 @@ export default function AppContainer() {
                   userSelect: "none",
                   transition: isDragging ? "none" : "background-color 0.2s",
                 }}
-                onMouseDown={() => setIsDragging(true)}
+                role="separator"
+        aria-orientation="vertical"
+        onMouseDown={() => setIsDragging(true)}
                 onMouseEnter={(e) =>
                   !isDragging &&
                   (e.currentTarget.style.backgroundColor = "#6366f1")

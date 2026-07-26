@@ -94,13 +94,13 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
 
   if (!isOpen) return null;
 
-  const thirdPartySources = [
-    { key: "7tv" as const, label: "7TV", color: "#00d4ff" },
-    { key: "bttv" as const, label: "BTTV", color: "#34ae7b" },
-    { key: "ffz" as const, label: "FFZ", color: "#faa61a" },
-  ] as const;
+const THIRD_PARTY_SOURCES = [
+  { key: "7tv" as const, label: "7TV", color: "#00d4ff" },
+  { key: "bttv" as const, label: "BTTV", color: "#34ae7b" },
+  { key: "ffz" as const, label: "FFZ", color: "#faa61a" },
+] as const;
 
-  const twitchColor = "#9146ff";
+const TWITCH_COLOR = "#9146ff";
   const isSearching = searchQuery.trim().length > 0;
 
   const renderEmoteItem = (emote: { name: string; url: string }) => {
@@ -115,6 +115,14 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             setSearchQuery("");
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (!isDisabled) onSelectEmote(emote.name);
+          }
+        }}
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
         title={emote.name}
       >
         <button type="button"
@@ -304,6 +312,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             ref={searchInputRef}
             type="text"
             placeholder="Search all emotes..."
+            aria-label="Search all emotes"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="emote-search-input"
@@ -315,14 +324,14 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             className={`emote-tab ${activeTab === "twitch" ? "active" : ""}`}
             onClick={() => setActiveTab("twitch")}
             style={{
-              color: activeTab === "twitch" ? twitchColor : "#cbd5e1",
+              color: activeTab === "twitch" ? TWITCH_COLOR : "#cbd5e1",
               borderBottomColor:
-                activeTab === "twitch" ? twitchColor : "transparent",
+                activeTab === "twitch" ? TWITCH_COLOR : "transparent",
             }}
           >
             Twitch
           </button>
-          {thirdPartySources.map(({ key, label, color }) => (
+          {THIRD_PARTY_SOURCES.map(({ key, label, color }) => (
             <button type="button"
               key={key}
               className={`emote-tab ${activeTab === key ? "active" : ""}`}

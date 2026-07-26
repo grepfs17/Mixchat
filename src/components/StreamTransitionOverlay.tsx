@@ -66,7 +66,7 @@ export default function StreamTransitionOverlay({
         zIndex: 9999,
         overflow: "hidden",
         pointerEvents: "none",
-        willChange: "transform",
+        willChange: "auto",
         transformOrigin: "top left",
         borderRadius: "16px",
       }}

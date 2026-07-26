@@ -402,41 +402,46 @@ export function useMusicPlayer(): UseMusicPlayerResult {
         // The functional updater runs twice under React 18 strict mode
         // — `savePlaylist` is idempotent (IDB put of the same payload)
         // so the double-fire is harmless.
-        let outcome = "notFound" as "ok" | "duplicate" | "notFound";
-        let savedPlaylist: MusicPlaylist | null = null;
+        // Step 1: Force any pending state updates (e.g. from createPlaylist)
+        // to commit so playlistsRef.current reflects the freshest state.
+        // This is necessary when addTrackFromUrl is called immediately after
+        // createPlaylist before React has had a chance to re-render.
+        flushSync(() => setPlaylists((p) => p));
+        const freshPlaylists = playlistsRef.current;
+
+        // Step 2: Compute outcome from fresh state (outside the updater).
+        const pi = freshPlaylists.findIndex((p) => p.id === resolvedId);
+        if (pi === -1) {
+          setError("Could not find the target playlist.");
+          return;
+        }
+        const pl = freshPlaylists[pi];
+        if (pl.items.some((it) => it.videoId === meta.videoId)) {
+          setError("This track is already in the playlist.");
+          return;
+        }
+        const cappedItems =
+          pl.items.length >= MAX_TRACKS_PER_PLAYLIST
+            ? pl.items
+            : [...pl.items, newItem];
+        const updatedPlaylist: MusicPlaylist = {
+          ...pl,
+          items: cappedItems,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Step 3: Pure updater — returns only next state, no side effects.
         flushSync(() => {
           setPlaylists((prev) => {
             const i = prev.findIndex((p) => p.id === resolvedId);
             if (i === -1) return prev;
-            const pl = prev[i];
-            if (pl.items.some((it) => it.videoId === meta.videoId)) {
-              outcome = "duplicate";
-              return prev;
-            }
-            outcome = "ok";
-            const cappedItems =
-              pl.items.length >= MAX_TRACKS_PER_PLAYLIST
-                ? pl.items
-                : [...pl.items, newItem];
-            const next: MusicPlaylist = {
-              ...pl,
-              items: cappedItems,
-              updatedAt: new Date().toISOString(),
-            };
-            savedPlaylist = next;
             const merged = [...prev];
-            merged[i] = next;
+            merged[i] = updatedPlaylist;
             return merged;
           });
         });
         // Persist to IDB after the state updater completes.
-        if (savedPlaylist) void savePlaylist(savedPlaylist);
-        // Surface errors after flushSync has committed.
-        if (outcome === "duplicate") {
-          setError("This track is already in the playlist.");
-        } else if (outcome === "notFound") {
-          setError("Could not find the target playlist.");
-        }
+        void savePlaylist(updatedPlaylist);
       } catch (err) {
         if (err instanceof VideoValidationError) {
           setError(err.message);

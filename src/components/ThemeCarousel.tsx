@@ -177,7 +177,7 @@ export default function ThemeCarousel({
         <div className="theme-carousel-dots" role="tablist">
           {slides.map((s, i) => (
             <button
-              key={i}
+              key={s.src}
               type="button"
               role="tab"
               aria-selected={i === index}

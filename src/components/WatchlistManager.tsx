@@ -19,12 +19,12 @@ export default function WatchlistManager({
   onClose,
 }: WatchlistManagerProps) {
   const [watchedStreamers, setWatchedStreamers] = useState(
-    getWatchedStreamers(),
+    () => getWatchedStreamers(),
   );
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [systemNotifications, setSystemNotifications] = useState(
-    getSystemNotificationsEnabled(),
+    () => getSystemNotificationsEnabled(),
   );
 
   const handleAddStreamer = () => {
@@ -80,6 +80,7 @@ export default function WatchlistManager({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="channel-search"
+            aria-label="Search channels"
           />
           <div className="channel-list-dropdown">
             {filteredChannels.length === 0 ? (
@@ -133,10 +134,10 @@ export default function WatchlistManager({
         </div>
 
         <div className="watchlist-settings">
-          <label className="watchlist-toggle">
-            <span className="watchlist-toggle-label">
-              <FaEye style={{ marginRight: "6px", opacity: 0.7 }} />
-              Browser notifications
+  <label className="watchlist-toggle">
+    <span className="watchlist-toggle-label" id="watchlist-notif-label">
+      <FaEye style={{ marginRight: "6px", opacity: 0.7 }} />
+      Browser notifications
               <span
                 className="watchlist-info-icon"
                 title="In-app notifications show a small popup on the page. Browser notifications are sent by your browser even when you're not actively using this tab."
@@ -144,14 +145,15 @@ export default function WatchlistManager({
                 <FaInfoCircle size={12} />
               </span>
             </span>
-            <button type="button"
-              className={`watchlist-toggle-switch${systemNotifications ? " active" : ""}`}
-              onClick={() => {
-                const next = !systemNotifications;
-                setSystemNotifications(next);
-                setSystemNotificationsEnabled(next);
-              }}
-              role="switch"
+    <button type="button"
+      className={`watchlist-toggle-switch${systemNotifications ? " active" : ""}`}
+      onClick={() => {
+        const next = !systemNotifications;
+        setSystemNotifications(next);
+        setSystemNotificationsEnabled(next);
+      }}
+      role="switch"
+      aria-labelledby="watchlist-notif-label"
               aria-checked={systemNotifications}
             >
               <span className="watchlist-toggle-knob" />

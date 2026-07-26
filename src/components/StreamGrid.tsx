@@ -106,6 +106,7 @@ export default function StreamGrid({
               type="text"
               className="stream-search"
               placeholder="Search streams, games…"
+              aria-label="Search streams and games"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoComplete="off"
@@ -172,7 +173,7 @@ export default function StreamGrid({
         ) : (
           <div className="stream-grid">
             {filtered.map((channel) => {
-              const isFav = favoriteChannels.includes(channel.id);
+              const isFav = new Set(favoriteChannels).has(channel.id);
               const thumbFailed = thumbErrors.has(channel.id);
               const thumbSrc = getThumbnailSrc(channel);
               const game = channel.gameName || channel.title || "";
@@ -255,7 +256,7 @@ export default function StreamGrid({
                           {channel.displayName}
                         </span>
                       </div>
-                      {linkedYoutubeChannelIds.includes(channel.id) && (
+                      {new Set(linkedYoutubeChannelIds).has(channel.id) && (
                         <FaYoutube
                           size={18}
                           className="stream-card-yt-badge"

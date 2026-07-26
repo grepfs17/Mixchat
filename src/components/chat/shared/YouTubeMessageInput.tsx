@@ -36,9 +36,11 @@ interface YouTubeMessageInputProps {
   onOptimisticFailed?: (id: string) => void;
 }
 
+const EMPTY_YT_MESSAGES: YTMessage[] = [];
+
 export default function YouTubeMessageInput({
   youtubeVideoId,
-  chatMessages = [],
+  chatMessages = [] as YTMessage[],
   onError,
   onOptimisticMessage,
   onOptimisticFailed,
@@ -86,6 +88,7 @@ export default function YouTubeMessageInput({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoId: youtubeVideoId, message: text }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!res.ok) {
         onOptimisticFailed?.(optimisticId);
@@ -334,6 +337,7 @@ export default function YouTubeMessageInput({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Send to YouTube..."
+          aria-label="Send message to YouTube"
           disabled={ytSending}
           className="message-textarea"
         />
@@ -357,6 +361,7 @@ export default function YouTubeMessageInput({
                   placeholder="Search emoji..."
                   value={pickerSearch}
                   onChange={(e) => setPickerSearch(e.target.value)}
+                  aria-label="Search emoji"
                   className="yt-emoji-picker-search-input"
                 />
               </div>

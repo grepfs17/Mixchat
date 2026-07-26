@@ -11,7 +11,7 @@ import {
 import { searchEmotes } from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
 
-const STORAGE_KEY = "mixchat_preset_messages";
+const STORAGE_KEY = "mixchat_preset_messages:v1";
 
 interface PresetMessage {
   id: string;
@@ -347,11 +347,13 @@ function PresetMessages({
                 </button>
               </div>
             ) : (
-              presets.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="preset-dropdown-item"
-                  onClick={() => handleSendPreset(preset)}
+              presets.map((preset) => (                    <div
+                      key={preset.id}
+                      role="button"
+                      tabIndex={0}
+                      className="preset-dropdown-item"
+                      onClick={() => handleSendPreset(preset)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSendPreset(preset); } }}
                 >
                   <div className="preset-dropdown-item-info">
                     <span className="preset-dropdown-item-name">
@@ -371,14 +373,10 @@ function PresetMessages({
         )}
 
       {showModal &&
-        createPortal(
-          <div
-            className="preset-modal-overlay"
-            onClick={() => {
-              setShowModal(false);
-              setEditingPreset(null);
-            }}
-          >
+        createPortal(        <div className="preset-modal-overlay" role="presentation" onClick={() => {
+          setShowModal(false);
+          setEditingPreset(null);
+        }}>
             <div
               className="preset-modal"
               ref={modalRef}
@@ -386,8 +384,9 @@ function PresetMessages({
             >
               <div className="preset-modal-header">
                 <h2>{editingPreset ? "Edit Preset" : "Preset Messages"}</h2>
-                <button type="button"
-                  className="preset-modal-close"
+        <button type="button"
+          className="preset-modal-close"
+          aria-label="Close preset messages"
                   onClick={() => {
                     setShowModal(false);
                     setEditingPreset(null);
@@ -399,8 +398,9 @@ function PresetMessages({
 
               <div className="preset-modal-form">
                 <div className="preset-modal-field">
-                  <label className="preset-modal-label">Name</label>
+                  <label className="preset-modal-label" htmlFor="preset-name-input">Name</label>
                   <input
+                    id="preset-name-input"
                     type="text"
                     className="preset-modal-input"
                     placeholder="e.g. Welcome message"
@@ -414,8 +414,9 @@ function PresetMessages({
                   className="preset-modal-field"
                   style={{ position: "relative" }}
                 >
-                  <label className="preset-modal-label">Message</label>
+                  <label className="preset-modal-label" htmlFor="preset-message-input">Message</label>
                   <textarea
+                    id="preset-message-input"
                     ref={textareaRef}
                     className="preset-modal-textarea"
                     placeholder="Type the message content... (emote autocomplete available)"
@@ -439,11 +440,13 @@ function PresetMessages({
                           maxHeight: "40vh",
                         }}
                       >
-                        {emoteResults.map((emote, index) => (
-                          <div
-                            key={`${emote.source}-${emote.name}`}
-                            onClick={() => insertEmote(emote.name)}
-                            className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
+                        {emoteResults.map((emote, index) => (    <div
+      key={`${emote.source}-${emote.name}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => insertEmote(emote.name)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); insertEmote(emote.name); } }}
+      className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
                             onMouseEnter={() => {
                               setSelectedEmoteIndex(index);
                               setHasEmoteSelection(true);

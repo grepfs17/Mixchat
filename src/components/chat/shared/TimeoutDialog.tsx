@@ -111,6 +111,7 @@ export default function TimeoutDialog({
 
   return createPortal(
     <div
+      role="presentation"
       className="yt-timeout-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -171,6 +172,7 @@ export default function TimeoutDialog({
                 min={1}
                 value={customValue}
                 placeholder="Duration"
+                aria-label="Timeout duration"
                 onChange={(e) => setCustomValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -185,10 +187,11 @@ export default function TimeoutDialog({
                 autoFocus
                 className="yt-timeout-input"
               />
-              <select
-                value={customUnit}
-                onChange={(e) => setCustomUnit(e.target.value as TimeUnit)}
-                className="yt-timeout-unit"
+  <select
+    value={customUnit}
+    onChange={(e) => setCustomUnit(e.target.value as TimeUnit)}
+    className="yt-timeout-unit"
+    aria-label="Timeout unit"
               >
                 <option value="s">sec</option>
                 <option value="m">min</option>

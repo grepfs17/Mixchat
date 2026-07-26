@@ -315,19 +315,12 @@ const FRIENDLY_NAMES: Record<string, string> = {
           )}
           <h2>
             <span className="status-badge-container" ref={statusDropdownRef}>
-              <span
-                className="status-badge-button"
-                role="button"
-                tabIndex={0}
-                onClick={() => setStatusDropdownOpen((v) => !v)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setStatusDropdownOpen((v) => !v);
-                  }
-                }}
-                title="EventSub connection status"
-              >
+            <button
+              type="button"
+              className="status-badge-button"
+              onClick={() => setStatusDropdownOpen((v) => !v)}
+              title="EventSub connection status"
+            >
                 {isStreamLive ? (
                   <span className="status-badge-live">
                     <span className="status-dot pulse" />
@@ -339,7 +332,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
                     <span className="status-badge-offline-text">OFFLINE</span>
                   </span>
                 )}
-              </span>
+              </button>
               {statusDropdownOpen && subscriptionStatuses && (
                 <div className="eventsub-status-dropdown">
                   <div className="eventsub-status-header">EventSub Connections</div>
@@ -718,6 +711,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
                   else if (e.key === "Escape") setEditingTitle(false);
                 }}
                 placeholder="Stream title"
+                aria-label="Stream title"
                 autoFocus
                 disabled={savingTitle}
               />
@@ -739,7 +733,8 @@ const FRIENDLY_NAMES: Record<string, string> = {
               </button>
             </div>
           ) : (
-            <span
+            <button
+              type="button"
               className="stream-info-title"
               onClick={() => {
                 setTitleInput(streamTitle || "");
@@ -749,7 +744,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
             >
               {streamTitle || "No title set"}
               <MdEdit size={11} className="stream-info-edit-icon" />
-            </span>
+            </button>
           )}
 
           {editingCategory ? (
@@ -804,6 +799,7 @@ const FRIENDLY_NAMES: Record<string, string> = {
                     });
                 }}
                 placeholder="Search category..."
+                aria-label="Search category"
                 autoFocus
                 disabled={savingCategory}
               />
@@ -821,20 +817,21 @@ const FRIENDLY_NAMES: Record<string, string> = {
               </button>
             </div>
           ) : (
-            <span
+            <button
+              type="button"
               className="stream-info-category"
               onClick={() => {
                 setCategoryInput(streamGameName || "");
                 setEditingCategory(true);
-                onSearchCategories?.(streamGameName || "").then((results) =>
-                  setCategoryResults(results),
-                );
+    onSearchCategories?.(streamGameName || "").then((results) =>
+      setCategoryResults(results),
+    ).catch(() => {});
               }}
               title="Click to change category"
-            >
+           >
               {streamGameName || "No category"}
               <MdEdit size={11} className="stream-info-edit-icon" />
-            </span>
+            </button>
           )}
         </div>
       )}

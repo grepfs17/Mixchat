@@ -190,16 +190,17 @@ export function YouTubeMessageContent({
             <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
           )}
           {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
-          <span
-            className="author"
-            style={{ color: config.color }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onUsernameClick?.(e, msg.author, msg.authorAvatar);
-            }}
-          >
-            {msg.author}
-          </span>
+        <button
+          type="button"
+          className="author"
+          style={{ color: config.color }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onUsernameClick?.(e, msg.author, msg.authorAvatar);
+          }}
+        >
+          {msg.author}
+        </button>
           <span className="message-separator">:</span>
           <span className="message-text">
             {msg.messageType === "membership" && (
@@ -290,8 +291,8 @@ export function YouTubeMessageContent({
         {msg.authorAvatar && (
           <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
         )}
-        {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
-        <span
+        {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}        <button
+          type="button"
           className="author"
           style={{
             color: getReadableUsernameColor(getColorFromName(msg.author)),
@@ -302,9 +303,9 @@ export function YouTubeMessageContent({
           }}
         >
           {msg.author}
-        </span>
-        <span className="message-separator">:</span>
-        {msg.isDeleted && !deletedRevealed ? (
+        </button>
+          <span className="message-separator">:</span>
+          {msg.isDeleted && !deletedRevealed ? (
           <span className="message-text deleted-clickable">
             {formatDeletedByText(msg.deletedByText)}{" "}
             {showDeletedMessages ? (

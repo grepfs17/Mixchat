@@ -238,7 +238,7 @@ export default function MessageMenu({
       <div className="context-menu-header">@{author}</div>
       {items.map((it) =>
         "divider" in it ? (
-          <div key={it.key} role="separator" className="context-menu-divider" />
+          <hr key={it.key} className="context-menu-divider" />
         ) : (
           <button type="button"
             key={it.key}

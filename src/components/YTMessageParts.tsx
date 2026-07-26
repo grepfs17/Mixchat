@@ -148,10 +148,10 @@ export default function YTMessageParts({
     () =>
       parts.map((part, i) =>
         part.type === "emoji" ? (
-          variant === "unified" ? (
-            <img
-              key={i}
-              src={part.url}
+        variant === "unified" ? (
+          <img
+            key={part.url}
+            src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}
               className="chat-emote"
@@ -167,10 +167,10 @@ export default function YTMessageParts({
                 cursor: "pointer",
               }}
             />
-          ) : (
-            <img
-              key={i}
-              src={part.url}
+        ) : (
+          <img
+            key={part.url}
+            src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}
               className={`yt-emoji ${part.isCustomEmoji ? "custom" : "standard"}`}

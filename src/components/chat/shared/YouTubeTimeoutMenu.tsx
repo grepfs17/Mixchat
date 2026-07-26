@@ -81,6 +81,7 @@ export default function YouTubeTimeoutMenu({
             min={1}
             value={customValue}
             placeholder="Duration"
+            aria-label="Timeout duration"
             onChange={(e) => setCustomValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleCustomSubmit();
@@ -89,11 +90,12 @@ export default function YouTubeTimeoutMenu({
             autoFocus
             style={{ width: "60px" }}
           />
-          <select
-            value={customUnit}
-            onChange={(e) =>
-              setCustomUnit(e.target.value as "s" | "m" | "h" | "d")
-            }
+  <select
+    value={customUnit}
+    onChange={(e) =>
+      setCustomUnit(e.target.value as "s" | "m" | "h" | "d")
+    }
+    aria-label="Timeout unit"
           >
             <option value="s">sec</option>
             <option value="m">min</option>

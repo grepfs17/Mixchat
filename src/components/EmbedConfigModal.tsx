@@ -260,13 +260,14 @@ export default function EmbedConfigModal({
         description: "Adjust the size of the text in the chat window",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">
+            <label className="embed-config-label" htmlFor="embed-font-size">
               Chat Font Size:{" "}
               <span className="embed-config-value">{fontSize}px</span>
             </label>
             <div className="embed-config-range-row">
               <span className="embed-config-range-bound">12px</span>
               <input
+                id="embed-font-size"
                 type="range"
                 min="12"
                 max="32"
@@ -290,8 +291,9 @@ export default function EmbedConfigModal({
         description: "Choose the font used in the chat window",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">Chat Font</label>
+            <label className="embed-config-label" htmlFor="embed-chat-font">Chat Font</label>
             <select
+              id="embed-chat-font"
               value={chatFont}
               onChange={(e) => onChatFontChange(e.target.value as ChatFont)}
               className="embed-config-select"
@@ -320,8 +322,8 @@ export default function EmbedConfigModal({
         description: "Choose the background and hover colors for chat messages",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">Chat Theme</label>
-            <div className="embed-config-theme-grid">
+            <label className="embed-config-label" id="embed-chat-theme-label">Chat Theme</label>
+            <div className="embed-config-theme-grid" role="radiogroup" aria-labelledby="embed-chat-theme-label">
         {(() => {
           let lastSection = "";
           return THEME_OPTIONS.map(({ value, label, preview, section }) => {
@@ -634,8 +636,9 @@ export default function EmbedConfigModal({
           "Choose which player to use for Twitch streams. M3U8 (HLS) uses less bandwidth and avoids third-party cookies.",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">Default player</label>
+            <label className="embed-config-label" htmlFor="embed-default-player">Default player</label>
             <select
+              id="embed-default-player"
               value={defaultPlayerType}
               onChange={(e) => {
                 onDefaultPlayerTypeChange(
@@ -663,8 +666,9 @@ export default function EmbedConfigModal({
           "When using the M3U8 player, start with this resolution.",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">Default HLS resolution</label>
+            <label className="embed-config-label" htmlFor="embed-hls-quality">Default HLS resolution</label>
             <select
+              id="embed-hls-quality"
               value={defaultHlsQuality}
               onChange={(e) => onDefaultHlsQualityChange(e.target.value)}
               className="embed-config-select"
@@ -742,12 +746,14 @@ export default function EmbedConfigModal({
           "Hide messages from specific users and show a badge counter instead",
         render: () => (
           <div className="embed-config-section">
-            <label className="embed-config-label">Ignored Users</label>
+            <label className="embed-config-label" htmlFor="embed-ignored-user-input">Ignored Users</label>
             <div className="embed-config-ignored-users-input-row">
               <input
+                id="embed-ignored-user-input"
                 type="text"
                 className="embed-config-ignored-users-input"
                 placeholder="Enter username..."
+                aria-label="Enter username to ignore"
                 value={ignoredUserInput}
                 onChange={(e) => setIgnoredUserInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -818,10 +824,9 @@ export default function EmbedConfigModal({
             >
               <div
                 style={{ display: "flex", alignItems: "center", gap: "8px" }}
-              >
-                <label className="embed-config-label embed-config-label--clickable">
-                  Event Sounds
-                </label>
+              ><label className="embed-config-label embed-config-label--clickable" id="embed-event-sounds-label">
+    Event Sounds
+  </label>
                 {Object.keys(eventSounds).length > 0 && (
                   <span className="embed-config-event-sounds-count">
                     {Object.keys(eventSounds).length}
@@ -855,7 +860,7 @@ export default function EmbedConfigModal({
                   className="embed-config-section"
                   style={{ padding: "0 0 8px" }}
                 >
-                  <label className="embed-config-volume-label">
+                  <label className="embed-config-volume-label" htmlFor="embed-event-sound-volume">
                     Volume:{" "}
                     <span className="embed-config-volume-value">
                       {Math.round(eventSoundVolume * 100)}%
@@ -864,6 +869,7 @@ export default function EmbedConfigModal({
                   <div className="embed-config-volume-row">
                     <span className="embed-config-volume-bound">0%</span>
                     <input
+                      id="embed-event-sound-volume"
                       type="range"
                       min="0"
                       max="1"
@@ -952,7 +958,7 @@ export default function EmbedConfigModal({
             {mentionSoundEnabled && (
               <div className="embed-config-mention-options">
                 <div>
-                  <label className="embed-config-volume-label">
+                  <label className="embed-config-volume-label" htmlFor="embed-mention-volume">
                     Volume:{" "}
                     <span className="embed-config-volume-value">
                       {Math.round(mentionVolume * 100)}%
@@ -961,6 +967,7 @@ export default function EmbedConfigModal({
                   <div className="embed-config-volume-row">
                     <span className="embed-config-volume-bound">0%</span>
                     <input
+                      id="embed-mention-volume"
                       type="range"
                       min="0"
                       max="1"
@@ -975,8 +982,8 @@ export default function EmbedConfigModal({
                   </div>
                 </div>
                 <div>
-                  <label className="embed-config-sound-label">Sound</label>
-                  <div className="embed-config-sound-options">
+                  <label className="embed-config-sound-label" id="embed-sound-label">Sound</label>
+                  <div className="embed-config-sound-options" role="radiogroup" aria-labelledby="embed-sound-label">
                     {MENTION_SOUND_OPTIONS.map((opt) => (
                       <button type="button"
                         key={opt.value}
@@ -1269,6 +1276,7 @@ export default function EmbedConfigModal({
                 type="text"
                 className="embed-config-search-input"
                 placeholder="Search settings..."
+                aria-label="Search settings"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

@@ -256,7 +256,7 @@ export default function ChatterHistoryOverlay({
               <MdOpenInNew size={20} />
             </a>
           )}
-          <button type="button" onClick={onClose} className="overlay-btn-icon">
+          <button type="button" onClick={onClose} className="overlay-btn-icon" aria-label="Close chatter history overlay">
             <MdClose size={24} />
           </button>
         </div>
