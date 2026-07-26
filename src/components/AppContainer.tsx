@@ -23,6 +23,8 @@ import { useEmbedState } from "../hooks/app/useEmbedState";
 import { useUiState } from "../hooks/app/useUiState";
 import { useMyChannelInfo } from "../hooks/app/useMyChannelInfo";
 import { markStreamerNotified } from "../lib/streamMonitor";
+// storageMigration runs at import time — importing it triggers the migration.
+import "../lib/storageMigration";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import StreamGrid from "./StreamGrid";
 import type { StreamTransitionInfo } from "./StreamGrid";

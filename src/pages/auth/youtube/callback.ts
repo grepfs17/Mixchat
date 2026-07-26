@@ -200,13 +200,13 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     var session = JSON.parse(${sessionPayloadJson});
 
     try {
-      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions') || '{}');
+      var sessions = JSON.parse(localStorage.getItem('mixchat_sessions:v1') || '{}');
       // Strip accessToken: it lives only in memory (React state) and is
       // repopulated on reload via useTokenRefresh + the httpOnly cookie.
       var persisted = Object.assign({}, session);
       delete persisted.accessToken;
       sessions.youtube = persisted;
-      localStorage.setItem('mixchat_sessions', JSON.stringify(sessions));
+      localStorage.setItem('mixchat_sessions:v1', JSON.stringify(sessions));
     } catch (e) { /* storage unavailable */ }
 
     // Signal the parent window via postMessage (if opener reference is alive)

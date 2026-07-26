@@ -178,13 +178,13 @@ describe("settingsBackup lib", () => {
     });
 
     it("does not touch auth tokens or caches", async () => {
-      localStorage.setItem("mixchat_sessions", '{"twitch":{}}');
+      localStorage.setItem("mixchat_sessions:v1", '{"twitch":{}}');
       localStorage.setItem("emotes_7tv_global_v2", "cached");
 
       const file = makeBackupFile({ mixchat_font_size: "16" });
       await importSettings(file);
 
-      expect(localStorage.getItem("mixchat_sessions")).toBe('{"twitch":{}}');
+      expect(localStorage.getItem("mixchat_sessions:v1")).toBe('{"twitch":{}}');
       expect(localStorage.getItem("emotes_7tv_global_v2")).toBe("cached");
       expect(localStorage.getItem("mixchat_font_size")).toBe("16");
     });
@@ -200,7 +200,7 @@ describe("settingsBackup lib", () => {
 
       expect(count).toBe(1);
       // In jsdom IndexedDB is unavailable, so the fallback writes to localStorage
-      expect(localStorage.getItem("mixchat_event_sounds")).toBe(
+      expect(localStorage.getItem("mixchat_event_sounds:v1")).toBe(
         JSON.stringify({ subscription: "data:audio/mp3;base64,abc123" }),
       );
     });
@@ -213,7 +213,7 @@ describe("settingsBackup lib", () => {
       const count = await importSettings(file);
 
       expect(count).toBe(0);
-      expect(localStorage.getItem("mixchat_event_sounds")).toBeNull();
+      expect(localStorage.getItem("mixchat_event_sounds:v1")).toBeNull();
     });
   });
 
@@ -233,7 +233,7 @@ describe("settingsBackup lib", () => {
 
     it("includes event sounds in the exported JSON when present in localStorage fallback", async () => {
       localStorage.setItem(
-        "mixchat_event_sounds",
+        "mixchat_event_sounds:v1",
         JSON.stringify({ subscription: "data:audio/mp3;base64,abc123" }),
       );
 

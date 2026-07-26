@@ -22,7 +22,7 @@ export interface GiveawayHistoryEntry {
   eligibility: GiveawayEligibility;
 }
 
-const STORAGE_KEY = "mixchat_giveaway_history";
+const STORAGE_KEY = "mixchat_giveaway_history:v1";
 const MAX_ENTRIES = 50;
 
 function readStorage(): GiveawayHistoryEntry[] {

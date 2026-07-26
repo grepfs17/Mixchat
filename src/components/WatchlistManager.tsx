@@ -134,7 +134,7 @@ export default function WatchlistManager({
         </div>
 
         <div className="watchlist-settings">
-  <label className="watchlist-toggle">
+  <div className="watchlist-toggle" role="group" aria-labelledby="watchlist-notif-label">
     <span className="watchlist-toggle-label" id="watchlist-notif-label">
       <FaEye style={{ marginRight: "6px", opacity: 0.7 }} />
       Browser notifications
@@ -158,7 +158,7 @@ export default function WatchlistManager({
             >
               <span className="watchlist-toggle-knob" />
             </button>
-          </label>
+          </div>
         </div>
 
         <div className="watchlist-items">

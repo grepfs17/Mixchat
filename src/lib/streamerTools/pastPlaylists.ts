@@ -30,7 +30,7 @@ export interface PastPlaylistEntry {
   >;
 }
 
-const STORAGE_KEY = "mixchat_song_queue_past_playlists";
+const STORAGE_KEY = "mixchat_song_queue_past_playlists:v1";
 const MAX_ENTRIES = 50;
 
 function readStorage(): PastPlaylistEntry[] {

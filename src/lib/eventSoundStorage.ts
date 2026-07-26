@@ -73,7 +73,7 @@ export async function saveEventSounds(
   sounds: Record<string, string>,
 ): Promise<void> {
   if (!isIDBAvailable()) {
-    localStorage.setItem("mixchat_event_sounds", JSON.stringify(sounds));
+    localStorage.setItem("mixchat_event_sounds:v1", JSON.stringify(sounds));
     return;
   }
 
@@ -98,7 +98,7 @@ export async function saveEventSounds(
       "Failed to save event sounds to IndexedDB, falling back to localStorage:",
       err,
     );
-    localStorage.setItem("mixchat_event_sounds", JSON.stringify(sounds));
+    localStorage.setItem("mixchat_event_sounds:v1", JSON.stringify(sounds));
   }
 }
 
@@ -111,7 +111,7 @@ export async function loadEventSounds(): Promise<Record<
   string
 > | null> {
   if (!isIDBAvailable()) {
-    const saved = localStorage.getItem("mixchat_event_sounds");
+    const saved = localStorage.getItem("mixchat_event_sounds:v1");
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -140,10 +140,10 @@ export async function loadEventSounds(): Promise<Record<
             resolve(null);
             return;
           }
-          const result: Record<string, string> = {};
-          for (const r of records) {
-            result[r.eventType] = await blobToDataUrl(r.blob);
-          }
+          const pairs = await Promise.all(
+            records.map(async (r) => [r.eventType, await blobToDataUrl(r.blob)] as const),
+          );
+          const result: Record<string, string> = Object.fromEntries(pairs);
           resolve(result);
         };
         req.onerror = () => reject(req.error);
@@ -157,13 +157,13 @@ export async function loadEventSounds(): Promise<Record<
     return fromDB;
   }
 
-  // Check for legacy localStorage data and migrate
-  const legacy = localStorage.getItem("mixchat_event_sounds");
-  if (legacy) {
-    try {
-      const parsed = JSON.parse(legacy);
-      await saveEventSounds(parsed);
-      localStorage.removeItem("mixchat_event_sounds");
+  // Check for legacy localStorage data and migrate    // Read from the legacy unversioned key to migrate pre-existing user data
+    const legacy = localStorage.getItem("mixchat_event_sounds");
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        await saveEventSounds(parsed);
+        localStorage.removeItem("mixchat_event_sounds");
       return parsed;
     } catch {
       return null;
@@ -176,7 +176,7 @@ export async function loadEventSounds(): Promise<Record<
 /** Remove all persisted event sounds. */
 async function clearEventSounds(): Promise<void> {
   if (!isIDBAvailable()) {
-    localStorage.removeItem("mixchat_event_sounds");
+    localStorage.removeItem("mixchat_event_sounds:v1");
     return;
   }
 
@@ -191,6 +191,6 @@ async function clearEventSounds(): Promise<void> {
     });
   } catch (err) {
     console.warn("Failed to clear IndexedDB event sounds:", err);
-    localStorage.removeItem("mixchat_event_sounds");
+    localStorage.removeItem("mixchat_event_sounds:v1");
   }
 }
