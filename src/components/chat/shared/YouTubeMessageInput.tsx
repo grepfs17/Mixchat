@@ -88,6 +88,7 @@ export default function YouTubeMessageInput({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoId: youtubeVideoId, message: text }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!res.ok) {
         onOptimisticFailed?.(optimisticId);

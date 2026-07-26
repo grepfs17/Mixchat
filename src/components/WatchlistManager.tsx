@@ -19,12 +19,12 @@ export default function WatchlistManager({
   onClose,
 }: WatchlistManagerProps) {
   const [watchedStreamers, setWatchedStreamers] = useState(
-    getWatchedStreamers(),
+    () => getWatchedStreamers(),
   );
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [systemNotifications, setSystemNotifications] = useState(
-    getSystemNotificationsEnabled(),
+    () => getSystemNotificationsEnabled(),
   );
 
   const handleAddStreamer = () => {

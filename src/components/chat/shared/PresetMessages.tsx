@@ -11,7 +11,7 @@ import {
 import { searchEmotes } from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
 
-const STORAGE_KEY = "mixchat_preset_messages";
+const STORAGE_KEY = "mixchat_preset_messages:v1";
 
 interface PresetMessage {
   id: string;

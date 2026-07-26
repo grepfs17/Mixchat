@@ -22,7 +22,7 @@ export default function YouTubeLinker({
   onLinksChanged,
 }: YouTubeLinkerProps) {
   const [youtubeLinks, setYoutubeLinks] =
-    useState<YouTubeLink[]>(getYoutubeLinks());
+    useState<YouTubeLink[]>(() => getYoutubeLinks());
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [youtubeUrl, setYoutubeUrl] = useState<string>("");

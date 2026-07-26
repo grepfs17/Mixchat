@@ -823,9 +823,9 @@ const FRIENDLY_NAMES: Record<string, string> = {
               onClick={() => {
                 setCategoryInput(streamGameName || "");
                 setEditingCategory(true);
-                onSearchCategories?.(streamGameName || "").then((results) =>
-                  setCategoryResults(results),
-                );
+    onSearchCategories?.(streamGameName || "").then((results) =>
+      setCategoryResults(results),
+    ).catch(() => {});
               }}
               title="Click to change category"
            >

@@ -1,4 +1,7 @@
 import React, { memo } from "react";
+
+const EMPTY_OBJECT = {};
+const noop = () => {};
 import {
   FaStar,
   FaRegStar,
@@ -103,14 +106,14 @@ function LoginPanel({
   onHideViewerCountChange,
   hideChatTimestamps = false,
   onHideChatTimestampsChange,
-  eventSounds = {},
+  eventSounds = {} as Record<string, string>,
   onEventSoundChange,
   eventSoundVolume = 1,
   onEventSoundVolumeChange,
   hasYoutubeSession = false,
   hasDriveScope = false,
   onReauthYoutube,
-  onYoutubeDriveLogin = () => {},
+  onYoutubeDriveLogin = noop,
   onGoHome,
   onRequestClose,
   ignoredUsers = EMPTY_STRING_ARRAY,

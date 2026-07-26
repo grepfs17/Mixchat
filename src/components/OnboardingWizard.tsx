@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -262,34 +262,19 @@ export default function OnboardingWizard({
     return () => window.removeEventListener("keydown", onKey);
   }, [onComplete]);
 
-  const currentValues = useMemo<Record<string, boolean>>(
-    () => ({
-      streamerToolsEnabled,
-      hideViewerCount,
-      unifyChatEnabled,
-      showDeletedMessages,
-      compactActions,
-      keepModActionsVisible,
-      modActionsFirst,
-      doubleClickConfirmModActions,
-      embedDefaultOpen,
-      hideChatTimestamps,
-      renderThirdPartyEmotesOnYoutube,
-    }),
-    [
-      streamerToolsEnabled,
-      hideViewerCount,
-      unifyChatEnabled,
-      showDeletedMessages,
-      compactActions,
-      keepModActionsVisible,
-      modActionsFirst,
-      doubleClickConfirmModActions,
-      embedDefaultOpen,
-      hideChatTimestamps,
-      renderThirdPartyEmotesOnYoutube,
-    ],
-  );
+  const currentValues: Record<string, boolean> = {
+    streamerToolsEnabled,
+    hideViewerCount,
+    unifyChatEnabled,
+    showDeletedMessages,
+    compactActions,
+    keepModActionsVisible,
+    modActionsFirst,
+    doubleClickConfirmModActions,
+    embedDefaultOpen,
+    hideChatTimestamps,
+    renderThirdPartyEmotesOnYoutube,
+  };
 
   const handleSettingToggle = useCallback(
     (key: SettingDef["key"]) => {
