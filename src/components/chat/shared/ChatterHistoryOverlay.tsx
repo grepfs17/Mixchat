@@ -256,7 +256,7 @@ export default function ChatterHistoryOverlay({
               <MdOpenInNew size={20} />
             </a>
           )}
-          <button onClick={onClose} className="overlay-btn-icon">
+          <button type="button" onClick={onClose} className="overlay-btn-icon">
             <MdClose size={24} />
           </button>
         </div>
@@ -275,7 +275,7 @@ export default function ChatterHistoryOverlay({
                   { label: "10m", sec: 600 },
                   { label: "1h", sec: 3600 },
                 ].map((t) => (
-                  <button
+                  <button type="button"
                     key={t.label}
                     onClick={() => handleTimeout(t.sec)}
                     disabled={!userId}
@@ -289,7 +289,7 @@ export default function ChatterHistoryOverlay({
                   { label: "1h", sec: 3600 },
                   { label: "24h", sec: 86400 },
                 ].map((t) => (
-                  <button
+                  <button type="button"
                     key={t.label}
                     onClick={() => handleTimeout(t.sec)}
                     disabled={!userId}
@@ -300,7 +300,7 @@ export default function ChatterHistoryOverlay({
                 ))}
           </div>
 
-          <button
+          <button type="button"
             onClick={handleBan}
             disabled={!userId}
             className="mod-btn mod-btn-ban"
@@ -309,7 +309,7 @@ export default function ChatterHistoryOverlay({
           </button>
 
           {!isYouTube && (
-            <button onClick={handleWarn} className="mod-btn mod-btn-warn">
+            <button type="button" onClick={handleWarn} className="mod-btn mod-btn-warn">
               <MdWarning size={14} /> Warn
             </button>
           )}

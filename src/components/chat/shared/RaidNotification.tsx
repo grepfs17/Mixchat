@@ -65,7 +65,7 @@ export default function RaidNotification({
               Press again to close
             </span>
           )}
-          <button
+          <button type="button"
             className="raid-notification-close"
             onClick={() => {
               if (confirmClose) {
@@ -103,7 +103,7 @@ export default function RaidNotification({
         {isInitiator ? (
           <div className="raid-initiator-controls">
             <div className="raid-initiator-buttons">
-              <button className="raid-cancel-btn" onClick={onCancelRaid}>
+              <button type="button" className="raid-cancel-btn" onClick={onCancelRaid}>
                 Cancel
               </button>
               {broadcasterChannel && (
@@ -138,7 +138,7 @@ export default function RaidNotification({
           </div>
         ) : (
           <>
-            <button className="raid-follow-btn" onClick={onFollowRaid}>
+            <button type="button" className="raid-follow-btn" onClick={onFollowRaid}>
               Follow Raid →
             </button>
             <span className="raid-countdown">Closes in {secondsLeft}s</span>

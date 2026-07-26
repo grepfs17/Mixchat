@@ -147,7 +147,7 @@ function HistorySection({ onChanged }: { onChanged: () => void }) {
     <div className="streamer-tools-history">
       <div className="streamer-tools-history-header">
         <span className="streamer-tools-history-title">Recent winners</span>
-        <button
+        <button type="button"
           className="streamer-tools-history-clear"
           onClick={handleClear}
           title="Clear all history"
@@ -528,7 +528,7 @@ function PastPlaylistsSection({
     return (
       <div className="past-playlists past-playlists--detail">
         <div className="past-playlists-detail-header">
-          <button
+          <button type="button"
             className="past-playlists-back"
             onClick={() => setOpenKey(null)}
             title="Back to past playlists"
@@ -538,7 +538,7 @@ function PastPlaylistsSection({
           </button>
           <div className="past-playlists-detail-actions">
             {openMeta.source === "server" && !openMeta.isPublic ? (
-              <button
+              <button type="button"
                 className="past-playlists-share"
                 onClick={() => handleMakePublic(openMeta.sessionId)}
                 disabled={makingPublic}
@@ -550,7 +550,7 @@ function PastPlaylistsSection({
               </button>
             ) : null}
             {openPublicUrl ? (
-              <button
+              <button type="button"
                 className="past-playlists-copy"
                 onClick={handleCopyPublicUrl}
                 title={`Copy ${openPublicUrl}`}
@@ -568,7 +568,7 @@ function PastPlaylistsSection({
                 <span>Not shared</span>
               </span>
             )}
-            <button
+            <button type="button"
               className="past-playlists-delete"
               onClick={() => handleDelete(openMeta.key)}
               title="Delete this playlist"
@@ -649,7 +649,7 @@ function PastPlaylistsSection({
                     )}
                   </span>
                 </div>
-                <button
+                <button type="button"
                   className="past-playlists-detail-copy"
                   onClick={() => handleCopySongUrl(item.id, item.videoId)}
                   title={`Copy https://www.youtube.com/watch?v=${item.videoId}`}
@@ -677,7 +677,7 @@ function PastPlaylistsSection({
         <span className="past-playlists-title">
           Past song queues{loadingServer ? " (loading…)" : ""}
         </span>
-        <button
+        <button type="button"
           className="past-playlists-clear"
           onClick={handleClear}
           title="Clear all past playlists"
@@ -702,7 +702,7 @@ function PastPlaylistsSection({
               className="past-playlists-item"
               data-source={entry.source}
             >
-              <button
+              <button type="button"
                 className="past-playlists-item-button"
                 onClick={() => setOpenKey(entry.key)}
                 title="View playlist"
@@ -738,7 +738,7 @@ function PastPlaylistsSection({
                 </span>
               </button>
               {entryUrl ? (
-                <button
+                <button type="button"
                   className="past-playlists-item-copy"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -757,7 +757,7 @@ function PastPlaylistsSection({
                   <FaCopy size={11} />
                 </button>
               ) : null}
-              <button
+              <button type="button"
                 className="past-playlists-item-delete"
                 onClick={() => handleDelete(entry.key)}
                 title="Delete this playlist"
@@ -841,7 +841,7 @@ export default function StreamerToolsModal({
             {tool ? `Streamer tools - ${tool.label}` : "Streamer tools"}
           </h2>
           <div className="streamer-tools-header-actions">
-            <button
+            <button type="button"
               className="streamer-tools-header-btn"
               onClick={onMinimize}
               disabled={!canMinimize}
@@ -850,7 +850,7 @@ export default function StreamerToolsModal({
             >
               <FaWindowMinimize size={14} />
             </button>
-            <button
+            <button type="button"
               className="streamer-tools-header-btn"
               onClick={onClose}
               title="Close"
@@ -875,7 +875,7 @@ export default function StreamerToolsModal({
                         {t.description}
                       </span>
                     </div>
-                    <button
+                    <button type="button"
                       className="streamer-tools-list-open"
                       onClick={() => setActiveTool(t.id)}
                     >
@@ -892,7 +892,7 @@ export default function StreamerToolsModal({
             </>
           ) : (
             <div className="streamer-tools-active">
-              <button
+              <button type="button"
                 className="streamer-tools-back"
                 onClick={() => setActiveTool(null)}
                 title="Back to tools"

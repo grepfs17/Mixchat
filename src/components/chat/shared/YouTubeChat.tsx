@@ -91,6 +91,10 @@ interface SSEEndEvent {
   reason: string;
 }
 
+function getTextContent(m: ChatMessage) {
+  return m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
+}
+
 export default function YouTubeChat({
   videoId,
   channel,
@@ -105,9 +109,6 @@ export default function YouTubeChat({
   onMessageDeleted,
   renderThirdPartyEmotes = false,
 }: YouTubeChatProps) {
-  const getTextContent = (m: ChatMessage) =>
-    m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
-
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -466,7 +467,7 @@ export default function YouTubeChat({
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
-        <button
+        <button type="button"
           className="yt-chat-reload-btn"
           onClick={() => {
             setReloadKey((k) => k + 1);
@@ -484,7 +485,7 @@ export default function YouTubeChat({
       {error && !isEnded && (
         <div className="yt-chat-error-banner">
           <span>⚠️ {error}</span>
-          <button
+          <button type="button"
             className="yt-chat-reload-btn"
             onClick={() => {
               setReloadKey((k) => k + 1);

@@ -113,21 +113,21 @@ export default function StreamGrid({
             />
           </div>
           <div className="stream-sort-group" role="group" aria-label="Sort by">
-            <button
+            <button type="button"
               className={`sort-btn${sortBy === "favorites" ? " active" : ""}`}
               onClick={() => setSortBy("favorites")}
               title="Sort by favorites first"
             >
               <StarIcon /> Favorites
             </button>
-            <button
+            <button type="button"
               className={`sort-btn${sortBy === "name" ? " active" : ""}`}
               onClick={() => setSortBy("name")}
               title="Sort alphabetically"
             >
               <SortAlphaIcon /> A-Z
             </button>
-            <button
+            <button type="button"
               className={`sort-btn${sortBy === "viewers" ? " active" : ""}`}
               onClick={() => setSortBy("viewers")}
               title="Sort by viewer count"
@@ -223,7 +223,7 @@ export default function StreamGrid({
                           {formatViewers(channel.viewerCount)}
                         </span>
                       )}
-                    <button
+                    <button type="button"
                       className={`stream-card-fav-btn${isFav ? " active" : ""}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -308,7 +308,7 @@ export default function StreamGrid({
           >
             <img height="42" src="/icons/tce.svg" alt="Clip Explorer" />
           </a>
-          <button
+          <button type="button"
             className="stream-grid-kofi-close"
             onClick={() => {
               setKofiClosed(true);

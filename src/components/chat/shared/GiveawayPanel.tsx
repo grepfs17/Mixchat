@@ -13,6 +13,11 @@ import {
 const MIN_DURATION = 5;
 const MAX_DURATION = 2 * 60 * 60;
 const ENTRIES_PREVIEW_LIMIT = 50;
+const ALL_SCOPES: ReadonlyArray<"twitch" | "youtube" | "both"> = [
+  "twitch",
+  "youtube",
+  "both",
+];
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "0:00";
@@ -74,14 +79,9 @@ export default function GiveawayPanel({
 
   // When YouTube is not connected, the YouTube-only and both options are
   // hidden entirely so the streamer only sees the relevant choice.
-  const allScopes: ReadonlyArray<"twitch" | "youtube" | "both"> = [
-    "twitch",
-    "youtube",
-    "both",
-  ];
   const scopeOptions = youtubeConnected
-    ? allScopes
-    : (allScopes.filter(
+    ? ALL_SCOPES
+    : (ALL_SCOPES.filter(
         (s) => s === "twitch",
       ) as ReadonlyArray<"twitch">);
 
@@ -194,7 +194,7 @@ export default function GiveawayPanel({
           {error && <p className="giveaway-error">{error}</p>}
 
           <div className="giveaway-actions">
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--primary"
               onClick={start}
             >
@@ -272,13 +272,13 @@ export default function GiveawayPanel({
             </ul>
           )}
           <div className="giveaway-actions">
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--secondary"
               onClick={cancel}
             >
               Cancel
             </button>
-            <button
+            <button type="button"
               className="giveaway-btn giveaway-btn--primary"
               onClick={reveal}
               disabled={liveEntries.length === 0}
@@ -334,13 +334,13 @@ export default function GiveawayPanel({
                 go to the winner&apos;s platform
               </p>
               <div className="giveaway-actions">
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--secondary"
                   onClick={startNew}
                 >
                   New giveaway
                 </button>
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--primary"
                   onClick={async () => {
                     await onAnnounce(
@@ -365,7 +365,7 @@ export default function GiveawayPanel({
                 keyword or eligibility.
               </p>
               <div className="giveaway-actions">
-                <button
+                <button type="button"
                   className="giveaway-btn giveaway-btn--primary"
                   onClick={startNew}
                 >

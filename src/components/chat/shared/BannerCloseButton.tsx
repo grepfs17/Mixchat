@@ -35,7 +35,7 @@ export default function BannerCloseButton({
           Press again to close
         </span>
       )}
-      <button
+      <button type="button"
         className={`banner-close ${toneClass}-close`}
         onClick={() => {
           if (confirmClose) {

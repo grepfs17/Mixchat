@@ -293,7 +293,7 @@ export default function AppContainer() {
             }}
             className="sidebar-close-btn-container"
           >
-            <button
+            <button type="button"
               onClick={() => setLeftColumnVisible(false)}
               style={{
                 background: "none",
@@ -426,7 +426,7 @@ export default function AppContainer() {
             }}
           >
             <div className="your-channel-banner">
-              <button
+              <button type="button"
                 onClick={() => setLeftColumnVisible((v) => !v)}
                 className="sidebar-toggle-button sidebar-toggle-button--home"
                 title={leftColumnVisible ? "Close sidebar" : "Open sidebar"}
@@ -473,14 +473,14 @@ export default function AppContainer() {
                 </div>
               )}
               <div className="your-channel-actions">
-                <button
+                <button type="button"
                   className="your-channel-btn your-channel-btn--favorites"
                   onClick={() => setShowFavoriteChannels(true)}
                 >
                   <FaStar size={14} />
                   Favorites
                 </button>
-                <button
+                <button type="button"
                   className="your-channel-btn"
                   onClick={() => setChannelData(sessions.twitch!.userId)}
                 >
@@ -532,7 +532,7 @@ export default function AppContainer() {
                 data-stream-embed
               >
                 <div className="stream-embed-header">
-                  <button
+                  <button type="button"
                     onClick={() => setLeftColumnVisible((v) => !v)}
                     className="sidebar-toggle-button sidebar-toggle-button--in-embed"
                     title={
@@ -546,14 +546,14 @@ export default function AppContainer() {
                   </span>
                   <div className="player-type-center">
                     <div className="player-type-buttons">
-                      <button
+                      <button type="button"
                         onClick={() => setPlayerType("embed")}
                         className={`player-type-btn${playerType === "embed" ? " active-twitch" : ""}`}
                         title="Twitch embed player"
                       >
                         Twitch
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => setPlayerType("m3u8")}
                         className={`player-type-btn${playerType === "m3u8" ? " active-m3u8" : ""}`}
                         title="M3U8 HLS player"
@@ -561,7 +561,7 @@ export default function AppContainer() {
                         M3U8 (experimental)
                       </button>
                       {linkedYoutubeUrl && (
-                        <button
+                        <button type="button"
                           onClick={() => setPlayerType("youtube")}
                           className={`player-type-btn${playerType === "youtube" ? " active-youtube" : ""}`}
                           title="YouTube live stream"
@@ -588,7 +588,7 @@ export default function AppContainer() {
                           />
                         )}
                         <div className="quality-selector__inner">
-                          <button
+                          <button type="button"
                             className="quality-selector__toggle"
                             onClick={() => setShowHlsQualityMenu((q) => !q)}
                             title={
@@ -605,7 +605,7 @@ export default function AppContainer() {
                           {showHlsQualityMenu && (
                             <div className="quality-selector__menu">
                               {hlsQualities.map((q, i) => (
-                                <button
+                                <button type="button"
                                   key={q.label}
                                   onClick={() => {
                                     setSelectedHlsQualityIdx(i);
@@ -622,7 +622,7 @@ export default function AppContainer() {
                         </div>
                       </div>
                     )}
-                    <button
+                    <button type="button"
                       onClick={() => setShowStreamEmbed(false)}
                       className="stream-embed-close"
                       title="Hide stream embed"

@@ -193,11 +193,11 @@ export default function ChatHeader({
     [onUpdateCategory],
   );
 
-  const getOverallStatus = (
-    statuses: Map<string, SubscriptionStatus>,
-    keys: string[] | null,
-    conditionFilter?: string,
-  ): SubscriptionStatus | "disconnected" => {
+function getOverallStatus(
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+): SubscriptionStatus | "disconnected" {
     if (keys === null) {
       return statuses.size > 0 ? "connected" : "disconnected";
     }
@@ -210,10 +210,10 @@ export default function ChatHeader({
     if (relevant.every(([, s]) => s === "connected")) return "connected";
     if (relevant.some(([, s]) => s === "error")) return "error";
     if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
-    return "pending";
-  };
+  return "pending";
+}
 
-  const statusLabel = (s: SubscriptionStatus | "disconnected") => {
+function statusLabel(s: SubscriptionStatus | "disconnected") {
     switch (s) {
       case "connected":
         return "connected";
@@ -223,12 +223,12 @@ export default function ChatHeader({
         return "error";
       case "scope_error":
         return "scope missing";
-      case "disconnected":
-        return "disabled";
-    }
-  };
+    case "disconnected":
+      return "disabled";
+  }
+}
 
-  const FRIENDLY_NAMES: Record<string, string> = {
+const FRIENDLY_NAMES: Record<string, string> = {
     "automod.message.hold": "Message Held",
     "automod.message.update": "Message Resolved",
     "channel.raid": "Incoming Raid",
@@ -245,8 +245,8 @@ export default function ChatHeader({
     "channel.prediction.progress": "Prediction Progress",
     "channel.prediction.lock": "Prediction Locked",
     "channel.prediction.end": "Prediction Resolved",
-    "channel.bits.use": "Bits Used",
-  };
+  "channel.bits.use": "Bits Used",
+};
 
   const renderStatusSection = (
     label: string,
@@ -296,7 +296,7 @@ export default function ChatHeader({
       <div className="chat-header">
         <div className="chat-header-content">
           {onToggleSidebar && (
-            <button
+            <button type="button"
               onClick={onToggleSidebar}
               className={`sidebar-toggle-button${showStreamEmbed ? " sidebar-toggle-button--embed-active" : ""}`}
               title={sidebarVisible ? "Fold sidebar" : "Unfold sidebar"}
@@ -305,7 +305,7 @@ export default function ChatHeader({
             </button>
           )}
           {!showStreamEmbed && onToggleStreamEmbed && (
-            <button
+            <button type="button"
               onClick={onToggleStreamEmbed}
               className="show-stream-button"
               title="Show stream embed"
@@ -404,7 +404,7 @@ export default function ChatHeader({
           <div className="desktop-header-items">
             {Array.from(ignoredUserCounts.entries()).map(
               ([key, { count, displayName, authorAvatar, platform }]) => (
-                <button
+                <button type="button"
                   key={key}
                   className="header-button ignored-messages-badge"
                   title={`${count} hidden message(s) from ${displayName}`}
@@ -423,7 +423,7 @@ export default function ChatHeader({
               ),
             )}
             {onRefreshEmotes && (
-              <button
+              <button type="button"
                 onClick={onRefreshEmotes}
                 disabled={isRefreshingEmotes}
                 className="header-button"
@@ -448,7 +448,7 @@ export default function ChatHeader({
             )}
             {showModToggle && (
               <div className="mod-mode-container" ref={modModeDropdownRef}>
-                <button
+                <button type="button"
                   onClick={() => setModModeDropdownOpen((v) => !v)}
                   className={`header-button mod-mode-trigger ${
                     modModeActive || youtubeModModeActive ? "mod-active" : ""
@@ -485,7 +485,7 @@ export default function ChatHeader({
                 {modModeDropdownOpen && (
                   <div className="mod-mode-dropdown">
                     {(isModerator || isYouTubeModerator) && (
-                      <button
+                      <button type="button"
                         className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
                         onClick={() => {
                           onSetModMode?.("off");
@@ -501,7 +501,7 @@ export default function ChatHeader({
                       </button>
                     )}
                     {isModerator && (
-                      <button
+                      <button type="button"
                         className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
                         onClick={() => {
                           onSetModMode?.("twitch");
@@ -517,7 +517,7 @@ export default function ChatHeader({
                       </button>
                     )}
                     {isYouTubeModerator && (
-                      <button
+                      <button type="button"
                         className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
                         onClick={() => {
                           onSetModMode?.("youtube");
@@ -533,7 +533,7 @@ export default function ChatHeader({
                       </button>
                     )}
                     {isModerator && isYouTubeModerator && (
-                      <button
+                      <button type="button"
                         className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
                         onClick={() => {
                           onSetModMode?.("both");
@@ -553,7 +553,7 @@ export default function ChatHeader({
               </div>
             )}
             {showModTools && onOpenModTools && (
-              <button
+              <button type="button"
                 onClick={onOpenModTools}
                 className="header-button mod-tools-trigger"
                 title="Streamer tools (giveaway, etc.)"
@@ -566,7 +566,7 @@ export default function ChatHeader({
 
           {(onRefreshEmotes || showModToggle || ignoredUserCounts.size > 0 || showModTools) && (
             <div className="mobile-header-menu" ref={mobileMenuRef}>
-              <button
+              <button type="button"
                 className="header-button mobile-menu-trigger"
                 onClick={() => setMobileMenuOpen((v) => !v)}
                 title="Menu"
@@ -576,7 +576,7 @@ export default function ChatHeader({
               {mobileMenuOpen && (
                 <div className="mobile-menu-dropdown">
                   {onRefreshEmotes && (
-                    <button
+                    <button type="button"
                       className="mobile-menu-item"
                       onClick={() => {
                         onRefreshEmotes();
@@ -599,7 +599,7 @@ export default function ChatHeader({
                   )}
                   {Array.from(ignoredUserCounts.entries()).map(
                     ([key, { count, displayName, authorAvatar, platform }]) => (
-                      <button
+                      <button type="button"
                         key={key}
                         className="mobile-menu-item"
                         onClick={() => {
@@ -622,7 +622,7 @@ export default function ChatHeader({
                     <>
                       <div className="mobile-menu-separator" />
                       {isModerator && (
-                        <button
+                        <button type="button"
                           className={`mobile-menu-item${modModeActive && !youtubeModModeActive ? " active" : ""}`}
                           onClick={() => {
                             onSetModMode?.("twitch");
@@ -637,7 +637,7 @@ export default function ChatHeader({
                         </button>
                       )}
                       {isYouTubeModerator && (
-                        <button
+                        <button type="button"
                           className={`mobile-menu-item${youtubeModModeActive && !modModeActive ? " active" : ""}`}
                           onClick={() => {
                             onSetModMode?.("youtube");
@@ -652,7 +652,7 @@ export default function ChatHeader({
                         </button>
                       )}
                       {isModerator && isYouTubeModerator && (
-                        <button
+                        <button type="button"
                           className={`mobile-menu-item${modModeActive && youtubeModModeActive ? " active" : ""}`}
                           onClick={() => {
                             onSetModMode?.("both");
@@ -667,7 +667,7 @@ export default function ChatHeader({
                         </button>
                       )}
                       {(modModeActive || youtubeModModeActive) && (
-                        <button
+                        <button type="button"
                           className="mobile-menu-item"
                           onClick={() => {
                             onSetModMode?.("off");
@@ -683,7 +683,7 @@ export default function ChatHeader({
                   {showModTools && onOpenModTools && (
                     <>
                       <div className="mobile-menu-separator" />
-                      <button
+                      <button type="button"
                         className="mobile-menu-item"
                         onClick={() => {
                           onOpenModTools();
@@ -721,7 +721,7 @@ export default function ChatHeader({
                 autoFocus
                 disabled={savingTitle}
               />
-              <button
+              <button type="button"
                 className="stream-info-edit-btn stream-info-edit-btn--confirm"
                 onClick={handleSaveTitle}
                 disabled={savingTitle}
@@ -729,7 +729,7 @@ export default function ChatHeader({
               >
                 <MdCheck size={14} />
               </button>
-              <button
+              <button type="button"
                 className="stream-info-edit-btn stream-info-edit-btn--cancel"
                 onClick={() => setEditingTitle(false)}
                 disabled={savingTitle}
@@ -807,7 +807,7 @@ export default function ChatHeader({
                 autoFocus
                 disabled={savingCategory}
               />
-              <button
+              <button type="button"
                 className="stream-info-edit-btn stream-info-edit-btn--cancel"
                 onClick={() => {
                   setEditingCategory(false);

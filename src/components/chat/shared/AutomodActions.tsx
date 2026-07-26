@@ -115,19 +115,19 @@ export default function AutomodActions({
         flexWrap: "wrap",
       }}
     >
-      <button onClick={handleApprove} className="action-button mod-action" title="Allow message" style={allowBtn}>
+      <button type="button" onClick={handleApprove} className="action-button mod-action" title="Allow message" style={allowBtn}>
         Allow
       </button>
-      <button onClick={handleDeny} className="action-button mod-action" title="Deny message" style={denyBtn}>
+      <button type="button" onClick={handleDeny} className="action-button mod-action" title="Deny message" style={denyBtn}>
         Deny
       </button>
-      <button onClick={handleTimeout} className="action-button mod-action" title="Timeout user (10m)" style={btnBase}>
+      <button type="button" onClick={handleTimeout} className="action-button mod-action" title="Timeout user (10m)" style={btnBase}>
         <MdHourglassEmpty size={12} />
       </button>
-      <button onClick={handleBan} className="action-button mod-action" title="Ban user" style={btnBase}>
+      <button type="button" onClick={handleBan} className="action-button mod-action" title="Ban user" style={btnBase}>
         <MdBlock size={12} />
       </button>
-      <button onClick={handleWarn} className="action-button mod-action" title="Warn user" style={btnBase}>
+      <button type="button" onClick={handleWarn} className="action-button mod-action" title="Warn user" style={btnBase}>
         <MdWarning size={12} />
       </button>
     </div>

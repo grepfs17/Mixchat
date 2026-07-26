@@ -164,7 +164,7 @@ function LoginPanel({
             style={{ height: 24, width: "auto", opacity: 0.9 }}
           />
         </a>
-        <button
+        <button type="button"
           onClick={() => setShowEmbedConfig(true)}
           className="icon-button small"
           title="Configure global settings"
@@ -204,7 +204,7 @@ function LoginPanel({
 
               <div className="user-actions">
                 {onManageWatchlist && (
-                  <button
+                  <button type="button"
                     onClick={() => {
                       onManageWatchlist();
                       onRequestClose?.();
@@ -216,7 +216,7 @@ function LoginPanel({
                   </button>
                 )}
                 {onManageYoutubeLinks && (
-                  <button
+                  <button type="button"
                     onClick={() => {
                       onManageYoutubeLinks();
                       onRequestClose?.();
@@ -229,7 +229,7 @@ function LoginPanel({
                 )}
               </div>
             </div>
-            <button onClick={onTwitchLogout} className="logout-btn">
+            <button type="button" onClick={onTwitchLogout} className="logout-btn">
               Logout
             </button>
 
@@ -298,7 +298,7 @@ function LoginPanel({
                             {channel.viewerCount.toLocaleString()}
                           </span>
                         )}
-                      <button
+                      <button type="button"
                         onClick={(e) => {
                           e.stopPropagation(); // Don't also select the channel when toggling a favorite
                           onToggleFavorite?.(channel.id);
@@ -351,7 +351,7 @@ function LoginPanel({
             )}
           </div>
         ) : (
-          <button onClick={onTwitchLogin} className="login-btn twitch-btn">
+          <button type="button" onClick={onTwitchLogin} className="login-btn twitch-btn">
             Login with Twitch
           </button>
         )}
@@ -368,12 +368,12 @@ function LoginPanel({
                   {youtubeUser || "YouTube"}
                 </span>
               </div>
-              <button onClick={onYoutubeLogout} className="logout-btn small">
+              <button type="button" onClick={onYoutubeLogout} className="logout-btn small">
                 Logout
               </button>
             </div>
           ) : onYoutubeLogin ? (
-            <button
+            <button type="button"
               onClick={onYoutubeLogin}
               className="login-btn youtube-btn"
               style={{ width: "100%" }}

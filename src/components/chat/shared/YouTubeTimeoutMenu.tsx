@@ -57,7 +57,7 @@ export default function YouTubeTimeoutMenu({
         Timeout {username} (this chat)
       </div>
       {YOUTUBE_TIMEOUT_PRESETS.map((opt) => (
-        <button
+        <button type="button"
           key={opt.seconds}
           onClick={() => {
             onTimeout(channelId, opt.seconds, username);
@@ -68,9 +68,9 @@ export default function YouTubeTimeoutMenu({
         </button>
       ))}
       {!showCustom ? (
-        <button
+        <button type="button"
           onClick={() => setShowCustom(true)}
-          title={`Custom (1s – ${formatTimeoutDuration(YOUTUBE_MAX_TIMEOUT_SECONDS)})`}
+          title={`Custom (1s - ${formatTimeoutDuration(YOUTUBE_MAX_TIMEOUT_SECONDS)})`}
         >
           Custom…
         </button>
@@ -100,10 +100,10 @@ export default function YouTubeTimeoutMenu({
             <option value="h">hr</option>
             <option value="d">day</option>
           </select>
-          <button onClick={handleCustomSubmit} title="Apply">
+          <button type="button" onClick={handleCustomSubmit} title="Apply">
             ✓
           </button>
-          <button
+          <button type="button"
             onClick={() => {
               setShowCustom(false);
               setCustomValue("");

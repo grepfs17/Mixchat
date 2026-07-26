@@ -240,7 +240,7 @@ export default function MessageMenu({
         "divider" in it ? (
           <div key={it.key} role="separator" className="context-menu-divider" />
         ) : (
-          <button
+          <button type="button"
             key={it.key}
             onClick={it.onClick}
             className="context-menu-item"

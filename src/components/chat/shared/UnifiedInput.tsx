@@ -478,7 +478,7 @@ export default function UnifiedInput({
             </span>
           </div>
           {onCancelReply && (
-            <button
+            <button type="button"
               onClick={onCancelReply}
               className="unified-reply-cancel"
               title="Cancel reply"
@@ -501,7 +501,7 @@ export default function UnifiedInput({
         />
 
         {/* Emote/Emoji picker button */}
-        <button
+        <button type="button"
           ref={
             showYoutubeFeatures && !showTwitchFeatures
               ? ytPickerBtnRef
@@ -537,7 +537,7 @@ export default function UnifiedInput({
         />
 
         <div className="unified-toggle">
-          <button
+          <button type="button"
             onClick={() => setSendTarget("twitch")}
             className={`unified-toggle-btn ${sendTarget === "twitch" ? "active twitch" : ""}`}
             title="Send to Twitch"
@@ -545,7 +545,7 @@ export default function UnifiedInput({
             <FaTwitch size={14} />
           </button>
           {youtubeAvailable && (
-            <button
+            <button type="button"
               onClick={() => setSendTarget("youtube")}
               className={`unified-toggle-btn ${sendTarget === "youtube" ? "active youtube" : ""}`}
               title="Send to YouTube"
@@ -554,7 +554,7 @@ export default function UnifiedInput({
             </button>
           )}
           {youtubeAvailable && (
-            <button
+            <button type="button"
               onClick={() => setSendTarget("both")}
               className={`unified-toggle-btn ${sendTarget === "both" ? "active both" : ""}`}
               title="Send to both"

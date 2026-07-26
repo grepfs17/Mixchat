@@ -117,7 +117,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         }}
         title={emote.name}
       >
-        <button
+        <button type="button"
           className="emote-disable-btn"
           onClick={(e) => {
             e.stopPropagation();
@@ -139,7 +139,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const twitchSidebar = (
     <div className="emote-channel-sidebar">
       {/* Global */}
-      <button
+      <button type="button"
         className={`emote-channel-avatar-btn ${activeTwitchChannel === TWITCH_GLOBAL_KEY ? "active" : ""}`}
         onClick={() => setActiveTwitchChannel(TWITCH_GLOBAL_KEY)}
         title="Global"
@@ -154,7 +154,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
 
       {/* Per-channel */}
       {emotes.twitchChannels.map((ch) => (
-        <button
+        <button type="button"
           key={ch.channelId}
           className={`emote-channel-avatar-btn ${activeTwitchChannel === ch.channelId ? "active" : ""}`}
           onClick={() => setActiveTwitchChannel(ch.channelId)}
@@ -293,7 +293,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       <div ref={menuRef} className="emote-menu-modal">
         <div className="emote-menu-header">
           <h2>Emotes</h2>
-          <button className="emote-menu-close" onClick={onClose}>
+          <button type="button" className="emote-menu-close" onClick={onClose}>
             ✕
           </button>
         </div>
@@ -311,7 +311,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         </div>
 
         <div className="emote-menu-tabs">
-          <button
+          <button type="button"
             className={`emote-tab ${activeTab === "twitch" ? "active" : ""}`}
             onClick={() => setActiveTab("twitch")}
             style={{
@@ -323,7 +323,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
             Twitch
           </button>
           {thirdPartySources.map(({ key, label, color }) => (
-            <button
+            <button type="button"
               key={key}
               className={`emote-tab ${activeTab === key ? "active" : ""}`}
               onClick={() => setActiveTab(key)}

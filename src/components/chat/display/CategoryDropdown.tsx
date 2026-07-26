@@ -32,7 +32,7 @@ export default function CategoryDropdown({
       }}
     >
       {results.map((cat) => (
-        <button
+        <button type="button"
           key={cat.id}
           className="stream-info-category-option"
           onClick={() => onSelect(cat.id, cat.name)}
