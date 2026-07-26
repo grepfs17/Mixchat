@@ -54,9 +54,11 @@ export function useCountdownTimer(
   // without putting them in dependency arrays (which would cause
   // re-fires on every parent render).
   const onExpireRef = useRef(onExpire);
-  onExpireRef.current = onExpire;
   const onAutoDismissRef = useRef(onAutoDismiss);
-  onAutoDismissRef.current = onAutoDismiss;
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+    onAutoDismissRef.current = onAutoDismiss;
+  }, [onExpire, onAutoDismiss]);
 
   // One-shot guard: ensures `onExpire` only fires on the transition
   // from timeLeft > 0 to timeLeft <= 0, not on every render that

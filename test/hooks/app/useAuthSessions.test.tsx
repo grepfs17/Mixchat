@@ -151,6 +151,71 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     expect(result.current.sessions.youtube).toBeUndefined();
   });
 
+  it("clears popup poll interval on unmount (youtubeLogin)", async () => {
+    vi.useFakeTimers();
+    const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+
+    // Mock window.open to return a popup that appears open
+    const mockPopup = { closed: false, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(mockPopup as any);
+
+    // Stub the YouTube client ID so openYoutubeOAuth doesn't early-return
+    vi.stubEnv("PUBLIC_YOUTUBE_CLIENT_ID", "test-client-id");
+
+    const useAuthSessions = await loadHook();
+    const { result, unmount } = renderHook(() => useAuthSessions());
+
+    act(() => {
+      result.current.youtubeLogin();
+    });
+    expect(result.current.isLoggingIn).toBe(true);
+
+    // Clear spy so we only track clearInterval calls from unmount
+    clearIntervalSpy.mockClear();
+
+    unmount();
+
+    // The cleanup effect should have called clearInterval for the popup poll
+    expect(clearIntervalSpy).toHaveBeenCalled();
+
+    // Advancing timers should not throw (interval was cleared)
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it("clears popup poll interval on unmount (youtubeDriveLogin)", async () => {
+    vi.useFakeTimers();
+    const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+
+    const mockPopup = { closed: false, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(mockPopup as any);
+    vi.stubEnv("PUBLIC_YOUTUBE_CLIENT_ID", "test-client-id");
+
+    const useAuthSessions = await loadHook();
+    const { result, unmount } = renderHook(() => useAuthSessions());
+
+    act(() => {
+      result.current.youtubeDriveLogin();
+    });
+    expect(result.current.isLoggingIn).toBe(true);
+
+    clearIntervalSpy.mockClear();
+    unmount();
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
   it("preserves hasDriveScope across token refreshes", async () => {
     seedYoutubeSession(true);
 

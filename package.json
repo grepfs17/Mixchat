@@ -10,7 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "doctor": "pnpx react-doctor@latest"
   },
   "dependencies": {
     "@twurple/api": "^8.1.4",
@@ -39,6 +40,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "pm2": "^7.0.3",
+    "react-doctor": "^0.9.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }

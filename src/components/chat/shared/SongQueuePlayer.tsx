@@ -134,6 +134,11 @@ function loadIFrameAPI(): Promise<void> {
     // Poll for window.YT.Player in case the script was loaded before we
     // attached the global callback. The script is small and loads quickly.
     const interval = window.setInterval(() => {
+      // Guard against the timer firing after jsdom has torn down (tests).
+      if (typeof window === "undefined") {
+        clearInterval(interval);
+        return;
+      }
       if (window.YT?.Player) {
         window.clearInterval(interval);
         settle();
@@ -141,6 +146,11 @@ function loadIFrameAPI(): Promise<void> {
     }, 50);
     // Stop polling after 10s to avoid a leaked timer on failure.
     window.setTimeout(() => {
+      // Guard against the timer firing after jsdom has torn down (tests).
+      if (typeof window === "undefined") {
+        clearInterval(interval);
+        return;
+      }
       window.clearInterval(interval);
       if (!window.YT?.Player) {
         // eslint-disable-next-line no-console
@@ -217,10 +227,12 @@ const SongQueuePlayerInner = (
   const onDurationKnownRef = useRef(onDurationKnown);
   const onReadyRef = useRef(onReady);
   const onStateChangeRef = useRef(onStateChange);
-  onAdvanceRef.current = onAdvance;
-  onDurationKnownRef.current = onDurationKnown;
-  onReadyRef.current = onReady;
-  onStateChangeRef.current = onStateChange;
+  useEffect(() => {
+    onAdvanceRef.current = onAdvance;
+    onDurationKnownRef.current = onDurationKnown;
+    onReadyRef.current = onReady;
+    onStateChangeRef.current = onStateChange;
+  }, [onAdvance, onDurationKnown, onReady, onStateChange]);
 
   useImperativeHandle(
     ref,

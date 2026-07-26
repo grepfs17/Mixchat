@@ -152,7 +152,7 @@ export function useEventSub({
   );
 
   useEffect(() => {
-    if (!enabled || !accessToken || !clientId) return;
+    if (!enabled || !accessToken || !clientId) return () => {};
     let active = true;
     let ws: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -166,8 +166,13 @@ export function useEventSub({
     const retryQueue = new Map<string, number>(); // key -> timestamp when it can be retried
     const retryBackoff = new Map<string, number>(); // key -> current delay
 
+    const abortCtrl = new AbortController();
     const sleep = (ms: number) =>
-      new Promise((resolve) => setTimeout(resolve, ms));
+      new Promise<void>((resolve) => {
+        if (abortCtrl.signal.aborted) { resolve(); return; }
+        const timer = setTimeout(resolve, ms);
+        abortCtrl.signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+      });
 
     const resetKeepalive = (timeoutSeconds: number, socketId: number) => {
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
@@ -480,6 +485,7 @@ export function useEventSub({
 
     return () => {
       active = false;
+      abortCtrl.abort();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (keepaliveTimer) clearTimeout(keepaliveTimer);
       if (retryTimer) clearTimeout(retryTimer);

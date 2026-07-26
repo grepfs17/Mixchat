@@ -91,9 +91,11 @@ function TwitchJSEmbed({
   const playerRef = useRef<TwitchPlayer | null>(null);
   // Keep a ref so the script-load callback always sees the latest channel
   const channelRef = useRef(channelName);
-  channelRef.current = channelName;
   const oauthTokenRef = useRef(oauthToken);
-  oauthTokenRef.current = oauthToken;
+  useEffect(() => {
+    channelRef.current = channelName;
+    oauthTokenRef.current = oauthToken;
+  }, [channelName, oauthToken]);
 
   // Coerce to boolean so we only recreate when token *presence* changes
   // (absent → present), not on every token value change (e.g. periodic refresh).
@@ -267,11 +269,12 @@ export default function StreamEmbed({
   useEffect(() => {
     if (playerType === "embed" || !channelName) {
       setLoading(false);
-      return;
+      return () => {};
     }
 
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const abortController = new AbortController();
 
     const loadStream = async (isRetry = false) => {
       if (cancelled) return;
@@ -299,6 +302,7 @@ export default function StreamEmbed({
         // the CDN with zero server bandwidth involved.
         const playlistRes = await fetch(
           `/api/stream-playlist?channel=${encodeURIComponent(channelName)}`,
+          { signal: abortController.signal },
         );
 
         // Surface actionable error messages by HTTP status before reading body
@@ -395,7 +399,7 @@ export default function StreamEmbed({
           setLoading(false);
         }
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || abortController.signal.aborted) return;
         console.error("Failed to load stream:", err);
         setError(err instanceof Error ? err.message : "Failed to load stream");
         setLoading(false);
@@ -406,6 +410,7 @@ export default function StreamEmbed({
 
     return () => {
       cancelled = true;
+      abortController.abort();
       if (retryTimer !== null) clearTimeout(retryTimer);
       if (hlsRef.current) {
         hlsRef.current.destroy();

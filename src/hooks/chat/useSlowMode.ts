@@ -9,6 +9,14 @@ export function useSlowMode(): UseSlowModeReturn {
   const [cooldown, setCooldown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Clear the interval when cooldown reaches zero
+  useEffect(() => {
+    if (cooldown === 0 && timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, [cooldown]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -19,14 +27,7 @@ export function useSlowMode(): UseSlowModeReturn {
     if (timerRef.current) clearInterval(timerRef.current);
     setCooldown(seconds);
     timerRef.current = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
   }, []);
 

@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { flushSync } from "react-dom";
@@ -177,14 +178,19 @@ export function useMusicPlayer(): UseMusicPlayerResult {
 
   const commitSettings = useCallback(
     (patch: Partial<MusicPlayerSettings>) => {
-      setSettings((prev) => {
-        const next = { ...prev, ...patch };
-        void saveSettings(next);
-        return next;
-      });
+      setSettings((prev) => ({ ...prev, ...patch }));
     },
     [],
   );
+
+  // Persist settings to IDB whenever they change after hydration.
+  // The redundant write on initial hydration is harmless (idempotent
+  // IDB put of the same payload loaded from IDB moments earlier).
+  useEffect(() => {
+    if (hydrated) {
+      void saveSettings(settings);
+    }
+  }, [settings, hydrated]);
 
   // ---- Mutations ----
 
@@ -210,25 +216,24 @@ export function useMusicPlayer(): UseMusicPlayerResult {
     [commitSettings],
   );
 
+  // Track latest playlists via ref so mutators can compute updates
+  // outside state updaters (keeping updaters pure per react-doctor).
+  const playlistsRef = useRef(playlists);
+  playlistsRef.current = playlists;
+
   const renamePlaylist = useCallback(
     (id: string, name: string) => {
       const trimmed = name.trim().slice(0, 80);
       if (!trimmed) return;
-      // Search inside the functional updater so `renamePlaylist` never
-      // captures a stale `playlists` closure. This eliminates the risk
-      // of a rename racing with a just-committed create/delete that
-      // hasn't re-rendered yet.
-      setPlaylists((prev) => {
-        const target = prev.find((p) => p.id === id);
-        if (!target) return prev;
-        const next: MusicPlaylist = {
-          ...target,
-          name: trimmed,
-          updatedAt: new Date().toISOString(),
-        };
-        void savePlaylist(next);
-        return prev.map((p) => (p.id === id ? next : p));
-      });
+      const target = playlistsRef.current.find((p) => p.id === id);
+      if (!target) return;
+      const updated: MusicPlaylist = {
+        ...target,
+        name: trimmed,
+        updatedAt: new Date().toISOString(),
+      };
+      setPlaylists((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      void savePlaylist(updated);
     },
     [],
   );
@@ -395,42 +400,38 @@ export function useMusicPlayer(): UseMusicPlayerResult {
         // just-created playlist as `prev`.
         //
         // The functional updater runs twice under React 18 strict mode
-        // — `savePlaylist` here is idempotent (IDB put of the same
-        // payload) so the double-fire is harmless. The `as` cast on
-        // the initial value widens the narrowing TS would otherwise
-        // apply, so the post-flush comparisons are well-typed.
-        let outcome = "ok" as "ok" | "duplicate" | "notFound";
+        // — `savePlaylist` is idempotent (IDB put of the same payload)
+        // so the double-fire is harmless.
+        let outcome = "notFound" as "ok" | "duplicate" | "notFound";
+        let savedPlaylist: MusicPlaylist | null = null;
         flushSync(() => {
           setPlaylists((prev) => {
-            const idx = prev.findIndex((p) => p.id === resolvedId);
-            if (idx === -1) {
-              outcome = "notFound";
-              return prev;
-            }
-            if (
-              prev[idx].items.some((it) => it.videoId === meta.videoId)
-            ) {
+            const i = prev.findIndex((p) => p.id === resolvedId);
+            if (i === -1) return prev;
+            const pl = prev[i];
+            if (pl.items.some((it) => it.videoId === meta.videoId)) {
               outcome = "duplicate";
               return prev;
             }
+            outcome = "ok";
             const cappedItems =
-              prev[idx].items.length >= MAX_TRACKS_PER_PLAYLIST
-                ? prev[idx].items
-                : [...prev[idx].items, newItem];
-            const nextPlaylist: MusicPlaylist = {
-              ...prev[idx],
+              pl.items.length >= MAX_TRACKS_PER_PLAYLIST
+                ? pl.items
+                : [...pl.items, newItem];
+            const next: MusicPlaylist = {
+              ...pl,
               items: cappedItems,
               updatedAt: new Date().toISOString(),
             };
-            void savePlaylist(nextPlaylist);
+            savedPlaylist = next;
             const merged = [...prev];
-            merged[idx] = nextPlaylist;
-            outcome = "ok";
+            merged[i] = next;
             return merged;
           });
         });
-        // After flushSync, React has committed and our outcome value
-        // is correct.
+        // Persist to IDB after the state updater completes.
+        if (savedPlaylist) void savePlaylist(savedPlaylist);
+        // Surface errors after flushSync has committed.
         if (outcome === "duplicate") {
           setError("This track is already in the playlist.");
         } else if (outcome === "notFound") {
@@ -474,18 +475,16 @@ export function useMusicPlayer(): UseMusicPlayerResult {
 
   const setPlaylistCategory = useCallback(
     (playlistId: string, categoryId: string | null, categoryName: string) => {
-      setPlaylists((prev) => {
-        const target = prev.find((p) => p.id === playlistId);
-        if (!target) return prev;
-        const next: MusicPlaylist = {
-          ...target,
-          categoryId,
-          categoryName: categoryName.trim().slice(0, 200),
-          updatedAt: new Date().toISOString(),
-        };
-        void savePlaylist(next);
-        return prev.map((p) => (p.id === playlistId ? next : p));
-      });
+      const target = playlistsRef.current.find((p) => p.id === playlistId);
+      if (!target) return;
+      const updated: MusicPlaylist = {
+        ...target,
+        categoryId,
+        categoryName: categoryName.trim().slice(0, 200),
+        updatedAt: new Date().toISOString(),
+      };
+      setPlaylists((prev) => prev.map((p) => (p.id === playlistId ? updated : p)));
+      void savePlaylist(updated);
     },
     [],
   );

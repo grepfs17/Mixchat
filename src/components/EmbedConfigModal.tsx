@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, useMemo } from "react";
+
 import {
   FaTimes,
   FaSearch,
@@ -123,7 +124,7 @@ export default function EmbedConfigModal({
   const [ignoredUserInput, setIgnoredUserInput] = useState("");
   const [needsReload, setNeedsReload] = useState(false);
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
@@ -135,7 +136,7 @@ export default function EmbedConfigModal({
       setTimeout(() => setImportMessage(null), 3000);
     }
     e.target.value = "";
-  };
+  }, []);
 
   const handleDriveSave = useCallback(async () => {
     setDriveLoading("save");

@@ -148,9 +148,10 @@ export default function YouTubeChat({
 
   // Connect to SSE stream
   useEffect(() => {
-    if (!videoId) return;
+    if (!videoId) return () => {};
 
     let isMounted = true;
+    const probeAbort = new AbortController();
     const isInitialConnect = prevVideoIdRef.current !== videoId;
     prevVideoIdRef.current = videoId;
     retryCountRef.current = 0;
@@ -172,7 +173,7 @@ export default function YouTubeChat({
       const sseUrl = `/api/youtube-stream-chat?videoId=${encodeURIComponent(videoId)}`;
 
       try {
-        const probeRes = await fetch(sseUrl, { method: "GET" });
+        const probeRes = await fetch(sseUrl, { method: "GET", signal: probeAbort.signal });
         if (!probeRes.ok) {
           let errorMsg = `Connection failed (${probeRes.status})`;
           try {
@@ -197,7 +198,8 @@ export default function YouTubeChat({
           return;
         }
         probeRes.body?.cancel();
-      } catch {
+      } catch (err) {
+        if (probeAbort.signal.aborted) return;
         // fetch probe failed (network error, etc.) — fall through to EventSource
       }
 
@@ -411,6 +413,7 @@ export default function YouTubeChat({
 
     return () => {
       isMounted = false;
+      probeAbort.abort();
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;

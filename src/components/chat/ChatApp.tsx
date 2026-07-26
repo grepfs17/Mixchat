@@ -161,12 +161,12 @@ export default function ChatApp(props: ChatAppStateProps) {
     }
   }, [linkedYoutubeUrl, youtubeVideoId]);
 
-  const showNotification = (
-    message: string,
-    type: "success" | "error" | "info",
-  ) => {
-    setNotification({ message, type });
-  };
+  const showNotification = useCallback(
+    (message: string, type: "success" | "error" | "info") => {
+      setNotification({ message, type });
+    },
+    [],
+  );
 
   const handleSetModMode = useCallback(
     (target: ModModeTarget) => {
@@ -422,27 +422,50 @@ export default function ChatApp(props: ChatAppStateProps) {
     }
   }, [messages, ytMessages, ingestSong, songPhase]);
 
-  const moderationValue = {
-    isModerator,
-    modModeActive,
-    compactActions,
-    keepModActionsVisible,
-    modActionsFirst,
-    doubleClickConfirmModActions,
-    isYouTubeModerator,
-    youtubeModModeActive,
-    youtubeVideoId,
-    youtubeOwnChannelId: youtubeSession?.userId ?? null,
-    onDeleteMessage: handleDelete,
-    onBanUser: handleBan,
-    onTimeoutUser: handleTimeout,
-    onUntimeoutUser: handleUntimeout,
-    onWarnUser: handleWarn,
-    onDeleteYouTubeMessage: handleYtDelete,
-    onBanYouTubeUser: handleYtBan,
-    onTimeoutYouTubeUser: handleYtTimeout,
-    onSetModMode: handleSetModMode,
-  };
+  const moderationValue = useMemo(
+    () => ({
+      isModerator,
+      modModeActive,
+      compactActions,
+      keepModActionsVisible,
+      modActionsFirst,
+      doubleClickConfirmModActions,
+      isYouTubeModerator,
+      youtubeModModeActive,
+      youtubeVideoId,
+      youtubeOwnChannelId: youtubeSession?.userId ?? null,
+      onDeleteMessage: handleDelete,
+      onBanUser: handleBan,
+      onTimeoutUser: handleTimeout,
+      onUntimeoutUser: handleUntimeout,
+      onWarnUser: handleWarn,
+      onDeleteYouTubeMessage: handleYtDelete,
+      onBanYouTubeUser: handleYtBan,
+      onTimeoutYouTubeUser: handleYtTimeout,
+      onSetModMode: handleSetModMode,
+    }),
+    [
+      isModerator,
+      modModeActive,
+      compactActions,
+      keepModActionsVisible,
+      modActionsFirst,
+      doubleClickConfirmModActions,
+      isYouTubeModerator,
+      youtubeModModeActive,
+      youtubeVideoId,
+      youtubeSession?.userId,
+      handleDelete,
+      handleBan,
+      handleTimeout,
+      handleUntimeout,
+      handleWarn,
+      handleYtDelete,
+      handleYtBan,
+      handleYtTimeout,
+      handleSetModMode,
+    ],
+  );
 
   return (
     <ModerationContext.Provider value={moderationValue}>

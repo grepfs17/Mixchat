@@ -24,9 +24,8 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
 
   useEffect(() => {
     const el = pageRef.current;
-    if (!el) return;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setHeroLoaded(true), 100));
+    if (!el) return () => {};
+    const heroTimer = setTimeout(() => setHeroLoaded(true), 100);
 
     const targets = el.querySelectorAll(".landing-reveal");
     const observer = new IntersectionObserver(
@@ -44,7 +43,7 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
 
     return () => {
       observer.disconnect();
-      timers.forEach(clearTimeout);
+      clearTimeout(heroTimer);
     };
   }, []);
 

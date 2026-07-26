@@ -44,11 +44,13 @@ export function useTwitchChatConnection({
 
   const broadcasterIdRef = useRef<string | null>(null);
   const broadcasterIdResolveRef = useRef<((id: string) => void) | null>(null);
-  const broadcasterIdPromiseRef = useRef<Promise<string>>(
-    new Promise<string>((resolve) => {
+  const broadcasterIdPromiseRef = useRef<Promise<string>>(null!);
+  // Lazy init: create the promise + capture its resolve once.
+  if (!broadcasterIdPromiseRef.current) {
+    broadcasterIdPromiseRef.current = new Promise<string>((resolve) => {
       broadcasterIdResolveRef.current = resolve;
-    }),
-  );
+    });
+  }
 
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
 

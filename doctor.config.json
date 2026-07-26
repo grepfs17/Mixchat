@@ -1,0 +1,7 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "rules": {
+    "react-doctor/effect-needs-cleanup": "warn",
+    "react-doctor/no-ref-current-in-render": "warn"
+  }
+}

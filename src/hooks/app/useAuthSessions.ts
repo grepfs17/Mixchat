@@ -120,6 +120,18 @@ export function useAuthSessions(): UseAuthSessionsResult {
   // `{}` and would clobber the localStorage copy that the load-effect is
   // about to read in the same commit.
   const isFirstSaveRef = useRef(true);
+  // Track popup-poll intervals so they can be cleaned up on unmount.
+  const popupPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clean up any popup-poll interval on unmount.
+  useEffect(() => {
+    return () => {
+      if (popupPollRef.current) {
+        clearInterval(popupPollRef.current);
+        popupPollRef.current = null;
+      }
+    };
+  }, []);
 
   // Persist sessions to localStorage on every change after the initial mount.
   useEffect(() => {
@@ -406,10 +418,12 @@ export function useAuthSessions(): UseAuthSessionsResult {
     const pollClosed = setInterval(() => {
       if (isPopupClosed(popup)) {
         clearInterval(pollClosed);
+        popupPollRef.current = null;
         setIsLoggingIn(false);
         removeMessageListener();
       }
     }, 500);
+    popupPollRef.current = pollClosed;
   }, []);
 
   /**
@@ -442,9 +456,11 @@ export function useAuthSessions(): UseAuthSessionsResult {
     const pollClosed = setInterval(() => {
       if (isPopupClosed(popup)) {
         clearInterval(pollClosed);
+        popupPollRef.current = null;
         setIsLoggingIn(false);
       }
     }, 500);
+    popupPollRef.current = pollClosed;
   }, []);
 
   const youtubeLogin = useCallback(
