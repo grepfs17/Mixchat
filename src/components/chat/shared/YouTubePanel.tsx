@@ -40,6 +40,22 @@ interface YouTubePanelProps {
   renderThirdPartyEmotes?: boolean;
 }
 
+function extractVideoId(val: string): string {
+  let vid = val;
+  try {
+    if (val.includes("v=")) {
+      vid = new URLSearchParams(new URL(val).search).get("v") || val;
+    } else if (val.includes("youtu.be/")) {
+      vid = val.split("youtu.be/")[1].split("?")[0];
+    } else if (val.includes("/live/")) {
+      vid = val.split("/live/")[1].split("?")[0];
+    }
+  } catch {
+    // keep original value
+  }
+  return vid;
+}
+
 export default function YouTubePanel({
   linkedYoutubeUrl,
   youtubeVideoId,
@@ -78,22 +94,6 @@ export default function YouTubePanel({
   ) => {
     setChatterHistory({ author, platform: "youtube", authorAvatar: avatar });
     onUsernameClick?.(e, author, avatar);
-  };
-
-  const extractVideoId = (val: string): string => {
-    let vid = val;
-    try {
-      if (val.includes("v=")) {
-        vid = new URLSearchParams(new URL(val).search).get("v") || val;
-      } else if (val.includes("youtu.be/")) {
-        vid = val.split("youtu.be/")[1].split("?")[0];
-      } else if (val.includes("/live/")) {
-        vid = val.split("/live/")[1].split("?")[0];
-      }
-    } catch {
-      // keep original value
-    }
-    return vid;
   };
 
   return (

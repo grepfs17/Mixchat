@@ -15,6 +15,12 @@ interface MessageBadgesProps {
  * Renders a row of badge icons from either detailed Twitch badge data
  * or a simple name→URL map.  badgeDetails takes priority when present.
  */
+const imgStyle: React.CSSProperties = {
+  width: "18px",
+  height: "18px",
+  verticalAlign: "middle",
+};
+
 export default function MessageBadges({
   badgeDetails,
   badges,
@@ -27,11 +33,6 @@ export default function MessageBadges({
     alignItems: "center",
     gap: "2px",
     ...style,
-  };
-  const imgStyle: React.CSSProperties = {
-    width: "18px",
-    height: "18px",
-    verticalAlign: "middle",
   };
   const loading = lazy ? "lazy" : "eager";
 

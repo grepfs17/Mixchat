@@ -193,11 +193,11 @@ export default function ChatHeader({
     [onUpdateCategory],
   );
 
-  const getOverallStatus = (
-    statuses: Map<string, SubscriptionStatus>,
-    keys: string[] | null,
-    conditionFilter?: string,
-  ): SubscriptionStatus | "disconnected" => {
+function getOverallStatus(
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+): SubscriptionStatus | "disconnected" {
     if (keys === null) {
       return statuses.size > 0 ? "connected" : "disconnected";
     }
@@ -210,10 +210,10 @@ export default function ChatHeader({
     if (relevant.every(([, s]) => s === "connected")) return "connected";
     if (relevant.some(([, s]) => s === "error")) return "error";
     if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
-    return "pending";
-  };
+  return "pending";
+}
 
-  const statusLabel = (s: SubscriptionStatus | "disconnected") => {
+function statusLabel(s: SubscriptionStatus | "disconnected") {
     switch (s) {
       case "connected":
         return "connected";
@@ -223,12 +223,12 @@ export default function ChatHeader({
         return "error";
       case "scope_error":
         return "scope missing";
-      case "disconnected":
-        return "disabled";
-    }
-  };
+    case "disconnected":
+      return "disabled";
+  }
+}
 
-  const FRIENDLY_NAMES: Record<string, string> = {
+const FRIENDLY_NAMES: Record<string, string> = {
     "automod.message.hold": "Message Held",
     "automod.message.update": "Message Resolved",
     "channel.raid": "Incoming Raid",
@@ -245,8 +245,8 @@ export default function ChatHeader({
     "channel.prediction.progress": "Prediction Progress",
     "channel.prediction.lock": "Prediction Locked",
     "channel.prediction.end": "Prediction Resolved",
-    "channel.bits.use": "Bits Used",
-  };
+  "channel.bits.use": "Bits Used",
+};
 
   const renderStatusSection = (
     label: string,

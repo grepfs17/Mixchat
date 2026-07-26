@@ -91,6 +91,10 @@ interface SSEEndEvent {
   reason: string;
 }
 
+function getTextContent(m: ChatMessage) {
+  return m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
+}
+
 export default function YouTubeChat({
   videoId,
   channel,
@@ -105,9 +109,6 @@ export default function YouTubeChat({
   onMessageDeleted,
   renderThirdPartyEmotes = false,
 }: YouTubeChatProps) {
-  const getTextContent = (m: ChatMessage) =>
-    m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
-
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
