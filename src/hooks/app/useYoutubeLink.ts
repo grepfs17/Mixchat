@@ -98,9 +98,10 @@ export function useYoutubeLink(
         const params = new URLSearchParams();
         params.append("action", "getLiveVideo");
         params.append("channelUrl", linkedYoutubeUrl);
-        const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
-        const data = await res.json();
-        if (!cancelled && res.ok && data.videoId) {
+    const res = await fetch(`/api/youtube-proxy?${params.toString()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!cancelled && data.videoId) {
           setYoutubeStreamVideoId(data.videoId);
         } else if (!cancelled) {
           setYoutubeStreamVideoId(null);
@@ -121,8 +122,7 @@ export function useYoutubeLink(
   const linkedYoutubeChannelIds = useMemo(
     () =>
       getYoutubeLinks()
-        .filter((l) => l.active !== false)
-        .map((l) => l.twitchChannelId),
+        .flatMap((l) => (l.active !== false ? [l.twitchChannelId] : [])),
     [ytLinksVersion],
   );
 

@@ -98,8 +98,7 @@ export function isOwnerMessage(
 export function messageContent(item: StreamerToolsMessage): string {
   if (item.platform === "twitch") return item.msg.content;
   return item.msg.parts
-    .filter((p) => p.type === "text")
-    .map((p) => p.text || "")
+    .flatMap((p) => (p.type === "text" ? [p.text || ""] : []))
     .join(" ");
 }
 

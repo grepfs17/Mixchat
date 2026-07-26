@@ -111,6 +111,8 @@ export default function SplitChat({
           }}
           role="separator"
         aria-orientation="vertical"
+        aria-label="Chat split resizer"
+        tabIndex={0}
         onMouseDown={() => onSetIsDraggingChatSplit(true)}
           onMouseEnter={(e) =>
             !isDraggingChatSplit &&

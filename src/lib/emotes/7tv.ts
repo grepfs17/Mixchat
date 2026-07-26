@@ -228,12 +228,10 @@ export function subscribeTo7TVChannelUpdates(
         const pulled = body.pulled || [];
 
         const emotesAdded = pushed
-          .filter((p: any) => p.key === "emotes")
-          .map((p: any) => p.value);
+          .flatMap((p: any) => (p.key === "emotes" ? [p.value] : []));
 
         const emotesRemoved = pulled
-          .filter((p: any) => p.key === "emotes")
-          .map((p: any) => p.old_value);
+          .flatMap((p: any) => (p.key === "emotes" ? [p.old_value] : []));
 
         if (emotesAdded.length > 0 || emotesRemoved.length > 0) {
           console.log(

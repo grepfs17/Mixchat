@@ -119,8 +119,7 @@ export async function getUserHistory(
         const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
 
         const filtered = results
-          .filter((m) => m.timestamp >= cutoff)
-          .filter((m) => !platform || m.platform === platform)
+          .filter((m) => m.timestamp >= cutoff && (!platform || m.platform === platform))
           .map((m) => ({
             ...m,
             timestamp: new Date(m.timestamp),

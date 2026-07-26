@@ -36,14 +36,17 @@ export async function checkLiveStreamers(
     );
 
     const liveStreamers: LiveStreamer[] = streamersToWatch
-      .filter((streamer) => statuses[streamer.id]?.isLive)
-      .map((streamer) => ({
-        ...streamer,
-        isLive: true as const,
-        title: statuses[streamer.id]?.title,
-        gameName: statuses[streamer.id]?.gameName,
-        viewerCount: statuses[streamer.id]?.viewerCount,
-      }));
+      .flatMap((streamer) => {
+        const s = statuses[streamer.id];
+        if (!s?.isLive) return [];
+        return [{
+          ...streamer,
+          isLive: true as const,
+          title: s.title,
+          gameName: s.gameName,
+          viewerCount: s.viewerCount,
+        }];
+      });
 
     return liveStreamers;
   } catch (error) {

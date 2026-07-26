@@ -66,8 +66,8 @@ function ThirdPartyEmoteNode({
   return (
     <span className="emote-overlay-container">
       {img}
-      {token.overlays.map((ov, i) => (
-        <span className="emote-overlay" key={`${ov.name}-${i}`}>
+      {token.overlays.map((ov) => (
+        <span className="emote-overlay" key={ov.name}>
           <img
             src={ov.url}
             alt={ov.name}
@@ -131,7 +131,7 @@ export default function YTMessageParts({
           needSpace = Boolean(tok.text);
         } else {
           out.push(
-            <React.Fragment key={`${key}-e-${i}`}>
+            <React.Fragment key={`${key}-e-${tok.name ?? tok.text ?? i}`}>
               {needSpace ? " " : ""}
               <ThirdPartyEmoteNode token={tok} variant={variant} />
             </React.Fragment>,

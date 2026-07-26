@@ -217,7 +217,7 @@ const TWITCH_COLOR = "#9146ff";
               </div>
             )}
             {filteredEmotes.twitchChannels
-              .filter((ch) => ch.emotes.length > 0)
+              .flatMap((ch) => (ch.emotes.length > 0 ? [ch] : []))
               .map((ch) => (
                 <div key={ch.channelId} className="emote-search-group">
                   <div className="emote-search-group-label">
