@@ -318,12 +318,13 @@ export function useChatAppState({
     setPrediction(null);
     setCelebration(null);
     preloadedMessagesRef.current.clear();
-  }, [
-    selectedTwitchChannelName,
-    selectedTwitchChannel,
-    setStreamTitle,
-    setStreamGameName,
-    setIsFollowingChannelState,
+  },    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      selectedTwitchChannelName,
+      selectedTwitchChannel,
+      setStreamTitle,
+      setStreamGameName,
+      setIsFollowingChannelState,
     setMessages,
   ]);
 

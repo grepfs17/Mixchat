@@ -372,7 +372,6 @@ export default function StreamEmbed({
             console.log("[hls] Manifest parsed — stream loaded for:", channelName);
             console.log("[hls] Quality:", fetchedQualities[0]?.label ?? "unknown", "URL:", playlistUrl);
             console.log("[hls] Ad-free via usher oauth_token: ads are controlled server-side, not by this badge");
-            setLoading(false);
             videoRef.current?.play().catch(() => {
               // Auto-play failed — user will need to click play
             });
@@ -393,16 +392,15 @@ export default function StreamEmbed({
         ) {
           // Safari supports HLS natively
           videoRef.current.src = playlistUrl;
-          setLoading(false);
         } else {
           setError("HLS not supported in this browser");
-          setLoading(false);
         }
       } catch (err) {
         if (cancelled || abortController.signal.aborted) return;
         console.error("Failed to load stream:", err);
-        setError(err instanceof Error ? err.message : "Failed to load stream");
-        setLoading(false);
+    setError(err instanceof Error ? err.message : "Failed to load stream");
+    } finally {
+      if (!cancelled) setLoading(false);
       }
     };
 
@@ -617,7 +615,9 @@ export default function StreamEmbed({
   // M3U8 mode — video player
   return (
     <div className="stream-player">
-      <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
+      {/* Live streams don't have pre-recorded captions */}
+    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+    <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
       {twitchConnected && (
         <div
           className={`stream-auth-badge${streamAuthenticated ? "" : " stream-auth-badge--guest"}`}

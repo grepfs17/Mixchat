@@ -344,6 +344,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         );
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedTwitchChannel, twitchSession?.userId, youtubeVideoId, showNotification],
   );
 

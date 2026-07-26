@@ -134,12 +134,13 @@ export function useEmbedState(
   // If the user is in YouTube-embed mode but the link has been removed
   // (channel change, link deleted from YouTubeLinker), fall back gracefully.
   // Fallback to embed when YouTube URL is missing — intentional
-  // eslint-disable-next-line no-adjust-state-on-prop-change
+  /* eslint-disable no-adjust-state-on-prop-change */
   useEffect(() => {
     if (playerType === "youtube" && !linkedYoutubeUrl) {
       setPlayerType("embed");
     }
   }, [linkedYoutubeUrl, playerType]);
+  /* eslint-enable no-adjust-state-on-prop-change */
 
   // Fetch live viewer count for the selected channel every 30s. 30s (vs the
   // previous 15s) cuts Helix query volume in half while still feeling live.
