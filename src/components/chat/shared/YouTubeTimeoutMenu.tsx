@@ -70,7 +70,7 @@ export default function YouTubeTimeoutMenu({
       {!showCustom ? (
         <button type="button"
           onClick={() => setShowCustom(true)}
-          title={`Custom (1s – ${formatTimeoutDuration(YOUTUBE_MAX_TIMEOUT_SECONDS)})`}
+          title={`Custom (1s - ${formatTimeoutDuration(YOUTUBE_MAX_TIMEOUT_SECONDS)})`}
         >
           Custom…
         </button>
