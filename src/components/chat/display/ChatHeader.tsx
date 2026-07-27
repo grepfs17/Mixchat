@@ -116,6 +116,49 @@ function statusLabel(s: SubscriptionStatus | "disconnected") {
   }
 }
 
+function renderStatusSection(
+  label: string,
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+) {
+  const overall = getOverallStatus(statuses, keys, conditionFilter);
+  return (
+    <div className="eventsub-status-section">
+      <div className={`eventsub-status-row eventsub-status--${overall}`}>
+        <span className="eventsub-status-dot" />
+        <span className="eventsub-status-label">{label}</span>
+        <span className="eventsub-status-value">{statusLabel(overall)}</span>
+      </div>
+      {keys &&
+        keys.map((typePrefix) => {
+          const entry = Array.from(statuses.entries()).find(([k]) => {
+            if (!k.startsWith(typePrefix + ":")) return false;
+            if (conditionFilter) return k.includes(conditionFilter);
+            return true;
+          });
+          const status = entry?.[1];
+          const nameKey = conditionFilter
+            ? `${typePrefix}:${conditionFilter}`
+            : typePrefix;
+          const friendlyLabel = FRIENDLY_NAMES[nameKey] || FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
+          return (
+            <div
+              key={typePrefix}
+              className={`eventsub-status-item eventsub-status--${status ?? "disconnected"}`}
+            >
+              <span className="eventsub-status-dot" />
+              <span className="eventsub-status-item-label">{friendlyLabel}</span>
+              <span className="eventsub-status-value">
+                {status ? statusLabel(status) : "disabled"}
+              </span>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
 export default function ChatHeader({
   channelName,
   channelDisplayName,
@@ -247,49 +290,6 @@ export default function ChatHeader({
     },
     [onUpdateCategory],
   );
-
-  const renderStatusSection = (
-    label: string,
-    statuses: Map<string, SubscriptionStatus>,
-    keys: string[] | null,
-    conditionFilter?: string,
-  ) => {
-    const overall = getOverallStatus(statuses, keys, conditionFilter);
-    return (
-      <div className="eventsub-status-section">
-        <div className={`eventsub-status-row eventsub-status--${overall}`}>
-          <span className="eventsub-status-dot" />
-          <span className="eventsub-status-label">{label}</span>
-          <span className="eventsub-status-value">{statusLabel(overall)}</span>
-        </div>
-        {keys &&
-          keys.map((typePrefix) => {
-            const entry = Array.from(statuses.entries()).find(([k]) => {
-              if (!k.startsWith(typePrefix + ":")) return false;
-              if (conditionFilter) return k.includes(conditionFilter);
-              return true;
-            });
-            const status = entry?.[1];
-            const nameKey = conditionFilter
-              ? `${typePrefix}:${conditionFilter}`
-              : typePrefix;
-            const label = FRIENDLY_NAMES[nameKey] || FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
-            return (
-              <div
-                key={typePrefix}
-                className={`eventsub-status-item eventsub-status--${status ?? "disconnected"}`}
-              >
-                <span className="eventsub-status-dot" />
-                <span className="eventsub-status-item-label">{label}</span>
-                <span className="eventsub-status-value">
-                  {status ? statusLabel(status) : "disabled"}
-                </span>
-              </div>
-            );
-          })}
-      </div>
-    );
-  };
 
   return (
     <>

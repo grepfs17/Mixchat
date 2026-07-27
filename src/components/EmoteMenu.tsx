@@ -32,6 +32,13 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevIsOpenRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  // Sync the latest onClose into the ref so event-listener callbacks
+  // captured at mount don't see a stale closure. Updating in an effect
+  // (rather than during render) keeps component body pure per React semantics.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Derive filtered emotes during render instead of storing in state
   const filteredEmotes = useMemo(() => {
@@ -78,22 +85,22 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node))
-        onClose();
+        onCloseRef.current();
     };
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) onClose();
+      if (e.key === "Escape" && isOpen) onCloseRef.current();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

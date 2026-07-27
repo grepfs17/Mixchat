@@ -197,7 +197,6 @@ export default function StreamEmbed({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const qualitiesRef = useRef<Array<{ label: string; url: string }>>([]);
-  const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(
     !!placeholderThumbnailUrl,
   );
@@ -255,7 +254,6 @@ export default function StreamEmbed({
       qualitiesRef.current[externalSelectedQualityIdx]
     ) {
       hlsRef.current.loadSource(qualitiesRef.current[externalSelectedQualityIdx].url);
-      setSelectedQualityIdx(externalSelectedQualityIdx);
       videoRef.current?.play().catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -281,7 +279,6 @@ export default function StreamEmbed({
         setError(null);
         if (!isRetry) {
       qualitiesRef.current = [];
-      setSelectedQualityIdx(0);
       onQualitiesLoaded?.([]);
         }
 

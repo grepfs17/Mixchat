@@ -13,6 +13,13 @@ function qualityRank(label: string): number {
 const GQL_CLIENT_ID =
   import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
+const BASE_GQL_HEADERS = {
+  "Client-ID": GQL_CLIENT_ID,
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
+};
+
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -70,16 +77,9 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       },
     };
 
-    const baseGqlHeaders = {
-      "Client-ID": GQL_CLIENT_ID,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
-    };
-
     let gqlRes = await fetch("https://gql.twitch.tv/gql", {
       method: "POST",
-      headers: baseGqlHeaders,
+      headers: BASE_GQL_HEADERS,
       body: JSON.stringify(gqlBody),
     });
 
@@ -110,7 +110,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
           if (clientIntegrity) {
             const deviceId = Math.random().toString(36).slice(2, 34);
             const retryHeaders: Record<string, string> = {
-              ...baseGqlHeaders,
+              ...BASE_GQL_HEADERS,
               "Device-Id": deviceId,
               "Client-Integrity": clientIntegrity,
               ...cookieHeader,

@@ -58,14 +58,15 @@ export default function FavoriteChannelsModal({
   };
 
   return (
-    <div className="favorites-modal-overlay" onClick={onClose}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}>
-      <div className="favorites-modal" onClick={(e) => e.stopPropagation()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.click(); } }}>
+    <div
+      className="favorites-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Favorite channels"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+    >
+      <div className="favorites-modal" onClick={(e) => e.stopPropagation()}>
         <div className="favorites-modal-header">
           <h2>
             <FaStar size={18} style={{ color: "var(--color-favorite)" }} />
@@ -113,12 +114,10 @@ export default function FavoriteChannelsModal({
               </div>
               {filteredFavorites.map((channel) => (
                 <div key={channel.id} className="favorites-channel-item favorites-channel-item--active">
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           className="favorites-channel-info"
           onClick={() => handleSelect(channel.id)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(channel.id); } }}
                   >
                     {channel.profileImageUrl && (
                       <img
@@ -135,7 +134,7 @@ export default function FavoriteChannelsModal({
                         @{channel.name}
                       </span>
                     </div>
-                  </div>
+                  </button>
                   <button type="button"
                     className="favorites-star-btn favorites-star-btn--active"
                     onClick={() => onToggleFavorite(channel.id)}
@@ -155,12 +154,10 @@ export default function FavoriteChannelsModal({
               </div>
               {filteredOthers.map((channel) => (
                 <div key={channel.id} className="favorites-channel-item">
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           className="favorites-channel-info"
           onClick={() => handleSelect(channel.id)}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(channel.id); } }}
                   >
                     {channel.profileImageUrl && (
                       <img
@@ -177,7 +174,7 @@ export default function FavoriteChannelsModal({
                         @{channel.name}
                       </span>
                     </div>
-                  </div>
+                  </button>
                   <button type="button"
                     className="favorites-star-btn"
                     onClick={() => onToggleFavorite(channel.id)}

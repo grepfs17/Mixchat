@@ -144,17 +144,19 @@ export default function StreamGrid({
           <div className="stream-grid">
             {Array.from({ length: 6 }, (_, i) => (
               <div key={i} className="stream-card stream-card--skeleton">
-                <div className="stream-card-thumb">
-                  <div className="skeleton-shimmer" />
-                </div>
-                <div className="stream-card-info">
-                  <div className="stream-card-avatar-row">
-                    <div className="skeleton-circle" />
-                    <div className="stream-card-names">
-                      <div className="skeleton-bar skeleton-bar--name" />
-                    </div>
+                <div className="stream-card-clickable">
+                  <div className="stream-card-thumb">
+                    <div className="skeleton-shimmer" />
                   </div>
-                  <div className="skeleton-bar skeleton-bar--game" />
+                  <div className="stream-card-info">
+                    <div className="stream-card-avatar-row">
+                      <div className="skeleton-circle" />
+                      <div className="stream-card-names">
+                        <div className="skeleton-bar skeleton-bar--name" />
+                      </div>
+                    </div>
+                    <div className="skeleton-bar skeleton-bar--game" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -179,29 +181,25 @@ export default function StreamGrid({
               const game = channel.gameName || channel.title || "";
 
               return (
-                <div
-                  key={channel.id}
-                  className={`stream-card${isFav ? " is-favorite" : ""}`}
-                  onClick={(e) => {
-                    const card = e.currentTarget;
-                    const thumbEl = card.querySelector(
-                      ".stream-card-thumb",
-                    ) as HTMLElement | null;
-                    const rect = (thumbEl ?? card).getBoundingClientRect();
-                    const info: StreamTransitionInfo = {
-                      thumbnailUrl: thumbSrc,
-                      rect,
-                      channelName: channel.displayName,
-                    };
-                    onChannelSelect(channel.id, info);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && onChannelSelect(channel.id)
-                  }
-                  aria-label={`Watch ${channel.displayName}`}
-                >
+                <div key={channel.id} className={`stream-card${isFav ? " is-favorite" : ""}`}>
+                  <button
+                    type="button"
+                    className="stream-card-clickable"
+                    onClick={(e) => {
+                      const clickable = e.currentTarget;
+                      const thumbEl = clickable.querySelector(
+                        ".stream-card-thumb",
+                      ) as HTMLElement | null;
+                      const rect = (thumbEl ?? clickable).getBoundingClientRect();
+                      const info: StreamTransitionInfo = {
+                        thumbnailUrl: thumbSrc,
+                        rect,
+                        channelName: channel.displayName,
+                      };
+                      onChannelSelect(channel.id, info);
+                    }}
+                    aria-label={`Watch ${channel.displayName}`}
+                  >
                   <div className="stream-card-thumb">
                     {thumbFailed ? (
                       <div className="stream-card-thumb-placeholder">📺</div>
@@ -224,21 +222,6 @@ export default function StreamGrid({
                           {formatViewers(channel.viewerCount)}
                         </span>
                       )}
-                    <button type="button"
-                      className={`stream-card-fav-btn${isFav ? " active" : ""}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleFavorite(channel.id);
-                      }}
-                      title={
-                        isFav ? "Remove from favorites" : "Add to favorites"
-                      }
-                      aria-label={
-                        isFav ? "Remove from favorites" : "Add to favorites"
-                      }
-                    >
-                      ★
-                    </button>
                   </div>
 
                   <div className="stream-card-info">
@@ -271,6 +254,19 @@ export default function StreamGrid({
                       </div>
                     )}
                   </div>
+                  </button>
+                  <button type="button"
+                    className={`stream-card-fav-btn${isFav ? " active" : ""}`}
+                    onClick={() => onToggleFavorite(channel.id)}
+                    title={
+                      isFav ? "Remove from favorites" : "Add to favorites"
+                    }
+                    aria-label={
+                      isFav ? "Remove from favorites" : "Add to favorites"
+                    }
+                  >
+                    ★
+                  </button>
                 </div>
               );
             })}
