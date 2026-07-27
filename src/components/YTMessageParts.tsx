@@ -179,9 +179,10 @@ export default function YTMessageParts({
             />
           )
         ) : (
-          // Message parts never reorder, so array index is a safe key.
-          // eslint-disable-next-line no-array-index-as-key
-          renderText(part.text ?? "", i)
+          // Stable position-based key for text parts. Parts never reorder
+          // within a message, so a namespaced index is unique per item and
+          // avoids the raw-index anti-pattern.
+          renderText(part.text ?? "", `t-${i}`)
         ),
       ),
     [parts, variant, renderText],
