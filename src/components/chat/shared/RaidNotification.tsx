@@ -123,17 +123,16 @@ export default function RaidNotification({
               <span className="raid-countdown">
                 Twitch auto-raids in {secondsLeft}s
               </span>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
+              <button
+                type="button"
+                onClick={() => {
                   onRaidNow?.();
                 }}
                 className="raid-open-channel-link"
                 title="Go to target channel"
               >
                 Go to channel →
-              </a>
+              </button>
             </div>
           </div>
         ) : (

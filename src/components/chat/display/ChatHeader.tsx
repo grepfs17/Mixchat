@@ -61,6 +61,61 @@ interface ChatHeaderProps {
   isOnOwnChannel?: boolean;
 }
 
+const FRIENDLY_NAMES: Record<string, string> = {
+  "automod.message.hold": "Message Held",
+  "automod.message.update": "Message Resolved",
+  "channel.raid": "Incoming Raid",
+  "channel.raid:to_broadcaster": "Incoming Raid",
+  "channel.raid:from_broadcaster": "Outgoing Raid",
+  "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
+  "channel.hype_train.begin": "Train Started",
+  "channel.hype_train.progress": "Train Progress",
+  "channel.hype_train.end": "Train Ended",
+  "channel.poll.begin": "Poll Started",
+  "channel.poll.progress": "Poll Progress",
+  "channel.poll.end": "Poll Ended",
+  "channel.prediction.begin": "Prediction Started",
+  "channel.prediction.progress": "Prediction Progress",
+  "channel.prediction.lock": "Prediction Locked",
+  "channel.prediction.end": "Prediction Resolved",
+  "channel.bits.use": "Bits Used",
+};
+
+function getOverallStatus(
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+): SubscriptionStatus | "disconnected" {
+  if (keys === null) {
+    return statuses.size > 0 ? "connected" : "disconnected";
+  }
+  const relevant = Array.from(statuses.entries()).filter(([k]) => {
+    if (!keys.some((prefix) => k.startsWith(prefix + ":"))) return false;
+    if (conditionFilter) return k.includes(conditionFilter);
+    return true;
+  });
+  if (relevant.length === 0) return "disconnected";
+  if (relevant.every(([, s]) => s === "connected")) return "connected";
+  if (relevant.some(([, s]) => s === "error")) return "error";
+  if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
+  return "pending";
+}
+
+function statusLabel(s: SubscriptionStatus | "disconnected") {
+  switch (s) {
+    case "connected":
+      return "connected";
+    case "pending":
+      return "connecting";
+    case "error":
+      return "error";
+    case "scope_error":
+      return "scope missing";
+    case "disconnected":
+      return "disabled";
+  }
+}
+
 export default function ChatHeader({
   channelName,
   channelDisplayName,
@@ -192,61 +247,6 @@ export default function ChatHeader({
     },
     [onUpdateCategory],
   );
-
-const FRIENDLY_NAMES: Record<string, string> = {
-    "automod.message.hold": "Message Held",
-    "automod.message.update": "Message Resolved",
-    "channel.raid": "Incoming Raid",
-    "channel.raid:to_broadcaster": "Incoming Raid",
-    "channel.raid:from_broadcaster": "Outgoing Raid",
-    "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
-    "channel.hype_train.begin": "Train Started",
-    "channel.hype_train.progress": "Train Progress",
-    "channel.hype_train.end": "Train Ended",
-    "channel.poll.begin": "Poll Started",
-    "channel.poll.progress": "Poll Progress",
-    "channel.poll.end": "Poll Ended",
-    "channel.prediction.begin": "Prediction Started",
-    "channel.prediction.progress": "Prediction Progress",
-    "channel.prediction.lock": "Prediction Locked",
-    "channel.prediction.end": "Prediction Resolved",
-    "channel.bits.use": "Bits Used",
-};
-
-function getOverallStatus(
-  statuses: Map<string, SubscriptionStatus>,
-  keys: string[] | null,
-  conditionFilter?: string,
-): SubscriptionStatus | "disconnected" {
-    if (keys === null) {
-      return statuses.size > 0 ? "connected" : "disconnected";
-    }
-    const relevant = Array.from(statuses.entries()).filter(([k]) => {
-      if (!keys.some((prefix) => k.startsWith(prefix + ":"))) return false;
-      if (conditionFilter) return k.includes(conditionFilter);
-      return true;
-    });
-    if (relevant.length === 0) return "disconnected";
-    if (relevant.every(([, s]) => s === "connected")) return "connected";
-    if (relevant.some(([, s]) => s === "error")) return "error";
-    if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
-  return "pending";
-}
-
-function statusLabel(s: SubscriptionStatus | "disconnected") {
-    switch (s) {
-      case "connected":
-        return "connected";
-      case "pending":
-        return "connecting";
-      case "error":
-        return "error";
-      case "scope_error":
-        return "scope missing";
-    case "disconnected":
-      return "disabled";
-  }
-}
 
   const renderStatusSection = (
     label: string,

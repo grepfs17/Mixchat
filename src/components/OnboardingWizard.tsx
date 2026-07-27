@@ -499,14 +499,13 @@ export default function OnboardingWizard({
                       >
                         <FaTwitch size={14} />
                       </span>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="author author-link"
                         style={{ color: "#c084fc" }}
-                        onClick={(e) => e.preventDefault()}
                       >
                         notmasterofpupis
-                      </a>
+                      </button>
                       <span className="message-separator">:</span>
                       <span className="message-text">
                         Where Am I?{" "}
@@ -535,14 +534,13 @@ export default function OnboardingWizard({
                       >
                         <FaTwitch size={14} />
                       </span>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="author author-link"
                         style={{ color: "#34d399" }}
-                        onClick={(e) => e.preventDefault()}
                       >
                         nothelder
-                      </a>
+                      </button>
                       <span className="message-separator">:</span>
                       <span className="message-text">
                         I just realized that my cousin drunk my beverage{" "}
@@ -571,14 +569,13 @@ export default function OnboardingWizard({
                       >
                         <FaTwitch size={14} />
                       </span>
-                      <a
-                        href="#"
+                      <button
+                        type="button"
                         className="author author-link"
                         style={{ color: "#fbbf24" }}
-                        onClick={(e) => e.preventDefault()}
                       >
                         shokastion
-                      </a>
+                      </button>
                       <span className="message-separator">:</span>
                       <span className="message-text">
                         In your head, in your head{" "}

@@ -196,9 +196,7 @@ export default function StreamEmbed({
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qualities, setQualities] = useState<
-    Array<{ label: string; url: string }>
-  >([]);
+  const qualitiesRef = useRef<Array<{ label: string; url: string }>>([]);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
   const [showPlaceholder, setShowPlaceholder] = useState(
     !!placeholderThumbnailUrl,
@@ -254,9 +252,9 @@ export default function StreamEmbed({
     if (
       externalSelectedQualityIdx !== undefined &&
       hlsRef.current &&
-      qualities[externalSelectedQualityIdx]
+      qualitiesRef.current[externalSelectedQualityIdx]
     ) {
-      hlsRef.current.loadSource(qualities[externalSelectedQualityIdx].url);
+      hlsRef.current.loadSource(qualitiesRef.current[externalSelectedQualityIdx].url);
       setSelectedQualityIdx(externalSelectedQualityIdx);
       videoRef.current?.play().catch(() => {});
     }
@@ -282,9 +280,9 @@ export default function StreamEmbed({
         setLoading(true);
         setError(null);
         if (!isRetry) {
-          setQualities([]);
-          setSelectedQualityIdx(0);
-          onQualitiesLoaded?.([]);
+      qualitiesRef.current = [];
+      setSelectedQualityIdx(0);
+      onQualitiesLoaded?.([]);
         }
 
         if (!videoRef.current) return;
@@ -343,7 +341,7 @@ export default function StreamEmbed({
 
         const fetchedQualities: Array<{ label: string; url: string }> =
           playlistData.qualities;
-        setQualities(fetchedQualities);
+          qualitiesRef.current = fetchedQualities;
         onQualitiesLoaded?.(fetchedQualities);
 
         // Use server-side subscription check result (more reliable: token has full scopes)
