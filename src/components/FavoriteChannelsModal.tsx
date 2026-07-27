@@ -62,13 +62,13 @@ export default function FavoriteChannelsModal({
       className="favorites-modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Favorite channels"
+      aria-labelledby="favorites-modal-title"
       onClick={onClose}
       onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
     >
       <div className="favorites-modal" onClick={(e) => e.stopPropagation()}>
         <div className="favorites-modal-header">
-          <h2>
+          <h2 id="favorites-modal-title">
             <FaStar size={18} style={{ color: "var(--color-favorite)" }} />
             Favorite Channels
           </h2>
