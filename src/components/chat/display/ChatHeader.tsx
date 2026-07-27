@@ -61,6 +61,104 @@ interface ChatHeaderProps {
   isOnOwnChannel?: boolean;
 }
 
+const FRIENDLY_NAMES: Record<string, string> = {
+  "automod.message.hold": "Message Held",
+  "automod.message.update": "Message Resolved",
+  "channel.raid": "Incoming Raid",
+  "channel.raid:to_broadcaster": "Incoming Raid",
+  "channel.raid:from_broadcaster": "Outgoing Raid",
+  "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
+  "channel.hype_train.begin": "Train Started",
+  "channel.hype_train.progress": "Train Progress",
+  "channel.hype_train.end": "Train Ended",
+  "channel.poll.begin": "Poll Started",
+  "channel.poll.progress": "Poll Progress",
+  "channel.poll.end": "Poll Ended",
+  "channel.prediction.begin": "Prediction Started",
+  "channel.prediction.progress": "Prediction Progress",
+  "channel.prediction.lock": "Prediction Locked",
+  "channel.prediction.end": "Prediction Resolved",
+  "channel.bits.use": "Bits Used",
+};
+
+function getOverallStatus(
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+): SubscriptionStatus | "disconnected" {
+  if (keys === null) {
+    return statuses.size > 0 ? "connected" : "disconnected";
+  }
+  const relevant = Array.from(statuses.entries()).filter(([k]) => {
+    if (!keys.some((prefix) => k.startsWith(prefix + ":"))) return false;
+    if (conditionFilter) return k.includes(conditionFilter);
+    return true;
+  });
+  if (relevant.length === 0) return "disconnected";
+  if (relevant.every(([, s]) => s === "connected")) return "connected";
+  if (relevant.some(([, s]) => s === "error")) return "error";
+  if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
+  return "pending";
+}
+
+function statusLabel(s: SubscriptionStatus | "disconnected") {
+  switch (s) {
+    case "connected":
+      return "connected";
+    case "pending":
+      return "connecting";
+    case "error":
+      return "error";
+    case "scope_error":
+      return "scope missing";
+    case "disconnected":
+      return "disabled";
+  }
+}
+
+function renderStatusSection(
+  label: string,
+  statuses: Map<string, SubscriptionStatus>,
+  keys: string[] | null,
+  conditionFilter?: string,
+) {
+  const overall = getOverallStatus(statuses, keys, conditionFilter);
+  return (
+    <div className="eventsub-status-section">
+      <div className={`eventsub-status-row eventsub-status--${overall}`}>
+        <span className="eventsub-status-dot" />
+        <span className="eventsub-status-label">{label}</span>
+        <span className="eventsub-status-value">{statusLabel(overall)}</span>
+      </div>
+      {keys &&
+        keys.map((typePrefix) => {
+          const entry = Array.from(statuses.entries()).find(([k]) => {
+            if (!k.startsWith(typePrefix + ":")) return false;
+            if (conditionFilter) return k.includes(conditionFilter);
+            return true;
+          });
+          const status = entry?.[1];
+          const nameKey = conditionFilter
+            ? `${typePrefix}:${conditionFilter}`
+            : typePrefix;
+          const friendlyLabel = FRIENDLY_NAMES[nameKey] || FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
+          return (
+            <div
+              key={typePrefix}
+              className={`eventsub-status-item eventsub-status--${status ?? "disconnected"}`}
+            >
+              <span className="eventsub-status-dot" />
+              <span className="eventsub-status-item-label">{friendlyLabel}</span>
+              <span className="eventsub-status-value">
+                {status ? statusLabel(status) : "disabled"}
+              </span>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
 export default function ChatHeader({
   channelName,
   channelDisplayName,
@@ -192,104 +290,6 @@ export default function ChatHeader({
     },
     [onUpdateCategory],
   );
-
-const FRIENDLY_NAMES: Record<string, string> = {
-    "automod.message.hold": "Message Held",
-    "automod.message.update": "Message Resolved",
-    "channel.raid": "Incoming Raid",
-    "channel.raid:to_broadcaster": "Incoming Raid",
-    "channel.raid:from_broadcaster": "Outgoing Raid",
-    "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
-    "channel.hype_train.begin": "Train Started",
-    "channel.hype_train.progress": "Train Progress",
-    "channel.hype_train.end": "Train Ended",
-    "channel.poll.begin": "Poll Started",
-    "channel.poll.progress": "Poll Progress",
-    "channel.poll.end": "Poll Ended",
-    "channel.prediction.begin": "Prediction Started",
-    "channel.prediction.progress": "Prediction Progress",
-    "channel.prediction.lock": "Prediction Locked",
-    "channel.prediction.end": "Prediction Resolved",
-    "channel.bits.use": "Bits Used",
-};
-
-function getOverallStatus(
-  statuses: Map<string, SubscriptionStatus>,
-  keys: string[] | null,
-  conditionFilter?: string,
-): SubscriptionStatus | "disconnected" {
-    if (keys === null) {
-      return statuses.size > 0 ? "connected" : "disconnected";
-    }
-    const relevant = Array.from(statuses.entries()).filter(([k]) => {
-      if (!keys.some((prefix) => k.startsWith(prefix + ":"))) return false;
-      if (conditionFilter) return k.includes(conditionFilter);
-      return true;
-    });
-    if (relevant.length === 0) return "disconnected";
-    if (relevant.every(([, s]) => s === "connected")) return "connected";
-    if (relevant.some(([, s]) => s === "error")) return "error";
-    if (relevant.some(([, s]) => s === "scope_error")) return "scope_error";
-  return "pending";
-}
-
-function statusLabel(s: SubscriptionStatus | "disconnected") {
-    switch (s) {
-      case "connected":
-        return "connected";
-      case "pending":
-        return "connecting";
-      case "error":
-        return "error";
-      case "scope_error":
-        return "scope missing";
-    case "disconnected":
-      return "disabled";
-  }
-}
-
-  const renderStatusSection = (
-    label: string,
-    statuses: Map<string, SubscriptionStatus>,
-    keys: string[] | null,
-    conditionFilter?: string,
-  ) => {
-    const overall = getOverallStatus(statuses, keys, conditionFilter);
-    return (
-      <div className="eventsub-status-section">
-        <div className={`eventsub-status-row eventsub-status--${overall}`}>
-          <span className="eventsub-status-dot" />
-          <span className="eventsub-status-label">{label}</span>
-          <span className="eventsub-status-value">{statusLabel(overall)}</span>
-        </div>
-        {keys &&
-          keys.map((typePrefix) => {
-            const entry = Array.from(statuses.entries()).find(([k]) => {
-              if (!k.startsWith(typePrefix + ":")) return false;
-              if (conditionFilter) return k.includes(conditionFilter);
-              return true;
-            });
-            const status = entry?.[1];
-            const nameKey = conditionFilter
-              ? `${typePrefix}:${conditionFilter}`
-              : typePrefix;
-            const label = FRIENDLY_NAMES[nameKey] || FRIENDLY_NAMES[typePrefix] || typePrefix.split(".").pop() || typePrefix;
-            return (
-              <div
-                key={typePrefix}
-                className={`eventsub-status-item eventsub-status--${status ?? "disconnected"}`}
-              >
-                <span className="eventsub-status-dot" />
-                <span className="eventsub-status-item-label">{label}</span>
-                <span className="eventsub-status-value">
-                  {status ? statusLabel(status) : "disabled"}
-                </span>
-              </div>
-            );
-          })}
-      </div>
-    );
-  };
 
   return (
     <>

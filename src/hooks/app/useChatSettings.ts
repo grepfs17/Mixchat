@@ -238,9 +238,8 @@ export function useChatSettings(): UseChatSettingsResult {
   const setModModeTargetForChannel = useCallback(
     (channelId: string, target: ModModeTarget) => {
       setModModeTargets((prev) => ({ ...prev, [channelId]: target }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [],
+    [setModModeTargets],
   );
 
   return {

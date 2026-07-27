@@ -258,51 +258,52 @@ function LoginPanel({
                   {filteredChannels.map((channel) => (
                     <div
                       key={channel.id}
-                      role="button"
-                      tabIndex={0}
                       className={`channel-item ${selectedTwitchChannel === channel.id ? "selected" : ""}`}
-                      onClick={() => {
-                        onChannelChange?.(channel.id);
-                        onRequestClose?.();
-                      }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onChannelChange?.(channel.id); onRequestClose?.(); } }}
-                      title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
                     >
-                      {channel.profileImageUrl ? (
-                        <span className="channel-item-avatar-wrap">
-                          <img
-                            src={channel.profileImageUrl}
-                            alt={channel.displayName}
-                            className="channel-item-image"
-                          />
-                          {new Set(linkedYoutubeChannelIds).has(channel.id) && (
+                      <button type="button"
+                        className="channel-item-info"
+                        onClick={() => {
+                          onChannelChange?.(channel.id);
+                          onRequestClose?.();
+                        }}
+                        title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
+                      >
+                        {channel.profileImageUrl ? (
+                          <span className="channel-item-avatar-wrap">
+                            <img
+                              src={channel.profileImageUrl}
+                              alt={channel.displayName}
+                              className="channel-item-image"
+                            />
+                            {new Set(linkedYoutubeChannelIds).has(channel.id) && (
+                              <FaYoutube
+                                size={13}
+                                className="channel-item-yt-badge"
+                                title="YouTube linked"
+                              />
+                            )}
+                          </span>
+                        ) : new Set(linkedYoutubeChannelIds).has(channel.id) ? (
+                          <span className="channel-item-avatar-wrap">
+                            <span className="channel-item-image channel-item-image--placeholder" />
                             <FaYoutube
                               size={13}
                               className="channel-item-yt-badge"
                               title="YouTube linked"
                             />
-                          )}
-                        </span>
-                      ) : new Set(linkedYoutubeChannelIds).has(channel.id) ? (
-                        <span className="channel-item-avatar-wrap">
-                          <span className="channel-item-image channel-item-image--placeholder" />
-                          <FaYoutube
-                            size={13}
-                            className="channel-item-yt-badge"
-                            title="YouTube linked"
-                          />
-                        </span>
-                      ) : null}
-                      <div className="channel-item-details">
-                        <span className="channel-item-name">
-                          {channel.displayName}
-                        </span>
-                        {channel.gameName && (
-                          <span className="channel-game-name">
-                            {channel.gameName}
                           </span>
-                        )}
-                      </div>
+                        ) : null}
+                        <div className="channel-item-details">
+                          <span className="channel-item-name">
+                            {channel.displayName}
+                          </span>
+                          {channel.gameName && (
+                            <span className="channel-game-name">
+                              {channel.gameName}
+                            </span>
+                          )}
+                        </div>
+                      </button>
                       {channel.viewerCount !== undefined &&
                         channel.viewerCount !== null && (
                           <span className="viewer-count">
@@ -311,10 +312,7 @@ function LoginPanel({
                           </span>
                         )}
                       <button type="button"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Don't also select the channel when toggling a favorite
-                          onToggleFavorite?.(channel.id);
-                        }}
+                        onClick={() => onToggleFavorite?.(channel.id)}
                         className={`favorite-button ${new Set(favoriteChannels).has(channel.id) ? "active" : ""}`}
                         title={
                           new Set(favoriteChannels).has(channel.id)
@@ -326,7 +324,7 @@ function LoginPanel({
                           <FaStar size={16} />
                         ) : (
                           <FaRegStar size={16} />
-                        )}
+                          )}
                       </button>
                     </div>
                   ))}

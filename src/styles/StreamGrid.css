@@ -186,7 +186,18 @@ StreamGrid stream cards list
     gap: 16px;
 }
 
+/*
+ * .stream-card is a layout-only wrapper that hosts two sibling buttons:
+ *   - .stream-card-clickable (the watch action)
+ *   - .stream-card-fav-btn    (the favorite toggle)
+ * Visual styles (background, border, hover lift, etc.) live on the clickable
+ * button so keyboard / screen-reader users get a proper <button> target.
+ */
 .stream-card {
+    position: relative;
+}
+
+.stream-card-clickable {
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-dark);
     border-radius: var(--radius-2xl);
@@ -196,22 +207,37 @@ StreamGrid stream cards list
         transform 0.2s ease,
         box-shadow 0.2s ease,
         border-color 0.2s ease;
-    position: relative;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    /* Reset default <button> styling */
+    padding: 0;
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
-.stream-card:hover {
+.stream-card-clickable:hover {
     transform: translateY(-3px);
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
     border-color: var(--color-border-medium);
 }
 
-.stream-card.is-favorite {
+/* Match .channel-item-info:focus-visible — clean box-shadow ring instead of
+ * outline + offset so the indicator is consistent across both card types. */
+.stream-card-clickable:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.stream-card.is-favorite .stream-card-clickable {
     border-color: rgba(251, 191, 36, 0.45);
 }
 
-.stream-card.is-favorite:hover {
+.stream-card.is-favorite:hover .stream-card-clickable {
     border-color: var(--color-favorite);
 }
 
@@ -401,13 +427,20 @@ StreamGrid stream cards list
     margin-top: 4px;
 }
 
-/* ---- Skeleton Cards ---- */
+/* ---- Skeleton Cards ----
+ * Skeletons render the same flex layout but disable interaction and hover
+ * lift so they look identical to a real card without acting like one.
+ * pointer-events and cursor inherit to the inner clickable automatically.
+ */
 .stream-card--skeleton {
     pointer-events: none;
     cursor: default;
 }
 
-.stream-card--skeleton:hover {
+/* `pointer-events: none` does NOT block `:hover` matching, so suppress
+ * the visual hover lift/shadow that the inner clickable would otherwise
+ * apply when the cursor passes over the skeleton. */
+.stream-card--skeleton:hover .stream-card-clickable {
     transform: none;
     box-shadow: none;
     border-color: var(--color-border-dark);

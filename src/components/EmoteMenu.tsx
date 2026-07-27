@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { FaSearch } from "react-icons/fa";
 import type { EmotesBySource } from "../lib/emotes";
 import { toggleDisableEmote, getDisabledEmotes } from "../lib/emotes";
@@ -22,7 +22,6 @@ const TWITCH_COLOR = "#9146ff";
 
 function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredEmotes, setFilteredEmotes] = useState<EmotesBySource>(emotes);
   const [activeTab, setActiveTab] = useState<"twitch" | "7tv" | "bttv" | "ffz">(
     "twitch",
   );
@@ -33,15 +32,19 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevIsOpenRef = useRef(false);
-
-  // Filter emotes based on search query — cross-source when searching
+  const onCloseRef = useRef(onClose);
+  // Sync the latest onClose into the ref so event-listener callbacks
+  // captured at mount don't see a stale closure. Updating in an effect
+  // (rather than during render) keeps component body pure per React semantics.
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredEmotes(emotes);
-      return;
-    }
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Derive filtered emotes during render instead of storing in state
+  const filteredEmotes = useMemo(() => {
+    if (!searchQuery.trim()) return emotes;
     const lowerQuery = searchQuery.toLowerCase();
-    setFilteredEmotes({
+    return {
       twitchGlobal: emotes.twitchGlobal.filter((e) =>
         e.name.toLowerCase().includes(lowerQuery),
       ),
@@ -58,23 +61,20 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         e.name.toLowerCase().includes(lowerQuery),
       ),
       ffz: emotes.ffz.filter((e) => e.name.toLowerCase().includes(lowerQuery)),
-    });
+    };
   }, [searchQuery, emotes]);
 
   // Reset navigation state only when the menu transitions from closed to open.
-  // Reset navigation state when menu opens — intentional state adjustment on prop change
-  // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       setSearchQuery("");
       setActiveTab("twitch");
       setActiveTwitchChannel(TWITCH_GLOBAL_KEY);
-      setFilteredEmotes(emotes);
       setDisabledSet(getDisabledEmotes());
       if (searchInputRef.current) searchInputRef.current.focus();
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen, emotes]);
+  }, [isOpen]);
 
   useEffect(() => {
     const handler = () => setDisabledSet(getDisabledEmotes());
@@ -85,22 +85,22 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node))
-        onClose();
+        onCloseRef.current();
     };
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) onClose();
+      if (e.key === "Escape" && isOpen) onCloseRef.current();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -112,21 +112,6 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       <div
         key={emote.name}
         className={`emote-item ${isDisabled ? "emote-disabled" : ""}`}
-        onClick={() => {
-          if (!isDisabled) {
-            onSelectEmote(emote.name);
-            setSearchQuery("");
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (!isDisabled) onSelectEmote(emote.name);
-          }
-        }}
-        role="button"
-        tabIndex={isDisabled ? -1 : 0}
-        title={emote.name}
       >
         <button type="button"
           className="emote-disable-btn"
@@ -139,8 +124,27 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         >
           {isDisabled ? "Enable" : "Disable"}
         </button>
-        <img src={emote.url} alt={emote.name} className="emote-image" />
-        <span className="emote-name">{emote.name}</span>
+        <button
+          type="button"
+          className="emote-select-btn"
+          onClick={() => {
+            if (!isDisabled) {
+              onSelectEmote(emote.name);
+              setSearchQuery("");
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (!isDisabled) onSelectEmote(emote.name);
+            }
+          }}
+          tabIndex={isDisabled ? -1 : 0}
+          title={emote.name}
+        >
+          <img src={emote.url} alt={emote.name} className="emote-image" />
+          <span className="emote-name">{emote.name}</span>
+        </button>
       </div>
     );
   };

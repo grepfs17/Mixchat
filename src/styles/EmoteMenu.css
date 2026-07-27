@@ -318,6 +318,27 @@
     position: relative;
 }
 
+.emote-select-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.emote-select-btn:hover {
+    outline: none;
+}
+
 .emote-disable-btn {
     position: absolute;
     top: 6px;

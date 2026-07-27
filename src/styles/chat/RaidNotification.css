@@ -258,6 +258,14 @@
     text-decoration: none;
     white-space: nowrap;
     transition: opacity 0.15s;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .raid-open-channel-link:hover {

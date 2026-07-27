@@ -230,15 +230,52 @@
     padding-right: 4px;
 }
 
+/*
+ * .channel-item is a layout-only flex row that hosts:
+ *   - .channel-item-info   (the select-channel <button>)
+ *   - .viewer-count        (a span)
+ *   - .favorite-button     (the favorite toggle <button>)
+ * The select-channel click handler moved off the wrapper so the favorite
+ * toggle can be a sibling <button> instead of nested HTML.
+ * Padding was moved to the children so the inner button covers the same
+ * clickable surface as before.
+ */
 .channel-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    cursor: pointer;
-    padding: 10px 12px;
+    padding: 0;
     border-radius: var(--radius-lg);
     border: 1px solid transparent;
     transition: all 0.2s ease;
+}
+
+/* The <button> that triggers channel selection.
+ * Wraps avatar-wrap + channel-item-details and gets a button-reset so default
+ * UA button styling doesn't override the row's visual identity. */
+.channel-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
+    padding: 10px 0 10px 12px;
+    background: transparent;
+    border: none;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Use a clean inset ring rather than `outline` + negative offset, which
+ * would draw the focus indicator INSIDE the button over the avatar / text. */
+.channel-item-info:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 .channel-item-avatar-wrap {
@@ -310,6 +347,7 @@
     color: #94a3b8;
     flex-shrink: 0;
     margin-left: 4px;
+    padding: 10px 0;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -319,7 +357,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 10px 12px 10px 0;
     flex-shrink: 0;
     color: var(--color-icon-inactive);
     transition: color 0.2s ease;

@@ -196,10 +196,7 @@ export default function StreamEmbed({
   const hlsRef = useRef<HLS | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [qualities, setQualities] = useState<
-    Array<{ label: string; url: string }>
-  >([]);
-  const [selectedQualityIdx, setSelectedQualityIdx] = useState(0);
+  const qualitiesRef = useRef<Array<{ label: string; url: string }>>([]);
   const [showPlaceholder, setShowPlaceholder] = useState(
     !!placeholderThumbnailUrl,
   );
@@ -243,10 +240,24 @@ export default function StreamEmbed({
   }, [twitchConnected, twitchAccessToken]);
 
   useEffect(() => {
-    fetch("/api/parent-domain")
+    let cancelled = false;
+    const abortController = new AbortController();
+    fetch("/api/parent-domain", { signal: abortController.signal })
       .then((res) => (res.ok ? res.json() : { parentDomain: "localhost" }))
-      .then((data) => setParentDomain(data.parentDomain ?? "localhost"))
-      .catch(() => setParentDomain("localhost"));
+      .then((data) => {
+        if (!cancelled) setParentDomain(data.parentDomain ?? "localhost");
+      })
+      .catch(() => {
+        // Silently swallow AbortError on unmount — flag pattern matches the
+        // parent cancelled/aborted guard so we don't fall back to "localhost"
+        // after the component has already torn down.
+        if (cancelled || abortController.signal.aborted) return;
+        setParentDomain("localhost");
+      });
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
   }, []);
 
   // Watch external quality index and switch the HLS source accordingly
@@ -254,10 +265,9 @@ export default function StreamEmbed({
     if (
       externalSelectedQualityIdx !== undefined &&
       hlsRef.current &&
-      qualities[externalSelectedQualityIdx]
+      qualitiesRef.current[externalSelectedQualityIdx]
     ) {
-      hlsRef.current.loadSource(qualities[externalSelectedQualityIdx].url);
-      setSelectedQualityIdx(externalSelectedQualityIdx);
+      hlsRef.current.loadSource(qualitiesRef.current[externalSelectedQualityIdx].url);
       videoRef.current?.play().catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,9 +292,8 @@ export default function StreamEmbed({
         setLoading(true);
         setError(null);
         if (!isRetry) {
-          setQualities([]);
-          setSelectedQualityIdx(0);
-          onQualitiesLoaded?.([]);
+      qualitiesRef.current = [];
+      onQualitiesLoaded?.([]);
         }
 
         if (!videoRef.current) return;
@@ -343,7 +352,7 @@ export default function StreamEmbed({
 
         const fetchedQualities: Array<{ label: string; url: string }> =
           playlistData.qualities;
-        setQualities(fetchedQualities);
+          qualitiesRef.current = fetchedQualities;
         onQualitiesLoaded?.(fetchedQualities);
 
         // Use server-side subscription check result (more reliable: token has full scopes)
@@ -378,6 +387,7 @@ export default function StreamEmbed({
           });
 
           hls.on(HLS.Events.ERROR, (_event, data) => {
+            if (cancelled) return;
             if (data.fatal) {
               setError(`Stream error: ${data.type}`);
               setLoading(false);
@@ -434,14 +444,18 @@ export default function StreamEmbed({
 
     let cancelled = false;
 
+    const abortController = new AbortController();
     const checkSubscription = async () => {
       try {
         console.log("[ads] Checking subscription for channel:", channelName);
 
         // Resolve the authenticated user's ID (GET /users with no params returns the token owner)
-        const selfRes = await fetch("/api/twitch-proxy?path=/helix/users");
+        const selfRes = await fetch("/api/twitch-proxy?path=/helix/users", {
+          signal: abortController.signal,
+        });
         if (!selfRes.ok || cancelled) return;
         const selfData = await selfRes.json();
+        if (cancelled) return;
         const userId = selfData?.data?.[0]?.id;
         console.log("[ads] Authenticated user ID:", userId);
         if (!userId) return;
@@ -449,6 +463,7 @@ export default function StreamEmbed({
         // Resolve the broadcaster's ID from their login name
         const usersRes = await fetch(
           `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelName)}`,
+          { signal: abortController.signal },
         );
         console.log("[ads] /users response status:", usersRes.status);
         if (!usersRes.ok || cancelled) {
@@ -456,6 +471,7 @@ export default function StreamEmbed({
           return;
         }
         const usersData = await usersRes.json();
+        if (cancelled) return;
         const broadcasterId = usersData?.data?.[0]?.id;
         console.log("[ads] Broadcaster ID:", broadcasterId);
         if (!broadcasterId) return;
@@ -463,6 +479,7 @@ export default function StreamEmbed({
         // Check subscription: requires both user_id (me) and broadcaster_id (channel)
         const subRes = await fetch(
           `/api/twitch-proxy?path=/helix/subscriptions/user&broadcaster_id=${broadcasterId}&user_id=${userId}`,
+          { signal: abortController.signal },
         );
         console.log("[ads] /subscriptions response status:", subRes.status);
         if (!subRes.ok || cancelled) {
@@ -473,6 +490,7 @@ export default function StreamEmbed({
           return;
         }
         const subData = await subRes.json();
+        if (cancelled) return;
         console.log("[ads] Subscription data:", subData);
 
         const isSubscribed =
@@ -480,6 +498,10 @@ export default function StreamEmbed({
         console.log("[ads] Is subscribed:", isSubscribed);
         if (!cancelled) setStreamAuthenticated(isSubscribed);
       } catch (err) {
+        // AbortError fires when the effect cleans up before the fetches
+        // settle. Don't pollute the console with a spurious error log on
+        // every unmount or channel change.
+        if ((err as Error)?.name === "AbortError" || abortController.signal.aborted) return;
         console.error("[ads] Subscription check error:", err);
       }
     };
@@ -487,6 +509,7 @@ export default function StreamEmbed({
     checkSubscription();
     return () => {
       cancelled = true;
+      abortController.abort();
     };
   }, [channelName, playerType, twitchConnected]);
 
