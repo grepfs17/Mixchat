@@ -291,6 +291,7 @@ function PastPlaylistsSection({
     }
     if (!openKey.startsWith("server:")) return;
     const sessionId = openKey.slice("server:".length);
+    let cancelled = false;
     setLoadingDetail(true);
     setDetailError(null);
     setServerDetail(null);
@@ -300,15 +301,20 @@ function PastPlaylistsSection({
           sessionId,
           ...channelParts,
         });
+        if (cancelled) return;
         setServerDetail(view);
       } catch (err) {
+        if (cancelled) return;
         setDetailError(
           err instanceof Error ? err.message : "Failed to load playlist",
         );
       } finally {
-        setLoadingDetail(false);
+        if (!cancelled) setLoadingDetail(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [openKey, channelParts]);
 
   type CombinedItem = {

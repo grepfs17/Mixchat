@@ -155,10 +155,12 @@ export function useYouTubeSync({
 
   // Reset all YouTube state when the user switches Twitch channels. Using the
   // recommended "adjusting state during render" pattern from React docs so the
-  // reset is applied synchronously rather than in a deferred effect.
-  const prevChannelRef = useRef(selectedTwitchChannelName);
-  if (prevChannelRef.current !== selectedTwitchChannelName) {
-    prevChannelRef.current = selectedTwitchChannelName;
+  // reset is applied synchronously rather than in a deferred effect. The
+  // previous channel value is tracked via useState (not useRef) so React can
+  // correctly retry the compare-and-set under concurrent rendering.
+  const [prevChannel, setPrevChannel] = useState(selectedTwitchChannelName);
+  if (prevChannel !== selectedTwitchChannelName) {
+    setPrevChannel(selectedTwitchChannelName);
     setManualVideoId("");
     setAutoVideoId(null);
     setAutoChannelId(null);
