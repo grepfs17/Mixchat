@@ -55,9 +55,9 @@ export function useMyChannelInfo(session: PlatformSession | undefined) {
           setInfo({ description: "", followerCount: null });
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        // Skip when stale: effect re-run sets loading=true synchronously,
+        // and the old fetchInfo's reset would otherwise flicker it back to false.
+        if (!cancelled) setLoading(false);
       }
     }
 

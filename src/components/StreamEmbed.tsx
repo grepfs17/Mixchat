@@ -296,7 +296,10 @@ export default function StreamEmbed({
       onQualitiesLoaded?.([]);
         }
 
-        if (!videoRef.current) return;
+        if (!videoRef.current) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
 
         // Clean up previous HLS instance
         if (hlsRef.current) {
@@ -405,12 +408,14 @@ export default function StreamEmbed({
         } else {
           setError("HLS not supported in this browser");
         }
+        // Loading ends here so the 401-retry-wait path keeps `loading=true`
+        // (the early `return` above skips this line, intentionally).
+        if (!cancelled) setLoading(false);
       } catch (err) {
         if (cancelled || abortController.signal.aborted) return;
         console.error("Failed to load stream:", err);
-    setError(err instanceof Error ? err.message : "Failed to load stream");
-    } finally {
-      if (!cancelled) setLoading(false);
+        setError(err instanceof Error ? err.message : "Failed to load stream");
+        setLoading(false);
       }
     };
 
