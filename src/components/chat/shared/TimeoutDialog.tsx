@@ -69,7 +69,7 @@ export default function TimeoutDialog({
   // Mount-only: open the native dialog and focus the OK button.
   useEffect(() => {
     const el = dialogRef.current;
-    if (el && !el.open) el.showModal();
+    if (el && !el.open && typeof el.showModal === "function") el.showModal();
     okButtonRef.current?.focus();
     return () => { if (el?.open) el.close(); };
   }, []);
