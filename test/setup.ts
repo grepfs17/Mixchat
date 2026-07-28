@@ -55,3 +55,14 @@ function createInMemoryStorage(): Storage {
 }
 
 setupGlobalStorage();
+
+// jsdom does not implement HTMLDialogElement.showModal() / close().
+// Mock them so components using native <dialog> render correctly in tests.
+if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+}
