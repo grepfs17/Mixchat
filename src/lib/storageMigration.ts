@@ -43,9 +43,3 @@ if (typeof localStorage !== "undefined") {
   }
 }
 
-/** Re-export for tests that need to trigger migration manually. */
-export function runStorageMigration(): void {
-  for (const [oldKey, newKey] of KEY_MIGRATIONS) {
-    migrateKey(oldKey, newKey);
-  }
-}

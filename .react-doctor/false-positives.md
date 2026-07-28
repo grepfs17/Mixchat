@@ -90,6 +90,31 @@ The static analyzer cannot trace the boolean through the closure.
 
 ---
 
+## `react-doctor/no-derived-state`
+
+**Skip after verifying:** `modModeActive` / `youtubeModModeActive` are derived
+from props + state in a useEffect, but they are part of the hook's public
+return API and callers call the setter to toggle. Lifting the derivation into
+render would require restructuring the entire parent-child state contract.
+
+- `src/hooks/chat/chatAppStateHelpers/useModeration.ts:100` — `setModModeActive(isModerator && …)`
+- `src/hooks/chat/chatAppStateHelpers/useYouTubeModeration.ts:120` — `setYoutubeModModeActive(isYouTubeModerator && …)`
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:64` — `setResolvedId(channelId)` for numeric IDs
+
+---
+
+## `react-doctor/no-ref-current-in-render`
+
+**Skip after verifying:** the ref write happens inside a render-time
+"adjusting state during render" guard (React docs pattern) or as a
+stable-reference tracker for mutators outside state updaters. The ref
+is never read during render output.
+
+- `src/hooks/chat/chatAppStateHelpers/useYouTubeSync.ts:169` — `deletedRef.current = new Map()` in render-time channel-switch guard
+- `src/hooks/chat/useMusicPlayer.ts:222` — `playlistsRef.current = playlists` tracks latest for pure updaters
+
+---
+
 ## `react-doctor/client-localstorage-no-version`
 
 **Skip after verifying:** the storage key already includes a `:v1` version

@@ -199,7 +199,6 @@ export default function ChatHeader({
   const [editingCategory, setEditingCategory] = useState(false);
   const [categoryInput, setCategoryInput] = useState("");
   const [categoryResults, setCategoryResults] = useState<CategoryResult[]>([]);
-  const [searchingCategory, setSearchingCategory] = useState(false);
   const [savingCategory, setSavingCategory] = useState(false);
   const [categoryDropdownPos, setCategoryDropdownPos] = useState<{
     x: number;
@@ -762,11 +761,11 @@ export default function ChatHeader({
                   if (categorySearchRef.current)
                     clearTimeout(categorySearchRef.current);
                   if (e.target.value.trim()) {
-                    setSearchingCategory(true);
+                    
                     categorySearchRef.current = setTimeout(() => {
                       onSearchCategories?.(e.target.value).then((results) => {
                         setCategoryResults(results);
-                        setSearchingCategory(false);
+                        
                         const rect =
                           categoryInputRef.current?.getBoundingClientRect();
                         if (rect)
@@ -778,7 +777,7 @@ export default function ChatHeader({
                     }, 300);
                   } else {
                     setCategoryResults([]);
-                    setSearchingCategory(false);
+                    
                     setCategoryDropdownPos(null);
                   }
                 }}

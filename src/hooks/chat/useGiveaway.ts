@@ -337,16 +337,4 @@ export function useGiveaway({
   };
 }
 
-/**
- * Test-only helpers. Not for app use.
- * @internal
- */
-export const __test__ = {
-  messageContent,
-  isSkippableItem,
-  isOwnerItem,
-  isEligibleItem,
-  inScope,
-  toEntry,
-  STARTED_AT_GRACE_MS,
-};
+
