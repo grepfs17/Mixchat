@@ -290,16 +290,17 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 /* YouTube-style Timeout Modal */
-.yt-timeout-overlay {
+.yt-timeout-dialog {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    margin: auto;
     z-index: 10000;
     animation: tooltipFade 0.12s ease-out;
+}
+
+.yt-timeout-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
 }
 
 .yt-timeout-dialog {

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 export interface TimeoutDialogConfig {
   /** Preset durations shown as radio chips. */
@@ -53,7 +52,7 @@ export default function TimeoutDialog({
   const [showCustom, setShowCustom] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [customUnit, setCustomUnit] = useState<TimeUnit>("m");
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const okButtonRef = useRef<HTMLButtonElement>(null);
 
   const presets = config.presets;
@@ -67,20 +66,26 @@ export default function TimeoutDialog({
     return presets[selectedIndex]?.seconds ?? 0;
   })();
 
-  // Mount-only: focus the OK button when the dialog opens. Keeping this
-  // out of the keydown effect's dep list prevents focus from being
-  // re-acquired (and stolen from the custom input) on every keystroke.
+  // Mount-only: open the native dialog and focus the OK button.
   useEffect(() => {
+    const el = dialogRef.current;
+    if (el && !el.open) el.showModal();
     okButtonRef.current?.focus();
+    return () => { if (el?.open) el.close(); };
   }, []);
 
+  // Handle the native dialog's close event (e.g. Escape key, backdrop click).
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    const handleClose = () => onClose();
+    el.addEventListener("close", handleClose);
+    return () => el.removeEventListener("close", handleClose);
+  }, [onClose]);
+
+  // Keyboard navigation for arrow keys (Enter is handled by the OK button).
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
       if (e.key === "Enter") {
         e.preventDefault();
         if (currentSeconds > 0) onConfirm(userId, currentSeconds, username);
@@ -100,7 +105,7 @@ export default function TimeoutDialog({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [userId, currentSeconds, onConfirm, onClose, presets.length, username]);
+  }, [userId, currentSeconds, onConfirm, presets.length, username]);
 
   const handleCustomSubmit = () => {
     const n = parseInt(customValue, 10);
@@ -109,21 +114,11 @@ export default function TimeoutDialog({
     onConfirm(userId, seconds, username);
   };
 
-  return createPortal(
-    <div
-      role="presentation"
-      className="yt-timeout-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="yt-timeout-dialog"
+  return (
+      <dialog
         ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
+        className="yt-timeout-dialog"
         aria-label={`Timeout ${username}`}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="yt-timeout-title">Timeout {username}?</div>
         <div className="yt-timeout-subtitle">{config.subtitle}</div>
@@ -222,8 +217,6 @@ export default function TimeoutDialog({
               : "Timeout"}
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </dialog>
   );
 }
