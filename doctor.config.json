@@ -1,7 +1,9 @@
 {
   "$schema": "https://react.doctor/schema/config.json",
+  "//": "no-adjust-state-on-prop-change is intentionally disabled — the codebase uses ~23 channel-switch state-reset effects (useEmbedState, useChatMessages, useModeration, useChatAppState, useChatAppState chat-state reset, etc.) that the team has deemed load-bearing. TODO: refactor the worst offenders (e.g. useChatAppState:312 reset-all) to use key-prop remounts.",
   "rules": {
     "react-doctor/effect-needs-cleanup": "warn",
-    "react-doctor/no-ref-current-in-render": "warn"
+    "react-doctor/no-ref-current-in-render": "warn",
+    "react-doctor/no-adjust-state-on-prop-change": "off"
   }
 }

@@ -150,6 +150,7 @@ export function useEmbedState(
       return;
     }
 
+    let cancelled = false;
     const fetchViewerCount = async () => {
       try {
         const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -158,17 +159,22 @@ export function useEmbedState(
           clientId,
           selectedTwitchChannel,
         );
+        if (cancelled) return;
         if (status) {
           setViewerCount(status.viewerCount || 0);
         }
       } catch (error) {
+        if (cancelled) return;
         console.error("Failed to fetch viewer count:", error);
       }
     };
 
     fetchViewerCount();
     const interval = setInterval(fetchViewerCount, VIEWER_COUNT_REFRESH_MS);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [selectedTwitchChannel, twitchAccessToken]);
 
   // Resize-handle drag listener. Attached only while isDragging is true so

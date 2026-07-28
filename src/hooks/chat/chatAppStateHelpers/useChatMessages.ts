@@ -58,11 +58,13 @@ export function useChatMessages({
     if (!showPreloadedMessages || !selectedTwitchChannelName || !badgesReady)
       return;
 
+    let cancelled = false;
     const loadRecentMessages = async () => {
       try {
         const recentMessages = await getRecentMessages(
           selectedTwitchChannelName,
         );
+        if (cancelled) return;
         recentMessages.forEach((msg) =>
           preloadedMessagesRef.current.add(msg.id),
         );
@@ -70,12 +72,16 @@ export function useChatMessages({
           (msg, index, self) =>
             index === self.findIndex((t) => t.id === msg.id),
         );
-        setMessages(uniqueRecent);
+        if (!cancelled) setMessages(uniqueRecent);
       } catch (error) {
+        if (cancelled) return;
         console.error("Failed to load recent messages:", error);
       }
     };
     loadRecentMessages();
+    return () => {
+      cancelled = true;
+    };
   }, [showPreloadedMessages, selectedTwitchChannelName, badgesReady]);
 
   const handleTwitchMessage = useCallback(

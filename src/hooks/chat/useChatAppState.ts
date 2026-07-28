@@ -331,6 +331,7 @@ export function useChatAppState({
   useEffect(() => {
     if (!selectedTwitchChannelName || !selectedTwitchChannel) return;
 
+    let cancelled = false;
     let subscribe7tv: (() => void) | undefined;
 
     const initializeAssets = async () => {
@@ -350,6 +351,7 @@ export function useChatAppState({
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
           ),
         ]);
+        if (cancelled) return;
         setBadgesReady(true);
 
         subscribe7tv = subscribeTo7TVUpdates(
@@ -357,6 +359,7 @@ export function useChatAppState({
           selectedTwitchChannelName,
         );
       } catch (err) {
+        if (cancelled) return;
         console.error("Failed to initialize chat assets:", err);
       }
     };
@@ -364,6 +367,7 @@ export function useChatAppState({
     initializeAssets();
 
     return () => {
+      cancelled = true;
       if (subscribe7tv) subscribe7tv();
     };
   }, [

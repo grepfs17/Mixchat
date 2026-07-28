@@ -43,14 +43,29 @@ export function useTwitchChatConnection({
   );
 
   const broadcasterIdRef = useRef<string | null>(null);
-  const broadcasterIdResolveRef = useRef<((id: string) => void) | null>(null);
-  const broadcasterIdPromiseRef = useRef<Promise<string>>(null!);
-  // Lazy init: create the promise + capture its resolve once.
-  if (!broadcasterIdPromiseRef.current) {
-    broadcasterIdPromiseRef.current = new Promise<string>((resolve) => {
-      broadcasterIdResolveRef.current = resolve;
+
+  // Build the broadcasterId promise once via useState's lazy initializer — the
+  // only React-idiomatic place to create a promise during render without
+  // triggering the "ref mutated during render" smell. The resolve callback is
+  // captured so the connect-effect loop can settle it once the broadcaster id
+  // resolves. The ref-like shape is preserved so the existing
+  // `RefObject<Promise<string>>` return interface is unchanged.
+  const [broadcasterIdPromise] = useState<{
+    promise: Promise<string>;
+    resolve: (id: string) => void;
+  }>(() => {
+    let resolveFn!: (id: string) => void;
+    const promise = new Promise<string>((resolve) => {
+      resolveFn = resolve;
     });
-  }
+    return { promise, resolve: resolveFn };
+  });
+  const broadcasterIdPromiseRef = useRef<Promise<string>>(
+    broadcasterIdPromise.promise,
+  );
+  const broadcasterIdResolveRef = useRef<((id: string) => void) | null>(
+    broadcasterIdPromise.resolve,
+  );
 
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
 

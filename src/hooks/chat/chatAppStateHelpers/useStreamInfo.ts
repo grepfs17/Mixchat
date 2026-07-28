@@ -125,6 +125,7 @@ export function useStreamInfo({
   );
 
   useEffect(() => {
+    let cancelled = false;
     const fetchStreamStatus = async () => {
       if (selectedTwitchChannel && twitchAccessToken) {
         try {
@@ -133,19 +134,19 @@ export function useStreamInfo({
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
             selectedTwitchChannel,
           );
-          if (status) {
-            setStreamIsLive(status.isLive);
-            setStreamTitle(status.isLive ? status.title || "" : "");
-            setStreamGameName(status.isLive ? status.gameName || "" : "");
-            if (status.isLive && status.startedAt) {
-              streamStartedAtRef.current = status.startedAt;
-              setStreamUptime(calculateUptime(status.startedAt));
-            } else {
-              streamStartedAtRef.current = null;
-              setStreamUptime("");
-            }
+          if (cancelled || !status) return;
+          setStreamIsLive(status.isLive);
+          setStreamTitle(status.isLive ? status.title || "" : "");
+          setStreamGameName(status.isLive ? status.gameName || "" : "");
+          if (status.isLive && status.startedAt) {
+            streamStartedAtRef.current = status.startedAt;
+            setStreamUptime(calculateUptime(status.startedAt));
+          } else {
+            streamStartedAtRef.current = null;
+            setStreamUptime("");
           }
         } catch (error) {
+          if (cancelled) return;
           console.error("Failed to fetch stream status:", error);
         }
       }
@@ -163,12 +164,14 @@ export function useStreamInfo({
     }, UPTIME_UPDATE_INTERVAL);
 
     return () => {
+      cancelled = true;
       clearInterval(statusInterval);
       clearInterval(uptimeInterval);
     };
   }, [selectedTwitchChannel, twitchAccessToken]);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchChannelInfo = async () => {
       if (selectedTwitchChannel && twitchAccessToken) {
         try {
@@ -177,12 +180,12 @@ export function useStreamInfo({
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
             selectedTwitchChannel,
           );
-          if (info) {
-            setStreamTitle(info.title);
-            setStreamGameName(info.gameName);
-            setStreamGameId(info.gameId);
-          }
+          if (cancelled || !info) return;
+          setStreamTitle(info.title);
+          setStreamGameName(info.gameName);
+          setStreamGameId(info.gameId);
         } catch (error) {
+          if (cancelled) return;
           console.error("Failed to fetch channel info:", error);
         }
       }
@@ -190,12 +193,16 @@ export function useStreamInfo({
 
     fetchChannelInfo();
     const interval = setInterval(fetchChannelInfo, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [selectedTwitchChannel, twitchAccessToken]);
 
   useEffect(() => {
     if (!selectedTwitchChannelName || !selectedTwitchChannel) return;
 
+    let cancelled = false;
     const checkFollowStatus = async () => {
       if (twitchAccessToken && twitchUserId && selectedTwitchChannelName) {
         try {
@@ -212,6 +219,7 @@ export function useStreamInfo({
                 import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
                 twitchUserId,
               );
+              if (cancelled) return;
               const match = all.some((ch: any) => {
                 const login = (ch.name || "").toLowerCase();
                 const display = (ch.displayName || "").toLowerCase();
@@ -222,20 +230,25 @@ export function useStreamInfo({
               });
               if (match) follows = true;
             } catch (fallbackErr) {
+              if (cancelled) return;
               console.warn("Fallback follow-list check failed:", fallbackErr);
             }
           }
-          setIsFollowingChannelState(follows);
+          if (!cancelled) setIsFollowingChannelState(follows);
         } catch (err) {
+          if (cancelled) return;
           console.error("Failed to check follow status:", err);
           setIsFollowingChannelState(null);
         }
       } else {
-        setIsFollowingChannelState(null);
+        if (!cancelled) setIsFollowingChannelState(null);
       }
     };
 
     checkFollowStatus();
+    return () => {
+      cancelled = true;
+    };
   }, [
     selectedTwitchChannelName,
     selectedTwitchChannel,

@@ -103,6 +103,7 @@ export function useModeration({
   }, [isModerator, modModeTarget]);
 
   useEffect(() => {
+    let cancelled = false;
     const checkModViaApi = async () => {
       if (
         twitchSession?.userId &&
@@ -116,15 +117,19 @@ export function useModeration({
             selectedTwitchChannel,
             twitchSession.userId,
           );
-          if (isMod) {
+          if (!cancelled && isMod) {
             setIsModerator(true);
           }
         } catch (err) {
+          if (cancelled) return;
           console.error("[ChatApp] API mod check failed:", err);
         }
       }
     };
     checkModViaApi();
+    return () => {
+      cancelled = true;
+    };
   }, [twitchSession?.userId, selectedTwitchChannel]);
 
   const handleOwnBadgesLoaded = useCallback(
