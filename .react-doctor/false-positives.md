@@ -73,6 +73,23 @@ key is namespaced (`t-${i}`) so it is unique per item.
 
 ---
 
+## `react-doctor/no-set-state-after-await-in-effect`
+
+**Skip after verifying:** every `setState` call after an `await` is guarded
+by `if (!cancelled) return` or `if (!cancelled) set...(…)`. The cleanup
+callback sets `cancelled = true` on unmount/re-run, preventing stale writes.
+The static analyzer cannot trace the boolean through the closure.
+
+- `src/components/StreamEmbed.tsx:279` — `if (!cancelled) setLoading(false)` after fetch
+- `src/hooks/app/useYoutubeLink.ts:85` — `if (!cancelled && data.videoId)` after fetch
+- `src/hooks/chat/chatAppStateHelpers/useModeration.ts:105` — `if (!cancelled && isMod)` after API check
+- `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:127` — `if (cancelled || !status) return` guard
+- `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:173` — `if (cancelled || !info) return` guard
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:56` — `if (!cancelled && resolved)` after resolve
+- `src/hooks/chat/useSongQueue.ts:185` — `if (cancelled || !stored) return` guard
+
+---
+
 ## `react-doctor/client-localstorage-no-version`
 
 **Skip after verifying:** the storage key already includes a `:v1` version
