@@ -7,6 +7,37 @@ import { YT_USER_AGENT } from "../../lib/constants";
 const ALLOWED_HOST_RE =
   /^(?:[a-z0-9-]+\.)*ttvnw\.net$|^(?:[a-z0-9-]+\.)*twitchsvc\.net$/;
 
+/**
+ * Rewrite relative URLs in an HLS playlist body to absolute CDN URLs
+ * so HLS.js resolves them against the CDN base, not the proxy base.
+ */
+function rewritePlaylist(text: string, baseUrl: string): string {
+  const base = new URL(baseUrl);
+  return text
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return line;
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        return line;
+      }
+      return new URL(trimmed, base).toString();
+    })
+    .join("\n");
+}
+
+/**
+ * Validate that a redirect Location header points to an allowed CDN host
+ * to prevent SSRF via redirect chains.
+ */
+function isAllowedRedirect(location: string): boolean {
+  try {
+    return ALLOWED_HOST_RE.test(new URL(location).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -63,7 +94,43 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       headers: {
         "User-Agent": YT_USER_AGENT,
       },
+      redirect: "manual",
     });
+
+    // Handle redirects manually, validating each hop against the allowlist.
+    if (upstream.status >= 300 && upstream.status < 400) {
+      const location = upstream.headers.get("Location");
+      if (!location || !isAllowedRedirect(location)) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: redirect target is not on an allowed CDN domain" }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      const followRes = await fetch(location, {
+        headers: { "User-Agent": YT_USER_AGENT },
+      });
+      if (!followRes.ok) {
+        return new Response(
+          JSON.stringify({ error: `CDN redirect target returned ${followRes.status}` }),
+          { status: followRes.status, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      const contentType =
+        followRes.headers.get("Content-Type") ?? "application/vnd.apple.mpegurl";
+      const text = await followRes.text();
+      const isPlaylist =
+        contentType.includes("mpegurl") || location.includes(".m3u8");
+      const body = isPlaylist ? rewritePlaylist(text, location) : text;
+
+      return new Response(body, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "no-cache, no-store",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
 
     if (!upstream.ok) {
       return new Response(
@@ -78,34 +145,14 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     const contentType =
       upstream.headers.get("Content-Type") ?? "application/vnd.apple.mpegurl";
     const text = await upstream.text();
-
-    // Rewrite any relative URLs in the playlist body so HLS.js resolves them
-    // correctly against the CDN base, not the proxy's base URL.
     const isPlaylist =
       contentType.includes("mpegurl") || targetUrl.includes(".m3u8");
-
-    let body = text;
-    if (isPlaylist) {
-      const base = new URL(targetUrl);
-      body = text
-        .split("\n")
-        .map((line) => {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith("#")) return line;
-          if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            return line;
-          }
-          // Resolve relative segment / sub-playlist URL to absolute CDN URL.
-          return new URL(trimmed, base).toString();
-        })
-        .join("\n");
-    }
+    const body = isPlaylist ? rewritePlaylist(text, targetUrl) : text;
 
     return new Response(body, {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        // Live playlists must never be cached; stale playlists break playback.
         "Cache-Control": "no-cache, no-store",
         "Access-Control-Allow-Origin": "*",
       },

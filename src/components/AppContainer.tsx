@@ -270,6 +270,7 @@ export default function AppContainer() {
       data-hide-timestamps={hideChatTimestamps}
       onClick={primeAudioContext}
       onKeyDown={primeAudioContext}
+      role="presentation"
     >
       {leftColumnVisible && (
         <div

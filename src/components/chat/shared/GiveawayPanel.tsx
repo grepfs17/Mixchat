@@ -106,11 +106,12 @@ export default function GiveawayPanel({
             </span>
           </label>
 
-          <label className="giveaway-field">
+          <div className="giveaway-field">
             <span className="giveaway-field-label">Duration (seconds)</span>
             <div className="giveaway-duration-row">
               <div className="giveaway-input-suffix">
                 <input
+                  id="giveaway-duration-input"
                   type="text"
                   className="giveaway-input giveaway-input--with-suffix"
                   inputMode="numeric"
@@ -153,7 +154,7 @@ export default function GiveawayPanel({
               Time viewers have to enter. {MIN_DURATION}–{MAX_DURATION}{" "}
               seconds, or <strong>0 for unlimited</strong> (you reveal manually).
             </span>
-          </label>
+          </div>
 
           <fieldset className="giveaway-field">
             <legend className="giveaway-field-label">Scope</legend>

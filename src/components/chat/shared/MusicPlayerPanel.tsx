@@ -326,8 +326,9 @@ export default function MusicPlayerPanel({
         </button>
       )}
 
-      <label className="music-player-add">
+      <div className="music-player-add">
         <input
+          id="music-player-url-input"
           type="text"
           className="music-player-input"
           placeholder="Paste a YouTube URL or video id…"
@@ -349,7 +350,7 @@ export default function MusicPlayerPanel({
         >
           <FaPlus size={10} /> {loadingUrl ? "Adding…" : "Add"}
         </button>
-      </label>
+      </div>
 
       {error && <p className="music-player-error">{error}</p>}
 
