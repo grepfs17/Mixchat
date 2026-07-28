@@ -74,13 +74,22 @@ export default function TimeoutDialog({
     return () => { if (el?.open) el.close(); };
   }, []);
 
-  // Handle the native dialog's close event (e.g. Escape key, backdrop click).
+  // Handle the native dialog's close and cancel events.
+  // Backdrop clicks fire 'cancel' — we must call close() to trigger 'close'.
   useEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
     const handleClose = () => onClose();
+    const handleCancel = (e: Event) => {
+      e.preventDefault();
+      el.close();
+    };
     el.addEventListener("close", handleClose);
-    return () => el.removeEventListener("close", handleClose);
+    el.addEventListener("cancel", handleCancel);
+    return () => {
+      el.removeEventListener("close", handleClose);
+      el.removeEventListener("cancel", handleCancel);
+    };
   }, [onClose]);
 
   // Keyboard navigation for arrow keys (Enter is handled by the OK button).

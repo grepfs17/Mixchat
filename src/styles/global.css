@@ -296,14 +296,6 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     margin: auto;
     z-index: 10000;
     animation: tooltipFade 0.12s ease-out;
-}
-
-.yt-timeout-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(2px);
-}
-
-.yt-timeout-dialog {
     background: #1f1f23;
     color: var(--color-text-primary);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -316,6 +308,11 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     flex-direction: column;
     gap: 16px;
     font-family: inherit;
+}
+
+.yt-timeout-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
 }
 
 .yt-timeout-title {
