@@ -121,3 +121,39 @@ is never read during render output.
 suffix (e.g. `"mixchat_sessions:v1"`).
 
 - `src/hooks/app/useAuthSessions.ts:245` — `SESSIONS_KEY = "mixchat_sessions:v1"`
+
+---
+
+## `react-doctor/no-flush-sync`
+
+**Skip after verifying:** `flushSync` is used intentionally to force pending
+state updates to commit synchronously so that `playlistsRef.current` reflects
+the freshest state before the updater reads it. `startTransition` cannot
+provide this synchronous commit guarantee.
+
+- `src/hooks/chat/useMusicPlayer.ts:8` — `flushSync(() => setPlaylists(...))` in `addTrackFromUrl`
+
+---
+
+## `react-doctor/no-promise-then-side-effect-in-effect-without-catch`
+
+**Skip after verifying:** the `.then()` chain already has a `.catch()` handler
+that handles both network errors and AbortError. The static matcher misses
+the catch because it is chained at the end of the promise.
+
+- `src/components/StreamEmbed.tsx:245` — `.then().then().catch()` with cancelled-flag guard in catch
+
+---
+
+## `react-doctor/prefer-html-dialog`
+
+**Skip after verifying:** these modals use complex custom overlay/backdrop
+behavior (portals, click-outside, custom keyboard navigation, inline state)
+that would require significant refactoring to convert to native `<dialog>`.
+The existing `role="dialog"` + `aria-modal="true"` pattern provides equivalent
+accessibility semantics.
+
+- `src/components/FavoriteChannelsModal.tsx:63` — portal modal with click-outside close
+- `src/components/OnboardingWizard.tsx:398` — multi-step wizard with custom navigation
+- `src/components/chat/shared/StreamerToolsModal.tsx:842` — minimizable tool panel
+- `src/components/chat/shared/TimeoutDialog.tsx:123` — keyboard-driven radio selection
