@@ -67,7 +67,7 @@ function PresetMessages({
     Array<{ name: string; url: string; source: string }>
   >([]);
   const [selectedEmoteIndex, setSelectedEmoteIndex] = useState(-1);
-  const [hasEmoteSelection, setHasEmoteSelection] = useState(false);
+  const hasEmoteSelectionRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -107,7 +107,7 @@ function PresetMessages({
         if (emoteResults.length > 0) {
           setEmoteResults([]);
           setSelectedEmoteIndex(-1);
-          setHasEmoteSelection(false);
+          hasEmoteSelectionRef.current = false;
           return;
         }
         if (showModal) {
@@ -123,10 +123,9 @@ function PresetMessages({
   }, [showModal, showDropdown, emoteResults]);
 
   useEffect(() => {
-    if (!showModal) {
-      setEmoteResults([]);
-      setSelectedEmoteIndex(-1);
-      setHasEmoteSelection(false);
+    if (!showModal) {        setEmoteResults([]);
+        setSelectedEmoteIndex(-1);
+        hasEmoteSelectionRef.current = false;
     }
   }, [showModal]);
 
@@ -161,13 +160,13 @@ function PresetMessages({
       if (results.length > 0) {
         setEmoteResults(results);
         setSelectedEmoteIndex(-1);
-        setHasEmoteSelection(false);
+        hasEmoteSelectionRef.current = false;
         return;
       }
     }
     setEmoteResults([]);
     setSelectedEmoteIndex(-1);
-    setHasEmoteSelection(false);
+    hasEmoteSelectionRef.current = false;
   };
 
   const insertEmote = (emoteName: string) => {
@@ -180,7 +179,7 @@ function PresetMessages({
       const newContent = emoteName + " " + textAfterCursor;
       setFormContent(newContent);
       setEmoteResults([]);
-      setHasEmoteSelection(false);
+      hasEmoteSelectionRef.current = false;
       setTimeout(() => {
         if (textareaRef.current) {
           const newPos = (emoteName + " ").length;
@@ -197,7 +196,7 @@ function PresetMessages({
     const newContent = beforeWord + emoteName + " " + textAfterCursor;
     setFormContent(newContent);
     setEmoteResults([]);
-    setHasEmoteSelection(false);
+    hasEmoteSelectionRef.current = false;
     setTimeout(() => {
       if (textareaRef.current) {
         const newPos = (beforeWord + emoteName + " ").length;
@@ -215,14 +214,14 @@ function PresetMessages({
         setSelectedEmoteIndex((prev) =>
           prev < emoteResults.length - 1 ? prev + 1 : prev,
         );
-        setHasEmoteSelection(true);
+        hasEmoteSelectionRef.current = true;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedEmoteIndex((prev) => (prev > 0 ? prev - 1 : 0));
-        setHasEmoteSelection(true);
+        hasEmoteSelectionRef.current = true;
       } else if (e.key === "Enter" || e.key === "Tab") {
         if (
-          hasEmoteSelection &&
+          hasEmoteSelectionRef.current &&
           selectedEmoteIndex >= 0 &&
           emoteResults[selectedEmoteIndex]
         ) {
@@ -239,7 +238,7 @@ function PresetMessages({
     setFormContent("");
     setEmoteResults([]);
     setSelectedEmoteIndex(-1);
-    setHasEmoteSelection(false);
+    hasEmoteSelectionRef.current = false;
     setShowModal(true);
     setShowDropdown(false);
   };
@@ -250,7 +249,7 @@ function PresetMessages({
     setFormContent(preset.content);
     setEmoteResults([]);
     setSelectedEmoteIndex(-1);
-    setHasEmoteSelection(false);
+    hasEmoteSelectionRef.current = false;
     setShowModal(true);
   };
 
@@ -449,7 +448,7 @@ function PresetMessages({
       className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
                             onMouseEnter={() => {
                               setSelectedEmoteIndex(index);
-                              setHasEmoteSelection(true);
+                              hasEmoteSelectionRef.current = true;
                             }}
                           >
                             <img

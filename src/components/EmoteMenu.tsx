@@ -223,9 +223,9 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
                 </div>
               </div>
             )}
-            {filteredEmotes.twitchChannels
-              .flatMap((ch) => (ch.emotes.length > 0 ? [ch] : []))
-              .map((ch) => (
+            {filteredEmotes.twitchChannels.reduce<React.ReactNode[]>((acc, ch) => {
+              if (ch.emotes.length === 0) return acc;
+              acc.push(
                 <div key={ch.channelId} className="emote-search-group">
                   <div className="emote-search-group-label">
                     {ch.channelName} ({ch.emotes.length})
@@ -233,8 +233,10 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
                   <div className="emote-grid">
                     {ch.emotes.map(renderEmoteItem)}
                   </div>
-                </div>
-              ))}
+                </div>,
+              );
+              return acc;
+            }, [])}
             {filteredEmotes.twitchGlobal.length === 0 &&
               filteredEmotes.twitchChannels.every(
                 (ch) => ch.emotes.length === 0,

@@ -338,7 +338,7 @@ export function useGiveaway({
 }
 
 /**
- * Test-only helpers exported for the useGiveaway tests. Not for app use.
+ * Test-only helpers. Not for app use.
  * @internal
  */
 export const __test__ = {
