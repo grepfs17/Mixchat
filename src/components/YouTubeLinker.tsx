@@ -16,7 +16,7 @@ interface YouTubeLinkerProps {
   onLinksChanged?: () => void;
 }
 
-interface State {
+export interface State {
   youtubeLinks: YouTubeLink[];
   selectedChannelId: string;
   searchQuery: string;
@@ -27,7 +27,7 @@ interface State {
   editError: string;
 }
 
-type Action =
+export type Action =
   | { type: "SET_LINKS"; payload: YouTubeLink[] }
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_SELECTED_CHANNEL"; payload: { id: string; query: string } }
@@ -40,7 +40,7 @@ type Action =
   | { type: "CANCEL_EDIT" }
   | { type: "FINISH_EDIT"; payload: YouTubeLink[] };
 
-function initLinks(links: YouTubeLink[]): State {
+export function initLinks(links: YouTubeLink[]): State {
   return {
     youtubeLinks: links,
     selectedChannelId: "",
@@ -53,7 +53,7 @@ function initLinks(links: YouTubeLink[]): State {
   };
 }
 
-function reducer(state: State, action: Action): State {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_LINKS":
       return { ...state, youtubeLinks: action.payload };

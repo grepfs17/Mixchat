@@ -13,7 +13,7 @@ import { isMobileDevice } from "../../../lib/device";
 
 const STORAGE_KEY = "mixchat_preset_messages:v1";
 
-interface PresetMessage {
+export interface PresetMessage {
   id: string;
   name: string;
   content: string;
@@ -36,7 +36,7 @@ function savePresetMessages(messages: PresetMessage[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
 }
 
-interface State {
+export interface State {
   showDropdown: boolean;
   showModal: boolean;
   presets: PresetMessage[];
@@ -48,7 +48,7 @@ interface State {
   dropdownRect: DOMRect | null;
 }
 
-type Action =
+export type Action =
   | { type: "SET_DROPDOWN"; payload: boolean }
   | { type: "SET_DROPDOWN_RECT"; payload: DOMRect | null }
   | { type: "OPEN_MODAL" }
@@ -63,7 +63,7 @@ type Action =
   | { type: "SET_PRESETS"; payload: PresetMessage[] }
   | { type: "FINISH_SAVE"; payload: PresetMessage[] };
 
-function reducer(state: State, action: Action): State {
+export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "SET_DROPDOWN":
       return { ...state, showDropdown: action.payload };
