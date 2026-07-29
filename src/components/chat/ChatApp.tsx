@@ -36,6 +36,7 @@ import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
+import ThemeMascots from "./ThemeMascots";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface YtConnectionState {
@@ -845,34 +846,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         )}
 
         <MobileTouchHintModal twitchConnected={twitchConnected} />
-        {chatTheme === "mushu" && (
-          <>
-            <img
-              src="/themes/Mushu/mushu.webp"
-              alt="Mushu"
-              className="mushu-theme-mascot"
-            />
-            <img
-              src="/themes/Mushu/mushuKnife.webp"
-              alt="Mushu Knife"
-              className="mushu-theme-knife"
-            />
-          </>
-        )}
-        {chatTheme === "lunita" && (
-          <>
-            <img
-              src="/themes/Lunita/lunateDrama.webp"
-              alt="Lunita Drama"
-              className="lunita-theme-drama"
-            />
-            <img
-              src="/themes/Lunita/lunateLurk.webp"
-              alt="Lunita Lurk"
-              className="lunita-theme-lurk"
-            />
-          </>
-        )}
+        <ThemeMascots chatTheme={chatTheme} />
       </div>
     </ModerationContext.Provider>
   );

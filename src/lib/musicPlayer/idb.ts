@@ -23,8 +23,8 @@ import {
 
 const DB_NAME = "mixchat_music_player";
 const DB_VERSION = 1;
-export const PLAYLISTS_STORE = "musicPlaylists";
-export const SETTINGS_STORE = "musicPlayerSettings";
+const PLAYLISTS_STORE = "musicPlaylists";
+const SETTINGS_STORE = "musicPlayerSettings";
 
 function isIDBAvailable(): boolean {
   return (

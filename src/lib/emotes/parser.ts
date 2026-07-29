@@ -120,7 +120,7 @@ export function parseMessageWithEmotes(
  * Look up a word across all emote providers (7TV > BTTV > FFZ > Twitch).
  * Returns the emote URL and provider name, or null if not found.
  */
-export function lookupEmote(
+function lookupEmote(
   word: string,
 ): { url: string; provider: string; author?: string } | null {
   if (emotes7tv[word])
@@ -317,7 +317,7 @@ function parseThirdPartyEmotes(text: string): string {
  * Twitch emotes are intentionally excluded — they're irrelevant on YouTube
  * chat and would cause false matches against any channel-specific sub emote.
  */
-export function lookupThirdPartyEmote(
+function lookupThirdPartyEmote(
   word: string,
 ):
   | { url: string; provider: "7TV" | "BTTV" | "FFZ"; author?: string }

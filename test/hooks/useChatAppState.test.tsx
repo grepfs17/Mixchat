@@ -11,7 +11,7 @@ vi.mock("../../src/hooks/chat/useTwitchChat", () => ({
   }),
 }));
 
-vi.mock("../../src/hooks/chat/useRaidDetection", () => ({
+vi.mock("../../src/hooks/chat/eventSubHelpers/useRaidDetection", () => ({
   useRaidDetection: vi.fn(),
 }));
 

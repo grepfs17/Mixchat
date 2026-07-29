@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import HLS from "hls.js";
+import StreamEmbedPlaceholder from "./StreamEmbedPlaceholder";
+import StreamAuthBadge from "./StreamAuthBadge";
 
 // Types for the Twitch Player JS API
 declare global {
@@ -533,19 +535,7 @@ export default function StreamEmbed({
           }}
         >
           {showPlaceholder && placeholderThumbnailUrl && (
-            <div
-              className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
-            >
-              <img
-                src={placeholderThumbnailUrl}
-                alt=""
-                className="stream-embed-placeholder__img"
-              />
-              <div className="stream-embed-placeholder__glass" />
-              <div className="stream-embed-placeholder__spinner">
-                <div className="stream-embed-placeholder__spinner-ring" />
-              </div>
-            </div>
+            <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
           )}
         </div>
       );
@@ -571,16 +561,7 @@ export default function StreamEmbed({
           }}
         >
           {showPlaceholder && placeholderThumbnailUrl && (
-            <div
-              className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
-            >
-              <img
-                src={placeholderThumbnailUrl}
-                alt=""
-                className="stream-embed-placeholder__img"
-              />
-              <div className="stream-embed-placeholder__glass" />
-            </div>
+            <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} showSpinner={false} />
           )}
           Authenticating…
         </div>
@@ -596,19 +577,7 @@ export default function StreamEmbed({
           />
         </div>
         {showPlaceholder && placeholderThumbnailUrl && (
-          <div
-            className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
-          >
-            <img
-              src={placeholderThumbnailUrl}
-              alt=""
-              className="stream-embed-placeholder__img"
-            />
-            <div className="stream-embed-placeholder__glass" />
-            <div className="stream-embed-placeholder__spinner">
-              <div className="stream-embed-placeholder__spinner-ring" />
-            </div>
-          </div>
+          <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
         )}
       </div>
     );
@@ -647,41 +616,10 @@ export default function StreamEmbed({
     {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
     <video ref={videoRef} controls title={`${channelName} Twitch Stream`} />
       {twitchConnected && (
-        <div
-          className={`stream-auth-badge${streamAuthenticated ? "" : " stream-auth-badge--guest"}`}
-          title={streamAuthenticated ? "Stream authenticated — ads skipped for subscribers" : "Not authenticated — stream may include ads"}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            {streamAuthenticated ? (
-              <>
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <path d="m9 12 2 2 4-4"/>
-              </>
-            ) : (
-              <>
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-              </>
-            )}
-          </svg>
-          {streamAuthenticated ? "Ad-free" : "Ads"}
-        </div>
+        <StreamAuthBadge authenticated={streamAuthenticated} />
       )}
       {showPlaceholder && placeholderThumbnailUrl && (
-        <div
-          className={`stream-embed-placeholder${placeholderFading ? " stream-embed-placeholder--fading" : ""}`}
-        >
-          <img
-            src={placeholderThumbnailUrl}
-            alt=""
-            className="stream-embed-placeholder__img"
-          />
-          <div className="stream-embed-placeholder__glass" />
-          <div className="stream-embed-placeholder__spinner">
-            <div className="stream-embed-placeholder__spinner-ring" />
-          </div>
-        </div>
+        <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
       )}
       {!showPlaceholder && loading && (
         <div className="stream-loading">

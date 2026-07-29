@@ -6,7 +6,7 @@
  * surfaced by throwing with a normalized message coming from the server.
  */
 
-export interface YouTubeModError extends Error {
+interface YouTubeModError extends Error {
   status?: number;
 }
 

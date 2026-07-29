@@ -6,7 +6,7 @@ import BannerShell from "./BannerShell";
 import { useCountdownTimer } from "../../../hooks/ui/useCountdownTimer";
 import type { PollChoice, PollState } from "./bannerTypes";
 
-export type { PollChoice, PollState };
+export type { PollState };
 
 interface PollBannerProps {
   poll: PollState;

@@ -85,7 +85,7 @@ export interface SongQueuePlayerHandle {
   seekTo(seconds: number): void;
 }
 
-export interface SongQueuePlayerProps {
+interface SongQueuePlayerProps {
   items: SongQueuePlayerItem[];
   currentIndex: number;
   onReady?: () => void;

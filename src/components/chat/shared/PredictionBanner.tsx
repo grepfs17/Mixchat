@@ -6,7 +6,7 @@ import BannerShell from "./BannerShell";
 import { useCountdownTimer } from "../../../hooks/ui/useCountdownTimer";
 import type { PredictionOutcome, PredictionState } from "./bannerTypes";
 
-export type { PredictionOutcome, PredictionState };
+export type { PredictionState };
 
 interface PredictionBannerProps {
   prediction: PredictionState;

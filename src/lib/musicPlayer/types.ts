@@ -76,7 +76,7 @@ export const MAX_TRACKS_PER_PLAYLIST = 200;
  * string instead of a keyPath since `musicPlayerSettings` is a key-less
  * store and we just `put` the record at this primary key.
  */
-export const MUSIC_PLAYER_SETTINGS_RECORD_ID = "current";
+const MUSIC_PLAYER_SETTINGS_RECORD_ID = "current";
 
 /** Stable identifier of the active settings record. */
 export function settingsRecordId(): string {

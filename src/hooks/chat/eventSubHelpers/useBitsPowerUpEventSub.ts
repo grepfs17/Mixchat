@@ -68,8 +68,6 @@ function parseBitsUseEvent(ev: any): BitsUseEvent {
   };
 }
 
-export type { BitsUseEvent };
-
 export function useBitsPowerUpEventSub({
   subscribe,
   channelId,

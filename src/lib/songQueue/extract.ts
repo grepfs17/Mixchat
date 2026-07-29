@@ -15,8 +15,6 @@ import {
   type StreamerToolsOwner,
 } from "../streamerTools/chatHelpers";
 
-export type { Platform };
-
 /**
  * Channel-owner identifiers that are always excluded from queue submissions.
  * Mirrors the giveaway owner shape; see `chatHelpers.ts`.

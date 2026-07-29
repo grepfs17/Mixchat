@@ -11,7 +11,7 @@ import { MessageModActions } from "./MessageModActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { TwitchMessage } from "../../../lib/types";
 
-export interface TwitchMessageContentProps {
+interface TwitchMessageContentProps {
   msg: TwitchMessage;
   index: number;
   previousMsg: TwitchMessage | null;

@@ -9,7 +9,7 @@ const VIEWER_COUNT_REFRESH_MS = 30000;
 
 export type PlayerType = "embed" | "m3u8" | "youtube";
 
-export type HlsQualityPreference =
+type HlsQualityPreference =
   | "highest"
   | "1080p"
   | "720p"

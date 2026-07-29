@@ -322,7 +322,7 @@ export async function listSessionsForChannel(
  *   - "missing" — no such session
  *   - "auth"   — token didn't match
  */
-export async function deleteSession(
+async function deleteSession(
   opts: SongQueueStoreOptions,
   sessionId: string,
   ownerToken: string,

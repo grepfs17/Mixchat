@@ -29,8 +29,6 @@ export type StreamerToolsMessage =
   | { platform: "twitch"; msg: TwitchMessage }
   | { platform: "youtube"; msg: YTMessage };
 
-export type { Platform };
-
 export function isSkippableMessage(msg: {
   optimistic?: boolean;
   isPreloaded?: boolean;

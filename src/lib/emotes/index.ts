@@ -24,17 +24,11 @@ import { subscribeTo7TVChannelUpdates } from "./7tv";
 import { migrateEmoteCachesFromLocalStorage } from "./emoteStorage";
 
 export type {
-  EmoteMap,
-  EmoteCache,
-  ChannelEmoteGroup,
-  ChannelGroupCache,
-  BroadcasterInfo,
-  TwitchChannelEmotes,
   EmotesBySource,
 } from "./types";
 
 export { parseMessageWithEmotes } from "./parser";
-export { lookupEmote, lookupThirdPartyEmote, tokenizeThirdPartyEmotesForYoutube } from "./parser";
+export { tokenizeThirdPartyEmotesForYoutube } from "./parser";
 export type { YoutubeEmoteToken } from "./parser";
 
 export {

@@ -6,7 +6,7 @@ export interface MessageMenuState {
   message: TwitchMessage;
 }
 
-export interface TimeoutMenuState {
+interface TimeoutMenuState {
   x: number;
   y: number;
   userId: string;
