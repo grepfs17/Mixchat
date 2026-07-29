@@ -98,6 +98,10 @@ export function useEventSub({
   const triggerResubscribeRef = useRef<((keys?: string[]) => void) | null>(
     null,
   );
+  /** Keys whose subscription cleanup ran but whose stale entry still
+   *  exists in the module-level `subscribedKeys`. Tracked so that
+   *  `subscribe()` can evict the stale entry and trigger re-registration. */
+  const keysCleanedUp = useRef(new Set<string>());
 
   useEffect(() => {
     accessTokenRef.current = accessToken;
@@ -126,6 +130,13 @@ export function useEventSub({
         onScopeError,
       });
 
+      if (keysCleanedUp.current.has(key)) {
+        // The previous subscription was cleaned up (effect re-ran) but
+        // the module-level cache still has a stale entry. Evict it so
+        // the normal "pending" + resubscribe path fires.
+        subscribedKeys.delete(key);
+        keysCleanedUp.current.delete(key);
+      }
       if (!subscribedKeys.has(key)) {
         setSubscriptionStatuses((prev) => {
           const next = new Map(prev);
@@ -146,6 +157,7 @@ export function useEventSub({
           next.delete(key);
           return next;
         });
+        keysCleanedUp.current.add(key);
       };
     },
     [],
@@ -471,14 +483,22 @@ export function useEventSub({
 
     connect(WS_URL, false);
 
+    let debouncedKeys: string[] = [];
     triggerResubscribeRef.current = (keys?: string[]) => {
       const sid = sessionIdRef.current;
       if (!sid) return;
+      if (keys) debouncedKeys.push(...keys);
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
         if (active && sessionIdRef.current === sid) {
-          void subscribeAll(sid, keys);
+          const keysToSubscribe = debouncedKeys.length > 0
+            ? [...new Set(debouncedKeys)]
+            : undefined;
+          debouncedKeys = [];
+          void subscribeAll(sid, keysToSubscribe);
+        } else {
+          debouncedKeys = [];
         }
       }, 300);
     };

@@ -550,6 +550,86 @@ describe("useEventSub", () => {
     expect(ws.close).toHaveBeenCalledWith(1000, "hook unmounting");
   });
 
+  it("accumulates keys when multiple subscriptions are registered synchronously after session is active (regression: debounce was overwriting keys)", async () => {
+    const callbackHold = vi.fn();
+    const callbackUpdate = vi.fn();
+    const callbackRaid = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    // Connect and establish session FIRST
+    const ws = wsInstances[0];
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    const fetchCountBefore = mockFetch.mock.calls.length;
+
+    // Register 3 subscriptions synchronously — mimics useAutomodQueue
+    // calling subscribe() for hold + update back-to-back, plus another
+    // hook subscribing simultaneously.
+    act(() => {
+      result.current.subscribe(
+        "automod.message.hold",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callbackHold,
+      );
+      result.current.subscribe(
+        "automod.message.update",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callbackUpdate,
+      );
+      result.current.subscribe(
+        "channel.raid",
+        "1",
+        { to_broadcaster_user_id: "1" },
+        callbackRaid,
+      );
+    });
+
+    // All 3 should show as pending
+    const statuses = result.current.subscriptionStatuses;
+    const holdKey =
+      'automod.message.hold:{"broadcaster_user_id":"1","moderator_user_id":"2"}';
+    const updateKey =
+      'automod.message.update:{"broadcaster_user_id":"1","moderator_user_id":"2"}';
+    const raidKey = 'channel.raid:{"to_broadcaster_user_id":"1"}';
+
+    expect(statuses.get(holdKey)).toBe("pending");
+    expect(statuses.get(updateKey)).toBe("pending");
+    expect(statuses.get(raidKey)).toBe("pending");
+
+    // Advance past the 300ms debounce + 2x 250ms stagger between subs
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(800);
+    });
+
+    // All 3 subscriptions should have been sent to Twitch
+    const newCalls = mockFetch.mock.calls.slice(fetchCountBefore);
+    expect(newCalls).toHaveLength(3);
+
+    const subscribedTypes = newCalls.map((call: any[]) =>
+      JSON.parse(call[1].body).type,
+    );
+    expect(subscribedTypes).toContain("automod.message.hold");
+    expect(subscribedTypes).toContain("automod.message.update");
+    expect(subscribedTypes).toContain("channel.raid");
+
+    // All should be connected now
+    expect(result.current.subscriptionStatuses.get(holdKey)).toBe("connected");
+    expect(result.current.subscriptionStatuses.get(updateKey)).toBe(
+      "connected",
+    );
+    expect(result.current.subscriptionStatuses.get(raidKey)).toBe("connected");
+  });
+
   it("calls onScopeError on 403 subscription response", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
