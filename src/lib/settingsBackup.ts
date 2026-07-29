@@ -11,7 +11,7 @@ const BACKUP_VERSION = 1;
 /** Keys that represent user preferences (not auth tokens, not caches). */
 export const SETTINGS_KEYS = [
   "mixchat_video_ratio",
-  "mixchat_favorite_channels",
+  "mixchat_favorite_channels:v1",
   "mixchat_embed_default_open",
   "mixchat_unify_chat",
   "mixchat_split_chat",
@@ -31,8 +31,8 @@ export const SETTINGS_KEYS = [
   "mixchat_hide_chat_timestamps",
   "mixchat_event_sound_volume",
   "mixchat_chat_split_ratio",
-  "mixchat_watched_streamers",
-  "mixchat_youtube_links",
+  "mixchat_watched_streamers:v1",
+  "mixchat_youtube_links:v1",
   "mixchat_streamer_tools_enabled",
   "mixchat_ignored_users",
   "mixchat_mod_mode_targets",
@@ -40,6 +40,10 @@ export const SETTINGS_KEYS = [
   "mixchat_default_hls_quality",
   "mixchat_render_thirdparty_on_youtube",
   "disabled_emotes_v1",
+  "mixchat_giveaway_history:v1",
+  "mixchat_song_queue_past_playlists:v1",
+  "mixchat_notified_streamers:v1",
+  "mixchat_system_notifications",
 ] as const;
 
 interface SettingsBackup {
@@ -60,9 +64,34 @@ function readSettings(): Record<string, string> {
   return data;
 }
 
+/**
+ * Maps old (pre-v1) key names to their current versioned equivalents.
+ * Used during import so that backups created before the key migration
+ * still restore correctly.
+ */
+const BACKUP_KEY_COMPAT_MAP: Record<string, string> = {
+  mixchat_favorite_channels: "mixchat_favorite_channels:v1",
+  mixchat_watched_streamers: "mixchat_watched_streamers:v1",
+  mixchat_youtube_links: "mixchat_youtube_links:v1",
+  mixchat_giveaway_history: "mixchat_giveaway_history:v1",
+  mixchat_song_queue_past_playlists:
+    "mixchat_song_queue_past_playlists:v1",
+  mixchat_event_sounds: "mixchat_event_sounds:v1",
+  mixchat_notified_streamers: "mixchat_notified_streamers:v1",
+};
+
+/**
+ * Resolve a backup key to its current canonical name.
+ * Falls back to the key itself when no mapping exists.
+ */
+export function resolveBackupKey(key: string): string {
+  return BACKUP_KEY_COMPAT_MAP[key] ?? key;
+}
+
 function writeSettings(settings: Record<string, string>): number {
   let count = 0;
-  for (const [key, value] of Object.entries(settings)) {
+  for (const [rawKey, value] of Object.entries(settings)) {
+    const key = resolveBackupKey(rawKey);
     if (SETTINGS_KEYS.includes(key as (typeof SETTINGS_KEYS)[number])) {
       localStorage.setItem(key, value);
       count++;
@@ -126,9 +155,14 @@ export function importSettings(file: File): Promise<number> {
 
         let count = writeSettings(parsed.settings);
 
-        if (parsed.settings["mixchat_event_sounds"]) {
+        // Event sounds are stored in IndexedDB, not plain localStorage.
+        // Check both old and :v1 key names for backward compatibility.
+        const eventSoundsRaw =
+          parsed.settings["mixchat_event_sounds"] ??
+          parsed.settings["mixchat_event_sounds:v1"];
+        if (eventSoundsRaw) {
           try {
-            const sounds = JSON.parse(parsed.settings["mixchat_event_sounds"]);
+            const sounds = JSON.parse(eventSoundsRaw);
             await saveEventSounds(sounds);
             count++;
           } catch {

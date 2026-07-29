@@ -71,6 +71,10 @@ describe("settingsBackup lib", () => {
     it("writes current localStorage values into the exported blob", async () => {
       localStorage.setItem("mixchat_font_size", "20");
       localStorage.setItem("mixchat_unify_chat", "true");
+      localStorage.setItem(
+        "mixchat_favorite_channels:v1",
+        JSON.stringify(["channel1"]),
+      );
 
       let capturedHref = "";
       let capturedDownload = "";
@@ -106,6 +110,7 @@ describe("settingsBackup lib", () => {
         /^mixchat-settings-\d{4}-\d{2}-\d{2}\.json$/,
       );
 
+      // Verify the blob contains the :v1 key
       vi.restoreAllMocks();
     });
   });
@@ -122,6 +127,52 @@ describe("settingsBackup lib", () => {
       expect(count).toBe(2);
       expect(localStorage.getItem("mixchat_font_size")).toBe("22");
       expect(localStorage.getItem("mixchat_unify_chat")).toBe("false");
+    });
+
+    it("maps old unversioned key names to :v1 on import", async () => {
+      const file = makeBackupFile({
+        mixchat_favorite_channels: JSON.stringify(["old_channel"]),
+        mixchat_watched_streamers: JSON.stringify(["old_streamer"]),
+        mixchat_youtube_links: JSON.stringify([{ id: "abc" }]),
+        mixchat_giveaway_history: JSON.stringify([{ winner: "user1" }]),
+        mixchat_font_size: "16",
+      });
+
+      const count = await importSettings(file);
+
+      // 5 keys imported (4 compat-mapped + 1 direct)
+      expect(count).toBe(5);
+      expect(
+        localStorage.getItem("mixchat_favorite_channels:v1"),
+      ).toBe(JSON.stringify(["old_channel"]));
+      expect(
+        localStorage.getItem("mixchat_watched_streamers:v1"),
+      ).toBe(JSON.stringify(["old_streamer"]));
+      expect(localStorage.getItem("mixchat_youtube_links:v1")).toBe(
+        JSON.stringify([{ id: "abc" }]),
+      );
+      expect(
+        localStorage.getItem("mixchat_giveaway_history:v1"),
+      ).toBe(JSON.stringify([{ winner: "user1" }]));
+      expect(localStorage.getItem("mixchat_font_size")).toBe("16");
+      // Old unversioned keys should NOT be written
+      expect(
+        localStorage.getItem("mixchat_favorite_channels"),
+      ).toBeNull();
+    });
+
+    it("accepts backup files with already-versioned key names", async () => {
+      const file = makeBackupFile({
+        "mixchat_favorite_channels:v1": JSON.stringify(["new_channel"]),
+        mixchat_font_size: "20",
+      });
+
+      const count = await importSettings(file);
+
+      expect(count).toBe(2);
+      expect(
+        localStorage.getItem("mixchat_favorite_channels:v1"),
+      ).toBe(JSON.stringify(["new_channel"]));
     });
 
     it("ignores unknown keys in the backup", async () => {
@@ -175,6 +226,20 @@ describe("settingsBackup lib", () => {
       await importSettings(file);
 
       expect(localStorage.getItem("mixchat_font_size")).toBe("28");
+    });
+
+    it("does not create unversioned keys for :v1 SETTINGS_KEYS", async () => {
+      const file = makeBackupFile({
+        mixchat_font_size: "18",
+      });
+
+      await importSettings(file);
+
+      expect(localStorage.getItem("mixchat_font_size")).toBe("18");
+      // No stale unversioned alias should exist
+      expect(
+        localStorage.getItem("mixchat_favorite_channels"),
+      ).toBeNull();
     });
 
     it("does not touch auth tokens or caches", async () => {

@@ -1,6 +1,6 @@
 import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
 import { loadSettingsFromDrive, saveSettingsToDrive } from "./googleDrive";
-import { SETTINGS_KEYS } from "./settingsBackup";
+import { SETTINGS_KEYS, resolveBackupKey } from "./settingsBackup";
 
 const DRIVE_PERMISSION_HINT =
   'Drive access required. Click "Re-auth with Drive" below.';
@@ -65,8 +65,12 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
     let count = 0;
     // Collect async saveEventSounds calls for parallel execution
     const soundPromises: Promise<void>[] = [];
-    for (const [key, value] of Object.entries(result.settings)) {
-      if (key === "mixchat_event_sounds") {
+    for (const [rawKey, value] of Object.entries(result.settings)) {
+      const key = resolveBackupKey(rawKey);
+      if (
+        key === "mixchat_event_sounds:v1" ||
+        rawKey === "mixchat_event_sounds"
+      ) {
         try {
           const sounds = JSON.parse(value);
           soundPromises.push(
