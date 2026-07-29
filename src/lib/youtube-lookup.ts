@@ -54,77 +54,56 @@ function buildFetchHeaders(cookies?: string): HeadersInit {
 
 const VIDEO_ID_RE = /^[\w-]{11}$/;
 
-function extractVideoIdFromHtml(
-  html: string,
-  requireLive = false,
-): string | null {
-  // 1. <link rel="canonical" href="...watch?v=VIDEO_ID">
-  const canonicalMatch = html.match(
+const LIVE_INDICATOR_RE =
+  /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i;
+
+function hasLiveIndicator(html: string): boolean {
+  return LIVE_INDICATOR_RE.test(html);
+}
+
+/** Extract videoId from <link rel="canonical"> or og:video:url meta tag. */
+function extractFromMetaTag(html: string): string | null {
+  const canonical = html.match(
     /<link\s+rel="canonical"\s+href="[^"]*watch\?v=([\w-]{11})/,
   );
-  if (canonicalMatch) {
-    if (!requireLive) return canonicalMatch[1];
-    // Only accept if page explicitly indicates this is a live stream
-    if (
-      /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(
-        html,
-      )
-    ) {
-      return canonicalMatch[1];
-    }
-  }
-
-  // 2. og:video:url meta tag
-  const ogMatch = html.match(
+  if (canonical) return canonical[1];
+  const og = html.match(
     /property="og:video:url"\s+content="[^"]*watch\?v=([\w-]{11})/,
   );
-  if (ogMatch) {
-    if (!requireLive) return ogMatch[1];
-    if (
-      /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/i.test(
-        html,
-      )
-    ) {
-      return ogMatch[1];
-    }
-  }
+  return og?.[1] ?? null;
+}
 
-  // 3. ytInitialPlayerResponse embedded JSON
-  const ytiprMatch = html.match(/ytInitialPlayerResponse\s*=\s*\{/);
-  if (ytiprMatch) {
-    const start = (ytiprMatch.index ?? 0) + ytiprMatch[0].length - 1;
-    let depth = 0;
-    for (let i = start; i < html.length; i++) {
-      if (html[i] === "{") depth++;
-      else if (html[i] === "}") {
-        depth--;
-        if (depth === 0) {
-          try {
-            const json = JSON.parse(html.slice(start, i + 1));
-            const vid = json?.videoDetails?.videoId;
-            if (vid && VIDEO_ID_RE.test(vid)) {
-              if (!requireLive) return vid;
-              // Check if videoDetails marks this as live
-              const isLive =
-                json?.videoDetails?.isLive === true ||
-                json?.videoDetails?.isLiveContent === true ||
-                json?.videoDetails?.liveBroadcastDetails?.isLiveNow === true;
-              if (isLive) return vid;
-            }
-          } catch {}
-          break;
-        }
+/** Extract videoId from ytInitialPlayerResponse embedded JSON. */
+function extractFromPlayerResponse(html: string): string | null {
+  const match = html.match(/ytInitialPlayerResponse\s*=\s*\{/);
+  if (!match) return null;
+  const start = (match.index ?? 0) + match[0].length - 1;
+  let depth = 0;
+  for (let i = start; i < html.length; i++) {
+    if (html[i] === "{") depth++;
+    else if (html[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          const json = JSON.parse(html.slice(start, i + 1));
+          const vid = json?.videoDetails?.videoId;
+          if (vid && VIDEO_ID_RE.test(vid)) return vid;
+        } catch {}
+        break;
       }
     }
   }
+  return null;
+}
 
-  // 4. "videoId":"VIDEO_ID" in ytInitialData — prefer videoIds near live indicators
+/** Extract videoId from ytInitialData JSON, preferring IDs near live indicators. */
+function extractFromInitialData(html: string): string | null {
   const vidMatches = html.matchAll(/"videoId"\s*:\s*"([\w-]{11})"/g);
-  const seen = new Set<string>();
   const liveIndicators = html.matchAll(
     /"isLive[cC]ontent"\s*:\s*true|"liveBroadcastDetails"\s*:\s*\{[^}]*"isLiveNow"\s*:\s*true/gi,
   );
   const livePositions = [...liveIndicators].map((m) => m.index ?? 0);
+  const seen = new Set<string>();
   for (const m of vidMatches) {
     if (!seen.has(m[1])) {
       seen.add(m[1]);
@@ -135,12 +114,36 @@ function extractVideoIdFromHtml(
       }
     }
   }
+  return null;
+}
 
-  // 5. watch?v=VIDEO_ID — only if not requiring live or if live indicators exist
-  if (!requireLive) {
-    const urlVidMatch = html.match(/watch\?v=([\w-]{11})/);
-    if (urlVidMatch) return urlVidMatch[1];
-  }
+/** Extract videoId from any watch?v= URL in the HTML. */
+function extractFromWatchUrl(html: string): string | null {
+  const m = html.match(/watch\?v=([\w-]{11})/);
+  return m?.[1] ?? null;
+}
+
+
+function extractVideoIdFromHtml(
+  html: string,
+  requireLive = false,
+): string | null {
+  const live = hasLiveIndicator(html);
+
+  // Strategy 1-2: Meta tags (canonical, og:video)
+  const metaId = extractFromMetaTag(html);
+  if (metaId && (!requireLive || live)) return metaId;
+
+  // Strategy 3: ytInitialPlayerResponse JSON
+  const playerJson = extractFromPlayerResponse(html);
+  if (playerJson && (!requireLive || live)) return playerJson;
+
+  // Strategy 4: ytInitialData videoIds near live indicators
+  const dataId = extractFromInitialData(html);
+  if (dataId && (!requireLive || live)) return dataId;
+
+  // Strategy 5: Any watch?v= URL (only for non-live lookups)
+  if (!requireLive) return extractFromWatchUrl(html);
 
   return null;
 }
@@ -222,6 +225,67 @@ function isActuallyLive(video: any): boolean {
   )
     return true;
   return false;
+}
+
+function findLiveInTree(node: any, depth = 0): string | null {
+  if (!node || typeof node !== "object" || depth > 8) return null;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const found = findLiveInTree(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+  const vr = node.videoRenderer;
+  if (vr) {
+    const vid = vr.videoId as string | undefined;
+    if (vid && isActuallyLive(vr)) return vid;
+  }
+  for (const val of Object.values(node)) {
+    const found = findLiveInTree(val, depth + 1);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function findLiveFromChannel(channel: any, debug: boolean): Promise<string | null> {
+  // Strategy 1: Live streams tab
+  try {
+    const liveStreams = await channel.getLiveStreams();
+    const videos: any[] = liveStreams?.videos ?? [];
+    if (debug) console.log(`[YouTube Lookup] getLiveStreams() → ${videos.length} videos`);
+    const liveVideo = videos.find((v: any) => isActuallyLive(v));
+    if (liveVideo) {
+      const id = liveVideo.id ?? liveVideo.videoId ?? null;
+      if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${id}`);
+      if (id) return id;
+    }
+  } catch (lsErr) {
+    if (debug) console.warn("[YouTube Lookup] getLiveStreams failed:", lsErr);
+  }
+
+  // Strategy 2: Videos tab
+  try {
+    const videosTab = await channel.getVideos();
+    const videos: any[] = videosTab?.videos ?? [];
+    const liveVideo = videos.find((v: any) => isActuallyLive(v));
+    if (liveVideo) return liveVideo.id ?? liveVideo.videoId ?? null;
+  } catch (videosError) {
+    if (debug) console.warn("[YouTube Lookup] getVideos failed:", videosError);
+  }
+
+  // Strategy 3: Home feed tree search
+  if (channel.hasHome) {
+    try {
+      const home = await channel.getHome();
+      const found = findLiveInTree(home?.contents);
+      if (found) return found;
+    } catch (homeError) {
+      if (debug) console.warn("[YouTube Lookup] Failed to check home feed:", homeError);
+    }
+  }
+
+  return null;
 }
 
 export async function resolveChannelId(
@@ -362,88 +426,7 @@ export async function findLiveForChannel(
     }
 
     if (channel) {
-      try {
-        const liveStreams = await (channel as any).getLiveStreams();
-        const videos: any[] = liveStreams?.videos ?? [];
-        if (debug)
-          console.log(
-            `[YouTube Lookup] getLiveStreams() → ${videos.length} videos`,
-          );
-        const liveVideo = videos.find((v: any) => isActuallyLive(v));
-        if (liveVideo) {
-          videoId = liveVideo.id ?? liveVideo.videoId ?? null;
-          if (debug)
-            console.log(
-              `[YouTube Lookup] Found live video in liveStreams: ${videoId}`,
-            );
-        }
-      } catch (lsErr) {
-        if (debug)
-          console.warn("[YouTube Lookup] getLiveStreams failed:", lsErr);
-      }
-
-      if (!videoId) {
-        try {
-          const videosTab = await (channel as any).getVideos();
-          const videos: any[] = videosTab?.videos ?? [];
-          const liveVideo = videos.find((v: any) => isActuallyLive(v));
-          if (liveVideo) {
-            videoId = liveVideo.id ?? liveVideo.videoId ?? null;
-          }
-        } catch (videosError) {
-          if (debug)
-            console.warn("[YouTube Lookup] getVideos failed:", videosError);
-        }
-      }
-
-      if (!videoId && (channel as any).hasHome) {
-        try {
-          const home = await (channel as any).getHome();
-
-          function findLiveInTree(node: any, depth = 0): string | null {
-            if (!node || typeof node !== "object" || depth > 8) return null;
-            if (Array.isArray(node)) {
-              for (const item of node) {
-                const found = findLiveInTree(item, depth + 1);
-                if (found) return found;
-              }
-              return null;
-            }
-            const vr = node.videoRenderer;
-            if (vr) {
-              const vid = vr.videoId as string | undefined;
-              if (
-                vid &&
-                (vr.isLiveContent === true ||
-                  (vr.badges ?? []).some(
-                    (b: any) => b?.metadataBadgeRenderer?.label === "LIVE",
-                  ) ||
-                  (vr.thumbnailOverlays ?? []).some(
-                    (o: any) =>
-                      o?.thumbnailOverlayTimeStatusRenderer?.style === "LIVE",
-                  ))
-              ) {
-                return vid;
-              }
-            }
-            for (const val of Object.values(node)) {
-              const found = findLiveInTree(val, depth + 1);
-              if (found) return found;
-            }
-            return null;
-          }
-
-          const found = findLiveInTree(home?.contents);
-          if (found) videoId = found;
-        } catch (homeError) {
-          if (debug)
-            console.warn(
-              "[YouTube Lookup] Failed to check home feed:",
-              homeError,
-            );
-        }
-      }
-
+      videoId = await findLiveFromChannel(channel, debug);
       finalChannelId =
         finalChannelId ||
         (channel as any).basic_info?.id ||

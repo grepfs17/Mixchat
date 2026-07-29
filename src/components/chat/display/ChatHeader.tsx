@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type RefObject } from "react";
 import {
   MdRefresh,
   MdEdit,
@@ -21,6 +21,21 @@ import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
 import type { Platform } from "../../../lib/types";
 import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
+
+function useClickOutside(
+  ref: RefObject<HTMLElement | null>,
+  handler: () => void,
+  enabled = true,
+): void {
+  useEffect(() => {
+    if (!enabled) return;
+    const listener = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) handler();
+    };
+    document.addEventListener("mousedown", listener);
+    return () => document.removeEventListener("mousedown", listener);
+  }, [enabled, handler, ref]);
+}
 
 interface ChatHeaderProps {
   channelName?: string;
@@ -116,6 +131,310 @@ function statusLabel(s: SubscriptionStatus | "disconnected") {
   }
 }
 
+function ModModeIcon({
+  modActive,
+  ytActive,
+}: {
+  modActive: boolean;
+  ytActive: boolean;
+}) {
+  if (modActive && ytActive)
+    return <GiCrossedSwords size={16} className="mod-icon" style={{ color: "var(--color-green)" }} />;
+  if (modActive)
+    return <FaTwitch size={16} className="mod-icon" style={{ color: "var(--color-twitch, #9146ff)" }} />;
+  if (ytActive)
+    return <FaYoutube size={16} className="mod-icon" style={{ color: "var(--color-youtube, #ff2222)" }} />;
+  return <GiCrossedSwords size={16} className="mod-icon" style={{ color: "var(--color-text-muted)" }} />;
+}
+
+function ModModeDropdown({
+  isModerator,
+  isYouTubeModerator,
+  modModeActive,
+  youtubeModModeActive,
+  onSetMode,
+  containerRef,
+  isOpen,
+  onToggle,
+}: {
+  isModerator: boolean;
+  isYouTubeModerator: boolean;
+  modModeActive: boolean;
+  youtubeModModeActive: boolean;
+  onSetMode?: (mode: string) => void;
+  containerRef: RefObject<HTMLDivElement | null>;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const check = (tw: boolean, yt: boolean) =>
+    modModeActive === tw && youtubeModModeActive === yt ? (
+      <span className="mod-mode-check">✓</span>
+    ) : null;
+
+  return (
+    <div className="mod-mode-container" ref={containerRef}>
+      <button type="button"
+        onClick={onToggle}
+        className={`header-button mod-mode-trigger ${
+          modModeActive || youtubeModModeActive ? "mod-active" : ""
+        }`}
+        title="Mod Mode"
+      >
+        <ModModeIcon modActive={modModeActive} ytActive={youtubeModModeActive} />
+        <span className="mod-label">Mod Mode</span>
+      </button>
+      {isOpen && (
+        <div className="mod-mode-dropdown">
+          {(isModerator || isYouTubeModerator) && (
+            <button type="button"
+              className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
+              onClick={() => { onSetMode?.("off"); onToggle(); }}
+              title="Disable Mod Mode"
+            >
+              <GiCrossedSwords size={14} />
+              <span>Off</span>
+              {check(false, false)}
+            </button>
+          )}
+          {isModerator && (
+            <button type="button"
+              className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
+              onClick={() => { onSetMode?.("twitch"); onToggle(); }}
+              title="Twitch Mod Mode"
+            >
+              <FaTwitch size={14} />
+              <span>Twitch</span>
+              {check(true, false)}
+            </button>
+          )}
+          {isYouTubeModerator && (
+            <button type="button"
+              className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
+              onClick={() => { onSetMode?.("youtube"); onToggle(); }}
+              title="YouTube Mod Mode"
+            >
+              <FaYoutube size={14} />
+              <span>YouTube</span>
+              {check(false, true)}
+            </button>
+          )}
+          {isModerator && isYouTubeModerator && (
+            <button type="button"
+              className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
+              onClick={() => { onSetMode?.("both"); onToggle(); }}
+              title="Both Platforms Mod Mode"
+            >
+              <GiCrossedSwords size={14} />
+              <span>Both</span>
+              {check(true, true)}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StreamInfoBar({
+  streamTitle,
+  streamGameName,
+  onUpdateTitle,
+  onUpdateCategory,
+  onSearchCategories,
+}: {
+  streamTitle?: string;
+  streamGameName?: string;
+  onUpdateTitle?: (title: string) => Promise<void>;
+  onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
+  onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
+}) {
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [categoryInput, setCategoryInput] = useState("");
+  const [categoryResults, setCategoryResults] = useState<CategoryResult[]>([]);
+  const [savingCategory, setSavingCategory] = useState(false);
+  const [categoryDropdownPos, setCategoryDropdownPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const categorySearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+
+  useClickOutside(categoryDropdownRef, () => {
+    const portalDropdown = document.getElementById("category-dropdown-portal");
+    const target = document.activeElement;
+    if (categoryInputRef.current === target || portalDropdown?.contains(target)) return;
+    setEditingCategory(false);
+    setCategoryResults([]);
+    setCategoryDropdownPos(null);
+  }, editingCategory);
+
+  const handleSaveTitle = useCallback(() => {
+    setSavingTitle(true);
+    onUpdateTitle?.(titleInput).finally(() => {
+      setSavingTitle(false);
+      setEditingTitle(false);
+    });
+  }, [onUpdateTitle, titleInput]);
+
+  const handleSaveCategory = useCallback(
+    (id: string, name: string) => {
+      setSavingCategory(true);
+      onUpdateCategory?.(id, name).finally(() => {
+        setSavingCategory(false);
+        setEditingCategory(false);
+        setCategoryResults([]);
+        setCategoryDropdownPos(null);
+      });
+    },
+    [onUpdateCategory],
+  );
+
+  return (
+    <>
+      <div className="stream-info-bar">
+        {editingTitle ? (
+          <div className="stream-info-edit-group">
+            <input
+              className="stream-info-input"
+              type="text"
+              value={titleInput}
+              onChange={(e) => setTitleInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveTitle();
+                else if (e.key === "Escape") setEditingTitle(false);
+              }}
+              placeholder="Stream title"
+              aria-label="Stream title"
+              autoFocus
+              disabled={savingTitle}
+            />
+            <button type="button"
+              className="stream-info-edit-btn stream-info-edit-btn--confirm"
+              onClick={handleSaveTitle}
+              disabled={savingTitle}
+              title="Save title"
+            >
+              <MdCheck size={14} />
+            </button>
+            <button type="button"
+              className="stream-info-edit-btn stream-info-edit-btn--cancel"
+              onClick={() => setEditingTitle(false)}
+              disabled={savingTitle}
+              title="Cancel"
+            >
+              <MdClose size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="stream-info-title"
+            onClick={() => {
+              setTitleInput(streamTitle || "");
+              setEditingTitle(true);
+            }}
+            title="Click to edit title"
+          >
+            {streamTitle || "No title set"}
+            <MdEdit size={11} className="stream-info-edit-icon" />
+          </button>
+        )}
+
+        {editingCategory ? (
+          <div
+            className="stream-info-edit-group stream-info-category-edit"
+            ref={categoryDropdownRef}
+          >
+            <input
+              ref={categoryInputRef}
+              className="stream-info-input stream-info-input--category"
+              type="text"
+              value={categoryInput}
+              onChange={(e) => {
+                setCategoryInput(e.target.value);
+                if (categorySearchRef.current)
+                  clearTimeout(categorySearchRef.current);
+                if (e.target.value.trim()) {
+                  categorySearchRef.current = setTimeout(() => {
+                    onSearchCategories?.(e.target.value).then((results) => {
+                      setCategoryResults(results);
+                      const rect = categoryInputRef.current?.getBoundingClientRect();
+                      if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+                    });
+                  }, 300);
+                } else {
+                  setCategoryResults([]);
+                  setCategoryDropdownPos(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setEditingCategory(false);
+                  setCategoryResults([]);
+                  setCategoryDropdownPos(null);
+                }
+              }}
+              onFocus={() => {
+                const rect = categoryInputRef.current?.getBoundingClientRect();
+                if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+              }}
+              placeholder="Search category..."
+              aria-label="Search category"
+              autoFocus
+              disabled={savingCategory}
+            />
+            <button type="button"
+              className="stream-info-edit-btn stream-info-edit-btn--cancel"
+              onClick={() => {
+                setEditingCategory(false);
+                setCategoryResults([]);
+                setCategoryDropdownPos(null);
+              }}
+              disabled={savingCategory}
+              title="Cancel"
+            >
+              <MdClose size={14} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="stream-info-category"
+            onClick={() => {
+              setCategoryInput(streamGameName || "");
+              setEditingCategory(true);
+              onSearchCategories?.(streamGameName || "")
+                .then((results) => setCategoryResults(results))
+                .catch(() => {});
+            }}
+            title="Click to change category"
+          >
+            {streamGameName || "No category"}
+            <MdEdit size={11} className="stream-info-edit-icon" />
+          </button>
+        )}
+      </div>
+
+      <CategoryDropdown
+        results={categoryResults}
+        pos={categoryDropdownPos}
+        saving={savingCategory}
+        inputRef={categoryInputRef}
+        onSelect={handleSaveCategory}
+        onCancel={() => {
+          setEditingCategory(false);
+          setCategoryResults([]);
+          setCategoryDropdownPos(null);
+        }}
+      />
+    </>
+  );
+}
+
 function renderStatusSection(
   label: string,
   statuses: Map<string, SubscriptionStatus>,
@@ -193,20 +512,6 @@ export default function ChatHeader({
     onSetModMode,
   } = useModerationContext();
   const showModToggle = isModerator || isYouTubeModerator;
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleInput, setTitleInput] = useState("");
-  const [savingTitle, setSavingTitle] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(false);
-  const [categoryInput, setCategoryInput] = useState("");
-  const [categoryResults, setCategoryResults] = useState<CategoryResult[]>([]);
-  const [savingCategory, setSavingCategory] = useState(false);
-  const [categoryDropdownPos, setCategoryDropdownPos] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const categorySearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const categoryDropdownRef = useRef<HTMLDivElement>(null);
-  const categoryInputRef = useRef<HTMLInputElement>(null);
   const modModeDropdownRef = useRef<HTMLDivElement>(null);
   const [modModeDropdownOpen, setModModeDropdownOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -214,81 +519,9 @@ export default function ChatHeader({
   const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    if (!editingCategory) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      const portalDropdown = document.getElementById(
-        "category-dropdown-portal",
-      );
-      if (
-        categoryDropdownRef.current?.contains(target) ||
-        portalDropdown?.contains(target) ||
-        categoryInputRef.current === target
-      ) {
-        return;
-      }
-      setEditingCategory(false);
-      setCategoryResults([]);
-      setCategoryDropdownPos(null);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [editingCategory]);
-
-  useEffect(() => {
-    if (!modModeDropdownOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!modModeDropdownRef.current?.contains(e.target as Node)) {
-        setModModeDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [modModeDropdownOpen]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!mobileMenuRef.current?.contains(e.target as Node)) {
-        setMobileMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    if (!statusDropdownOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!statusDropdownRef.current?.contains(e.target as Node)) {
-        setStatusDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [statusDropdownOpen]);
-
-  const handleSaveTitle = useCallback(() => {
-    setSavingTitle(true);
-    onUpdateTitle?.(titleInput).finally(() => {
-      setSavingTitle(false);
-      setEditingTitle(false);
-    });
-  }, [onUpdateTitle, titleInput]);
-
-  const handleSaveCategory = useCallback(
-    (id: string, name: string) => {
-      setSavingCategory(true);
-      onUpdateCategory?.(id, name).finally(() => {
-        setSavingCategory(false);
-        setEditingCategory(false);
-        setCategoryResults([]);
-        setCategoryDropdownPos(null);
-      });
-    },
-    [onUpdateCategory],
-  );
+  useClickOutside(modModeDropdownRef, () => setModModeDropdownOpen(false), modModeDropdownOpen);
+  useClickOutside(mobileMenuRef, () => setMobileMenuOpen(false), mobileMenuOpen);
+  useClickOutside(statusDropdownRef, () => setStatusDropdownOpen(false), statusDropdownOpen);
 
   return (
     <>
@@ -439,110 +672,16 @@ export default function ChatHeader({
               </button>
             )}
             {showModToggle && (
-              <div className="mod-mode-container" ref={modModeDropdownRef}>
-                <button type="button"
-                  onClick={() => setModModeDropdownOpen((v) => !v)}
-                  className={`header-button mod-mode-trigger ${
-                    modModeActive || youtubeModModeActive ? "mod-active" : ""
-                  }`}
-                  title="Mod Mode"
-                >
-                  {modModeActive && youtubeModModeActive ? (
-                    <GiCrossedSwords
-                      size={16}
-                      className="mod-icon"
-                      style={{ color: "var(--color-green)" }}
-                    />
-                  ) : modModeActive ? (
-                    <FaTwitch
-                      size={16}
-                      className="mod-icon"
-                      style={{ color: "var(--color-twitch, #9146ff)" }}
-                    />
-                  ) : youtubeModModeActive ? (
-                    <FaYoutube
-                      size={16}
-                      className="mod-icon"
-                      style={{ color: "var(--color-youtube, #ff2222)" }}
-                    />
-                  ) : (
-                    <GiCrossedSwords
-                      size={16}
-                      className="mod-icon"
-                      style={{ color: "var(--color-text-muted)" }}
-                    />
-                  )}
-                  <span className="mod-label">Mod Mode</span>
-                </button>
-                {modModeDropdownOpen && (
-                  <div className="mod-mode-dropdown">
-                    {(isModerator || isYouTubeModerator) && (
-                      <button type="button"
-                        className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
-                        onClick={() => {
-                          onSetModMode?.("off");
-                          setModModeDropdownOpen(false);
-                        }}
-                        title="Disable Mod Mode"
-                      >
-                        <GiCrossedSwords size={14} />
-                        <span>Off</span>
-                        {!modModeActive && !youtubeModModeActive && (
-                          <span className="mod-mode-check">✓</span>
-                        )}
-                      </button>
-                    )}
-                    {isModerator && (
-                      <button type="button"
-                        className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
-                        onClick={() => {
-                          onSetModMode?.("twitch");
-                          setModModeDropdownOpen(false);
-                        }}
-                        title="Twitch Mod Mode"
-                      >
-                        <FaTwitch size={14} />
-                        <span>Twitch</span>
-                        {modModeActive && !youtubeModModeActive && (
-                          <span className="mod-mode-check">✓</span>
-                        )}
-                      </button>
-                    )}
-                    {isYouTubeModerator && (
-                      <button type="button"
-                        className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
-                        onClick={() => {
-                          onSetModMode?.("youtube");
-                          setModModeDropdownOpen(false);
-                        }}
-                        title="YouTube Mod Mode"
-                      >
-                        <FaYoutube size={14} />
-                        <span>YouTube</span>
-                        {youtubeModModeActive && !modModeActive && (
-                          <span className="mod-mode-check">✓</span>
-                        )}
-                      </button>
-                    )}
-                    {isModerator && isYouTubeModerator && (
-                      <button type="button"
-                        className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
-                        onClick={() => {
-                          onSetModMode?.("both");
-                          setModModeDropdownOpen(false);
-                        }}
-                        title="Both Platforms Mod Mode"
-                      >
-                        <GiCrossedSwords size={14} />
-                        <span>Both</span>
-                        {modModeActive && youtubeModModeActive && (
-                          <span className="mod-mode-check">✓</span>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <ModModeDropdown
+                isModerator={isModerator}
+                isYouTubeModerator={isYouTubeModerator}
+                modModeActive={modModeActive}
+                youtubeModModeActive={youtubeModModeActive}
+                onSetMode={onSetModMode}
+                containerRef={modModeDropdownRef}
+                isOpen={modModeDropdownOpen}
+                onToggle={() => setModModeDropdownOpen((v) => !v)}
+              />
             )}
             {showModTools && onOpenModTools && (
               <button type="button"
@@ -696,157 +835,15 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {modModeActive && (streamTitle || streamGameName || true) && (
-        <div className="stream-info-bar">
-          {editingTitle ? (
-            <div className="stream-info-edit-group">
-              <input
-                className="stream-info-input"
-                type="text"
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSaveTitle();
-                  else if (e.key === "Escape") setEditingTitle(false);
-                }}
-                placeholder="Stream title"
-                aria-label="Stream title"
-                autoFocus
-                disabled={savingTitle}
-              />
-              <button type="button"
-                className="stream-info-edit-btn stream-info-edit-btn--confirm"
-                onClick={handleSaveTitle}
-                disabled={savingTitle}
-                title="Save title"
-              >
-                <MdCheck size={14} />
-              </button>
-              <button type="button"
-                className="stream-info-edit-btn stream-info-edit-btn--cancel"
-                onClick={() => setEditingTitle(false)}
-                disabled={savingTitle}
-                title="Cancel"
-              >
-                <MdClose size={14} />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="stream-info-title"
-              onClick={() => {
-                setTitleInput(streamTitle || "");
-                setEditingTitle(true);
-              }}
-              title="Click to edit title"
-            >
-              {streamTitle || "No title set"}
-              <MdEdit size={11} className="stream-info-edit-icon" />
-            </button>
-          )}
-
-          {editingCategory ? (
-            <div
-              className="stream-info-edit-group stream-info-category-edit"
-              ref={categoryDropdownRef}
-            >
-              <input
-                ref={categoryInputRef}
-                className="stream-info-input stream-info-input--category"
-                type="text"
-                value={categoryInput}
-                onChange={(e) => {
-                  setCategoryInput(e.target.value);
-                  if (categorySearchRef.current)
-                    clearTimeout(categorySearchRef.current);
-                  if (e.target.value.trim()) {
-                    
-                    categorySearchRef.current = setTimeout(() => {
-                      onSearchCategories?.(e.target.value).then((results) => {
-                        setCategoryResults(results);
-                        
-                        const rect =
-                          categoryInputRef.current?.getBoundingClientRect();
-                        if (rect)
-                          setCategoryDropdownPos({
-                            x: rect.left,
-                            y: rect.bottom + 4,
-                          });
-                      });
-                    }, 300);
-                  } else {
-                    setCategoryResults([]);
-                    
-                    setCategoryDropdownPos(null);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setEditingCategory(false);
-                    setCategoryResults([]);
-                    setCategoryDropdownPos(null);
-                  }
-                }}
-                onFocus={() => {
-                  const rect =
-                    categoryInputRef.current?.getBoundingClientRect();
-                  if (rect)
-                    setCategoryDropdownPos({
-                      x: rect.left,
-                      y: rect.bottom + 4,
-                    });
-                }}
-                placeholder="Search category..."
-                aria-label="Search category"
-                autoFocus
-                disabled={savingCategory}
-              />
-              <button type="button"
-                className="stream-info-edit-btn stream-info-edit-btn--cancel"
-                onClick={() => {
-                  setEditingCategory(false);
-                  setCategoryResults([]);
-                  setCategoryDropdownPos(null);
-                }}
-                disabled={savingCategory}
-                title="Cancel"
-              >
-                <MdClose size={14} />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="stream-info-category"
-              onClick={() => {
-                setCategoryInput(streamGameName || "");
-                setEditingCategory(true);
-    onSearchCategories?.(streamGameName || "").then((results) =>
-      setCategoryResults(results),
-    ).catch(() => {});
-              }}
-              title="Click to change category"
-           >
-              {streamGameName || "No category"}
-              <MdEdit size={11} className="stream-info-edit-icon" />
-            </button>
-          )}
-        </div>
+      {modModeActive && (
+        <StreamInfoBar
+          streamTitle={streamTitle}
+          streamGameName={streamGameName}
+          onUpdateTitle={onUpdateTitle}
+          onUpdateCategory={onUpdateCategory}
+          onSearchCategories={onSearchCategories}
+        />
       )}
-
-      <CategoryDropdown
-        results={categoryResults}
-        pos={categoryDropdownPos}
-        saving={savingCategory}
-        inputRef={categoryInputRef}
-        onSelect={handleSaveCategory}
-        onCancel={() => {
-          setEditingCategory(false);
-          setCategoryResults([]);
-          setCategoryDropdownPos(null);
-        }}
-      />
     </>
   );
 }
