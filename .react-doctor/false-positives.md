@@ -56,10 +56,12 @@ and causing cascading re-renders with `useSyncExternalStore`. The
 
 **Skip after verifying:** loading state is reset inside a `finally` block
 guarded by a `cancelled` flag. The static matcher misses the conditional
-`if (!cancelled) setLoading(false)` inside `finally`.
+`if (!cancelled) setLoading(false)` inside `finally`, or a `cancelled`
+guard at the top of the `catch` block that prevents stale writes.
 
 - `src/hooks/app/useMyChannelInfo.ts:60` — `finally { if (!cancelled) setLoading(false); }`
 - `src/hooks/chat/chatAppStateHelpers/useYouTubeSync.ts:142` — `finally { if (!cancelled) setYtLoading(false); }`
+- `src/components/StreamEmbed.tsx:418` — catch block guarded by `if (cancelled || abortController.signal.aborted) return;` before `setLoading(false)`
 
 ---
 
@@ -147,13 +149,127 @@ the catch because it is chained at the end of the promise.
 
 ## `react-doctor/prefer-html-dialog`
 
-**Skip after verifying:** these modals use complex custom overlay/backdrop
+**WIP — planned refactoring.** These modals use complex custom overlay/backdrop
 behavior (portals, click-outside, custom keyboard navigation, inline state)
 that would require significant refactoring to convert to native `<dialog>`.
 The existing `role="dialog"` + `aria-modal="true"` pattern provides equivalent
-accessibility semantics.
+accessibility semantics. Converting to native `<dialog>` is tracked as future work.
 
 - `src/components/FavoriteChannelsModal.tsx:63` — portal modal with click-outside close
 - `src/components/OnboardingWizard.tsx:398` — multi-step wizard with custom navigation
 - `src/components/chat/shared/StreamerToolsModal.tsx:842` — minimizable tool panel
 - `src/components/chat/shared/TimeoutDialog.tsx:123` — keyboard-driven radio selection
+
+---
+
+## `react-doctor/no-pass-live-state-to-parent`
+
+**Skip after verifying:** every instance uses a callback prop (e.g. `onMessages`,
+`onConnectionChange`) inside a `useEffect` to notify the parent of state
+changes. This is the standard React pattern for child-to-parent communication
+when lifting state is impractical (e.g. SSE streams, connection monitors).
+All callbacks are memoized with `useCallback` so the effect only re-runs when
+the actual data changes.
+
+- `src/components/chat/ChatApp.tsx:420` — `onMessages(messages)` for unified chat
+- `src/components/chat/ChatApp.tsx:424` — `onConnectionChange(state)` for YT connection
+- `src/components/chat/shared/YouTubeChat.tsx:444` — `onMessages(messages)` for unified chat
+- `src/components/chat/shared/YouTubeChat.tsx:451` — `onConnectionChange(state)` for connection
+- `src/hooks/app/useTwitchChannels.ts:185` — channel list callback
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:96` — raid detection callback
+- `src/hooks/chat/useSongQueue.ts:285` — song queue state callback
+
+---
+
+## `react-doctor/no-prop-callback-in-effect`
+
+**Skip after verifying:** same pattern as `no-pass-live-state-to-parent` —
+callback props invoked inside effects for child-to-parent communication.
+All callbacks are stable (`useCallback`) and the effects have proper cleanup.
+
+- `src/components/chat/shared/StreamerToolsModal.tsx:122` — `onChanged()` in HistorySection
+- `src/components/chat/shared/YouTubeChat.tsx:444` — `onMessages(messages)`
+- `src/components/chat/shared/YouTubeChat.tsx:451` — `onConnectionChange(state)`
+
+---
+
+## `react-doctor/no-pass-data-to-parent`
+
+**Skip after verifying:** same pattern as above — data passed to parent via
+callback props inside effects. Standard child-to-parent communication.
+
+- `src/components/chat/ChatApp.tsx:420` — `onMessages(messages)`
+- `src/components/chat/ChatApp.tsx:424` — `onConnectionChange(state)`
+
+---
+
+## `react-doctor/no-fetch-in-effect`
+
+**Skip after verifying:** data fetching inside effects with proper cleanup
+(AbortController, cancelled flag) is the standard React pattern for
+component-level data loading. Both instances guard against stale writes.
+
+- `src/hooks/app/useYoutubeLink.ts:85` — fetch with `cancelled` flag guard
+- `src/hooks/chat/twitchChatHelpers/useConnection.ts:72` — connection probe with cleanup
+
+---
+
+## `react-doctor/no-effect-chain`
+
+**Skip after verifying:** the effects handle separate concerns (local state
+refresh, server fetch, detail fetch) and each has its own dependency array.
+They are not chained — they are independent effects that happen to run in
+sequence due to shared state.
+
+- `src/components/chat/shared/StreamerToolsModal.tsx:373` — PastPlaylistsSection separate refresh effects
+
+---
+
+## `react-doctor/no-giant-component`
+
+**WIP — planned refactoring.** Large component warnings are maintainability
+suggestions. The codebase uses hook extraction (`useChatAppState`,
+`useModeration`, etc.) to manage complexity. Splitting these components
+further requires extracting sub-components — tracked as future work.
+
+- `src/components/AppContainer.tsx:49`
+- `src/components/EmbedConfigModal.tsx:69`
+- `src/components/EmoteMenu.tsx:23`
+- `src/components/LandingPage.tsx:162`
+- `src/components/LoginPanel.tsx:55`
+- `src/components/OnboardingWizard.tsx:220`
+- `src/components/StreamEmbed.tsx:184`
+- `src/components/YouTubeLinker.tsx:19`
+- `src/components/chat/ChatApp.tsx:47`
+- `src/components/chat/display/ChatHeader.tsx:162`
+- `src/components/chat/display/index.tsx:73`
+- `src/components/chat/shared/ChatterHistoryOverlay.tsx:27`
+- `src/components/chat/shared/GiveawayPanel.tsx:38`
+- `src/components/chat/shared/MessageInput.tsx:39`
+- `src/components/chat/shared/MusicPlayerPanel.tsx:32`
+- `src/components/chat/shared/PresetMessages.tsx:51`
+- `src/components/chat/shared/SongQueuePanel.tsx:71`
+- `src/components/chat/shared/StreamerToolsModal.tsx:222`
+- `src/components/chat/shared/UnifiedInput.tsx:73`
+- `src/components/chat/shared/YouTubeChat.tsx:98`
+- `src/components/chat/shared/YouTubeMessageInput.tsx:41`
+- `src/components/chat/unified/index.tsx:57`
+
+---
+
+## `react-doctor/no-many-boolean-props`
+
+**Skip after verifying:** boolean props come from `SettingsProps`, a shared
+interface that represents independent user settings. Each boolean is a
+standalone toggle in the settings UI. The flat structure is load-bearing:
+`settingsBackup.ts`, `driveSync.ts`, `importSettings`, and `exportSettings`
+all serialize/deserialize the flat JSON format. Consolidating into
+sub-objects would break backup/restore and Google Drive sync, require
+updating 10+ files, and add indirection that makes the code harder to
+read. The current pattern (one boolean prop + one setter per setting) is
+the standard React approach for settings forms.
+
+- `src/components/EmbedConfigModal.tsx:69` — extends `SettingsProps` directly
+- `src/components/LoginPanel.tsx:55` — extends `Partial<SettingsProps>`
+- `src/components/chat/display/ChatHeader.tsx:162` — subset of boolean props
+- `src/components/chat/display/index.tsx:73` — subset of boolean props

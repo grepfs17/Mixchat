@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { FaPlus, FaTrash, FaYoutube, FaPencilAlt } from "react-icons/fa";
 import {
   getYoutubeLinks,
@@ -16,20 +16,111 @@ interface YouTubeLinkerProps {
   onLinksChanged?: () => void;
 }
 
+export interface State {
+  youtubeLinks: YouTubeLink[];
+  selectedChannelId: string;
+  searchQuery: string;
+  youtubeUrl: string;
+  error: string;
+  editingId: string | null;
+  editUrl: string;
+  editError: string;
+}
+
+export type Action =
+  | { type: "SET_LINKS"; payload: YouTubeLink[] }
+  | { type: "SET_SEARCH_QUERY"; payload: string }
+  | { type: "SET_SELECTED_CHANNEL"; payload: { id: string; query: string } }
+  | { type: "SET_YOUTUBE_URL"; payload: string }
+  | { type: "RESET_ADD_FORM"; payload: YouTubeLink[] }
+  | { type: "SET_ADD_ERROR"; payload: string }
+  | { type: "START_EDIT"; payload: { id: string; url: string } }
+  | { type: "SET_EDIT_URL"; payload: string }
+  | { type: "SET_EDIT_ERROR"; payload: string }
+  | { type: "CANCEL_EDIT" }
+  | { type: "FINISH_EDIT"; payload: YouTubeLink[] };
+
+export function initLinks(links: YouTubeLink[]): State {
+  return {
+    youtubeLinks: links,
+    selectedChannelId: "",
+    searchQuery: "",
+    youtubeUrl: "",
+    error: "",
+    editingId: null,
+    editUrl: "",
+    editError: "",
+  };
+}
+
+export function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET_LINKS":
+      return { ...state, youtubeLinks: action.payload };
+    case "SET_SEARCH_QUERY":
+      return { ...state, searchQuery: action.payload, selectedChannelId: "" };
+    case "SET_SELECTED_CHANNEL":
+      return {
+        ...state,
+        selectedChannelId: action.payload.id,
+        searchQuery: action.payload.query,
+      };
+    case "SET_YOUTUBE_URL":
+      return { ...state, youtubeUrl: action.payload, error: "" };
+    case "RESET_ADD_FORM":
+      return {
+        ...state,
+        youtubeLinks: action.payload,
+        selectedChannelId: "",
+        searchQuery: "",
+        youtubeUrl: "",
+        error: "",
+      };
+    case "SET_ADD_ERROR":
+      return { ...state, error: action.payload };
+    case "START_EDIT":
+      return {
+        ...state,
+        editingId: action.payload.id,
+        editUrl: action.payload.url,
+        editError: "",
+      };
+    case "SET_EDIT_URL":
+      return { ...state, editUrl: action.payload, editError: "" };
+    case "SET_EDIT_ERROR":
+      return { ...state, editError: action.payload };
+    case "CANCEL_EDIT":
+      return { ...state, editingId: null, editUrl: "", editError: "" };
+    case "FINISH_EDIT":
+      return {
+        ...state,
+        youtubeLinks: action.payload,
+        editingId: null,
+        editUrl: "",
+        editError: "",
+      };
+    default:
+      return state;
+  }
+}
+
 export default function YouTubeLinker({
   availableChannels,
   onClose,
   onLinksChanged,
 }: YouTubeLinkerProps) {
-  const [youtubeLinks, setYoutubeLinks] =
-    useState<YouTubeLink[]>(() => getYoutubeLinks());
-  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [youtubeUrl, setYoutubeUrl] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editUrl, setEditUrl] = useState<string>("");
-  const [editError, setEditError] = useState<string>("");
+  const [state, dispatch] = useReducer(reducer, getYoutubeLinks(), initLinks);
+
+  const {
+    youtubeLinks,
+    selectedChannelId,
+    searchQuery,
+    youtubeUrl,
+    error,
+    editingId,
+    editUrl,
+    editError,
+  } = state;
 
   const handleAddLink = () => {
     if (!selectedChannelId || !youtubeUrl.trim()) return;
@@ -42,9 +133,11 @@ export default function YouTubeLinker({
       !trimmed.startsWith("http://www.youtube.com/") &&
       !trimmed.startsWith("http://youtube.com/")
     ) {
-      setError(
-        "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
-      );
+      dispatch({
+        type: "SET_ADD_ERROR",
+        payload:
+          "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
+      });
       return;
     }
 
@@ -55,31 +148,28 @@ export default function YouTubeLinker({
         twitchDisplayName: channel.displayName,
         youtubeUrl: trimmed,
       });
-      setYoutubeLinks(getYoutubeLinks());
-      setSelectedChannelId("");
-      setSearchQuery("");
-      setYoutubeUrl("");
-      setError("");
+      dispatch({ type: "RESET_ADD_FORM", payload: getYoutubeLinks() });
       onLinksChanged?.();
     }
   };
 
   const handleRemoveLink = (twitchChannelId: string) => {
     removeYoutubeLink(twitchChannelId);
-    setYoutubeLinks(getYoutubeLinks());
+    dispatch({ type: "SET_LINKS", payload: getYoutubeLinks() });
     onLinksChanged?.();
   };
 
   const handleToggleActive = (twitchChannelId: string) => {
     toggleYoutubeLinkActive(twitchChannelId);
-    setYoutubeLinks(getYoutubeLinks());
+    dispatch({ type: "SET_LINKS", payload: getYoutubeLinks() });
     onLinksChanged?.();
   };
 
   const handleEditStart = (twitchChannelId: string, currentUrl: string) => {
-    setEditingId(twitchChannelId);
-    setEditUrl(currentUrl);
-    setEditError("");
+    dispatch({
+      type: "START_EDIT",
+      payload: { id: twitchChannelId, url: currentUrl },
+    });
   };
 
   const handleEditSave = () => {
@@ -92,24 +182,21 @@ export default function YouTubeLinker({
       !trimmed.startsWith("http://www.youtube.com/") &&
       !trimmed.startsWith("http://youtube.com/")
     ) {
-      setEditError(
-        "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
-      );
+      dispatch({
+        type: "SET_EDIT_ERROR",
+        payload:
+          "Please enter a valid YouTube channel URL (e.g. https://www.youtube.com/@channelname)",
+      });
       return;
     }
 
     updateYoutubeLink(editingId, trimmed);
-    setYoutubeLinks(getYoutubeLinks());
-    setEditingId(null);
-    setEditUrl("");
-    setEditError("");
+    dispatch({ type: "FINISH_EDIT", payload: getYoutubeLinks() });
     onLinksChanged?.();
   };
 
   const handleEditCancel = () => {
-    setEditingId(null);
-    setEditUrl("");
-    setEditError("");
+    dispatch({ type: "CANCEL_EDIT" });
   };
 
   const isAlreadyLinked = (channelId: string) =>
@@ -157,8 +244,7 @@ export default function YouTubeLinker({
                 aria-label="Search followed channels"
                 value={searchQuery}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSelectedChannelId("");
+                  dispatch({ type: "SET_SEARCH_QUERY", payload: e.target.value });
                 }}
                 className="ytlinker-search"
               />
@@ -175,8 +261,10 @@ export default function YouTubeLinker({
                       key={channel.id}
                       className="ytlinker-channel-item"
                       onClick={() => {
-                        setSelectedChannelId(channel.id);
-                        setSearchQuery(channel.displayName);
+                        dispatch({
+                          type: "SET_SELECTED_CHANNEL",
+                          payload: { id: channel.id, query: channel.displayName },
+                        });
                       }}
                     >
                       {channel.profileImageUrl && (
@@ -216,8 +304,7 @@ export default function YouTubeLinker({
                 aria-label="YouTube channel URL"
                 value={youtubeUrl}
                 onChange={(e) => {
-                  setYoutubeUrl(e.target.value);
-                  setError("");
+                  dispatch({ type: "SET_YOUTUBE_URL", payload: e.target.value });
                 }}
                 className="ytlinker-search"
               />
@@ -267,8 +354,7 @@ export default function YouTubeLinker({
     type="text"
     value={editUrl}
     onChange={(e) => {
-      setEditUrl(e.target.value);
-      setEditError("");
+      dispatch({ type: "SET_EDIT_URL", payload: e.target.value });
     }}
     onKeyDown={(e) => {
       if (e.key === "Enter") handleEditSave();
