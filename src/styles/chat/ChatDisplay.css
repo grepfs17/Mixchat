@@ -372,7 +372,6 @@
 
 /* Reset default button styles for elements converted from <span> to <button>
    for prefer-tag-over-role accessibility compliance */
-button.author,
 button.deleted-clickable,
 button.reply-info-clickable {
     background: transparent;
@@ -405,7 +404,8 @@ button.stream-info-title {
     padding: 2px 4px;
     margin: 0;
     font: inherit;
-    color: inherit;
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -416,7 +416,8 @@ button.stream-info-category {
     padding: 2px 8px;
     margin: 0;
     font: inherit;
-    color: inherit;
+    color: var(--color-indigo);
+    font-size: 0.72rem;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -1150,6 +1151,11 @@ img.emoji {
     user-select: none;
 }
 
+button.deleted-clickable {
+    color: #94a3b8;
+    font-size: 0.78rem;
+}
+
 .yt-deleted-reveal {
     background: none;
     border: none;
@@ -1398,6 +1404,12 @@ img.emoji {
     transition:
         opacity 0.15s ease,
         background 0.15s ease;
+}
+
+button.reply-info {
+    color: var(--color-text-muted);
+    font-style: italic;
+    font-size: 0.85em;
 }
 
 .reply-info-clickable:hover {
