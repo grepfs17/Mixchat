@@ -630,6 +630,82 @@ describe("useEventSub", () => {
     expect(result.current.subscriptionStatuses.get(raidKey)).toBe("connected");
   });
 
+  it("evicts stale subscribedKeys entry and re-registers when cleanup and re-subscribe happen within the same session (regression: stuck in disabled/connected with no pending status)", async () => {
+    const callback = vi.fn();
+
+    const { result } = renderHook(() =>
+      useEventSub({ accessToken: "tok", clientId: "cid", enabled: true }),
+    );
+
+    // Connect and establish session
+    const ws = wsInstances[0];
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage(sessionWelcome("sess-1")));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Subscribe — should go through fetch and become connected
+    let unsubscribe: () => void;
+    act(() => {
+      unsubscribe = result.current.subscribe(
+        "automod.message.hold",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callback,
+      );
+    });
+
+    // Advance past debounce + stagger
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+
+    const holdKey =
+      'automod.message.hold:{"broadcaster_user_id":"1","moderator_user_id":"2"}';
+    expect(result.current.subscriptionStatuses.get(holdKey)).toBe("connected");
+
+    const fetchCountAfterFirst = mockFetch.mock.calls.length;
+
+    // Simulate effect cleanup (e.g. useAutomodQueue effect re-ran).
+    // The cleanup removes from subscriptionsRef + subscriptionStatuses,
+    // but the module-level subscribedKeys STILL has the stale entry.
+    act(() => {
+      unsubscribe!();
+    });
+
+    // Status should be removed after cleanup
+    expect(result.current.subscriptionStatuses.has(holdKey)).toBe(false);
+
+    // Re-subscribe with the same key (effect re-runs and calls subscribe again).
+    // Without the fix, subscribedKeys.has(key) === true and
+    // subscribedKeys.get(key) === currentSid, so "pending" is never set
+    // and triggerResubscribeRef is never called — subscription gets stuck.
+    act(() => {
+      result.current.subscribe(
+        "automod.message.hold",
+        "1",
+        { broadcaster_user_id: "1", moderator_user_id: "2" },
+        callback,
+      );
+    });
+
+    // Status should be "pending" immediately after re-subscribe
+    expect(result.current.subscriptionStatuses.get(holdKey)).toBe("pending");
+
+    // Advance past debounce + stagger for the re-registration
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+
+    // Should have made a NEW fetch call to re-register with Twitch
+    expect(mockFetch.mock.calls.length).toBeGreaterThan(fetchCountAfterFirst);
+
+    // Status should be connected again
+    expect(result.current.subscriptionStatuses.get(holdKey)).toBe("connected");
+  });
+
   it("calls onScopeError on 403 subscription response", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
