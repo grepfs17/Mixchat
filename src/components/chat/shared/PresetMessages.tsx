@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from "react";
+import { useReducer, useRef, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
 import {
   FaBookmark,
@@ -36,6 +36,111 @@ function savePresetMessages(messages: PresetMessage[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
 }
 
+interface State {
+  showDropdown: boolean;
+  showModal: boolean;
+  presets: PresetMessage[];
+  editingPreset: PresetMessage | null;
+  formName: string;
+  formContent: string;
+  emoteResults: Array<{ name: string; url: string; source: string }>;
+  selectedEmoteIndex: number;
+  dropdownRect: DOMRect | null;
+}
+
+type Action =
+  | { type: "SET_DROPDOWN"; payload: boolean }
+  | { type: "SET_DROPDOWN_RECT"; payload: DOMRect | null }
+  | { type: "OPEN_MODAL" }
+  | { type: "CLOSE_MODAL" }
+  | { type: "START_EDIT"; payload: PresetMessage }
+  | { type: "SET_FORM_NAME"; payload: string }
+  | { type: "SET_FORM_CONTENT"; payload: string }
+  | { type: "SET_EMOTE_RESULTS"; payload: State["emoteResults"] }
+  | { type: "SET_SELECTED_EMOTE_INDEX"; payload: number }
+  | { type: "MOVE_EMOTE_SELECTION"; payload: "UP" | "DOWN" }
+  | { type: "CLEAR_EMOTES" }
+  | { type: "SET_PRESETS"; payload: PresetMessage[] }
+  | { type: "FINISH_SAVE"; payload: PresetMessage[] };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "SET_DROPDOWN":
+      return { ...state, showDropdown: action.payload };
+    case "SET_DROPDOWN_RECT":
+      return { ...state, dropdownRect: action.payload };
+    case "OPEN_MODAL":
+      return {
+        ...state,
+        showModal: true,
+        showDropdown: false,
+        editingPreset: null,
+        formName: "",
+        formContent: "",
+        emoteResults: [],
+        selectedEmoteIndex: -1,
+      };
+    case "CLOSE_MODAL":
+      return {
+        ...state,
+        showModal: false,
+        editingPreset: null,
+        emoteResults: [],
+        selectedEmoteIndex: -1,
+      };
+    case "START_EDIT":
+      return {
+        ...state,
+        showModal: true,
+        editingPreset: action.payload,
+        formName: action.payload.name,
+        formContent: action.payload.content,
+        emoteResults: [],
+        selectedEmoteIndex: -1,
+      };
+    case "SET_FORM_NAME":
+      return { ...state, formName: action.payload };
+    case "SET_FORM_CONTENT":
+      return { ...state, formContent: action.payload };
+    case "SET_EMOTE_RESULTS":
+      return { ...state, emoteResults: action.payload, selectedEmoteIndex: -1 };
+    case "SET_SELECTED_EMOTE_INDEX":
+      return { ...state, selectedEmoteIndex: action.payload };
+    case "MOVE_EMOTE_SELECTION":
+      if (action.payload === "DOWN") {
+        return {
+          ...state,
+          selectedEmoteIndex:
+            state.selectedEmoteIndex < state.emoteResults.length - 1
+              ? state.selectedEmoteIndex + 1
+              : state.selectedEmoteIndex,
+        };
+      } else {
+        return {
+          ...state,
+          selectedEmoteIndex:
+            state.selectedEmoteIndex > 0 ? state.selectedEmoteIndex - 1 : 0,
+        };
+      }
+    case "CLEAR_EMOTES":
+      return { ...state, emoteResults: [], selectedEmoteIndex: -1 };
+    case "SET_PRESETS":
+      return { ...state, presets: action.payload };
+    case "FINISH_SAVE":
+      return {
+        ...state,
+        presets: action.payload,
+        editingPreset: null,
+        formName: "",
+        formContent: "",
+        emoteResults: [],
+        showModal: false,
+      };
+    default:
+      return state;
+  }
+}
+
 interface PresetMessagesProps {
   onSendMessage: (
     message: string,
@@ -55,33 +160,35 @@ function PresetMessages({
   replyingTo,
   onCancelReply,
 }: PresetMessagesProps) {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [presets, setPresets] = useState<PresetMessage[]>(getPresetMessages);
-  const [editingPreset, setEditingPreset] = useState<PresetMessage | null>(
-    null,
-  );
-  const [formName, setFormName] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [emoteResults, setEmoteResults] = useState<
-    Array<{ name: string; url: string; source: string }>
-  >([]);
-  const [selectedEmoteIndex, setSelectedEmoteIndex] = useState(-1);
+  const [state, dispatch] = useReducer(reducer, {
+    showDropdown: false,
+    showModal: false,
+    presets: getPresetMessages(),
+    editingPreset: null,
+    formName: "",
+    formContent: "",
+    emoteResults: [],
+    selectedEmoteIndex: -1,
+    dropdownRect: null,
+  });
+
   const hasEmoteSelectionRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
-  const [dropdownRect, setDropdownRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (showDropdown && buttonRef.current) {
-      setDropdownRect(buttonRef.current.getBoundingClientRect());
+    if (state.showDropdown && buttonRef.current) {
+      dispatch({
+        type: "SET_DROPDOWN_RECT",
+        payload: buttonRef.current.getBoundingClientRect(),
+      });
     } else {
-      setDropdownRect(null);
+      dispatch({ type: "SET_DROPDOWN_RECT", payload: null });
     }
-  }, [showDropdown]);
+  }, [state.showDropdown]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -91,48 +198,46 @@ function PresetMessages({
         buttonRef.current &&
         !buttonRef.current.contains(e.target as Node)
       ) {
-        setShowDropdown(false);
+        dispatch({ type: "SET_DROPDOWN", payload: false });
       }
     }
-    if (showDropdown) {
+    if (state.showDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [showDropdown]);
+  }, [state.showDropdown]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (emoteResults.length > 0) {
-          setEmoteResults([]);
-          setSelectedEmoteIndex(-1);
+        if (state.emoteResults.length > 0) {
+          dispatch({ type: "CLEAR_EMOTES" });
           hasEmoteSelectionRef.current = false;
           return;
         }
-        if (showModal) {
-          setShowModal(false);
-          setEditingPreset(null);
-        } else if (showDropdown) {
-          setShowDropdown(false);
+        if (state.showModal) {
+          dispatch({ type: "CLOSE_MODAL" });
+        } else if (state.showDropdown) {
+          dispatch({ type: "SET_DROPDOWN", payload: false });
         }
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [showModal, showDropdown, emoteResults]);
+  }, [state.showModal, state.showDropdown, state.emoteResults]);
 
   useEffect(() => {
-    if (!showModal) {        setEmoteResults([]);
-        setSelectedEmoteIndex(-1);
-        hasEmoteSelectionRef.current = false;
+    if (!state.showModal) {
+      dispatch({ type: "CLEAR_EMOTES" });
+      hasEmoteSelectionRef.current = false;
     }
-  }, [showModal]);
+  }, [state.showModal]);
 
   useEffect(() => {
-    if (emoteResults.length > 0 && emoteMenuRef.current) {
+    if (state.emoteResults.length > 0 && emoteMenuRef.current) {
       const selectedElement = emoteMenuRef.current.children[
-        selectedEmoteIndex
+        state.selectedEmoteIndex
       ] as HTMLElement;
       if (selectedElement) {
         selectedElement.scrollIntoView(
@@ -142,13 +247,13 @@ function PresetMessages({
         );
       }
     }
-  }, [selectedEmoteIndex, emoteResults]);
+  }, [state.selectedEmoteIndex, state.emoteResults]);
 
   const handleFormContentChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>,
   ) => {
     const value = e.target.value;
-    setFormContent(value);
+    dispatch({ type: "SET_FORM_CONTENT", payload: value });
 
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = value.substring(0, cursorPos);
@@ -158,27 +263,25 @@ function PresetMessages({
     if (currentWord.length > 0 && !currentWord.startsWith("@")) {
       const results = searchEmotes(currentWord);
       if (results.length > 0) {
-        setEmoteResults(results);
-        setSelectedEmoteIndex(-1);
+        dispatch({ type: "SET_EMOTE_RESULTS", payload: results });
         hasEmoteSelectionRef.current = false;
         return;
       }
     }
-    setEmoteResults([]);
-    setSelectedEmoteIndex(-1);
+    dispatch({ type: "CLEAR_EMOTES" });
     hasEmoteSelectionRef.current = false;
   };
 
   const insertEmote = (emoteName: string) => {
     if (!textareaRef.current) return;
     const cursorPos = textareaRef.current.selectionStart;
-    const textBeforeCursor = formContent.substring(0, cursorPos);
-    const textAfterCursor = formContent.substring(cursorPos);
+    const textBeforeCursor = state.formContent.substring(0, cursorPos);
+    const textAfterCursor = state.formContent.substring(cursorPos);
 
     if (!textBeforeCursor.trim()) {
       const newContent = emoteName + " " + textAfterCursor;
-      setFormContent(newContent);
-      setEmoteResults([]);
+      dispatch({ type: "SET_FORM_CONTENT", payload: newContent });
+      dispatch({ type: "CLEAR_EMOTES" });
       hasEmoteSelectionRef.current = false;
       setTimeout(() => {
         if (textareaRef.current) {
@@ -194,8 +297,8 @@ function PresetMessages({
     const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
     const beforeWord = textBeforeCursor.substring(0, lastSpaceIndex + 1);
     const newContent = beforeWord + emoteName + " " + textAfterCursor;
-    setFormContent(newContent);
-    setEmoteResults([]);
+    dispatch({ type: "SET_FORM_CONTENT", payload: newContent });
+    dispatch({ type: "CLEAR_EMOTES" });
     hasEmoteSelectionRef.current = false;
     setTimeout(() => {
       if (textareaRef.current) {
@@ -208,88 +311,74 @@ function PresetMessages({
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent) => {
-    if (emoteResults.length > 0) {
+    if (state.emoteResults.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedEmoteIndex((prev) =>
-          prev < emoteResults.length - 1 ? prev + 1 : prev,
-        );
+        dispatch({ type: "MOVE_EMOTE_SELECTION", payload: "DOWN" });
         hasEmoteSelectionRef.current = true;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedEmoteIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        dispatch({ type: "MOVE_EMOTE_SELECTION", payload: "UP" });
         hasEmoteSelectionRef.current = true;
       } else if (e.key === "Enter" || e.key === "Tab") {
         if (
           hasEmoteSelectionRef.current &&
-          selectedEmoteIndex >= 0 &&
-          emoteResults[selectedEmoteIndex]
+          state.selectedEmoteIndex >= 0 &&
+          state.emoteResults[state.selectedEmoteIndex]
         ) {
           e.preventDefault();
-          insertEmote(emoteResults[selectedEmoteIndex].name);
+          insertEmote(state.emoteResults[state.selectedEmoteIndex].name);
         }
       }
     }
   };
 
   const handleOpenModal = () => {
-    setEditingPreset(null);
-    setFormName("");
-    setFormContent("");
-    setEmoteResults([]);
-    setSelectedEmoteIndex(-1);
     hasEmoteSelectionRef.current = false;
-    setShowModal(true);
-    setShowDropdown(false);
+    dispatch({ type: "OPEN_MODAL" });
   };
 
   const handleEditPreset = (preset: PresetMessage) => {
-    setEditingPreset(preset);
-    setFormName(preset.name);
-    setFormContent(preset.content);
-    setEmoteResults([]);
-    setSelectedEmoteIndex(-1);
     hasEmoteSelectionRef.current = false;
-    setShowModal(true);
+    dispatch({ type: "START_EDIT", payload: preset });
   };
 
   const handleSavePreset = () => {
-    if (!formName.trim() || !formContent.trim()) return;
+    if (!state.formName.trim() || !state.formContent.trim()) return;
     let updated: PresetMessage[];
-    if (editingPreset) {
-      updated = presets.map((p) =>
-        p.id === editingPreset.id
-          ? { ...p, name: formName.trim(), content: formContent.trim() }
+    if (state.editingPreset) {
+      updated = state.presets.map((p) =>
+        p.id === state.editingPreset!.id
+          ? {
+              ...p,
+              name: state.formName.trim(),
+              content: state.formContent.trim(),
+            }
           : p,
       );
     } else {
       updated = [
-        ...presets,
+        ...state.presets,
         {
           id: generateId(),
-          name: formName.trim(),
-          content: formContent.trim(),
+          name: state.formName.trim(),
+          content: state.formContent.trim(),
         },
       ];
     }
-    setPresets(updated);
+    dispatch({ type: "FINISH_SAVE", payload: updated });
     savePresetMessages(updated);
-    setEditingPreset(null);
-    setFormName("");
-    setFormContent("");
-    setEmoteResults([]);
-    setShowModal(false);
   };
 
   const handleDeletePreset = (id: string) => {
-    const updated = presets.filter((p) => p.id !== id);
-    setPresets(updated);
+    const updated = state.presets.filter((p) => p.id !== id);
+    dispatch({ type: "SET_PRESETS", payload: updated });
     savePresetMessages(updated);
   };
 
   const handleSendPreset = async (preset: PresetMessage) => {
     if (isLoading || selectedPlatforms.length === 0) return;
-    setShowDropdown(false);
+    dispatch({ type: "SET_DROPDOWN", payload: false });
     await onSendMessage(preset.content, selectedPlatforms, replyingTo?.id);
     if (onCancelReply) onCancelReply();
   };
@@ -310,7 +399,9 @@ function PresetMessages({
         </button>
         <button type="button"
           className="preset-split-right"
-          onClick={() => setShowDropdown(!showDropdown)}
+          onClick={() =>
+            dispatch({ type: "SET_DROPDOWN", payload: !state.showDropdown })
+          }
           disabled={isDisabled}
           title="Send preset message"
         >
@@ -318,27 +409,27 @@ function PresetMessages({
         </button>
       </div>
 
-      {showDropdown &&
-        dropdownRect &&
+      {state.showDropdown &&
+        state.dropdownRect &&
         createPortal(
           <div
             ref={dropdownRef}
             className="preset-dropdown"
             style={{
               position: "fixed",
-              bottom: window.innerHeight - dropdownRect.top + 6,
-              left: dropdownRect.left,
-              minWidth: Math.max(dropdownRect.width, 200),
+              bottom: window.innerHeight - state.dropdownRect.top + 6,
+              left: state.dropdownRect.left,
+              minWidth: Math.max(state.dropdownRect.width, 200),
               maxHeight: "50vh",
             }}
           >
-            {presets.length === 0 ? (
+            {state.presets.length === 0 ? (
               <div className="preset-dropdown-empty">
                 <span>No preset messages yet</span>
                 <button type="button"
                   className="preset-dropdown-create-btn"
                   onClick={() => {
-                    setShowDropdown(false);
+                    dispatch({ type: "SET_DROPDOWN", payload: false });
                     handleOpenModal();
                   }}
                 >
@@ -346,7 +437,8 @@ function PresetMessages({
                 </button>
               </div>
             ) : (
-              presets.map((preset) => (                    <div
+              state.presets.map((preset) => (
+                    <div
                       key={preset.id}
                       role="button"
                       tabIndex={0}
@@ -371,10 +463,10 @@ function PresetMessages({
           document.body,
         )}
 
-      {showModal &&
-        createPortal(        <div className="preset-modal-overlay" role="presentation" onClick={() => {
-          setShowModal(false);
-          setEditingPreset(null);
+      {state.showModal &&
+        createPortal(
+        <div className="preset-modal-overlay" role="presentation" onClick={() => {
+          dispatch({ type: "CLOSE_MODAL" });
         }}>
             <div
               className="preset-modal"
@@ -382,13 +474,12 @@ function PresetMessages({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="preset-modal-header">
-                <h2>{editingPreset ? "Edit Preset" : "Preset Messages"}</h2>
+                <h2>{state.editingPreset ? "Edit Preset" : "Preset Messages"}</h2>
         <button type="button"
           className="preset-modal-close"
           aria-label="Close preset messages"
                   onClick={() => {
-                    setShowModal(false);
-                    setEditingPreset(null);
+                    dispatch({ type: "CLOSE_MODAL" });
                   }}
                 >
                   <FaTimes size={16} />
@@ -403,8 +494,10 @@ function PresetMessages({
                     type="text"
                     className="preset-modal-input"
                     placeholder="e.g. Welcome message"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
+                    value={state.formName}
+                    onChange={(e) =>
+                      dispatch({ type: "SET_FORM_NAME", payload: e.target.value })
+                    }
                     maxLength={50}
                     autoFocus
                   />
@@ -419,13 +512,13 @@ function PresetMessages({
                     ref={textareaRef}
                     className="preset-modal-textarea"
                     placeholder="Type the message content... (emote autocomplete available)"
-                    value={formContent}
+                    value={state.formContent}
                     onChange={handleFormContentChange}
                     onKeyDown={handleTextareaKeyDown}
                     maxLength={500}
                     rows={3}
                   />
-                  {emoteResults.length > 0 &&
+                  {state.emoteResults.length > 0 &&
                     textareaRect &&
                     createPortal(
                       <div
@@ -439,15 +532,16 @@ function PresetMessages({
                           maxHeight: "40vh",
                         }}
                       >
-                        {emoteResults.map((emote, index) => (    <div
+                        {state.emoteResults.map((emote, index) => (
+    <div
       key={`${emote.source}-${emote.name}`}
       role="button"
       tabIndex={0}
       onClick={() => insertEmote(emote.name)}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); insertEmote(emote.name); } }}
-      className={`preset-emote-item${index === selectedEmoteIndex ? " selected" : ""}`}
+      className={`preset-emote-item${index === state.selectedEmoteIndex ? " selected" : ""}`}
                             onMouseEnter={() => {
-                              setSelectedEmoteIndex(index);
+                              dispatch({ type: "SET_SELECTED_EMOTE_INDEX", payload: index });
                               hasEmoteSelectionRef.current = true;
                             }}
                           >
@@ -473,20 +567,20 @@ function PresetMessages({
                 <button type="button"
                   className="preset-modal-save"
                   onClick={handleSavePreset}
-                  disabled={!formName.trim() || !formContent.trim()}
+                  disabled={!state.formName.trim() || !state.formContent.trim()}
                 >
                   <FaPlus size={12} />{" "}
-                  {editingPreset ? "Save Changes" : "Add Preset"}
+                  {state.editingPreset ? "Save Changes" : "Add Preset"}
                 </button>
               </div>
 
               <div className="preset-modal-list">
-                {presets.length === 0 && !editingPreset && (
+                {state.presets.length === 0 && !state.editingPreset && (
                   <div className="preset-modal-empty">
                     No preset messages created yet.
                   </div>
                 )}
-                {presets.map((preset) => (
+                {state.presets.map((preset) => (
                   <div key={preset.id} className="preset-modal-item">
                     <div className="preset-modal-item-info">
                       <span className="preset-modal-item-name">
