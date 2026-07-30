@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   FaTimes,
   FaChevronLeft,
@@ -135,6 +135,7 @@ export default function AppContainer() {
     setDefaultHlsQuality,
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
+    autoFoldSidebar,
   } = chatSettings;
   const {
     linkedYoutubeUrl,
@@ -241,6 +242,28 @@ export default function AppContainer() {
 
   // Auth login flows now live in useAuthSessions. The Twitch logout also has
   // to clear non-auth state (channel list, current selection, favorites).
+  const handleChannelSelect = useCallback(
+    (channelId: string, transitionInfo?: StreamTransitionInfo) => {
+      setChannelData(channelId, transitionInfo);
+      if (autoFoldSidebar) setLeftColumnVisible(false);
+    },
+    [setChannelData, autoFoldSidebar, setLeftColumnVisible],
+  );
+
+  // When a channel is loaded from URL on page reload (bypassing
+  // handleChannelSelect), auto-fold the sidebar if the setting is on.
+  const prevChannelRef = useRef(selectedTwitchChannel);
+  useEffect(() => {
+    if (
+      autoFoldSidebar &&
+      selectedTwitchChannel &&
+      !prevChannelRef.current
+    ) {
+      setLeftColumnVisible(false);
+    }
+    prevChannelRef.current = selectedTwitchChannel;
+  }, [selectedTwitchChannel, autoFoldSidebar, setLeftColumnVisible]);
+
   const handleTwitchLogout = useCallback(() => {
     twitchLogout();
     resetChannels();
@@ -264,30 +287,33 @@ export default function AppContainer() {
   return (
     <SettingsProvider value={chatSettings}>
     <div
+      className="main-layout"
       style={{
         display: "grid",
-        gridTemplateColumns: leftColumnVisible ? "280px 1fr" : "1fr",
+        gridTemplateColumns: leftColumnVisible ? "280px 1fr" : "0px 1fr",
         gap: "0",
         height: "100%",
+        transition: "grid-template-columns 250ms ease",
       }}
       data-hide-timestamps={hideChatTimestamps}
       onClick={primeAudioContext}
       onKeyDown={primeAudioContext}
       role="presentation"
     >
-      {leftColumnVisible && (
-        <div
-          data-sidebar-section
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0",
-            overflowY: "auto",
-            padding: "0",
-            borderRight: "1px solid #1c1c1c",
-            background: "linear-gradient(160deg, #131313 0%, #0d0d0d 100%)",
-          }}
-        >
+      <div
+        data-sidebar-section
+        className={leftColumnVisible ? "" : "sidebar-collapsed"}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "0",
+          overflow: "hidden",
+          overflowY: leftColumnVisible ? "auto" : undefined,
+          padding: "0",
+          borderRight: "1px solid #1c1c1c",
+          background: "linear-gradient(160deg, #131313 0%, #0d0d0d 100%)",
+        }}
+      >
           {/* Close button for mobile */}
           <div
             style={{
@@ -327,7 +353,7 @@ export default function AppContainer() {
             selectedTwitchChannel={selectedTwitchChannel}
             favoriteChannels={favoriteChannels}
             onToggleFavorite={toggleFavorite}
-            onChannelChange={(channelId) => setChannelData(channelId)}
+            onChannelChange={(channelId) => handleChannelSelect(channelId)}
             onRequestClose={() => {
               if (window.innerWidth < 1366) setLeftColumnVisible(false);
             }}
@@ -351,7 +377,6 @@ export default function AppContainer() {
             }}
           />
         </div>
-      )}
       <div
         style={{
           display: "grid",
@@ -432,7 +457,7 @@ export default function AppContainer() {
                 </button>
                 <button type="button"
                   className="your-channel-btn"
-                  onClick={() => setChannelData(sessions.twitch!.userId)}
+                  onClick={() => handleChannelSelect(sessions.twitch!.userId)}
                 >
                   Go to channel
                 </button>
@@ -463,7 +488,7 @@ export default function AppContainer() {
               favoriteChannels={favoriteChannels}
               linkedYoutubeChannelIds={linkedYoutubeChannelIds}
               onChannelSelect={(id, transitionInfo) =>
-                setChannelData(id, transitionInfo)
+                handleChannelSelect(id, transitionInfo)
               }
               onToggleFavorite={toggleFavorite}
               loading={channelsLoading}
@@ -703,7 +728,7 @@ export default function AppContainer() {
                 eventSounds={eventSounds}
                 eventSoundVolume={eventSoundVolume}
                 ignoredUsers={ignoredUsers}
-                onFollowRaid={(channelLogin) => setChannelData(channelLogin)}
+                onFollowRaid={(channelLogin) => handleChannelSelect(channelLogin)}
                 streamerToolsEnabled={streamerToolsEnabled}
                 isOnOwnChannel={isOnOwnChannel}
                 renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
@@ -720,7 +745,7 @@ export default function AppContainer() {
           onViewNow={() => {
             // Persist that user has seen this notification so it won't reappear
             markStreamerNotified(newLiveStreamer.id);
-            setChannelData(newLiveStreamer.id);
+            handleChannelSelect(newLiveStreamer.id);
             clearNewNotification();
           }}
           onClose={() => {
@@ -753,7 +778,7 @@ export default function AppContainer() {
           allChannels={allTwitchChannels}
           favoriteChannels={favoriteChannels}
           onToggleFavorite={toggleFavorite}
-          onChannelSelect={(id) => setChannelData(id)}
+          onChannelSelect={(id) => handleChannelSelect(id)}
           onClose={() => setShowFavoriteChannels(false)}
         />
       )}

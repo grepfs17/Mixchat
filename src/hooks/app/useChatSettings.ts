@@ -85,6 +85,8 @@ export type UseChatSettingsResult = {
   setRenderThirdPartyEmotesOnYoutube: React.Dispatch<
     React.SetStateAction<boolean>
   >;
+  autoFoldSidebar: boolean;
+  setAutoFoldSidebar: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -214,6 +216,10 @@ export function useChatSettings(): UseChatSettingsResult {
       "mixchat_render_thirdparty_on_youtube",
       false,
     );
+  const [autoFoldSidebar, setAutoFoldSidebar] = useLocalStorageState<boolean>(
+    "mixchat_auto_fold_sidebar",
+    false,
+  );
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -295,5 +301,7 @@ export function useChatSettings(): UseChatSettingsResult {
     setDefaultHlsQuality,
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
+    autoFoldSidebar,
+    setAutoFoldSidebar,
   };
 }

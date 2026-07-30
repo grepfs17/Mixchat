@@ -155,6 +155,8 @@ export default function EmbedConfigModal({
         defaultHlsQuality: s.defaultHlsQuality,
         onDefaultHlsQualityChange: s.setDefaultHlsQuality,
         onNeedsReload: handleNeedsReload,
+        autoFoldSidebar: s.autoFoldSidebar,
+        onAutoFoldSidebarChange: s.setAutoFoldSidebar,
       }),
       ...getStreamerSettings({
         streamerToolsEnabled: s.streamerToolsEnabled,
@@ -228,6 +230,8 @@ export default function EmbedConfigModal({
       s.defaultHlsQuality,
       s.setDefaultHlsQuality,
       handleNeedsReload,
+      s.autoFoldSidebar,
+      s.setAutoFoldSidebar,
       s.streamerToolsEnabled,
       s.setStreamerToolsEnabled,
       s.hideViewerCount,

@@ -39,6 +39,7 @@ export const SETTINGS_KEYS = [
   "mixchat_default_player_type",
   "mixchat_default_hls_quality",
   "mixchat_render_thirdparty_on_youtube",
+  "mixchat_auto_fold_sidebar",
   "disabled_emotes_v1",
   "mixchat_giveaway_history:v1",
   "mixchat_song_queue_past_playlists:v1",

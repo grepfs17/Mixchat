@@ -64,6 +64,8 @@ function makeSettings(
     setDefaultHlsQuality: noop,
     renderThirdPartyEmotesOnYoutube: false,
     setRenderThirdPartyEmotesOnYoutube: noop,
+    autoFoldSidebar: false,
+    setAutoFoldSidebar: noop,
     ...overrides,
   };
 }

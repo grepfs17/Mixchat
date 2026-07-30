@@ -54,4 +54,6 @@ export interface SettingsProps {
   onDefaultHlsQualityChange: (value: string) => void;
   renderThirdPartyEmotesOnYoutube: boolean;
   onRenderThirdPartyEmotesOnYoutubeChange: (value: boolean) => void;
+  autoFoldSidebar: boolean;
+  onAutoFoldSidebarChange: (value: boolean) => void;
 }

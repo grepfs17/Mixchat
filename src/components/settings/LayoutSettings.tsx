@@ -10,6 +10,8 @@ export interface LayoutSettingsProps {
   defaultHlsQuality: string;
   onDefaultHlsQualityChange: (v: string) => void;
   onNeedsReload: () => void;
+  autoFoldSidebar: boolean;
+  onAutoFoldSidebarChange: (v: boolean) => void;
 }
 
 function EmbedDefaultSetting({
@@ -98,6 +100,28 @@ function HlsQualitySetting({
   );
 }
 
+function AutoFoldSidebarSetting({
+  autoFoldSidebar,
+  onAutoFoldSidebarChange,
+}: Pick<LayoutSettingsProps, "autoFoldSidebar" | "onAutoFoldSidebarChange">) {
+  return (
+    <div className="embed-config-section">
+      <label className="embed-config-checkbox-label">
+        <input
+          type="checkbox"
+          checked={autoFoldSidebar}
+          onChange={(e) => onAutoFoldSidebarChange(e.target.checked)}
+        />
+        <span>Auto-fold sidebar on channel select</span>
+      </label>
+      <p className="embed-config-description embed-config-description--indented">
+        When enabled, the sidebar will automatically close after you click on a
+        channel, giving more space to the chat.
+      </p>
+    </div>
+  );
+}
+
 
 export function getLayoutSettings(
   props: LayoutSettingsProps,
@@ -112,6 +136,19 @@ export function getLayoutSettings(
         <EmbedDefaultSetting
           embedDefaultOpen={props.embedDefaultOpen}
           onEmbedDefaultOpenChange={props.onEmbedDefaultOpenChange}
+        />
+      ),
+    },
+    {
+      id: "auto-fold-sidebar",
+      group: "layout",
+      label: "Auto-fold sidebar on channel select",
+      description:
+        "The sidebar automatically closes after you click on a channel.",
+      render: () => (
+        <AutoFoldSidebarSetting
+          autoFoldSidebar={props.autoFoldSidebar}
+          onAutoFoldSidebarChange={props.onAutoFoldSidebarChange}
         />
       ),
     },

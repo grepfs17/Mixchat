@@ -70,6 +70,8 @@ function makeSettings(): UseChatSettingsResult {
     setDefaultHlsQuality: noop,
     renderThirdPartyEmotesOnYoutube: false,
     setRenderThirdPartyEmotesOnYoutube: noop,
+    autoFoldSidebar: false,
+    setAutoFoldSidebar: noop,
   };
 }
 
@@ -149,5 +151,37 @@ describe("MobileTouchHintModal event trigger", () => {
     expect(
       screen.getByText((content) => content.includes("Mobile Controls")),
     ).toBeInTheDocument();
+  });
+});
+
+describe("EmbedConfigModal Layout tab — auto-fold sidebar", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("renders the auto-fold sidebar checkbox in the Layout tab", () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: "Layout" }));
+    expect(
+      screen.getByText("Auto-fold sidebar on channel select"),
+    ).toBeInTheDocument();
+  });
+
+  it("calls setAutoFoldSidebar when the checkbox is toggled", () => {
+    const setAutoFoldSidebar = vi.fn();
+    const settings = makeSettings();
+    render(
+      <SettingsProvider
+        value={{ ...settings, setAutoFoldSidebar }}
+      >
+        <EmbedConfigModal {...makeProps()} />
+      </SettingsProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Layout" }));
+    const checkbox = screen.getByLabelText(
+      "Auto-fold sidebar on channel select",
+    );
+    fireEvent.click(checkbox);
+    expect(setAutoFoldSidebar).toHaveBeenCalledWith(true);
   });
 });

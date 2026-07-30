@@ -2,16 +2,18 @@
 
 /* AppContainer responsive layout */
 
+/* Sidebar collapse transition */
+.sidebar-collapsed {
+    border-right-color: transparent !important;
+}
+
 @media (max-width: 1365px) {
-    /* Main grid layout */
-    [style*="gridTemplateColumns"][style*="280px"] {
+    /* Main grid layout — force single column regardless of sidebar state. */
+    .main-layout {
         grid-template-columns: 1fr !important;
     }
 
-    /* Sidebar becomes floating/overlay.
-     Use --initial-vh-px (captured once on mount, before the keyboard can
-     open) so the sidebar height is immune to the virtual keyboard resizing
-     the viewport.  Falls back to 100dvh for SSR / before JS runs. */
+    /* Show sidebar as fixed overlay */
     [data-sidebar-section] {
         display: flex !important;
         position: fixed !important;
@@ -22,6 +24,11 @@
         z-index: 1000 !important;
         box-shadow: var(--shadow-sm-dark) !important;
         overflow: hidden !important;
+    }
+
+    /* Hide fixed overlay when sidebar is collapsed */
+    .sidebar-collapsed {
+        display: none !important;
     }
 
     /* Show close button on mobile */

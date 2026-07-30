@@ -254,6 +254,17 @@ describe("settingsBackup lib", () => {
       expect(localStorage.getItem("mixchat_font_size")).toBe("16");
     });
 
+    it("imports mixchat_auto_fold_sidebar from backup", async () => {
+      const file = makeBackupFile({
+        mixchat_auto_fold_sidebar: "true",
+      });
+
+      const count = await importSettings(file);
+
+      expect(count).toBe(1);
+      expect(localStorage.getItem("mixchat_auto_fold_sidebar")).toBe("true");
+    });
+
     it("restores event sounds from backup into localStorage fallback", async () => {
       const file = makeBackupFile({
         mixchat_event_sounds: JSON.stringify({
