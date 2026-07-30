@@ -233,7 +233,7 @@ suggestions. The codebase uses hook extraction (`useChatAppState`,
 further requires extracting sub-components — tracked as future work.
 
 - `src/components/AppContainer.tsx:49`
-- `src/components/EmbedConfigModal.tsx:69`
+- `src/components/EmbedConfigModal.tsx:69` - File already extracted
 - `src/components/EmoteMenu.tsx:23`
 - `src/components/LandingPage.tsx:162`
 - `src/components/LoginPanel.tsx:55`
@@ -254,6 +254,22 @@ further requires extracting sub-components — tracked as future work.
 - `src/components/chat/shared/YouTubeChat.tsx:98`
 - `src/components/chat/shared/YouTubeMessageInput.tsx:41`
 - `src/components/chat/unified/index.tsx:57`
+
+---
+
+## `react-doctor/no-multi-comp`
+
+**Skip after verifying:** settings files co-locate small, single-purpose
+render helpers (checkbox + label + description) alongside their parent
+`get*Settings()` function. Each helper is ~10–30 lines and never reused
+outside its settings file. Extracting them into separate files would create
+~16 micro-files with one-line exports, adding navigation overhead without
+improving testability or reusability.
+
+- `src/components/settings/AppearanceSettings.tsx` — `FontSizeSlider`, `ChatFontSelect`, `ChatThemePicker`, `TimestampsToggle`
+- `src/components/settings/ChatSettings.tsx` — `UnifyChatToggle`, `UseYoutubeEmbedToggle`, `ShowDeletedMessagesToggle`, `CompactActionsToggle`, `KeepModActionsVisibleToggle`, `ModActionsFirstToggle`, `DoubleClickConfirmModActionsToggle`
+- `src/components/settings/LayoutSettings.tsx` — `EmbedDefaultSetting`, `DefaultPlayerSetting`, `HlsQualitySetting`, `AutoFoldSidebarSetting`
+- `src/components/settings/StreamerSettings.tsx` — `StreamerToolsToggle`, `IgnoredUsersSection`, `EventSoundSection`
 
 ---
 

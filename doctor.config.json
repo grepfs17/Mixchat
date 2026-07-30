@@ -22,6 +22,7 @@
     "react-doctor/no-loading-flag-reset-outside-finally": "off",
     "react-doctor/no-ref-current-in-render": "off",
     "react-doctor/no-giant-component": "off",
-    "react-doctor/no-many-boolean-props": "off"
-  }
+  "react-doctor/no-many-boolean-props": "off",
+    "react-doctor/no-multi-comp": "off"
+}
 }
