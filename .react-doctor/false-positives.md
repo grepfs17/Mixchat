@@ -87,7 +87,7 @@ The static analyzer cannot trace the boolean through the closure.
 - `src/hooks/chat/chatAppStateHelpers/useModeration.ts:105` — `if (!cancelled && isMod)` after API check
 - `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:127` — `if (cancelled || !status) return` guard
 - `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:173` — `if (cancelled || !info) return` guard
-- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:79` — `if (!cancelled && resolved)` after resolveBroadcasterId
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:74` — `if (!cancelled && resolved)` after resolveBroadcasterId
 - `src/hooks/chat/useSongQueue.ts:185` — `if (cancelled || !stored) return` guard
 
 ---
@@ -121,7 +121,7 @@ is never read during render output.
 **Skip after verifying:** the storage key already includes a `:v1` version
 suffix (e.g. `"mixchat_sessions:v1"`).
 
-- `src/hooks/app/useAuthSessions.ts:245` — `SESSIONS_KEY = "mixchat_sessions:v1"`
+- `src/hooks/app/useAuthSessions.ts:6` — `SESSIONS_KEY = "mixchat_sessions:v1"`
 
 ---
 
@@ -132,7 +132,7 @@ state updates to commit synchronously so that `playlistsRef.current` reflects
 the freshest state before the updater reads it. `startTransition` cannot
 provide this synchronous commit guarantee.
 
-- `src/hooks/chat/useMusicPlayer.ts:8` — `flushSync(() => setPlaylists(...))` in `addTrackFromUrl`
+- `src/hooks/chat/useMusicPlayer.ts:409,434` — `flushSync(() => setPlaylists(...))` in `addTrackFromUrl`
 
 ---
 
@@ -175,7 +175,7 @@ the actual data changes.
 - `src/components/chat/shared/YouTubeChat.tsx:444` — `onMessages(messages)` for unified chat
 - `src/components/chat/shared/YouTubeChat.tsx:451` — `onConnectionChange(state)` for connection
 - `src/hooks/app/useTwitchChannels.ts:185` — channel list callback
-- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:96` — raid detection callback
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:102` — raid detection callback
 - `src/hooks/chat/useSongQueue.ts:285` — song queue state callback
 
 ---
@@ -274,17 +274,17 @@ improving testability or reusability.
 
 ## `react-doctor/no-many-boolean-props`
 
-**Skip after verifying:** boolean props come from `SettingsProps`, a shared
-interface that represents independent user settings. Each boolean is a
-standalone toggle in the settings UI. The flat structure is load-bearing:
-`settingsBackup.ts`, `driveSync.ts`, `importSettings`, and `exportSettings`
-all serialize/deserialize the flat JSON format. Consolidating into
-sub-objects would break backup/restore and Google Drive sync, require
-updating 10+ files, and add indirection that makes the code harder to
-read. The current pattern (one boolean prop + one setter per setting) is
-the standard React approach for settings forms.
+**Skip after verifying:** boolean props come from `useSettingsContext()`,
+which returns `UseChatSettingsResult` — a flat bag of independent user
+settings. Each boolean is a standalone toggle in the settings UI. The
+flat structure is load-bearing: `settingsBackup.ts`, `driveSync.ts`,
+`importSettings`, and `exportSettings` all serialize/deserialize the flat
+JSON format. Consolidating into sub-objects would break backup/restore
+and Google Drive sync, require updating 10+ files, and add indirection.
+The current pattern (one boolean prop + one setter per setting) is the
+standard React approach for settings forms.
 
-- `src/components/EmbedConfigModal.tsx:69` — extends `SettingsProps` directly
-- `src/components/LoginPanel.tsx:55` — extends `Partial<SettingsProps>`
+- `src/components/EmbedConfigModal.tsx:30` — uses `useSettingsContext()` (flat UseChatSettingsResult)
+- `src/components/LoginPanel.tsx:55` — passes flat boolean props
 - `src/components/chat/display/ChatHeader.tsx:162` — subset of boolean props
 - `src/components/chat/display/index.tsx:73` — subset of boolean props
