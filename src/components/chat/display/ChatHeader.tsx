@@ -21,6 +21,7 @@ import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
 import type { Platform } from "../../../lib/types";
 import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
+import type { ModModeTarget } from "../../../contexts/ModerationContext";
 
 function useClickOutside(
   ref: RefObject<HTMLElement | null>,
@@ -139,7 +140,7 @@ function ModModeIcon({
   ytActive,
 }: {
   modActive: boolean;
-  ytActive: boolean;
+  ytActive?: boolean;
 }) {
   if (modActive && ytActive)
     return <GiCrossedSwords size={16} className="mod-icon" style={{ color: "var(--color-green)" }} />;
@@ -161,10 +162,10 @@ function ModModeDropdown({
   onToggle,
 }: {
   isModerator: boolean;
-  isYouTubeModerator: boolean;
+  isYouTubeModerator?: boolean;
   modModeActive: boolean;
-  youtubeModModeActive: boolean;
-  onSetMode?: (mode: string) => void;
+  youtubeModModeActive?: boolean;
+  onSetMode?: (mode: ModModeTarget) => void;
   containerRef: RefObject<HTMLDivElement | null>;
   isOpen: boolean;
   onToggle: () => void;

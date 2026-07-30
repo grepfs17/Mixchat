@@ -1,7 +1,6 @@
 import type { APIRoute } from "astro";
 import {
   createSession,
-  deleteSession,
   getSession,
   listSessionsForChannel,
   publicView,

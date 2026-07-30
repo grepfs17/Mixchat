@@ -557,11 +557,12 @@ export function useModeration({
       const parts = message.split(/\s+/);
       const action = parts[0].toLowerCase();
 
-      const isOwner =
+      const isOwner = Boolean(
         (twitchSession?.username || "").toLowerCase() ===
           (selectedTwitchChannelName || "").toLowerCase() ||
         (twitchSession?.userId &&
-          twitchSession.userId === selectedTwitchChannel);
+          twitchSession.userId === selectedTwitchChannel),
+      );
 
       return executeModCommand(
         action,
