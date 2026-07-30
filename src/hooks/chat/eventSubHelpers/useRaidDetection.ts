@@ -11,7 +11,7 @@
  * to be deleted from the subscription map before notifications arrive.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
 
@@ -50,43 +50,41 @@ export function useRaidDetection({
     subscribeRef.current = subscribe;
   }, [subscribe]);
 
-  // Derived state: resolvedId is computed from channelId via an async call
-  // to the broadcaster ID resolver. This genuinely requires state because
-  // the resolution is asynchronous and cannot be computed during render.
-  // eslint-disable-next-line react-doctor/no-derived-state-effect
-  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  // Derive resolvedId synchronously when channelId is already numeric.
+  const derivedId = useMemo(() => {
+    if (!enabled || !channelId) return null;
+    if (/^\d+$/.test(channelId)) return channelId;
+    return null;
+  }, [channelId, enabled]);
+
+  // Async resolution for non-numeric channel IDs (username → numeric ID).
+  const [asyncResolvedId, setAsyncResolvedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!enabled || !channelId) {
-      setResolvedId(null);
-      return;
-    }
-
-    // If already numeric, resolve synchronously via setState
-    if (/^\d+$/.test(channelId)) {
-      setResolvedId(channelId);
+    if (!enabled || !channelId || /^\d+$/.test(channelId)) {
+      setAsyncResolvedId(null);
       return;
     }
 
     let cancelled = false;
 
-    const resolve = async () => {
-      try {
-        const resolved = await resolveBroadcasterId(channelId);
+    resolveBroadcasterId(channelId)
+      .then((resolved) => {
         if (!cancelled && resolved && /^\d+$/.test(resolved)) {
-          setResolvedId(resolved);
+          setAsyncResolvedId(resolved);
         }
-      } catch {
-        // Resolution failed — leave resolvedId as null
-      }
-    };
-
-    resolve();
+      })
+      .catch(() => {
+        // Resolution failed — leave asyncResolvedId as null
+      });
 
     return () => {
       cancelled = true;
     };
   }, [channelId, enabled]);
+
+  // Prefer synchronous derivation, fall back to async resolution.
+  const resolvedId = derivedId ?? asyncResolvedId;
 
   // Step 2: Subscribe synchronously when resolved ID is available
   useEffect(() => {

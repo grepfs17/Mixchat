@@ -87,7 +87,7 @@ The static analyzer cannot trace the boolean through the closure.
 - `src/hooks/chat/chatAppStateHelpers/useModeration.ts:105` — `if (!cancelled && isMod)` after API check
 - `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:127` — `if (cancelled || !status) return` guard
 - `src/hooks/chat/chatAppStateHelpers/useStreamInfo.ts:173` — `if (cancelled || !info) return` guard
-- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:56` — `if (!cancelled && resolved)` after resolve
+- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:79` — `if (!cancelled && resolved)` after resolveBroadcasterId
 - `src/hooks/chat/useSongQueue.ts:185` — `if (cancelled || !stored) return` guard
 
 ---
@@ -101,7 +101,6 @@ render would require restructuring the entire parent-child state contract.
 
 - `src/hooks/chat/chatAppStateHelpers/useModeration.ts:100` — `setModModeActive(isModerator && …)`
 - `src/hooks/chat/chatAppStateHelpers/useYouTubeModeration.ts:120` — `setYoutubeModModeActive(isYouTubeModerator && …)`
-- `src/hooks/chat/eventSubHelpers/useRaidDetection.ts:64` — `setResolvedId(channelId)` for numeric IDs
 
 ---
 
