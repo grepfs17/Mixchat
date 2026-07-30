@@ -2,6 +2,8 @@ import { act, render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import EmbedConfigModal from "../../src/components/EmbedConfigModal";
 import MobileTouchHintModal from "../../src/components/chat/shared/MobileTouchHintModal";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import type { UseChatSettingsResult } from "../../src/hooks/app/useChatSettings";
 
 vi.mock("../../src/lib/driveSync", () => ({
   backupSettingsToDrive: vi.fn(),
@@ -13,62 +15,80 @@ vi.mock("../../src/hooks/chat/useTwitchChat", () => ({
   MENTION_SOUND_OPTIONS: [],
 }));
 
-function makeProps() {
+function makeSettings(): UseChatSettingsResult {
+  const noop = vi.fn();
   return {
     embedDefaultOpen: false,
-    onEmbedDefaultOpenChange: vi.fn(),
+    setEmbedDefaultOpen: noop,
+    showStreamEmbed: false,
+    setShowStreamEmbed: noop,
     unifyChatEnabled: true,
-    onUnifyChatEnabledChange: vi.fn(),
+    setUnifyChatEnabled: noop,
     useYoutubeEmbed: false,
-    onUseYoutubeEmbedChange: vi.fn(),
+    setUseYoutubeEmbed: noop,
     fontSize: 14,
-    onFontSizeChange: vi.fn(),
-    chatFont: "inter" as const,
-    onChatFontChange: vi.fn(),
+    setFontSize: noop,
+    chatFont: "inter",
+    setChatFont: noop,
     mentionSoundEnabled: false,
-    onMentionSoundEnabledChange: vi.fn(),
+    setMentionSoundEnabled: noop,
     mentionVolume: 0.2,
-    onMentionVolumeChange: vi.fn(),
-    mentionSoundType: "ding" as const,
-    onMentionSoundTypeChange: vi.fn(),
+    setMentionVolume: noop,
+    mentionSoundType: "ding",
+    setMentionSoundType: noop,
     showDeletedMessages: true,
-    onShowDeletedMessagesChange: vi.fn(),
+    setShowDeletedMessages: noop,
     compactActions: false,
-    onCompactActionsChange: vi.fn(),
+    setCompactActions: noop,
     keepModActionsVisible: false,
-    onKeepModActionsVisibleChange: vi.fn(),
+    setKeepModActionsVisible: noop,
     modActionsFirst: false,
-    onModActionsFirstChange: vi.fn(),
+    setModActionsFirst: noop,
     doubleClickConfirmModActions: false,
-    onDoubleClickConfirmModActionsChange: vi.fn(),
+    setDoubleClickConfirmModActions: noop,
     splitChatEnabled: false,
-    onSplitChatEnabledChange: vi.fn(),
-    chatTheme: "default" as const,
-    onChatThemeChange: vi.fn(),
+    setSplitChatEnabled: noop,
+    chatTheme: "default",
+    setChatTheme: noop,
     hideViewerCount: false,
-    onHideViewerCountChange: vi.fn(),
+    setHideViewerCount: noop,
     hideChatTimestamps: false,
-    onHideChatTimestampsChange: vi.fn(),
+    setHideChatTimestamps: noop,
     eventSounds: {},
-    onEventSoundChange: vi.fn(),
     eventSoundVolume: 1,
-    onEventSoundVolumeChange: vi.fn(),
+    setEventSoundVolume: noop,
     ignoredUsers: [],
-    onIgnoredUsersChange: vi.fn(),
+    setIgnoredUsers: noop,
+    handleEventSoundChange: noop,
+    modModeTargets: {},
+    setModModeTargetForChannel: noop,
+    streamerToolsEnabled: false,
+    setStreamerToolsEnabled: noop,
+    defaultPlayerType: "embed",
+    setDefaultPlayerType: noop,
+    defaultHlsQuality: "highest",
+    setDefaultHlsQuality: noop,
+    renderThirdPartyEmotesOnYoutube: false,
+    setRenderThirdPartyEmotesOnYoutube: noop,
+  };
+}
+
+function makeProps() {
+  return {
+    onClose: vi.fn(),
     hasYoutubeSession: false,
     hasDriveScope: false,
     onReauthYoutube: vi.fn(),
     onYoutubeDriveLogin: vi.fn(),
-    streamerToolsEnabled: false,
-    onStreamerToolsEnabledChange: vi.fn(),
-    defaultPlayerType: "embed" as const,
-    onDefaultPlayerTypeChange: vi.fn(),
-    defaultHlsQuality: "highest",
-    onDefaultHlsQualityChange: vi.fn(),
-    renderThirdPartyEmotesOnYoutube: false,
-    onRenderThirdPartyEmotesOnYoutubeChange: vi.fn(),
-    onClose: vi.fn(),
   };
+}
+
+function renderModal() {
+  return render(
+    <SettingsProvider value={makeSettings()}>
+      <EmbedConfigModal {...makeProps()} />
+    </SettingsProvider>,
+  );
 }
 
 describe("EmbedConfigModal Help section", () => {
@@ -77,12 +97,12 @@ describe("EmbedConfigModal Help section", () => {
   });
 
   it("renders a Help sidebar tab", () => {
-    render(<EmbedConfigModal {...makeProps()} />);
+    renderModal();
     expect(screen.getByRole("button", { name: "Help" })).toBeInTheDocument();
   });
 
   it("shows both wizard buttons when Help tab is active", () => {
-    render(<EmbedConfigModal {...makeProps()} />);
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Help" }));
     expect(
       screen.getByText("Show setup wizard"),
@@ -93,7 +113,7 @@ describe("EmbedConfigModal Help section", () => {
   });
 
   it("dispatches mixchat:show-onboarding when Show setup wizard is clicked", () => {
-    render(<EmbedConfigModal {...makeProps()} />);
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Help" }));
     const handler = vi.fn();
     window.addEventListener("mixchat:show-onboarding", handler);
@@ -103,7 +123,7 @@ describe("EmbedConfigModal Help section", () => {
   });
 
   it("dispatches mixchat:show-mobile-hint when Show mobile controls wizard is clicked", () => {
-    render(<EmbedConfigModal {...makeProps()} />);
+    renderModal();
     fireEvent.click(screen.getByRole("button", { name: "Help" }));
     const handler = vi.fn();
     window.addEventListener("mixchat:show-mobile-hint", handler);

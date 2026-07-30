@@ -14,6 +14,7 @@ import LiveNotification from "./LiveNotification";
 import WatchlistManager from "./WatchlistManager";
 import YouTubeLinker from "./YouTubeLinker";
 
+import { SettingsProvider } from "../contexts/SettingsContext";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
@@ -80,6 +81,7 @@ export default function AppContainer() {
     onSessionInvalid: clearTwitchSession,
     onStreamTransition: setStreamTransition,
   });
+  const chatSettings = useChatSettings();
   const {
     embedDefaultOpen,
     setEmbedDefaultOpen,
@@ -133,7 +135,7 @@ export default function AppContainer() {
     setDefaultHlsQuality,
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
-  } = useChatSettings();
+  } = chatSettings;
   const {
     linkedYoutubeUrl,
     youtubeStreamVideoId,
@@ -260,6 +262,7 @@ export default function AppContainer() {
   }
 
   return (
+    <SettingsProvider value={chatSettings}>
     <div
       style={{
         display: "grid",
@@ -337,65 +340,9 @@ export default function AppContainer() {
             onManageWatchlist={() => setShowWatchlistManager(true)}
             onManageYoutubeLinks={() => setShowYoutubeLinker(true)}
             linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-            embedDefaultOpen={embedDefaultOpen}
-            onEmbedDefaultOpenChange={setEmbedDefaultOpen}
-            unifyChatEnabled={unifyChatEnabled}
-            onUnifyChatEnabledChange={(v: boolean) => {
-              setUnifyChatEnabled(v);
-              if (v) setUseYoutubeEmbed(false);
-            }}
-            useYoutubeEmbed={useYoutubeEmbed}
-            onUseYoutubeEmbedChange={(v: boolean) => {
-              setUseYoutubeEmbed(v);
-              if (v) setUnifyChatEnabled(false);
-            }}
-            fontSize={fontSize}
-            onFontSizeChange={setFontSize}
-            chatFont={chatFont}
-            onChatFontChange={setChatFont}
-            mentionSoundEnabled={mentionSoundEnabled}
-            onMentionSoundEnabledChange={setMentionSoundEnabled}
-            mentionVolume={mentionVolume}
-            onMentionVolumeChange={setMentionVolume}
-            mentionSoundType={mentionSoundType}
-            onMentionSoundTypeChange={setMentionSoundType}
-            showDeletedMessages={showDeletedMessages}
-            onShowDeletedMessagesChange={setShowDeletedMessages}
-            compactActions={compactActions}
-            onCompactActionsChange={setCompactActions}
-            keepModActionsVisible={keepModActionsVisible}
-            onKeepModActionsVisibleChange={setKeepModActionsVisible}
-            modActionsFirst={modActionsFirst}
-            onModActionsFirstChange={setModActionsFirst}
-            doubleClickConfirmModActions={doubleClickConfirmModActions}
-            onDoubleClickConfirmModActionsChange={setDoubleClickConfirmModActions}
-            splitChatEnabled={splitChatEnabled}
-            onSplitChatEnabledChange={setSplitChatEnabled}
-            chatTheme={chatTheme}
-            onChatThemeChange={setChatTheme}
-            hideViewerCount={hideViewerCount}
-            onHideViewerCountChange={setHideViewerCount}
-            hideChatTimestamps={hideChatTimestamps}
-            onHideChatTimestampsChange={setHideChatTimestamps}
-            eventSounds={eventSounds}
-            onEventSoundChange={handleEventSoundChange}
-            eventSoundVolume={eventSoundVolume}
-            onEventSoundVolumeChange={setEventSoundVolume}
-            ignoredUsers={ignoredUsers}
-            onIgnoredUsersChange={setIgnoredUsers}
             hasYoutubeSession={!!sessions.youtube}
             hasDriveScope={!!sessions.youtube?.hasDriveScope}
             onYoutubeDriveLogin={handleYoutubeDriveLogin}
-            streamerToolsEnabled={streamerToolsEnabled}
-            onStreamerToolsEnabledChange={setStreamerToolsEnabled}
-            defaultPlayerType={defaultPlayerType}
-            onDefaultPlayerTypeChange={setDefaultPlayerType}
-            defaultHlsQuality={defaultHlsQuality}
-            onDefaultHlsQualityChange={setDefaultHlsQuality}
-            renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-            onRenderThirdPartyEmotesOnYoutubeChange={
-              setRenderThirdPartyEmotesOnYoutube
-            }
             onReauthYoutube={handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();
@@ -847,39 +794,10 @@ export default function AppContainer() {
 
       {showOnboarding && (
         <OnboardingWizard
-          chatTheme={chatTheme}
-          onChatThemeChange={setChatTheme}
-          fontSize={fontSize}
-          onFontSizeChange={setFontSize}
-          chatFont={chatFont}
-          onChatFontChange={setChatFont}
-          streamerToolsEnabled={streamerToolsEnabled}
-          onStreamerToolsEnabledChange={setStreamerToolsEnabled}
-          hideViewerCount={hideViewerCount}
-          onHideViewerCountChange={setHideViewerCount}
-          unifyChatEnabled={unifyChatEnabled}
-          onUnifyChatEnabledChange={setUnifyChatEnabled}
-          showDeletedMessages={showDeletedMessages}
-          onShowDeletedMessagesChange={setShowDeletedMessages}
-          compactActions={compactActions}
-          onCompactActionsChange={setCompactActions}
-          keepModActionsVisible={keepModActionsVisible}
-          onKeepModActionsVisibleChange={setKeepModActionsVisible}
-          modActionsFirst={modActionsFirst}
-          onModActionsFirstChange={setModActionsFirst}
-          doubleClickConfirmModActions={doubleClickConfirmModActions}
-          onDoubleClickConfirmModActionsChange={setDoubleClickConfirmModActions}
-          embedDefaultOpen={embedDefaultOpen}
-          onEmbedDefaultOpenChange={setEmbedDefaultOpen}
-          hideChatTimestamps={hideChatTimestamps}
-          onHideChatTimestampsChange={setHideChatTimestamps}
-          renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-          onRenderThirdPartyEmotesOnYoutubeChange={
-            setRenderThirdPartyEmotesOnYoutube
-          }
           onComplete={handleOnboardingComplete}
         />
       )}
     </div>
+    </SettingsProvider>
   );
 }

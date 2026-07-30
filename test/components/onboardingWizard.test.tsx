@@ -1,43 +1,89 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import OnboardingWizard from "../../src/components/OnboardingWizard";
+import { SettingsProvider } from "../../src/contexts/SettingsContext";
+import type { UseChatSettingsResult } from "../../src/hooks/app/useChatSettings";
 import type { ChatFont, ChatTheme } from "../../src/lib/types";
 
-function makeProps(overrides: Partial<React.ComponentProps<typeof OnboardingWizard>> = {}) {
+function makeSettings(
+  overrides: Partial<UseChatSettingsResult> = {},
+): UseChatSettingsResult {
+  const noop = vi.fn();
   return {
-    chatTheme: "default" as const,
-    onChatThemeChange: vi.fn(),
-    fontSize: 14,
-    onFontSizeChange: vi.fn(),
-    chatFont: "inter" as const,
-    onChatFontChange: vi.fn(),
-    streamerToolsEnabled: false,
-    onStreamerToolsEnabledChange: vi.fn(),
-    hideViewerCount: false,
-    onHideViewerCountChange: vi.fn(),
-    unifyChatEnabled: true,
-    onUnifyChatEnabledChange: vi.fn(),
-    showDeletedMessages: true,
-    onShowDeletedMessagesChange: vi.fn(),
-    compactActions: false,
-    onCompactActionsChange: vi.fn(),
-    keepModActionsVisible: false,
-    onKeepModActionsVisibleChange: vi.fn(),
-    modActionsFirst: false,
-    onModActionsFirstChange: vi.fn(),
-    doubleClickConfirmModActions: false,
-    onDoubleClickConfirmModActionsChange: vi.fn(),
     embedDefaultOpen: false,
-    onEmbedDefaultOpenChange: vi.fn(),
+    setEmbedDefaultOpen: noop,
+    showStreamEmbed: false,
+    setShowStreamEmbed: noop,
+    unifyChatEnabled: true,
+    setUnifyChatEnabled: noop,
+    useYoutubeEmbed: false,
+    setUseYoutubeEmbed: noop,
+    fontSize: 14,
+    setFontSize: noop,
+    chatFont: "inter",
+    setChatFont: noop,
+    mentionSoundEnabled: false,
+    setMentionSoundEnabled: noop,
+    mentionVolume: 0.2,
+    setMentionVolume: noop,
+    mentionSoundType: "ding",
+    setMentionSoundType: noop,
+    showDeletedMessages: true,
+    setShowDeletedMessages: noop,
+    compactActions: false,
+    setCompactActions: noop,
+    keepModActionsVisible: false,
+    setKeepModActionsVisible: noop,
+    modActionsFirst: false,
+    setModActionsFirst: noop,
+    doubleClickConfirmModActions: false,
+    setDoubleClickConfirmModActions: noop,
+    splitChatEnabled: false,
+    setSplitChatEnabled: noop,
+    chatTheme: "default",
+    setChatTheme: noop,
+    hideViewerCount: false,
+    setHideViewerCount: noop,
     hideChatTimestamps: false,
-    onHideChatTimestampsChange: vi.fn(),
+    setHideChatTimestamps: noop,
+    eventSounds: {},
+    eventSoundVolume: 1,
+    setEventSoundVolume: noop,
+    ignoredUsers: [],
+    setIgnoredUsers: noop,
+    handleEventSoundChange: noop,
+    modModeTargets: {},
+    setModModeTargetForChannel: noop,
+    streamerToolsEnabled: false,
+    setStreamerToolsEnabled: noop,
+    defaultPlayerType: "embed",
+    setDefaultPlayerType: noop,
+    defaultHlsQuality: "highest",
+    setDefaultHlsQuality: noop,
     renderThirdPartyEmotesOnYoutube: false,
-    onRenderThirdPartyEmotesOnYoutubeChange: vi.fn(),
+    setRenderThirdPartyEmotesOnYoutube: noop,
+    ...overrides,
+  };
+}
+
+function makeProps(overrides: { onComplete?: () => void } = {}) {
+  return {
     onComplete: vi.fn(),
     ...overrides,
   };
+}
+
+function renderWizard(
+  settings: UseChatSettingsResult = makeSettings(),
+  props = makeProps(),
+) {
+  return render(
+    <SettingsProvider value={settings}>
+      <OnboardingWizard {...props} />
+    </SettingsProvider>,
+  );
 }
 
 interface HarnessState {
@@ -60,7 +106,7 @@ interface HarnessState {
 function StatefulHarness({
   initial,
 }: {
-  initial?: Partial<React.ComponentProps<typeof OnboardingWizard>>;
+  initial?: Partial<HarnessState>;
 }) {
   const [state, setState] = useState<HarnessState>({
     chatTheme: "default",
@@ -77,48 +123,64 @@ function StatefulHarness({
     embedDefaultOpen: false,
     hideChatTimestamps: false,
     renderThirdPartyEmotesOnYoutube: false,
+    ...initial,
   });
-  const update =
-    <K extends keyof HarnessState>(key: K) =>
-    (value: HarnessState[K]) =>
-      setState((s) => ({ ...s, [key]: value }));
+
+  const settings: UseChatSettingsResult = {
+    ...makeSettings(),
+    chatTheme: state.chatTheme,
+    setChatTheme: (v) =>
+      setState((s) => ({ ...s, chatTheme: v as ChatTheme })),
+    fontSize: state.fontSize,
+    setFontSize: (v) => setState((s) => ({ ...s, fontSize: v as number })),
+    chatFont: state.chatFont,
+    setChatFont: (v) =>
+      setState((s) => ({ ...s, chatFont: v as ChatFont })),
+    streamerToolsEnabled: state.streamerToolsEnabled,
+    setStreamerToolsEnabled: (v) =>
+      setState((s) => ({ ...s, streamerToolsEnabled: v as boolean })),
+    hideViewerCount: state.hideViewerCount,
+    setHideViewerCount: (v) =>
+      setState((s) => ({ ...s, hideViewerCount: v as boolean })),
+    unifyChatEnabled: state.unifyChatEnabled,
+    setUnifyChatEnabled: (v) =>
+      setState((s) => ({ ...s, unifyChatEnabled: v as boolean })),
+    showDeletedMessages: state.showDeletedMessages,
+    setShowDeletedMessages: (v) =>
+      setState((s) => ({ ...s, showDeletedMessages: v as boolean })),
+    compactActions: state.compactActions,
+    setCompactActions: (v) =>
+      setState((s) => ({ ...s, compactActions: v as boolean })),
+    keepModActionsVisible: state.keepModActionsVisible,
+    setKeepModActionsVisible: (v) =>
+      setState((s) => ({ ...s, keepModActionsVisible: v as boolean })),
+    modActionsFirst: state.modActionsFirst,
+    setModActionsFirst: (v) =>
+      setState((s) => ({ ...s, modActionsFirst: v as boolean })),
+    doubleClickConfirmModActions: state.doubleClickConfirmModActions,
+    setDoubleClickConfirmModActions: (v) =>
+      setState((s) => ({
+        ...s,
+        doubleClickConfirmModActions: v as boolean,
+      })),
+    embedDefaultOpen: state.embedDefaultOpen,
+    setEmbedDefaultOpen: (v) =>
+      setState((s) => ({ ...s, embedDefaultOpen: v as boolean })),
+    hideChatTimestamps: state.hideChatTimestamps,
+    setHideChatTimestamps: (v) =>
+      setState((s) => ({ ...s, hideChatTimestamps: v as boolean })),
+    renderThirdPartyEmotesOnYoutube: state.renderThirdPartyEmotesOnYoutube,
+    setRenderThirdPartyEmotesOnYoutube: (v) =>
+      setState((s) => ({
+        ...s,
+        renderThirdPartyEmotesOnYoutube: v as boolean,
+      })),
+  };
+
   return (
-    <OnboardingWizard
-      chatTheme={state.chatTheme}
-      onChatThemeChange={update("chatTheme")}
-      fontSize={state.fontSize}
-      onFontSizeChange={update("fontSize")}
-      chatFont={state.chatFont}
-      onChatFontChange={update("chatFont")}
-      streamerToolsEnabled={state.streamerToolsEnabled}
-      onStreamerToolsEnabledChange={update("streamerToolsEnabled")}
-      hideViewerCount={state.hideViewerCount}
-      onHideViewerCountChange={update("hideViewerCount")}
-      unifyChatEnabled={state.unifyChatEnabled}
-      onUnifyChatEnabledChange={update("unifyChatEnabled")}
-      showDeletedMessages={state.showDeletedMessages}
-      onShowDeletedMessagesChange={update("showDeletedMessages")}
-      compactActions={state.compactActions}
-      onCompactActionsChange={update("compactActions")}
-      keepModActionsVisible={state.keepModActionsVisible}
-      onKeepModActionsVisibleChange={update("keepModActionsVisible")}
-      modActionsFirst={state.modActionsFirst}
-      onModActionsFirstChange={update("modActionsFirst")}
-      doubleClickConfirmModActions={state.doubleClickConfirmModActions}
-      onDoubleClickConfirmModActionsChange={update(
-        "doubleClickConfirmModActions",
-      )}
-      embedDefaultOpen={state.embedDefaultOpen}
-      onEmbedDefaultOpenChange={update("embedDefaultOpen")}
-      hideChatTimestamps={state.hideChatTimestamps}
-      onHideChatTimestampsChange={update("hideChatTimestamps")}
-      renderThirdPartyEmotesOnYoutube={state.renderThirdPartyEmotesOnYoutube}
-      onRenderThirdPartyEmotesOnYoutubeChange={update(
-        "renderThirdPartyEmotesOnYoutube",
-      )}
-      onComplete={vi.fn()}
-      {...initial}
-    />
+    <SettingsProvider value={settings}>
+      <OnboardingWizard onComplete={vi.fn()} />
+    </SettingsProvider>
   );
 }
 
@@ -128,7 +190,7 @@ describe("OnboardingWizard component", () => {
   });
 
   it("renders the welcome step first with the setup question and two options", () => {
-    render(<OnboardingWizard {...makeProps()} />);
+    renderWizard();
     expect(
       screen.getByText(/Do you want help to configure Mixchat\?/i),
     ).toBeInTheDocument();
@@ -142,7 +204,7 @@ describe("OnboardingWizard component", () => {
   });
 
   it("shows the Mixchat logo on the welcome step", () => {
-    render(<OnboardingWizard {...makeProps()} />);
+    renderWizard();
     const logo = screen.getByAltText("Mixchat");
     expect(logo).toBeInTheDocument();
     expect(logo.tagName).toBe("IMG");
@@ -151,119 +213,107 @@ describe("OnboardingWizard component", () => {
 
   it("calls onComplete when the Skip setup button is clicked on the welcome step", async () => {
     const onComplete = vi.fn();
-    render(<OnboardingWizard {...makeProps({ onComplete })} />);
+    renderWizard(makeSettings(), makeProps({ onComplete }));
     const skipButtons = screen.getAllByText("Skip setup");
     await userEvent.click(skipButtons[0]);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it("advances to the theme step when Continue is clicked", async () => {
-    render(<OnboardingWizard {...makeProps()} />);
+    renderWizard();
     await userEvent.click(screen.getByText("Continue"));
     expect(screen.getByText("Pick a theme")).toBeInTheDocument();
   });
 
-  async function goToThemeStep() {
-    render(<StatefulHarness />);
-    await userEvent.click(screen.getByText("Continue"));
-  }
-
-  async function goToUserTypeStep() {
-    render(<StatefulHarness />);
-    await userEvent.click(screen.getByText("Continue"));
-    await userEvent.click(screen.getByText("Continue"));
-    await userEvent.click(screen.getByText("Next"));
-  }
-
   it("applies streamer defaults when the streamer role is selected", async () => {
-    const onStreamerToolsEnabledChange = vi.fn();
-    const onHideViewerCountChange = vi.fn();
-    const onEmbedDefaultOpenChange = vi.fn();
-    const onCompactActionsChange = vi.fn();
-    const onKeepModActionsVisibleChange = vi.fn();
-    const onModActionsFirstChange = vi.fn();
-    const onDoubleClickConfirmModActionsChange = vi.fn();
+    const setStreamerToolsEnabled = vi.fn();
+    const setHideViewerCount = vi.fn();
+    const setEmbedDefaultOpen = vi.fn();
+    const setCompactActions = vi.fn();
+    const setKeepModActionsVisible = vi.fn();
+    const setModActionsFirst = vi.fn();
+    const setDoubleClickConfirmModActions = vi.fn();
 
-    const props = makeProps({
-      onStreamerToolsEnabledChange,
-      onHideViewerCountChange,
-      onEmbedDefaultOpenChange,
-      onCompactActionsChange,
-      onKeepModActionsVisibleChange,
-      onModActionsFirstChange,
-      onDoubleClickConfirmModActionsChange,
+    const settings = makeSettings({
+      setStreamerToolsEnabled,
+      setHideViewerCount,
+      setEmbedDefaultOpen,
+      setCompactActions,
+      setKeepModActionsVisible,
+      setModActionsFirst,
+      setDoubleClickConfirmModActions,
     });
-    render(<OnboardingWizard {...props} />);
+    renderWizard(settings);
 
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     await userEvent.click(screen.getByText("I'm a streamer"));
 
-    expect(onStreamerToolsEnabledChange).toHaveBeenCalledWith(true);
-    expect(onHideViewerCountChange).toHaveBeenCalledWith(true);
-    expect(onEmbedDefaultOpenChange).toHaveBeenCalledWith(false);
-    expect(onCompactActionsChange).toHaveBeenCalledWith(true);
-    expect(onKeepModActionsVisibleChange).toHaveBeenCalledWith(true);
-    expect(onModActionsFirstChange).toHaveBeenCalledWith(true);
-    expect(onDoubleClickConfirmModActionsChange).toHaveBeenCalledWith(true);
+    expect(setStreamerToolsEnabled).toHaveBeenCalledWith(true);
+    expect(setHideViewerCount).toHaveBeenCalledWith(true);
+    expect(setEmbedDefaultOpen).toHaveBeenCalledWith(false);
+    expect(setCompactActions).toHaveBeenCalledWith(true);
+    expect(setKeepModActionsVisible).toHaveBeenCalledWith(true);
+    expect(setModActionsFirst).toHaveBeenCalledWith(true);
+    expect(setDoubleClickConfirmModActions).toHaveBeenCalledWith(true);
   });
 
   it("applies the same defaults for moderators as for streamers", async () => {
-    const onStreamerToolsEnabledChange = vi.fn();
-    const onHideViewerCountChange = vi.fn();
-    const onCompactActionsChange = vi.fn();
-    const props = makeProps({
-      onStreamerToolsEnabledChange,
-      onHideViewerCountChange,
-      onCompactActionsChange,
+    const setStreamerToolsEnabled = vi.fn();
+    const setHideViewerCount = vi.fn();
+    const setCompactActions = vi.fn();
+    const settings = makeSettings({
+      setStreamerToolsEnabled,
+      setHideViewerCount,
+      setCompactActions,
     });
-    render(<OnboardingWizard {...props} />);
+    renderWizard(settings);
 
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     await userEvent.click(screen.getByText("I'm a moderator"));
 
-    expect(onStreamerToolsEnabledChange).toHaveBeenCalledWith(true);
-    expect(onHideViewerCountChange).toHaveBeenCalledWith(true);
-    expect(onCompactActionsChange).toHaveBeenCalledWith(true);
+    expect(setStreamerToolsEnabled).toHaveBeenCalledWith(true);
+    expect(setHideViewerCount).toHaveBeenCalledWith(true);
+    expect(setCompactActions).toHaveBeenCalledWith(true);
   });
 
   it("applies viewer defaults when the viewer role is selected", async () => {
-    const onStreamerToolsEnabledChange = vi.fn();
-    const onHideViewerCountChange = vi.fn();
-    const onEmbedDefaultOpenChange = vi.fn();
-    const onCompactActionsChange = vi.fn();
-    const onKeepModActionsVisibleChange = vi.fn();
-    const onModActionsFirstChange = vi.fn();
-    const onDoubleClickConfirmModActionsChange = vi.fn();
+    const setStreamerToolsEnabled = vi.fn();
+    const setHideViewerCount = vi.fn();
+    const setEmbedDefaultOpen = vi.fn();
+    const setCompactActions = vi.fn();
+    const setKeepModActionsVisible = vi.fn();
+    const setModActionsFirst = vi.fn();
+    const setDoubleClickConfirmModActions = vi.fn();
 
-    const props = makeProps({
-      onStreamerToolsEnabledChange,
-      onHideViewerCountChange,
-      onEmbedDefaultOpenChange,
-      onCompactActionsChange,
-      onKeepModActionsVisibleChange,
-      onModActionsFirstChange,
-      onDoubleClickConfirmModActionsChange,
+    const settings = makeSettings({
+      setStreamerToolsEnabled,
+      setHideViewerCount,
+      setEmbedDefaultOpen,
+      setCompactActions,
+      setKeepModActionsVisible,
+      setModActionsFirst,
+      setDoubleClickConfirmModActions,
     });
-    render(<OnboardingWizard {...props} />);
+    renderWizard(settings);
 
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     await userEvent.click(screen.getByText("I'm a viewer"));
 
-    expect(onStreamerToolsEnabledChange).toHaveBeenCalledWith(false);
-    expect(onHideViewerCountChange).toHaveBeenCalledWith(false);
-    expect(onEmbedDefaultOpenChange).toHaveBeenCalledWith(true);
-    expect(onCompactActionsChange).toHaveBeenCalledWith(false);
-    expect(onKeepModActionsVisibleChange).toHaveBeenCalledWith(false);
-    expect(onModActionsFirstChange).toHaveBeenCalledWith(false);
-    expect(onDoubleClickConfirmModActionsChange).toHaveBeenCalledWith(false);
+    expect(setStreamerToolsEnabled).toHaveBeenCalledWith(false);
+    expect(setHideViewerCount).toHaveBeenCalledWith(false);
+    expect(setEmbedDefaultOpen).toHaveBeenCalledWith(true);
+    expect(setCompactActions).toHaveBeenCalledWith(false);
+    expect(setKeepModActionsVisible).toHaveBeenCalledWith(false);
+    expect(setModActionsFirst).toHaveBeenCalledWith(false);
+    expect(setDoubleClickConfirmModActions).toHaveBeenCalledWith(false);
   });
 
   it("disables Finish until a role is picked, then calls onComplete on click", async () => {
     const onComplete = vi.fn();
-    render(<OnboardingWizard {...makeProps({ onComplete })} />);
+    renderWizard(makeSettings(), makeProps({ onComplete }));
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     expect(screen.getByText("Finish")).toBeDisabled();
@@ -274,7 +324,7 @@ describe("OnboardingWizard component", () => {
   });
 
   it("navigates back to the theme step when Back is clicked", async () => {
-    render(<OnboardingWizard {...makeProps()} />);
+    renderWizard();
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     expect(screen.getByText("How will you use Mixchat?")).toBeInTheDocument();
@@ -283,12 +333,12 @@ describe("OnboardingWizard component", () => {
   });
 
   it("toggles a non-locked setting and shows the new value", async () => {
-    const onHideChatTimestampsChange = vi.fn();
-    const props = makeProps({
+    const setHideChatTimestamps = vi.fn();
+    const settings = makeSettings({
       hideChatTimestamps: false,
-      onHideChatTimestampsChange,
+      setHideChatTimestamps,
     });
-    render(<OnboardingWizard {...props} />);
+    renderWizard(settings);
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     await userEvent.click(screen.getByText("I'm a viewer"));
@@ -298,7 +348,7 @@ describe("OnboardingWizard component", () => {
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes.length).toBeGreaterThan(0);
     await userEvent.click(checkboxes[0]);
-    expect(onHideChatTimestampsChange).toHaveBeenCalled();
+    expect(setHideChatTimestamps).toHaveBeenCalled();
   });
 
   it("does not render toggles for locked settings, but shows their on/off pill", async () => {
@@ -567,29 +617,25 @@ describe("OnboardingWizard component", () => {
   });
 
   it("updates font size when the slider is moved", async () => {
-    const onFontSizeChange = vi.fn();
-    render(<OnboardingWizard {...makeProps({ onFontSizeChange })} />);
+    const setFontSize = vi.fn();
+    renderWizard(makeSettings({ setFontSize }));
     await userEvent.click(screen.getByText("Continue"));
     const range = screen.getByRole("slider");
     await userEvent.click(range);
     fireEvent.change(range, { target: { value: "18" } });
-    expect(onFontSizeChange).toHaveBeenCalledWith(18);
+    expect(setFontSize).toHaveBeenCalledWith(18);
   });
 
   it("switches the active font when a font button is clicked", async () => {
-    const onChatFontChange = vi.fn();
-    render(<OnboardingWizard {...makeProps({ onChatFontChange })} />);
+    const setChatFont = vi.fn();
+    renderWizard(makeSettings({ setChatFont }));
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Roboto"));
-    expect(onChatFontChange).toHaveBeenCalledWith("roboto");
+    expect(setChatFont).toHaveBeenCalledWith("roboto");
   });
 
   it("marks the currently selected font as active", async () => {
-    render(
-      <OnboardingWizard
-        {...makeProps({ chatFont: "rubik" })}
-      />,
-    );
+    renderWizard(makeSettings({ chatFont: "rubik" }));
     await userEvent.click(screen.getByText("Continue"));
     const active = document.querySelector(
       ".onboarding-typography-font--active",
@@ -638,13 +684,9 @@ describe("OnboardingWizard component", () => {
   });
 
   it("invokes the YT third-party emote setter when the toggle is clicked", async () => {
-    const onRenderThirdPartyEmotesOnYoutubeChange = vi.fn();
-    render(
-      <OnboardingWizard
-        {...makeProps({
-          onRenderThirdPartyEmotesOnYoutubeChange,
-        })}
-      />,
+    const setRenderThirdPartyEmotesOnYoutube = vi.fn();
+    renderWizard(
+      makeSettings({ setRenderThirdPartyEmotesOnYoutube }),
     );
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
@@ -660,25 +702,21 @@ describe("OnboardingWizard component", () => {
     expect(checkbox).not.toBeNull();
     await userEvent.click(checkbox!);
     expect(
-      onRenderThirdPartyEmotesOnYoutubeChange,
+      setRenderThirdPartyEmotesOnYoutube,
     ).toHaveBeenCalledWith(true);
   });
 
   it("applies the streamer default (off) for the YT third-party emote setting", async () => {
-    const onRenderThirdPartyEmotesOnYoutubeChange = vi.fn();
-    render(
-      <OnboardingWizard
-        {...makeProps({
-          onRenderThirdPartyEmotesOnYoutubeChange,
-        })}
-      />,
+    const setRenderThirdPartyEmotesOnYoutube = vi.fn();
+    renderWizard(
+      makeSettings({ setRenderThirdPartyEmotesOnYoutube }),
     );
     await userEvent.click(screen.getByText("Continue"));
     await userEvent.click(screen.getByText("Next"));
     await userEvent.click(screen.getByText("I'm a streamer"));
 
     expect(
-      onRenderThirdPartyEmotesOnYoutubeChange,
+      setRenderThirdPartyEmotesOnYoutube,
     ).toHaveBeenCalledWith(false);
   });
 });

@@ -17,39 +17,12 @@ import {
   FONT_FAMILY_MAP,
   THEME_OPTIONS,
 } from "../lib/types";
+import { useSettingsContext } from "../contexts/SettingsContext";
 import "../styles/OnboardingWizard.css";
 
 type UserType = "streamer" | "mod" | "viewer";
 
 interface OnboardingWizardProps {
-  chatTheme: ChatTheme;
-  onChatThemeChange: (value: ChatTheme) => void;
-  fontSize: number;
-  onFontSizeChange: (value: number) => void;
-  chatFont: ChatFont;
-  onChatFontChange: (value: ChatFont) => void;
-  streamerToolsEnabled: boolean;
-  onStreamerToolsEnabledChange: (value: boolean) => void;
-  hideViewerCount: boolean;
-  onHideViewerCountChange: (value: boolean) => void;
-  unifyChatEnabled: boolean;
-  onUnifyChatEnabledChange: (value: boolean) => void;
-  showDeletedMessages: boolean;
-  onShowDeletedMessagesChange: (value: boolean) => void;
-  compactActions: boolean;
-  onCompactActionsChange: (value: boolean) => void;
-  keepModActionsVisible: boolean;
-  onKeepModActionsVisibleChange: (value: boolean) => void;
-  modActionsFirst: boolean;
-  onModActionsFirstChange: (value: boolean) => void;
-  doubleClickConfirmModActions: boolean;
-  onDoubleClickConfirmModActionsChange: (value: boolean) => void;
-  embedDefaultOpen: boolean;
-  onEmbedDefaultOpenChange: (value: boolean) => void;
-  hideChatTimestamps: boolean;
-  onHideChatTimestampsChange: (value: boolean) => void;
-  renderThirdPartyEmotesOnYoutube: boolean;
-  onRenderThirdPartyEmotesOnYoutubeChange: (value: boolean) => void;
   onComplete: () => void;
 }
 
@@ -218,36 +191,10 @@ const BASE_SETTINGS: SettingDef[] = [
 ];
 
 export default function OnboardingWizard({
-  chatTheme,
-  onChatThemeChange,
-  fontSize,
-  onFontSizeChange,
-  chatFont,
-  onChatFontChange,
-  streamerToolsEnabled,
-  onStreamerToolsEnabledChange,
-  hideViewerCount,
-  onHideViewerCountChange,
-  unifyChatEnabled,
-  onUnifyChatEnabledChange,
-  showDeletedMessages,
-  onShowDeletedMessagesChange,
-  compactActions,
-  onCompactActionsChange,
-  keepModActionsVisible,
-  onKeepModActionsVisibleChange,
-  modActionsFirst,
-  onModActionsFirstChange,
-  doubleClickConfirmModActions,
-  onDoubleClickConfirmModActionsChange,
-  embedDefaultOpen,
-  onEmbedDefaultOpenChange,
-  hideChatTimestamps,
-  onHideChatTimestampsChange,
-  renderThirdPartyEmotesOnYoutube,
-  onRenderThirdPartyEmotesOnYoutubeChange,
   onComplete,
 }: OnboardingWizardProps) {
+  const s = useSettingsContext();
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [userType, setUserType] = useState<UserType | null>(null);
 
@@ -263,82 +210,82 @@ export default function OnboardingWizard({
   }, [onComplete]);
 
   const currentValues: Record<string, boolean> = {
-    streamerToolsEnabled,
-    hideViewerCount,
-    unifyChatEnabled,
-    showDeletedMessages,
-    compactActions,
-    keepModActionsVisible,
-    modActionsFirst,
-    doubleClickConfirmModActions,
-    embedDefaultOpen,
-    hideChatTimestamps,
-    renderThirdPartyEmotesOnYoutube,
+    streamerToolsEnabled: s.streamerToolsEnabled,
+    hideViewerCount: s.hideViewerCount,
+    unifyChatEnabled: s.unifyChatEnabled,
+    showDeletedMessages: s.showDeletedMessages,
+    compactActions: s.compactActions,
+    keepModActionsVisible: s.keepModActionsVisible,
+    modActionsFirst: s.modActionsFirst,
+    doubleClickConfirmModActions: s.doubleClickConfirmModActions,
+    embedDefaultOpen: s.embedDefaultOpen,
+    hideChatTimestamps: s.hideChatTimestamps,
+    renderThirdPartyEmotesOnYoutube: s.renderThirdPartyEmotesOnYoutube,
   };
 
   const handleSettingToggle = useCallback(
     (key: SettingDef["key"]) => {
       switch (key) {
         case "streamerToolsEnabled":
-          onStreamerToolsEnabledChange(!streamerToolsEnabled);
+          s.setStreamerToolsEnabled(!s.streamerToolsEnabled);
           break;
         case "hideViewerCount":
-          onHideViewerCountChange(!hideViewerCount);
+          s.setHideViewerCount(!s.hideViewerCount);
           break;
         case "unifyChatEnabled":
-          onUnifyChatEnabledChange(!unifyChatEnabled);
+          s.setUnifyChatEnabled(!s.unifyChatEnabled);
           break;
         case "showDeletedMessages":
-          onShowDeletedMessagesChange(!showDeletedMessages);
+          s.setShowDeletedMessages(!s.showDeletedMessages);
           break;
         case "compactActions":
-          onCompactActionsChange(!compactActions);
+          s.setCompactActions(!s.compactActions);
           break;
         case "keepModActionsVisible":
-          onKeepModActionsVisibleChange(!keepModActionsVisible);
+          s.setKeepModActionsVisible(!s.keepModActionsVisible);
           break;
         case "modActionsFirst":
-          onModActionsFirstChange(!modActionsFirst);
+          s.setModActionsFirst(!s.modActionsFirst);
           break;
         case "doubleClickConfirmModActions":
-          onDoubleClickConfirmModActionsChange(!doubleClickConfirmModActions);
+          s.setDoubleClickConfirmModActions(!s.doubleClickConfirmModActions);
           break;
         case "embedDefaultOpen":
-          onEmbedDefaultOpenChange(!embedDefaultOpen);
+          s.setEmbedDefaultOpen(!s.embedDefaultOpen);
           break;
         case "hideChatTimestamps":
-          onHideChatTimestampsChange(!hideChatTimestamps);
+          s.setHideChatTimestamps(!s.hideChatTimestamps);
           break;
         case "renderThirdPartyEmotesOnYoutube":
-          onRenderThirdPartyEmotesOnYoutubeChange(
-            !renderThirdPartyEmotesOnYoutube,
+          s.setRenderThirdPartyEmotesOnYoutube(
+            !s.renderThirdPartyEmotesOnYoutube,
           );
           break;
       }
     },
     [
-      streamerToolsEnabled,
-      hideViewerCount,
-      unifyChatEnabled,
-      showDeletedMessages,
-      compactActions,
-      keepModActionsVisible,
-      modActionsFirst,
-      doubleClickConfirmModActions,
-      embedDefaultOpen,
-      hideChatTimestamps,
-      renderThirdPartyEmotesOnYoutube,
-      onStreamerToolsEnabledChange,
-      onHideViewerCountChange,
-      onUnifyChatEnabledChange,
-      onShowDeletedMessagesChange,
-      onCompactActionsChange,
-      onKeepModActionsVisibleChange,
-      onModActionsFirstChange,
-      onDoubleClickConfirmModActionsChange,
-      onEmbedDefaultOpenChange,
-      onHideChatTimestampsChange,
-      onRenderThirdPartyEmotesOnYoutubeChange,
+      s.streamerToolsEnabled,
+      s.hideViewerCount,
+      s.unifyChatEnabled,
+      s.showDeletedMessages,
+      s.compactActions,
+      s.keepModActionsVisible,
+      s.modActionsFirst,
+      s.doubleClickConfirmModActions,
+      s.embedDefaultOpen,
+      s.hideChatTimestamps,
+      s.renderThirdPartyEmotesOnYoutube,
+      s.setStreamerToolsEnabled,
+      s.setHideViewerCount,
+      s.setUnifyChatEnabled,
+      s.setShowDeletedMessages,
+      s.setCompactActions,
+      s.setKeepModActionsVisible,
+      s.setModActionsFirst,
+      s.setDoubleClickConfirmModActions,
+      s.setEmbedDefaultOpen,
+      s.setHideChatTimestamps,
+      s.setRenderThirdPartyEmotesOnYoutube,
     ],
   );
 
@@ -347,34 +294,34 @@ export default function OnboardingWizard({
       setUserType(type);
       const defaults =
         type === "viewer" ? VIEWER_DEFAULTS : STREAMER_MOD_DEFAULTS;
-      onStreamerToolsEnabledChange(defaults.streamerToolsEnabled);
-      onHideViewerCountChange(defaults.hideViewerCount);
-      onUnifyChatEnabledChange(defaults.unifyChatEnabled);
-      onShowDeletedMessagesChange(defaults.showDeletedMessages);
-      onCompactActionsChange(defaults.compactActions);
-      onKeepModActionsVisibleChange(defaults.keepModActionsVisible);
-      onModActionsFirstChange(defaults.modActionsFirst);
-      onDoubleClickConfirmModActionsChange(
+      s.setStreamerToolsEnabled(defaults.streamerToolsEnabled);
+      s.setHideViewerCount(defaults.hideViewerCount);
+      s.setUnifyChatEnabled(defaults.unifyChatEnabled);
+      s.setShowDeletedMessages(defaults.showDeletedMessages);
+      s.setCompactActions(defaults.compactActions);
+      s.setKeepModActionsVisible(defaults.keepModActionsVisible);
+      s.setModActionsFirst(defaults.modActionsFirst);
+      s.setDoubleClickConfirmModActions(
         defaults.doubleClickConfirmModActions,
       );
-      onEmbedDefaultOpenChange(defaults.embedDefaultOpen);
-      onHideChatTimestampsChange(defaults.hideChatTimestamps);
-      onRenderThirdPartyEmotesOnYoutubeChange(
+      s.setEmbedDefaultOpen(defaults.embedDefaultOpen);
+      s.setHideChatTimestamps(defaults.hideChatTimestamps);
+      s.setRenderThirdPartyEmotesOnYoutube(
         defaults.renderThirdPartyEmotesOnYoutube,
       );
     },
     [
-      onStreamerToolsEnabledChange,
-      onHideViewerCountChange,
-      onUnifyChatEnabledChange,
-      onShowDeletedMessagesChange,
-      onCompactActionsChange,
-      onKeepModActionsVisibleChange,
-      onModActionsFirstChange,
-      onDoubleClickConfirmModActionsChange,
-      onEmbedDefaultOpenChange,
-      onHideChatTimestampsChange,
-      onRenderThirdPartyEmotesOnYoutubeChange,
+      s.setStreamerToolsEnabled,
+      s.setHideViewerCount,
+      s.setUnifyChatEnabled,
+      s.setShowDeletedMessages,
+      s.setCompactActions,
+      s.setKeepModActionsVisible,
+      s.setModActionsFirst,
+      s.setDoubleClickConfirmModActions,
+      s.setEmbedDefaultOpen,
+      s.setHideChatTimestamps,
+      s.setRenderThirdPartyEmotesOnYoutube,
     ],
   );
 
@@ -480,8 +427,8 @@ export default function OnboardingWizard({
               <div
                 className="onboarding-preview"
                 style={{
-                  "--chat-font-size": `${fontSize}px`,
-                  "--chat-font-family": FONT_FAMILY_MAP[chatFont],
+                  "--chat-font-size": `${s.fontSize}px`,
+                  "--chat-font-family": FONT_FAMILY_MAP[s.chatFont],
                 } as React.CSSProperties}
               >
                 <div className="onboarding-preview-header">
@@ -634,9 +581,9 @@ export default function OnboardingWizard({
                         )}
                         <button
                           type="button"
-                          onClick={() => onChatThemeChange(value as ChatTheme)}
+                          onClick={() => s.setChatTheme(value as ChatTheme)}
                           className={`onboarding-theme-btn${
-                            chatTheme === value
+                            s.chatTheme === value
                               ? " onboarding-theme-btn--active"
                               : ""
                           }`}
@@ -656,7 +603,7 @@ export default function OnboardingWizard({
                             />
                           </div>
                           <span className="onboarding-theme-label">{label}</span>
-                          {chatTheme === value && (
+                          {s.chatTheme === value && (
                             <span className="onboarding-theme-check">✓</span>
                           )}
                         </button>
@@ -671,7 +618,7 @@ export default function OnboardingWizard({
                   <label className="onboarding-typography-label" htmlFor="onboarding-font-size">
                     Font size
                     <span className="onboarding-typography-value">
-                      {fontSize}px
+                      {s.fontSize}px
                     </span>
                   </label>                  <div className="onboarding-typography-controls">
                     <span className="onboarding-typography-bound">A</span>
@@ -681,9 +628,9 @@ export default function OnboardingWizard({
                       min="12"
                       max="22"
                       step="1"
-                      value={fontSize}
+                      value={s.fontSize}
                       onChange={(e) =>
-                        onFontSizeChange(parseInt(e.target.value))
+                        s.setFontSize(parseInt(e.target.value))
                       }
                       className="onboarding-typography-range"
                     />
@@ -699,9 +646,9 @@ export default function OnboardingWizard({
                       <button
                         key={value}
                         type="button"
-                        onClick={() => onChatFontChange(value)}
+                        onClick={() => s.setChatFont(value)}
                         className={`onboarding-typography-font${
-                          chatFont === value
+                          s.chatFont === value
                             ? " onboarding-typography-font--active"
                             : ""
                         }`}
@@ -755,20 +702,20 @@ export default function OnboardingWizard({
                     ones to taste, and adjust everything later in Settings.
                   </p>
                   <div className="onboarding-settings-list">
-                    {BASE_SETTINGS.map((s) => {
-                      const value = currentValues[s.key];
-                      const isChoosable = s.choosableFor.includes(userType);
+                    {BASE_SETTINGS.map((setting) => {
+                      const value = currentValues[setting.key];
+                      const isChoosable = setting.choosableFor.includes(userType);
                       return (
-                        <div key={s.key} className="onboarding-setting">
+                        <div key={setting.key} className="onboarding-setting">
                           <div className="onboarding-setting-icon">
-                            {s.icon}
+                            {setting.icon}
                           </div>
                           <div className="onboarding-setting-content">
                             <p className="onboarding-setting-label">
-                              {s.label}
+                              {setting.label}
                             </p>
                             <p className="onboarding-setting-desc">
-                              {s.description}
+                              {setting.description}
                             </p>
                           </div>
                           <div className="onboarding-setting-state">
@@ -780,8 +727,8 @@ export default function OnboardingWizard({
                                 <input
                                   type="checkbox"
                                   checked={value}
-                                  onChange={() => handleSettingToggle(s.key)}
-                                  aria-label={s.label}
+                                  onChange={() => handleSettingToggle(setting.key)}
+                                  aria-label={setting.label}
                                 />
                                 <span className="onboarding-toggle-slider" />
                               </label>

@@ -1,7 +1,5 @@
 import React, { memo } from "react";
 
-const EMPTY_OBJECT = {};
-const noop = () => {};
 import {
   FaStar,
   FaRegStar,
@@ -12,9 +10,6 @@ import {
   FaTwitch,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
-import type { ChatFont, ChatTheme } from "../lib/types";
-import type { MentionSoundType } from "../hooks/chat/useTwitchChat";
-import type { SettingsProps } from "../lib/settings/types";
 
 interface TwitchChannel {
   id: string;
@@ -28,7 +23,7 @@ interface TwitchChannel {
 
 const EMPTY_STRING_ARRAY: string[] = [];
 
-interface LoginPanelProps extends Partial<SettingsProps> {
+interface LoginPanelProps {
   twitchConnected: boolean;
   twitchUser?: string;
   twitchProfileImage?: string;
@@ -50,6 +45,10 @@ interface LoginPanelProps extends Partial<SettingsProps> {
   linkedYoutubeChannelIds?: string[];
   onGoHome?: () => void;
   onRequestClose?: () => void;
+  hasYoutubeSession: boolean;
+  hasDriveScope: boolean;
+  onReauthYoutube: () => void;
+  onYoutubeDriveLogin: () => void;
 }
 
 function LoginPanel({
@@ -72,60 +71,12 @@ function LoginPanel({
   onManageWatchlist,
   onManageYoutubeLinks,
   linkedYoutubeChannelIds = EMPTY_STRING_ARRAY,
-  embedDefaultOpen = true,
-  onEmbedDefaultOpenChange,
-  unifyChatEnabled = false,
-  onUnifyChatEnabledChange,
-  useYoutubeEmbed = false,
-  onUseYoutubeEmbedChange,
-  fontSize = 14,
-  onFontSizeChange,
-  chatFont = "inter" as ChatFont,
-  onChatFontChange,
-  mentionSoundEnabled = true,
-  onMentionSoundEnabledChange,
-  mentionVolume = 0.2,
-  onMentionVolumeChange,
-  mentionSoundType = "ding" as MentionSoundType,
-  onMentionSoundTypeChange,
-  showDeletedMessages = true,
-  onShowDeletedMessagesChange,
-  compactActions = false,
-  onCompactActionsChange,
-  keepModActionsVisible = false,
-  onKeepModActionsVisibleChange,
-  modActionsFirst = false,
-  onModActionsFirstChange,
-  doubleClickConfirmModActions = false,
-  onDoubleClickConfirmModActionsChange,
-  splitChatEnabled = false,
-  onSplitChatEnabledChange,
-  chatTheme = "default" as ChatTheme,
-  onChatThemeChange,
-  hideViewerCount = false,
-  onHideViewerCountChange,
-  hideChatTimestamps = false,
-  onHideChatTimestampsChange,
-  eventSounds = {} as Record<string, string>,
-  onEventSoundChange,
-  eventSoundVolume = 1,
-  onEventSoundVolumeChange,
-  hasYoutubeSession = false,
-  hasDriveScope = false,
-  onReauthYoutube,
-  onYoutubeDriveLogin = noop,
   onGoHome,
   onRequestClose,
-  ignoredUsers = EMPTY_STRING_ARRAY,
-  onIgnoredUsersChange,
-  streamerToolsEnabled = false,
-  onStreamerToolsEnabledChange,
-  defaultPlayerType = "embed" as "embed" | "m3u8",
-  onDefaultPlayerTypeChange,
-  defaultHlsQuality = "highest",
-  onDefaultHlsQualityChange,
-  renderThirdPartyEmotesOnYoutube = false,
-  onRenderThirdPartyEmotesOnYoutubeChange,
+  hasYoutubeSession,
+  hasDriveScope,
+  onReauthYoutube,
+  onYoutubeDriveLogin,
 }: LoginPanelProps) {
   const [manualChannel, setManualChannel] = React.useState("");
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -193,7 +144,7 @@ function LoginPanel({
             onRequestClose?.();
           }
         }}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } } }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } } } }
         title={`Switch to ${twitchUser}'s channel`}
               >
                 {twitchProfileImage && (
@@ -397,129 +348,11 @@ function LoginPanel({
 
       {showEmbedConfig && (
         <EmbedConfigModal
-          embedDefaultOpen={embedDefaultOpen}
-          onEmbedDefaultOpenChange={(value) => {
-            if (onEmbedDefaultOpenChange) {
-              onEmbedDefaultOpenChange(value);
-            }
-          }}
-          unifyChatEnabled={unifyChatEnabled}
-          onUnifyChatEnabledChange={(value) => {
-            if (onUnifyChatEnabledChange) {
-              onUnifyChatEnabledChange(value);
-            }
-          }}
-          useYoutubeEmbed={useYoutubeEmbed}
-          onUseYoutubeEmbedChange={(value) => {
-            if (onUseYoutubeEmbedChange) {
-              onUseYoutubeEmbedChange(value);
-            }
-          }}
-          fontSize={fontSize}
-          onFontSizeChange={(value) => {
-            if (onFontSizeChange) {
-              onFontSizeChange(value);
-            }
-          }}
-          chatFont={chatFont}
-          onChatFontChange={(value) => {
-            if (onChatFontChange) {
-              onChatFontChange(value);
-            }
-          }}
-          mentionSoundEnabled={mentionSoundEnabled}
-          onMentionSoundEnabledChange={(value) => {
-            if (onMentionSoundEnabledChange) {
-              onMentionSoundEnabledChange(value);
-            }
-          }}
-          mentionVolume={mentionVolume}
-          onMentionVolumeChange={(value) => {
-            if (onMentionVolumeChange) {
-              onMentionVolumeChange(value);
-            }
-          }}
-          mentionSoundType={mentionSoundType}
-          onMentionSoundTypeChange={(value) => {
-            if (onMentionSoundTypeChange) {
-              onMentionSoundTypeChange(value);
-            }
-          }}
-          showDeletedMessages={showDeletedMessages}
-          onShowDeletedMessagesChange={(value) => {
-            if (onShowDeletedMessagesChange) {
-              onShowDeletedMessagesChange(value);
-            }
-          }}
-          compactActions={compactActions}
-          onCompactActionsChange={(value) => {
-            if (onCompactActionsChange) onCompactActionsChange(value);
-          }}
-          keepModActionsVisible={keepModActionsVisible}
-          onKeepModActionsVisibleChange={(value) => {
-            if (onKeepModActionsVisibleChange)
-              onKeepModActionsVisibleChange(value);
-          }}
-          modActionsFirst={modActionsFirst}
-          onModActionsFirstChange={(value) => {
-            if (onModActionsFirstChange) onModActionsFirstChange(value);
-          }}
-          doubleClickConfirmModActions={doubleClickConfirmModActions}
-          onDoubleClickConfirmModActionsChange={(value) => {
-            if (onDoubleClickConfirmModActionsChange)
-              onDoubleClickConfirmModActionsChange(value);
-          }}
-          splitChatEnabled={splitChatEnabled}
-          onSplitChatEnabledChange={(value) => {
-            if (onSplitChatEnabledChange) onSplitChatEnabledChange(value);
-          }}
-          chatTheme={chatTheme}
-          onChatThemeChange={(value) => {
-            if (onChatThemeChange) onChatThemeChange(value);
-          }}
-          hideViewerCount={hideViewerCount}
-          onHideViewerCountChange={(value) => {
-            if (onHideViewerCountChange) onHideViewerCountChange(value);
-          }}
-          hideChatTimestamps={hideChatTimestamps}
-          onHideChatTimestampsChange={(value) => {
-            if (onHideChatTimestampsChange) onHideChatTimestampsChange(value);
-          }}
-          eventSounds={eventSounds}
-          onEventSoundChange={(eventType, soundData) => {
-            if (onEventSoundChange) onEventSoundChange(eventType, soundData);
-          }}
-          eventSoundVolume={eventSoundVolume}
-          onEventSoundVolumeChange={(value) => {
-            if (onEventSoundVolumeChange) onEventSoundVolumeChange(value);
-          }}
-          ignoredUsers={ignoredUsers}
-          onIgnoredUsersChange={(users) => {
-            if (onIgnoredUsersChange) onIgnoredUsersChange(users);
-          }}
+          onClose={() => setShowEmbedConfig(false)}
           hasYoutubeSession={hasYoutubeSession}
           hasDriveScope={hasDriveScope}
-          onReauthYoutube={onReauthYoutube || (() => {})}
+          onReauthYoutube={onReauthYoutube}
           onYoutubeDriveLogin={onYoutubeDriveLogin}
-          streamerToolsEnabled={streamerToolsEnabled}
-          onStreamerToolsEnabledChange={(value) => {
-            if (onStreamerToolsEnabledChange)
-              onStreamerToolsEnabledChange(value);
-          }}
-          defaultPlayerType={defaultPlayerType}
-          onDefaultPlayerTypeChange={(value) => {
-            if (onDefaultPlayerTypeChange) onDefaultPlayerTypeChange(value);
-          }}
-          defaultHlsQuality={defaultHlsQuality}
-          onDefaultHlsQualityChange={(value) => {
-            if (onDefaultHlsQualityChange) onDefaultHlsQualityChange(value);
-          }}
-          renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-          onRenderThirdPartyEmotesOnYoutubeChange={(value) => {
-            if (onRenderThirdPartyEmotesOnYoutubeChange)
-              onRenderThirdPartyEmotesOnYoutubeChange(value);
-          }}
-          onClose={() => setShowEmbedConfig(false)}
         />
       )}
     </div>
