@@ -175,7 +175,7 @@ function EventSoundsSetting({
   | "onEventSoundVolumeChange"
 >) {
   const soundFileInputRef = useRef<HTMLInputElement>(null);
-  const [currentEventType, setCurrentEventType] = useState<string>("");
+  const currentEventTypeRef = useRef<string>("");
   const [eventSoundsCollapsed, setEventSoundsCollapsed] = useState(true);
 
   const playEventSound = useCallback(
@@ -199,7 +199,7 @@ function EventSoundsSetting({
   const handleSoundFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file || !currentEventType) return;
+      if (!file || !currentEventTypeRef.current) return;
 
       if (!file.type.startsWith("audio/")) {
         alert("Please select a valid audio file.");
@@ -214,13 +214,13 @@ function EventSoundsSetting({
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        onEventSoundChange(currentEventType, dataUrl);
-        setCurrentEventType("");
+        onEventSoundChange(currentEventTypeRef.current, dataUrl);
+        currentEventTypeRef.current = "";
       };
       reader.readAsDataURL(file);
       e.target.value = "";
     },
-    [currentEventType, onEventSoundChange],
+    [onEventSoundChange],
   );
 
   return (
@@ -329,7 +329,7 @@ function EventSoundsSetting({
                     <button
                       type="button"
                       onClick={() => {
-                        setCurrentEventType(key);
+                        currentEventTypeRef.current = key;
                         soundFileInputRef.current?.click();
                       }}
                       className="embed-config-event-sound-btn embed-config-event-sound-btn--upload"
