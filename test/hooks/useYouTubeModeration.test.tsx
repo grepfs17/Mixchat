@@ -161,14 +161,6 @@ describe("useYouTubeModeration - moderator detection", () => {
     expect(result.current.isYouTubeModerator).toBe(false);
   });
 
-  it("ignores mod toggle clicks when the user is not a moderator", () => {
-    const { result } = renderHook(() => useYouTubeModeration(baseProps()));
-    act(() => {
-      result.current.handleToggleYoutubeModMode();
-    });
-    expect(result.current.youtubeModModeActive).toBe(false);
-  });
-
   it("activates youtubeModModeActive when modModeTarget includes youtube", () => {
     const { result } = renderHook(() =>
       useYouTubeModeration(

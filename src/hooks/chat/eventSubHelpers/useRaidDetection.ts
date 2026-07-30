@@ -50,7 +50,10 @@ export function useRaidDetection({
     subscribeRef.current = subscribe;
   }, [subscribe]);
 
-  // Step 1: Resolve broadcaster ID asynchronously
+  // Derived state: resolvedId is computed from channelId via an async call
+  // to the broadcaster ID resolver. This genuinely requires state because
+  // the resolution is asynchronous and cannot be computed during render.
+  // eslint-disable-next-line react-doctor/no-derived-state-effect
   const [resolvedId, setResolvedId] = useState<string | null>(null);
 
   useEffect(() => {

@@ -44,8 +44,6 @@ export interface UseModerationReturn {
   isModerator: boolean;
   modModeActive: boolean;
   setIsModerator: (v: boolean) => void;
-  setModModeActive: (v: boolean) => void;
-  handleToggleModMode: () => void;
   handleDelete: (messageId: string) => Promise<void>;
   handleBan: (userId: string, displayName?: string) => Promise<void>;
   handleTimeout: (
@@ -243,7 +241,9 @@ export function useModeration({
   setIsRaidInitiator,
 }: UseModerationOptions): UseModerationReturn {
   const [isModerator, setIsModerator] = useState(false);
-  const [modModeActive, setModModeActive] = useState(false);
+
+  const modModeActive =
+    isModerator && (modModeTarget === "twitch" || modModeTarget === "both");
 
   // Derive moderator status from session and channel — intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
@@ -261,12 +261,6 @@ export function useModeration({
       }
     }
   }, [twitchSession, selectedTwitchChannelName, selectedTwitchChannel]);
-
-  useEffect(() => {
-    setModModeActive(
-      isModerator && (modModeTarget === "twitch" || modModeTarget === "both"),
-    );
-  }, [isModerator, modModeTarget]);
 
   useEffect(() => {
     let cancelled = false;
@@ -323,11 +317,6 @@ export function useModeration({
       selectedTwitchChannel,
     ],
   );
-
-  const handleToggleModMode = useCallback(() => {
-    if (!isModerator) return;
-    setModModeActive((v) => !v);
-  }, [isModerator]);
 
   const handleDelete = useCallback(
     async (messageId: string) => {
@@ -590,8 +579,6 @@ export function useModeration({
     isModerator,
     modModeActive,
     setIsModerator,
-    setModModeActive,
-    handleToggleModMode,
     handleDelete,
     handleBan,
     handleTimeout,

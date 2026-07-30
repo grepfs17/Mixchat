@@ -206,7 +206,6 @@ export function useChatAppState({
   const {
     isModerator,
     modModeActive,
-    handleToggleModMode,
     handleDelete,
     handleBan,
     handleTimeout,
@@ -230,7 +229,6 @@ export function useChatAppState({
   const {
     isYouTubeModerator,
     youtubeModModeActive,
-    handleToggleYoutubeModMode,
     handleYtDelete,
     handleYtBan,
     handleYtTimeout,
@@ -773,7 +771,6 @@ export function useChatAppState({
 
     handleSendMessage,
     handleRefreshEmotes,
-    handleToggleModMode,
     handleDelete,
     handleBan,
     handleTimeout,
@@ -789,7 +786,6 @@ export function useChatAppState({
     handleYtDelete,
     handleYtBan,
     handleYtTimeout,
-    handleToggleYoutubeModMode,
     getYtMessageText,
     markYtMessageDeleted,
     sendTwitchMessage,

@@ -38,7 +38,7 @@ function useClickOutside(
     };
     document.addEventListener("mousedown", listener);
     return () => document.removeEventListener("mousedown", listener);
-  }, [enabled]);
+  }, [enabled, ref]);
 }
 
 interface ChatHeaderProps {

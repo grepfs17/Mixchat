@@ -38,8 +38,6 @@ export interface UseYouTubeModerationReturn {
   isYouTubeModerator: boolean;
   youtubeModModeActive: boolean;
   setIsYouTubeModerator: (v: boolean) => void;
-  setYoutubeModModeActive: (v: boolean) => void;
-  handleToggleYoutubeModMode: () => void;
   handleYtDelete: (messageId: string) => Promise<void>;
   handleYtBan: (channelId: string, displayName?: string) => Promise<void>;
   handleYtTimeout: (
@@ -61,8 +59,11 @@ export function useYouTubeModeration({
   getMessageText,
 }: UseYouTubeModerationOptions): UseYouTubeModerationReturn {
   const [isYouTubeModerator, setIsYouTubeModerator] = useState(false);
-  const [youtubeModModeActive, setYoutubeModModeActive] = useState(false);
   const lastNotifiedIdRef = useRef<number | null>(null);
+
+  const youtubeModModeActive = !!youtubeVideoId &&
+    isYouTubeModerator &&
+    (modModeTarget === "youtube" || modModeTarget === "both");
 
   // Keep the latest messages in a ref so handleYtDelete stays stable while
   // still seeing current data when resolving the official message id.
@@ -109,24 +110,6 @@ export function useYouTubeModeration({
     );
     setIsYouTubeModerator(hasOwnModMessage);
   }, [youtubeVideoId, ytChannelId, ownChannelId, messages]);
-
-  // Sync YouTube mod mode based on moderator status — intentional
-  // eslint-disable-next-line no-adjust-state-on-prop-change
-  useEffect(() => {
-    if (!youtubeVideoId) {
-      setYoutubeModModeActive(false);
-      return;
-    }
-    setYoutubeModModeActive(
-      isYouTubeModerator &&
-        (modModeTarget === "youtube" || modModeTarget === "both"),
-    );
-  }, [isYouTubeModerator, modModeTarget, youtubeVideoId]);
-
-  const handleToggleYoutubeModMode = useCallback(() => {
-    if (!isYouTubeModerator) return;
-    setYoutubeModModeActive((v) => !v);
-  }, [isYouTubeModerator]);
 
   const notify = useCallback(
     (message: string, type: "success" | "error" | "info") => {
@@ -216,8 +199,6 @@ export function useYouTubeModeration({
     isYouTubeModerator,
     youtubeModModeActive,
     setIsYouTubeModerator,
-    setYoutubeModModeActive,
-    handleToggleYoutubeModMode,
     handleYtDelete,
     handleYtBan,
     handleYtTimeout,
