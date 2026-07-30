@@ -27,14 +27,17 @@ function useClickOutside(
   handler: () => void,
   enabled = true,
 ): void {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
   useEffect(() => {
     if (!enabled) return;
     const listener = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) handler();
+      if (!ref.current?.contains(e.target as Node)) handlerRef.current();
     };
     document.addEventListener("mousedown", listener);
     return () => document.removeEventListener("mousedown", listener);
-  }, [enabled, handler, ref]);
+  }, [enabled]);
 }
 
 interface ChatHeaderProps {
@@ -263,14 +266,16 @@ function StreamInfoBar({
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
-  useClickOutside(categoryDropdownRef, () => {
+  const closeCategoryDropdown = useCallback(() => {
     const portalDropdown = document.getElementById("category-dropdown-portal");
     const target = document.activeElement;
     if (categoryInputRef.current === target || portalDropdown?.contains(target)) return;
     setEditingCategory(false);
     setCategoryResults([]);
     setCategoryDropdownPos(null);
-  }, editingCategory);
+  }, []);
+
+  useClickOutside(categoryDropdownRef, closeCategoryDropdown, editingCategory);
 
   const handleSaveTitle = useCallback(() => {
     setSavingTitle(true);
