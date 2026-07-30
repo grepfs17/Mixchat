@@ -520,10 +520,10 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
   /**
-   * Sticky set of message ids that have been marked deleted by a moderator.
-   * Survives the FIFO shift of the bounded `messages` buffer, so a deleted
-   * message is never re-broadcast if InnerTube re-publishes it after the
-   * buffer has cycled past it.
+   * Sticky set of message ids that have been marked deleted (by a moderator
+   * or by the author). Survives the FIFO shift of the bounded `messages`
+   * buffer, so a deleted message is never re-broadcast if InnerTube
+   * re-publishes it after the buffer has cycled past it.
    */
   const deletedIds = new Map<string, string>();
 
@@ -664,14 +664,20 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         return;
       }
       if (action.is(YTNodes.RemoveChatItemAction)) {
+        // User deleted their own message (or YouTube auto-mod removed it).
+        // Unlike MarkChatItemAsDeletedAction, there is no
+        // deleted_state_message — the item is simply removed. Mark it as
+        // deleted with an author-removed label so moderators can distinguish
+        // self-deletions from moderator deletions.
         const targetId = action.target_item_id;
-        if (targetId) {
-          const idx = messages.findIndex((m) => m.id === targetId);
-          if (idx !== -1) messages.splice(idx, 1);
-          seenIds.delete(targetId);
-          deletedIds.delete(targetId);
-          broadcast(session!, "delete", { messageId: targetId });
+        if (!targetId) return;
+        const text = "Message removed by author";
+        deletedIds.set(targetId, text);
+        const idx = messages.findIndex((m) => m.id === targetId);
+        if (idx !== -1) {
+          messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: text };
         }
+        broadcast(session!, "delete", { messageId: targetId, deletedByText: text });
         return;
       }
       if (action.is(YTNodes.MarkChatItemAsDeletedAction)) {
