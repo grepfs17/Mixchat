@@ -137,6 +137,14 @@
     background: rgba(255, 255, 255, 0.08);
 }
 
+.stream-info-title--readonly {
+    cursor: default;
+}
+
+.stream-info-title--readonly:hover {
+    background: transparent;
+}
+
 .stream-info-edit-icon {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -167,6 +175,14 @@
 
 .stream-info-category:hover {
     background: rgba(99, 102, 241, 0.22);
+}
+
+.stream-info-category--readonly {
+    cursor: default;
+}
+
+.stream-info-category--readonly:hover {
+    background: rgba(99, 102, 241, 0.12);
 }
 
 .stream-info-edit-group {

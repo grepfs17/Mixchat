@@ -242,12 +242,14 @@ function ModModeDropdown({
 function StreamInfoBar({
   streamTitle,
   streamGameName,
+  canEdit,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
 }: {
   streamTitle?: string;
   streamGameName?: string;
+  canEdit?: boolean;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -302,7 +304,7 @@ function StreamInfoBar({
   return (
     <>
       <div className="stream-info-bar">
-        {editingTitle ? (
+        {canEdit && editingTitle ? (
           <div className="stream-info-edit-group">
             <input
               className="stream-info-input"
@@ -335,7 +337,7 @@ function StreamInfoBar({
               <MdClose size={14} />
             </button>
           </div>
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             className="stream-info-title"
@@ -348,9 +350,13 @@ function StreamInfoBar({
             {streamTitle || "No title set"}
             <MdEdit size={11} className="stream-info-edit-icon" />
           </button>
+        ) : (
+          <span className="stream-info-title stream-info-title--readonly">
+            {streamTitle || "No title set"}
+          </span>
         )}
 
-        {editingCategory ? (
+        {canEdit && editingCategory ? (
           <div
             className="stream-info-edit-group stream-info-category-edit"
             ref={categoryDropdownRef}
@@ -406,7 +412,7 @@ function StreamInfoBar({
               <MdClose size={14} />
             </button>
           </div>
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             className="stream-info-category"
@@ -422,21 +428,27 @@ function StreamInfoBar({
             {streamGameName || "No category"}
             <MdEdit size={11} className="stream-info-edit-icon" />
           </button>
+        ) : (
+          <span className="stream-info-category stream-info-category--readonly">
+            {streamGameName || "No category"}
+          </span>
         )}
       </div>
 
-      <CategoryDropdown
-        results={categoryResults}
-        pos={categoryDropdownPos}
-        saving={savingCategory}
-        inputRef={categoryInputRef}
-        onSelect={handleSaveCategory}
-        onCancel={() => {
-          setEditingCategory(false);
-          setCategoryResults([]);
-          setCategoryDropdownPos(null);
-        }}
-      />
+      {canEdit && (
+        <CategoryDropdown
+          results={categoryResults}
+          pos={categoryDropdownPos}
+          saving={savingCategory}
+          inputRef={categoryInputRef}
+          onSelect={handleSaveCategory}
+          onCancel={() => {
+            setEditingCategory(false);
+            setCategoryResults([]);
+            setCategoryDropdownPos(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -841,15 +853,14 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {modModeActive && (
-        <StreamInfoBar
-          streamTitle={streamTitle}
-          streamGameName={streamGameName}
-          onUpdateTitle={onUpdateTitle}
-          onUpdateCategory={onUpdateCategory}
-          onSearchCategories={onSearchCategories}
-        />
-      )}
+      <StreamInfoBar
+        streamTitle={streamTitle}
+        streamGameName={streamGameName}
+        canEdit={isOnOwnChannel}
+        onUpdateTitle={onUpdateTitle}
+        onUpdateCategory={onUpdateCategory}
+        onSearchCategories={onSearchCategories}
+      />
     </>
   );
 }
