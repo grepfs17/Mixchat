@@ -36,7 +36,7 @@ import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
-import { sendYouTubeChatMessage } from "../../lib/youtube";
+import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
 import ThemeMascots from "./ThemeMascots";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -708,10 +708,6 @@ export default function ChatApp(props: ChatAppStateProps) {
               channelName={selectedTwitchChannelName}
               youtubeVideoId={youtubeVideoId}
               ytChatMessages={ytMessages}
-              onSendYoutube={async (text) => {
-                if (!youtubeVideoId) return;
-                await sendYouTubeChatMessage(youtubeVideoId, text);
-              }}
               onOptimisticYoutube={handleYtOptimisticMessage}
               onOptimisticYoutubeFailed={handleYtOptimisticFailed}
               youtubeAvailable={

@@ -16,7 +16,7 @@ import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
 import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
 import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
-import { sendYouTubeChatMessage } from "../../../lib/youtube";
+import { sendYouTubeChatMessage } from "../../../lib/youtubeChat";
 
 interface YTMessage {
   id: string;

@@ -3,7 +3,6 @@ import React, {
   useRef,
   useEffect,
   useCallback,
-  useMemo,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -15,24 +14,13 @@ import {
 } from "react-icons/fa";
 import { BsFillPeopleFill } from "react-icons/bs";
 import type { Platform, TwitchMessage } from "../../../lib/types";
-import { searchEmotes } from "../../../lib/emotes";
-import {
-  searchEmojis,
-  EMOJI_LIST,
-  type EmojiEntry,
-} from "../../../lib/emojiShortcodes";
+import { EMOJI_LIST } from "../../../lib/emojiShortcodes";
 import { useModerationContext } from "../../../contexts/ModerationContext";
-import { MOD_COMMANDS } from "../../../lib/constants";
+import { sendYouTubeChatMessage } from "../../../lib/youtubeChat";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
 import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
-import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
-import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
-import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
-import { useSlowMode } from "../../../hooks/chat/useSlowMode";
-import { useEmotes } from "../../../hooks/chat/useEmotes";
-import { isMobileDevice } from "../../../lib/device";
-import { sendYouTubeChatMessage } from "../../../lib/youtube";
+import { useChatInputCore } from "../../../hooks/chat/useChatInputCore";
 
 interface YTMessage {
   id: string;
@@ -63,8 +51,9 @@ interface UnifiedInputProps {
   channelName?: string;
   youtubeVideoId?: string | null;
   ytChatMessages?: YTMessage[];
-  onSendYoutube?: (message: string) => Promise<void>;
+  /** Called when an optimistic YouTube message should be shown. */
   onOptimisticYoutube?: (id: string, text: string) => void;
+  /** Called when an optimistic YouTube message fails to deliver. */
   onOptimisticYoutubeFailed?: (id: string) => void;
   youtubeAvailable?: boolean;
 }
@@ -85,21 +74,13 @@ export default function UnifiedInput({
   channelName = "",
   youtubeVideoId = null,
   ytChatMessages = EMPTY_YT_MSG_ARRAY,
-  onSendYoutube,
   onOptimisticYoutube,
   onOptimisticYoutubeFailed,
   youtubeAvailable = false,
 }: UnifiedInputProps) {
   const { isModerator } = useModerationContext();
   const [sendTarget, setSendTarget] = useState<SendTarget>("twitch");
-  const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const shouldRefocusRef = useRef(false);
-  const emotesOrganized = useEmotes();
-  const { cooldown: slowModeCooldown, startCooldown } = useSlowMode();
-
-  // Colon position for YouTube emoji autocomplete
-  const colonPosRef = useRef(-1);
 
   // Emote picker (Twitch full grid)
   const [showEmotePicker, setShowEmotePicker] = useState(false);
@@ -112,299 +93,68 @@ export default function UnifiedInput({
   const ytPickerBtnRef = useRef<HTMLButtonElement>(null);
   const ytPickerSearchRef = useRef<HTMLInputElement>(null);
 
+  const showTwitchFeatures = sendTarget === "twitch" || sendTarget === "both";
+  const showYoutubeFeatures =
+    (sendTarget === "youtube" || sendTarget === "both") && youtubeAvailable;
 
-
-  // --- Authors for @mention ---
-  const allAuthors = useMemo(() => {
-    const authorMap = new Map<string, string>();
-    chatMessages.forEach((msg) => {
-      const lower = msg.author.toLowerCase();
-      const existing = authorMap.get(lower);
-      if (
-        !existing ||
-        (existing === existing.toLowerCase() &&
-          msg.author !== msg.author.toLowerCase())
-      ) {
-        authorMap.set(lower, msg.author);
+  // ---- Send callback ----
+  const onSend = useCallback(
+    async (text: string) => {
+      if (sendTarget === "twitch" || sendTarget === "both") {
+        try {
+          await onSendMessage(text, ["twitch"], replyingTo?.id);
+        } catch (err) {
+          console.error("Twitch send failed:", err);
+        }
       }
-    });
-    ytChatMessages.forEach((m) => {
-      if (m.author) {
-        const lower = m.author.toLowerCase();
-        if (!authorMap.has(lower)) authorMap.set(lower, m.author);
+      if (showYoutubeFeatures && youtubeVideoId) {
+        const optimisticId = `optimistic_yt_${Date.now()}_${Math.random()}`;
+        onOptimisticYoutube?.(optimisticId, text);
+        try {
+          await sendYouTubeChatMessage(youtubeVideoId, text);
+        } catch (err) {
+          onOptimisticYoutubeFailed?.(optimisticId);
+          console.error("YouTube send failed:", err);
+        }
       }
-    });
-    return Array.from(authorMap.values());
-  }, [chatMessages, ytChatMessages]);
-
-  // --- Shared send ---
-  const doSend = useCallback(async () => {
-    const text = message.trim();
-    if (!text) return;
-    if (
-      (sendTarget === "twitch" || sendTarget === "both") &&
-      slowModeCooldown <= 0
-    ) {
-      try {
-        if (!isMobileDevice()) shouldRefocusRef.current = true;
-        await onSendMessage(text, ["twitch"], replyingTo?.id);
-      } catch (err) {
-        console.error("Twitch send failed:", err);
-      }
-    }
-    if (
-      (sendTarget === "youtube" || sendTarget === "both") &&
-      youtubeAvailable &&
-      onSendYoutube &&
-      youtubeVideoId
-    ) {
-      const optimisticId = `optimistic_yt_${Date.now()}_${Math.random()}`;
-      onOptimisticYoutube?.(optimisticId, text);
-      try {
-        await sendYouTubeChatMessage(youtubeVideoId, text);
-      } catch (err) {
-        onOptimisticYoutubeFailed?.(optimisticId);
-        console.error("YouTube send failed:", err);
-      }
-    }
-    setMessage("");
-    emoteAutocomplete.hide();
-    emojiAutocomplete.hide();
-    setShowEmotePicker(false);
-    setShowYtPicker(false);
-    if (onCancelReply) onCancelReply();
-    if (
-      (sendTarget === "twitch" || sendTarget === "both") &&
-      slowModeWaitTime &&
-      slowModeWaitTime > 0
-    ) {
-      startCooldown(slowModeWaitTime);
-    }    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-      message,
-      sendTarget,
-      slowModeCooldown,
-    slowModeWaitTime,
-    youtubeAvailable,
-    onSendYoutube,
-    youtubeVideoId,
-    onOptimisticYoutube,
-    onOptimisticYoutubeFailed,
-    onCancelReply,
-    replyingTo,
-    startCooldown,
-    onSendMessage,
-  ]);
-
-  // --- Insert at cursor helper ---
-  const { insertWithPrefix, insertAtPosition, replaceCurrentWord } =
-    useInsertAtCursor({ message, setMessage, inputRef });
-
-  // --- Autocomplete instances ---
-  const emoteAutocomplete = useAutocomplete<{
-    name: string;
-    url: string;
-    source: string;
-  }>({
-    onSelect: (emote) => {
-      insertWithPrefix(emote.name);
       setShowEmotePicker(false);
+      setShowYtPicker(false);
+      if (onCancelReply) onCancelReply();
     },
-    onSend: doSend,
-  });
-
-  const emojiAutocomplete = useAutocomplete<EmojiEntry>({
-    onSelect: (entry) => {
-      if (colonPosRef.current === -1) return;
-      const before = message.substring(0, colonPosRef.current);
-      const cursor = inputRef.current?.selectionStart ?? message.length;
-      const after = message.substring(cursor);
-      insertAtPosition(before, entry.char);
-      colonPosRef.current = -1;
-    },
-    onSend: doSend,
-  });
-
-  const usernameAutocomplete = useAutocomplete<string>({
-    onSelect: (username) => {
-      insertWithPrefix(username, "@");
-    },
-    onSend: doSend,
-  });
-
-  const commandAutocomplete = useAutocomplete<{
-    name: string;
-    usage: string;
-    description: string;
-  }>({
-    onSelect: (cmd) => {
-      replaceCurrentWord(cmd.name);
-    },
-    onSend: doSend,
-  });
-
-  // --- Autocomplete menu management ---
-  const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
-    inputRef,
-    autocompleteInstances: [
-      emoteAutocomplete,
-      emojiAutocomplete,
-      usernameAutocomplete,
-      commandAutocomplete,
-    ],
-  });
-
-  // --- Text change handler ---
-  const handleMessageChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newMessage = e.target.value;
-      setMessage(newMessage);
-      const cursorPos = e.target.selectionStart ?? newMessage.length;
-      const textBeforeCursor = newMessage.substring(0, cursorPos);
-      const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
-      const currentWord = textBeforeCursor.substring(lastSpaceIndex + 1);
-
-      // YouTube emoji :shortcode:
-      if (sendTarget === "youtube" || sendTarget === "both") {
-        const lastColon = textBeforeCursor.lastIndexOf(":");
-        if (lastColon !== -1) {
-          const query = textBeforeCursor.substring(lastColon + 1);
-          if (query.length >= 2 && !query.includes(" ")) {
-            const matches = searchEmojis(query);
-            if (matches.length > 0) {
-              colonPosRef.current = lastColon;
-              closeAll();
-              emojiAutocomplete.show(matches);
-              return;
-            }
-          }
-        }
-      }
-
-      // @mention
-      if (currentWord.startsWith("@") && currentWord.length > 1) {
-        const query = currentWord.substring(1).toLowerCase();
-        const matching = allAuthors
-          .filter(
-            (name) =>
-              name.toLowerCase().includes(query) &&
-              name.toLowerCase() !== currentUsername.toLowerCase(),
-          )
-          .sort();
-        if (matching.length > 0) {
-          closeAll();
-          usernameAutocomplete.show(matching);
-          return;
-        }
-      }
-
-      // Slash commands
-      if (
-        (sendTarget === "twitch" || sendTarget === "both") &&
-        isModerator &&
-        currentWord.startsWith("/") &&
-        lastSpaceIndex === -1
-      ) {
-        const matching = MOD_COMMANDS.filter((cmd) =>
-          cmd.name.startsWith(currentWord.toLowerCase()),
-        );
-        if (matching.length > 0) {
-          closeAll();
-          commandAutocomplete.show(matching);
-          return;
-        }
-      }
-
-      // Twitch emotes
-      if (
-        (sendTarget === "twitch" || sendTarget === "both") &&
-        currentWord.length > 0 &&
-        !currentWord.startsWith("@") &&
-        !currentWord.startsWith("/")
-      ) {
-        const results = searchEmotes(currentWord);
-        if (results.length > 0) {
-          closeAll();
-          emoteAutocomplete.show(results);
-          return;
-        }
-      }
-
-      closeAll();
-    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       sendTarget,
-      allAuthors,
-      currentUsername,
-      isModerator,
-      emoteAutocomplete,
-      emojiAutocomplete,
-      usernameAutocomplete,
-      commandAutocomplete,
-      closeAll,
+      showYoutubeFeatures,
+      youtubeVideoId,
+      onOptimisticYoutube,
+      onOptimisticYoutubeFailed,
+      onCancelReply,
+      replyingTo,
+      onSendMessage,
     ],
   );
 
-  // --- Keyboard handler ---
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      // Try each autocomplete in priority order
-      if (usernameAutocomplete.isOpen) {
-        usernameAutocomplete.handleKeyDown(e);
-        return;
-      }
-      if (commandAutocomplete.isOpen) {
-        commandAutocomplete.handleKeyDown(e);
-        return;
-      }
-      if (emoteAutocomplete.isOpen) {
-        emoteAutocomplete.handleKeyDown(e);
-        return;
-      }
-      if (emojiAutocomplete.isOpen) {
-        emojiAutocomplete.handleKeyDown(e);
-        return;
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        doSend();
-      }
-    },
-    [
-      usernameAutocomplete,
-      commandAutocomplete,
-      emoteAutocomplete,
-      emojiAutocomplete,
-      doSend,
-    ],
-  );
+  const core = useChatInputCore({
+    inputRef,
+    chatMessages: chatMessages as any,
+    ytChatMessages,
+    currentUsername,
+    isModerator,
+    isLoading,
+    replyingToId: replyingTo?.id,
+    enableTwitchFeatures: showTwitchFeatures,
+    enableYoutubeEmoji: showYoutubeFeatures,
+    slowModeWaitTime: (sendTarget === "twitch" || sendTarget === "both") ? slowModeWaitTime : null,
+    onSend,
+  });
 
-  // --- Effects ---
+  // Reset send target when YouTube becomes unavailable
   useEffect(() => {
-    return () => {
-      if (shouldRefocusRef.current) inputRef.current?.focus();
-    };
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (!isLoading && shouldRefocusRef.current) {
-      shouldRefocusRef.current = false;
-      const t = setTimeout(() => inputRef.current?.focus(), 0);
-      return () => clearTimeout(t);
-    }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (replyingTo && inputRef.current) inputRef.current.focus();
-  }, [replyingTo]);
-
-  // Reset send target when YouTube becomes unavailable    // Reset send target when YouTube becomes unavailable — intentional
+    if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
     // eslint-disable-next-line no-adjust-state-on-prop-change
-    useEffect(() => {
-      if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
-    }, [youtubeAvailable, sendTarget]);
+  }, [youtubeAvailable, sendTarget]);
 
-  // YouTube picker
+  // YouTube picker position and auto-focus
   useEffect(() => {
     if (showYtPicker) {
       setYtPickerRect(ytPickerBtnRef.current?.getBoundingClientRect() ?? null);
@@ -431,21 +181,17 @@ export default function UnifiedInput({
     return () => document.removeEventListener("mousedown", handler);
   }, [showYtPicker]);
 
-  // --- YouTube emoji insert from picker ---
+  // Insert emoji from YouTube emoji picker
   const insertEmojiFromPicker = useCallback(
     (char: string) => {
-      const cursor = inputRef.current?.selectionStart ?? message.length;
-      const before = message.substring(0, cursor);
-      const after = message.substring(cursor);
-      insertAtPosition(before, char, after);
+      const cursor = inputRef.current?.selectionStart ?? core.message.length;
+      const before = core.message.substring(0, cursor);
+      core.insertAtPosition(before, char);
     },
-    [message, insertAtPosition],
+    [core],
   );
 
-  // --- Render ---
-  const showTwitchFeatures = sendTarget === "twitch" || sendTarget === "both";
-  const showYoutubeFeatures =
-    (sendTarget === "youtube" || sendTarget === "both") && youtubeAvailable;
+  // ---- Render ----
   const borderColor =
     sendTarget === "twitch"
       ? "#9146ff"
@@ -520,9 +266,9 @@ export default function UnifiedInput({
         <input
           ref={inputRef}
           type="text"
-          value={message}
-          onChange={handleMessageChange}
-          onKeyDown={handleKeyDown}
+          value={core.message}
+          onChange={core.handleChange}
+          onKeyDown={core.handleKeyDown}
           onFocus={onInputFocus}
           placeholder={placeholder}
           disabled={isLoading}
@@ -560,9 +306,9 @@ export default function UnifiedInput({
         </div>
       </div>
 
-      {slowModeCooldown > 0 && (
+      {core.slowModeCooldown > 0 && (
         <div className="unified-warning" style={{ color: "#f59e0b" }}>
-          Slow mode: wait {slowModeCooldown}s
+          Slow mode: wait {core.slowModeCooldown}s
         </div>
       )}
       {followerModeMinutes !== null &&
@@ -581,18 +327,18 @@ export default function UnifiedInput({
       {/* === PORTAL MENUS === */}
 
       <AutocompleteMenu
-        isOpen={emoteAutocomplete.isOpen}
-        results={emoteAutocomplete.results}
-        selectedIndex={emoteAutocomplete.selectedIndex}
-        menuRect={menuRect}
-        menuRef={menuRef}
-        onSelect={(i) => emoteAutocomplete.select(i)}
+        isOpen={core.emoteAC.isOpen}
+        results={core.emoteAC.results}
+        selectedIndex={core.emoteAC.selectedIndex}
+        menuRect={core.menuRect}
+        menuRef={core.menuRef}
+        onSelect={(i) => core.emoteAC.select(i)}
         renderItem={(emote, index, isSelected) => (
           <MenuItem
             key={`${emote.source}-${emote.name}`}
             index={index}
             isSelected={isSelected}
-            onSelect={(i) => emoteAutocomplete.select(i)}
+            onSelect={(i) => core.emoteAC.select(i)}
             title={emote.name}
           >
             <img
@@ -609,19 +355,19 @@ export default function UnifiedInput({
       />
 
       <AutocompleteMenu
-        isOpen={emojiAutocomplete.isOpen}
-        results={emojiAutocomplete.results}
-        selectedIndex={emojiAutocomplete.selectedIndex}
-        menuRect={menuRect}
-        menuRef={menuRef}
+        isOpen={core.emojiAC.isOpen}
+        results={core.emojiAC.results}
+        selectedIndex={core.emojiAC.selectedIndex}
+        menuRect={core.menuRect}
+        menuRef={core.menuRef}
         maxHeight="260px"
-        onSelect={(i) => emojiAutocomplete.select(i)}
+        onSelect={(i) => core.emojiAC.select(i)}
         renderItem={(entry, idx, isSelected) => (
           <MenuItem
             key={entry.shortcode}
             index={idx}
             isSelected={isSelected}
-            onSelect={(i) => emojiAutocomplete.select(i)}
+            onSelect={(i) => core.emojiAC.select(i)}
           >
             <span
               style={{
@@ -644,17 +390,17 @@ export default function UnifiedInput({
       />
 
       <AutocompleteMenu
-        isOpen={usernameAutocomplete.isOpen}
-        results={usernameAutocomplete.results}
-        selectedIndex={usernameAutocomplete.selectedIndex}
-        menuRect={menuRect}
-        onSelect={(i) => usernameAutocomplete.select(i)}
+        isOpen={core.usernameAC.isOpen}
+        results={core.usernameAC.results}
+        selectedIndex={core.usernameAC.selectedIndex}
+        menuRect={core.menuRect}
+        onSelect={(i) => core.usernameAC.select(i)}
         renderItem={(username, index, isSelected) => (
           <MenuItem
             key={username}
             index={index}
             isSelected={isSelected}
-            onSelect={(i) => usernameAutocomplete.select(i)}
+            onSelect={(i) => core.usernameAC.select(i)}
             style={{ fontSize: "0.95rem" }}
           >
             @{username}
@@ -663,17 +409,17 @@ export default function UnifiedInput({
       />
 
       <AutocompleteMenu
-        isOpen={commandAutocomplete.isOpen}
-        results={commandAutocomplete.results}
-        selectedIndex={commandAutocomplete.selectedIndex}
-        menuRect={menuRect}
-        onSelect={(i) => commandAutocomplete.select(i)}
+        isOpen={core.commandAC.isOpen}
+        results={core.commandAC.results}
+        selectedIndex={core.commandAC.selectedIndex}
+        menuRect={core.menuRect}
+        onSelect={(i) => core.commandAC.select(i)}
         renderItem={(cmd, index, isSelected) => (
           <MenuItem
             key={cmd.name}
             index={index}
             isSelected={isSelected}
-            onSelect={(i) => commandAutocomplete.select(i)}
+            onSelect={(i) => core.commandAC.select(i)}
             className="autocomplete-command-item"
           >
             <div className="autocomplete-command-header">
@@ -686,9 +432,9 @@ export default function UnifiedInput({
       />
 
       <EmoteMenu
-        emotes={emotesOrganized}
+        emotes={core.emotesOrganized}
         onSelectEmote={(name) => {
-          insertWithPrefix(name);
+          core.insertWithPrefix(name);
           setShowEmotePicker(false);
         }}
         isOpen={showEmotePicker}
