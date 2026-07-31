@@ -152,8 +152,12 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
   });
 
   it("clears popup poll interval on unmount (youtubeLogin)", async () => {
-    vi.useFakeTimers();
     const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+
+    // Mock fetch to return oauth-state so the async flow proceeds.
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ state: "test-state" }), { status: 200 }),
+    );
 
     // Mock window.open to return a popup that appears open
     const mockPopup = { closed: false, close: vi.fn() };
@@ -168,7 +172,10 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     act(() => {
       result.current.youtubeLogin();
     });
-    expect(result.current.isLoggingIn).toBe(true);
+    // The oauth-state fetch is async, so wait for isLoggingIn to become true.
+    await waitFor(() => {
+      expect(result.current.isLoggingIn).toBe(true);
+    });
 
     // Clear spy so we only track clearInterval calls from unmount
     clearIntervalSpy.mockClear();
@@ -178,18 +185,16 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     // The cleanup effect should have called clearInterval for the popup poll
     expect(clearIntervalSpy).toHaveBeenCalled();
 
-    // Advancing timers should not throw (interval was cleared)
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-
-    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 
   it("clears popup poll interval on unmount (youtubeDriveLogin)", async () => {
-    vi.useFakeTimers();
     const clearIntervalSpy = vi.spyOn(global, "clearInterval");
+
+    // Mock fetch to return oauth-state with drive flow.
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ state: "test-state:drive" }), { status: 200 }),
+    );
 
     const mockPopup = { closed: false, close: vi.fn() };
     vi.spyOn(window, "open").mockReturnValue(mockPopup as any);
@@ -201,18 +206,16 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     act(() => {
       result.current.youtubeDriveLogin();
     });
-    expect(result.current.isLoggingIn).toBe(true);
+    // The oauth-state fetch is async, so wait for isLoggingIn to become true.
+    await waitFor(() => {
+      expect(result.current.isLoggingIn).toBe(true);
+    });
 
     clearIntervalSpy.mockClear();
     unmount();
 
     expect(clearIntervalSpy).toHaveBeenCalled();
 
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-
-    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 

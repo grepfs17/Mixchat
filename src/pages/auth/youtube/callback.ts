@@ -14,6 +14,29 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     return new Response("Missing state parameter", { status: 400 });
   }
 
+  // Server-side CSRF validation: the state must match the httpOnly cookie
+  // that was set when the OAuth flow started. This prevents login CSRF
+  // attacks where an attacker tricks a victim into completing OAuth with
+  // the attacker's identity.
+  const expectedState = cookies.get("oauth_state")?.value;
+  if (!expectedState || expectedState !== returnedState) {
+    cookies.delete("oauth_state", { path: "/" });
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head><title>Auth Error</title></head>
+<body>
+<h1>Authentication Failed</h1>
+<p>Invalid state parameter. This could be a CSRF attack. Please try again.</p>
+<a href="/">Back to home</a>
+</body>
+</html>`,
+      { status: 403, headers: { "Content-Type": "text/html" } },
+    );
+  }
+  // State is valid — consume it now so it can't be replayed.
+  cookies.delete("oauth_state", { path: "/" });
+
   try {
     const isDev = import.meta.env.MODE === "development";
     const isSecure = !isDev;
@@ -56,7 +79,10 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 
       // Signal the opener that Drive access was granted so the YouTube
       // session can update its hasDriveScope flag.
-      const driveReturnedStateJson = JSON.stringify(returnedState);
+      const driveReturnedStateJson = JSON.stringify(returnedState).replace(
+        /</g,
+        "\\u003c",
+      );
 
       return new Response(
         `<!DOCTYPE html>
@@ -157,7 +183,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       "\\u003c",
     );
     // Pass the returned state value safely so the browser can verify it.
-    const returnedStateJson = JSON.stringify(returnedState);
+    // Escape </ to prevent the string from closing the <script> block.
+    const returnedStateJson = JSON.stringify(returnedState).replace(
+      /</g,
+      "\\u003c",
+    );
 
     // Return HTML that posts the session to the opener (popup flow) and
     // falls back to a localStorage + redirect approach when opened as a
@@ -201,10 +231,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 
     try {
       var sessions = JSON.parse(localStorage.getItem('mixchat_sessions:v1') || '{}');
-      // Strip accessToken: it lives only in memory (React state) and is
-      // repopulated on reload via useTokenRefresh + the httpOnly cookie.
+      // Strip accessToken and refreshToken: they live only in httpOnly
+      // cookies and must not be exposed to JavaScript.
       var persisted = Object.assign({}, session);
       delete persisted.accessToken;
+      delete persisted.refreshToken;
       sessions.youtube = persisted;
       localStorage.setItem('mixchat_sessions:v1', JSON.stringify(sessions));
     } catch (e) { /* storage unavailable */ }
@@ -213,10 +244,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     // and also via a dedicated localStorage key as a reliable fallback.
     // Some browsers null out window.opener after cross-origin navigation.
     try {
-      // Strip the access token before writing to localStorage — it belongs only
-      // in memory (React state) and is re-hydrated on reload via the httpOnly cookie.
+      // Strip the access token and refresh token before writing to
+      // localStorage — they belong only in httpOnly cookies.
       var persistedYT = Object.assign({}, session);
       delete persistedYT.accessToken;
+      delete persistedYT.refreshToken;
       localStorage.setItem('mixchat_youtube_auth', JSON.stringify({ session: persistedYT, ts: Date.now() }));
     } catch (e) { /* storage unavailable */ }
 

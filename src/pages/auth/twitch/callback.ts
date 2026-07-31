@@ -16,6 +16,30 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     return new Response("Missing state parameter", { status: 400 });
   }
 
+  // Server-side CSRF validation: the state must match the httpOnly cookie
+  // that was set when the OAuth flow started. This prevents login CSRF
+  // attacks where an attacker tricks a victim into completing OAuth with
+  // the attacker's identity.
+  const expectedState = cookies.get("oauth_state")?.value;
+  if (!expectedState || expectedState !== returnedState) {
+    // Clear the stale/invalid state cookie so it doesn't linger.
+    cookies.delete("oauth_state", { path: "/" });
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head><title>Auth Error</title></head>
+<body>
+<h1>Authentication Failed</h1>
+<p>Invalid state parameter. This could be a CSRF attack. Please try again.</p>
+<a href="/">Back to home</a>
+</body>
+</html>`,
+      { status: 403, headers: { "Content-Type": "text/html" } },
+    );
+  }
+  // State is valid — consume it now so it can't be replayed.
+  cookies.delete("oauth_state", { path: "/" });
+
   try {
     const isDev = import.meta.env.MODE === "development";
     const isSecure = !isDev;
@@ -76,7 +100,11 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       // Extra safety: escape </ so the string can never end the <script> block.
       .replace(/</g, "\\u003c");
     // Pass the returned state value safely so the browser can verify it.
-    const returnedStateJson = JSON.stringify(returnedState);
+    // Escape </ to prevent the string from closing the <script> block.
+    const returnedStateJson = JSON.stringify(returnedState).replace(
+      /</g,
+      "\\u003c",
+    );
 
     // Return HTML that stores session in localStorage, posts message to opener, and redirects
     return new Response(
@@ -166,6 +194,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       var sessions = JSON.parse(localStorage.getItem('mixchat_sessions:v1') || '{}');
       var persisted = Object.assign({}, session);
       delete persisted.accessToken;
+      delete persisted.refreshToken;
       sessions.twitch = persisted;
       localStorage.setItem('mixchat_sessions:v1', JSON.stringify(sessions));
       console.log('[twitch-callback] session written to localStorage');

@@ -1,12 +1,12 @@
 import type { APIRoute } from "astro";
-import { deleteSessionsByChannel } from "../../../../server/songQueueStore";
+import { deleteSession } from "../../../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../../../server/songQueueConfig";
 import { clientAddress, json } from "../../../../server/songQueueApi";
 import { checkRateLimit } from "../../../../lib/rateLimit";
 
 /**
- * Bulk channel-trusted delete for past song-queue sessions.
- * Body: { sessionIds: string[], channelName: string, channelPlatform: string }
+ * Bulk owner-token-authenticated delete for past song-queue sessions.
+ * Body: { sessions: Array<{ sessionId: string; ownerToken: string }> }
  */
 
 export const POST: APIRoute = async ({ request }) => {
@@ -31,29 +31,48 @@ export const POST: APIRoute = async ({ request }) => {
   }
   const b = body as Record<string, unknown>;
 
-  const channelName =
-    typeof b.channelName === "string" ? b.channelName.trim() : "";
-  const channelPlatform =
-    typeof b.channelPlatform === "string" ? b.channelPlatform.trim() : "";
-  if (!channelName || !channelPlatform) {
-    return json({ error: "Missing channel" }, 400);
+  if (!Array.isArray(b.sessions) || b.sessions.length === 0) {
+    return json(
+      { error: "sessions (non-empty array) is required" },
+      400,
+    );
   }
 
-  if (!Array.isArray(b.sessionIds) || b.sessionIds.length === 0) {
-    return json({ error: "sessionIds (non-empty array) is required" }, 400);
+  const sessions: Array<{ sessionId: string; ownerToken: string }> = [];
+  for (const item of b.sessions) {
+    if (
+      !item ||
+      typeof item !== "object" ||
+      typeof (item as Record<string, unknown>).sessionId !== "string" ||
+      typeof (item as Record<string, unknown>).ownerToken !== "string"
+    ) {
+      continue;
+    }
+    const s = item as { sessionId: string; ownerToken: string };
+    if (s.sessionId.length > 0 && s.ownerToken.length > 0) {
+      sessions.push(s);
+    }
   }
-  const sessionIds = b.sessionIds.filter(
-    (id): id is string => typeof id === "string" && id.length > 0,
+
+  if (sessions.length === 0) {
+    return json(
+      { error: "sessions must contain valid sessionId/ownerToken pairs" },
+      400,
+    );
+  }
+
+  const results = await Promise.all(
+    sessions.map((s) =>
+      deleteSession(getSongQueueStoreOptions(), s.sessionId, s.ownerToken),
+    ),
   );
-  if (sessionIds.length === 0) {
-    return json({ error: "sessionIds must contain valid strings" }, 400);
+
+  let deleted = 0;
+  let missing = 0;
+  for (const result of results) {
+    if (result === "ok") deleted += 1;
+    else missing += 1;
   }
 
-  const result = await deleteSessionsByChannel(
-    getSongQueueStoreOptions(),
-    sessionIds,
-    { channelName, channelPlatform },
-  );
-
-  return json({ ok: true, ...result });
+  return json({ ok: true, deleted, missing });
 };

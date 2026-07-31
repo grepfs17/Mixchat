@@ -448,6 +448,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           title: session.title || config.title,
           channelName: session.channelName,
           channelPlatform: session.channelPlatform,
+          ownerToken: bootstrap.ownerToken,
           itemCount: reconciledItems.length,
           playedCount,
           skippedCount,

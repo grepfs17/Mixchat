@@ -1,40 +1,26 @@
 import type { APIRoute } from "astro";
 import {
-  deleteSessionByChannel,
+  deleteSession,
   getSession,
   publicView,
+  readSessionWithToken,
   setSessionPublicByChannel,
 } from "../../../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../../../server/songQueueConfig";
-import { clientAddress, json } from "../../../../server/songQueueApi";
+import {
+  clientAddress,
+  json,
+  loadSessionForOwner,
+  ownerTokenFromRequest,
+} from "../../../../server/songQueueApi";
 import { checkRateLimit } from "../../../../lib/rateLimit";
 
 /**
- * Channel-trusted read/delete/PATCH for past song-queue sessions. The
- * streamer UI is already gated by the mod-tools check, so we trust the
- * (channelName, channelPlatform) tuple. Past sessions have no surviving
- * ownerToken on the client, so the per-session route can't be used here.
+ * Owner-token-authenticated read/delete/PATCH for past song-queue sessions.
+ * The request must include an Authorization: Bearer <ownerToken> header.
+ * The ownerToken is verified against the session's stored hash, which works
+ * for both live and ended sessions.
  */
-
-function getChannel(req: Request): { name: string; platform: string } | null {
-  const url = new URL(req.url);
-  const name = url.searchParams.get("channelName")?.trim() || "";
-  const platform = url.searchParams.get("channelPlatform")?.trim() || "";
-  if (!name || !platform) return null;
-  return { name, platform };
-}
-
-function channelMatches(
-  session: { channelName: string; channelPlatform: string },
-  channel: { name: string; platform: string },
-): boolean {
-  return (
-    (session.channelName || "").trim().toLowerCase() ===
-      channel.name.toLowerCase() &&
-    (session.channelPlatform || "").trim().toLowerCase() ===
-      channel.platform.toLowerCase()
-  );
-}
 
 export const GET: APIRoute = async ({ request, params }) => {
   if (
@@ -42,18 +28,16 @@ export const GET: APIRoute = async ({ request, params }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  const channel = getChannel(request);
-  if (!channel) return json({ error: "Missing channel" }, 400);
   const sessionId = params.sessionId || "";
-  const session = await getSession(getSongQueueStoreOptions(), sessionId);
-  if (!session) return json({ error: "Not found" }, 404);
-  if (!channelMatches(session, channel)) {
-    return json({ error: "Not found" }, 404);
-  }
-  return json(publicView(session));
+  const result = await loadSessionForOwner(request, sessionId);
+  if (result.kind === "no-auth")
+    return json({ error: "Missing owner token" }, 401);
+  if (result.kind === "missing") return json({ error: "Not found" }, 404);
+  // Accept both live and ended sessions — the owner token is valid for both.
+  return json(publicView(result.session));
 };
 
-const deleteHandler: APIRoute = async ({ request, params }) => {
+export const DELETE: APIRoute = async ({ request, params }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-past-delete`,
@@ -63,25 +47,17 @@ const deleteHandler: APIRoute = async ({ request, params }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  const channel = getChannel(request);
-  if (!channel) return json({ error: "Missing channel" }, 400);
+  const token = ownerTokenFromRequest(request);
+  if (!token) return json({ error: "Missing owner token" }, 401);
   const sessionId = params.sessionId || "";
-  const res = await deleteSessionByChannel(
-    getSongQueueStoreOptions(),
-    sessionId,
-    {
-      channelName: channel.name,
-      channelPlatform: channel.platform,
-    },
-  );
+  const res = await deleteSession(getSongQueueStoreOptions(), sessionId, token);
   if (res === "ok") return json({ ok: true });
+  if (res === "auth") return json({ error: "Forbidden" }, 403);
   return json({ error: "Not found" }, 404);
 };
 
-export const DELETE: APIRoute = deleteHandler;
-
 /** POST fallback for proxies that block the DELETE verb (e.g. Cloudflare WAF). */
-export const POST: APIRoute = deleteHandler;
+export const POST: APIRoute = DELETE;
 
 export const PATCH: APIRoute = async ({ request, params }) => {
   if (
@@ -93,8 +69,9 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  const channel = getChannel(request);
-  if (!channel) return json({ error: "Missing channel" }, 400);
+  const token = ownerTokenFromRequest(request);
+  if (!token) return json({ error: "Missing owner token" }, 401);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -108,13 +85,36 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   if (typeof b.isPublic !== "boolean") {
     return json({ error: "isPublic (boolean) is required" }, 400);
   }
+
   const sessionId = params.sessionId || "";
+  // Verify the owner token is valid for this session.
+  const result = await readSessionWithToken(
+    getSongQueueStoreOptions(),
+    sessionId,
+    token,
+  );
+  // readSessionWithToken returns "missing" for both non-existent sessions
+  // and token mismatches. Distinguish the two so attackers can't probe
+  // for valid session IDs via this endpoint.
+  if (result.kind === "missing") {
+    const exists = await getSession(
+      getSongQueueStoreOptions(),
+      sessionId,
+    );
+    if (exists) return json({ error: "Forbidden" }, 403);
+    return json({ error: "Not found" }, 404);
+  }
+
+  // Use the same channel-scoped store function for the actual update.
+  // readSessionWithToken already verified ownership — the channel check in
+  // setSessionPublicByChannel is an additional safety layer.
+  const session = result.session;
   const res = await setSessionPublicByChannel(
     getSongQueueStoreOptions(),
     sessionId,
     {
-      channelName: channel.name,
-      channelPlatform: channel.platform,
+      channelName: session.channelName,
+      channelPlatform: session.channelPlatform,
     },
     b.isPublic,
   );

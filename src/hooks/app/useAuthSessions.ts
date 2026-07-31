@@ -20,28 +20,50 @@ function isPopupClosed(popup: Window | null): boolean {
 }
 
 /**
- * Build the Google OAuth request URL including the CSRF `state`.
- * For the Drive flow the state is suffixed with `:drive` so the
- * server-side callback can detect which OAuth flow it is serving.
- * The full state (with suffix) is persisted to sessionStorage so the
- * popup's CSRF check matches.
+ * Fetch a CSRF state token from the server. The server sets an httpOnly
+ * cookie that the callback validates before setting any auth cookies.
+ * On failure (network error, etc.) falls back to a client-generated UUID
+ * so the user can still attempt login — the server will reject the flow
+ * if the cookie is missing, but the UX degrades gracefully.
+ */
+async function fetchOAuthState(flow?: string): Promise<string> {
+  try {
+    const params = flow ? `?flow=${encodeURIComponent(flow)}` : "";
+    const res = await fetch(`/api/auth/oauth-state${params}`);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const body = (await res.json()) as { state: string };
+    return body.state;
+  } catch (err) {
+    console.warn(
+      "Failed to fetch OAuth state from server — login may fail if server is unreachable",
+      err,
+    );
+    // Return a client-generated UUID as last resort. The server will reject
+    // the flow (oauth_state cookie won't match), but the error page will
+    // make the cause obvious to the user.
+    return flow === "drive"
+      ? `${crypto.randomUUID()}:drive`
+      : crypto.randomUUID();
+  }
+}
+
+/**
+ * Build the Google OAuth request URL. The state parameter is provided by
+ * the caller (fetched from the server for CSRF protection). For the Drive
+ * flow the state is suffixed with `:drive` so the server-side callback can
+ * detect which OAuth flow it is serving.
  *
  * Module-scope: no closure dependencies on the hook, so useCallback
  * would only add React noise.
  */
-function buildGoogleAuthUrl(scope: string, drive: boolean): string {
+function buildGoogleAuthUrl(scope: string, state: string): string {
   const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
   const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
-  const state = drive
-    ? `${crypto.randomUUID()}:drive`
-    : crypto.randomUUID();
   try {
     sessionStorage.setItem("youtube_oauth_state", state);
   } catch (_) {
     // sessionStorage may be unavailable in private browsing mode or when
-    // the quota is exhausted. Without this write the popup's CSRF check
-    // would later fail with "invalid state" — log here so devtools makes
-    // the cause obvious.
+    // the quota is exhausted.
     console.warn("sessionStorage unavailable for OAuth CSRF state");
   }
   const params = new URLSearchParams({
@@ -225,6 +247,11 @@ export function useAuthSessions(): UseAuthSessionsResult {
     }
   }, []);
 
+  /**
+   * Initiate the Twitch OAuth flow. Fetches a CSRF state token from the
+   * server so the callback can validate it before setting auth cookies.
+   * Falls back to a client-generated UUID if the server is unreachable.
+   */
   const twitchLogin = useCallback(() => {
     const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
     const redirectUri = import.meta.env.PUBLIC_TWITCH_REDIRECT_URI;
@@ -234,123 +261,124 @@ export function useAuthSessions(): UseAuthSessionsResult {
       return;
     }
 
-    // Generate a random CSRF state token and persist it for the callback to verify.
-    const state = crypto.randomUUID();
-    sessionStorage.setItem("twitch_oauth_state", state);
-    // Also persist to localStorage as a fallback for mobile browsers where
-    // window.open creates a new tab instead of a popup (new tabs do not
-    // inherit sessionStorage).
-    try {
-      localStorage.setItem(
-        "twitch_oauth_state_fb",
-        JSON.stringify({
-          state,
-          returnUrl: window.location.href,
-          exp: Date.now() + 5 * 60 * 1000,
-        }),
+    // Fetch CSRF state from server, then proceed with the OAuth flow.
+    void (async () => {
+      const state = await fetchOAuthState();
+      // Persist to sessionStorage for the inline-script client-side check.
+      sessionStorage.setItem("twitch_oauth_state", state);
+      // Also persist to localStorage as a fallback for mobile browsers where
+      // window.open creates a new tab instead of a popup (new tabs do not
+      // inherit sessionStorage).
+      try {
+        localStorage.setItem(
+          "twitch_oauth_state_fb",
+          JSON.stringify({
+            state,
+            returnUrl: window.location.href,
+            exp: Date.now() + 5 * 60 * 1000,
+          }),
+        );
+      } catch (_) {
+        /* storage may be unavailable (private mode, quota) */
+      }
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: "code",
+        scope:
+          "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers",
+        state,
+      });
+
+      const authUrl = `https://id.twitch.tv/oauth2/authorize?${params}`;
+
+      // On mobile, popups are not supported — navigate the current tab instead.
+      const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(
+        navigator.userAgent,
       );
-    } catch (_) {
-      /* storage may be unavailable (private mode, quota) */
-    }
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope:
-        "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers",
-      state,
-    });
-
-    const authUrl = `https://id.twitch.tv/oauth2/authorize?${params}`;
-
-    // On mobile, popups are not supported — navigate the current tab instead.
-    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(
-      navigator.userAgent,
-    );
-    if (isMobileDevice) {
-      window.location.href = authUrl;
-      return;
-    }
-
-    // Desktop: open OAuth in a popup so the main window's React state is preserved.
-    const width = 600;
-    const height = 700;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    const popup = window.open(
-      authUrl,
-      "twitch_oauth",
-      `width=${width},height=${height},left=${left},top=${top}`,
-    );
-
-    if (isPopupClosed(popup)) {
-      window.location.href = authUrl;
-      return;
-    }
-
-    setIsLoggingIn(true);
-
-    const removeMessageListener = listenForOAuthSession(
-      "twitch",
-      popup,
-      (session) =>
-        setSessions((prev) => ({
-          ...prev,
-          twitch: session as PlatformSession,
-        })),
-      () => setIsLoggingIn(false),
-    );
-
-    // Storage event listener covers cross-origin popups and new-tab/mobile
-    // flows where the callback can't postMessage back to this window.
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "mixchat_youtube_auth" && e.newValue) {
-        try {
-          const { session } = JSON.parse(e.newValue);
-          if (session && session.platform === "youtube") {
-            setSessions((prev) => ({ ...prev, youtube: session }));
-            localStorage.removeItem("mixchat_youtube_auth");
-          }
-        } catch (err) {
-          console.error("Failed to parse youtube auth storage event", err);
-        }
+      if (isMobileDevice) {
+        window.location.href = authUrl;
+        return;
       }
-      if (e.key === "mixchat_sessions:v1" && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed && parsed.twitch) {
-            setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
-            setIsLoggingIn(false);
-            if (!isPopupClosed(popup)) popup!.close();
-            removeMessageListener();
-            window.removeEventListener("storage", onStorage);
-          }
-        } catch (err) {
-          console.error("Failed to parse sessions storage event", err);
-        }
-      }
-    };
-    window.addEventListener("storage", onStorage);
 
-    // Clean up if popup is closed without completing auth.
-    // Wrapped in try-catch via isPopupClosed to suppress COOP warnings
-    // from Google's OAuth pages which set Cross-Origin-Opener-Policy.
-    const pollClosed = setInterval(() => {
+      // Desktop: open OAuth in a popup so the main window's React state is preserved.
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        authUrl,
+        "twitch_oauth",
+        `width=${width},height=${height},left=${left},top=${top}`,
+      );
+
       if (isPopupClosed(popup)) {
+        window.location.href = authUrl;
+        return;
+      }
+
+      setIsLoggingIn(true);
+
+      const removeMessageListener = listenForOAuthSession(
+        "twitch",
+        popup,
+        (session) =>
+          setSessions((prev) => ({
+            ...prev,
+            twitch: session as PlatformSession,
+          })),
+        () => setIsLoggingIn(false),
+      );
+
+      // Storage event listener covers cross-origin popups and new-tab/mobile
+      // flows where the callback can't postMessage back to this window.
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === "mixchat_youtube_auth" && e.newValue) {
+          try {
+            const { session } = JSON.parse(e.newValue);
+            if (session && session.platform === "youtube") {
+              setSessions((prev) => ({ ...prev, youtube: session }));
+              localStorage.removeItem("mixchat_youtube_auth");
+            }
+          } catch (err) {
+            console.error("Failed to parse youtube auth storage event", err);
+          }
+        }
+        if (e.key === "mixchat_sessions:v1" && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed && parsed.twitch) {
+              setSessions((prev) => ({ ...prev, twitch: parsed.twitch }));
+              setIsLoggingIn(false);
+              if (!isPopupClosed(popup)) popup!.close();
+              removeMessageListener();
+              window.removeEventListener("storage", onStorage);
+            }
+          } catch (err) {
+            console.error("Failed to parse sessions storage event", err);
+          }
+        }
+      };
+      window.addEventListener("storage", onStorage);
+
+      // Clean up if popup is closed without completing auth.
+      const pollClosed = setInterval(() => {
+        if (isPopupClosed(popup)) {
+          clearInterval(pollClosed);
+          setIsLoggingIn(false);
+          removeMessageListener();
+          window.removeEventListener("storage", onStorage);
+        }
+      }, 500);
+
+      return () => {
         clearInterval(pollClosed);
-        setIsLoggingIn(false);
         removeMessageListener();
         window.removeEventListener("storage", onStorage);
-      }
-    }, 500);
-
-    return () => {
-      clearInterval(pollClosed);
-      removeMessageListener();
-      window.removeEventListener("storage", onStorage);
-    };
+      };
+    })();
   }, []);
 
   /**
@@ -381,86 +409,89 @@ export function useAuthSessions(): UseAuthSessionsResult {
   }, [postLogout]);
 
   /**
-   * Open the YouTube OAuth popup. Falls back to a full-page redirect when
-   * the popup is blocked. The popup posts `mixchat_session` back to the
-   * opener, which `listenForOAuthSession` handles and is the canonical
-   * trigger for `setIsLoggingIn(false)`.
+   * Open the YouTube OAuth popup. Fetches a CSRF state token from the
+   * server so the callback can validate it before setting auth cookies.
+   * Falls back to a full-page redirect when the popup is blocked.
    */
   const openYoutubeOAuth = useCallback(() => {
     if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
       alert("YouTube Client ID not configured");
       return;
     }
-    const url = buildGoogleAuthUrl(
-      "https://www.googleapis.com/auth/youtube.force-ssl",
-      false,
-    );
-    const popup = openCenteredPopup("youtube_oauth", url);
 
-    if (isPopupClosed(popup)) {
-      window.location.href = url;
-      return;
-    }
+    void (async () => {
+      const state = await fetchOAuthState();
+      const url = buildGoogleAuthUrl(
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+        state,
+      );
+      const popup = openCenteredPopup("youtube_oauth", url);
 
-    setIsLoggingIn(true);
-
-    const removeMessageListener = listenForOAuthSession(
-      "youtube",
-      popup,
-      (session) =>
-        setSessions((prev) => ({
-          ...prev,
-          youtube: session as PlatformSession,
-        })),
-      () => setIsLoggingIn(false),
-    );
-
-    const pollClosed = setInterval(() => {
       if (isPopupClosed(popup)) {
-        clearInterval(pollClosed);
-        popupPollRef.current = null;
-        setIsLoggingIn(false);
-        removeMessageListener();
+        window.location.href = url;
+        return;
       }
-    }, 500);
-    popupPollRef.current = pollClosed;
+
+      setIsLoggingIn(true);
+
+      const removeMessageListener = listenForOAuthSession(
+        "youtube",
+        popup,
+        (session) =>
+          setSessions((prev) => ({
+            ...prev,
+            youtube: session as PlatformSession,
+          })),
+        () => setIsLoggingIn(false),
+      );
+
+      const pollClosed = setInterval(() => {
+        if (isPopupClosed(popup)) {
+          clearInterval(pollClosed);
+          popupPollRef.current = null;
+          setIsLoggingIn(false);
+          removeMessageListener();
+        }
+      }, 500);
+      popupPollRef.current = pollClosed;
+    })();
   }, []);
 
   /**
-   * Open the Drive-only OAuth popup. Falls back to a full-page redirect
-   * when the popup is blocked. Intentionally does NOT register
-   * `listenForOAuthSession("youtube", …)` because Drive posts
-   * `mixchat_drive_granted` (handled by the top-level useEffect below),
-   * and that listener would never fire for this flow. `isLoggingIn` is
-   * cleared by the postMessage handler on success or by the close
-   * poller if the user abandons the popup.
+   * Open the Drive-only OAuth popup. Fetches a CSRF state token from the
+   * server so the callback can validate it before setting auth cookies.
+   * Falls back to a full-page redirect when the popup is blocked.
    */
   const openDriveOAuth = useCallback(() => {
     if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
       alert("YouTube Client ID not configured");
       return;
     }
-    const url = buildGoogleAuthUrl(
-      "https://www.googleapis.com/auth/drive.file",
-      true,
-    );
-    const popup = openCenteredPopup("youtube_drive_oauth", url);
 
-    if (isPopupClosed(popup)) {
-      window.location.href = url;
-      return;
-    }
+    void (async () => {
+      const state = await fetchOAuthState("drive");
+      const url = buildGoogleAuthUrl(
+        "https://www.googleapis.com/auth/drive.file",
+        state,
+      );
+      const popup = openCenteredPopup("youtube_drive_oauth", url);
 
-    setIsLoggingIn(true);
-
-    const pollClosed = setInterval(() => {
       if (isPopupClosed(popup)) {
-        clearInterval(pollClosed);
-        popupPollRef.current = null;
-        setIsLoggingIn(false);
+        window.location.href = url;
+        return;
       }
-    }, 500);
-    popupPollRef.current = pollClosed;
+
+      setIsLoggingIn(true);
+
+      const pollClosed = setInterval(() => {
+        if (isPopupClosed(popup)) {
+          clearInterval(pollClosed);
+          popupPollRef.current = null;
+          setIsLoggingIn(false);
+        }
+      }, 500);
+      popupPollRef.current = pollClosed;
+    })();
   }, []);
 
   const youtubeLogin = useCallback(
