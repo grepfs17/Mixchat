@@ -235,6 +235,7 @@ export function useChatAppState({
     setNotification,
     notificationIdRef,
     onLocalDelete: removeYtMessage,
+    onLocalDeleteWithLabel: markYtMessageDeleted,
     messages: ytMessages,
     getMessageText: getYtMessageText,
   });

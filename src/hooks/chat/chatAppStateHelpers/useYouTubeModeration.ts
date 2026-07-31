@@ -25,6 +25,12 @@ export interface UseYouTubeModerationOptions {
   notificationIdRef: React.RefObject<number>;
   onLocalDelete?: (messageId: string) => void;
   /**
+   * Called with the proper moderator-deletion label before the API call,
+   * so the client-side state shows the correct text regardless of what
+   * the SSE stream later broadcasts for this deletion.
+   */
+  onLocalDeleteWithLabel?: (messageId: string, deletedByText: string) => void;
+  /**
    * Current YouTube chat messages. Used to attach author channel + text to a
    * delete request so the server can resolve the official Data API message id
    * (the rendered InnerTube id is not accepted by liveChatMessages.delete).
@@ -55,6 +61,7 @@ export function useYouTubeModeration({
   setNotification,
   notificationIdRef,
   onLocalDelete,
+  onLocalDeleteWithLabel,
   messages,
   getMessageText,
 }: UseYouTubeModerationOptions): UseYouTubeModerationReturn {
@@ -124,7 +131,11 @@ export function useYouTubeModeration({
   const handleYtDelete = useCallback(
     async (messageId: string) => {
       if (!youtubeVideoId) return;
-      onLocalDelete?.(messageId);
+      // Mark locally with the proper moderator-deletion label immediately so
+      // the UI shows the correct text even if the SSE stream later broadcasts
+      // a generic "Message removed" for this deletion (Data API deletions
+      // arrive as RemoveChatItemAction which has no moderator attribution).
+      onLocalDeleteWithLabel?.(messageId, "Message deleted by a moderator");
 
       // Attach author channel + text + timestamp so the server can resolve the
       // official Data API message id (the rendered InnerTube id won't match).
@@ -152,12 +163,20 @@ export function useYouTubeModeration({
         notify(message, "error");
       }
     },
-    [youtubeVideoId, notify, onLocalDelete, getMessageText],
+    [youtubeVideoId, notify, onLocalDeleteWithLabel, getMessageText],
   );
 
   const handleYtBan = useCallback(
     async (channelId: string, displayName?: string) => {
       if (!youtubeVideoId) return;
+      // Mark all messages from this user as deleted locally immediately so
+      // the UI reflects the ban even before the SSE stream delivers any
+      // MarkChatItemsByAuthorAsDeletedAction (if it ever does).
+      for (const m of messagesRef.current) {
+        if (m.authorChannelId === channelId) {
+          onLocalDeleteWithLabel?.(m.id, "Message deleted by a moderator");
+        }
+      }
       try {
         await banYouTubeUser(youtubeVideoId, channelId, displayName);
         notify(`${displayName || channelId} banned`, "success");
@@ -168,12 +187,18 @@ export function useYouTubeModeration({
         notify(message, "error");
       }
     },
-    [youtubeVideoId, notify],
+    [youtubeVideoId, notify, onLocalDeleteWithLabel],
   );
 
   const handleYtTimeout = useCallback(
     async (channelId: string, seconds: number, displayName?: string) => {
       if (!youtubeVideoId) return;
+      // Mark all messages from this user as deleted locally immediately.
+      for (const m of messagesRef.current) {
+        if (m.authorChannelId === channelId) {
+          onLocalDeleteWithLabel?.(m.id, "Message deleted by a moderator");
+        }
+      }
       try {
         await timeoutYouTubeUser(
           youtubeVideoId,
@@ -192,7 +217,7 @@ export function useYouTubeModeration({
         notify(message, "error");
       }
     },
-    [youtubeVideoId, notify],
+    [youtubeVideoId, notify, onLocalDeleteWithLabel],
   );
 
   return {

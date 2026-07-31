@@ -664,20 +664,24 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         return;
       }
       if (action.is(YTNodes.RemoveChatItemAction)) {
-        // User deleted their own message (or YouTube auto-mod removed it).
-        // Unlike MarkChatItemAsDeletedAction, there is no
-        // deleted_state_message — the item is simply removed. Mark it as
-        // deleted with an author-removed label so moderators can distinguish
-        // self-deletions from moderator deletions.
+        // User deleted their own message, YouTube auto-mod removed it, or a
+        // moderator deleted it via the Data API. There is no
+        // deleted_state_message — the item is simply removed. Use a neutral
+        // label since the source of the deletion is unknown. The check on
+        // deletedIds is forward-looking: if a future API path pre-populates
+        // a better label (e.g. the moderation endpoint marking the message
+        // before InnerTube delivers this action), we'll use it.
         const targetId = action.target_item_id;
         if (!targetId) return;
-        const text = "Message removed by author";
-        deletedIds.set(targetId, text);
+        const text = "Message removed";
+        const existingText = deletedIds.get(targetId);
+        const resolvedText = existingText ?? text;
+        deletedIds.set(targetId, resolvedText);
         const idx = messages.findIndex((m) => m.id === targetId);
         if (idx !== -1) {
-          messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: text };
+          messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: resolvedText };
         }
-        broadcast(session!, "delete", { messageId: targetId, deletedByText: text });
+        broadcast(session!, "delete", { messageId: targetId, deletedByText: resolvedText });
         return;
       }
       if (action.is(YTNodes.MarkChatItemAsDeletedAction)) {
