@@ -16,6 +16,7 @@ import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useAutocomplete } from "../../../hooks/chat/useAutocomplete";
 import { useAutocompleteMenu } from "../../../hooks/chat/useAutocompleteMenu";
 import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
+import { sendYouTubeChatMessage } from "../../../lib/youtube";
 
 interface YTMessage {
   id: string;
@@ -83,23 +84,13 @@ export default function YouTubeMessageInput({
     setYtMessage("");
     setYtSending(true);
     try {
-      const res = await fetch("/api/youtube-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: youtubeVideoId, message: text }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (!res.ok) {
-        onOptimisticFailed?.(optimisticId);
-        setYtMessage(text);
-        onError?.(`YouTube: ${data.error || "Failed to send message"}`);
-      }
+      await sendYouTubeChatMessage(youtubeVideoId, text);
     } catch (err) {
       console.error("Failed to send YouTube message:", err);
       onOptimisticFailed?.(optimisticId);
       setYtMessage(text);
-      onError?.("Failed to send YouTube message");
+      const msg = err instanceof Error ? err.message : "Failed to send YouTube message";
+      onError?.(msg);
     } finally {
       setYtSending(false);
     }

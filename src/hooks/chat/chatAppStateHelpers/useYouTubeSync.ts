@@ -124,13 +124,9 @@ export function useYouTubeSync({
           }
           setYtError(null);
         } else {
-          if (!res.ok) {
-            setYtError(data.error || "Failed to check for live stream");
-          } else {
-            setYtError("No live stream found");
-            setAutoVideoId(null);
-            setAutoChannelId(null);
-          }
+          setYtError("No live stream found");
+          setAutoVideoId(null);
+          setAutoChannelId(null);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;

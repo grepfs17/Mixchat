@@ -36,6 +36,7 @@ import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
+import { sendYouTubeChatMessage } from "../../lib/youtube";
 import ThemeMascots from "./ThemeMascots";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -211,18 +212,11 @@ export default function ChatApp(props: ChatAppStateProps) {
           await handleSendMessage(message, ["twitch"]);
         }
         if (platforms.includes("youtube") && youtubeVideoId) {
-          const res = await fetch("/api/youtube-chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              videoId: youtubeVideoId,
-              message,
-            }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
+          try {
+            await sendYouTubeChatMessage(youtubeVideoId, message);
+          } catch (err) {
             showNotification(
-              data.error || "Failed to send winner to YouTube",
+              err instanceof Error ? err.message : "Failed to send winner to YouTube",
               "error",
             );
           }
@@ -321,15 +315,11 @@ export default function ChatApp(props: ChatAppStateProps) {
             );
             return;
           }
-          const res = await fetch("/api/youtube-chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ videoId: youtubeVideoId, message }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
+          try {
+            await sendYouTubeChatMessage(youtubeVideoId, message);
+          } catch (err) {
             showNotification(
-              data.error || "Failed to send song-queue message to YouTube",
+              err instanceof Error ? err.message : "Failed to send song-queue message to YouTube",
               "error",
             );
           }
@@ -720,18 +710,7 @@ export default function ChatApp(props: ChatAppStateProps) {
               ytChatMessages={ytMessages}
               onSendYoutube={async (text) => {
                 if (!youtubeVideoId) return;
-                const res = await fetch("/api/youtube-chat", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    videoId: youtubeVideoId,
-                    message: text,
-                  }),
-                });
-                if (!res.ok) {
-                  const data = await res.json();
-                  throw new Error(data.error || "Failed to send to YouTube");
-                }
+                await sendYouTubeChatMessage(youtubeVideoId, text);
               }}
               onOptimisticYoutube={handleYtOptimisticMessage}
               onOptimisticYoutubeFailed={handleYtOptimisticFailed}

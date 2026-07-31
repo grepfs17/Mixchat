@@ -660,9 +660,9 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       seenMessageIdsRef.current.add(key);
       pendingMessagesRef.current.push(item);
       if (ingestFrameRef.current === null) {
-        ingestFrameRef.current = requestAnimationFrame(() => {
+        ingestFrameRef.current = window.setTimeout(() => {
           void flushIngest();
-        });
+        }, 0);
       }
     },
     [bootstrap, flushIngest, phase],

@@ -32,6 +32,7 @@ import { useInsertAtCursor } from "../../../hooks/chat/useInsertAtCursor";
 import { useSlowMode } from "../../../hooks/chat/useSlowMode";
 import { useEmotes } from "../../../hooks/chat/useEmotes";
 import { isMobileDevice } from "../../../lib/device";
+import { sendYouTubeChatMessage } from "../../../lib/youtube";
 
 interface YTMessage {
   id: string;
@@ -160,16 +161,7 @@ export default function UnifiedInput({
       const optimisticId = `optimistic_yt_${Date.now()}_${Math.random()}`;
       onOptimisticYoutube?.(optimisticId, text);
       try {
-        const res = await fetch("/api/youtube-chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videoId: youtubeVideoId, message: text }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          onOptimisticYoutubeFailed?.(optimisticId);
-          throw new Error(data.error || "Failed");
-        }
+        await sendYouTubeChatMessage(youtubeVideoId, text);
       } catch (err) {
         onOptimisticYoutubeFailed?.(optimisticId);
         console.error("YouTube send failed:", err);

@@ -430,14 +430,6 @@ export function useTwitchChatEventHandlers({
       }
     });
 
-    // DEV ONLY: expose a manual test helper
-    if (typeof window !== "undefined") {
-      (window as any).__testDeleteMessage = (id: string) => {
-        console.log("[useTwitchChat] Manual delete test for id:", id);
-        onMessageDeletedRef.current?.(id);
-      };
-    }
-
     client.onTimeout((_channel, user, duration) => {
       if (!active) return;
       onMessageRef.current(
@@ -473,6 +465,7 @@ export function useTwitchChatEventHandlers({
 
     return () => {
       active = false;
-    };    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [client, enabled]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, enabled]);
 }
