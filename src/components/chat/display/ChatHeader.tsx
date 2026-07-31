@@ -7,6 +7,7 @@ import {
   MdVisibilityOff,
   MdMoreVert,
   MdBuild,
+  MdTv,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -243,6 +244,9 @@ function StreamInfoBar({
   streamTitle,
   streamGameName,
   canEdit,
+  youtubeVideoId,
+  channelName,
+  showTwitchModButton,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
@@ -250,6 +254,9 @@ function StreamInfoBar({
   streamTitle?: string;
   streamGameName?: string;
   canEdit?: boolean;
+  youtubeVideoId?: string | null;
+  channelName?: string;
+  showTwitchModButton?: boolean;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -433,6 +440,52 @@ function StreamInfoBar({
             {streamGameName || "No category"}
           </span>
         )}
+
+        <div className="stream-info-actions">
+          {youtubeVideoId && (
+            <button
+              type="button"
+              className="stream-info-action-btn"
+              title="Open YouTube chat popout"
+              onClick={() => {
+                window.open(
+                  `https://www.youtube.com/live_chat?is_popout=1&v=${encodeURIComponent(youtubeVideoId)}`,
+                  "yt-chat-popout",
+                  "width=400,height=600,noopener,noreferrer",
+                );
+              }}
+            >
+              <FaYoutube size={14} />
+            </button>
+          )}
+          {showTwitchModButton && channelName && (
+            <>
+              <button
+                type="button"
+                className="stream-info-action-btn"
+                title="Open Twitch stream popout"
+                onClick={() => {
+                  window.open(
+                    `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName)}/player?id=1`,
+                    "twitch-stream-popout",
+                    "width=1280,height=720,noopener,noreferrer",
+                  );
+                }}
+              >
+                <MdTv size={14} />
+              </button>
+              <a
+                href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="stream-info-action-btn"
+                title="Open Twitch moderator page"
+              >
+                <FaTwitch size={14} />
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
       {canEdit && (
@@ -527,6 +580,7 @@ export default function ChatHeader({
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,
+    youtubeVideoId,
     onSetModMode,
   } = useModerationContext();
   const showModToggle = isModerator || isYouTubeModerator;
@@ -857,6 +911,9 @@ export default function ChatHeader({
         streamTitle={streamTitle}
         streamGameName={streamGameName}
         canEdit={isOnOwnChannel}
+        youtubeVideoId={youtubeVideoId}
+        channelName={channelName}
+        showTwitchModButton={isModerator || isOnOwnChannel}
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
