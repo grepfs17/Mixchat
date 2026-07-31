@@ -73,6 +73,15 @@ function clampConfig(input: SongQueueConfig): SongQueueConfig {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  if (
+    !checkRateLimit(
+      `${clientAddress(request)}:song-queue-create`,
+      10,
+      60_000,
+    )
+  ) {
+    return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
+  }
   if (request.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }

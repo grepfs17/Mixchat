@@ -37,9 +37,14 @@ export async function loadSessionForOwner(
 }
 
 export function clientAddress(request: Request): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
+  // Use the rightmost IP in X-Forwarded-For (the last proxy in the chain,
+  // which is closest to the origin). The leftmost IP is the original client
+  // and can be spoofed unless the edge proxy strips incoming XFF headers.
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const ips = forwarded.split(",");
+    const last = ips[ips.length - 1]?.trim();
+    if (last) return last;
+  }
+  return request.headers.get("x-real-ip") || "unknown";
 }
