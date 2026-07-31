@@ -40,6 +40,7 @@
 | `YT_DEBUG` | Enable YouTube debug logging |
 | `ORIGIN` | Origin URL for referrer header |
 | `PUBLIC_URL` | Public-facing application URL |
+| `PUBLIC_TWITCH_ONLY` | Set to `"true"` to disable all Google/YouTube integrations (auth, chat, drive) |
 
 ## Commands
 

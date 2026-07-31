@@ -3,7 +3,8 @@ dist/
 .astro
 astro/
 *vercel*
-.env*
+.env
+!.env.example
 *.log
 .DS_Store
 .vscode/settings.json
