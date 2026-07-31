@@ -2,6 +2,19 @@ export const YT_USER_AGENT =
   (typeof process !== "undefined" && process.env?.YT_USER_AGENT) ||
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+/** When set to "true", disables all Google/YouTube integrations (auth, chat, drive). */
+export const IS_TWITCH_ONLY = import.meta.env.PUBLIC_TWITCH_ONLY === "true";
+
+/** Returns a 403 Response for disabled YouTube API endpoints. */
+export function twitchOnlyResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: "YouTube integrations are disabled on this instance",
+    }),
+    { status: 403, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 export const MOD_COMMANDS = [
   {
     name: "/announce",

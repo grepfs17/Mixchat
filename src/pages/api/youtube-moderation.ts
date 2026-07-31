@@ -6,6 +6,7 @@ import {
   resolveLiveChatMessageId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 interface ModerationBody {
   action?: "delete" | "ban" | "timeout";
@@ -80,6 +81,8 @@ function mapGoogleError(err: unknown): {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||

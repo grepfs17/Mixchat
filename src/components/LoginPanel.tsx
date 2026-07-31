@@ -10,6 +10,7 @@ import {
   FaTwitch,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 
 interface TwitchChannel {
   id: string;
@@ -173,7 +174,7 @@ function LoginPanel({
                     <FaEye />
                   </button>
                 )}
-                {onManageYoutubeLinks && (
+                {!IS_TWITCH_ONLY && onManageYoutubeLinks && (
                   <button type="button"
                     onClick={() => {
                       onManageYoutubeLinks();
@@ -319,6 +320,7 @@ function LoginPanel({
         )}
 
         {/* YouTube login/logout */}
+        {!IS_TWITCH_ONLY && (
         <div className="youtube-section">
           {youtubeConnected ? (
             <div className="youtube-info-row">
@@ -344,6 +346,7 @@ function LoginPanel({
             </button>
           ) : null}
         </div>
+        )}
       </div>
 
       {showEmbedConfig && (

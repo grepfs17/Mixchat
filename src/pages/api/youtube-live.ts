@@ -4,6 +4,7 @@ import {
   findLiveForChannel,
   isValidYouTubeParam,
 } from "../../lib/youtube-lookup";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 // Simple in-memory cache to save on Innertube calls
 const liveVideoCache = new Map<
@@ -29,6 +30,8 @@ const JSON_HEADERS = {
 const RATE_LIMIT_HEADERS = { "Content-Type": "application/json", "Retry-After": "60" };
 
 export const GET: APIRoute = async ({ request, url }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||

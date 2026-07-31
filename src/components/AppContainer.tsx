@@ -24,6 +24,7 @@ import { useEmbedState } from "../hooks/app/useEmbedState";
 import { useUiState } from "../hooks/app/useUiState";
 import { useMyChannelInfo } from "../hooks/app/useMyChannelInfo";
 import { markStreamerNotified } from "../lib/streamMonitor";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 // storageMigration runs at import time — importing it triggers the migration.
 import "../lib/storageMigration";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
@@ -359,17 +360,19 @@ export default function AppContainer() {
             }}
             onTwitchLogin={handleTwitchLogin}
             onTwitchLogout={handleTwitchLogout}
-            youtubeConnected={!!sessions.youtube}
+            youtubeConnected={IS_TWITCH_ONLY ? false : !!sessions.youtube}
             youtubeUser={sessions.youtube?.displayName}
-            onYoutubeLogin={handleYoutubeLogin}
-            onYoutubeLogout={handleYoutubeLogout}
+            onYoutubeLogin={IS_TWITCH_ONLY ? undefined : handleYoutubeLogin}
+            onYoutubeLogout={IS_TWITCH_ONLY ? undefined : handleYoutubeLogout}
             onManageWatchlist={() => setShowWatchlistManager(true)}
-            onManageYoutubeLinks={() => setShowYoutubeLinker(true)}
+            onManageYoutubeLinks={
+              IS_TWITCH_ONLY ? undefined : () => setShowYoutubeLinker(true)
+            }
             linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-            hasYoutubeSession={!!sessions.youtube}
-            hasDriveScope={!!sessions.youtube?.hasDriveScope}
-            onYoutubeDriveLogin={handleYoutubeDriveLogin}
-            onReauthYoutube={handleYoutubeLogin}
+            hasYoutubeSession={IS_TWITCH_ONLY ? false : !!sessions.youtube}
+            hasDriveScope={IS_TWITCH_ONLY ? false : !!sessions.youtube?.hasDriveScope}
+            onYoutubeDriveLogin={IS_TWITCH_ONLY ? () => {} : handleYoutubeDriveLogin}
+            onReauthYoutube={IS_TWITCH_ONLY ? () => {} : handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();
               setStreamTransition(null);

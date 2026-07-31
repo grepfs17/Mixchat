@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { refreshTwitchAccessToken } from "../../lib/twitch";
 import { refreshYoutubeToken } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const clientAddress =
@@ -90,6 +91,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         });
       }
     } else if (platform === "youtube") {
+      if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
       // Read the refresh token from the secure httpOnly cookie.
       const refreshToken = cookies.get("youtube_refresh_token")?.value;
       if (!refreshToken) {
