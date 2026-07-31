@@ -79,6 +79,7 @@ export function useTwitchChatEventHandlers({
       if (!getCachedAvatar(userId) && userId) {
         getUserInfo(userId, accessTokenRef.current)
           .then((info) => {
+            if (!active) return;
             onMessageRef.current({
               ...chatMessage,
               authorAvatar:
@@ -86,7 +87,10 @@ export function useTwitchChatEventHandlers({
                   ?.profileImageUrl || chatMessage.authorAvatar,
             });
           })
-          .catch(() => onMessageRef.current(chatMessage));
+          .catch(() => {
+            if (!active) return;
+            onMessageRef.current(chatMessage);
+          });
       } else {
         onMessageRef.current(chatMessage);
       }
@@ -347,6 +351,7 @@ export function useTwitchChatEventHandlers({
             : Promise.resolve(null);
 
         const result = await avatarPromise;
+        if (!active) return;
         onMessageRef.current({
           ...chatMessage,
           authorAvatar:
@@ -403,6 +408,7 @@ export function useTwitchChatEventHandlers({
       if (!cachedUserInfo && userId) {
         getUserInfo(userId, accessTokenRef.current)
           .then((info) => {
+            if (!active) return;
             onMessageRef.current({
               ...chatMessage,
               authorAvatar:
@@ -410,7 +416,10 @@ export function useTwitchChatEventHandlers({
                   ?.profileImageUrl || undefined,
             });
           })
-          .catch(() => onMessageRef.current(chatMessage));
+          .catch(() => {
+            if (!active) return;
+            onMessageRef.current(chatMessage);
+          });
       } else {
         onMessageRef.current(chatMessage);
       }

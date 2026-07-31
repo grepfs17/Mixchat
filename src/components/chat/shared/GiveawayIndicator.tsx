@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { FaTwitch, FaWrench, FaYoutube } from "react-icons/fa";
 import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
 
@@ -18,8 +19,21 @@ export default function GiveawayIndicator({
   giveaway,
   onOpen,
 }: GiveawayIndicatorProps) {
-  const { phase, keyword, endsAt, remainingMs, elapsedMs, liveEntries } =
+  const { phase, keyword, endsAt, startedAt, liveEntries } =
     giveaway;
+
+  // Local 1s tick for the countdown display — scoped to this small component
+  // so ChatApp never re-renders for the giveaway clock.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (phase !== "running") return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [phase]);
+
+  const remainingMs = endsAt !== null ? Math.max(0, endsAt - now) : 0;
+  const elapsedMs = startedAt !== null ? Math.max(0, now - startedAt) : 0;
 
   if (phase === "config") return null;
 

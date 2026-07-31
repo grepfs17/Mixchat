@@ -48,9 +48,8 @@ export default function GiveawayPanel({
     scope,
     eligibility,
     endsAt,
+    startedAt,
     liveEntries,
-    remainingMs,
-    elapsedMs,
     winner,
     error,
     setKeyword,
@@ -63,6 +62,19 @@ export default function GiveawayPanel({
     startNew,
     reveal,
   } = giveaway;
+
+  // Local 1s tick for the countdown display — scoped to this component
+  // so ChatApp never re-renders for the giveaway clock.
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    if (phase !== "running") return;
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [phase]);
+
+  const remainingMs = endsAt !== null ? Math.max(0, endsAt - now) : 0;
+  const elapsedMs = startedAt !== null ? Math.max(0, now - startedAt) : 0;
 
   const [notifyInChat, setNotifyInChat] = useState(true);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatFont, ChatTheme } from "../../lib/types";
 import { applyTheme } from "../../lib/themes";
 import { loadEventSounds, saveEventSounds } from "../../lib/eventSoundStorage";
@@ -248,7 +248,12 @@ export function useChatSettings(): UseChatSettingsResult {
     [setModModeTargets],
   );
 
-  return {
+  // Memoize the entire settings object so the SettingsContext value reference
+  // is stable across AppContainer re-renders that don't change settings. This
+  // prevents every context consumer from re-rendering on unrelated state changes
+  // (e.g. viewer count polls, sidebar toggles).
+  return useMemo(
+    () => ({
     embedDefaultOpen,
     setEmbedDefaultOpen,
     showStreamEmbed,
@@ -303,5 +308,62 @@ export function useChatSettings(): UseChatSettingsResult {
     setRenderThirdPartyEmotesOnYoutube,
     autoFoldSidebar,
     setAutoFoldSidebar,
-  };
+    }),
+    [
+      embedDefaultOpen,
+      setEmbedDefaultOpen,
+      showStreamEmbed,
+      setShowStreamEmbed,
+      unifyChatEnabled,
+      setUnifyChatEnabled,
+      useYoutubeEmbed,
+      setUseYoutubeEmbed,
+      fontSize,
+      setFontSize,
+      chatFont,
+      setChatFont,
+      mentionSoundEnabled,
+      setMentionSoundEnabled,
+      mentionVolume,
+      setMentionVolume,
+      mentionSoundType,
+      setMentionSoundType,
+      showDeletedMessages,
+      setShowDeletedMessages,
+      compactActions,
+      setCompactActions,
+      keepModActionsVisible,
+      setKeepModActionsVisible,
+      modActionsFirst,
+      setModActionsFirst,
+      doubleClickConfirmModActions,
+      setDoubleClickConfirmModActions,
+      splitChatEnabled,
+      setSplitChatEnabled,
+      chatTheme,
+      setChatTheme,
+      hideViewerCount,
+      setHideViewerCount,
+      hideChatTimestamps,
+      setHideChatTimestamps,
+      eventSounds,
+      eventSoundVolume,
+      setEventSoundVolume,
+      ignoredUsers,
+      setIgnoredUsers,
+      handleEventSoundChange,
+      modModeTargets,
+      setModModeTargetForChannel,
+      streamerToolsEnabled,
+      setStreamerToolsEnabled,
+      defaultPlayerType,
+      setDefaultPlayerType,
+      defaultHlsQuality,
+      setDefaultHlsQuality,
+      renderThirdPartyEmotesOnYoutube,
+      setRenderThirdPartyEmotesOnYoutube,
+      autoFoldSidebar,
+      setAutoFoldSidebar,
+    ],
+  );
 }
