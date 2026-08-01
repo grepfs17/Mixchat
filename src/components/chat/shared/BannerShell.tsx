@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import BannerCloseButton from "./BannerCloseButton";
 
-type BannerTone = "celebration" | "hype-train" | "poll" | "prediction";
+type BannerTone =
+  | "celebration"
+  | "hype-train"
+  | "poll"
+  | "prediction"
+  | "pinned";
 
 interface BannerShellProps {
   tone: BannerTone;

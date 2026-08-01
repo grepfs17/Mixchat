@@ -10,6 +10,8 @@ import HypeTrainBanner from "./shared/HypeTrainBanner";
 import PollBanner from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
 import CelebrationBanner from "./shared/CelebrationBanner";
+import PinnedChatBanner from "./shared/PinnedChatBanner";
+import { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
 import SplitLayout from "./SplitLayout";
 import StreamerToolsModal from "./shared/StreamerToolsModal";
 import {
@@ -230,6 +232,16 @@ export default function ChatApp(props: ChatAppStateProps) {
     },
     [handleSendMessage, youtubeVideoId],
   );
+
+  // Poll the Twitch GQL pinnedChatHighlight for the currently-viewed Twitch
+  // channel. Pinned chat is a property of the selected Twitch stream, not
+  // the chat layout, so we always poll when a Twitch channel is selected.
+  const pinned = usePinnedChatHighlight(selectedTwitchChannelName ?? null);
+  const pinnedHighlight = pinned.highlight;
+  const showPinnedBanner =
+    !!pinnedHighlight &&
+    (pinned.dismissedMessageId !== pinnedHighlight.messageId ||
+      pinned.dismissedPinnedAt !== pinnedHighlight.pinnedAt.toISOString());
 
   const giveaway = useGiveaway({
     owner: {
@@ -524,6 +536,14 @@ export default function ChatApp(props: ChatAppStateProps) {
           <CelebrationBanner
             celebration={celebration}
             onDismiss={() => setCelebration(null)}
+          />
+        )}
+
+        {/* Twitch pinned chat message — persists until the streamer unpins. */}
+        {pinnedHighlight && showPinnedBanner && (
+          <PinnedChatBanner
+            highlight={pinnedHighlight}
+            onDismiss={pinned.dismiss}
           />
         )}
 
