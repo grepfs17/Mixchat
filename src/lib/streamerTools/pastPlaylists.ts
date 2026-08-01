@@ -13,6 +13,9 @@ export interface PastPlaylistEntry {
   itemCount: number;
   playedCount: number;
   skippedCount: number;
+  /** Owner token for server-side auth on past-session operations.
+   *  May be absent for entries persisted before this field was added. */
+  ownerToken?: string;
   items: Array<
     Pick<
       SongQueueItem,

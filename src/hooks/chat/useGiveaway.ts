@@ -59,12 +59,6 @@ export interface UseGiveawayResult {
   startedAt: number | null;
   winner: GiveawayEntry | null;
   liveEntries: GiveawayEntry[];
-  /** Time remaining in ms (Infinity when unlimited). */
-  remainingMs: number;
-  /** Time elapsed since the giveaway started. */
-  elapsedMs: number;
-  /** Current `now` value (updated by the internal tick). */
-  now: number;
   error: string | null;
   setKeyword: (v: string) => void;
   setDuration: (v: number) => void;
@@ -155,7 +149,6 @@ export function useGiveaway({
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [winner, setWinner] = useState<GiveawayEntry | null>(null);
-  const [now, setNow] = useState<number>(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   /** Bumped on every buffer mutation so consumers re-render. */
   const [entriesVersion, setEntriesVersion] = useState(0);
@@ -179,30 +172,23 @@ export function useGiveaway({
     setEntriesVersion((v) => v + 1);
   }, []);
 
-  // Tick the clock while the giveaway is running, regardless of whether
-  // the modal is open — this is what lets the giveaway keep running when
-  // the streamer minimizes the tool.
+  // Auto-reveal when the countdown reaches zero. Uses a single setTimeout
+  // instead of a polling interval so ChatApp never re-renders for the tick.
   useEffect(() => {
     if (phase !== "running" || !enabled) return;
-    setNow(Date.now());
-    tickRef.current = window.setInterval(() => setNow(Date.now()), 250);
+    if (endsAt === null || endsAt === Number.POSITIVE_INFINITY) return;
+    const delay = Math.max(0, endsAt - Date.now());
+    tickRef.current = window.setTimeout(() => {
+      setWinner(pickWinner(Array.from(bufferRef.current.values())));
+      setPhase("revealed");
+    }, delay);
     return () => {
       if (tickRef.current !== null) {
-        window.clearInterval(tickRef.current);
+        window.clearTimeout(tickRef.current);
         tickRef.current = null;
       }
     };
-  }, [phase, enabled]);
-
-  // Auto-reveal when the countdown reaches zero.
-  useEffect(() => {
-    if (phase !== "running" || endsAt === null) return;
-    if (endsAt === Number.POSITIVE_INFINITY) return;
-    if (now >= endsAt) {
-      setWinner(pickWinner(Array.from(bufferRef.current.values())));
-      setPhase("revealed");
-    }
-  }, [phase, now, endsAt]);
+  }, [phase, endsAt, enabled]);
 
   // Record the result once when entering the revealed phase with a winner.
   useEffect(() => {
@@ -267,7 +253,6 @@ export function useGiveaway({
     }
     setWinner(null);
     const startMs = Date.now();
-    setNow(startMs);
     setStartedAt(startMs);
     setEndsAt(
       duration === UNLIMITED_DURATION
@@ -281,7 +266,7 @@ export function useGiveaway({
 
   const cancel = useCallback(() => {
     if (tickRef.current !== null) {
-      window.clearInterval(tickRef.current);
+      window.clearTimeout(tickRef.current);
       tickRef.current = null;
     }
     setEndsAt(null);
@@ -307,9 +292,6 @@ export function useGiveaway({
     setPhase("revealed");
   }, [phase]);
 
-  const remainingMs = endsAt !== null ? Math.max(0, endsAt - now) : 0;
-  const elapsedMs = startedAt !== null ? Math.max(0, now - startedAt) : 0;
-
   return {
     phase,
     keyword,
@@ -320,9 +302,6 @@ export function useGiveaway({
     startedAt,
     winner,
     liveEntries,
-    remainingMs,
-    elapsedMs,
-    now,
     error,
     setKeyword,
     setDuration,

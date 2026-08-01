@@ -40,7 +40,7 @@ function isAllowedRedirect(location: string): boolean {
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
   const clientAddress =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
   // Require an active session — prevents open-proxy abuse.
@@ -108,6 +108,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       }
       const followRes = await fetch(location, {
         headers: { "User-Agent": YT_USER_AGENT },
+        redirect: "manual",
       });
       if (!followRes.ok) {
         return new Response(

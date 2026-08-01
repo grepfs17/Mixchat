@@ -100,7 +100,7 @@ async function forwardRequest(
 }
 
 export const GET: APIRoute = async ({ url, cookies, request }) => {
-  const clientAddress = request.headers.get("x-forwarded-for") || "unknown";
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
   if (!checkRateLimit(`${clientAddress}:twitch-proxy`, 120, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
@@ -162,7 +162,7 @@ export const GET: APIRoute = async ({ url, cookies, request }) => {
 };
 
 export const POST: APIRoute = async ({ request, url, cookies }) => {
-  const clientAddress = request.headers.get("x-forwarded-for") || "unknown";
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
   if (!checkRateLimit(`${clientAddress}:twitch-proxy-post`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,
@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request, url, cookies }) => {
 };
 
 export const DELETE: APIRoute = async ({ url, cookies, request }) => {
-  const clientAddress = request.headers.get("x-forwarded-for") || "unknown";
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
   if (!checkRateLimit(`${clientAddress}:twitch-proxy-delete`, 60, 60_000)) {
     return new Response(JSON.stringify({ error: "Too many requests" }), {
       status: 429,

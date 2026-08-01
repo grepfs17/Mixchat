@@ -113,6 +113,14 @@ export default function EmbedConfigModal({
     setNeedsReload(true);
   }, []);
 
+  // Close on Escape
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose],
+  );
+
   // Settings items assembled from category files
 
   const settingsItems = useMemo(
@@ -295,7 +303,11 @@ export default function EmbedConfigModal({
     <div className="embed-config-overlay" onClick={onClose}>
       <div
         className="embed-config-modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Global Settings"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
       >
         <div className="embed-config-header">
           <h2 className="embed-config-title">Global Settings</h2>

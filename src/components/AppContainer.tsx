@@ -385,7 +385,7 @@ export default function AppContainer() {
           display: "grid",
           gridTemplateColumns:
             showStreamEmbed && !!selectedTwitchChannel
-              ? `${videoRatio}fr 2px ${100 - videoRatio}fr`
+              ? `${videoRatio}fr 8px ${100 - videoRatio}fr`
               : "1fr",
           gap: "0",
           overflow: "hidden",
@@ -664,7 +664,7 @@ export default function AppContainer() {
               <div
                 data-resizer
                 style={{
-                  width: "4px",
+                  width: "8px",
                   backgroundColor: "#1a1a1a",
                   cursor: "col-resize",
                   userSelect: "none",

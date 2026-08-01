@@ -58,6 +58,13 @@ function authedRequest(
   return makeRequest(url, body, { Authorization: `Bearer ${ownerToken}` });
 }
 
+function authedGetRequest(url: string, ownerToken: string): Request {
+  return new Request(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${ownerToken}` },
+  });
+}
+
 function makeContext(
   request: Request,
   params: Record<string, string> = {},
@@ -130,7 +137,7 @@ afterEach(async () => {
 });
 
 describe("GET /api/song-queue/past/:sessionId", () => {
-  it("returns the public view for an matching ended session", async () => {
+  it("returns the public view for a matching ended session (using ownerToken)", async () => {
     const { sessionId, ownerToken } = await createTestSession(true);
     await appendItem(
       makeContext(
@@ -149,8 +156,9 @@ describe("GET /api/song-queue/past/:sessionId", () => {
 
     const res = await pastGet(
       makeContext(
-        new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
+        authedGetRequest(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          ownerToken,
         ),
         { sessionId },
       ),
@@ -161,14 +169,30 @@ describe("GET /api/song-queue/past/:sessionId", () => {
     expect(body.items).toHaveLength(1);
   });
 
-  it("returns 404 when channel does not match", async () => {
+  it("returns 401 when owner token is missing", async () => {
     const { sessionId, ownerToken } = await createTestSession(true);
     await closeAndEnd(sessionId, ownerToken);
 
     const res = await pastGet(
       makeContext(
         new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=other&channelPlatform=twitch`,
+          `http://localhost/api/song-queue/past/${sessionId}`,
+        ),
+        { sessionId },
+      ),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 404 when owner token does not match", async () => {
+    const { sessionId, ownerToken } = await createTestSession(true);
+    await closeAndEnd(sessionId, ownerToken);
+
+    const res = await pastGet(
+      makeContext(
+        authedGetRequest(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          "wrong-token",
         ),
         { sessionId },
       ),
@@ -178,15 +202,16 @@ describe("GET /api/song-queue/past/:sessionId", () => {
 });
 
 describe("POST /api/song-queue/past/:sessionId", () => {
-  it("deletes the matching ended session without a method-override header", async () => {
+  it("deletes the matching ended session using owner token", async () => {
     const { sessionId, ownerToken } = await createTestSession(true);
     await closeAndEnd(sessionId, ownerToken);
 
     const res = await pastDelete(
       makeContext(
-        new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
-          { method: "POST" },
+        authedRequest(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          {},
+          ownerToken,
         ),
         { sessionId },
       ),
@@ -195,8 +220,9 @@ describe("POST /api/song-queue/past/:sessionId", () => {
 
     const getRes = await pastGet(
       makeContext(
-        new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
+        authedGetRequest(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          ownerToken,
         ),
         { sessionId },
       ),
@@ -204,35 +230,39 @@ describe("POST /api/song-queue/past/:sessionId", () => {
     expect(getRes.status).toBe(404);
   });
 
-  it("returns 404 when channel does not match", async () => {
+  it("returns 403 when owner token is wrong", async () => {
     const { sessionId, ownerToken } = await createTestSession(true);
     await closeAndEnd(sessionId, ownerToken);
 
     const res = await pastDelete(
       makeContext(
-        new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=other&channelPlatform=twitch`,
-          { method: "POST" },
+        authedRequest(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          {},
+          "wrong-token",
         ),
         { sessionId },
       ),
     );
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });
 
 describe("PATCH /api/song-queue/past/:sessionId", () => {
-  it("flips isPublic on the ended session", async () => {
+  it("flips isPublic on the ended session using owner token", async () => {
     const { sessionId, ownerToken } = await createTestSession(true);
     await closeAndEnd(sessionId, ownerToken);
 
     const res = await pastPatch(
       makeContext(
         new Request(
-          `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
+          `http://localhost/api/song-queue/past/${sessionId}`,
           {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${ownerToken}`,
+            },
             body: JSON.stringify({ isPublic: false }),
           },
         ),
@@ -244,10 +274,33 @@ describe("PATCH /api/song-queue/past/:sessionId", () => {
     expect(body.ok).toBe(true);
     expect(body.session.ended).toBe(true);
   });
+
+  it("returns 403 when owner token is wrong", async () => {
+    const { sessionId, ownerToken } = await createTestSession(true);
+    await closeAndEnd(sessionId, ownerToken);
+
+    const res = await pastPatch(
+      makeContext(
+        new Request(
+          `http://localhost/api/song-queue/past/${sessionId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer wrong-token",
+            },
+            body: JSON.stringify({ isPublic: false }),
+          },
+        ),
+        { sessionId },
+      ),
+    );
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("POST /api/song-queue/past/delete", () => {
-  it("deletes multiple matching ended sessions", async () => {
+  it("deletes multiple matching ended sessions using per-session ownerTokens", async () => {
     const sessions: Array<{ sessionId: string; ownerToken: string }> = [];
     for (let i = 0; i < 3; i += 1) {
       const { sessionId, ownerToken } = await createTestSession(true);
@@ -260,11 +313,7 @@ describe("POST /api/song-queue/past/delete", () => {
         new Request("http://localhost/api/song-queue/past/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionIds: sessions.map((s) => s.sessionId),
-            channelName: "streamer",
-            channelPlatform: "twitch",
-          }),
+          body: JSON.stringify({ sessions }),
         }),
       ),
     );
@@ -274,11 +323,12 @@ describe("POST /api/song-queue/past/delete", () => {
     expect(body.deleted).toBe(3);
     expect(body.missing).toBe(0);
 
-    for (const { sessionId } of sessions) {
+    for (const { sessionId, ownerToken } of sessions) {
       const getRes = await pastGet(
         makeContext(
-          new Request(
-            `http://localhost/api/song-queue/past/${sessionId}?channelName=streamer&channelPlatform=twitch`,
+          authedGetRequest(
+            `http://localhost/api/song-queue/past/${sessionId}`,
+            ownerToken,
           ),
           { sessionId },
         ),
@@ -287,34 +337,26 @@ describe("POST /api/song-queue/past/delete", () => {
     }
   });
 
-  it("returns 400 when channel is missing", async () => {
+  it("returns 400 when sessions is empty", async () => {
     const res = await bulkDelete(
       makeContext(
         new Request("http://localhost/api/song-queue/past/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionIds: ["abc"],
-            channelName: "",
-            channelPlatform: "twitch",
-          }),
+          body: JSON.stringify({ sessions: [] }),
         }),
       ),
     );
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when sessionIds is empty", async () => {
+  it("returns 400 when sessions array is missing", async () => {
     const res = await bulkDelete(
       makeContext(
         new Request("http://localhost/api/song-queue/past/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionIds: [],
-            channelName: "streamer",
-            channelPlatform: "twitch",
-          }),
+          body: JSON.stringify({}),
         }),
       ),
     );

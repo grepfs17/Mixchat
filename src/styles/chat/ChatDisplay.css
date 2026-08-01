@@ -137,6 +137,14 @@
     background: rgba(255, 255, 255, 0.08);
 }
 
+.stream-info-title--readonly {
+    cursor: default;
+}
+
+.stream-info-title--readonly:hover {
+    background: transparent;
+}
+
 .stream-info-edit-icon {
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -167,6 +175,44 @@
 
 .stream-info-category:hover {
     background: rgba(99, 102, 241, 0.22);
+}
+
+.stream-info-category--readonly {
+    cursor: default;
+}
+
+.stream-info-category--readonly:hover {
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.stream-info-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.stream-info-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-sm, 3px);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font: inherit;
+    transition: all 0.15s ease;
+}
+
+.stream-info-action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
 }
 
 .stream-info-edit-group {

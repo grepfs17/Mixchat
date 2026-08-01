@@ -222,15 +222,13 @@ export async function listPastSongQueues(input: {
 /** Fetch the public projection of a past session (no submitter `userId`). */
 export async function getPastSongQueue(input: {
   sessionId: string;
-  channelName: string;
-  channelPlatform: string;
+  ownerToken: string;
 }): Promise<SongQueuePublicView> {
-  const params = new URLSearchParams({
-    channelName: input.channelName,
-    channelPlatform: input.channelPlatform,
-  });
   const res = await fetch(
-    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}`,
+    {
+      headers: baseHeaders(input.ownerToken),
+    },
   );
   return handle<SongQueuePublicView>(res);
 }
@@ -238,17 +236,13 @@ export async function getPastSongQueue(input: {
 /** Delete a past session file on the server. */
 export async function deletePastSongQueue(input: {
   sessionId: string;
-  channelName: string;
-  channelPlatform: string;
+  ownerToken: string;
 }): Promise<void> {
-  const params = new URLSearchParams({
-    channelName: input.channelName,
-    channelPlatform: input.channelPlatform,
-  });
   const res = await fetch(
-    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}`,
     {
       method: "POST",
+      headers: baseHeaders(input.ownerToken),
     },
   );
   if (!res.ok) await handle(res);
@@ -256,18 +250,12 @@ export async function deletePastSongQueue(input: {
 
 /** Bulk-delete past session files on the server. */
 export async function deletePastSongQueues(input: {
-  sessionIds: string[];
-  channelName: string;
-  channelPlatform: string;
+  sessions: Array<{ sessionId: string; ownerToken: string }>;
 }): Promise<{ deleted: number; missing: number }> {
   const res = await fetch("/api/song-queue/past/delete", {
     method: "POST",
     headers: baseHeaders(),
-    body: JSON.stringify({
-      sessionIds: input.sessionIds,
-      channelName: input.channelName,
-      channelPlatform: input.channelPlatform,
-    }),
+    body: JSON.stringify({ sessions: input.sessions }),
   });
   return handle<{ deleted: number; missing: number }>(res);
 }
@@ -278,19 +266,14 @@ export async function deletePastSongQueues(input: {
  */
 export async function setPastSongQueuePublic(input: {
   sessionId: string;
-  channelName: string;
-  channelPlatform: string;
+  ownerToken: string;
   isPublic: boolean;
 }): Promise<SongQueuePublicView> {
-  const params = new URLSearchParams({
-    channelName: input.channelName,
-    channelPlatform: input.channelPlatform,
-  });
   const res = await fetch(
-    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}?${params.toString()}`,
+    `/api/song-queue/past/${encodeURIComponent(input.sessionId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: baseHeaders(input.ownerToken),
       body: JSON.stringify({ isPublic: input.isPublic }),
     },
   );

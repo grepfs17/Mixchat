@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useCallback, useReducer } from "react";
 import { FaPlus, FaTrash, FaYoutube, FaPencilAlt } from "react-icons/fa";
 import {
   getYoutubeLinks,
@@ -199,6 +199,14 @@ export default function YouTubeLinker({
     dispatch({ type: "CANCEL_EDIT" });
   };
 
+  // Close on Escape
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose],
+  );
+
   const isAlreadyLinked = (channelId: string) =>
     youtubeLinks.some((l) => l.twitchChannelId === channelId);
 
@@ -217,7 +225,14 @@ export default function YouTubeLinker({
 
   return (
     <div className="ytlinker-overlay" onClick={onClose}>
-      <div className="ytlinker-manager" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="ytlinker-manager"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Link YouTube Channels"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+      >
         <h2>
           <FaYoutube
             style={{

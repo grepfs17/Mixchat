@@ -174,6 +174,7 @@ export function useTwitchChatMessageHandler({
 
         Promise.all([userInfoPromise, sourceInfoPromise, rewardInfoPromise])
           .then(([userInfoResult, sourceInfoResult, rewardInfoResult]) => {
+            if (!active) return;
             const resolvedAvatar = (
               userInfoResult as { profileImageUrl?: string | null } | null
             )?.profileImageUrl;
@@ -201,6 +202,7 @@ export function useTwitchChatMessageHandler({
             });
           })
           .catch(() => {
+            if (!active) return;
             onMessageRef.current(chatMessage);
           });
 

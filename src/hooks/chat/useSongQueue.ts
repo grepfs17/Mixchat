@@ -448,6 +448,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           title: session.title || config.title,
           channelName: session.channelName,
           channelPlatform: session.channelPlatform,
+          ownerToken: bootstrap.ownerToken,
           itemCount: reconciledItems.length,
           playedCount,
           skippedCount,
@@ -659,9 +660,9 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       seenMessageIdsRef.current.add(key);
       pendingMessagesRef.current.push(item);
       if (ingestFrameRef.current === null) {
-        ingestFrameRef.current = requestAnimationFrame(() => {
+        ingestFrameRef.current = window.setTimeout(() => {
           void flushIngest();
-        });
+        }, 0);
       }
     },
     [bootstrap, flushIngest, phase],

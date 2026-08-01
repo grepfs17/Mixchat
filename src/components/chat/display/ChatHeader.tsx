@@ -7,6 +7,7 @@ import {
   MdVisibilityOff,
   MdMoreVert,
   MdBuild,
+  MdTv,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -242,12 +243,20 @@ function ModModeDropdown({
 function StreamInfoBar({
   streamTitle,
   streamGameName,
+  canEdit,
+  youtubeVideoId,
+  channelName,
+  showTwitchModButton,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
 }: {
   streamTitle?: string;
   streamGameName?: string;
+  canEdit?: boolean;
+  youtubeVideoId?: string | null;
+  channelName?: string;
+  showTwitchModButton?: boolean;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -302,7 +311,7 @@ function StreamInfoBar({
   return (
     <>
       <div className="stream-info-bar">
-        {editingTitle ? (
+        {canEdit && editingTitle ? (
           <div className="stream-info-edit-group">
             <input
               className="stream-info-input"
@@ -335,7 +344,7 @@ function StreamInfoBar({
               <MdClose size={14} />
             </button>
           </div>
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             className="stream-info-title"
@@ -348,9 +357,13 @@ function StreamInfoBar({
             {streamTitle || "No title set"}
             <MdEdit size={11} className="stream-info-edit-icon" />
           </button>
+        ) : (
+          <span className="stream-info-title stream-info-title--readonly">
+            {streamTitle || "No title set"}
+          </span>
         )}
 
-        {editingCategory ? (
+        {canEdit && editingCategory ? (
           <div
             className="stream-info-edit-group stream-info-category-edit"
             ref={categoryDropdownRef}
@@ -406,7 +419,7 @@ function StreamInfoBar({
               <MdClose size={14} />
             </button>
           </div>
-        ) : (
+        ) : canEdit ? (
           <button
             type="button"
             className="stream-info-category"
@@ -422,21 +435,73 @@ function StreamInfoBar({
             {streamGameName || "No category"}
             <MdEdit size={11} className="stream-info-edit-icon" />
           </button>
+        ) : (
+          <span className="stream-info-category stream-info-category--readonly">
+            {streamGameName || "No category"}
+          </span>
         )}
+
+        <div className="stream-info-actions">
+          {youtubeVideoId && (
+            <button
+              type="button"
+              className="stream-info-action-btn"
+              title="Open YouTube chat popout"
+              onClick={() => {
+                window.open(
+                  `https://www.youtube.com/live_chat?is_popout=1&v=${encodeURIComponent(youtubeVideoId)}`,
+                  "yt-chat-popout",
+                  "width=400,height=600,noopener,noreferrer",
+                );
+              }}
+            >
+              <FaYoutube size={14} />
+            </button>
+          )}
+          {showTwitchModButton && channelName && (
+            <>
+              <button
+                type="button"
+                className="stream-info-action-btn"
+                title="Open Twitch stream popout"
+                onClick={() => {
+                  window.open(
+                    `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName)}/player?id=1`,
+                    "twitch-stream-popout",
+                    "width=1280,height=720,noopener,noreferrer",
+                  );
+                }}
+              >
+                <MdTv size={14} />
+              </button>
+              <a
+                href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="stream-info-action-btn"
+                title="Open Twitch moderator page"
+              >
+                <FaTwitch size={14} />
+              </a>
+            </>
+          )}
+        </div>
       </div>
 
-      <CategoryDropdown
-        results={categoryResults}
-        pos={categoryDropdownPos}
-        saving={savingCategory}
-        inputRef={categoryInputRef}
-        onSelect={handleSaveCategory}
-        onCancel={() => {
-          setEditingCategory(false);
-          setCategoryResults([]);
-          setCategoryDropdownPos(null);
-        }}
-      />
+      {canEdit && (
+        <CategoryDropdown
+          results={categoryResults}
+          pos={categoryDropdownPos}
+          saving={savingCategory}
+          inputRef={categoryInputRef}
+          onSelect={handleSaveCategory}
+          onCancel={() => {
+            setEditingCategory(false);
+            setCategoryResults([]);
+            setCategoryDropdownPos(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -515,6 +580,7 @@ export default function ChatHeader({
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,
+    youtubeVideoId,
     onSetModMode,
   } = useModerationContext();
   const showModToggle = isModerator || isYouTubeModerator;
@@ -841,15 +907,17 @@ export default function ChatHeader({
         </div>
       </div>
 
-      {modModeActive && (
-        <StreamInfoBar
-          streamTitle={streamTitle}
-          streamGameName={streamGameName}
-          onUpdateTitle={onUpdateTitle}
-          onUpdateCategory={onUpdateCategory}
-          onSearchCategories={onSearchCategories}
-        />
-      )}
+      <StreamInfoBar
+        streamTitle={streamTitle}
+        streamGameName={streamGameName}
+        canEdit={isOnOwnChannel}
+        youtubeVideoId={youtubeVideoId}
+        channelName={channelName}
+        showTwitchModButton={isModerator || isOnOwnChannel}
+        onUpdateTitle={onUpdateTitle}
+        onUpdateCategory={onUpdateCategory}
+        onSearchCategories={onSearchCategories}
+      />
     </>
   );
 }

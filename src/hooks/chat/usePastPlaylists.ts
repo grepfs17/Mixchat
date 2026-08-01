@@ -26,6 +26,8 @@ export type CombinedItem = {
   skippedCount: number;
   thumbnail: string | null;
   isPublic: boolean;
+  /** Owner token (available for local entries and server entries that match a local entry). */
+  ownerToken?: string;
 };
 
 export interface UsePastPlaylistsResult {
@@ -79,6 +81,19 @@ export function usePastPlaylists(
     return { channelName: rest.join(":"), channelPlatform: platform };
   }, [channelKey]);
 
+  // Build a lookup of sessionId → ownerToken from local entries.
+  const ownerTokenMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of localEntries) {
+      if (entry.ownerToken) {
+        // Map by the session creation timestamp as a proxy for sessionId
+        // since local entries use local IDs, not server sessionIds.
+        map.set(entry.createdAt, entry.ownerToken);
+      }
+    }
+    return map;
+  }, [localEntries]);
+
   const refreshLocal = useCallback(() => {
     setLocalEntries(getPastPlaylists());
   }, []);
@@ -120,6 +135,22 @@ export function usePastPlaylists(
     }
     if (!openKey.startsWith("server:")) return;
     const sessionId = openKey.slice("server:".length);
+
+    // Find ownerToken: first try to match by sessionId in server entries
+    // and cross-reference with local entries by createdAt.
+    const serverEntry = serverEntries.find((e) => e.sessionId === sessionId);
+    let ownerToken: string | undefined;
+    if (serverEntry) {
+      ownerToken = ownerTokenMap.get(serverEntry.createdAt);
+    }
+
+    if (!ownerToken) {
+      setDetailError(
+        "Owner token not available. This session may have been created on another device.",
+      );
+      return;
+    }
+
     let cancelled = false;
     setLoadingDetail(true);
     setDetailError(null);
@@ -128,7 +159,7 @@ export function usePastPlaylists(
       try {
         const view = await getPastSongQueue({
           sessionId,
-          ...channelParts,
+          ownerToken,
         });
         if (cancelled) return;
         setServerDetail(view);
@@ -144,11 +175,12 @@ export function usePastPlaylists(
     return () => {
       cancelled = true;
     };
-  }, [openKey, channelParts]);
+  }, [openKey, channelParts, serverEntries, ownerTokenMap]);
 
   const combined = useMemo<CombinedItem[]>(() => {
     const items: CombinedItem[] = [];
     for (const e of serverEntries) {
+      const ownerToken = ownerTokenMap.get(e.createdAt);
       items.push({
         key: `server:${e.sessionId}`,
         source: "server",
@@ -160,6 +192,7 @@ export function usePastPlaylists(
         skippedCount: e.skippedCount,
         thumbnail: e.firstThumbnail,
         isPublic: e.isPublic,
+        ownerToken,
       });
     }
     for (const e of localEntries) {
@@ -174,11 +207,12 @@ export function usePastPlaylists(
         skippedCount: e.skippedCount,
         thumbnail: e.items[0]?.thumbnail || null,
         isPublic: false,
+        ownerToken: e.ownerToken,
       });
     }
     items.sort((a, b) => b.endedAt.localeCompare(a.endedAt));
     return items;
-  }, [localEntries, serverEntries]);
+  }, [localEntries, serverEntries, ownerTokenMap]);
 
   useEffect(() => {
     if (openKey && !combined.some((c) => c.key === openKey)) {
@@ -207,8 +241,23 @@ export function usePastPlaylists(
       }
       if (!channelParts) return;
       const sessionId = key.slice("server:".length);
+
+      // Find ownerToken for this session.
+      const item = combined.find((c) => c.key === key);
+      if (!item?.ownerToken) {
+        if (typeof window !== "undefined") {
+          window.alert(
+            "Owner token not available. Cannot delete this session.",
+          );
+        }
+        return;
+      }
+
       try {
-        await deletePastSongQueue({ sessionId, ...channelParts });
+        await deletePastSongQueue({
+          sessionId,
+          ownerToken: item.ownerToken,
+        });
         refreshServer();
         if (openKey === key) {
           setOpenKey(null);
@@ -222,7 +271,7 @@ export function usePastPlaylists(
         }
       }
     },
-    [channelParts, openKey, refreshLocal, refreshServer],
+    [channelParts, combined, openKey, refreshLocal, refreshServer],
   );
 
   const handleClear = useCallback(async () => {
@@ -237,10 +286,19 @@ export function usePastPlaylists(
     clearPastPlaylists();
     refreshLocal();
     if (channelParts) {
-      const ids = serverEntries.map((e) => e.sessionId);
-      if (ids.length > 0) {
+      // Collect ownerTokens for server entries that have them.
+      const sessions: Array<{ sessionId: string; ownerToken: string }> = [];
+      for (const item of combined) {
+        if (item.source === "server" && item.ownerToken && item.sessionId) {
+          sessions.push({
+            sessionId: item.sessionId,
+            ownerToken: item.ownerToken,
+          });
+        }
+      }
+      if (sessions.length > 0) {
         try {
-          await deletePastSongQueues({ sessionIds: ids, ...channelParts });
+          await deletePastSongQueues({ sessions });
         } catch (err) {
           if (typeof window !== "undefined") {
             window.alert(
@@ -253,7 +311,7 @@ export function usePastPlaylists(
       setOpenKey(null);
       setServerDetail(null);
     }
-  }, [channelParts, serverEntries, refreshLocal, refreshServer]);
+  }, [channelParts, combined, refreshLocal, refreshServer]);
 
   const openMeta = useMemo(
     () => (openKey ? combined.find((c) => c.key === openKey) ?? null : null),
@@ -309,12 +367,24 @@ export function usePastPlaylists(
       ) {
         return;
       }
+
+      // Find ownerToken for this session.
+      const item = combined.find(
+        (c) => c.sessionId === sessionId && c.source === "server",
+      );
+      if (!item?.ownerToken) {
+        setPublicError(
+          "Owner token not available. Cannot make this session public.",
+        );
+        return;
+      }
+
       setMakingPublic(true);
       setPublicError(null);
       try {
         await setPastSongQueuePublic({
           sessionId,
-          ...channelParts,
+          ownerToken: item.ownerToken,
           isPublic: true,
         });
         setServerEntries((prev) =>
@@ -330,7 +400,7 @@ export function usePastPlaylists(
         setMakingPublic(false);
       }
     },
-    [channelParts],
+    [channelParts, combined],
   );
 
   return {

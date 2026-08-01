@@ -1,0 +1,52 @@
+@import "../vars.css";
+
+/* === Pinned chat highlight banner ===
+ * Frame, keyframes, and close button are inherited from BannerShell.css.
+ * Per-tone overrides live here.
+ */
+
+.pinned-banner-icon {
+    color: #f5b800;
+}
+
+.pinned-banner .pinned-banner-badge {
+    background: linear-gradient(135deg, #9146ff 0%, #6441a5 100%);
+    animation: none;
+}
+
+.pinned-banner-sender {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pinned-banner-message {
+    color: var(--color-text-primary);
+    font-size: 12px;
+    line-height: 1.35;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* `linkifyUrl` (`src/lib/emotes/utils.ts`) embeds an inline `color: #6366f1`
+ * on every anchor, which is unreadable against the pinned banner's purple
+ * Twitch background. Override with white + kept underline via !important to
+ * win against the inline style — scoped to the pinned banner only so the
+ * regular chat line keeps its existing accent colour. */
+.pinned-banner-message a {
+    color: #ffffff !important;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* BannerShell applies `pinned-banner-header` to the banner wrapper via a
+ * className template literal — NOT orphan. Compactness override:
+ *   - margin-bottom: 4px (vs base 8px) — gentle tightening without fusing
+ *     the title row with the message body on multi-line pinned text. */
+.pinned-banner-header {
+    margin-bottom: 4px;
+}
+

@@ -113,7 +113,6 @@ export function useChatAppState({
   const notificationIdRef = useRef(0);
   const chatDisplayRef = useRef<ChatDisplayHandle>(null);
   const unifiedChatRef = useRef<UnifiedChatHandle>(null);
-  const showDeletedMessagesRef = useRef(showDeletedMessages);
   const currentUserBadgesRef = useRef<{
     badges: Record<string, string>;
     badgeDetails: Record<string, { url: string; title: string }>;
@@ -123,10 +122,6 @@ export function useChatAppState({
   const [prediction, setPrediction] = useState<PredictionState | null>(null);
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const [badgesReady, setBadgesReady] = useState(false);
-
-  useEffect(() => {
-    showDeletedMessagesRef.current = showDeletedMessages;
-  }, [showDeletedMessages]);
 
   const showDeletedMessagesRefForMessages = useRef(showDeletedMessages);
   useEffect(() => {
@@ -240,6 +235,7 @@ export function useChatAppState({
     setNotification,
     notificationIdRef,
     onLocalDelete: removeYtMessage,
+    onLocalDeleteWithLabel: markYtMessageDeleted,
     messages: ytMessages,
     getMessageText: getYtMessageText,
   });

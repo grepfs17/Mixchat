@@ -56,6 +56,13 @@ function createInMemoryStorage(): Storage {
 
 setupGlobalStorage();
 
+// jsdom does not implement SharedArrayBuffer (requires cross-origin isolation
+// headers in real browsers). Define a stub so libraries that reference it
+// (e.g. Innertube / youtubei.js) don't crash during hydration in tests.
+if (typeof globalThis.SharedArrayBuffer === "undefined") {
+  (globalThis as any).SharedArrayBuffer = ArrayBuffer;
+}
+
 // jsdom does not implement HTMLDialogElement.showModal() / close().
 // Mock them so components using native <dialog> render correctly in tests.
 if (typeof HTMLDialogElement !== "undefined" && !HTMLDialogElement.prototype.showModal) {

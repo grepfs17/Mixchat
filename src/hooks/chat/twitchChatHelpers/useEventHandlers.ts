@@ -79,6 +79,7 @@ export function useTwitchChatEventHandlers({
       if (!getCachedAvatar(userId) && userId) {
         getUserInfo(userId, accessTokenRef.current)
           .then((info) => {
+            if (!active) return;
             onMessageRef.current({
               ...chatMessage,
               authorAvatar:
@@ -86,7 +87,10 @@ export function useTwitchChatEventHandlers({
                   ?.profileImageUrl || chatMessage.authorAvatar,
             });
           })
-          .catch(() => onMessageRef.current(chatMessage));
+          .catch(() => {
+            if (!active) return;
+            onMessageRef.current(chatMessage);
+          });
       } else {
         onMessageRef.current(chatMessage);
       }
@@ -347,6 +351,7 @@ export function useTwitchChatEventHandlers({
             : Promise.resolve(null);
 
         const result = await avatarPromise;
+        if (!active) return;
         onMessageRef.current({
           ...chatMessage,
           authorAvatar:
@@ -403,6 +408,7 @@ export function useTwitchChatEventHandlers({
       if (!cachedUserInfo && userId) {
         getUserInfo(userId, accessTokenRef.current)
           .then((info) => {
+            if (!active) return;
             onMessageRef.current({
               ...chatMessage,
               authorAvatar:
@@ -410,7 +416,10 @@ export function useTwitchChatEventHandlers({
                   ?.profileImageUrl || undefined,
             });
           })
-          .catch(() => onMessageRef.current(chatMessage));
+          .catch(() => {
+            if (!active) return;
+            onMessageRef.current(chatMessage);
+          });
       } else {
         onMessageRef.current(chatMessage);
       }
@@ -420,14 +429,6 @@ export function useTwitchChatEventHandlers({
         playEventSound("watch-streak", soundData, eventSoundVolumeRef.current);
       }
     });
-
-    // DEV ONLY: expose a manual test helper
-    if (typeof window !== "undefined") {
-      (window as any).__testDeleteMessage = (id: string) => {
-        console.log("[useTwitchChat] Manual delete test for id:", id);
-        onMessageDeletedRef.current?.(id);
-      };
-    }
 
     client.onTimeout((_channel, user, duration) => {
       if (!active) return;
@@ -464,6 +465,7 @@ export function useTwitchChatEventHandlers({
 
     return () => {
       active = false;
-    };    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [client, enabled]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, enabled]);
 }

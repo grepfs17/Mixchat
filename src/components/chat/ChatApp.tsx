@@ -10,6 +10,8 @@ import HypeTrainBanner from "./shared/HypeTrainBanner";
 import PollBanner from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
 import CelebrationBanner from "./shared/CelebrationBanner";
+import PinnedChatBanner from "./shared/PinnedChatBanner";
+import { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
 import SplitLayout from "./SplitLayout";
 import StreamerToolsModal from "./shared/StreamerToolsModal";
 import {
@@ -36,6 +38,7 @@ import SongQueuePanel from "./shared/SongQueuePanel";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
+import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
 import ThemeMascots from "./ThemeMascots";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -211,18 +214,11 @@ export default function ChatApp(props: ChatAppStateProps) {
           await handleSendMessage(message, ["twitch"]);
         }
         if (platforms.includes("youtube") && youtubeVideoId) {
-          const res = await fetch("/api/youtube-chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              videoId: youtubeVideoId,
-              message,
-            }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
+          try {
+            await sendYouTubeChatMessage(youtubeVideoId, message);
+          } catch (err) {
             showNotification(
-              data.error || "Failed to send winner to YouTube",
+              err instanceof Error ? err.message : "Failed to send winner to YouTube",
               "error",
             );
           }
@@ -236,6 +232,16 @@ export default function ChatApp(props: ChatAppStateProps) {
     },
     [handleSendMessage, youtubeVideoId],
   );
+
+  // Poll the Twitch GQL pinnedChatHighlight for the currently-viewed Twitch
+  // channel. Pinned chat is a property of the selected Twitch stream, not
+  // the chat layout, so we always poll when a Twitch channel is selected.
+  const pinned = usePinnedChatHighlight(selectedTwitchChannelName ?? null);
+  const pinnedHighlight = pinned.highlight;
+  const showPinnedBanner =
+    !!pinnedHighlight &&
+    (pinned.dismissedMessageId !== pinnedHighlight.messageId ||
+      pinned.dismissedPinnedAt !== pinnedHighlight.pinnedAt.toISOString());
 
   const giveaway = useGiveaway({
     owner: {
@@ -321,15 +327,11 @@ export default function ChatApp(props: ChatAppStateProps) {
             );
             return;
           }
-          const res = await fetch("/api/youtube-chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ videoId: youtubeVideoId, message }),
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
+          try {
+            await sendYouTubeChatMessage(youtubeVideoId, message);
+          } catch (err) {
             showNotification(
-              data.error || "Failed to send song-queue message to YouTube",
+              err instanceof Error ? err.message : "Failed to send song-queue message to YouTube",
               "error",
             );
           }
@@ -537,6 +539,14 @@ export default function ChatApp(props: ChatAppStateProps) {
           />
         )}
 
+        {/* Twitch pinned chat message — persists until the streamer unpins. */}
+        {pinnedHighlight && showPinnedBanner && (
+          <PinnedChatBanner
+            highlight={pinnedHighlight}
+            onDismiss={pinned.dismiss}
+          />
+        )}
+
         {streamerToolsOpen && (
           <StreamerToolsModal
             giveaway={giveaway}
@@ -718,21 +728,6 @@ export default function ChatApp(props: ChatAppStateProps) {
               channelName={selectedTwitchChannelName}
               youtubeVideoId={youtubeVideoId}
               ytChatMessages={ytMessages}
-              onSendYoutube={async (text) => {
-                if (!youtubeVideoId) return;
-                const res = await fetch("/api/youtube-chat", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    videoId: youtubeVideoId,
-                    message: text,
-                  }),
-                });
-                if (!res.ok) {
-                  const data = await res.json();
-                  throw new Error(data.error || "Failed to send to YouTube");
-                }
-              }}
               onOptimisticYoutube={handleYtOptimisticMessage}
               onOptimisticYoutubeFailed={handleYtOptimisticFailed}
               youtubeAvailable={

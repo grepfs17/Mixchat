@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { FaPlus, FaTrash, FaEye, FaInfoCircle } from "react-icons/fa";
 import {
   getWatchedStreamers,
@@ -49,6 +49,14 @@ export default function WatchlistManager({
     setWatchedStreamers(getWatchedStreamers());
   };
 
+  // Close on Escape
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose],
+  );
+
   const isAlreadyWatched = (channelId: string) =>
     watchedStreamers.some((s) => s.id === channelId);
 
@@ -67,7 +75,14 @@ export default function WatchlistManager({
 
   return (
     <div className="watchlist-manager-overlay" onClick={onClose}>
-      <div className="watchlist-manager" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="watchlist-manager"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage Notification Streams"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+      >
         <h2>Manage Notification Streams</h2>
         <p className="subtitle">
           Get notifications when these streamers go live

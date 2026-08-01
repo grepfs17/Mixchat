@@ -124,13 +124,9 @@ export function useYouTubeSync({
           }
           setYtError(null);
         } else {
-          if (!res.ok) {
-            setYtError(data.error || "Failed to check for live stream");
-          } else {
-            setYtError("No live stream found");
-            setAutoVideoId(null);
-            setAutoChannelId(null);
-          }
+          setYtError("No live stream found");
+          setAutoVideoId(null);
+          setAutoChannelId(null);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
@@ -257,6 +253,22 @@ export function useYouTubeSync({
       // Persist the deleted state so it survives full `ytMessages`
       // replacements from the periodic SSE `onMessages` callback.
       const text = deletedByText ?? "Message deleted by a moderator";
+      // First-writer-wins: if a label is already stored (e.g. from the
+      // mod-delete flow which sets it before the API call), keep it.
+      // The SSE stream may arrive later with a less specific label.
+      const existing = deletedRef.current.get(id);
+      if (existing) {
+        setYtMessages((prev) => {
+          const msg = prev.find((m) => m.id === id);
+          if (!msg || (msg.isDeleted && msg.deletedByText)) return prev;
+          return prev.map((m) =>
+            m.id === id
+              ? { ...m, isDeleted: true, deletedByText: existing }
+              : m,
+          );
+        });
+        return;
+      }
       deletedRef.current.set(id, text);
       setYtMessages((prev) => {
         const exists = prev.some((m) => m.id === id);

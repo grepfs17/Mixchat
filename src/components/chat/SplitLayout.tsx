@@ -102,7 +102,7 @@ export default function SplitChat({
       {linkedYoutubeUrl && showYoutubeSection && (
         <div
           style={{
-            height: "4px",
+            height: "8px",
             backgroundColor: "#1a1a1a",
             cursor: "row-resize",
             userSelect: "none",

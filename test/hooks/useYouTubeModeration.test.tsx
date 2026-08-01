@@ -3,6 +3,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { useYouTubeModeration } from "../../src/hooks/chat/chatAppStateHelpers/useYouTubeModeration";
 import type { YTMessage } from "../../src/components/chat/unified/types";
+import * as youtubeModeration from "../../src/lib/youtubeModeration";
+
+vi.mock("../../src/lib/youtubeModeration", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../src/lib/youtubeModeration")
+  >("../../src/lib/youtubeModeration");
+  return {
+    ...actual,
+    banYouTubeUser: vi.fn(),
+    timeoutYouTubeUser: vi.fn(),
+  };
+});
 
 const OWN = "UC-mine";
 
@@ -23,6 +35,7 @@ function baseProps(overrides: Partial<Props> = {}): Props {
     setNotification,
     notificationIdRef,
     onLocalDelete: vi.fn(),
+    onLocalDeleteWithLabel: vi.fn(),
     messages: [],
     ...overrides,
   };
@@ -205,5 +218,206 @@ describe("useYouTubeModeration - moderator detection", () => {
 
     rerender(baseProps({ ytChannelId: OWN, modModeTarget: "off" }));
     expect(result.current.youtubeModModeActive).toBe(false);
+  });
+});
+
+describe("useYouTubeModeration — ban/timeout local message marking", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const BANNED = "UC-spammer";
+
+  it("handleYtBan marks all messages from the banned user as deleted locally", async () => {
+    const onLocalDeleteWithLabel = vi.fn();
+    const messages = [
+      msg({ id: "m1", authorChannelId: BANNED, author: "Spammer" }),
+      msg({ id: "m2", authorChannelId: BANNED }),
+      msg({ id: "m3", authorChannelId: "UC-innocent", author: "Innocent" }),
+      msg({ id: "m4", authorChannelId: BANNED }),
+    ];
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({ onLocalDeleteWithLabel, messages }),
+      ),
+    );
+
+    await act(() => result.current.handleYtBan(BANNED, "Spammer"));
+
+    // Banned user's 3 messages should be marked.
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledTimes(3);
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m1",
+      "Message deleted by a moderator",
+    );
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m2",
+      "Message deleted by a moderator",
+    );
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m4",
+      "Message deleted by a moderator",
+    );
+    // Innocent user's message should NOT be marked.
+    expect(onLocalDeleteWithLabel).not.toHaveBeenCalledWith(
+      "m3",
+      expect.anything(),
+    );
+
+    // API call should still happen.
+    expect(youtubeModeration.banYouTubeUser).toHaveBeenCalledWith(
+      "vid-1",
+      BANNED,
+      "Spammer",
+    );
+  });
+
+  it("handleYtBan calls the API and notifies even when the user has no messages", async () => {
+    const setNotification = vi.fn();
+    const onLocalDeleteWithLabel = vi.fn();
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({
+          onLocalDeleteWithLabel,
+          setNotification,
+          messages: [msg({ id: "m1", authorChannelId: "UC-other" })],
+        }),
+      ),
+    );
+
+    await act(() => result.current.handleYtBan(BANNED, "Spammer"));
+
+    // No messages matched.
+    expect(onLocalDeleteWithLabel).not.toHaveBeenCalled();
+    // API call still fires.
+    expect(youtubeModeration.banYouTubeUser).toHaveBeenCalled();
+    // Notification shown.
+    expect(setNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Spammer banned", type: "success" }),
+    );
+  });
+
+  it("handleYtBan does nothing when youtubeVideoId is null", async () => {
+    const onLocalDeleteWithLabel = vi.fn();
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({
+          youtubeVideoId: undefined,
+          onLocalDeleteWithLabel,
+          messages: [
+            msg({ id: "m1", authorChannelId: BANNED }),
+          ],
+        }),
+      ),
+    );
+
+    await act(() => result.current.handleYtBan(BANNED));
+
+    expect(onLocalDeleteWithLabel).not.toHaveBeenCalled();
+    expect(youtubeModeration.banYouTubeUser).not.toHaveBeenCalled();
+  });
+
+  it("handleYtTimeout marks all messages from the timed-out user as deleted locally", async () => {
+    const onLocalDeleteWithLabel = vi.fn();
+    const messages = [
+      msg({ id: "m1", authorChannelId: BANNED }),
+      msg({ id: "m2", authorChannelId: "UC-other" }),
+      msg({ id: "m3", authorChannelId: BANNED }),
+    ];
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({ onLocalDeleteWithLabel, messages }),
+      ),
+    );
+
+    await act(() => result.current.handleYtTimeout(BANNED, 600, "Spammer"));
+
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledTimes(2);
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m1",
+      "Message deleted by a moderator",
+    );
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m3",
+      "Message deleted by a moderator",
+    );
+
+    expect(youtubeModeration.timeoutYouTubeUser).toHaveBeenCalledWith(
+      "vid-1",
+      BANNED,
+      600,
+      "Spammer",
+    );
+  });
+
+  it("handleYtTimeout does nothing when youtubeVideoId is null", async () => {
+    const onLocalDeleteWithLabel = vi.fn();
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({
+          youtubeVideoId: undefined,
+          onLocalDeleteWithLabel,
+          messages: [msg({ id: "m1", authorChannelId: BANNED })],
+        }),
+      ),
+    );
+
+    await act(() => result.current.handleYtTimeout(BANNED, 600));
+
+    expect(onLocalDeleteWithLabel).not.toHaveBeenCalled();
+    expect(youtubeModeration.timeoutYouTubeUser).not.toHaveBeenCalled();
+  });
+
+  it("handleYtTimeout calls the API and notifies even when the user has no messages", async () => {
+    const setNotification = vi.fn();
+    const onLocalDeleteWithLabel = vi.fn();
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({
+          onLocalDeleteWithLabel,
+          setNotification,
+          messages: [msg({ id: "m1", authorChannelId: "UC-other" })],
+        }),
+      ),
+    );
+
+    await act(() => result.current.handleYtTimeout(BANNED, 600, "Troll"));
+
+    expect(onLocalDeleteWithLabel).not.toHaveBeenCalled();
+    expect(youtubeModeration.timeoutYouTubeUser).toHaveBeenCalled();
+    expect(setNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Troll timed out for 600s",
+        type: "success",
+      }),
+    );
+  });
+
+  it("does not attempt to mark messages that lack an authorChannelId", async () => {
+    const onLocalDeleteWithLabel = vi.fn();
+    const messages = [
+      // Message without authorChannelId (e.g. system/redirect).
+      msg({ id: "m1" }),
+      msg({ id: "m2", authorChannelId: BANNED }),
+    ];
+
+    const { result } = renderHook(() =>
+      useYouTubeModeration(
+        baseProps({ onLocalDeleteWithLabel, messages }),
+      ),
+    );
+
+    await act(() => result.current.handleYtBan(BANNED));
+
+    // Only the message WITH authorChannelId matching BANNED should be marked.
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledTimes(1);
+    expect(onLocalDeleteWithLabel).toHaveBeenCalledWith(
+      "m2",
+      "Message deleted by a moderator",
+    );
   });
 });

@@ -28,7 +28,11 @@ describe("YouTube callback route", () => {
   it("sets cookies and returns session HTML", async () => {
     const { GET } = await import("../../../../src/pages/auth/youtube/callback");
 
-    const cookies = { set: vi.fn() } as any;
+    const cookies = {
+      set: vi.fn(),
+      get: vi.fn().mockReturnValue({ value: "test_state" }),
+      delete: vi.fn(),
+    } as any;
     const url = new URL("http://localhost/?code=abc123&state=test_state");
     const locals = { nonce: "test_nonce" };
 
@@ -64,7 +68,11 @@ describe("YouTube callback route", () => {
 
     const { GET } = await import("../../../../src/pages/auth/youtube/callback");
 
-    const cookies = { set: vi.fn() } as any;
+    const cookies = {
+      set: vi.fn(),
+      get: vi.fn().mockReturnValue({ value: "test_state" }),
+      delete: vi.fn(),
+    } as any;
     const url = new URL("http://localhost/?code=abc123&state=test_state");
     const locals = { nonce: "test_nonce" };
 
@@ -79,7 +87,11 @@ describe("YouTube callback route", () => {
     const { GET } = await import("../../../../src/pages/auth/youtube/callback");
 
     sessionStorage.setItem("youtube_oauth_state", "abc-123:drive");
-    const cookies = { set: vi.fn(), delete: vi.fn() } as any;
+    const cookies = {
+      set: vi.fn(),
+      get: vi.fn().mockReturnValue({ value: "abc-123:drive" }),
+      delete: vi.fn(),
+    } as any;
     const url = new URL(
       "http://localhost/?code=authcode_drive&state=abc-123:drive",
     );
@@ -123,13 +135,17 @@ describe("YouTube callback route", () => {
     expect(mockGetYoutubeUser).not.toHaveBeenCalled();
   });
 
-  it("drive flow: rendered HTML aborts on CSRF state mismatch", async () => {
+  it("drive flow: rendered HTML shows 403 on CSRF state mismatch (server-side check)", async () => {
     const { GET } = await import("../../../../src/pages/auth/youtube/callback");
 
-    // Persisted expected state ends with ":drive" so the server routes to
-    // the drive branch — but the URL state is a different UUID.
+    // Cookie holds the original state, URL has a different (attacker) state.
+    // Server-side CSRF validation rejects before any auth cookies are set.
     sessionStorage.setItem("youtube_oauth_state", "expected-uuid:drive");
-    const cookies = { set: vi.fn(), delete: vi.fn() } as any;
+    const cookies = {
+      set: vi.fn(),
+      get: vi.fn().mockReturnValue({ value: "expected-uuid:drive" }),
+      delete: vi.fn(),
+    } as any;
     const url = new URL(
       "http://localhost/?code=x&state=attacker-uuid:drive",
     );
@@ -137,18 +153,16 @@ describe("YouTube callback route", () => {
 
     const res = await GET({ url, cookies, locals } as any);
 
-    expect(res.status).toBe(200);
+    // Server-side CSRF check rejects mismatched state before any cookies.
+    expect(res.status).toBe(403);
     const body = await res.text();
-    // The popup's runtime CSRF check sets this message via document.body.
-    expect(body).toContain("invalid state");
+    expect(body).toContain("Invalid state");
 
-    // Server-side cookies are still set BEFORE the popup's CSRF check runs
-    // (the popup is the only thing that displays the CSRF error). Confirm
-    // drive_token was written so the wiring before the response is covered.
-    expect(cookies.set).toHaveBeenCalledWith(
+    // No auth cookies should be set on a CSRF failure.
+    expect(cookies.set).not.toHaveBeenCalledWith(
       "drive_token",
-      "access123",
-      expect.any(Object),
+      expect.anything(),
+      expect.anything(),
     );
   });
 
@@ -157,7 +171,11 @@ describe("YouTube callback route", () => {
 
     // Bare-UUID state (no `:drive` suffix) routes to the established YouTube flow.
     sessionStorage.setItem("youtube_oauth_state", "test_state_youtube");
-    const cookies = { set: vi.fn(), delete: vi.fn() } as any;
+    const cookies = {
+      set: vi.fn(),
+      get: vi.fn().mockReturnValue({ value: "test_state_youtube" }),
+      delete: vi.fn(),
+    } as any;
     const url = new URL(
       "http://localhost/?code=abc123&state=test_state_youtube",
     );
