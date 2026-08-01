@@ -144,6 +144,7 @@ export default function UnifiedInput({
     replyingToId: replyingTo?.id,
     enableTwitchFeatures: showTwitchFeatures,
     enableYoutubeEmoji: showYoutubeFeatures,
+    mentionSource: sendTarget,
     slowModeWaitTime: (sendTarget === "twitch" || sendTarget === "both") ? slowModeWaitTime : null,
     onSend,
   });
