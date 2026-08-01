@@ -43,6 +43,8 @@ export interface UseChatInputCoreOptions {
   enableTwitchFeatures?: boolean;
   /** Enable YouTube emoji :shortcode: autocomplete. */
   enableYoutubeEmoji?: boolean;
+  /** Filter @mention autocomplete by source platform. */
+  mentionSource?: "twitch" | "youtube" | "both";
   /** Slow-mode wait time (seconds). If set, cooldown starts after send. */
   slowModeWaitTime?: number | null;
   /** Called with the trimmed message text. Hook clears state after. */
@@ -124,6 +126,7 @@ export function useChatInputCore(
     replyingToId,
     enableTwitchFeatures = true,
     enableYoutubeEmoji = false,
+    mentionSource,
     slowModeWaitTime = null,
     onSend,
   } = opts;
@@ -137,25 +140,29 @@ export function useChatInputCore(
   // ---- Authors for @mention ----
   const allAuthors = useMemo(() => {
     const authorMap = new Map<string, string>();
-    for (const msg of chatMessages) {
-      const lower = msg.author.toLowerCase();
-      const existing = authorMap.get(lower);
-      if (
-        !existing ||
-        (existing === existing.toLowerCase() &&
-          msg.author !== msg.author.toLowerCase())
-      ) {
-        authorMap.set(lower, msg.author);
+    if (!mentionSource || mentionSource === "twitch" || mentionSource === "both") {
+      for (const msg of chatMessages) {
+        const lower = msg.author.toLowerCase();
+        const existing = authorMap.get(lower);
+        if (
+          !existing ||
+          (existing === existing.toLowerCase() &&
+            msg.author !== msg.author.toLowerCase())
+        ) {
+          authorMap.set(lower, msg.author);
+        }
       }
     }
-    for (const m of ytChatMessages) {
-      if (m.author) {
-        const lower = m.author.toLowerCase();
-        if (!authorMap.has(lower)) authorMap.set(lower, m.author);
+    if (!mentionSource || mentionSource === "youtube" || mentionSource === "both") {
+      for (const m of ytChatMessages) {
+        if (m.author) {
+          const lower = m.author.toLowerCase();
+          if (!authorMap.has(lower)) authorMap.set(lower, m.author);
+        }
       }
     }
     return Array.from(authorMap.values());
-  }, [chatMessages, ytChatMessages]);
+  }, [chatMessages, ytChatMessages, mentionSource]);
 
   // ---- Insert at cursor ----
   const { insertWithPrefix, insertAtPosition, replaceCurrentWord } =
