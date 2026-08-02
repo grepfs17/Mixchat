@@ -282,7 +282,7 @@ export default function AppContainer() {
 
   // Not logged in and not loading — show the landing page
   if (!isLoggingIn && !sessions.twitch) {
-    return <LandingPage onTwitchLogin={handleTwitchLogin} />;
+    return <LandingPage onTwitchLogin={handleTwitchLogin} twitchOnly={IS_TWITCH_ONLY} />;
   }
 
   return (

@@ -116,7 +116,7 @@ function LoginPanel({
           style={{ lineHeight: 0 }}
         >
           <img
-            src="/logo.webp"
+            src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
             alt="Mixchat"
             style={{ height: 24, width: "auto", opacity: 0.9 }}
           />
