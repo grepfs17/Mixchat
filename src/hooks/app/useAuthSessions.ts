@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
 import { useTokenRefresh } from "./useTokenRefresh";
+import { IS_TWITCH_ONLY } from "../../lib/constants";
 
 const SESSIONS_KEY = "mixchat_sessions:v1";
 
@@ -233,6 +234,12 @@ export function useAuthSessions(): UseAuthSessionsResult {
             ...restored.youtube,
             expiresAt: new Date().getTime(),
           };
+        }
+        // In Twitch-only mode, discard any YouTube session persisted from a
+        // previous visit — YouTube integrations must not activate from stale
+        // browser state.
+        if (IS_TWITCH_ONLY) {
+          delete restored.youtube;
         }
         setSessions(restored);
         if (!restored.twitch) {

@@ -427,7 +427,7 @@ export default function AppContainer() {
                   <span className="your-channel-name">
                     {sessions.twitch.displayName}
                   </span>
-                  {sessions.youtube && (
+                  {!IS_TWITCH_ONLY && sessions.youtube && (
                     <span className="your-channel-youtube-chip">
                       <FaYoutube size={12} />
                       {sessions.youtube.displayName}
@@ -473,7 +473,7 @@ export default function AppContainer() {
                   <FaTwitch size={14} />
                   Open on Twitch
                 </a>
-                {sessions.youtube && (
+                {!IS_TWITCH_ONLY && sessions.youtube && (
                   <a
                     className="your-channel-btn your-channel-btn--youtube"
                     href={`https://www.youtube.com/channel/${sessions.youtube.userId}`}
