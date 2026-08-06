@@ -5,6 +5,7 @@ import FloatingEmotes from "./FloatingEmotes";
 
 interface LandingPageProps {
   onTwitchLogin: () => void;
+  twitchOnly?: boolean;
 }
 
 interface FeatureImage {
@@ -159,7 +160,7 @@ const FEATURES: {
     },
   ];
 
-export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
+export default function LandingPage({ onTwitchLogin, twitchOnly }: LandingPageProps) {
   const [heroLoaded, setHeroLoaded] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -198,14 +199,14 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
         }}
       >
         <FloatingEmotes />
-        <img src="/logo.webp" alt="Mixchat" className="landing-hero-logo" />
+        <img src={twitchOnly ? "/logo-twitch.webp" : "/logo.webp"} alt="Mixchat" className="landing-hero-logo" />
         <h1 className="landing-hero-title">
           Watch streams. Use emotes easily.
         </h1>
         <p className="landing-hero-subtitle">
-          A Twitch chat client with 7TV, BTTV, and FFZ emotes built in, no
-          extensions needed. Link streamer's YouTube channel to view both chats
-          together.
+          {twitchOnly
+            ? "A Twitch chat client with 7TV, BTTV, and FFZ emotes built in, no browser extensions needed."
+            : "A Twitch chat client with 7TV, BTTV, and FFZ emotes built in, no extensions needed. Link streamer's YouTube channel to view both chats together."}
         </p>
         <button type="button" className="landing-cta-button" onClick={onTwitchLogin}>
           <svg
@@ -260,186 +261,212 @@ export default function LandingPage({ onTwitchLogin }: LandingPageProps) {
             </svg>
             Your data stays in your browser
           </span>
-        </div>
-      </div>
-
-      <div className="landing-features">
-        {FEATURES.map((feature) => (
-          <section key={feature.title} className="landing-feature landing-reveal">
-            <div className="landing-feature-text">
-              <h2 className="landing-feature-title">{feature.title}</h2>
-              <p className="landing-feature-description">
-                {feature.description}
-              </p>
-            </div>
-            {feature.useCarousel ? (
-              <div className="landing-feature-image-container landing-feature-image-container--single">
-                <ThemeCarousel
-                  slides={feature.images as CarouselSlide[]}
-                  badge={feature.badge}
-                />
-              </div>
-            ) : (
-              <div
-                className={`landing-feature-image-container ${
-                  feature.images.length === 2
-                    ? "landing-feature-image-container--dual"
-                    : ""
-                }`}
+          {!twitchOnly && (
+            <span className="landing-meta-item">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <span className="landing-feature-badge">{feature.badge}</span>
-                {feature.images.map((img, j) => (
-                  <img
-                    key={j}
-                    src={img.src}
-                    alt={img.alt}
-                    className={`landing-feature-image${img.objectFit === "contain" ? " landing-feature-image--contain" : ""}`}
-                    loading="lazy"
-                    style={
-                      img.objectFit || img.objectPosition
-                        ? {
-                            ...(img.objectFit
-                              ? { objectFit: img.objectFit }
-                              : {}),
-                            ...(img.objectPosition
-                              ? { objectPosition: img.objectPosition }
-                              : {}),
-                          }
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        ))}
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                <path d="M16 3.13a4 4 0 010 7.75" />
+              </svg>
+              Cross-platform: Twitch + YouTube
+            </span>
+          )}
+        </div>
       </div>
 
-      <section className="landing-privacy landing-reveal">
-        <div className="landing-privacy-icon">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0110 0v4" />
-          </svg>
+      {!twitchOnly && (
+        <div className="landing-features">
+          {FEATURES.map((feature) => (
+            <section key={feature.title} className="landing-feature landing-reveal">
+              <div className="landing-feature-text">
+                <h2 className="landing-feature-title">{feature.title}</h2>
+                <p className="landing-feature-description">
+                  {feature.description}
+                </p>
+              </div>
+              {feature.useCarousel ? (
+                <div className="landing-feature-image-container landing-feature-image-container--single">
+                  <ThemeCarousel
+                    slides={feature.images as CarouselSlide[]}
+                    badge={feature.badge}
+                  />
+                </div>
+              ) : (
+                <div
+                  className={`landing-feature-image-container ${
+                    feature.images.length === 2
+                      ? "landing-feature-image-container--dual"
+                      : ""
+                  }`}
+                >
+                  <span className="landing-feature-badge">{feature.badge}</span>
+                  {feature.images.map((img, j) => (
+                    <img
+                      key={j}
+                      src={img.src}
+                      alt={img.alt}
+                      className={`landing-feature-image${img.objectFit === "contain" ? " landing-feature-image--contain" : ""}`}
+                      loading="lazy"
+                      style={
+                        img.objectFit || img.objectPosition
+                          ? {
+                              ...(img.objectFit
+                                ? { objectFit: img.objectFit }
+                                : {}),
+                              ...(img.objectPosition
+                                ? { objectPosition: img.objectPosition }
+                                : {}),
+                            }
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          ))}
         </div>
-        <h2 className="landing-privacy-title">Your Data, Your Browser</h2>
-        <p className="landing-privacy-description">
-          Mixchat has <strong>no database</strong>. All your settings, followed
-          channels, watchlists, and preferences are stored exclusively in your
-          browser's local storage. Nothing is sent to any server. Want to back
-          up? Export your settings. Want to start fresh? Clear your browser
-          data.
-        </p>
-        <div className="landing-privacy-grid">
-          <div className="landing-privacy-card">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <div>
-              <strong>Export &amp; Import</strong>
-              <span>Back up and restore your settings anytime</span>
-            </div>
-          </div>
-          <div className="landing-privacy-card">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-            <div>
-              <strong>Zero Server Storage</strong>
-              <span>No accounts, no profiles, no tracking</span>
-            </div>
-          </div>
-          <div className="landing-privacy-card">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-            </svg>
-            <div>
-              <strong>Google Drive Backup</strong>
-              <span>Optional cloud backup you control</span>
-            </div>
-          </div>
-          <div className="landing-privacy-card">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div>
-              <strong>Open Source</strong>
-              <span>Fully transparent, auditable codebase</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      )}
 
-      <section className="landing-cta landing-reveal">
-        <h2 className="landing-cta-title">Ready to chat?</h2>
-        <p className="landing-cta-subtitle">
-          Log in with your Twitch account to get started.
-        </p>
-        <button type="button"
-          className="landing-cta-button landing-cta-button--large"
-          onClick={onTwitchLogin}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
+      {!twitchOnly && (
+        <section className="landing-privacy landing-reveal">
+          <div className="landing-privacy-icon">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0110 0v4" />
+            </svg>
+          </div>
+          <h2 className="landing-privacy-title">Your Data, Your Browser</h2>
+          <p className="landing-privacy-description">
+            Mixchat has <strong>no database</strong>. All your settings, followed
+            channels, watchlists, and preferences are stored exclusively in your
+            browser's local storage. Nothing is sent to any server. Want to back
+            up? Export your settings. Want to start fresh? Clear your browser
+            data.
+          </p>
+          <div className="landing-privacy-grid">
+            <div className="landing-privacy-card">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <div>
+                <strong>Export &amp; Import</strong>
+                <span>Back up and restore your settings anytime</span>
+              </div>
+            </div>
+            <div className="landing-privacy-card">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <div>
+                <strong>Zero Server Storage</strong>
+                <span>No accounts, no profiles, no tracking</span>
+              </div>
+            </div>
+            <div className="landing-privacy-card">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+              <div>
+                <strong>Google Drive Backup</strong>
+                <span>Optional cloud backup you control</span>
+              </div>
+            </div>
+            <div className="landing-privacy-card">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div>
+                <strong>Open Source</strong>
+                <span>Fully transparent, auditable codebase</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!twitchOnly && (
+        <section className="landing-cta landing-reveal">
+          <h2 className="landing-cta-title">Ready to chat?</h2>
+          <p className="landing-cta-subtitle">
+            Log in with your Twitch account to get started.
+          </p>
+          <button type="button"
+            className="landing-cta-button landing-cta-button--large"
+            onClick={onTwitchLogin}
           >
-            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
-          </svg>
-          Login with Twitch
-        </button>
-      </section>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z" />
+            </svg>
+            Login with Twitch
+          </button>
+        </section>
+      )}
 
       <section className="landing-beta landing-reveal">
         <div className="landing-beta-icon">

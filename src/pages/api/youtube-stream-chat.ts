@@ -3,6 +3,7 @@ import { YTNodes } from "youtubei.js";
 import { getInnertube } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 import { isPlayabilityError } from "./youtube-stream-chat.playability";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 interface MessagePart {
   type: "text" | "emoji";
@@ -857,6 +858,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
 
 // SSE endpoint
 export const GET: APIRoute = async ({ request, url }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||

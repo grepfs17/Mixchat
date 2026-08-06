@@ -17,6 +17,7 @@ import {
   FONT_FAMILY_MAP,
   THEME_OPTIONS,
 } from "../lib/types";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import "../styles/OnboardingWizard.css";
 
@@ -404,7 +405,7 @@ export default function OnboardingWizard({
           {step === 1 ? (
             <div className="onboarding-welcome">
               <img
-                src="/logo.webp"
+                src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
                 alt="Mixchat"
                 className="onboarding-welcome-logo"
               />

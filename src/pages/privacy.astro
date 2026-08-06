@@ -1,5 +1,6 @@
 ---
 import ContentLayout from "../layouts/ContentLayout.astro";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const title = "Privacy Policy - Mixchat";
@@ -51,7 +52,7 @@ const description =
     </Fragment>
     <div style="text-align: center; margin-bottom: 30px;">
         <img
-            src="/logo.webp"
+            src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
             alt="Mixchat Logo"
             width="80"
             height="80"
@@ -77,10 +78,10 @@ const description =
 
     <h2>2. Data Collection</h2>
 
-    <h3>2.1 Logging In (Twitch & YouTube)</h3>
+    <h3>2.1 Logging In{IS_TWITCH_ONLY ? " (Twitch)" : " (Twitch & YouTube)"}</h3>
     <p>
-        When connecting a Twitch or YouTube account, the browser gets "keys"
-        (OAuth tokens) from those services.
+        When connecting a Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"} account, the browser gets "keys"
+        (OAuth tokens) from {IS_TWITCH_ONLY ? "the service" : "those services"}.
     </p>
     <ul>
         <li>
@@ -97,17 +98,19 @@ const description =
 
     <h3>2.2 Your Messages</h3>
     <p>
-        Mixchat is a real-time client. Chat messages flow from Twitch or YouTube
+        Mixchat is a real-time client. Chat messages flow from Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"}
         directly to the screen. They are kept in the browser's memory during a
         session and are not archived.
     </p>
 
+    {!IS_TWITCH_ONLY && (
     <h3>2.3 YouTube Integration</h3>
     <p>
         By linking a YouTube channel, Mixchat uses the official YouTube Data
         API. It only requests public info to show live status and stream
         metadata properly.
     </p>
+    )}
 
     <h2>3. Third-Party Services</h2>
     <p>
@@ -115,7 +118,7 @@ const description =
     </p>
     <ul>
         <li>
-            <strong>Twitch & YouTube:</strong> For the chat and video feeds.
+            <strong>Twitch{IS_TWITCH_ONLY ? "" : " & YouTube"}:</strong> For the chat and video feeds.
         </li>
         <li>
             <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those custom
@@ -178,7 +181,7 @@ const description =
     <p>
         Login tokens are managed using secure HTTP-only cookies. It is
         recommended to use strong passwords and two-factor authentication (2FA)
-        on Twitch and YouTube accounts.
+        on Twitch{IS_TWITCH_ONLY ? "" : " and YouTube"} accounts.
     </p>
 
     <h2>7. Changes</h2>
@@ -192,7 +195,7 @@ const description =
     <p>
         If you have questions about any of this, open an issue on the
         <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
-            >Forgejo repository</a
+            > Forgejo repository</a
         >.
     </p>
 

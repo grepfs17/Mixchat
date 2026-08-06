@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import OnboardingWizard from "../../src/components/OnboardingWizard";
+import { IS_TWITCH_ONLY } from "../../src/lib/constants";
 import { SettingsProvider } from "../../src/contexts/SettingsContext";
 import type { UseChatSettingsResult } from "../../src/hooks/app/useChatSettings";
 import type { ChatFont, ChatTheme } from "../../src/lib/types";
@@ -210,7 +211,7 @@ describe("OnboardingWizard component", () => {
     const logo = screen.getByAltText("Mixchat");
     expect(logo).toBeInTheDocument();
     expect(logo.tagName).toBe("IMG");
-    expect((logo as HTMLImageElement).getAttribute("src")).toBe("/logo.webp");
+    expect((logo as HTMLImageElement).getAttribute("src")).toBe(IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp");
   });
 
   it("calls onComplete when the Skip setup button is clicked on the welcome step", async () => {

@@ -1,17 +1,19 @@
 ---
 import MainLayout from "../layouts/MainLayout.astro";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 
 const title = "Mixchat";
-const description =
-    "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.";
+const description = IS_TWITCH_ONLY
+    ? "Advanced Twitch chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions."
+    : "Advanced Twitch and YouTube chat client with support for 7TV, BTTV, and FFZ emotes without browser extensions.";
+const keywords = IS_TWITCH_ONLY
+    ? "twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, mixchat"
+    : "twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, youtube chat, youtube emotes, youtube chat client, mixchat";
 ---
 
 <MainLayout title={title} description={description}>
     <Fragment slot="head">
-        <meta
-            name="keywords"
-            content="twitch chat, twitch emotes, 7tv, bttv, ffz, streaming client, chat client, youtube chat, youtube emotes, youtube chat client, mixchat"
-        />
+        <meta name="keywords" content={keywords} />
         <script
             type="application/ld+json"
             set:html={JSON.stringify({

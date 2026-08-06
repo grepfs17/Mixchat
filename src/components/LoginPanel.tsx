@@ -10,6 +10,7 @@ import {
   FaTwitch,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 
 interface TwitchChannel {
   id: string;
@@ -115,7 +116,7 @@ function LoginPanel({
           style={{ lineHeight: 0 }}
         >
           <img
-            src="/logo.webp"
+            src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
             alt="Mixchat"
             style={{ height: 24, width: "auto", opacity: 0.9 }}
           />
@@ -173,7 +174,7 @@ function LoginPanel({
                     <FaEye />
                   </button>
                 )}
-                {onManageYoutubeLinks && (
+                {!IS_TWITCH_ONLY && onManageYoutubeLinks && (
                   <button type="button"
                     onClick={() => {
                       onManageYoutubeLinks();
@@ -319,6 +320,7 @@ function LoginPanel({
         )}
 
         {/* YouTube login/logout */}
+        {!IS_TWITCH_ONLY && (
         <div className="youtube-section">
           {youtubeConnected ? (
             <div className="youtube-info-row">
@@ -344,6 +346,7 @@ function LoginPanel({
             </button>
           ) : null}
         </div>
+        )}
       </div>
 
       {showEmbedConfig && (

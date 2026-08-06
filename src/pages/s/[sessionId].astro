@@ -1,5 +1,6 @@
 ---
 import ContentLayout from "../../layouts/ContentLayout.astro";
+import { IS_TWITCH_ONLY } from "../../lib/constants";
 import { readPublic } from "../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../server/songQueueConfig";
 import type { SongQueuePublicView } from "../../lib/songQueue/types";
@@ -311,7 +312,7 @@ const description = initialView
     <div style="text-align: center; margin-bottom: 18px;">
         <a href="/">
             <img
-                src="/logo.webp"
+                src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
                 alt="Mixchat Logo"
                 width="60"
                 height="60"

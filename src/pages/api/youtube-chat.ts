@@ -5,6 +5,7 @@ import {
   resolveActiveLiveChatId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 /**
  * Sends a message to a YouTube live chat using the YouTube Data API v3.
@@ -16,6 +17,8 @@ import {
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||

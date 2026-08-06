@@ -6,6 +6,7 @@ import {
   resolveChannelId,
 } from "../../lib/youtube-lookup";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 // Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
 const DEBUG_YT =
@@ -35,6 +36,8 @@ const JSON_HEADERS = {
 const RATE_LIMIT_HEADERS = { "Content-Type": "application/json", "Retry-After": "60" };
 
 export const GET: APIRoute = async ({ request, url, cookies }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||

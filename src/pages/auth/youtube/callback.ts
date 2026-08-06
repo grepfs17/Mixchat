@@ -1,7 +1,23 @@
 import type { APIRoute } from "astro";
 import { getYoutubeAccessToken, getYoutubeUser } from "../../../lib/youtube";
+import { IS_TWITCH_ONLY } from "../../../lib/constants";
 
 export const GET: APIRoute = async ({ url, cookies, locals }) => {
+  if (IS_TWITCH_ONLY) {
+    return new Response(
+      `<!DOCTYPE html>
+<html>
+<head><title>Disabled</title></head>
+<body>
+<h1>YouTube Integrations Disabled</h1>
+<p>This instance is configured for Twitch only. YouTube authentication is not available.</p>
+<a href="/">Back to home</a>
+</body>
+</html>`,
+      { status: 403, headers: { "Content-Type": "text/html" } },
+    );
+  }
+
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
 

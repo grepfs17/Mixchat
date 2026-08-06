@@ -24,6 +24,7 @@ import { useEmbedState } from "../hooks/app/useEmbedState";
 import { useUiState } from "../hooks/app/useUiState";
 import { useMyChannelInfo } from "../hooks/app/useMyChannelInfo";
 import { markStreamerNotified } from "../lib/streamMonitor";
+import { IS_TWITCH_ONLY } from "../lib/constants";
 // storageMigration runs at import time — importing it triggers the migration.
 import "../lib/storageMigration";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
@@ -281,7 +282,7 @@ export default function AppContainer() {
 
   // Not logged in and not loading — show the landing page
   if (!isLoggingIn && !sessions.twitch) {
-    return <LandingPage onTwitchLogin={handleTwitchLogin} />;
+    return <LandingPage onTwitchLogin={handleTwitchLogin} twitchOnly={IS_TWITCH_ONLY} />;
   }
 
   return (
@@ -359,17 +360,19 @@ export default function AppContainer() {
             }}
             onTwitchLogin={handleTwitchLogin}
             onTwitchLogout={handleTwitchLogout}
-            youtubeConnected={!!sessions.youtube}
+            youtubeConnected={IS_TWITCH_ONLY ? false : !!sessions.youtube}
             youtubeUser={sessions.youtube?.displayName}
-            onYoutubeLogin={handleYoutubeLogin}
-            onYoutubeLogout={handleYoutubeLogout}
+            onYoutubeLogin={IS_TWITCH_ONLY ? undefined : handleYoutubeLogin}
+            onYoutubeLogout={IS_TWITCH_ONLY ? undefined : handleYoutubeLogout}
             onManageWatchlist={() => setShowWatchlistManager(true)}
-            onManageYoutubeLinks={() => setShowYoutubeLinker(true)}
+            onManageYoutubeLinks={
+              IS_TWITCH_ONLY ? undefined : () => setShowYoutubeLinker(true)
+            }
             linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-            hasYoutubeSession={!!sessions.youtube}
-            hasDriveScope={!!sessions.youtube?.hasDriveScope}
-            onYoutubeDriveLogin={handleYoutubeDriveLogin}
-            onReauthYoutube={handleYoutubeLogin}
+            hasYoutubeSession={IS_TWITCH_ONLY ? false : !!sessions.youtube}
+            hasDriveScope={IS_TWITCH_ONLY ? false : !!sessions.youtube?.hasDriveScope}
+            onYoutubeDriveLogin={IS_TWITCH_ONLY ? () => {} : handleYoutubeDriveLogin}
+            onReauthYoutube={IS_TWITCH_ONLY ? () => {} : handleYoutubeLogin}
             onGoHome={() => {
               clearSelection();
               setStreamTransition(null);
@@ -424,7 +427,7 @@ export default function AppContainer() {
                   <span className="your-channel-name">
                     {sessions.twitch.displayName}
                   </span>
-                  {sessions.youtube && (
+                  {!IS_TWITCH_ONLY && sessions.youtube && (
                     <span className="your-channel-youtube-chip">
                       <FaYoutube size={12} />
                       {sessions.youtube.displayName}
@@ -470,7 +473,7 @@ export default function AppContainer() {
                   <FaTwitch size={14} />
                   Open on Twitch
                 </a>
-                {sessions.youtube && (
+                {!IS_TWITCH_ONLY && sessions.youtube && (
                   <a
                     className="your-channel-btn your-channel-btn--youtube"
                     href={`https://www.youtube.com/channel/${sessions.youtube.userId}`}

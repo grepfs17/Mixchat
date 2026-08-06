@@ -4,6 +4,7 @@ import {
   getYoutubeLinkForChannel,
   getYoutubeLinks,
 } from "../../lib/youtubeLinks";
+import { IS_TWITCH_ONLY } from "../../lib/constants";
 
 const YT_VIDEO_ID_REFRESH_MS = 600000; // 10 minutes
 
@@ -57,7 +58,7 @@ export function useYoutubeLink(
   // Computed during render (not in an effect) to avoid unnecessary state
   // updates and the stale-closure issues they introduce.
   const linkedYoutubeUrl = useMemo(() => {
-    if (!selectedTwitchChannel) return null;
+    if (!selectedTwitchChannel || IS_TWITCH_ONLY) return null;
     const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
     if (storedLink) return storedLink;
     if (
@@ -117,8 +118,10 @@ export function useYoutubeLink(
 
   const linkedYoutubeChannelIds = useMemo(
     () =>
-      getYoutubeLinks()
-        .flatMap((l) => (l.active !== false ? [l.twitchChannelId] : [])),
+      IS_TWITCH_ONLY
+        ? []
+        : getYoutubeLinks()
+            .flatMap((l) => (l.active !== false ? [l.twitchChannelId] : [])),
     [ytLinksVersion],
   );
 

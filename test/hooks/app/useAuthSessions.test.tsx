@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { IS_TWITCH_ONLY } from "../../../src/lib/constants";
 
 // Mocks first so the hook imports see them.
 vi.mock("../../../src/lib/oauthSession", () => ({
@@ -259,5 +260,76 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     // effect runs it's stripped from the serialised copy — but hasDriveScope
     // is a client-side flag that survives the strip + refresh cycle.
     expect(result.current.sessions.youtube?.accessToken).toBeUndefined();
+  });
+});
+
+describe("useAuthSessions — YouTube session restore gated by IS_TWITCH_ONLY", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it("strips YouTube from restored sessions when IS_TWITCH_ONLY is true", async () => {
+    seedYoutubeSession(false);
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    if (IS_TWITCH_ONLY) {
+      // Twitch-only mode: YouTube session must be stripped after restore
+      expect(result.current.sessions.youtube).toBeUndefined();
+    } else {
+      // Normal mode: YouTube session should be restored from localStorage
+      expect(result.current.sessions.youtube).toBeDefined();
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    }
+  });
+
+  it("preserves Twitch session while handling YouTube based on IS_TWITCH_ONLY", async () => {
+    localStorage.setItem(
+      "mixchat_sessions:v1",
+      JSON.stringify({
+        twitch: {
+          platform: "twitch",
+          userId: "t1",
+          displayName: "Bob",
+          expiresAt: Date.now() + 60_000,
+        },
+        youtube: {
+          platform: "youtube",
+          userId: "u1",
+          displayName: "Alice",
+          expiresAt: Date.now() + 60_000,
+        },
+      }),
+    );
+
+    const useAuthSessions = await loadHook();
+    const { result } = renderHook(() => useAuthSessions());
+
+    await waitFor(() => {
+      expect(result.current.sessions.twitch).toBeDefined();
+    });
+
+    // Twitch session is always preserved
+    expect(result.current.sessions.twitch?.userId).toBe("t1");
+
+    if (IS_TWITCH_ONLY) {
+      // Twitch-only mode: YouTube session must be stripped
+      expect(result.current.sessions.youtube).toBeUndefined();
+    } else {
+      // Normal mode: YouTube session should be restored
+      expect(result.current.sessions.youtube).toBeDefined();
+      expect(result.current.sessions.youtube?.userId).toBe("u1");
+    }
   });
 });

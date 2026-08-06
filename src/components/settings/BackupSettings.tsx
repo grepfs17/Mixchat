@@ -8,6 +8,7 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import { exportSettings } from "../../lib/settingsBackup";
+import { IS_TWITCH_ONLY } from "../../lib/constants";
 import type { SettingsItemDef } from "./types";
 
 export interface BackupSettingsProps {
@@ -205,27 +206,31 @@ export function getBackupSettings(
         />
       ),
     },
-    {
-      id: "google-drive",
-      group: "backup",
-      label: "Google Drive backup",
-      description:
-        "Save and load your settings directly from your Google Drive",
-      render: () => (
-        <GoogleDriveSetting
-          hasYoutubeSession={props.hasYoutubeSession}
-          hasDriveScope={props.hasDriveScope}
-          onReauthYoutube={props.onReauthYoutube}
-          onYoutubeDriveLogin={props.onYoutubeDriveLogin}
-          handleDriveSave={props.handleDriveSave}
-          handleDriveLoad={props.handleDriveLoad}
-          handleCopyLink={props.handleCopyLink}
-          driveLoading={props.driveLoading}
-          driveMessage={props.driveMessage}
-          shareLink={props.shareLink}
-          linkCopied={props.linkCopied}
-        />
-      ),
-    },
+    ...(IS_TWITCH_ONLY
+      ? []
+      : [
+          {
+            id: "google-drive",
+            group: "backup" as const,
+            label: "Google Drive backup",
+            description:
+              "Save and load your settings directly from your Google Drive",
+            render: () => (
+              <GoogleDriveSetting
+                hasYoutubeSession={props.hasYoutubeSession}
+                hasDriveScope={props.hasDriveScope}
+                onReauthYoutube={props.onReauthYoutube}
+                onYoutubeDriveLogin={props.onYoutubeDriveLogin}
+                handleDriveSave={props.handleDriveSave}
+                handleDriveLoad={props.handleDriveLoad}
+                handleCopyLink={props.handleCopyLink}
+                driveLoading={props.driveLoading}
+                driveMessage={props.driveMessage}
+                shareLink={props.shareLink}
+                linkCopied={props.linkCopied}
+              />
+            ),
+          },
+        ]),
   ];
 }

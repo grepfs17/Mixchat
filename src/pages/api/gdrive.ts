@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { refreshYoutubeToken } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
@@ -190,6 +191,8 @@ async function driveFetch(
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  if (IS_TWITCH_ONLY) return twitchOnlyResponse();
+
   const clientAddress =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
