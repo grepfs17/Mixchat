@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "type-check": "tsc --noEmit",
-    "doctor": "pnpx react-doctor@latest"
+    "doctor": "pnpx react-doctor@latest --no-lint"
   },
   "dependencies": {
     "@twurple/api": "^8.1.4",
@@ -41,7 +41,7 @@
     "jsdom": "^29.1.1",
     "pm2": "^7.0.3",
     "react-doctor": "0.9.1",
-    "vitest": "^4.1.10",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   }
 }

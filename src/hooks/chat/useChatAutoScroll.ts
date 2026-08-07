@@ -23,10 +23,19 @@ export function useChatAutoScroll({
       messages.length > 0 ? messages[messages.length - 1] : undefined;
   }, [messages]);
 
+  // Flag set during programmatic scrolls (auto-scroll or manual scrollToBottom)
+  // so the scroll handler does not falsely flip isAtBottom to false when
+  // messages are arriving faster than the browser can lay them out.
+  const isAutoScrollingRef = useRef(false);
+
   // Auto-scroll when at bottom
   useEffect(() => {
     if (containerRef.current && isAtBottom) {
+      isAutoScrollingRef.current = true;
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      requestAnimationFrame(() => {
+        isAutoScrollingRef.current = false;
+      });
     }
   }, [messages, isAtBottom, containerRef]);
 
@@ -37,6 +46,7 @@ export function useChatAutoScroll({
     const el = containerRef.current;
     if (!el) return;
     const handleScroll = () => {
+      if (isAutoScrollingRef.current) return;
       const atBottom =
         el.scrollHeight - el.scrollTop - el.clientHeight < 50;
       setIsAtBottom(atBottom);
@@ -72,10 +82,14 @@ export function useChatAutoScroll({
 
   const scrollToBottom = useCallback(() => {
     if (containerRef.current) {
+      isAutoScrollingRef.current = true;
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
       setIsAtBottom(true);
       setNewMessagesCount(0);
       prevLastItemRef.current = lastItemRef.current;
+      requestAnimationFrame(() => {
+        isAutoScrollingRef.current = false;
+      });
     }
   }, [containerRef]);
 
