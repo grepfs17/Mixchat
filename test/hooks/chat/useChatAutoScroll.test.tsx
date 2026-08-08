@@ -306,10 +306,12 @@ describe("useChatAutoScroll", () => {
   });
 
   it("newMessagesCount resets to 0 when user scrolls back to bottom", () => {
-    const { result, rerender } = renderAutoScroll(container.el, [
-      { id: "a" },
-      { id: "b" },
-    ]);
+    // Use stable references so indexOf can find the previous last item
+    const msgA = { id: "a" };
+    const msgB = { id: "b" };
+    const msgC = { id: "c" };
+
+    const { result, rerender } = renderAutoScroll(container.el, [msgA, msgB]);
 
     // Flush the initial auto-scroll rAFs
     flushAllRAF();
@@ -320,11 +322,11 @@ describe("useChatAutoScroll", () => {
     act(() => handler(new Event("scroll")));
     expect(result.current.isAtBottom).toBe(false);
 
-    // Messages arrive while scrolled up
+    // Messages arrive while scrolled up — reuse references
     rerender({
-      messages: [{ id: "a" }, { id: "b" }, { id: "c" }],
+      messages: [msgA, msgB, msgC],
     });
-    expect(result.current.newMessagesCount).toBeGreaterThan(0);
+    expect(result.current.newMessagesCount).toBe(1);
 
     // User scrolls to bottom
     container.el.scrollTop = container.el.scrollHeight - container.el.clientHeight;

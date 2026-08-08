@@ -120,10 +120,15 @@ export function useChatAutoScroll({
     if (!isAtBottom && prev != null && lastItem !== prev) {
       // Find where the previous last item sits in the new array.
       // Everything after it is a new message.
+      // When indexOf returns -1 (the previous last item was deleted or
+      // the array was reconstructed with new references), don't guess —
+      // reset the tracking ref so the next change is counted correctly.
       const idx = messages.indexOf(prev);
-      const diff = idx >= 0 ? messages.length - 1 - idx : 1;
-      if (diff > 0) {
-        setNewMessagesCount((p) => p + diff);
+      if (idx >= 0) {
+        const diff = messages.length - 1 - idx;
+        if (diff > 0) {
+          setNewMessagesCount((p) => p + diff);
+        }
       }
     }
 
