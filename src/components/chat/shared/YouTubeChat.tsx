@@ -426,12 +426,14 @@ export default function YouTubeChat({
     };    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoId, reloadKey]);
 
-  // Keep the view pinned to the newest message
+  // Keep the view pinned to the newest message.
+  // Defer via rAF so the browser finishes layout of new messages first.
   useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
   }, [mergedMessages]);
 
   // Handle mobile keyboard - scroll to bottom when keyboard closes (viewport expands)

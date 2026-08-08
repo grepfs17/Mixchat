@@ -28,15 +28,30 @@ export function useChatAutoScroll({
   // messages are arriving faster than the browser can lay them out.
   const isAutoScrollingRef = useRef(false);
 
-  // Auto-scroll when at bottom
+  // Keep a ref in sync with isAtBottom so the ResizeObserver callback
+  // always reads the current value (avoids stale closure).
+  const isAtBottomRef = useRef(isAtBottom);
+  isAtBottomRef.current = isAtBottom;
+
+  // Track the last seen scrollHeight so the ResizeObserver only scrolls
+  // when the content actually grows (e.g. late image/emote loads).
+  const lastScrollHeightRef = useRef(0);
+
+  // Auto-scroll when at bottom.
+  // Defer the scroll via rAF so the browser has completed layout for the
+  // new messages — otherwise scrollHeight can be stale for multi-line text
+  // and the view ends up above the true bottom.
   useEffect(() => {
-    if (containerRef.current && isAtBottom) {
-      isAutoScrollingRef.current = true;
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    if (!containerRef.current || !isAtBottom) return;
+    const el = containerRef.current;
+    isAutoScrollingRef.current = true;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+      lastScrollHeightRef.current = el.scrollHeight;
       requestAnimationFrame(() => {
         isAutoScrollingRef.current = false;
       });
-    }
+    });
   }, [messages, isAtBottom, containerRef]);
 
   useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
@@ -53,6 +68,7 @@ export function useChatAutoScroll({
       if (atBottom) {
         setNewMessagesCount(0);
         prevLastItemRef.current = lastItemRef.current;
+        lastScrollHeightRef.current = el.scrollHeight;
       }
     };
     el.addEventListener("scroll", handleScroll);
@@ -60,6 +76,39 @@ export function useChatAutoScroll({
       el.removeEventListener("scroll", handleScroll);
     };
   }, [containerRef]);
+
+  // ResizeObserver safety net: catches late layout changes after the
+  // primary rAF scroll — e.g. custom emote images loading in, font
+  // metrics updating, or async content expanding the message height.
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Seed the baseline so we only react to growth, not the initial entry.
+    lastScrollHeightRef.current = el.scrollHeight;
+
+    const observer = new ResizeObserver(() => {
+      // Bail if a programmatic scroll is already in progress, or if the
+      // user has scrolled up since the observer was created.
+      if (isAutoScrollingRef.current || !isAtBottomRef.current) return;
+
+      const newHeight = el.scrollHeight;
+      if (newHeight > lastScrollHeightRef.current) {
+        isAutoScrollingRef.current = true;
+        el.scrollTop = newHeight;
+        lastScrollHeightRef.current = newHeight;
+        requestAnimationFrame(() => {
+          isAutoScrollingRef.current = false;
+        });
+      } else {
+        lastScrollHeightRef.current = newHeight;
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [containerRef, isAtBottom]);
 
   // Count new messages when scrolled up
   useEffect(() => {
@@ -81,16 +130,19 @@ export function useChatAutoScroll({
   }, [messages, isAtBottom]);
 
   const scrollToBottom = useCallback(() => {
-    if (containerRef.current) {
-      isAutoScrollingRef.current = true;
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      setIsAtBottom(true);
-      setNewMessagesCount(0);
-      prevLastItemRef.current = lastItemRef.current;
+    const el = containerRef.current;
+    if (!el) return;
+    isAutoScrollingRef.current = true;
+    setIsAtBottom(true);
+    setNewMessagesCount(0);
+    prevLastItemRef.current = lastItemRef.current;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+      lastScrollHeightRef.current = el.scrollHeight;
       requestAnimationFrame(() => {
         isAutoScrollingRef.current = false;
       });
-    }
+    });
   }, [containerRef]);
 
   return { isAtBottom, newMessagesCount, scrollToBottom };
