@@ -28,6 +28,22 @@ export function useChatAutoScroll({
   // messages are arriving faster than the browser can lay them out.
   const isAutoScrollingRef = useRef(false);
 
+  // Each programmatic scroll gets a generation. Older animation callbacks
+  // must not clear the flag after a newer message has started another scroll.
+  const autoScrollGenerationRef = useRef(0);
+  const pendingScrollFrameRef = useRef<number | null>(null);
+  const pendingClearFrameRef = useRef<number | null>(null);
+  const cancelPendingFrames = () => {
+    if (pendingScrollFrameRef.current !== null) {
+      cancelAnimationFrame(pendingScrollFrameRef.current);
+      pendingScrollFrameRef.current = null;
+    }
+    if (pendingClearFrameRef.current !== null) {
+      cancelAnimationFrame(pendingClearFrameRef.current);
+      pendingClearFrameRef.current = null;
+    }
+  };
+
   // Keep a ref in sync with isAtBottom so the ResizeObserver callback
   // always reads the current value (avoids stale closure).
   const isAtBottomRef = useRef(isAtBottom);
@@ -44,17 +60,64 @@ export function useChatAutoScroll({
   useEffect(() => {
     if (!containerRef.current || !isAtBottom) return;
     const el = containerRef.current;
+    cancelPendingFrames();
+    const generation = ++autoScrollGenerationRef.current;
+    let scrollFrameId: number | undefined;
+    let clearFrameId: number | undefined;
     isAutoScrollingRef.current = true;
-    requestAnimationFrame(() => {
+
+    scrollFrameId = requestAnimationFrame(() => {
+      if (pendingScrollFrameRef.current === scrollFrameId) {
+        pendingScrollFrameRef.current = null;
+      }
+      // The frame may still run in a test environment or after cancellation;
+      // do not let an obsolete frame change the scroll position.
+      if (autoScrollGenerationRef.current !== generation) return;
       el.scrollTop = el.scrollHeight;
       lastScrollHeightRef.current = el.scrollHeight;
-      requestAnimationFrame(() => {
-        isAutoScrollingRef.current = false;
+      clearFrameId = requestAnimationFrame(() => {
+        if (pendingClearFrameRef.current === clearFrameId) {
+          pendingClearFrameRef.current = null;
+        }
+        if (autoScrollGenerationRef.current === generation) {
+          isAutoScrollingRef.current = false;
+        }
       });
+      pendingClearFrameRef.current = clearFrameId;
     });
+    pendingScrollFrameRef.current = scrollFrameId;
+
+    return () => {
+      if (scrollFrameId !== undefined) {
+        cancelAnimationFrame(scrollFrameId);
+        if (pendingScrollFrameRef.current === scrollFrameId) {
+          pendingScrollFrameRef.current = null;
+        }
+      }
+      if (clearFrameId !== undefined) {
+        cancelAnimationFrame(clearFrameId);
+        if (pendingClearFrameRef.current === clearFrameId) {
+          pendingClearFrameRef.current = null;
+        }
+      }
+      if (autoScrollGenerationRef.current === generation) {
+        ++autoScrollGenerationRef.current;
+        isAutoScrollingRef.current = false;
+      }
+    };
   }, [messages, isAtBottom, containerRef]);
 
   useScrollToBottomOnKeyboard(containerRef, setIsAtBottom);
+
+  // Cancel any remaining frames on unmount, including frames scheduled by the
+  // imperative scrollToBottom action (which has no message effect cleanup).
+  useEffect(() => {
+    return () => {
+      cancelPendingFrames();
+      ++autoScrollGenerationRef.current;
+      isAutoScrollingRef.current = false;
+    };
+  }, [containerRef]);
 
   // Detect scroll position
   useEffect(() => {
@@ -64,6 +127,7 @@ export function useChatAutoScroll({
       if (isAutoScrollingRef.current) return;
       const atBottom =
         el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      isAtBottomRef.current = atBottom;
       setIsAtBottom(atBottom);
       if (atBottom) {
         setNewMessagesCount(0);
@@ -89,6 +153,8 @@ export function useChatAutoScroll({
     // Seed the baseline so we only react to growth, not the initial entry.
     lastScrollHeightRef.current = el.scrollHeight;
 
+    let clearFrameId: number | undefined;
+    let generation: number | undefined;
     const observer = new ResizeObserver(() => {
       // Bail if a programmatic scroll is already in progress, or if the
       // user has scrolled up since the observer was created.
@@ -96,19 +162,42 @@ export function useChatAutoScroll({
 
       const newHeight = el.scrollHeight;
       if (newHeight > lastScrollHeightRef.current) {
+        cancelPendingFrames();
+        generation = ++autoScrollGenerationRef.current;
         isAutoScrollingRef.current = true;
         el.scrollTop = newHeight;
         lastScrollHeightRef.current = newHeight;
-        requestAnimationFrame(() => {
-          isAutoScrollingRef.current = false;
+        clearFrameId = requestAnimationFrame(() => {
+          if (pendingClearFrameRef.current === clearFrameId) {
+            pendingClearFrameRef.current = null;
+          }
+          if (autoScrollGenerationRef.current === generation) {
+            isAutoScrollingRef.current = false;
+          }
         });
+        pendingClearFrameRef.current = clearFrameId;
       } else {
         lastScrollHeightRef.current = newHeight;
       }
     });
 
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      if (clearFrameId !== undefined) {
+        cancelAnimationFrame(clearFrameId);
+        if (pendingClearFrameRef.current === clearFrameId) {
+          pendingClearFrameRef.current = null;
+        }
+      }
+      if (
+        generation !== undefined &&
+        autoScrollGenerationRef.current === generation
+      ) {
+        ++autoScrollGenerationRef.current;
+        isAutoScrollingRef.current = false;
+      }
+      observer.disconnect();
+    };
   }, [containerRef, isAtBottom]);
 
   // Count new messages when scrolled up
@@ -138,17 +227,31 @@ export function useChatAutoScroll({
   const scrollToBottom = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
+    cancelPendingFrames();
+    const generation = ++autoScrollGenerationRef.current;
     isAutoScrollingRef.current = true;
+    isAtBottomRef.current = true;
     setIsAtBottom(true);
     setNewMessagesCount(0);
     prevLastItemRef.current = lastItemRef.current;
-    requestAnimationFrame(() => {
+    const scrollFrameId = requestAnimationFrame(() => {
+      if (pendingScrollFrameRef.current === scrollFrameId) {
+        pendingScrollFrameRef.current = null;
+      }
+      if (autoScrollGenerationRef.current !== generation) return;
       el.scrollTop = el.scrollHeight;
       lastScrollHeightRef.current = el.scrollHeight;
-      requestAnimationFrame(() => {
-        isAutoScrollingRef.current = false;
+      const clearFrameId = requestAnimationFrame(() => {
+        if (pendingClearFrameRef.current === clearFrameId) {
+          pendingClearFrameRef.current = null;
+        }
+        if (autoScrollGenerationRef.current === generation) {
+          isAutoScrollingRef.current = false;
+        }
       });
+      pendingClearFrameRef.current = clearFrameId;
     });
+    pendingScrollFrameRef.current = scrollFrameId;
   }, [containerRef]);
 
   return { isAtBottom, newMessagesCount, scrollToBottom };

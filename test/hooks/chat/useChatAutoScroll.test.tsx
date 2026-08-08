@@ -439,6 +439,36 @@ describe("useChatAutoScroll", () => {
   // ---------------------------------------------------------------------------
   // Rapid message accumulation
   // ---------------------------------------------------------------------------
+  it("does not let a stale clear frame interrupt a message burst", () => {
+    container.el.scrollHeight = 1000;
+    container.el.scrollTop = 600;
+    container.el.clientHeight = 400;
+
+    const { result, rerender } = renderAutoScroll(container.el, [{ id: "a" }]);
+
+    // Let the first scroll run so its delayed flag-clearing frame is queued.
+    flushRAF();
+    expect(rAFCallbacks).toHaveLength(1);
+
+    // A new message starts another auto-scroll before the old clear frame runs.
+    rerender({ messages: [{ id: "a" }, { id: "b" }] });
+    expect(rAFCallbacks).toHaveLength(2);
+
+    // Run only the stale clear frame. The old implementation would clear the
+    // flag here and misclassify the following delayed scroll event.
+    const staleClearFrame = rAFCallbacks.shift()!;
+    act(() => staleClearFrame(0));
+
+    container.el.scrollHeight = 1200;
+    container.el.scrollTop = 500;
+    const handler = [...container.listeners.get("scroll")!][0] as EventListener;
+    act(() => handler(new Event("scroll")));
+    expect(result.current.isAtBottom).toBe(true);
+
+    flushAllRAF();
+    expect(container.el.scrollTop).toBe(1200);
+  });
+
   it("handles rapid message accumulation and always scrolls to final scrollHeight", () => {
     container.el.scrollHeight = 400;
     container.el.scrollTop = 0;
