@@ -461,7 +461,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           </div>
         )}
 
-        {!isAtBottom && !unifiedChatSlot && (
+        {!isAtBottom && newMessagesCount > 0 && !unifiedChatSlot && (
           <ScrollToBottomButton
             count={newMessagesCount}
             onClick={scrollToBottom}

@@ -80,10 +80,11 @@ export function useChatAutoScroll({
   // ResizeObserver safety net: catches late layout changes after the
   // primary rAF scroll — e.g. custom emote images loading in, font
   // metrics updating, or async content expanding the message height.
+  // Disconnected entirely when the user scrolls up.
   useEffect(() => {
     if (typeof ResizeObserver === "undefined") return;
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !isAtBottom) return;
 
     // Seed the baseline so we only react to growth, not the initial entry.
     lastScrollHeightRef.current = el.scrollHeight;

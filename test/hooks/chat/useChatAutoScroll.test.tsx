@@ -8,15 +8,24 @@ import { useChatAutoScroll } from "../../../src/hooks/chat/useChatAutoScroll";
  * and track addEventListener/removeEventListener for the "scroll" event.
  */
 function createContainer() {
-  const el = document.createElement("div") as any as HTMLDivElement & {
-    scrollHeight: number;
-    scrollTop: number;
-    clientHeight: number;
-  };
-  // Default: tall enough to not be "at bottom"
-  el.scrollHeight = 1000;
-  el.scrollTop = 0;
-  el.clientHeight = 400;
+  const el = document.createElement("div");
+  // Make scrollHeight / scrollTop / clientHeight writable so tests can
+  // simulate different scroll positions and content heights.
+  Object.defineProperty(el, "scrollHeight", {
+    value: 1000,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(el, "scrollTop", {
+    value: 0,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(el, "clientHeight", {
+    value: 400,
+    writable: true,
+    configurable: true,
+  });
 
   const listeners = new Map<string, Set<EventListenerOrEventListenerObject>>();
 
@@ -37,7 +46,8 @@ function createContainer() {
     },
   );
 
-  return { el, listeners };
+  // Cast so TS allows assignment to the redefined properties.
+  return { el: el as any as HTMLDivElement & { scrollHeight: number; scrollTop: number; clientHeight: number }, listeners };
 }
 
 /**
