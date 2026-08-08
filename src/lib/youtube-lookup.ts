@@ -206,9 +206,35 @@ async function redirectFallbackLive(
   return null;
 }
 
+function isLockupViewLive(video: any): boolean {
+  // Check metadata badges (e.g. BadgeView with style "BADGE_STYLE_TYPE_LIVE")
+  const rows: any[] = video?.metadata?.metadata?.metadata_rows ?? [];
+  for (const row of rows) {
+    const rowBadges: any[] = row.badges ?? [];
+    if (rowBadges.some((b: any) => /LIVE/i.test(b?.style ?? ""))) return true;
+  }
+
+  // Check thumbnail overlay badges (ThumbnailOverlayBadgeView → ThumbnailBadgeView)
+  const overlays: any[] = video?.content_image?.overlays ?? [];
+  for (const overlay of overlays) {
+    const thumbnailBadges: any[] = overlay?.badges ?? [];
+    if (
+      thumbnailBadges.some(
+        (tb: any) =>
+          /LIVE/i.test(tb?.text ?? "") || /LIVE/i.test(tb?.badge_style ?? ""),
+      )
+    )
+      return true;
+  }
+
+  return false;
+}
+
 function isActuallyLive(video: any): boolean {
   if (!video) return false;
   if (video.is_live === true) return true;
+
+  // Old videoRenderer-style badges
   const badges: any[] = video.badges ?? [];
   if (
     badges.some(
@@ -217,6 +243,8 @@ function isActuallyLive(video: any): boolean {
     )
   )
     return true;
+
+  // Old videoRenderer-style thumbnail overlays
   const overlays: any[] = video.thumbnailOverlays ?? [];
   if (
     overlays.some(
@@ -224,7 +252,15 @@ function isActuallyLive(video: any): boolean {
     )
   )
     return true;
+
+  // New LockupView-style detection
+  if (isLockupViewLive(video)) return true;
+
   return false;
+}
+
+function extractVideoIdFromNode(video: any): string | null {
+  return video?.id ?? video?.videoId ?? video?.content_id ?? null;
 }
 
 function findLiveInTree(node: any, depth = 0): string | null {
@@ -236,11 +272,23 @@ function findLiveInTree(node: any, depth = 0): string | null {
     }
     return null;
   }
+
+  // Old videoRenderer format
   const vr = node.videoRenderer;
   if (vr) {
-    const vid = vr.videoId as string | undefined;
+    const vid = extractVideoIdFromNode(vr);
     if (vid && isActuallyLive(vr)) return vid;
   }
+
+  // New LockupView format (check type string for robustness)
+  if (
+    node.type === "LockupView" &&
+    (node.content_type === "VIDEO" || node.content_type === "MOVIE")
+  ) {
+    const vid = extractVideoIdFromNode(node);
+    if (vid && isActuallyLive(node)) return vid;
+  }
+
   for (const val of Object.values(node)) {
     const found = findLiveInTree(val, depth + 1);
     if (found) return found;
@@ -256,7 +304,7 @@ async function findLiveFromChannel(channel: any, debug: boolean): Promise<string
     if (debug) console.log(`[YouTube Lookup] getLiveStreams() → ${videos.length} videos`);
     const liveVideo = videos.find((v: any) => isActuallyLive(v));
     if (liveVideo) {
-      const id = liveVideo.id ?? liveVideo.videoId ?? null;
+      const id = extractVideoIdFromNode(liveVideo);
       if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${id}`);
       if (id) return id;
     }
@@ -269,7 +317,7 @@ async function findLiveFromChannel(channel: any, debug: boolean): Promise<string
     const videosTab = await channel.getVideos();
     const videos: any[] = videosTab?.videos ?? [];
     const liveVideo = videos.find((v: any) => isActuallyLive(v));
-    if (liveVideo) return liveVideo.id ?? liveVideo.videoId ?? null;
+    if (liveVideo) return extractVideoIdFromNode(liveVideo);
   } catch (videosError) {
     if (debug) console.warn("[YouTube Lookup] getVideos failed:", videosError);
   }
