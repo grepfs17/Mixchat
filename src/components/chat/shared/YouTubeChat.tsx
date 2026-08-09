@@ -5,6 +5,18 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useScrollToBottomOnKeyboard } from "../../../hooks/chat/useScrollToBottomOnKeyboard";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
 import { YouTubeMessageContent } from "./YouTubeMessageContent";
+import type { MessagePart, YTMessage as UnifiedYTMessage } from "../unified/types";
+
+/**
+ * Standalone YouTubeChat maintains a parallel `ChatMessage` type that
+ * mirrors the shape produced by the SSE stream (`/api/youtube-stream-chat`).
+ * Server messages don't carry `twitch-link` parts, but we widen the
+ * discriminator so a `YTMessage` from the unified chat can be fed back
+ * through YouTubeMessageContent without a cast.
+ */
+type ChatMessage = Omit<UnifiedYTMessage, "parts"> & {
+  parts: MessagePart[];
+};
 
 interface YouTubeChatProps {
   videoId: string;
@@ -36,41 +48,6 @@ interface YouTubeChatProps {
    * images, using the same emote set the Twitch side is currently using.
    */
   renderThirdPartyEmotes?: boolean;
-}
-
-interface MessagePart {
-  type: "text" | "emoji";
-  text?: string;
-  url?: string;
-  alt?: string;
-  emojiText?: string;
-  isCustomEmoji?: boolean;
-}
-
-interface ChatMessage {
-  id: string;
-  author: string;
-  authorAvatar?: string;
-  badges?: Record<string, string>;
-  parts: MessagePart[];
-  timestamp: Date;
-  authorChannelId?: string;
-  optimistic?: boolean;
-  messageType?: string;
-  giftCount?: number;
-  recipientName?: string;
-  isDeleted?: boolean;
-  deletedByText?: string;
-  authorIsModerator?: boolean;
-  authorIsOwner?: boolean;
-  superchat?: {
-    amount: string;
-    color: string;
-    sticker?: {
-      url: string;
-      alt: string;
-    };
-  };
 }
 
 interface SSEMessageEvent {

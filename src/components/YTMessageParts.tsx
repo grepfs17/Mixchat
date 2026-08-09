@@ -6,14 +6,18 @@ import {
   type YoutubeEmoteToken,
 } from "../lib/emotes";
 import { renderUnicodeEmojis } from "../lib/emotes/utils";
+import TwitchLinkPreview from "./chat/TwitchLinkPreview";
+import { parseTwitchUrl } from "../lib/twitchLink";
 
 export interface YTMessagePart {
-  type: "text" | "emoji";
+  type: "text" | "emoji" | "twitch-link";
   text?: string;
   url?: string;
   alt?: string;
   emojiText?: string;
   isCustomEmoji?: boolean;
+  /** Required when type === "twitch-link". Twich parts used by the preview card. */
+  twitchUrl?: string;
 }
 
 interface YTMessagePartsProps {
@@ -147,12 +151,41 @@ export default function YTMessageParts({
 
   const rendered = useMemo(
     () =>
-      parts.map((part, i) =>
-        part.type === "emoji" ? (
-        variant === "unified" ? (
-          <img
-            key={part.url}
-            src={part.url}
+      parts.map((part, i) => {
+        if (part.type === "twitch-link") {
+          const url = part.twitchUrl || part.text || "";
+          const parsed = parseTwitchUrl(url);
+          if (!parsed) {
+            // Defensive fallback: render as plain text link if the URL
+            // somehow can't be classified at render time. Real chat
+            // messages never produce this branch (parts only become
+            // 'twitch-link' after a successful parseTwitchUrl in
+            // expandPartsWithTwitchLinks).
+            return (
+              <a
+                key={`tw-${i}`}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="twitch-link-fallback"
+              >
+                {url}
+              </a>
+            );
+          }
+          return (
+            <TwitchLinkPreview
+              key={`tw-${i}-${parsed.href}`}
+              url={url}
+              parts={parsed}
+            />
+          );
+        }
+        if (part.type === "emoji") {
+          return variant === "unified" ? (
+            <img
+              key={part.url}
+              src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}
               className="chat-emote"
@@ -168,23 +201,22 @@ export default function YTMessageParts({
                 cursor: "pointer",
               }}
             />
-        ) : (
-          <img
-            key={part.url}
-            src={part.url}
+          ) : (
+            <img
+              key={part.url}
+              src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}
               className={`yt-emoji ${part.isCustomEmoji ? "custom" : "standard"}`}
               loading="lazy"
             />
-          )
-        ) : (
-          // Stable position-based key for text parts. Parts never reorder
-          // within a message, so a namespaced index is unique per item and
-          // avoids the raw-index anti-pattern.
-          renderText(part.text ?? "", `t-${i}`)
-        ),
-      ),
+          );
+        }
+        // Stable position-based key for text parts. Parts never reorder
+        // within a message, so a namespaced index is unique per item and
+        // avoids the raw-index anti-pattern.
+        return renderText(part.text ?? "", `t-${i}`);
+      }),
     [parts, variant, renderText],
   );
 

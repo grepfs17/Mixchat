@@ -50,6 +50,8 @@ function buildCSP(nonce?: string): string {
     // Images: self, Twitch CDN, YouTube/Google CDNs, and third-party emote CDNs
     "img-src 'self' data: blob:" +
       " https://static-cdn.jtvnw.net" + // Twitch emotes & badges
+      " https://*.jtvnw.net" + // Twitch profile pictures & clip thumbs (clips-media, vod-secure etc.)
+      " https://twitch-static.net" + // channel offline-image placeholders / stream thumbnails
       " https://cdn.7tv.app" + // 7TV emotes
       " https://cdn.betterttv.net" + // BTTV emotes
       " https://cdn.frankerfacez.com" + // FFZ emotes

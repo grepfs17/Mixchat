@@ -1,10 +1,12 @@
 export interface MessagePart {
-  type: "text" | "emoji";
+  type: "text" | "emoji" | "twitch-link";
   text?: string;
   url?: string;
   alt?: string;
   emojiText?: string;
   isCustomEmoji?: boolean;
+  /** When type === "twitch-link", the original text/url the user typed. */
+  twitchUrl?: string;
 }
 
 export interface YTMessage {

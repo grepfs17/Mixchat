@@ -1,0 +1,310 @@
+/* Inline Twitch preview card. Rendered in the chat message-text flow
+ * wherever a twitch.tv URL would normally show as a tiny link. */
+@import "../vars.css";
+
+.twitch-link-preview {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 10px;
+    margin: 4px 0;
+    padding: 8px 10px 8px 8px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(145, 70, 255, 0.35);
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    max-width: 460px;
+    min-width: 280px;
+    width: max-content;
+    flex-basis: 320px;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+    vertical-align: top;
+    overflow: hidden;
+}
+
+.twitch-link-preview:hover {
+    background: rgba(99, 102, 241, 0.18);
+    border-color: rgba(145, 70, 255, 0.65);
+    transform: translateY(-1px);
+}
+
+.twitch-link-preview:focus-visible {
+    outline: 2px solid var(--color-twitch, #9146ff);
+    outline-offset: 2px;
+}
+
+.twitch-link-preview__thumb {
+    position: relative;
+    width: 96px;
+    min-width: 96px;
+    height: 54px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #1a1625;
+    flex-shrink: 0;
+}
+
+.twitch-link-preview__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.25s ease;
+}
+
+.twitch-link-preview:hover .twitch-link-preview__thumb img {
+    transform: scale(1.04);
+}
+
+.twitch-link-preview__thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(145, 70, 255, 0.7);
+    background: linear-gradient(135deg, #1a1625 0%, #2d1f4d 100%);
+}
+
+.twitch-link-preview__thumb--skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(145, 70, 255, 0.08) 0%,
+        rgba(145, 70, 255, 0.22) 50%,
+        rgba(145, 70, 255, 0.08) 100%
+    );
+    background-size: 200% 100%;
+    animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(145, 70, 255, 0.55);
+}
+
+@keyframes twitchLinkPreviewShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.twitch-link-preview__kind-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.72);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    font-family: inherit;
+}
+
+.twitch-link-preview--video .twitch-link-preview__kind-badge {
+    background: rgba(33, 150, 243, 0.92);
+}
+
+.twitch-link-preview--live .twitch-link-preview__kind-badge {
+    background: rgba(239, 68, 68, 0.92);
+}
+
+.twitch-link-preview__duration {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.78);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: inherit;
+}
+
+.twitch-link-preview__play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.twitch-link-preview__viewers {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(0, 0, 0, 0.72);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-family: inherit;
+}
+
+.twitch-link-preview__viewers::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
+    margin-right: 2px;
+}
+
+.twitch-link-preview__body {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+}
+
+.twitch-link-preview__game {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #c4b5fd;
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin-bottom: 1px;
+}
+
+.twitch-link-preview__title {
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.twitch-link-preview__title--skeleton {
+    background: rgba(255, 255, 255, 0.06);
+    height: 12px;
+    border-radius: 3px;
+    width: 80%;
+    animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.04) 0%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.04) 100%
+    );
+    background-size: 200% 100%;
+    color: transparent;
+}
+
+.twitch-link-preview__meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72em;
+    color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+    margin-top: 1px;
+    min-width: 0;
+}
+
+.twitch-link-preview__meta--skeleton {
+    background: rgba(255, 255, 255, 0.05);
+    height: 10px;
+    border-radius: 3px;
+    width: 60%;
+    animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.03) 100%
+    );
+    background-size: 200% 100%;
+    color: transparent;
+}
+
+.twitch-link-preview__avatar {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.twitch-link-preview__avatar--skeleton {
+    background: rgba(255, 255, 255, 0.08);
+    display: inline-block;
+}
+
+.twitch-link-preview__meta-text {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.twitch-link-preview__meta-text strong {
+    font-weight: 600;
+    color: var(--color-text-primary, #ffffff);
+}
+
+.twitch-link-preview__meta-divider {
+    color: var(--color-text-muted, rgba(255, 255, 255, 0.4));
+}
+
+/* Fallback (loading or fetch failed): plain styled link with Twitch icon */
+.twitch-link-fallback {
+    color: #c4b5fd;
+    text-decoration: underline;
+    text-decoration-color: rgba(145, 70, 255, 0.5);
+    word-break: break-all;
+}
+
+.twitch-link-fallback:hover {
+    color: #ddd6fe;
+    text-decoration-color: rgba(145, 70, 255, 0.9);
+}
+
+/* Compact width inside the message-text flex row so the card doesn't push
+ * the rest of the message awkwardly. Using block-flex lets us appear on a
+ * new line below the message text content where there isn't room. */
+.message-single-line > .twitch-link-preview {
+    flex-basis: 100%;
+    max-width: 100%;
+}
+
+/* Keep the preview card easy to read when text is large (font-size: 18+) */
+@media (max-width: 480px) {
+    .twitch-link-preview {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+    }
+}

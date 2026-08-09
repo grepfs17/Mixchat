@@ -7,6 +7,8 @@ import { useModerationContext } from "../../../contexts/ModerationContext";
 import { isMobileDevice } from "../../../lib/device";
 import MessageBadges from "../../MessageBadges";
 import AutomodActions from "./AutomodActions";
+import TwitchLinkPreview from "../TwitchLinkPreview";
+import { rebaseEmotesForSegment, splitByTwitchLinks } from "../../../lib/twitchLink";
 import { MessageModActions } from "./MessageModActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { TwitchMessage } from "../../../lib/types";
@@ -296,13 +298,10 @@ function TwitchMessageContentBase({
               click to see the deleted message
             </button>
           ) : (
-            <span
-              className="message-text"
-              dangerouslySetInnerHTML={{
-                __html: parseMessageWithEmotes(msg.content, msg.emotes, {
-                  gigantified: msg.isGigantifiedEmote,
-                }),
-              }}
+            <TwitchMessageText
+              content={msg.content}
+              emotes={msg.emotes}
+              gigantified={msg.isGigantifiedEmote}
             />
           )}
           {msg.messageType === "automod" && isModerator && (
@@ -340,3 +339,109 @@ export const TwitchMessageContent = memo(
     );
   },
 );
+
+/**
+ * Renders a Twitch chat message body with rich preview cards swapped in
+ * wherever a `twitch.tv/...` URL appears. Text segments between URLs are
+ * still parsed via the existing emote+link pipeline so Twitch emotes,
+ * third-party emotes, mentions, links and Twemoji all behave exactly as
+ * before. Emote character ranges live in absolute coordinates within
+ * `content`, so we re-base them for each text segment.
+ *
+ * Memoised with content/emote-key identity — React reconciliation handles
+ * new messages, edits, and message-removal as the parent passes new data;
+ * within a single message the segments are stable for its lifetime.
+ */
+function TwitchMessageTextBase({
+  content,
+  emotes,
+  gigantified,
+}: {
+  content: string;
+  emotes?: Record<string, string[]>;
+  gigantified?: boolean;
+}) {
+  const segments = React.useMemo(() => splitByTwitchLinks(content), [content]);
+
+  // Quick path: no Twitch URLs in the message. The original logic used
+  // `dangerouslySetInnerHTML` once for emotes + unicode emoji + general
+  // link wrapping. We keep that exact behaviour here to avoid behavioural
+  // changes for messages without a twitch URL.
+  const hasTwitchLinks = segments.some((s) => s.type === "twitch-link");
+  const html = React.useMemo(() => {
+    if (hasTwitchLinks) return null;
+    return parseMessageWithEmotes(content, emotes, {
+      gigantified,
+    });
+  }, [content, emotes, gigantified, hasTwitchLinks]);
+
+  if (!hasTwitchLinks && html !== null) {
+    return (
+      <span
+        className="message-text"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
+
+  return (
+    <span className="message-text">
+      {segments.map((seg, i) => (
+        <TwitchMessageTextSegment
+          key={`tw-seg-${i}-${seg.type}`}
+          segment={seg}
+          emotes={emotes}
+          gigantified={gigantified}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Memoised renderer for one segment of a Twitch message body. Pulled out of
+ * `TwitchMessageText` so each segment's `parseMessageWithEmotes` call (and
+ * the DOMPurify pass it triggers) only re-runs when this segment's text or
+ * the re-based emote offsets actually change.
+ */
+function TwitchMessageTextSegmentBase({
+  segment,
+  emotes,
+  gigantified,
+}: {
+  segment: ReturnType<typeof splitByTwitchLinks>[number];
+  emotes?: Record<string, string[]>;
+  gigantified?: boolean;
+}) {
+  // Compute the emote rebase and the parsed HTML unconditionally so the
+  // hooks order stays stable across renders regardless of segment type.
+  // Twitch-link segments skip the parseMessageWithEmotes call.
+  const isTwitchLink = segment.type === "twitch-link";
+  const segEmotes = isTwitchLink
+    ? undefined
+    : rebaseEmotesForSegment(emotes, segment.start, segment.end);
+  const segText = isTwitchLink ? "" : segment.text;
+  const segHtml = React.useMemo(
+    () =>
+      isTwitchLink
+        ? ""
+        : parseMessageWithEmotes(segText, segEmotes, {
+            gigantified,
+          }),
+    [segText, segEmotes, gigantified, isTwitchLink],
+  );
+
+  if (isTwitchLink) {
+    return (
+      <TwitchLinkPreview
+        url={segment.url}
+        parts={segment.parts}
+      />
+    );
+  }
+  return <span dangerouslySetInnerHTML={{ __html: segHtml }} />;
+}
+
+const TwitchMessageTextSegment = memo(TwitchMessageTextSegmentBase);
+
+const TwitchMessageText = memo(TwitchMessageTextBase);

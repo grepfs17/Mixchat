@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { FaShieldAlt } from "react-icons/fa";
 import {
   getColorFromName,
@@ -10,6 +10,8 @@ import YTMessageParts from "../../YTMessageParts";
 import { PlatformTag } from "../unified/PlatformTag";
 import { MessageModActions } from "./MessageModActions";
 import type { YTMessage } from "../unified/types";
+import { splitByTwitchLinks } from "../../../lib/twitchLink";
+import type { MessagePart } from "../unified/types";
 
 export interface YouTubeMessageContentProps {
   msg: YTMessage;
@@ -95,6 +97,46 @@ function formatDeletedByText(raw: string | undefined): string {
   return "Message deleted by a moderator";
 }
 
+/**
+ * Re-walk each text part of a YouTube message and split it into
+ * [text | twitch-link | text | ...] so YTMessageParts can mount a
+ * TwitchLinkPreview inline next to the rest of the message body.
+ *
+ * Memoised on the input parts reference identity — if the message
+ * re-renders without new parts, no recomputation.
+ */
+function expandPartsWithTwitchLinks(parts: MessagePart[]): MessagePart[] {
+  const out: MessagePart[] = [];
+  for (const part of parts) {
+    if (part.type !== "text") {
+      out.push(part);
+      continue;
+    }
+    const text = part.text ?? "";
+    if (!text) {
+      out.push(part);
+      continue;
+    }
+    const segments = splitByTwitchLinks(text);
+    if (segments.length === 1 && segments[0].type === "text") {
+      out.push(part);
+      continue;
+    }
+    for (const seg of segments) {
+      if (seg.type === "twitch-link") {
+        out.push({
+          type: "twitch-link",
+          twitchUrl: seg.url,
+          text: seg.url,
+        });
+      } else if (seg.text) {
+        out.push({ type: "text", text: seg.text });
+      }
+    }
+  }
+  return out;
+}
+
 export function YouTubeMessageContent({
   msg,
   index = 0,
@@ -122,6 +164,14 @@ export function YouTubeMessageContent({
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
+  // Split Twitch.tv URLs out of text parts so YTMessageParts can render
+  // preview cards next to the message body. The original `msg.parts`
+  // shape is preserved for messages without twitch URLs (memo hits the
+  // reference equality short-circuit).
+  const expandedParts = useMemo(
+    () => expandPartsWithTwitchLinks(msg.parts),
+    [msg.parts],
+  );
   const isMod = Boolean(msg.authorIsModerator);
   const isOwner = Boolean(msg.authorIsOwner);
   const isCurrentUser = Boolean(
@@ -213,7 +263,7 @@ export function YouTubeMessageContent({
                 </span>
                 {msg.parts.length > 0 && (
                   <YTMessageParts
-                    parts={msg.parts}
+                    parts={expandedParts}
                     variant={variant}
                     renderThirdPartyEmotes={renderThirdPartyEmotes}
                   />
@@ -231,7 +281,7 @@ export function YouTubeMessageContent({
             )}
             {msg.messageType === "redirect" && (
               <YTMessageParts
-                parts={msg.parts}
+                parts={expandedParts}
                 variant={variant}
                 renderThirdPartyEmotes={renderThirdPartyEmotes}
               />
@@ -246,7 +296,7 @@ export function YouTubeMessageContent({
                 </span>
                 {msg.parts.length > 0 && (
                   <YTMessageParts
-                    parts={msg.parts}
+                    parts={expandedParts}
                     variant={variant}
                     renderThirdPartyEmotes={renderThirdPartyEmotes}
                   />
@@ -321,7 +371,7 @@ export function YouTubeMessageContent({
         ) : (
           <span className="message-text">
             <YTMessageParts
-              parts={msg.parts}
+              parts={expandedParts}
               variant={variant}
               renderThirdPartyEmotes={renderThirdPartyEmotes}
             />
