@@ -11,6 +11,10 @@ import { PlatformTag } from "../unified/PlatformTag";
 import { MessageModActions } from "./MessageModActions";
 import type { YTMessage } from "../unified/types";
 import { splitByTwitchLinks } from "../../../lib/twitchLink";
+import {
+  approveYouTubeMessage,
+  denyYouTubeMessage,
+} from "../../../lib/youtubeModeration";
 import type { MessagePart } from "../unified/types";
 
 export interface YouTubeMessageContentProps {
@@ -60,6 +64,26 @@ const YT_EVENT_CONFIG: Record<
     label: "RAID / REDIRECT",
     color: "#ff9800",
     bg: "rgba(255, 152, 0, 0.15)",
+  },
+  automod: {
+    label: "HELD FOR REVIEW",
+    color: "#fbbf24",
+    bg: "rgba(251, 191, 36, 0.15)",
+  },
+  removed: {
+    label: "REMOVED FROM CHAT",
+    color: "#ef4444",
+    bg: "rgba(239, 68, 68, 0.15)",
+  },
+  "mod-hidden": {
+    label: "MESSAGES REMOVED",
+    color: "#f87171",
+    bg: "rgba(248, 113, 113, 0.15)",
+  },
+  raidHost: {
+    label: "RAID HOST",
+    color: "#4ade80",
+    bg: "rgba(74, 222, 128, 0.15)",
   },
 };
 
@@ -160,6 +184,7 @@ export function YouTubeMessageContent({
     onDeleteYouTubeMessage,
     onBanYouTubeUser,
     onTimeoutYouTubeUser,
+    youtubeVideoId,
   } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
@@ -303,9 +328,83 @@ export function YouTubeMessageContent({
                 )}
               </>
             )}
+            {msg.messageType === "automod" && (
+              <YTMessageParts
+                parts={expandedParts}
+                variant={variant}
+                renderThirdPartyEmotes={renderThirdPartyEmotes}
+              />
+            )}
+            {(msg.messageType === "removed" ||
+              msg.messageType === "mod-hidden") && (
+              <YTMessageParts
+                parts={expandedParts}
+                variant={variant}
+                renderThirdPartyEmotes={renderThirdPartyEmotes}
+              />
+            )}
+            {msg.messageType === "raidHost" && (
+              <YTMessageParts
+                parts={expandedParts}
+                variant={variant}
+                renderThirdPartyEmotes={renderThirdPartyEmotes}
+              />
+            )}
           </span>
           {!modActionsFirst && renderModActions()}
         </div>
+        {showModActions && (msg as any).automodButtons && (
+          <div
+            style={{
+              display: "flex",
+              gap: "6px",
+              marginTop: "4px",
+              flexWrap: "wrap" as const,
+            }}
+          >
+            {(msg as any).automodButtons
+              .filter((b: any) => !b.is_disabled)
+              .map((b: any, i: number) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="action-button mod-action"
+                  onClick={async () => {
+                    if (!youtubeVideoId || !b.text) return;
+                    const decision = b.text.toLowerCase().includes("deny")
+                      ? "deny"
+                      : "approve";
+                    try {
+                      if (decision === "approve") {
+                        await approveYouTubeMessage(youtubeVideoId, msg.id);
+                      } else {
+                        await denyYouTubeMessage(youtubeVideoId, msg.id);
+                      }
+                      // The SSE stream will send RemoveChatItemAction to
+                      // remove the automod message from the UI naturally.
+                    } catch (e) {
+                      console.error("[Automod] Action failed:", e);
+                    }
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    border: "1px solid",
+                    borderRadius: "4px",
+                    padding: "2px 8px",
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    borderColor: config.color,
+                    color: config.color,
+                    background: config.bg,
+                  }}
+                >
+                  {b.text || "Action"}
+                </button>
+              ))}
+          </div>
+        )}
         {msg.superchat?.sticker && (
           <div className="yt-superchat-sticker-row">
             <img
@@ -382,3 +481,4 @@ export function YouTubeMessageContent({
     </div>
   );
 }
+

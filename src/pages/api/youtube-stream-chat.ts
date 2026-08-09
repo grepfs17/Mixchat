@@ -30,6 +30,9 @@ interface ChatMessage {
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
   authorIsMember?: boolean;
+  /** Username of the target when this message is a synthetic system note
+   *  about a moderator-driven removal (e.g. "X was removed from the chat"). */
+  targetUsername?: string;
   superchat?: {
     amount: string;
     color: string;
@@ -93,6 +96,31 @@ interface ChatSession {
   chat: any;
   messages: ChatMessage[];
   seenIds: Set<string>;
+  /**
+   * Reverse index channelId -> most recent display name observed for that
+   * channel. Used to render "X was removed from the chat" system notes when
+   * a moderator removes a user's messages — YouTube's stream action only
+   * carries the channel id, so we have to recover the author's display name
+   * from the messages we've already seen.
+   */
+  authorByChannel: Map<string, string>;/**
+ * Cooldown so we only emit one system removal note per "(videoId, channelId)"
+ * pair. InnerTube sometimes re-publishes the same moderator removal action
+ * (e.g. on session reconnect or replay), which would otherwise spam the
+ * chat with duplicates of the same system message. Dedupe is keyed on the
+ * event identity (no TTL) — once a removal note has been emitted for a
+ * `(actionKind, channelId)`, the same pair will not fire again for the
+ * lifetime of the chat session.
+ */
+  recentRemovals: Set<string>;
+  /**
+   * Cooldown so duplicate host-handoff banners (which can fire repeatedly
+   * for the same event across reconnects and InnerTube polls) only
+   * translate to a single chat-list announcement per event pair. Like
+   * `recentRemovals`, dedupe is keyed on the event identity with no TTL
+   * for the lifetime of the chat session.
+   */
+  recentHostHandoffs: Set<string>;
   clients: Map<string, SSEClient>;
   lastUpdate: number;
   destroyTimer: ReturnType<typeof setTimeout> | null;
@@ -153,6 +181,69 @@ function ARGBtoHex(argb: number): string {
   const unsigned = argb >>> 0;
   const hex = (unsigned & 0xffffff).toString(16).padStart(6, "0");
   return `#${hex}`;
+}
+
+/**
+ * Synthesize a system message announcing a moderator-driven user removal.
+ * YouTube's InnerTube action stream surfaces `RemoveChatItemByAuthorAction`
+ * and `MarkChatItemsByAuthorAsDeletedAction` for every moderator who removes
+ * a user's messages — ourselves, an in-stream bot, or any other moderator
+ * connected to the chat. The action doesn't distinguish ban vs. timeout so
+ * we label it generically; the action is observable in the messageType.
+ *
+ * The server scrolls the existing `messages` buffer for the most recent
+ * author display name tied to the affected channel id so the note has a
+ * human-readable target ("tofumushu was removed from the chat").
+ */
+/**
+ * Session-scoped dedupe gate for synthetic system notes. Returns true the
+ * FIRST time it's called for a given key within the chat session, and
+ * false on every subsequent call — regardless of how much wall-clock time
+ * has passed. This is what guarantees that an InnerTube re-poll, a
+ * reconnect, or a delayed replay of the same moderator action ONLY
+ * produces ONE chat-list announcement per session, instead of one per
+ * poll cycle.
+ *
+ * Exported via the test bridge so unit tests can assert the gate is
+ * reentrant but not re-emitting.
+ */
+export function shouldEmitSystemNote(
+  dedupeSet: Set<string>,
+  key: string,
+): boolean {
+  if (dedupeSet.has(key)) return false;
+  dedupeSet.add(key);
+  return true;
+}
+
+export function createSystemRemovalMessage(
+  authorName: string | undefined,
+  channelId: string | undefined,
+  channelIdToAuthor: Map<string, string>,
+  actionKind: "removed" | "deleted",
+): ChatMessage {
+  const resolvedName =
+    authorName ||
+    (channelId ? channelIdToAuthor.get(channelId) : undefined) ||
+    "A user";
+  const label =
+    actionKind === "deleted"
+      ? `${resolvedName}'s messages were removed by a moderator`
+      : `${resolvedName} was removed from the chat`;
+  return {
+    id: `system-${actionKind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    author: "System",
+    authorChannelId: undefined,
+    authorAvatar: undefined,
+    badges: {},
+    parts: [{ type: "text", text: label }],
+    timestamp: new Date(),
+    messageType: actionKind === "deleted" ? "mod-hidden" : "removed",
+    targetUsername: resolvedName,
+    authorIsModerator: false,
+    authorIsOwner: false,
+    authorIsMember: false,
+  };
 }
 
 function parseRuns(runs: any[]): MessagePart[] {
@@ -402,7 +493,62 @@ function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatSponsorshipsGiftRedemptionAnnouncement)) {
     return parseGiftRedemptionAnnouncement(item);
   }
+  if (item.is(YTNodes.LiveChatAutoModMessage)) {
+    return parseAutoModMessage(item);
+  }
   return null;
+}
+
+function parseAutoModMessage(item: any): ChatMessage | null {
+  // Parse the held message content from auto_moderated_item.
+  // It can be any chat item type — try recursive parsing first.
+  const heldItem = item.auto_moderated_item;
+  let held: ChatMessage | null = null;
+  if (heldItem) {
+    if (typeof heldItem.is === "function") {
+      held = parseChatItem(heldItem);
+    }
+    if (!held && heldItem.author) {
+      // Fallback: parse basic fields directly from the held item
+      held = parseTextMessageBase(heldItem);
+    }
+  }
+
+  const headerText =
+    item.header_text?.toString() || "Held for review";
+
+  // Extract moderation button endpoints so the moderation API can
+  // invoke approve/deny later. Store them on the message for the
+  // per-session automod map.
+  const buttons: { text: string; is_disabled: boolean }[] =
+    Array.isArray(item.moderation_buttons)
+      ? item.moderation_buttons.map((b: any) => ({
+          text: typeof b.text === "string" ? b.text : "",
+          is_disabled: Boolean(b.is_disabled),
+        }))
+      : [];
+
+  // Store the raw LiveChatAutoModMessage on the session for later
+  // moderation API access (approve/deny). The session's automodMap
+  // will be populated by the caller (in chat-update / start).
+  const msg: ChatMessage & { automodItem?: any; automodButtons?: typeof buttons } = {
+    id: item.id,
+    author: held?.author || "System",
+    authorChannelId: held?.authorChannelId,
+    authorAvatar: held?.authorAvatar,
+    badges: {},
+    parts: held?.parts || [
+      { type: "text", text: headerText },
+    ],
+    timestamp: item.timestamp
+      ? new Date(item.timestamp)
+      : held?.timestamp || new Date(),
+    messageType: "automod",
+    automodItem: item,
+    automodButtons: buttons,
+  };
+
+  return msg;
 }
 
 function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
@@ -437,7 +583,133 @@ function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | nu
   };
 }
 
+/**
+ * Synthesize a single-line "Raid host joined: [X]" system note from a
+ * host-handoff-style banner. Returns null if the banner is a plain
+ * redirect NOTIFY (e.g. community rules) rather than an actual channel
+ * hand-off — those should only land as a `redirect` chat-list entry.
+ *
+ * YouTube doesn't expose a single dedicated YTNode for cross-stream
+ * "raid"-style hand-offs, so we detect by structural cues of a redirect
+ * to another channel:
+ *   - Action button present (redirects through a CTA)
+ *   - Author photo present (typical of a channel-card banner)
+ *   - Banner text mentions "host", "hosted", "redirect", "joined", or
+ *     banner_type indicates a redirect
+ * The first two cover every observed InnerTube hand-off banner in the
+ * wild; the third is a fallback for localization variants.
+ */
+export function parseHostHandoffBanner(
+  banner: any,
+  headerText?: string,
+): ChatMessage | null {
+  const contents = banner?.contents;
+  if (!contents?.is?.(YTNodes.LiveChatBannerRedirect)) return null;
+
+  const hasAuthorPhoto = Array.isArray(contents.author_photo) &&
+    contents.author_photo.length > 0;
+  const hasActionButton = Boolean(contents.inline_action_button);
+  const bannerType =
+    typeof banner.banner_type === "string" ? banner.banner_type.toLowerCase() : "";
+  // Build a lowercase view of the text for the keyword scan, then keep
+  // an original-cased view for the host-name extraction below so we
+  // preserve "SunBurst" rather than regressing to "sunburst".
+  const rawCombined = [
+    headerText ?? "",
+    contents.banner_message?.toString?.() ?? "",
+    banner.header?.text?.toString?.() ?? "",
+  ].join(" ");
+  const combinedText = rawCombined.toLowerCase();
+
+  const keywordMatch = /host|raid|joined from|now hosting|hand ?off|redirect/.test(
+    combinedText,
+  );
+  const bannerTypeMatch = bannerType.includes("redirect");
+
+  const looksLikeHandoff =
+    (hasAuthorPhoto && hasActionButton) || bannerTypeMatch || keywordMatch;
+  if (!looksLikeHandoff) return null;
+
+  // Resolve the host's display name.
+  // 1. inline_action_button.text often contains the host channel name on
+  //    YouTube's redirect banners ("Watch X's stream", "View X").
+  // 2. The action button's `accessibility_text` (tooltip) sometimes carries
+  //    the channel name verbatim.
+  // 3. Fall back to "another channel" so we always have a friendly label.
+  const actionText = contents.inline_action_button?.text?.toString?.() || "";
+  const actionTooltip =
+    contents.inline_action_button?.accessibility_text?.toString?.() || "";
+  const buttonUrl =
+    typeof contents.inline_action_button?.url === "string"
+      ? contents.inline_action_button.url
+      : "";
+  // Try to pull a channel handle out of a /@handle/ route from the URL.
+  let hostName = "";
+  if (buttonUrl) {
+    const m = buttonUrl.match(/@([\w.-]+)/);
+    if (m) hostName = m[1];
+  }
+  if (!hostName) {
+    const m = actionText.match(/(?:join|view|watch|go to)\s+([^!,.?]+)/i);
+    if (m) hostName = m[1].trim();
+  }
+  if (!hostName && actionTooltip) {
+    hostName = actionTooltip.trim();
+  }
+  if (!hostName) {
+    // Match both "hosting X" and "hosted by X". Use a char class stop
+    // list so we trim after the first non-identifier char (apostrophes,
+    // spaces, punctuation).
+    const m1 = rawCombined.match(/hosting\s+([\w.-]+)/i);
+    const m2 = m1
+      ? null
+      : rawCombined.match(/hosted\s+(?:by\s+)?([\w.-]+)/i);
+    const m = m1 ?? m2;
+    if (m) hostName = m[1].trim();
+  }
+  if (!hostName) {
+    hostName = "another channel";
+  }
+
+  const label =
+    hostName === "another channel"
+      ? "A new raid joined the chat"
+      : `Joining raid from ${hostName}`;
+
+  const authorAvatar = Array.isArray(contents.author_photo)
+    ? contents.author_photo[0]?.url
+    : undefined;
+
+  return {
+    id: `system-raidHost-${banner.action_id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    author: "System",
+    authorChannelId: undefined,
+    authorAvatar,
+    badges: {},
+    parts: [{ type: "text", text: label }],
+    timestamp: new Date(),
+    messageType: "raidHost",
+    targetUsername: hostName,
+    authorIsModerator: false,
+    authorIsOwner: false,
+    authorIsMember: false,
+  };
+}
+
 // Session management
+
+/** Look up an auto-mod message by videoId + messageId for the moderation API. */
+export function getAutomodItem(
+  videoId: string,
+  messageId: string,
+): any | undefined {
+  const session = activeLiveChats.get(videoId);
+  if (!session) return undefined;
+  const msg = session.messages.find(
+    (m: any) => m.id === messageId && (m as any).automodItem,
+  );
+  return msg ? (msg as any).automodItem : undefined;
+}
 
 function reapIdleSessions() {
   const nowMs = Date.now();
@@ -520,6 +792,15 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
+  const authorByChannel = new Map<string, string>();
+  /**
+   * Session-scoped dedupe sets. `Set<string>` is enough since membership
+   * is the only signal we need — once an event identity lands here, it
+   * never re-emits, regardless of how often InnerTube re-publishes the
+   * underlying action. The set is freed when the session is reaped.
+   */
+  const recentRemovals = new Set<string>();
+  const recentHostHandoffs = new Set<string>();
   /**
    * Sticky set of message ids that have been marked deleted (by a moderator
    * or by the author). Survives the FIFO shift of the bounded `messages`
@@ -534,6 +815,79 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   });
 
   const parse = (item: any): ChatMessage | null => parseChatItem(item);
+
+  // Build/extend the channelId -> display name index whenever a new message
+  // is admitted. Called both from the initial-data replay and the live
+  // chat-update stream so the moderator-removal summary can recover a
+  // human-readable name.
+  const indexAuthor = (msg: ChatMessage) => {
+    if (msg.authorChannelId && msg.author) {
+      authorByChannel.set(msg.authorChannelId, msg.author);
+    }
+  };
+
+  /**
+   * Emit a synthetic "X was removed from the chat" system note through the
+   * SSE stream. This fires for every moderator-driven removal of an
+   * author's messages (ours or anyone else's). Dedupe is keyed on the
+   * `(actionKind, channelId)` event identity with no TTL — once a
+   * removal note has been emitted for a pair, it will not re-emit for
+   * the lifetime of the chat session, so re-polls / reconnects that
+   * replay the same action can't spam chat with duplicate notes.
+   */
+  const emitRemovalSystemMessage = (
+    channelId: string | undefined,
+    authorName: string | undefined,
+    actionKind: "removed" | "deleted",
+  ) => {
+    if (!channelId) return;
+    const dedupeKey = `${actionKind}:${channelId}`;
+    if (!shouldEmitSystemNote(recentRemovals, dedupeKey)) return;
+
+    const systemMsg = createSystemRemovalMessage(
+      authorName,
+      channelId,
+      authorByChannel,
+      actionKind,
+    );
+    if (!seenIds.has(systemMsg.id)) {
+      seenIds.add(systemMsg.id);
+      messages.push(systemMsg);
+      if (messages.length > 200) {
+        const removed = messages.shift()!;
+        seenIds.delete(removed.id);
+      }
+    }
+    broadcast(session!, "message", systemMsg, systemMsg.id);
+  };
+
+  /**
+   * Emit a synthetic "Joining raid from [X]" system note through the SSE
+   * stream when a host/redirect banner is detected. Dedupe is keyed on
+   * `(targetUsername, banner.action_id)` with no TTL — once a handoff
+   * note has been emitted for a (host, banner) pair, it will not re-emit
+   * for the lifetime of the chat session, so subsequent polls of the
+   * InnerTube chat-update stream that replay the same banner can't spam
+   * chat with duplicate announcements.
+   */
+  const emitHostHandoffSystemMessage = (
+    banner: any,
+    systemMsg: ChatMessage,
+  ): boolean => {
+    const dedupeKey = `${systemMsg.targetUsername || "host"}:${banner?.action_id || "no-id"}`;
+    if (!shouldEmitSystemNote(recentHostHandoffs, dedupeKey)) return false;
+
+    if (!seenIds.has(systemMsg.id)) {
+      seenIds.add(systemMsg.id);
+      messages.push(systemMsg);
+      if (messages.length > 200) {
+        const removed = messages.shift()!;
+        seenIds.delete(removed.id);
+      }
+    }
+    broadcast(session!, "message", systemMsg, systemMsg.id);
+    return true;
+  };
 
   chat.on("start", (initialData: any) => {
     console.log(
@@ -566,6 +920,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           if (!seenIds.has(msg.id)) {
             seenIds.add(msg.id);
             messages.push(msg);
+            indexAuthor(msg);
             if (messages.length > 200) {
               const removed = messages.shift()!;
               seenIds.delete(removed.id);
@@ -577,11 +932,56 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           const targetId = action.target_item_id;
           if (!targetId) continue;
           const text = extractDeletedByText(action.deleted_state_message);
-          deletedIds.set(targetId, text ?? "Message deleted by a moderator");
+          const deletedByText = text ?? "Message deleted by a moderator";
+          deletedIds.set(targetId, deletedByText);
+          const idx = messages.findIndex((m) => m.id === targetId);
+          if (idx !== -1) {
+            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText };
+          }
           broadcast(session!, "delete", {
             messageId: targetId,
             deletedByText: text,
           });
+          continue;
+        }
+        if (action.is(YTNodes.MarkChatItemsByAuthorAsDeletedAction)) {
+          const channelId = action.external_channel_id;
+          if (!channelId) continue;
+          const text = extractDeletedByText(action.deleted_state_message);
+          const deletedByText = text ?? "Message deleted by a moderator";
+          for (const m of messages) {
+            if (m.authorChannelId !== channelId) continue;
+            deletedIds.set(m.id, deletedByText);
+            messages[messages.indexOf(m)] = { ...m, isDeleted: true, deletedByText };
+            broadcast(session!, "delete", { messageId: m.id, deletedByText });
+          }
+          emitRemovalSystemMessage(channelId, undefined, "deleted");
+          continue;
+        }
+        if (action.is(YTNodes.RemoveChatItemByAuthorAction)) {
+          const channelId = action.external_channel_id;
+          if (!channelId) continue;
+          for (const m of messages) {
+            if (m.authorChannelId !== channelId) continue;
+            deletedIds.set(m.id, "Message removed");
+            messages[messages.indexOf(m)] = { ...m, isDeleted: true, deletedByText: "Message removed" };
+            broadcast(session!, "delete", { messageId: m.id, deletedByText: "Message removed" });
+          }
+          emitRemovalSystemMessage(channelId, undefined, "removed");
+          continue;
+        }
+        if (action.is(YTNodes.RemoveChatItemAction)) {
+          const targetId = action.target_item_id;
+          if (!targetId) continue;
+          const text = "Message removed";
+          const existingText = deletedIds.get(targetId);
+          const resolvedText = existingText ?? text;
+          deletedIds.set(targetId, resolvedText);
+          const idx = messages.findIndex((m) => m.id === targetId);
+          if (idx !== -1) {
+            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: resolvedText };
+          }
+          broadcast(session!, "delete", { messageId: targetId, deletedByText: resolvedText });
           continue;
         }
         if (action.is(YTNodes.ReplaceChatItemAction)) {
@@ -591,6 +991,10 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           const text = detectDeletedReplacementText(replacement);
           if (text) {
             deletedIds.set(targetId, text);
+            const idx = messages.findIndex((m) => m.id === targetId);
+            if (idx !== -1) {
+              messages[idx] = { ...messages[idx], isDeleted: true, deletedByText: text };
+            }
             broadcast(session!, "delete", {
               messageId: targetId,
               deletedByText: text,
@@ -607,10 +1011,18 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           if (!seenIds.has(msg.id)) {
             seenIds.add(msg.id);
             messages.push(msg);
+            indexAuthor(msg);
             if (messages.length > 200) {
               const removed = messages.shift()!;
               seenIds.delete(removed.id);
             }
+          }
+          // Additionally, if the banner looks like a channel hand-off,
+          // emit a dedicated "RAID HOST" system note so the chat
+          // announces the joining group as one clear line.
+          const hostHandoff = parseHostHandoffBanner(banner, headerText);
+          if (hostHandoff) {
+            emitHostHandoffSystemMessage(banner, hostHandoff);
           }
           continue;
         }
@@ -654,6 +1066,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         if (!seenIds.has(msg.id)) {
           seenIds.add(msg.id);
           messages.push(msg);
+          indexAuthor(msg);
           if (messages.length > 200) {
             const removed = messages.shift()!;
             seenIds.delete(removed.id);
@@ -705,19 +1118,41 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         return;
       }
       if (action.is(YTNodes.MarkChatItemsByAuthorAsDeletedAction)) {
-        const ids = Array.isArray(action.target_item_ids)
-          ? action.target_item_ids
-          : [];
+        const channelId = action.external_channel_id;
+        if (!channelId) return;
         const text = extractDeletedByText(action.deleted_state_message);
         const deletedByText = text ?? "Message deleted by a moderator";
-        for (const id of ids) {
-          deletedIds.set(id, deletedByText);
-          const idx = messages.findIndex((m) => m.id === id);
+        for (const m of messages) {
+          if (m.authorChannelId !== channelId) continue;
+          deletedIds.set(m.id, deletedByText);
+          const idx = messages.indexOf(m);
           if (idx !== -1) {
-            messages[idx] = { ...messages[idx], isDeleted: true, deletedByText };
+            messages[idx] = { ...m, isDeleted: true, deletedByText };
           }
-          broadcast(session!, "delete", { messageId: id, deletedByText });
+          broadcast(session!, "delete", { messageId: m.id, deletedByText });
         }
+        emitRemovalSystemMessage(channelId, undefined, "deleted");
+        return;
+      }
+      if (action.is(YTNodes.RemoveChatItemByAuthorAction)) {
+        // Silently removes all messages from an author (ban/timeout). No
+        // deleted_state_message — just wipe them. Use the same label as
+        // RemoveChatItemAction for consistency. In addition, synthesize a
+        // system "X was removed from the chat" note so every connected
+        // client (including viewers who can't see deletions directly)
+        // sees that a moderator action occurred.
+        const channelId = action.external_channel_id;
+        if (!channelId) return;
+        for (const m of messages) {
+          if (m.authorChannelId !== channelId) continue;
+          deletedIds.set(m.id, "Message removed");
+          const idx = messages.indexOf(m);
+          if (idx !== -1) {
+            messages[idx] = { ...m, isDeleted: true, deletedByText: "Message removed" };
+          }
+          broadcast(session!, "delete", { messageId: m.id, deletedByText: "Message removed" });
+        }
+        emitRemovalSystemMessage(channelId, undefined, "removed");
         return;
       }
       if (action.is(YTNodes.ReplaceChatItemAction)) {
@@ -750,8 +1185,22 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           }
           broadcast(session!, "message", msg, msg.id);
         }
+        // Additionally, if the banner looks like a channel hand-off,
+        // emit a dedicated "RAID HOST" system note so the chat
+        // announces the joining group as one clear line. The note
+        // arrives in the SSE stream after the redirect banner line,
+        // giving connected viewers a clean handoff summary scroll.
+        const hostHandoff = parseHostHandoffBanner(banner, headerText);
+        if (hostHandoff) {
+          emitHostHandoffSystemMessage(banner, hostHandoff);
+        }
         return;
       }
+      // Log unhandled action types to help discover new YouTube chat actions
+      console.debug(
+        "[YouTube Chat] Unhandled chat-update action type:",
+        action.type || action.constructor?.name || "unknown",
+      );
     } catch (e) {
       console.warn(
         "[YouTube Chat] Failed to parse chat-update action:",
@@ -847,6 +1296,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     chat,
     messages,
     seenIds,
+    authorByChannel,
+    recentRemovals,
+    recentHostHandoffs,
     clients: new Map(),
     lastUpdate: Date.now(),
     destroyTimer: null,

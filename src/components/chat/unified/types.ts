@@ -26,6 +26,8 @@ export interface YTMessage {
   authorIsModerator?: boolean;
   authorIsOwner?: boolean;
   authorIsMember?: boolean;
+  /** Username of the target when this message is a system note (e.g. "X was removed from the chat"). */
+  targetUsername?: string;
   superchat?: {
     amount: string;
     color: string;

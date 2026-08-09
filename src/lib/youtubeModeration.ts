@@ -67,6 +67,30 @@ export async function banYouTubeUser(
   await callModeration({ action: "ban", videoId, channelId });
 }
 
+export async function approveYouTubeMessage(
+  videoId: string,
+  messageId: string,
+): Promise<void> {
+  await callModeration({
+    action: "automod",
+    videoId,
+    messageId,
+    decision: "approve",
+  });
+}
+
+export async function denyYouTubeMessage(
+  videoId: string,
+  messageId: string,
+): Promise<void> {
+  await callModeration({
+    action: "automod",
+    videoId,
+    messageId,
+    decision: "deny",
+  });
+}
+
 export async function timeoutYouTubeUser(
   videoId: string,
   channelId: string,

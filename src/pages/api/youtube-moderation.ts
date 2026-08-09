@@ -6,10 +6,14 @@ import {
   resolveLiveChatMessageId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
+import {
+  getAutomodItem,
+} from "./youtube-stream-chat";
+import { getInnertube } from "../../lib/youtube";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
 interface ModerationBody {
-  action?: "delete" | "ban" | "timeout";
+  action?: "delete" | "ban" | "timeout" | "automod";
   videoId?: string;
   messageId?: string;
   channelId?: string;
@@ -18,6 +22,8 @@ interface ModerationBody {
   text?: string;
   /** For delete: render timestamp (ms) used to disambiguate matches. */
   publishedAtMs?: number;
+  /** For automod: "approve" or "deny". */
+  decision?: "approve" | "deny";
 }
 
 const MIN_TIMEOUT_SECONDS = 1;
@@ -105,16 +111,73 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       durationSeconds,
       text,
       publishedAtMs,
+      decision,
     } = body;
 
-    if (!action || !["delete", "ban", "timeout"].includes(action)) {
+    if (!action || !["delete", "ban", "timeout", "automod"].includes(action)) {
       return jsonResponse(
-        { error: "action must be 'delete', 'ban' or 'timeout'" },
+        { error: "action must be 'delete', 'ban', 'timeout' or 'automod'" },
         400,
       );
     }
     if (!videoId || typeof videoId !== "string") {
       return jsonResponse({ error: "videoId is required" }, 400);
+    }
+
+    if (action === "automod") {
+      if (!messageId || typeof messageId !== "string") {
+        return jsonResponse(
+          { error: "messageId is required for automod" },
+          400,
+        );
+      }
+      if (!decision || !["approve", "deny"].includes(decision)) {
+        return jsonResponse(
+          { error: "decision must be 'approve' or 'deny'" },
+          400,
+        );
+      }
+
+      const automodItem = getAutomodItem(videoId, messageId);
+      if (!automodItem) {
+        return jsonResponse(
+          { error: "Auto-mod message not found. It may have already been handled." },
+          404,
+        );
+      }
+
+      // Find the approve or deny button on the automod item and execute it.
+      const buttons: any[] = Array.isArray(automodItem.moderation_buttons)
+        ? automodItem.moderation_buttons
+        : [];
+      const targetText = decision === "approve" ? "Approve" : "Deny";
+      const button = buttons.find(
+        (b: any) =>
+          (typeof b.text === "string" &&
+            b.text.toLowerCase().includes(targetText.toLowerCase())) ||
+          (typeof b.label === "string" &&
+            b.label.toLowerCase().includes(targetText.toLowerCase())),
+      );
+      if (!button || !button.endpoint) {
+        return jsonResponse(
+          { error: "Could not find moderation button on this message" },
+          400,
+        );
+      }
+
+      // Execute the button's endpoint through the Innertube session.
+      try {
+        const yt = await getInnertube();
+        await yt.actions.execute(button.endpoint);
+        return jsonResponse({ success: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[youtube-moderation] automod action failed:", msg);
+        return jsonResponse(
+          { error: `Failed to ${decision} message: ${msg}` },
+          500,
+        );
+      }
     }
 
     if (action === "delete") {

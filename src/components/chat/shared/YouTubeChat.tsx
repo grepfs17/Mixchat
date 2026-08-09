@@ -202,8 +202,11 @@ export default function YouTubeChat({
           recipientName: msg.recipientName,
           superchat: msg.superchat,
           isDeleted: msg.isDeleted,
+          deletedByText: msg.deletedByText,
+          targetUsername: msg.targetUsername,
           authorIsModerator: msg.authorIsModerator,
           authorIsOwner: msg.authorIsOwner,
+          authorIsMember: msg.authorIsMember,
         }));
 
         setMessages((prev) => {
@@ -264,8 +267,11 @@ export default function YouTubeChat({
           recipientName: msg.recipientName,
           superchat: msg.superchat,
           isDeleted: msg.isDeleted,
+          deletedByText: msg.deletedByText,
+          targetUsername: msg.targetUsername,
           authorIsModerator: msg.authorIsModerator,
           authorIsOwner: msg.authorIsOwner,
+          authorIsMember: msg.authorIsMember,
         };
 
         setMessages((prev) => {
