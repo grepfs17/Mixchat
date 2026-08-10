@@ -955,7 +955,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             messages[messages.indexOf(m)] = { ...m, isDeleted: true, deletedByText };
             broadcast(session!, "delete", { messageId: m.id, deletedByText });
           }
-          emitRemovalSystemMessage(channelId, undefined, "deleted");
+          // Skip system note during start replay: prevents re-emit on session recreation.
           continue;
         }
         if (action.is(YTNodes.RemoveChatItemByAuthorAction)) {
@@ -967,7 +967,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             messages[messages.indexOf(m)] = { ...m, isDeleted: true, deletedByText: "Message removed" };
             broadcast(session!, "delete", { messageId: m.id, deletedByText: "Message removed" });
           }
-          emitRemovalSystemMessage(channelId, undefined, "removed");
+          // Skip system note during start replay: prevents re-emit on session recreation.
           continue;
         }
         if (action.is(YTNodes.RemoveChatItemAction)) {
@@ -1017,13 +1017,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
               seenIds.delete(removed.id);
             }
           }
-          // Additionally, if the banner looks like a channel hand-off,
-          // emit a dedicated "RAID HOST" system note so the chat
-          // announces the joining group as one clear line.
-          const hostHandoff = parseHostHandoffBanner(banner, headerText);
-          if (hostHandoff) {
-            emitHostHandoffSystemMessage(banner, hostHandoff);
-          }
+          // Skip host-handoff note during start replay: prevents re-emit on session recreation.
           continue;
         }
       }
