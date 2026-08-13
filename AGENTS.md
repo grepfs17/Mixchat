@@ -3,6 +3,7 @@
 ## Overview
 
 **Mixchat** is an advanced unified live-streaming chat client for **Twitch** and **YouTube**, built with Astro 7.x (SSR + Server) and React 19.x. It surfaces both platforms' chats side-by-side or merged, supports third-party emotes (7TV, BTTV, FFZ) without browser extensions, and includes moderation tools, a song-queue system, giveaways, an HLS video player, music player, and stream-event notifications.
+- Complete tech specs and file structure on SPEC.md
 
 ## Operating principles
 - Working code only. Plausibility is not correctness; verify before reporting done.
@@ -17,6 +18,7 @@
 - Prefer running code, tests, linters, and type checks over guessing.
 - Read complete errors, logs, and stack traces before fixing them.
 - Execute pnpx react-doctor@latest at the end to assure the code is healthy and there is no regressions.
+- Update SPEC.md if some file was added or removed, if the file structure or tech specs have changed or a dependency was added or removed.
 
 
 ## Environment Variables
