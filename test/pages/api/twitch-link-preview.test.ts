@@ -12,11 +12,6 @@ const mockedFetch = vi.fn();
 
 beforeEach(() => {
   vi.stubGlobal("fetch", mockedFetch);
-  (import.meta as any).env = {
-    ...(import.meta as any).env,
-    PUBLIC_TWITCH_CLIENT_ID: "test-client-id",
-    PUBLIC_TWITCH_ONLY: undefined,
-  };
   mockedFetch.mockReset();
 });
 
