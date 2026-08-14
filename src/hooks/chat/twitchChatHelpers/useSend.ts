@@ -1,34 +1,35 @@
 import { useCallback } from "react";
-import type { ChatClient } from "@twurple/chat";
+import { sendHelixMessage } from "../../../lib/twitch";
 
 interface UseTwitchChatSendOptions {
-  client: ChatClient | null;
-  isConnected: boolean;
+  userId: string;
+  broadcasterId: string;
   channelName: string;
 }
 
 export function useTwitchChatSend({
-  client,
-  isConnected,
+  userId,
+  broadcasterId,
   channelName,
 }: UseTwitchChatSendOptions) {
   return useCallback(
     async (message: string, replyToMessageId?: string) => {
-      if (!client || !isConnected) {
+      if (!userId) {
         throw new Error("Not connected to chat");
       }
 
       try {
-        if (replyToMessageId) {
-          await client.say(channelName, message, { replyTo: replyToMessageId });
-        } else {
-          await client.say(channelName, message);
-        }
+        await sendHelixMessage(
+          broadcasterId || channelName,
+          userId,
+          message,
+          replyToMessageId,
+        );
       } catch (error) {
         console.error("Failed to send message:", error);
         throw error;
       }
     },
-    [client, isConnected, channelName],
+    [broadcasterId, channelName, userId],
   );
 }

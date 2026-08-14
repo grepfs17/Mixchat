@@ -435,6 +435,8 @@ export function useChatAppState({
     eventSoundVolume,
     handleOwnBadgesLoaded,
     handleMessageDeleted,
+    twitchSession?.userId || "",
+    selectedTwitchChannel,
   );
 
   const handleSendMessage = useCallback(

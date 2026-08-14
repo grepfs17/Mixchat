@@ -13,6 +13,7 @@ import {
   buildUserTwitchMessage,
   shiftEmoteOffsets,
   parseBadgeString,
+  extractBadges,
 } from "../../../lib/twitchChatMessages";
 import { playEventSound } from "../../../lib/eventSounds";
 import type { MentionSoundType } from "../../../lib/twitchChatAudio";
@@ -32,6 +33,13 @@ interface UseTwitchChatEventHandlersOptions {
   mentionSoundEnabledRef: React.RefObject<boolean>;
   mentionVolumeRef: React.RefObject<number>;
   mentionSoundTypeRef: React.RefObject<MentionSoundType>;
+  onOwnBadgesLoadedRef: React.RefObject<
+    | ((
+        badges: Record<string, string>,
+        badgeDetails: Record<string, { url: string; title: string }>,
+      ) => void)
+    | undefined
+  >;
 }
 
 export function useTwitchChatEventHandlers({
@@ -44,14 +52,30 @@ export function useTwitchChatEventHandlers({
   eventSoundsRef,
   eventSoundVolumeRef,
   broadcasterIdRef,
+  onOwnBadgesLoadedRef,
 }: UseTwitchChatEventHandlersOptions): void {
   useEffect(() => {
     if (!enabled || !client) return;
 
     let active = true;
 
+    // The anonymous connection can't receive USERSTATE, so derive the
+    // viewer's own badges from their own messages instead.
+    const maybeLoadOwnBadges = (msg: {
+      userInfo: { userName: string; badges: Map<string, string> };
+    }): void => {
+      if (
+        msg.userInfo.userName.toLowerCase() ===
+        usernameRef.current.toLowerCase()
+      ) {
+        const { badges, badgeDetails } = extractBadges(msg.userInfo);
+        onOwnBadgesLoadedRef.current?.(badges, badgeDetails);
+      }
+    };
+
     client.onAction((_channel, _user, message, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       onMessageRef.current(
         buildUserTwitchMessage(msg, message, usernameRef.current, {
           messageType: "chat",
@@ -61,6 +85,7 @@ export function useTwitchChatEventHandlers({
 
     client.onAnnouncement((_channel, _user, _announcementInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const emotes =
         msg.emoteOffsets.size > 0
           ? Object.fromEntries(msg.emoteOffsets)
@@ -103,6 +128,7 @@ export function useTwitchChatEventHandlers({
 
     client.onRewardGift((_channel, _user, rewardGiftInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const content = `gifted ${rewardGiftInfo.count} reward${rewardGiftInfo.count > 1 ? "s" : ""} (${rewardGiftInfo.triggerType})`;
       onMessageRef.current(
         buildUserTwitchMessage(msg, content, usernameRef.current, {
@@ -171,6 +197,7 @@ export function useTwitchChatEventHandlers({
 
     client.onSub((_channel, _user, subInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const tier =
         subInfo.plan === "Prime"
           ? "Prime"
@@ -203,6 +230,7 @@ export function useTwitchChatEventHandlers({
 
     client.onResub((_channel, _user, subInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const monthsCount = subInfo.months;
       const monthLabel = monthsCount === 1 ? "month" : "months";
       const prefix = `resubscribed for ${monthsCount} ${monthLabel}`;
@@ -229,6 +257,7 @@ export function useTwitchChatEventHandlers({
 
     client.onSubGift((_channel, recipient, subInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const tier =
         subInfo.plan === "3000" ? "3" : subInfo.plan === "2000" ? "2" : "1";
       const content = `gifted a Tier ${tier} subscription to ${recipient}`;
@@ -247,6 +276,7 @@ export function useTwitchChatEventHandlers({
 
     client.onCommunitySub((_channel, _user, giftInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const tier =
         giftInfo.plan === "3000" ? "3" : giftInfo.plan === "2000" ? "2" : "1";
       const content = `gifted ${giftInfo.count} Tier ${tier} subscriptions to the community!`;
@@ -265,6 +295,7 @@ export function useTwitchChatEventHandlers({
 
     client.onRaid((_channel, _user, raidInfo, msg) => {
       if (!active) return;
+      maybeLoadOwnBadges(msg);
       const content = `is raiding with a party of ${raidInfo.viewerCount} viewers!`;
 
       onMessageRef.current(

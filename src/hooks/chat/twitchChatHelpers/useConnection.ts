@@ -1,20 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { StaticAuthProvider } from "@twurple/auth";
-import { ChatClient, UserState } from "@twurple/chat";
-import { parseBadgeString } from "../../../lib/twitchChatMessages";
+import { ChatClient } from "@twurple/chat";
 import { preCacheRewards } from "../../../lib/twitchChatCache";
 
 interface UseTwitchChatConnectionOptions {
   channelName: string;
-  accessToken: string;
   enabled: boolean;
-  onOwnBadgesLoadedRef: React.RefObject<
-    | ((
-        badges: Record<string, string>,
-        badgeDetails: Record<string, { url: string; title: string }>,
-      ) => void)
-    | undefined
-  >;
   accessTokenRef: React.RefObject<string>;
 }
 
@@ -24,15 +14,11 @@ export interface TwitchChatConnection {
   slowModeWaitTime: number | null;
   followerModeMinutes: number | null;
   broadcasterIdRef: React.RefObject<string | null>;
-  broadcasterIdResolveRef: React.RefObject<((id: string) => void) | null>;
-  broadcasterIdPromiseRef: React.RefObject<Promise<string>>;
 }
 
 export function useTwitchChatConnection({
   channelName,
-  accessToken,
   enabled,
-  onOwnBadgesLoadedRef,
   accessTokenRef,
 }: UseTwitchChatConnectionOptions): TwitchChatConnection {
   const [isConnected, setIsConnected] = useState(false);
@@ -44,48 +30,17 @@ export function useTwitchChatConnection({
 
   const broadcasterIdRef = useRef<string | null>(null);
 
-  // Build the broadcasterId promise once via useState's lazy initializer — the
-  // only React-idiomatic place to create a promise during render without
-  // triggering the "ref mutated during render" smell. The resolve callback is
-  // captured so the connect-effect loop can settle it once the broadcaster id
-  // resolves. The ref-like shape is preserved so the existing
-  // `RefObject<Promise<string>>` return interface is unchanged.
-  const [broadcasterIdPromise] = useState<{
-    promise: Promise<string>;
-    resolve: (id: string) => void;
-  }>(() => {
-    let resolveFn!: (id: string) => void;
-    const promise = new Promise<string>((resolve) => {
-      resolveFn = resolve;
-    });
-    return { promise, resolve: resolveFn };
-  });
-  const broadcasterIdPromiseRef = useRef<Promise<string>>(
-    broadcasterIdPromise.promise,
-  );
-  const broadcasterIdResolveRef = useRef<((id: string) => void) | null>(
-    broadcasterIdPromise.resolve,
-  );
-
-  const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-
   useEffect(() => {
     if (!enabled) return;
-    if (!channelName || !accessToken || !clientId) {
-      if (enabled && !clientId) {
-        console.error(
-          "Twitch Client ID is missing (PUBLIC_TWITCH_CLIENT_ID env var)",
-        );
-      }
-      return;
-    }
+    if (!channelName) return;
 
     let active = true;
 
-    const authProvider = new StaticAuthProvider(clientId, accessToken);
-
+    // Anonymous read-only connection. Without an `authProvider`, twurple
+    // connects as a `justinfan` nick and never calls
+    // `id.twitch.tv/oauth2/validate` — which is CORS-blocked in the browser —
+    // so chat reads work from any origin. Sending is handled via Helix.
     const newClient = new ChatClient({
-      authProvider,
       channels: [channelName],
     });
 
@@ -105,7 +60,6 @@ export function useTwitchChatConnection({
           if (!broadcasterId) return;
           if (active) {
             broadcasterIdRef.current = broadcasterId;
-            broadcasterIdResolveRef.current?.(broadcasterId);
           }
 
           const settingsRes = await fetch(
@@ -151,25 +105,16 @@ export function useTwitchChatConnection({
       setIsConnected(false);
     });
 
-    newClient.irc.onTypedMessage(UserState, (msg) => {
-      if (!active || !onOwnBadgesLoadedRef.current) return;
-      const { badges, badgeDetails } = parseBadgeString(
-        msg.tags.get("badges") || "",
-      );
-      onOwnBadgesLoadedRef.current(badges, badgeDetails);
-    });
-
     newClient.connect();
 
     setClient(newClient);
 
     return () => {
       active = false;
-      if (newClient) {
-        newClient.quit();
-      }
-    };    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [channelName, enabled, clientId]);
+      newClient.quit();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelName, enabled]);
 
   return {
     client,
@@ -177,7 +122,5 @@ export function useTwitchChatConnection({
     slowModeWaitTime,
     followerModeMinutes,
     broadcasterIdRef,
-    broadcasterIdResolveRef,
-    broadcasterIdPromiseRef,
   };
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   initializeBadges,
   getBadge,
@@ -6,68 +6,89 @@ import {
   clearBadgeCache,
 } from "../../src/lib/badges";
 
-// Mock the @twurple modules
-vi.mock("@twurple/auth", () => ({
-  StaticAuthProvider: vi.fn(),
-}));
-
-const mockBadgeSet = (id: string, versions: any[]) => ({
-  id,
-  getVersion: (v: string) => {
-    const ver = versions.find((ver) => ver.id === v);
-    if (!ver) return null;
-    return {
-      getImageUrl: (size: number) => `http://badge.com/${id}/${v}/${size}x`,
-      title: ver.title,
-      description: ver.description,
-    };
-  },
-});
-
-vi.mock("@twurple/api", () => {
-  return {
-    ApiClient: vi.fn().mockImplementation(function () {
-      return {
-        chat: {
-          getGlobalBadges: vi
-            .fn()
-            .mockResolvedValue([
-              mockBadgeSet("moderator", [
-                { id: "1", title: "Mod", description: "Moderator" },
-              ]),
-              mockBadgeSet("subscriber", [
-                { id: "0", title: "Sub", description: "Subscriber" },
-              ]),
-            ]),
-          getChannelBadges: vi.fn().mockResolvedValue([
-            mockBadgeSet("subscriber", [
-              {
-                id: "12",
-                title: "12-Month Sub",
-                description: "1 Year Subscriber",
-              },
-            ]),
-            mockBadgeSet("custom-badge", [
-              { id: "1", title: "VIP+", description: "Special VIP" },
-            ]),
-          ]),
+const globalBadges = {
+  data: [
+    {
+      set_id: "moderator",
+      versions: [
+        {
+          id: "1",
+          image_url_1x: "http://badge.com/moderator/1/1x",
+          image_url_2x: "http://badge.com/moderator/1/2x",
+          title: "Mod",
+          description: "Moderator",
         },
-        users: {
-          getUserByName: vi.fn().mockResolvedValue({ id: "123" }),
+      ],
+    },
+    {
+      set_id: "subscriber",
+      versions: [
+        {
+          id: "0",
+          image_url_2x: "http://badge.com/subscriber/0/2x",
+          title: "Sub",
+          description: "Subscriber",
         },
-      };
-    }),
-  };
-});
+      ],
+    },
+  ],
+};
+
+const channelBadges = {
+  data: [
+    {
+      set_id: "subscriber",
+      versions: [
+        {
+          id: "12",
+          image_url_2x: "http://badge.com/subscriber/12/2x",
+          title: "12-Month Sub",
+          description: "1 Year Subscriber",
+        },
+      ],
+    },
+    {
+      set_id: "custom-badge",
+      versions: [
+        {
+          id: "1",
+          image_url_2x: "http://badge.com/custom-badge/1/2x",
+          title: "VIP+",
+          description: "Special VIP",
+        },
+      ],
+    },
+  ],
+};
+
+function jsonResponse(data: unknown) {
+  return { ok: true, status: 200, json: async () => data };
+}
 
 describe("badges lib", () => {
   beforeEach(() => {
     clearBadgeCache();
-    vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("initializes and retrieves global badges", async () => {
-    await initializeBadges("123", "token", "client");
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation((input: any) => {
+      const url = String(input);
+      if (url.includes("/helix/chat/badges/global")) {
+        return Promise.resolve(jsonResponse(globalBadges) as any);
+      }
+      if (url.includes("/helix/chat/badges")) {
+        return Promise.resolve(jsonResponse({ data: [] }) as any);
+      }
+      return Promise.resolve(jsonResponse({ data: [] }) as any);
+    });
+
+    await initializeBadges("123");
 
     const modBadge = getBadge("moderator", "1");
     expect(modBadge).toBe("http://badge.com/moderator/1/2x");
@@ -83,10 +104,20 @@ describe("badges lib", () => {
   });
 
   it("prioritizes channel badges over global badges", async () => {
-    await initializeBadges("123", "token", "client");
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation((input: any) => {
+      const url = String(input);
+      if (url.includes("/helix/chat/badges/global")) {
+        return Promise.resolve(jsonResponse(globalBadges) as any);
+      }
+      if (url.includes("/helix/chat/badges")) {
+        return Promise.resolve(jsonResponse(channelBadges) as any);
+      }
+      return Promise.resolve(jsonResponse({ data: [] }) as any);
+    });
 
-    // Subscriber badge exists in both global and channel
-    // Global: version '0', Channel: version '12'
+    await initializeBadges("123");
+
     const channelSub = getBadgeDetail("subscriber", "12");
     expect(channelSub?.title).toBe("12-Month Sub");
 
@@ -95,15 +126,47 @@ describe("badges lib", () => {
   });
 
   it("returns undefined for non-existent badges", async () => {
-    await initializeBadges("123", "token", "client");
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockImplementation((input: any) => {
+      const url = String(input);
+      if (url.includes("/helix/chat/badges/global")) {
+        return Promise.resolve(jsonResponse(globalBadges) as any);
+      }
+      if (url.includes("/helix/chat/badges")) {
+        return Promise.resolve(jsonResponse(channelBadges) as any);
+      }
+      return Promise.resolve(jsonResponse({ data: [] }) as any);
+    });
+
+    await initializeBadges("123");
     expect(getBadge("non-existent", "1")).toBeUndefined();
   });
 
-  it("resolves numeric broadcaster ID when login name is provided", async () => {
-    await initializeBadges("my_channel", "token", "client");
-    // The ApiClient mock is called with '123' because 'my_channel' is resolved
-    const { ApiClient } = await import("@twurple/api");
-    const clientInstance = vi.mocked(ApiClient).mock.results[0].value;
-    expect(clientInstance.chat.getChannelBadges).toHaveBeenCalledWith("123");
+  it("resolves a login name to a numeric broadcaster ID", async () => {
+    const fetchMock = vi.mocked(fetch);
+    const calls: string[] = [];
+    fetchMock.mockImplementation((input: any) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("/helix/users")) {
+        return Promise.resolve(jsonResponse({ data: [{ id: "123" }] }) as any);
+      }
+      if (url.includes("/helix/chat/badges/global")) {
+        return Promise.resolve(jsonResponse(globalBadges) as any);
+      }
+      if (url.includes("/helix/chat/badges")) {
+        return Promise.resolve(jsonResponse(channelBadges) as any);
+      }
+      return Promise.resolve(jsonResponse({ data: [] }) as any);
+    });
+
+    await initializeBadges("my_channel");
+
+    expect(calls.some((c) => c.includes("/helix/users&login=my_channel"))).toBe(
+      true,
+    );
+    expect(
+      calls.some((c) => c.includes("broadcaster_id=123")),
+    ).toBe(true);
   });
 });

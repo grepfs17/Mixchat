@@ -33,6 +33,8 @@ export function useTwitchChat(
     badgeDetails: Record<string, { url: string; title: string }>,
   ) => void,
   onMessageDeleted?: (messageId: string) => void,
+  userId: string = "",
+  broadcasterId: string = "",
 ) {
   // Refs for stale-closure-safe access inside IRC handlers
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
@@ -77,7 +79,7 @@ export function useTwitchChat(
     onOwnBadgesLoadedRef.current = onOwnBadgesLoaded;
   }, [onOwnBadgesLoaded]);
 
-  // Connection lifecycle (client creation, connect/disconnect, room settings)
+  // Connection lifecycle (anonymous IRC client, connect/disconnect, room settings)
   const {
     client,
     isConnected,
@@ -86,9 +88,7 @@ export function useTwitchChat(
     broadcasterIdRef,
   } = useTwitchChatConnection({
     channelName,
-    accessToken,
     enabled,
-    onOwnBadgesLoadedRef,
     accessTokenRef,
   });
 
@@ -105,6 +105,7 @@ export function useTwitchChat(
     eventSoundsRef,
     eventSoundVolumeRef,
     broadcasterIdRef,
+    onOwnBadgesLoadedRef,
   });
 
   // All other IRC event handlers (action, announcement, sub, raid, mod, etc.)
@@ -121,15 +122,16 @@ export function useTwitchChat(
     mentionSoundEnabledRef,
     mentionVolumeRef,
     mentionSoundTypeRef,
+    onOwnBadgesLoadedRef,
   });
 
   // 7TV emote window events
   useTwitchChat7TV({ enabled, onMessageRef });
 
-  // sendMessage callback
+  // sendMessage callback — routed through Helix (the IRC client is read-only)
   const sendMessage = useTwitchChatSend({
-    client,
-    isConnected,
+    userId,
+    broadcasterId,
     channelName,
   });
 

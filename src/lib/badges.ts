@@ -1,8 +1,10 @@
-import { ApiClient } from "@twurple/api";
-import { StaticAuthProvider } from "@twurple/auth";
-import type { HelixChatBadgeSet } from "@twurple/api";
+// Badge catalog used to map IRC badge tags (name + version) to image URLs.
+//
+// The data is fetched through `/api/twitch-proxy` (server-side, using the
+// httpOnly `twitch_token` cookie) instead of a browser twurple `ApiClient`,
+// which can't work in the browser because id.twitch.tv/oauth2/validate is
+// CORS-blocked for third-party origins.
 
-// Shorthand for badge data we actually care about in the UI
 export interface BadgeDetail {
   id: string;
   version: string;
@@ -11,9 +13,12 @@ export interface BadgeDetail {
   description: string;
 }
 
-// Store the full HelixChatBadgeSet objects for better metadata
-let badgesGlobal: Map<string, HelixChatBadgeSet> = new Map();
-let badgesChannel: Map<string, HelixChatBadgeSet> = new Map();
+interface BadgeSet {
+  versions: Map<string, BadgeDetail>;
+}
+
+let badgesGlobal: Map<string, BadgeSet> = new Map();
+let badgesChannel: Map<string, BadgeSet> = new Map();
 
 // Wipe everything if we switch accounts or reset
 export function clearBadgeCache(): void {
@@ -21,56 +26,80 @@ export function clearBadgeCache(): void {
   badgesChannel.clear();
 }
 
-// Grab badge sets from Twitch. If channelId is null, gets global ones.
-async function fetchBadges(
-  apiClient: ApiClient,
-  channelId?: string,
-): Promise<Map<string, HelixChatBadgeSet>> {
+interface HelixBadgeVersion {
+  id: string;
+  image_url_1x?: string;
+  image_url_2x?: string;
+  image_url_4x?: string;
+  title?: string;
+  description?: string;
+}
+
+interface HelixBadgeSet {
+  set_id: string;
+  versions?: HelixBadgeVersion[];
+}
+
+async function fetchBadgeSets(
+  query: string,
+): Promise<Map<string, BadgeSet>> {
+  const map = new Map<string, BadgeSet>();
   try {
-    let resolvedId = channelId;
-
-    // The Twitch badge API requires a numeric broadcaster_id. If we received a
-    // login name (non-numeric), resolve it to the numeric user ID first.
-    if (resolvedId && !/^\d+$/.test(resolvedId)) {
-      const user = await apiClient.users.getUserByName(resolvedId);
-      if (user) {
-        resolvedId = user.id;
-      } else {
-        console.warn(
-          `Could not resolve Twitch username "${resolvedId}" to a user ID — skipping channel badges.`,
-        );
-        return new Map();
-      }
+    const res = await fetch(`/api/twitch-proxy?${query}`);
+    if (!res.ok) {
+      console.warn(`Twitch badges not loaded (${res.status}) for ${query}`);
+      return map;
     }
-
-    const badgeSets = resolvedId
-      ? await apiClient.chat.getChannelBadges(resolvedId)
-      : await apiClient.chat.getGlobalBadges();
-
-    const map = new Map<string, HelixChatBadgeSet>();
-    badgeSets.forEach((set) => map.set(set.id, set));
-    return map;
+    const data = await res.json();
+    for (const set of (data?.data ?? []) as HelixBadgeSet[]) {
+      const versions = new Map<string, BadgeDetail>();
+      for (const version of set.versions ?? []) {
+        versions.set(version.id, {
+          id: set.set_id,
+          version: version.id,
+          url: version.image_url_2x || version.image_url_1x || "",
+          title: version.title || "",
+          description: version.description || "",
+        });
+      }
+      map.set(set.set_id, { versions });
+    }
   } catch (error) {
-    console.warn(
-      `Twitch ${channelId ? "channel" : "global"} badges not loaded:`,
-      error,
+    console.warn(`Twitch badges not loaded for ${query}:`, error);
+  }
+  return map;
+}
+
+/** Resolve a broadcaster login name to a numeric ID when necessary. */
+async function resolveChannelId(channelId: string): Promise<string | null> {
+  if (/^\d+$/.test(channelId)) return channelId;
+  try {
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/users&login=${encodeURIComponent(channelId)}`,
     );
-    return new Map();
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data?.[0]?.id ?? null;
+  } catch {
+    return null;
   }
 }
 
-// Pull down both global and channel-specific badges so we can show them in chat
+/** Pull down global and channel-specific badges. */
 export async function initializeBadges(
   channelId: string,
-  accessToken: string,
-  clientId: string,
+  _accessToken?: string,
+  _clientId?: string,
 ): Promise<void> {
-  const authProvider = new StaticAuthProvider(clientId, accessToken);
-  const apiClient = new ApiClient({ authProvider });
+  const resolvedId = await resolveChannelId(channelId);
 
   const [global, channel] = await Promise.all([
-    fetchBadges(apiClient),
-    fetchBadges(apiClient, channelId),
+    fetchBadgeSets("path=/helix/chat/badges/global"),
+    resolvedId
+      ? fetchBadgeSets(
+          `path=/helix/chat/badges&broadcaster_id=${encodeURIComponent(resolvedId)}`,
+        )
+      : Promise.resolve(new Map<string, BadgeSet>()),
   ]);
 
   badgesGlobal = global;
@@ -79,27 +108,16 @@ export async function initializeBadges(
 
 // Get the raw image URL for a specific badge/version
 export function getBadge(name: string, version: string): string | undefined {
-  const detail = getBadgeDetail(name, version);
-  return detail?.url;
+  return getBadgeDetail(name, version)?.url;
 }
 
-// Find the full badge info, checking the channel first (custom badges) then global ones
+// Find the full badge info, checking the channel first (custom badges) then global
 export function getBadgeDetail(
   name: string,
   version: string,
 ): BadgeDetail | undefined {
-  // Look in channel badges first, then global
   const set = badgesChannel.get(name) || badgesGlobal.get(name);
   if (!set) return undefined;
 
-  const v = set.getVersion(version);
-  if (!v) return undefined;
-
-  return {
-    id: name,
-    version: version,
-    url: v.getImageUrl(2) || v.getImageUrl(1), // Default to 2x for better appearance
-    title: v.title,
-    description: v.description,
-  };
+  return set.versions.get(version);
 }

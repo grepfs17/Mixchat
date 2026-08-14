@@ -16,7 +16,7 @@
 
 | Package | Purpose |
 |---------|---------|
-| `@twurple/api`, `@twurple/auth`, `@twurple/chat` | Twitch IRC chat, Helix API, EventSub |
+| `@twurple/chat` | Twitch IRC chat (anonymous read-only client-side connection) |
 | `youtubei.js` | YouTube InnerTube API (chat, metadata, player) |
 | `hls.js` | HLS video player for M3U8 streams |
 | `bgutils-js` | Bot guard utilities (PoToken generation for YouTube) |
@@ -86,7 +86,7 @@ mixchat/
 ### 1. Data Flow
 
 - **Auth**: OAuth popup → callback page → postMessage → parent window stores session in localStorage
-- **Twitch Chat**: Twurple IRC client → `useTwitchChat` hook → message handler → `useChatMessages` → renders via ChatDisplay
+- **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message).
 - **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component
 - **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available.
 - **Server State**: Song queue uses server-side in-memory store (`songQueueStore`) with live polling via API routes.

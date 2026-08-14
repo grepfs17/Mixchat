@@ -26,6 +26,13 @@ interface UseTwitchChatMessageHandlerOptions {
   eventSoundsRef: React.RefObject<Record<string, string>>;
   eventSoundVolumeRef: React.RefObject<number>;
   broadcasterIdRef: React.RefObject<string | null>;
+  onOwnBadgesLoadedRef: React.RefObject<
+    | ((
+        badges: Record<string, string>,
+        badgeDetails: Record<string, { url: string; title: string }>,
+      ) => void)
+    | undefined
+  >;
 }
 
 export function useTwitchChatMessageHandler({
@@ -40,6 +47,7 @@ export function useTwitchChatMessageHandler({
   eventSoundsRef,
   eventSoundVolumeRef,
   broadcasterIdRef,
+  onOwnBadgesLoadedRef,
 }: UseTwitchChatMessageHandlerOptions): void {
   useEffect(() => {
     if (!enabled || !client) return;
@@ -104,6 +112,10 @@ export function useTwitchChatMessageHandler({
           ? getCachedSourceChannelInfo(sourceRoomId)
           : undefined;
 
+      const isCurrentUser =
+        msg.userInfo.userName.toLowerCase() ===
+        usernameRef.current.toLowerCase();
+
       const chatMessage: TwitchMessage = {
         id: msg.id,
         platform: "twitch",
@@ -121,9 +133,7 @@ export function useTwitchChatMessageHandler({
         isBot,
         badges: badgeImages,
         badgeDetails,
-        isCurrentUser:
-          msg.userInfo.userName.toLowerCase() ===
-          usernameRef.current.toLowerCase(),
+        isCurrentUser,
         messageType: msg.isRedemption
           ? "redemption"
           : msg.isHighlight
@@ -143,6 +153,12 @@ export function useTwitchChatMessageHandler({
           powerUpType === "message_effect" ? messageEffectId : undefined,
         isFirstMessage,
       };
+
+      // The anonymous connection can't receive USERSTATE, so derive the
+      // viewer's own badges from their own messages instead.
+      if (isCurrentUser) {
+        onOwnBadgesLoadedRef.current?.(badgeImages, badgeDetails);
+      }
 
       const needsUserInfo = !authorAvatar && !!msg.userInfo.userId;
       const needsSourceAvatar =
@@ -256,6 +272,7 @@ export function useTwitchChatMessageHandler({
 
     return () => {
       active = false;
-    };    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [client, enabled]);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, enabled]);
 }

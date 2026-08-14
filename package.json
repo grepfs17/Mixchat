@@ -14,7 +14,6 @@
     "doctor": "pnpx react-doctor@latest --no-lint"
   },
   "dependencies": {
-    "@twurple/api": "^8.1.4",
     "@twurple/auth": "^8.1.4",
     "@twurple/chat": "^8.1.4",
     "astro": "^7.1.3",

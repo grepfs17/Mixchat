@@ -64,8 +64,7 @@ function buildCSP(nonce?: string): string {
       " https://cdn.prod.website-files.com", // Ko-fi badge images
     // API / XHR calls the client makes directly
     "connect-src 'self'" +
-      " https://api.twitch.tv" + // Twitch Helix API (Twurple)
-      " https://id.twitch.tv" + // Twitch OAuth validate
+      " https://api.twitch.tv" + // Twitch Helix API
       " https://gql.twitch.tv" + // Twitch GQL (HLS token)
       " https://usher.ttvnw.net" + // Twitch HLS master playlist
       " https://*.ttvnw.net" + // Twitch HLS CDN segment subdomains
@@ -79,8 +78,8 @@ function buildCSP(nonce?: string): string {
       " https://api.frankerfacez.com" + // FFZ emote API
       " https://events.7tv.io" + // 7TV EventAPI
       " wss://events.7tv.io" + // 7TV EventAPI (WebSocket alternate)
-      " wss://irc-ws.chat.twitch.tv" + // Twitch chat IRC WebSocket
-      " wss://eventsub.wss.twitch.tv", // Twitch EventSub WebSocket
+      " wss://eventsub.wss.twitch.tv" + // Twitch EventSub WebSocket
+      " wss://irc-ws.chat.twitch.tv", // Twitch chat IRC WebSocket
     // Twitch and YouTube embedded players
     "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)
