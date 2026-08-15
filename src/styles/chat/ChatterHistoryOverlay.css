@@ -140,6 +140,30 @@
     padding: 10px 0;
 }
 
+.history-day-divider {
+    padding: 8px 16px 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #adadb8;
+}
+
+.history-day-divider::before,
+.history-day-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background-color: #2a2a2e;
+}
+
+.history-day-divider span {
+    flex-shrink: 0;
+}
+
 .history-empty-state {
     padding: 40px;
     text-align: center;

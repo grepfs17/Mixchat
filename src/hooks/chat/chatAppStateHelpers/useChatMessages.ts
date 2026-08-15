@@ -41,9 +41,9 @@ export function useChatMessages({
   const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
-    pruneMessages(24);
+    pruneMessages(48);
 
-    const interval = setInterval(() => pruneMessages(24), 3600000);
+    const interval = setInterval(() => pruneMessages(48), 3600000);
     return () => clearInterval(interval);
   }, []);
 

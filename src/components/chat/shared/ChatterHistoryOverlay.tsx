@@ -16,6 +16,31 @@ import MessageBadges from "../../MessageBadges";
 import { useMemo } from "react";
 import "../../../styles/chat/ChatterHistoryOverlay.css";
 
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function formatDayLabel(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((today.getTime() - day.getTime()) / 86400000);
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return date.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    ...(date.getFullYear() !== now.getFullYear()
+      ? { year: "numeric" as const }
+      : {}),
+  });
+}
+
 interface ChatterHistoryOverlayProps {
   author: string;
   channel: string;
@@ -62,7 +87,7 @@ export default function ChatterHistoryOverlay({
     let mounted = true;
     setLoading(true);
 
-    getUserHistory(author, channel, 24, platform)
+    getUserHistory(author, channel, 48, platform)
       .then((data) => {
         if (mounted) {
           setHistory(data);
@@ -325,45 +350,56 @@ export default function ChatterHistoryOverlay({
             No messages captured in this session.
           </div>
         ) : (
-          history.map((msg, idx) => (
-            <div
-              key={msg.id}
-              className={`history-item ${idx % 2 !== 0 ? "history-item-alt" : ""} ${msg.isDeleted ? "history-item-deleted" : ""}`}
-            >
-              <div className="history-item-content">
-                <span className="history-item-timestamp">
-                  {msg.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <div className="history-item-text-container">
-                  {(msg.badgeDetails || msg.badges) && (
-                    <div className="history-item-badges">
-                      <MessageBadges
-                        badgeDetails={msg.badgeDetails}
-                        badges={msg.badges}
+          history.map((msg, idx) => {
+            const prev = idx > 0 ? history[idx - 1] : null;
+            const showDay =
+              !prev || !isSameDay(prev.timestamp, msg.timestamp);
+            return (
+              <React.Fragment key={msg.id}>
+                {showDay && (
+                  <div className="history-day-divider">
+                    <span>{formatDayLabel(msg.timestamp)}</span>
+                  </div>
+                )}
+                <div
+                  className={`history-item ${idx % 2 !== 0 ? "history-item-alt" : ""} ${msg.isDeleted ? "history-item-deleted" : ""}`}
+                >
+                  <div className="history-item-content">
+                    <span className="history-item-timestamp">
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <div className="history-item-text-container">
+                      {(msg.badgeDetails || msg.badges) && (
+                        <div className="history-item-badges">
+                          <MessageBadges
+                            badgeDetails={msg.badgeDetails}
+                            badges={msg.badges}
+                          />
+                        </div>
+                      )}
+                      <div
+                        className={`history-item-text ${msg.isDeleted ? "deleted" : ""}`}
+                        dangerouslySetInnerHTML={{
+                          __html: parseMessageWithEmotes(msg.content, msg.emotes, {
+                            gigantified: msg.isGigantifiedEmote,
+                          }),
+                        }}
                       />
                     </div>
-                  )}
-                  <div
-                    className={`history-item-text ${msg.isDeleted ? "deleted" : ""}`}
-                    dangerouslySetInnerHTML={{
-                      __html: parseMessageWithEmotes(msg.content, msg.emotes, {
-                        gigantified: msg.isGigantifiedEmote,
-                      }),
-                    }}
-                  />
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
+              </React.Fragment>
+            );
+          })
         )}
       </div>
 
       {/* Footer */}
       <div className="history-footer">
-        <span>Session logs (24h)</span>
+        <span>Session logs (48h)</span>
         <span>{history.length} messages</span>
       </div>
     </div>
