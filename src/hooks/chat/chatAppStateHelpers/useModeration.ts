@@ -272,7 +272,7 @@ export function useModeration({
       ) {
         try {
           const isMod = await checkUserModStatus(
-            twitchSession.userId,
+            twitchSession.accessToken,
             import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
             selectedTwitchChannel,
             twitchSession.userId,
@@ -290,7 +290,7 @@ export function useModeration({
     return () => {
       cancelled = true;
     };
-  }, [twitchSession?.userId, selectedTwitchChannel]);
+  }, [twitchSession?.userId, twitchSession?.accessToken, selectedTwitchChannel]);
 
   const handleOwnBadgesLoaded = useCallback(
     (
