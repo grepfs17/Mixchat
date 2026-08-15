@@ -49,6 +49,10 @@ interface TwitchPlayer {
   play(): void;
   pause(): void;
   getPaused(): boolean;
+  setMuted(muted: boolean): void;
+  getMuted(): boolean;
+  setVolume(volume: number): void;
+  getVolume(): number;
   addEventListener(event: string, callback: () => void): void;
   removeEventListener(event: string, callback: () => void): void;
 }
@@ -107,6 +111,39 @@ function TwitchJSEmbed({
     let cancelled = false;
     let embedInstance: TwitchEmbed | null = null;
 
+    // Browsers (Brave/Chromium 145+) and Twitch's own player both pause a
+    // *muted* stream when the tab loses visibility or the player is occluded
+    // (e.g. by the settings/emote overlay). The embed autoplays muted because
+    // unmuted autoplay is blocked, so the first tab-out / overlay-open stops
+    // the stream. Unmute programmatically at a near-zero volume: the player is
+    // then "unmuted" (so it isn't paused on background/occlusion), audio stays
+    // effectively silent until the first user gesture, and the user can raise
+    // the volume if they want sound.
+    const ensureUnmuted = () => {
+      const player = playerRef.current;
+      if (!player) return;
+      try {
+        player.setMuted(false);
+        player.setVolume(0.05);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    // Re-assert on the first user gesture so a browser that blocked the
+    // programmatic unmute (autoplay policy) applies it with real activation.
+    let removeGestureListeners = () => {};
+    const onFirstGesture = () => {
+      ensureUnmuted();
+      removeGestureListeners();
+    };
+    document.addEventListener("pointerdown", onFirstGesture);
+    document.addEventListener("keydown", onFirstGesture);
+    removeGestureListeners = () => {
+      document.removeEventListener("pointerdown", onFirstGesture);
+      document.removeEventListener("keydown", onFirstGesture);
+    };
+
     const initPlayer = () => {
       if (cancelled || !containerRef.current || !window.Twitch?.Embed) return;
 
@@ -131,6 +168,7 @@ function TwitchJSEmbed({
         });
 
         playerRef.current = embedInstance.getPlayer();
+        ensureUnmuted();
       });
     };
 
@@ -150,7 +188,10 @@ function TwitchJSEmbed({
           initPlayer();
         }
       }, 50);
-      return () => clearInterval(poll);
+      return () => {
+        clearInterval(poll);
+        removeGestureListeners();
+      };
     }
 
     return () => {
@@ -163,6 +204,7 @@ function TwitchJSEmbed({
         }
         embedInstance = null;
       }
+      removeGestureListeners();
       playerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
