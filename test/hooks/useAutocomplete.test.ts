@@ -141,6 +141,20 @@ describe("useAutocomplete", () => {
       expect(result.current.isOpen).toBe(false);
     });
 
+    it("Tab without selection completes the top result", () => {
+      const opts = defaultOpts();
+      const { result } = renderHook(() => useAutocomplete(opts));
+      act(() => result.current.show(["a", "b"]));
+      act(() =>
+        result.current.handleKeyDown({
+          key: "Tab",
+          preventDefault: vi.fn(),
+        } as any),
+      );
+      expect(opts.onSelect).toHaveBeenCalledWith("a");
+      expect(result.current.isOpen).toBe(false);
+    });
+
     it("Escape calls onClose and closes", () => {
       const opts = defaultOpts();
       const { result } = renderHook(() => useAutocomplete(opts));

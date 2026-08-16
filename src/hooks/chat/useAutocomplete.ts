@@ -71,6 +71,11 @@ export function useAutocomplete<T>({
             e.preventDefault();
             onSelect(results[selectedIndex]);
             hide();
+          } else if (e.key === "Tab" && results[0] !== undefined) {
+            // Tab with no explicit selection completes the top suggestion.
+            e.preventDefault();
+            onSelect(results[0]);
+            hide();
           } else if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             hide();
