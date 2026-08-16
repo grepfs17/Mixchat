@@ -133,6 +133,16 @@ describe("EmbedConfigModal Help section", () => {
     expect(handler).toHaveBeenCalled();
     window.removeEventListener("mixchat:show-mobile-hint", handler);
   });
+
+  it("dispatches mixchat:show-firefox-notice when Show Firefox twitch player fix is clicked", () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: "Help" }));
+    const handler = vi.fn();
+    window.addEventListener("mixchat:show-firefox-notice", handler);
+    fireEvent.click(screen.getByText("Show Firefox twitch player fix"));
+    expect(handler).toHaveBeenCalled();
+    window.removeEventListener("mixchat:show-firefox-notice", handler);
+  });
 });
 
 describe("MobileTouchHintModal event trigger", () => {

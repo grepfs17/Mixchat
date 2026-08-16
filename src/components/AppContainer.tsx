@@ -34,6 +34,7 @@ import StreamTransitionOverlay from "./StreamTransitionOverlay";
 import LandingPage from "./LandingPage";
 import OnboardingWizard from "./OnboardingWizard";
 import FavoriteChannelsModal from "./FavoriteChannelsModal";
+import FirefoxTrackingProtectionModal from "./FirefoxTrackingProtectionModal";
 
 const ONBOARDING_COMPLETE_KEY = "mixchat_onboarding_complete";
 
@@ -825,6 +826,9 @@ export default function AppContainer() {
           onComplete={handleOnboardingComplete}
         />
       )}
+
+      {/* Firefox Enhanced Tracking Protection notice — only when logged in */}
+      {sessions.twitch && <FirefoxTrackingProtectionModal />}
     </div>
     </SettingsProvider>
   );

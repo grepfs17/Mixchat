@@ -41,6 +41,7 @@ mixchat/
 │   │   ├── StreamGrid.tsx   # Grid of live channels
 │   │   ├── LandingPage.tsx  # Unauthenticated landing
 │   │   ├── OnboardingWizard.tsx  # First-run setup wizard
+│   │   ├── FirefoxTrackingProtectionModal.tsx  # Firefox ETP notice popup (home + global)
 │   │   └── ...              # Misc components (WatchlistManager, YouTubeLinker, etc.)
 │   ├── hooks/               # Custom React hooks
 │   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor)

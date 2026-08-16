@@ -126,3 +126,4 @@ describe("StreamEmbed — effect cleanup", () => {
     expect(errorCalls).toHaveLength(0);
   });
 });
+

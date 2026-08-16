@@ -33,6 +33,17 @@ function HelpWizardsSetting() {
         >
           <FaPlay size={12} /> Show mobile controls wizard
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("mixchat:show-firefox-notice"),
+            )
+          }
+          className="embed-config-backup-btn"
+        >
+          <FaPlay size={12} /> Show Firefox twitch player fix
+        </button>
       </div>
     </div>
   );
