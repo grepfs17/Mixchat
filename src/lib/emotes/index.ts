@@ -38,6 +38,9 @@ export {
   isEmoteChannelDisabled,
   toggleDisableEmote,
   toggleDisableEmoteChannel,
+  getEmoteAliases,
+  addEmoteAlias,
+  removeEmoteAlias,
   getAllEmotesOrganized,
 } from "./search";
 

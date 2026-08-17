@@ -6,6 +6,9 @@ import {
   getDisabledEmotes,
   getDisabledEmoteChannels,
   toggleDisableEmoteChannel,
+  getEmoteAliases,
+  addEmoteAlias,
+  removeEmoteAlias,
 } from "../lib/emotes";
 
 interface EmoteMenuProps {
@@ -37,6 +40,9 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [disabledChannels, setDisabledChannels] = useState<Set<string>>(
     new Set(),
   );
+  const [aliases, setAliases] = useState<Record<string, string>>({});
+  const [aliasTarget, setAliasTarget] = useState<string | null>(null);
+  const [aliasInput, setAliasInput] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevIsOpenRef = useRef(false);
@@ -80,6 +86,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       setActiveTwitchChannel(TWITCH_GLOBAL_KEY);
       setDisabledSet(getDisabledEmotes());
       setDisabledChannels(getDisabledEmoteChannels());
+      setAliases(getEmoteAliases());
       if (searchInputRef.current) searchInputRef.current.focus();
     }
     prevIsOpenRef.current = isOpen;
@@ -89,6 +96,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
     const handler = () => {
       setDisabledSet(getDisabledEmotes());
       setDisabledChannels(getDisabledEmoteChannels());
+      setAliases(getEmoteAliases());
     };
     window.addEventListener("emotes-reloaded", handler);
     return () => window.removeEventListener("emotes-reloaded", handler);
@@ -118,6 +126,21 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
 
   const isSearching = searchQuery.trim().length > 0;
 
+  const submitAlias = () => {
+    if (!aliasTarget) return;
+    const alias = aliasInput.trim();
+    if (!alias) return;
+    addEmoteAlias(aliasTarget, alias);
+    setAliases(getEmoteAliases());
+    setAliasInput("");
+  };
+
+  const handleRemoveAlias = () => {
+    if (!aliasTarget) return;
+    removeEmoteAlias(aliasTarget);
+    setAliases(getEmoteAliases());
+  };
+
   const renderEmoteItem = (
     emote: { name: string; url: string },
     channelDisabled = false,
@@ -129,17 +152,19 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
         className={`emote-item ${isDisabled ? "emote-disabled" : ""}`}
       >
         {!channelDisabled && (
-          <button type="button"
-            className="emote-disable-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleDisableEmote(emote.name);
-              setDisabledSet(getDisabledEmotes());
-            }}
-            title={isDisabled ? "Enable emote" : "Disable emote"}
-          >
-            {isDisabled ? "Enable" : "Disable"}
-          </button>
+          <div className="emote-item-actions emote-item-actions--top">
+            <button type="button"
+              className="emote-disable-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDisableEmote(emote.name);
+                setDisabledSet(getDisabledEmotes());
+              }}
+              title={isDisabled ? "Enable emote" : "Disable emote"}
+            >
+              {isDisabled ? "Enable" : "Disable"}
+            </button>
+          </div>
         )}
         <button
           type="button"
@@ -162,6 +187,66 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           <img src={emote.url} alt={emote.name} className="emote-image" />
           <span className="emote-name">{emote.name}</span>
         </button>
+        {aliases[emote.name] && aliasTarget !== emote.name && (
+          <div
+            className="emote-alias-display"
+            title={`Alias: ${aliases[emote.name]}`}
+          >
+            {aliases[emote.name]}
+          </div>
+        )}
+        {aliasTarget === emote.name && (
+          <div className="emote-alias-editor">
+            <div className="emote-alias-input-row">
+              <input
+                className="emote-alias-input"
+                value={aliasInput}
+                onChange={(e) => setAliasInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitAlias();
+                  }
+                }}
+                placeholder={aliases[emote.name] ? "Replace alias" : "Add alias"}
+                autoFocus
+              />
+              <button type="button"
+                className="emote-alias-add-btn"
+                onClick={submitAlias}
+                title={aliases[emote.name] ? "Replace alias" : "Add alias"}
+              >
+                {aliases[emote.name] ? "Save" : "Add"}
+              </button>
+            </div>
+            {aliases[emote.name] && (
+              <div className="emote-alias-list">
+                <span className="emote-alias-chip">
+                  {aliases[emote.name]}
+                  <button type="button"
+                    onClick={handleRemoveAlias}
+                    title={`Remove alias "${aliases[emote.name]}"`}
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="emote-item-actions emote-item-actions--bottom">
+          <button type="button"
+            className="emote-alias-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setAliasTarget(aliasTarget === emote.name ? null : emote.name);
+              setAliasInput("");
+            }}
+            title="Manage aliases"
+          >
+            Alias
+          </button>
+        </div>
       </div>
     );
   };

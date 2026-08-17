@@ -9,6 +9,9 @@ import {
   getDisabledEmoteChannels,
   isEmoteChannelDisabled,
   toggleDisableEmoteChannel,
+  getEmoteAliases,
+  addEmoteAlias,
+  removeEmoteAlias,
   tokenizeThirdPartyEmotesForYoutube,
 } from "../../src/lib/emotes";
 import { renderUnicodeEmojis } from "../../src/lib/emotes/utils";
@@ -494,6 +497,44 @@ describe("emotes lib", () => {
       expect(
         searchEmotes("TestEmote").some((r) => r.name === "TestEmote"),
       ).toBe(false);
+    });
+  });
+
+  describe("emote aliases", () => {
+    beforeEach(() => {
+      setEmotes7tv({ Cool: "https://cdn.7tv.app/emote/cool/1x.webp" });
+      setEmotesBttv({});
+      setEmotesFfz({});
+    });
+
+    it("adds, replaces, and removes an alias", () => {
+      expect(getEmoteAliases()).toEqual({});
+      addEmoteAlias("Cool", "CoolPic");
+      expect(getEmoteAliases()).toEqual({ Cool: "CoolPic" });
+      addEmoteAlias("Cool", "Another");
+      expect(getEmoteAliases()).toEqual({ Cool: "Another" });
+      removeEmoteAlias("Cool");
+      expect(getEmoteAliases()).toEqual({});
+    });
+
+    it("ignores empty aliases and no-ops on the same alias", () => {
+      addEmoteAlias("Cool", "   ");
+      expect(getEmoteAliases()).toEqual({});
+      addEmoteAlias("Cool", "CoolPic");
+      addEmoteAlias("Cool", "CoolPic");
+      expect(getEmoteAliases()).toEqual({ Cool: "CoolPic" });
+    });
+
+    it("searchEmotes matches an emote by its alias", () => {
+      addEmoteAlias("Cool", "CoolPic");
+      expect(searchEmotes("CoolPic").some((r) => r.name === "Cool")).toBe(
+        true,
+      );
+    });
+
+    it("searchEmotes still matches the canonical name", () => {
+      addEmoteAlias("Cool", "CoolPic");
+      expect(searchEmotes("Cool").some((r) => r.name === "Cool")).toBe(true);
     });
   });
 

@@ -20,10 +20,16 @@ export function searchEmotes(
 
   const results: Array<{ name: string; url: string; source: string }> = [];
   const lowerQuery = query.toLowerCase();
+  const aliases = getEmoteAliases();
+  const matchesQuery = (name: string): boolean => {
+    if (name.toLowerCase().includes(lowerQuery)) return true;
+    const alias = aliases[name];
+    return Boolean(alias?.toLowerCase().includes(lowerQuery));
+  };
 
   // Search Twitch global emotes
   Object.entries(emotesTwitchGlobal).forEach(([name, url]) => {
-    if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+    if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "Twitch" });
     }
   });
@@ -34,7 +40,7 @@ export function searchEmotes(
   emotesTwitchByChannel.forEach((group) => {
     if (isEmoteChannelDisabled(group.channelId)) return;
     Object.entries(group.emotes).forEach(([name, url]) => {
-      if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+      if (matchesQuery(name) && !isEmoteDisabled(name)) {
         results.push({ name, url, source: "Twitch" });
       }
     });
@@ -42,21 +48,21 @@ export function searchEmotes(
 
   // Search 7TV emotes
   Object.entries(emotes7tv).forEach(([name, url]) => {
-    if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+    if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url: getEmoteUrl(url), source: "7TV" });
     }
   });
 
   // Search BTTV emotes
   Object.entries(emotesBttv).forEach(([name, url]) => {
-    if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+    if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "BTTV" });
     }
   });
 
   // Search FFZ emotes
   Object.entries(emotesFfz).forEach(([name, url]) => {
-    if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
+    if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "FFZ" });
     }
   });
@@ -151,6 +157,67 @@ export function toggleDisableEmoteChannel(channelId: string): void {
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to toggle emote channel disabled state", e);
+  }
+}
+
+/**
+ * Emote aliases (stored in localStorage as `{ emoteName: alias }`).
+ * Each emote has at most one alias; adding a new alias replaces the old one.
+ * The alias lets an emote surface in autocomplete when the user types the
+ * alias instead of the emote's canonical name.
+ */
+export const EMOTE_ALIASES_KEY = "emote_aliases:v1";
+
+export function getEmoteAliases(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(EMOTE_ALIASES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+    const out: Record<string, string> = {};
+    for (const [name, value] of Object.entries(parsed)) {
+      if (typeof value === "string") {
+        out[name] = value;
+      } else if (Array.isArray(value)) {
+        // Legacy shape (multiple aliases per emote): keep only the first.
+        const first = value.find((v): v is string => typeof v === "string");
+        if (first) out[name] = first;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function addEmoteAlias(name: string, alias: string): void {
+  try {
+    const trimmed = alias.trim();
+    if (!trimmed) return;
+    const aliases = getEmoteAliases();
+    if (aliases[name] === trimmed) return;
+    aliases[name] = trimmed;
+    localStorage.setItem(EMOTE_ALIASES_KEY, JSON.stringify(aliases));
+
+    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    notifyEmotesReloaded();
+  } catch (e) {
+    console.warn("Failed to add emote alias", e);
+  }
+}
+
+export function removeEmoteAlias(name: string): void {
+  try {
+    const aliases = getEmoteAliases();
+    delete aliases[name];
+    localStorage.setItem(EMOTE_ALIASES_KEY, JSON.stringify(aliases));
+
+    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    notifyEmotesReloaded();
+  } catch (e) {
+    console.warn("Failed to remove emote alias", e);
   }
 }
 

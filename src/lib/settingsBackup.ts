@@ -42,6 +42,7 @@ export const SETTINGS_KEYS = [
   "mixchat_auto_fold_sidebar",
   "disabled_emotes_v1",
   "disabled_emote_channels:v1",
+  "emote_aliases:v1",
   "mixchat_giveaway_history:v1",
   "mixchat_song_queue_past_playlists:v1",
   "mixchat_notified_streamers:v1",
