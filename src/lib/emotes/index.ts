@@ -34,7 +34,10 @@ export type { YoutubeEmoteToken } from "./parser";
 export {
   searchEmotes,
   getDisabledEmotes,
+  getDisabledEmoteChannels,
+  isEmoteChannelDisabled,
   toggleDisableEmote,
+  toggleDisableEmoteChannel,
   getAllEmotesOrganized,
 } from "./search";
 

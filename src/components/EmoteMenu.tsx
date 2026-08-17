@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { FaSearch } from "react-icons/fa";
 import type { EmotesBySource } from "../lib/emotes";
-import { toggleDisableEmote, getDisabledEmotes } from "../lib/emotes";
+import {
+  toggleDisableEmote,
+  getDisabledEmotes,
+  getDisabledEmoteChannels,
+  toggleDisableEmoteChannel,
+} from "../lib/emotes";
 
 interface EmoteMenuProps {
   emotes: EmotesBySource;
@@ -29,6 +34,9 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [activeTwitchChannel, setActiveTwitchChannel] =
     useState<string>(TWITCH_GLOBAL_KEY);
   const [disabledSet, setDisabledSet] = useState<Set<string>>(new Set());
+  const [disabledChannels, setDisabledChannels] = useState<Set<string>>(
+    new Set(),
+  );
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const prevIsOpenRef = useRef(false);
@@ -71,13 +79,17 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
       setActiveTab("twitch");
       setActiveTwitchChannel(TWITCH_GLOBAL_KEY);
       setDisabledSet(getDisabledEmotes());
+      setDisabledChannels(getDisabledEmoteChannels());
       if (searchInputRef.current) searchInputRef.current.focus();
     }
     prevIsOpenRef.current = isOpen;
   }, [isOpen]);
 
   useEffect(() => {
-    const handler = () => setDisabledSet(getDisabledEmotes());
+    const handler = () => {
+      setDisabledSet(getDisabledEmotes());
+      setDisabledChannels(getDisabledEmoteChannels());
+    };
     window.addEventListener("emotes-reloaded", handler);
     return () => window.removeEventListener("emotes-reloaded", handler);
   }, []);
@@ -106,24 +118,29 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
 
   const isSearching = searchQuery.trim().length > 0;
 
-  const renderEmoteItem = (emote: { name: string; url: string }) => {
-    const isDisabled = disabledSet.has(emote.name);
+  const renderEmoteItem = (
+    emote: { name: string; url: string },
+    channelDisabled = false,
+  ) => {
+    const isDisabled = channelDisabled || disabledSet.has(emote.name);
     return (
       <div
         key={emote.name}
         className={`emote-item ${isDisabled ? "emote-disabled" : ""}`}
       >
-        <button type="button"
-          className="emote-disable-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleDisableEmote(emote.name);
-            setDisabledSet(getDisabledEmotes());
-          }}
-          title={isDisabled ? "Enable emote" : "Disable emote"}
-        >
-          {isDisabled ? "Enable" : "Disable"}
-        </button>
+        {!channelDisabled && (
+          <button type="button"
+            className="emote-disable-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleDisableEmote(emote.name);
+              setDisabledSet(getDisabledEmotes());
+            }}
+            title={isDisabled ? "Enable emote" : "Disable emote"}
+          >
+            {isDisabled ? "Enable" : "Disable"}
+          </button>
+        )}
         <button
           type="button"
           className="emote-select-btn"
@@ -206,6 +223,10 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           (ch) => ch.channelId === activeTwitchChannel,
         )?.channelName ?? "");
 
+  const isCurrentChannelGlobal = activeTwitchChannel === TWITCH_GLOBAL_KEY;
+  const currentChannelDisabled =
+    !isCurrentChannelGlobal && disabledChannels.has(activeTwitchChannel);
+
   const twitchPanel = (
     <div className="emote-tab-panel emote-tab-panel--twitch">
       {twitchSidebar}
@@ -219,7 +240,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
                   Global ({filteredEmotes.twitchGlobal.length})
                 </div>
                 <div className="emote-grid">
-                  {filteredEmotes.twitchGlobal.map(renderEmoteItem)}
+                  {filteredEmotes.twitchGlobal.map((e) => renderEmoteItem(e))}
                 </div>
               </div>
             )}
@@ -231,7 +252,9 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
                     {ch.channelName} ({ch.emotes.length})
                   </div>
                   <div className="emote-grid">
-                    {ch.emotes.map(renderEmoteItem)}
+                    {ch.emotes.map((e) =>
+                      renderEmoteItem(e, disabledChannels.has(ch.channelId)),
+                    )}
                   </div>
                 </div>,
               );
@@ -256,10 +279,28 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
               <span className="emote-source-count">
                 ({currentTwitchEmotes.length})
               </span>
+              {!isCurrentChannelGlobal && (
+                <button type="button"
+                  className="emote-channel-disable-btn"
+                  onClick={() => {
+                    toggleDisableEmoteChannel(activeTwitchChannel);
+                    setDisabledChannels(getDisabledEmoteChannels());
+                  }}
+                  title={
+                    currentChannelDisabled
+                      ? "Enable all emotes from this channel"
+                      : "Disable all emotes from this channel"
+                  }
+                >
+                  {currentChannelDisabled ? "Enable channel" : "Disable channel"}
+                </button>
+              )}
             </div>
             {currentTwitchEmotes.length > 0 ? (
               <div className="emote-grid">
-                {currentTwitchEmotes.map(renderEmoteItem)}
+                {currentTwitchEmotes.map((e) =>
+                  renderEmoteItem(e, currentChannelDisabled),
+                )}
               </div>
             ) : (
               <div className="emote-no-results">
@@ -291,7 +332,7 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           </div>
           {sourceEmotes.length > 0 ? (
             <div className="emote-grid">
-              {sourceEmotes.map(renderEmoteItem)}
+              {sourceEmotes.map((e) => renderEmoteItem(e))}
             </div>
           ) : (
             <div className="emote-no-results">

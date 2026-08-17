@@ -28,8 +28,11 @@ export function searchEmotes(
     }
   });
 
-  // Search user's subscription emotes (only emotes they can actually use)
+  // Search user's subscription emotes (only emotes they can actually use).
+  // Channels disabled in bulk are skipped entirely, matching the individual
+  // per-emote disable behaviour above.
   emotesTwitchByChannel.forEach((group) => {
+    if (isEmoteChannelDisabled(group.channelId)) return;
     Object.entries(group.emotes).forEach(([name, url]) => {
       if (name.toLowerCase().includes(lowerQuery) && !isEmoteDisabled(name)) {
         results.push({ name, url, source: "Twitch" });
@@ -83,6 +86,13 @@ export function searchEmotes(
  */
 export const DISABLED_EMOTES_KEY = "disabled_emotes_v1";
 
+/**
+ * Twitch channels disabled as a whole (stored as array of channel IDs).
+ * Separate from `DISABLED_EMOTES_KEY` so disabling a channel survives new
+ * emotes being added to it and never pollutes the per-emote name list.
+ */
+export const DISABLED_EMOTE_CHANNELS_KEY = "disabled_emote_channels:v1";
+
 export function getDisabledEmotes(): Set<string> {
   try {
     const raw = localStorage.getItem(DISABLED_EMOTES_KEY);
@@ -94,8 +104,23 @@ export function getDisabledEmotes(): Set<string> {
   }
 }
 
+export function getDisabledEmoteChannels(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISABLED_EMOTE_CHANNELS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as string[];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
 function isEmoteDisabled(name: string): boolean {
   return getDisabledEmotes().has(name);
+}
+
+export function isEmoteChannelDisabled(channelId: string): boolean {
+  return getDisabledEmoteChannels().has(channelId);
 }
 
 export function toggleDisableEmote(name: string): void {
@@ -109,6 +134,23 @@ export function toggleDisableEmote(name: string): void {
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to toggle emote disabled state", e);
+  }
+}
+
+export function toggleDisableEmoteChannel(channelId: string): void {
+  try {
+    const set = getDisabledEmoteChannels();
+    if (set.has(channelId)) set.delete(channelId);
+    else set.add(channelId);
+    localStorage.setItem(
+      DISABLED_EMOTE_CHANNELS_KEY,
+      JSON.stringify(Array.from(set)),
+    );
+
+    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    notifyEmotesReloaded();
+  } catch (e) {
+    console.warn("Failed to toggle emote channel disabled state", e);
   }
 }
 

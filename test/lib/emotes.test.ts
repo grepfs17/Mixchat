@@ -2,12 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   initializeEmotes,
   parseMessageWithEmotes,
+  searchEmotes,
   setEmotes7tv,
   setEmotesBttv,
   setEmotesFfz,
+  getDisabledEmoteChannels,
+  isEmoteChannelDisabled,
+  toggleDisableEmoteChannel,
   tokenizeThirdPartyEmotesForYoutube,
 } from "../../src/lib/emotes";
 import { renderUnicodeEmojis } from "../../src/lib/emotes/utils";
+import { setEmotesTwitchByChannel } from "../../src/lib/emotes/state";
 
 describe("emotes lib", () => {
   beforeEach(() => {
@@ -455,6 +460,40 @@ describe("emotes lib", () => {
       expect(result).not.toContain("<script>");
       expect(result).toContain('&lt;script&gt;');
       expect(result).toContain('<img class="emoji"');
+    });
+  });
+
+  describe("disabled emote channels", () => {
+    beforeEach(() => {
+      setEmotesTwitchByChannel([
+        {
+          channelId: "123",
+          channelName: "testchannel",
+          emotes: {
+            TestEmote:
+              "https://static-cdn.jtvnw.net/emoticons/v2/1/default/dark/2.0",
+          },
+        },
+      ]);
+    });
+
+    it("toggles a channel's disabled state and persists it", () => {
+      expect(isEmoteChannelDisabled("123")).toBe(false);
+      toggleDisableEmoteChannel("123");
+      expect(isEmoteChannelDisabled("123")).toBe(true);
+      expect(getDisabledEmoteChannels().has("123")).toBe(true);
+      toggleDisableEmoteChannel("123");
+      expect(isEmoteChannelDisabled("123")).toBe(false);
+    });
+
+    it("searchEmotes excludes emotes from a disabled channel", () => {
+      expect(
+        searchEmotes("TestEmote").some((r) => r.name === "TestEmote"),
+      ).toBe(true);
+      toggleDisableEmoteChannel("123");
+      expect(
+        searchEmotes("TestEmote").some((r) => r.name === "TestEmote"),
+      ).toBe(false);
     });
   });
 

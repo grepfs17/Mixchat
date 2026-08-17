@@ -297,6 +297,25 @@
     font-size: 0.85rem;
 }
 
+.emote-channel-disable-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-secondary);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.emote-channel-disable-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-text-primary);
+}
+
 .emote-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));

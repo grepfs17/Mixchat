@@ -28,7 +28,7 @@ describe("FirefoxTrackingProtectionModal", () => {
     render(<FirefoxTrackingProtectionModal />);
 
     expect(
-      await screen.findByText(/Firefox: fix Twitch login/i),
+      await screen.findByText(/Firefox: fix Twitch Player login/i),
     ).toBeDefined();
   });
 
@@ -39,7 +39,7 @@ describe("FirefoxTrackingProtectionModal", () => {
 
     render(<FirefoxTrackingProtectionModal />);
 
-    expect(screen.queryByText(/Firefox: fix Twitch login/i)).toBeNull();
+    expect(screen.queryByText(/Firefox: fix Twitch Player login/i)).toBeNull();
   });
 
   it("does not show the popup when it was previously dismissed", () => {
@@ -47,7 +47,7 @@ describe("FirefoxTrackingProtectionModal", () => {
 
     render(<FirefoxTrackingProtectionModal />);
 
-    expect(screen.queryByText(/Firefox: fix Twitch login/i)).toBeNull();
+    expect(screen.queryByText(/Firefox: fix Twitch Player login/i)).toBeNull();
   });
 
   it("persists the dismissal and hides the popup when 'Got it!' is clicked", async () => {
@@ -56,7 +56,7 @@ describe("FirefoxTrackingProtectionModal", () => {
     const button = await screen.findByRole("button", { name: "Got it!" });
     fireEvent.click(button);
 
-    expect(screen.queryByText(/Firefox: fix Twitch login/i)).toBeNull();
+    expect(screen.queryByText(/Firefox: fix Twitch Player login/i)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEY)).toBe("1");
   });
 
@@ -68,12 +68,12 @@ describe("FirefoxTrackingProtectionModal", () => {
 
     render(<FirefoxTrackingProtectionModal />);
 
-    expect(screen.queryByText(/Firefox: fix Twitch login/i)).toBeNull();
+    expect(screen.queryByText(/Firefox: fix Twitch Player login/i)).toBeNull();
 
     act(() => {
       window.dispatchEvent(new CustomEvent("mixchat:show-firefox-notice"));
     });
 
-    expect(screen.getByText(/Firefox: fix Twitch login/i)).toBeDefined();
+    expect(screen.getByText(/Firefox: fix Twitch Player login/i)).toBeDefined();
   });
 });
