@@ -235,6 +235,78 @@ export const POST: APIRoute = async ({ request, url, cookies }) => {
   }
 };
 
+export const PUT: APIRoute = async ({ request, url, cookies }) => {
+  const clientAddress = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
+  if (!checkRateLimit(`${clientAddress}:twitch-proxy-put`, 60, 60_000)) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "60" },
+    });
+  }
+
+  try {
+    const path = url.searchParams.get("path");
+    if (!path) {
+      return new Response(
+        JSON.stringify({ error: "path parameter required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    if (!isPathAllowed(path)) {
+      return new Response(
+        JSON.stringify({ error: `Path not permitted: ${path}` }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const accessToken = cookies.get("twitch_token")?.value;
+    if (!accessToken)
+      return new Response(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+    if (!clientId)
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+
+    const forwardParams = new URLSearchParams(url.searchParams);
+    forwardParams.delete("path");
+    const targetUrl = `${TWITCH_API_BASE}${path}${forwardParams.size > 0 ? `?${forwardParams}` : ""}`;
+
+    const body = await request.text().catch(() => "");
+    let parsedBody: any;
+    if (body) {
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+    return await forwardRequest(
+      "PUT",
+      targetUrl,
+      accessToken,
+      clientId,
+      parsedBody,
+    );
+  } catch (error) {
+    console.error("Twitch proxy PUT error:", error);
+    return new Response(JSON.stringify({ error: "Proxy request failed" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};
+
 export const DELETE: APIRoute = async ({ url, cookies, request }) => {
   const clientAddress = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || "unknown";
   if (!checkRateLimit(`${clientAddress}:twitch-proxy-delete`, 60, 60_000)) {

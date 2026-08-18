@@ -828,6 +828,30 @@ describe("Moderator Mode", () => {
       fireEvent.click(screen.getByTitle("Delete message"));
       expect(onDelete).toHaveBeenCalledWith("msg-1");
     });
+
+    it("calls onPinMessage from inline button", () => {
+      const onPin = vi.fn();
+      render(
+        withModeration(
+          <UnifiedChat
+            channelName="testchannel"
+            twitchMessages={[baseMessage]}
+            ytMessages={[]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onPinMessage: onPin,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+      fireEvent.click(screen.getByTitle("Pin message"));
+      expect(onPin).toHaveBeenCalledWith("msg-1");
+    });
   });
 
   describe("modActionsFirst placement (Twitch inline)", () => {
@@ -850,6 +874,7 @@ describe("Moderator Mode", () => {
             modModeActive: true,
             modActionsFirst,
             onDeleteMessage: vi.fn(),
+            onPinMessage: vi.fn(),
             onTimeoutUser: vi.fn(),
             onBanUser: vi.fn(),
             onWarnUser: vi.fn(),
@@ -912,7 +937,7 @@ describe("Moderator Mode", () => {
       expect(line.querySelectorAll(".message-actions")).toHaveLength(2);
       expect(
         line.querySelectorAll(".message-actions .action-button.mod-action"),
-      ).toHaveLength(4); // delete, timeout, ban, warn
+      ).toHaveLength(5); // delete, pin, timeout, ban, warn
     });
 
     it("does not render the inline divider when modActionsFirst is on (the message content already separates the strips)", () => {

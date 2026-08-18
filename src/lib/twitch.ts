@@ -339,7 +339,7 @@ export const pinTwitchMessage = async (
         resolvedBroadcasterId,
       )}&moderator_id=${encodeURIComponent(moderatorId)}`,
       {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({ message_id: messageId }),

@@ -55,6 +55,7 @@ export interface UseModerationReturn {
   ) => Promise<void>;
   handleUntimeout: (userName: string) => Promise<void>;
   handleWarn: (userName: string) => Promise<void>;
+  handlePinMessage: (messageId: string) => Promise<void>;
   handleCancelRaid: () => Promise<void>;
   handleOwnBadgesLoaded: (
     badges: Record<string, string>,
@@ -523,6 +524,34 @@ export function useModeration({
     [selectedTwitchChannel, twitchSession, notificationIdRef, setNotification],
   );
 
+  const handlePinMessage = useCallback(
+    async (messageId: string) => {
+      if (!twitchSession || !selectedTwitchChannel) return;
+      try {
+        await pinTwitchMessage(
+          selectedTwitchChannel,
+          twitchSession.userId,
+          messageId,
+        );
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Message pinned",
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err) {
+        console.error("Failed to pin message:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: "Failed to pin message",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession, notificationIdRef, setNotification],
+  );
+
   const handleCancelRaid = useCallback(async () => {
     if (!selectedTwitchChannel) return;
     try {
@@ -603,6 +632,7 @@ export function useModeration({
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handlePinMessage,
     handleCancelRaid,
     handleOwnBadgesLoaded,
     handleModCommand,

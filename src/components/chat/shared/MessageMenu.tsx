@@ -53,6 +53,7 @@ export default function MessageMenu({
     onTimeoutUser,
     onBanUser,
     onWarnUser,
+    onPinMessage,
     onDeleteYouTubeMessage,
     onTimeoutYouTubeUser,
     onBanYouTubeUser,
@@ -172,6 +173,14 @@ export default function MessageMenu({
         label: "Delete",
         onClick: () => {
           onDeleteMessage?.(chatMsg.id);
+          onClose();
+        },
+      });
+      items.push({
+        key: "pin",
+        label: "Pin message",
+        onClick: () => {
+          onPinMessage?.(chatMsg.id);
           onClose();
         },
       });

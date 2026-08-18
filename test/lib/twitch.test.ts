@@ -73,7 +73,7 @@ describe("twitch lib mocked HTTP tests", () => {
     expect(messages).toEqual([]);
   });
 
-  it("pinTwitchMessage posts the message id to the pin endpoint", async () => {
+  it("pinTwitchMessage puts the message id to the pin endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -85,7 +85,7 @@ describe("twitch lib mocked HTTP tests", () => {
     expect(url).toBe(
       "/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=123&moderator_id=456",
     );
-    expect(opts.method).toBe("POST");
+    expect(opts.method).toBe("PUT");
     expect(JSON.parse(opts.body)).toEqual({ message_id: "msg-1" });
   });
 });
