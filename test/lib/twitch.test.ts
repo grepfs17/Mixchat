@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getStreamStatuses, getRecentMessages } from "../../src/lib/twitch";
+import {
+  getStreamStatuses,
+  getRecentMessages,
+  pinTwitchMessage,
+} from "../../src/lib/twitch";
 
 describe("twitch lib mocked HTTP tests", () => {
   beforeEach(() => {
@@ -67,5 +71,21 @@ describe("twitch lib mocked HTTP tests", () => {
     );
     const messages = await getRecentMessages("channel");
     expect(messages).toEqual([]);
+  });
+
+  it("pinTwitchMessage posts the message id to the pin endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await pinTwitchMessage("123", "456", "msg-1");
+
+    expect(result).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=123&moderator_id=456",
+    );
+    expect(opts.method).toBe("POST");
+    expect(JSON.parse(opts.body)).toEqual({ message_id: "msg-1" });
   });
 });

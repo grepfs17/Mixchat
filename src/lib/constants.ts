@@ -22,6 +22,11 @@ export const MOD_COMMANDS = [
     usage: "/announce <message>",
   },
   {
+    name: "/pin",
+    description: "Send a message and pin it to chat",
+    usage: "/pin <message>",
+  },
+  {
     name: "/shoutout",
     description: "Promote another channel",
     usage: "/shoutout <username>",

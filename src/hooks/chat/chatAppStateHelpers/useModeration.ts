@@ -11,6 +11,8 @@ import {
   startRaid,
   sendAnnouncement,
   sendShoutout,
+  sendHelixMessage,
+  pinTwitchMessage,
 } from "../../../lib/twitch";
 import type {
   TwitchMessage,
@@ -165,6 +167,23 @@ async function executeModCommand(
     try {
       await sendAnnouncement(channelId, session.userId, text);
       notify(deps, "Announcement sent!", "success");
+      return { handled: true };
+    } catch (err) { return catchErr(err, action); }
+  }
+
+  if (action === "/pin") {
+    const text = parts.slice(1).join(" ");
+    if (!text) return { handled: false, error: "Usage: /pin <message>" };
+    try {
+      const messageId = await sendHelixMessage(channelId, session.userId, text);
+      if (!messageId) {
+        return {
+          handled: true,
+          error: "Message was sent but could not be pinned (no message ID returned)",
+        };
+      }
+      await pinTwitchMessage(channelId, session.userId, messageId);
+      notify(deps, "Message pinned!", "success");
       return { handled: true };
     } catch (err) { return catchErr(err, action); }
   }

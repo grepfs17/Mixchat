@@ -15,6 +15,7 @@ const ALLOWED_PATH_PREFIXES = [
   "/helix/chat/settings", // used to check show_first_message_highlights
   "/helix/chat/announcements", // send chat announcements
   "/helix/chat/shoutouts", // send shoutouts
+  "/helix/chat/pins", // pin chat messages
   "/helix/subscriptions", // check user subscription to a broadcaster
   "/helix/users", // used to resolve broadcaster IDs -> display names
   "/helix/channels/followers", // used to get follower count for own channel

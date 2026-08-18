@@ -323,6 +323,42 @@ export const sendAnnouncement = async (
 };
 
 /**
+ * Pin a chat message to the top of the broadcaster's chat room.
+ * Requires moderator:manage:chat_messages scope.
+ */
+export const pinTwitchMessage = async (
+  broadcasterId: string,
+  moderatorId: string,
+  messageId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ message_id: messageId }),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to pin message: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("pinTwitchMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Send a shoutout via Helix API.
  * Requires moderator:manage:shoutouts scope.
  */
