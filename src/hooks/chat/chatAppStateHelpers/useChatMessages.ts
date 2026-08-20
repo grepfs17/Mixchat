@@ -1,8 +1,33 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getRecentMessages } from "../../../lib/twitch";
 import { saveMessage, pruneMessages } from "../../../lib/chatHistoryStorage";
-import { MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
+import {
+  MAX_DISPLAYED_MESSAGES,
+  REDEMPTION_DEDUP_MS,
+} from "../../../lib/types";
 import type { TwitchMessage, PlatformSession } from "../../../lib/types";
+
+/**
+ * Cross-source dedup for channel point redemptions. Twitch delivers the
+ * same redemption over IRC (USERNOTICE `channel_points_reward` / PRIVMSG
+ * `custom-reward-id`), EventSub and PubSub; the first copy to arrive
+ * within the window wins. Returns `true` when the redemption is a
+ * duplicate that should be dropped.
+ */
+export function isDuplicateRedemption(
+  recent: Map<string, number>,
+  rewardId: string,
+  userId: string,
+): boolean {
+  const dedupKey = `${rewardId}-${userId}`;
+  const now = Date.now();
+  if (now - (recent.get(dedupKey) ?? 0) < REDEMPTION_DEDUP_MS) return true;
+  recent.set(dedupKey, now);
+  for (const [key, ts] of recent) {
+    if (now - ts > REDEMPTION_DEDUP_MS) recent.delete(key);
+  }
+  return false;
+}
 
 export interface UseChatMessagesOptions {
   selectedTwitchChannelName?: string;
@@ -101,6 +126,24 @@ export function useChatMessages({
         }
       }
 
+      // Dedup redemptions before touching state: the same redemption
+      // arrives from IRC AND PubSub (and EventSub on the broadcaster's
+      // own channel). Note this deliberately runs outside the setMessages
+      // updater — writing the ref inside a reducer would misbehave under
+      // React StrictMode's double-invocation.
+      if (
+        message.messageType === "redemption" &&
+        message.rewardId &&
+        message.userId &&
+        isDuplicateRedemption(
+          recentRedemptionsRef.current,
+          message.rewardId,
+          message.userId,
+        )
+      ) {
+        return;
+      }
+
       setMessages((prev) => {
         const existingIdx = prev.findIndex(
           (m) => m.id === message.id || m.id === `optimistic_${message.id}`,
@@ -194,19 +237,6 @@ export function useChatMessages({
             return copy.length > MAX_DISPLAYED_MESSAGES
               ? copy.slice(-MAX_DISPLAYED_MESSAGES)
               : copy;
-          }
-        }
-
-        if (
-          message.messageType === "redemption" &&
-          message.rewardId &&
-          message.userId &&
-          (!message.content || message.content.trim().length === 0)
-        ) {
-          const dedupKey = `${message.rewardId}-${message.userId}`;
-          const recentTime = recentRedemptionsRef.current.get(dedupKey);
-          if (recentTime && Math.abs(Date.now() - recentTime) < 5000) {
-            return prev;
           }
         }
 

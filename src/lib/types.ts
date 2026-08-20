@@ -2,6 +2,14 @@ export type Platform = "twitch" | "youtube";
 
 export const MAX_DISPLAYED_MESSAGES = 150;
 
+/**
+ * Window (ms) during which the same `rewardId + userId` redemption is
+ * considered a duplicate across sources. Twitch delivers every redemption
+ * over multiple channels (IRC USERNOTICE / PRIVMSG, EventSub, PubSub), so
+ * the first copy to arrive wins and later copies are dropped.
+ */
+export const REDEMPTION_DEDUP_MS = 10_000;
+
 const MESSAGE_TYPES = [
   "chat",
   "cheer",

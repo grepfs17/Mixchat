@@ -147,8 +147,9 @@ mixchat/
 ### 10. EventSub (Twitch)
 
 - `src/hooks/chat/useEventSub.ts` — manages EventSub subscription lifecycle.
-- Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, channel points, bits, automod.
+- Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, bits, automod.
 - Uses Twitch Helix EventSub API with subscription deduplication.
+- Channel point redemptions are **not** EventSub-based (the old broadcaster-only `channel.channel_points_custom_reward_redemption.add` subscription was removed). `eventSubHelpers/useChannelPointRedemptionsPubSub.ts` is the redemption feed: it listens on Twitch PubSub topic `community-points-channel-v1.<broadcasterId>` and works for any authenticated user on any channel. Duplicate redemptions across IRC / PubSub are collapsed by a shared `rewardId+userId` window in `useChatMessages` / `useLiveEvents`; its connection state is surfaced in the chat header status dropdown. Requires the PubSub websocket origin in the CSP (`wss://pubsub-edge.twitch.tv`).
 
 ## Project Conventions
 

@@ -279,7 +279,7 @@ export function useChatAppState({
     enabled: !!(twitchSession?.accessToken && selectedTwitchChannel),
   });
 
-  useLiveEvents({
+  const { redemptionPubSubStatus } = useLiveEvents({
     subscribe,
     channelId: selectedTwitchChannel,
     twitchSession,
@@ -744,6 +744,7 @@ export function useChatAppState({
     badgesReady,
     isModerator,
     subscriptionStatuses,
+    redemptionPubSubStatus,
     modModeActive,
     isYouTubeModerator,
     youtubeModModeActive,

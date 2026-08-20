@@ -7,7 +7,6 @@ vi.mock("../../../src/hooks/chat/useEventSub", () => ({
 
 import { useAutomodQueue } from "../../../src/hooks/chat/eventSubHelpers/useAutomodQueue";
 import { useRaidDetection } from "../../../src/hooks/chat/eventSubHelpers/useRaidDetection";
-import { useChannelPointRedemptions } from "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptions";
 import { useHypeTrainEventSub } from "../../../src/hooks/chat/eventSubHelpers/useHypeTrainEventSub";
 import { usePollEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePollEventSub";
 import { usePredictionEventSub } from "../../../src/hooks/chat/eventSubHelpers/usePredictionEventSub";
@@ -280,106 +279,6 @@ describe("useRaidDetection", () => {
       targetDisplayName: "TargetChannel",
       viewerCount: 200,
     });
-  });
-});
-
-describe("useChannelPointRedemptions", () => {
-  it("subscribes to channel.channel_points_custom_reward_redemption.add", async () => {
-    let subscribeCondition: Record<string, string> | undefined;
-
-    renderHook(() =>
-      useChannelPointRedemptions({
-        subscribe: (_type, _v, condition, _cb) => {
-          subscribeCondition = condition;
-          return vi.fn();
-        },
-        channelId: "somechannel",
-        enabled: true,
-        onRedemption: vi.fn(),
-      }),
-    );
-
-    await act(async () => {
-      await vi.waitFor(() => expect(subscribeCondition).toBeDefined());
-    });
-
-    expect(subscribeCondition).toEqual({ broadcaster_user_id: "12345" });
-  });
-
-  it("parses redemption and calls onRedemption", async () => {
-    let notificationHandler: ((event: unknown) => void) | undefined;
-
-    const onRedemption = vi.fn();
-    renderHook(() =>
-      useChannelPointRedemptions({
-        subscribe: (_type, _v, _c, onNotification) => {
-          notificationHandler = onNotification;
-          return vi.fn();
-        },
-        channelId: "12345",
-        enabled: true,
-        onRedemption,
-      }),
-    );
-
-    await act(async () => {
-      await vi.waitFor(() => expect(notificationHandler).toBeDefined());
-    });
-
-    act(() => {
-      notificationHandler!({
-        id: "red-1",
-        user_id: "u-1",
-        user_login: "user1",
-        user_name: "User1",
-        reward: { id: "rw-1", title: "Emote", cost: 500 },
-        user_input: "",
-        redeemed_at: "2024-01-01T00:00:00Z",
-      });
-    });
-
-    expect(onRedemption).toHaveBeenCalledTimes(1);
-    const msg = onRedemption.mock.calls[0][0];
-    expect(msg.id).toBe("redemption-red-1");
-    expect(msg.author).toBe("User1");
-    expect(msg.messageType).toBe("redemption");
-    expect(msg.rewardTitle).toBe("Emote");
-    expect(msg.rewardCost).toBe(500);
-  });
-
-  it("skips redemptions with user input", async () => {
-    let notificationHandler: ((event: unknown) => void) | undefined;
-
-    const onRedemption = vi.fn();
-    renderHook(() =>
-      useChannelPointRedemptions({
-        subscribe: (_type, _v, _c, onNotification) => {
-          notificationHandler = onNotification;
-          return vi.fn();
-        },
-        channelId: "12345",
-        enabled: true,
-        onRedemption,
-      }),
-    );
-
-    await act(async () => {
-      await vi.waitFor(() => expect(notificationHandler).toBeDefined());
-    });
-
-    act(() => {
-      notificationHandler!({
-        id: "red-2",
-        user_id: "u-2",
-        user_login: "user2",
-        user_name: "User2",
-        reward: { id: "rw-2", title: "Song Request", cost: 1000 },
-        user_input: "never gonna give you up",
-        redeemed_at: "2024-01-01T00:00:00Z",
-      });
-    });
-
-    expect(onRedemption).not.toHaveBeenCalled();
   });
 });
 

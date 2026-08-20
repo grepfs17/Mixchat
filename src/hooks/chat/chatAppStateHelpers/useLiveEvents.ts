@@ -1,7 +1,8 @@
 import { useCallback } from "react";
 import { useRaidDetection } from "../eventSubHelpers/useRaidDetection";
 import type { RaidOutEvent } from "../eventSubHelpers/useRaidDetection";
-import { useChannelPointRedemptions } from "../eventSubHelpers/useChannelPointRedemptions";
+import { useChannelPointRedemptionsPubSub } from "../eventSubHelpers/useChannelPointRedemptionsPubSub";
+import { isDuplicateRedemption } from "./useChatMessages";
 import { useHypeTrainEventSub } from "../eventSubHelpers/useHypeTrainEventSub";
 import { useAutomodQueue } from "../eventSubHelpers/useAutomodQueue";
 import type {
@@ -17,9 +18,9 @@ import type { PredictionState } from "../../../components/chat/shared/Prediction
 import { useBitsPowerUpEventSub } from "../eventSubHelpers/useBitsPowerUpEventSub";
 import type { CelebrationState } from "../../../components/chat/shared/CelebrationBanner";
 import type { HypeTrainState } from "../../../components/chat/shared/HypeTrainBanner";
-import type { TwitchMessage } from "../../../lib/types";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
 import { MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
+import type { TwitchMessage } from "../../../lib/types";
 import type { SubscribeFn } from "../useEventSub";
 
 interface UseLiveEventsOptions {
@@ -184,15 +185,19 @@ export function useLiveEvents({
   // --- Channel Point Redemptions ---
   const handleRedemptionEvent = useCallback(
     (message: TwitchMessage) => {
-      if (message.rewardId && message.userId) {
-        recentRedemptionsRef.current.set(
-          `${message.rewardId}-${message.userId}`,
-          Date.now(),
-        );
-        const now = Date.now();
-        for (const [key, ts] of recentRedemptionsRef.current) {
-          if (now - ts > 10000) recentRedemptionsRef.current.delete(key);
-        }
+      // The same redemption arrives from IRC (USERNOTICE / PRIVMSG),
+      // PubSub and — on the broadcaster's own channel — EventSub. Keep
+      // only the first copy within the dedup window.
+      if (
+        message.rewardId &&
+        message.userId &&
+        isDuplicateRedemption(
+          recentRedemptionsRef.current,
+          message.rewardId,
+          message.userId,
+        )
+      ) {
+        return;
       }
 
       setMessages((prev) => {
@@ -207,18 +212,16 @@ export function useLiveEvents({
     [selectedTwitchChannelName, setMessages, recentRedemptionsRef],
   );
 
-  const onRedemptionScopeError = useCallback(() => {
-    console.info(
-      "[useLiveEvents] EventSub redemption subscription rejected — this is expected when viewing another broadcaster's channel.",
-    );
-  }, []);
-
-  useChannelPointRedemptions({
-    subscribe,
+  // Channel point redemptions arrive via the PubSub feed
+  // (`community-points-channel-v1`), which works for ANY authenticated
+  // user watching ANY channel — unlike the broadcaster-only EventSub
+  // subscriptions topic. Deduped against IRC via the shared
+  // recentRedemptionsRef.
+  const redemptionPubSubStatus = useChannelPointRedemptionsPubSub({
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    accessToken: accessToken || "",
+    enabled: !!(accessToken && channelId),
     onRedemption: handleRedemptionEvent,
-    onScopeError: onRedemptionScopeError,
   });
 
   // --- Hype Train ---
@@ -519,4 +522,6 @@ export function useLiveEvents({
     onCelebration: handleCelebration,
     onScopeError: onCelebrationScopeError,
   });
+
+  return { redemptionPubSubStatus };
 }

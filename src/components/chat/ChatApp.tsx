@@ -120,6 +120,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     followerModeMinutes,
     ignoredUsers,
     subscriptionStatuses,
+    redemptionPubSubStatus,
   } = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
@@ -663,6 +664,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                 showModTools={showModTools}
                 onOpenModTools={() => openStreamerTools()}
                 subscriptionStatuses={subscriptionStatuses}
+                redemptionPubSubStatus={redemptionPubSubStatus}
                 isOnOwnChannel={isOnOwnChannel}
                 /* Override messages area with UnifiedChat */
                 unifiedChatSlot={
@@ -796,6 +798,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     showModTools={showModTools}
                     onOpenModTools={() => openStreamerTools()}
                     subscriptionStatuses={subscriptionStatuses}
+                    redemptionPubSubStatus={redemptionPubSubStatus}
                     isOnOwnChannel={isOnOwnChannel}
                   />
                 </div>

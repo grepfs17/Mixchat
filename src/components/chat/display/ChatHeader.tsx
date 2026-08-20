@@ -78,6 +78,7 @@ interface ChatHeaderProps {
   showModTools?: boolean;
   onOpenModTools?: () => void;
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
+  redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
 }
 
@@ -87,7 +88,6 @@ const FRIENDLY_NAMES: Record<string, string> = {
   "channel.raid": "Incoming Raid",
   "channel.raid:to_broadcaster": "Incoming Raid",
   "channel.raid:from_broadcaster": "Outgoing Raid",
-  "channel.channel_points_custom_reward_redemption.add": "Reward Redeemed",
   "channel.hype_train.begin": "Train Started",
   "channel.hype_train.progress": "Train Progress",
   "channel.hype_train.end": "Train Ended",
@@ -506,6 +506,21 @@ function StreamInfoBar({
   );
 }
 
+function renderSimpleStatusSection(
+  label: string,
+  status: SubscriptionStatus | "disconnected",
+) {
+  return (
+    <div className="eventsub-status-section">
+      <div className={`eventsub-status-row eventsub-status--${status}`}>
+        <span className="eventsub-status-dot" />
+        <span className="eventsub-status-label">{label}</span>
+        <span className="eventsub-status-value">{statusLabel(status)}</span>
+      </div>
+    </div>
+  );
+}
+
 function renderStatusSection(
   label: string,
   statuses: Map<string, SubscriptionStatus>,
@@ -573,6 +588,7 @@ export default function ChatHeader({
   showModTools = false,
   onOpenModTools,
   subscriptionStatuses,
+  redemptionPubSubStatus,
   isOnOwnChannel = false,
 }: ChatHeaderProps) {
   const {
@@ -623,7 +639,7 @@ export default function ChatHeader({
               type="button"
               className="status-badge-button"
               onClick={() => setStatusDropdownOpen((v) => !v)}
-              title="EventSub connection status"
+              title="Event connection status"
             >
                 {isStreamLive ? (
                   <span className="status-badge-live">
@@ -639,7 +655,7 @@ export default function ChatHeader({
               </button>
               {statusDropdownOpen && subscriptionStatuses && (
                 <div className="eventsub-status-dropdown">
-                  <div className="eventsub-status-header">EventSub Connections</div>
+                  <div className="eventsub-status-header">Event Connections</div>
                   {renderStatusSection("WebSocket", subscriptionStatuses, null)}
                   {renderStatusSection("Automod", subscriptionStatuses, [
                     "automod.message.hold",
@@ -651,9 +667,6 @@ export default function ChatHeader({
                   {renderStatusSection("Outgoing Raids", subscriptionStatuses, [
                     "channel.raid",
                   ], "from_broadcaster")}
-                  {renderStatusSection("Channel Points", subscriptionStatuses, [
-                    "channel.channel_points_custom_reward_redemption.add",
-                  ])}
                   {renderStatusSection("Hype Train", subscriptionStatuses, [
                     "channel.hype_train.begin",
                     "channel.hype_train.progress",
@@ -673,6 +686,11 @@ export default function ChatHeader({
                   {renderStatusSection("Bits", subscriptionStatuses, [
                     "channel.bits.use",
                   ])}
+                  {redemptionPubSubStatus !== undefined &&
+                    renderSimpleStatusSection(
+                      "Channel Points (PubSub)",
+                      redemptionPubSubStatus,
+                    )}
                 </div>
               )}
             </span>

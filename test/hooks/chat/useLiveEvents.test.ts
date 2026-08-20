@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RaidOutEvent } from "../../../src/hooks/chat/eventSubHelpers/useRaidDetection";
 import type { SubscribeFn } from "../../../src/hooks/chat/useEventSub";
+import type { TwitchMessage } from "../../../src/lib/types";
 
 // Track all useRaidDetection calls
 const raidDetectionCalls: Array<{
@@ -12,6 +13,18 @@ const raidDetectionCalls: Array<{
   onScopeError?: () => void;
 }> = [];
 
+// Track all useChannelPointRedemptionsPubSub calls
+const pubSubRedemptionCalls: Array<{
+  channelId: string;
+  accessToken: string;
+  enabled: boolean;
+  onRedemption: (message: TwitchMessage) => void;
+}> = [];
+
+// Value the mocked useChannelPointRedemptionsPubSub returns, so tests can
+// assert that useLiveEvents forwards the connection status.
+let pubSubStatusReturn: string = "disconnected";
+
 vi.mock("../../../src/hooks/chat/eventSubHelpers/useRaidDetection", () => ({
   useRaidDetection: vi.fn((opts: (typeof raidDetectionCalls)[0]) => {
     raidDetectionCalls.push(opts);
@@ -19,9 +32,12 @@ vi.mock("../../../src/hooks/chat/eventSubHelpers/useRaidDetection", () => ({
 }));
 
 vi.mock(
-  "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptions",
+  "../../../src/hooks/chat/eventSubHelpers/useChannelPointRedemptionsPubSub",
   () => ({
-    useChannelPointRedemptions: vi.fn(),
+    useChannelPointRedemptionsPubSub: vi.fn((opts) => {
+      pubSubRedemptionCalls.push(opts);
+      return pubSubStatusReturn;
+    }),
   }),
 );
 
@@ -61,6 +77,7 @@ function makeOptions(overrides?: {
   userId?: string;
   accessToken?: string;
   isOnOwnChannel?: boolean;
+  setMessages?: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
   setPendingRaid?: React.Dispatch<React.SetStateAction<RaidOutEvent | null>>;
   setIsRaidInitiator?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
@@ -82,7 +99,7 @@ function makeOptions(overrides?: {
     setCelebration: vi.fn(),
     setPendingRaid: overrides?.setPendingRaid ?? vi.fn(),
     setIsRaidInitiator: overrides?.setIsRaidInitiator ?? vi.fn(),
-    setMessages: vi.fn(),
+    setMessages: overrides?.setMessages ?? vi.fn(),
     setNotification: vi.fn(),
     notificationIdRef: { current: 0 },
     recentRedemptionsRef: { current: new Map() },
@@ -95,6 +112,8 @@ function makeOptions(overrides?: {
 beforeEach(() => {
   vi.clearAllMocks();
   raidDetectionCalls.length = 0;
+  pubSubRedemptionCalls.length = 0;
+  pubSubStatusReturn = "disconnected";
 });
 
 describe("useLiveEvents — raid subscriptions", () => {
@@ -215,6 +234,103 @@ describe("useLiveEvents — raid subscriptions", () => {
     watchedRaidOut.onRaid(raidEvent);
 
     expect(setPendingRaid).toHaveBeenCalledWith(raidEvent);
+  });
+
+  it("pubsub redemptions: enabled with a token when watching another channel", () => {
+    renderHook(() =>
+      useLiveEvents(makeOptions({ isOnOwnChannel: false })),
+    );
+
+    expect(pubSubRedemptionCalls).toHaveLength(1);
+    expect(pubSubRedemptionCalls[0].channelId).toBe("channel-100");
+    expect(pubSubRedemptionCalls[0].accessToken).toBe("test-token");
+    expect(pubSubRedemptionCalls[0].enabled).toBe(true);
+  });
+
+  it("pubsub redemptions: enabled for the broadcaster's own channel too", () => {
+    renderHook(() =>
+      useLiveEvents(
+        makeOptions({ channelId: "user-200", userId: "user-200", isOnOwnChannel: true }),
+      ),
+    );
+
+    expect(pubSubRedemptionCalls[0].enabled).toBe(true);
+  });
+
+  it("pubsub redemptions: disabled when there is no access token", () => {
+    renderHook(() =>
+      useLiveEvents(makeOptions({ accessToken: "" })),
+    );
+
+    expect(pubSubRedemptionCalls[0].enabled).toBe(false);
+  });
+
+  it("exposes the PubSub redemption connection status", () => {
+    pubSubStatusReturn = "connected";
+    const { result } = renderHook(() => useLiveEvents(makeOptions()));
+    expect(result.current?.redemptionPubSubStatus).toBe("connected");
+  });
+
+  it("pubsub redemption callback dedupes the same reward+user from another source", () => {
+    const setMessages = vi.fn();
+    renderHook(() => useLiveEvents(makeOptions({ setMessages })));
+
+    const onRedemption = pubSubRedemptionCalls[0].onRedemption;
+    const redemption = (id: string, content: string): TwitchMessage => ({
+      id,
+      platform: "twitch",
+      author: "User1",
+      content,
+      timestamp: new Date(),
+      userId: "u-1",
+      authorColor: "#c9a2ff",
+      mentionsUser: false,
+      emotes: {},
+      isBot: false,
+      badges: {},
+      badgeDetails: {},
+      messageType: "redemption",
+      rewardId: "rw-1",
+      rewardTitle: "Emote",
+      rewardCost: 500,
+    });
+
+    // IRC already surfaced this redemption (different content shape);
+    // the PubSub copy must be dropped.
+    onRedemption(redemption("a", "User1 redeemed Emote"));
+    onRedemption(redemption("b", "Emote (500 points)"));
+
+    expect(setMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it("pubsub redemption callback keeps distinct rewards by the same user", () => {
+    const setMessages = vi.fn();
+    renderHook(() => useLiveEvents(makeOptions({ setMessages })));
+
+    const onRedemption = pubSubRedemptionCalls[0].onRedemption;
+    const redemption = (id: string, rewardId: string): TwitchMessage => ({
+      id,
+      platform: "twitch",
+      author: "User1",
+      content: "User1 redeemed Emote",
+      timestamp: new Date(),
+      userId: "u-1",
+      authorColor: "#c9a2ff",
+      mentionsUser: false,
+      emotes: {},
+      isBot: false,
+      badges: {},
+      badgeDetails: {},
+      messageType: "redemption",
+      rewardId,
+      rewardTitle: "Emote",
+      rewardCost: 500,
+    });
+
+    onRedemption(redemption("a", "rw-1"));
+    onRedemption(redemption("b", "rw-2"));
+
+    expect(setMessages).toHaveBeenCalledTimes(2);
   });
 
   it("watched-channel raid-out callback sets isRaidInitiator(false) when watching another channel", () => {

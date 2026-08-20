@@ -61,6 +61,7 @@ interface ChatDisplayProps {
   showModTools?: boolean;
   onOpenModTools?: () => void;
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
+  redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
 }
 
@@ -105,6 +106,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       showModTools = false,
       onOpenModTools,
       subscriptionStatuses,
+      redemptionPubSubStatus,
       isOnOwnChannel = false,
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
@@ -399,6 +401,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           showModTools={showModTools}
           onOpenModTools={onOpenModTools}
           subscriptionStatuses={subscriptionStatuses}
+          redemptionPubSubStatus={redemptionPubSubStatus}
           isOnOwnChannel={isOnOwnChannel}
         />
 
