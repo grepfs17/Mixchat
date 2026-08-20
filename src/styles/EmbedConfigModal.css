@@ -392,6 +392,24 @@
     cursor: pointer;
 }
 
+/* Row that keeps a label and its select on a single line */
+.embed-config-inline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.embed-config-inline-row .embed-config-label {
+    margin-bottom: 0;
+    flex: none;
+}
+
+.embed-config-inline-row .embed-config-select {
+    width: auto;
+    flex: 1;
+    max-width: 260px;
+}
+
 /* Theme picker grid */
 .embed-config-theme-grid {
     display: grid;

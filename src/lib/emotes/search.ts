@@ -10,13 +10,18 @@ import {
 import { getEmoteUrl } from "./utils";
 
 /**
- * Search for emotes matching a query
+ * Search for emotes matching a query.
+ *
+ * When `allowEmptyQuery` is true, an empty query returns the top emotes
+ * (used by the "require the : prefix" emote autocomplete mode, where typing
+ * ":" alone surfaces suggestions).
  */
 export function searchEmotes(
   query: string,
   limit: number = 10,
+  allowEmptyQuery: boolean = false,
 ): Array<{ name: string; url: string; source: string }> {
-  if (!query) return [];
+  if (!query && !allowEmptyQuery) return [];
 
   const results: Array<{ name: string; url: string; source: string }> = [];
   const lowerQuery = query.toLowerCase();

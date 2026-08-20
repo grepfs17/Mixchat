@@ -16,6 +16,7 @@ import type {
   PlatformSession,
   ChatFont,
   ChatTheme,
+  EmoteAutocompleteMode,
 } from "../../lib/types";
 import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
 import type { ChatDisplayHandle } from "../../components/chat/display";
@@ -79,6 +80,7 @@ export interface ChatAppStateProps {
   streamerToolsEnabled?: boolean;
   isOnOwnChannel?: boolean;
   renderThirdPartyEmotesOnYoutube?: boolean;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
 export function useChatAppState({

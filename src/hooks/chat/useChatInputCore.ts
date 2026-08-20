@@ -6,7 +6,7 @@ import {
   useState,
   type RefObject,
 } from "react";
-import type { TwitchMessage } from "../../lib/types";
+import type { TwitchMessage, EmoteAutocompleteMode } from "../../lib/types";
 import { searchEmotes } from "../../lib/emotes";
 import { searchEmojis, type EmojiEntry } from "../../lib/emojiShortcodes";
 import { MOD_COMMANDS } from "../../lib/constants";
@@ -41,6 +41,8 @@ export interface UseChatInputCoreOptions {
   replyingToId?: string;
   /** Enable Twitch-specific autocomplete (emotes, commands). */
   enableTwitchFeatures?: boolean;
+  /** When to show the emote autocomplete menu while typing. */
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
   /** Enable YouTube emoji :shortcode: autocomplete. */
   enableYoutubeEmoji?: boolean;
   /** Filter @mention autocomplete by source platform. */
@@ -126,6 +128,7 @@ export function useChatInputCore(
     replyingToId,
     enableTwitchFeatures = true,
     enableYoutubeEmoji = false,
+    emoteAutocompleteMode = "default",
     mentionSource,
     slowModeWaitTime = null,
     onSend,
@@ -291,17 +294,37 @@ export function useChatInputCore(
       }
 
       // Twitch emotes
-      if (
-        enableTwitchFeatures &&
-        currentWord.length > 0 &&
-        !currentWord.startsWith("@") &&
-        !currentWord.startsWith("/")
-      ) {
-        const results = searchEmotes(currentWord);
-        if (results.length > 0) {
-          closeAll();
-          emoteAC.show(results);
-          return;
+      if (enableTwitchFeatures) {
+        let query = currentWord;
+        if (emoteAutocompleteMode === "colon") {
+          // "Require the : prefix": only show suggestions once the user
+          // types a colon. The colon is stripped from the search query, and
+          // typing ":" alone surfaces the top emotes.
+          if (!currentWord.startsWith(":")) {
+            query = "";
+          } else {
+            query = currentWord.substring(1);
+          }
+        }
+        const shouldShow =
+          emoteAutocompleteMode === "colon"
+            ? currentWord.startsWith(":")
+            : query.length > 0;
+        if (
+          shouldShow &&
+          !currentWord.startsWith("@") &&
+          !currentWord.startsWith("/")
+        ) {
+          const results = searchEmotes(
+            query,
+            10,
+            emoteAutocompleteMode === "colon",
+          );
+          if (results.length > 0) {
+            closeAll();
+            emoteAC.show(results);
+            return;
+          }
         }
       }
 
@@ -310,6 +333,7 @@ export function useChatInputCore(
     [
       enableYoutubeEmoji,
       enableTwitchFeatures,
+      emoteAutocompleteMode,
       allAuthors,
       currentUsername,
       isModerator,

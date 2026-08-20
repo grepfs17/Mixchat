@@ -138,6 +138,8 @@ export default function AppContainer() {
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
     autoFoldSidebar,
+    emoteAutocompleteMode,
+    setEmoteAutocompleteMode,
   } = chatSettings;
   const {
     linkedYoutubeUrl,
@@ -736,6 +738,7 @@ export default function AppContainer() {
                 streamerToolsEnabled={streamerToolsEnabled}
                 isOnOwnChannel={isOnOwnChannel}
                 renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+                emoteAutocompleteMode={emoteAutocompleteMode}
               />
             </div>
           </>

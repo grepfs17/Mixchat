@@ -13,7 +13,7 @@ import {
   FaYoutube,
 } from "react-icons/fa";
 import { BsFillPeopleFill } from "react-icons/bs";
-import type { Platform, TwitchMessage } from "../../../lib/types";
+import type { Platform, TwitchMessage, EmoteAutocompleteMode } from "../../../lib/types";
 import { EMOJI_LIST } from "../../../lib/emojiShortcodes";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { sendYouTubeChatMessage } from "../../../lib/youtubeChat";
@@ -56,6 +56,7 @@ interface UnifiedInputProps {
   /** Called when an optimistic YouTube message fails to deliver. */
   onOptimisticYoutubeFailed?: (id: string) => void;
   youtubeAvailable?: boolean;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
 const EMPTY_YT_MSG_ARRAY: YTMessage[] = [];
@@ -77,6 +78,7 @@ export default function UnifiedInput({
   onOptimisticYoutube,
   onOptimisticYoutubeFailed,
   youtubeAvailable = false,
+  emoteAutocompleteMode = "default",
 }: UnifiedInputProps) {
   const { isModerator } = useModerationContext();
   const [sendTarget, setSendTarget] = useState<SendTarget>("twitch");
@@ -144,6 +146,7 @@ export default function UnifiedInput({
     replyingToId: replyingTo?.id,
     enableTwitchFeatures: showTwitchFeatures,
     enableYoutubeEmoji: showYoutubeFeatures,
+    emoteAutocompleteMode,
     mentionSource: sendTarget,
     slowModeWaitTime: (sendTarget === "twitch" || sendTarget === "both") ? slowModeWaitTime : null,
     onSend,
@@ -240,6 +243,7 @@ export default function UnifiedInput({
           }
           replyingTo={replyingTo}
           onCancelReply={onCancelReply}
+          emoteAutocompleteMode={emoteAutocompleteMode}
         />
 
         {/* Emote/Emoji picker button */}

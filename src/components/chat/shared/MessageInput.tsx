@@ -1,6 +1,6 @@
 import React, { useState, useRef, memo, useCallback } from "react";
 import { FaTimes, FaSmile } from "react-icons/fa";
-import type { Platform, TwitchMessage } from "../../../lib/types";
+import type { Platform, TwitchMessage, EmoteAutocompleteMode } from "../../../lib/types";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
@@ -26,6 +26,7 @@ interface MessageInputProps {
   followerModeMinutes?: number | null;
   isFollowing?: boolean | null;
   channelName?: string;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
 function MessageInput({
@@ -41,6 +42,7 @@ function MessageInput({
   followerModeMinutes = null,
   isFollowing = null,
   channelName = "",
+  emoteAutocompleteMode = "default",
 }: MessageInputProps) {
   const { isModerator } = useModerationContext();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -64,6 +66,7 @@ function MessageInput({
     isLoading,
     replyingToId: replyingTo?.id,
     enableTwitchFeatures: true,
+    emoteAutocompleteMode,
     slowModeWaitTime,
     onSend,
   });
@@ -119,6 +122,7 @@ function MessageInput({
           selectedPlatforms={SELECTED_PLATFORMS}
           replyingTo={replyingTo}
           onCancelReply={onCancelReply}
+          emoteAutocompleteMode={emoteAutocompleteMode}
         />
         <button type="button"
           onClick={() => setShowEmotePicker(!showEmotePicker)}

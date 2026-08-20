@@ -72,6 +72,8 @@ function makeSettings(): UseChatSettingsResult {
     setRenderThirdPartyEmotesOnYoutube: noop,
     autoFoldSidebar: false,
     setAutoFoldSidebar: noop,
+    emoteAutocompleteMode: "default",
+    setEmoteAutocompleteMode: noop,
   };
 }
 

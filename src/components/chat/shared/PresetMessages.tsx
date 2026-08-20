@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { searchEmotes } from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
+import type { EmoteAutocompleteMode } from "../../../lib/types";
 
 const STORAGE_KEY = "mixchat_preset_messages:v1";
 
@@ -151,6 +152,7 @@ interface PresetMessagesProps {
   selectedPlatforms: any[];
   replyingTo?: any;
   onCancelReply?: () => void;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
 function PresetMessages({
@@ -159,6 +161,7 @@ function PresetMessages({
   selectedPlatforms,
   replyingTo,
   onCancelReply,
+  emoteAutocompleteMode = "default",
 }: PresetMessagesProps) {
   const [state, dispatch] = useReducer(reducer, {
     showDropdown: false,
@@ -260,8 +263,29 @@ function PresetMessages({
     const lastSpaceIndex = textBeforeCursor.lastIndexOf(" ");
     const currentWord = textBeforeCursor.substring(lastSpaceIndex + 1);
 
-    if (currentWord.length > 0 && !currentWord.startsWith("@")) {
-      const results = searchEmotes(currentWord);
+    let query = currentWord;
+    if (emoteAutocompleteMode === "colon") {
+      // "Require the : prefix": only show suggestions once the user types a
+      // colon. The colon is stripped from the search query, and typing ":"
+      // alone surfaces the top emotes.
+      if (!currentWord.startsWith(":")) {
+        query = "";
+      } else {
+        query = currentWord.substring(1);
+      }
+    }
+
+    if (
+      (emoteAutocompleteMode === "colon"
+        ? currentWord.startsWith(":")
+        : query.length > 0) &&
+      !currentWord.startsWith("@")
+    ) {
+      const results = searchEmotes(
+        query,
+        10,
+        emoteAutocompleteMode === "colon",
+      );
       if (results.length > 0) {
         dispatch({ type: "SET_EMOTE_RESULTS", payload: results });
         hasEmoteSelectionRef.current = false;

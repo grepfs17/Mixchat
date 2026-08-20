@@ -1,5 +1,7 @@
 import React from "react";
 import type { SettingsItemDef } from "./types";
+import type { EmoteAutocompleteMode } from "../../lib/types";
+import { EMOTE_AUTOCOMPLETE_OPTIONS } from "../../lib/types";
 
 export interface ChatSettingsProps {
   unifyChatEnabled: boolean;
@@ -8,6 +10,8 @@ export interface ChatSettingsProps {
   onUseYoutubeEmbedChange: (v: boolean) => void;
   showDeletedMessages: boolean;
   onShowDeletedMessagesChange: (v: boolean) => void;
+  emoteAutocompleteMode: EmoteAutocompleteMode;
+  onEmoteAutocompleteModeChange: (v: EmoteAutocompleteMode) => void;
   renderThirdPartyEmotesOnYoutube: boolean;
   onRenderThirdPartyEmotesOnYoutubeChange: (v: boolean) => void;
   compactActions: boolean;
@@ -117,6 +121,49 @@ function ThirdPartyEmotesSetting({
         channel-specific just like Twitch chat. Only Mixchat users will see
         the emotes. The message is still sent as plain text on YouTube and
         other viewers see the raw names.
+      </p>
+    </div>
+  );
+}
+
+function EmoteAutocompleteSetting({
+  emoteAutocompleteMode,
+  onEmoteAutocompleteModeChange,
+}: Pick<
+  ChatSettingsProps,
+  "emoteAutocompleteMode" | "onEmoteAutocompleteModeChange"
+>) {
+  return (
+    <div className="embed-config-section">
+      <div className="embed-config-inline-row">
+        <label
+          className="embed-config-label"
+          htmlFor="chat-emote-autocomplete"
+        >
+          Emote autocomplete
+        </label>
+        <select
+          id="chat-emote-autocomplete"
+          value={emoteAutocompleteMode}
+          onChange={(e) =>
+            onEmoteAutocompleteModeChange(
+              e.target.value as EmoteAutocompleteMode,
+            )
+          }
+          className="embed-config-select"
+        >
+          {EMOTE_AUTOCOMPLETE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="embed-config-description">
+        Controls when the emote autocomplete menu appears while typing. With
+        "Default", suggestions show as soon as you start typing. With "Require
+        the : prefix", you must type a colon (:) first to start seeing
+        suggestions.
       </p>
     </div>
   );
@@ -278,6 +325,21 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
           }
           onRenderThirdPartyEmotesOnYoutubeChange={
             props.onRenderThirdPartyEmotesOnYoutubeChange
+          }
+        />
+      ),
+    },
+    {
+      id: "emote-autocomplete",
+      group: "chat",
+      label: "Emote autocomplete",
+      description:
+        "Control when the emote autocomplete menu appears while typing",
+      render: () => (
+        <EmoteAutocompleteSetting
+          emoteAutocompleteMode={props.emoteAutocompleteMode}
+          onEmoteAutocompleteModeChange={
+            props.onEmoteAutocompleteModeChange
           }
         />
       ),

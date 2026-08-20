@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ChatFont, ChatTheme } from "../../lib/types";
+import type { ChatFont, ChatTheme, EmoteAutocompleteMode } from "../../lib/types";
 import { applyTheme } from "../../lib/themes";
 import { loadEventSounds, saveEventSounds } from "../../lib/eventSoundStorage";
 import type { MentionSoundType } from "../chat/useTwitchChat";
@@ -87,6 +87,10 @@ export type UseChatSettingsResult = {
   >;
   autoFoldSidebar: boolean;
   setAutoFoldSidebar: React.Dispatch<React.SetStateAction<boolean>>;
+  emoteAutocompleteMode: EmoteAutocompleteMode;
+  setEmoteAutocompleteMode: React.Dispatch<
+    React.SetStateAction<EmoteAutocompleteMode>
+  >;
 };
 
 export function useChatSettings(): UseChatSettingsResult {
@@ -220,6 +224,11 @@ export function useChatSettings(): UseChatSettingsResult {
     "mixchat_auto_fold_sidebar",
     false,
   );
+  const [emoteAutocompleteMode, setEmoteAutocompleteMode] =
+    useLocalStorageState<EmoteAutocompleteMode>(
+      "mixchat_emote_autocomplete",
+      "default",
+    );
 
   // Apply theme to document whenever it changes.
   useEffect(() => {
@@ -308,6 +317,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setRenderThirdPartyEmotesOnYoutube,
     autoFoldSidebar,
     setAutoFoldSidebar,
+    emoteAutocompleteMode,
+    setEmoteAutocompleteMode,
     }),
     [
       embedDefaultOpen,
@@ -364,6 +375,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setRenderThirdPartyEmotesOnYoutube,
       autoFoldSidebar,
       setAutoFoldSidebar,
+      emoteAutocompleteMode,
+      setEmoteAutocompleteMode,
     ],
   );
 }

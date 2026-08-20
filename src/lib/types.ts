@@ -95,6 +95,16 @@ export interface PlatformSession {
   hasDriveScope?: boolean;
 }
 
+export type EmoteAutocompleteMode = "default" | "colon";
+
+export const EMOTE_AUTOCOMPLETE_OPTIONS: {
+  value: EmoteAutocompleteMode;
+  label: string;
+}[] = [
+  { value: "default", label: "Default" },
+  { value: "colon", label: "Require the \":\" prefix" },
+];
+
 export type ChatFont =
   | "inter"
   | "open-sans"

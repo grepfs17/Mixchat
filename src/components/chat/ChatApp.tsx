@@ -159,6 +159,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     streamerToolsEnabled = false,
     isOnOwnChannel = false,
     renderThirdPartyEmotesOnYoutube = false,
+    emoteAutocompleteMode = "default",
   } = props;    // Reset YouTube connection when URL/video changes — intentional
     // eslint-disable-next-line no-adjust-state-on-prop-change
     useEffect(() => {
@@ -742,6 +743,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   youtubeSession
                 )
               }
+              emoteAutocompleteMode={emoteAutocompleteMode}
             />
           </>
         ) : (
@@ -815,6 +817,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   followerModeMinutes={followerModeMinutes}
                   isFollowing={isFollowingChannelState}
                   channelName={selectedTwitchChannelName}
+                  emoteAutocompleteMode={emoteAutocompleteMode}
                 />
               </div>
             }
