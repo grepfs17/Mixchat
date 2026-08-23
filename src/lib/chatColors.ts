@@ -74,15 +74,25 @@ function parseColor(color: string): { r: number; g: number; b: number } | null {
   return null;
 }
 
-function getRgbDistance(
+function getRelativeLuminance(c: { r: number; g: number; b: number }): number {
+  const channel = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return (
+    0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
+  );
+}
+
+function getContrastRatio(
   c1: { r: number; g: number; b: number },
   c2: { r: number; g: number; b: number },
 ): number {
-  return Math.sqrt(
-    Math.pow(c1.r - c2.r, 2) +
-      Math.pow(c1.g - c2.g, 2) +
-      Math.pow(c1.b - c2.b, 2),
-  );
+  const l1 = getRelativeLuminance(c1);
+  const l2 = getRelativeLuminance(c2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
 }
 
 // Initialise cached background from the active CSS variable
@@ -100,18 +110,22 @@ export function setThemeBackgroundColor(color: string) {
   cachedBgRgb = parseColor(color) || cachedBgRgb;
 }
 
-const COLOR_DISTANCE_THRESHOLD = 100;
+// WCAG large-text minimum contrast (3:1). Colours below this are hard to
+// read on the dark chat background regardless of how far apart they are in
+// RGB space (e.g. pure blue #0000ff is ~2.3:1 against a near-black bg).
+const MIN_CONTRAST_RATIO = 3;
 
 /**
- * Returns the provided colour unchanged unless it is visually close to the
- * current dark theme background, in which case it switches to white so the
- * username remains readable.
+ * Returns the provided colour unchanged unless it has insufficient contrast
+ * against the current chat background, in which case it switches to white so
+ * the username remains readable.
  */
 export function getReadableUsernameColor(color: string | undefined): string {
   if (!color) return "#e2e8f0";
   const rgb = parseColor(color);
   if (!rgb || !cachedBgRgb) return color;
-  const distance = getRgbDistance(rgb, cachedBgRgb);
-  if (distance < COLOR_DISTANCE_THRESHOLD) return "#ffffff";
+  if (getContrastRatio(rgb, cachedBgRgb) < MIN_CONTRAST_RATIO) {
+    return "#ffffff";
+  }
   return color;
 }
