@@ -126,7 +126,7 @@ export function useChatAutoScroll({
     const handleScroll = () => {
       if (isAutoScrollingRef.current) return;
       const atBottom =
-        el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+        el.scrollHeight - el.scrollTop - el.clientHeight < 85;
       isAtBottomRef.current = atBottom;
       setIsAtBottom(atBottom);
       if (atBottom) {

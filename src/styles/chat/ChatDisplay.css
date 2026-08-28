@@ -544,34 +544,88 @@ button.stream-info-category {
     display: none !important;
 }
 
-.go-to-bottom-button {
+.chat-paused-button {
     position: absolute;
     bottom: 12px;
     right: 20px;
-    background: linear-gradient(
-        135deg,
-        var(--color-accent) 0%,
-        var(--color-accent-hover) 100%
-    );
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 30, 38, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     color: #ffffff;
-    padding: 8px 16px;
+    padding: 7px 14px;
     border-radius: var(--radius-pill, 999px);
     cursor: pointer;
     font-size: 12px;
-    font-weight: 600;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    backdrop-filter: blur(6px);
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
     z-index: 100;
-    box-shadow: var(--shadow-accent-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
 }
 
-.go-to-bottom-button:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-accent-lg);
+.chat-paused-button:hover {
+    background: rgba(45, 45, 56, 0.98);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 
-.go-to-bottom-button:active {
+.chat-paused-button:active {
     transform: translateY(0);
+}
+
+.chat-paused-icon {
+    position: relative;
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-paused-icon svg {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+}
+
+/* Swap the icon from pause (default) to play while hovered. */
+.chat-paused-icon--play {
+    display: none;
+}
+
+.chat-paused-button:hover .chat-paused-icon--pause {
+    display: none;
+}
+
+.chat-paused-button:hover .chat-paused-icon--play {
+    display: block;
+}
+
+/* Stack both labels in the same slot so swapping states never changes the
+reserved width, keeping the button size identical between states. */
+.chat-paused-button-label {
+    display: grid;
+    align-items: center;
+}
+
+.chat-paused-button-text {
+    grid-area: 1 / 1;
+    white-space: nowrap;
+}
+
+.chat-paused-button-text--count {
+    visibility: hidden;
+}
+
+.chat-paused-button:hover .chat-paused-button-text--default {
+    visibility: hidden;
+}
+
+.chat-paused-button:hover .chat-paused-button-text--count {
+    visibility: visible;
 }
 
 .chat-emote {

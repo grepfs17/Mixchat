@@ -396,7 +396,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
           })}
         </div>
 
-        {!isAtBottom && newMessagesCount > 0 && (
+        {!isAtBottom && (
           <ScrollToBottomButton
             count={newMessagesCount}
             onClick={scrollToBottom}
