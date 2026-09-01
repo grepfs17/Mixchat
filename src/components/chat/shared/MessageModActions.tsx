@@ -1,16 +1,14 @@
 import { useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning, MdPushPin } from "react-icons/md";
+import { MdDelete, MdHourglassEmpty, MdBlock, MdWarning } from "react-icons/md";
 
 interface BaseProps {
   onDelete?: () => void;
-  onPin?: () => void;
   onTimeout?: (e: React.MouseEvent) => void;
   onTimeoutContextMenu?: (e: React.MouseEvent) => void;
   onBan?: () => void;
   onWarn?: () => void;
   deleteTitle?: string;
-  pinTitle?: string;
   timeoutTitle?: string;
   banTitle?: string;
   warnTitle?: string;
@@ -35,13 +33,11 @@ type PendingAction = "ban" | "timeout" | "warn" | "delete" | null;
  */
 export function MessageModActions({
   onDelete,
-  onPin,
   onTimeout,
   onTimeoutContextMenu,
   onBan,
   onWarn,
   deleteTitle = "Delete message",
-  pinTitle = "Pin message",
   timeoutTitle = "Timeout",
   banTitle = "Ban user",
   warnTitle = "Warn user",
@@ -87,7 +83,7 @@ export function MessageModActions({
   );
 
   const hasAny =
-    onDelete || onPin || (showUserActions && (onTimeout || onBan || onWarn));
+    onDelete || (showUserActions && (onTimeout || onBan || onWarn));
   if (!hasAny) return null;
 
   const getButtonClass = (action: PendingAction) => {
@@ -136,20 +132,6 @@ export function MessageModActions({
           style={btnStyle}
         >
           <MdWarning size={12} />
-        </button>
-      )}
-      {onPin && (
-        <button type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            onPin();
-          }}
-          className="action-button mod-action"
-          title={pinTitle}
-          style={btnStyle}
-        >
-          <MdPushPin size={12} />
         </button>
       )}
       {onDelete && (

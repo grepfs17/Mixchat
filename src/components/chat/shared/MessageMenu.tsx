@@ -133,12 +133,8 @@ export default function MessageMenu({
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
-    if (
-      !isBroadcaster &&
-      !isModeratorMsg &&
-      !chatMsg.isCurrentUser &&
-      !twitchModActionsVisibleInline
-    ) {
+    const canModerate = !isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser;
+    if (canModerate && !twitchModActionsVisibleInline) {
       items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
         key: "ban",
@@ -176,15 +172,21 @@ export default function MessageMenu({
           onClose();
         },
       });
-      items.push({
-        key: "pin",
-        label: "Pin message",
-        onClick: () => {
-          onPinMessage?.(chatMsg.id);
-          onClose();
-        },
-      });
     }
+    // Pin works on any message (broadcaster, moderator, or the current user
+    // included) and has no inline button, so it always lives here. It needs
+    // a divider only when it is not grouped with the mod action items above.
+    if (!canModerate || twitchModActionsVisibleInline) {
+      items.push({ key: "pin-divider", divider: true });
+    }
+    items.push({
+      key: "pin",
+      label: "Pin message",
+      onClick: () => {
+        onPinMessage?.(chatMsg.id);
+        onClose();
+      },
+    });
   }
 
   // YouTube moderation

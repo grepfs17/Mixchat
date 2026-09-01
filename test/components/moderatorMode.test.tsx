@@ -537,6 +537,7 @@ describe("Moderator Mode", () => {
       expect(screen.getByText("Timeout...")).toBeInTheDocument();
       expect(screen.getByText("Ban")).toBeInTheDocument();
       expect(screen.getByText("Warn")).toBeInTheDocument();
+      expect(screen.getByText("Pin message")).toBeInTheDocument();
     });
 
     it("does not show mod actions in context menu when modModeActive is false", () => {
@@ -707,6 +708,67 @@ describe("Moderator Mode", () => {
       fireEvent.click(screen.getByText("Warn"));
       expect(onWarn).toHaveBeenCalledWith("TestUser");
     });
+
+    it("shows Pin message in context menu when keepModActionsVisible is active", () => {
+      const { container } = render(
+        withModeration(
+          <ChatDisplay
+            messages={[baseMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+
+      const messageEl = container.querySelector('[data-message-id="msg-1"]');
+      expect(messageEl).toBeTruthy();
+      fireEvent.contextMenu(messageEl!);
+
+      expect(screen.getByText("Pin message")).toBeInTheDocument();
+      // The remaining mod actions render inline in the strip, so they are
+      // not duplicated in the context menu.
+      expect(screen.queryByText("Ban")).not.toBeInTheDocument();
+      expect(screen.queryByText("Delete")).not.toBeInTheDocument();
+    });
+
+    it("shows Pin message in context menu even for broadcaster/mod/self messages", () => {
+      const { container } = render(
+        withModeration(
+          <ChatDisplay
+            messages={[broadcasterMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+
+      const messageEl = container.querySelector('[data-message-id="msg-bc"]');
+      expect(messageEl).toBeTruthy();
+      fireEvent.contextMenu(messageEl!);
+
+      expect(screen.getByText("Pin message")).toBeInTheDocument();
+      // Ban/timeout/warn/delete still stay hidden for the broadcaster.
+      expect(screen.queryByText("Ban")).not.toBeInTheDocument();
+      expect(screen.queryByText("Delete")).not.toBeInTheDocument();
+    });
   });
 
   describe("UnifiedChat - Mod Actions", () => {
@@ -829,9 +891,9 @@ describe("Moderator Mode", () => {
       expect(onDelete).toHaveBeenCalledWith("msg-1");
     });
 
-    it("calls onPinMessage from inline button", () => {
+    it("calls onPinMessage from context menu and not as an inline button", () => {
       const onPin = vi.fn();
-      render(
+      const { container } = render(
         withModeration(
           <UnifiedChat
             channelName="testchannel"
@@ -849,7 +911,11 @@ describe("Moderator Mode", () => {
           },
         ),
       );
-      fireEvent.click(screen.getByTitle("Pin message"));
+      expect(screen.queryByTitle("Pin message")).not.toBeInTheDocument();
+      const messageEl = container.querySelector('[data-message-id="msg-1"]');
+      expect(messageEl).toBeTruthy();
+      fireEvent.contextMenu(messageEl!);
+      fireEvent.click(screen.getByText("Pin message"));
       expect(onPin).toHaveBeenCalledWith("msg-1");
     });
   });
@@ -937,7 +1003,7 @@ describe("Moderator Mode", () => {
       expect(line.querySelectorAll(".message-actions")).toHaveLength(2);
       expect(
         line.querySelectorAll(".message-actions .action-button.mod-action"),
-      ).toHaveLength(5); // delete, pin, timeout, ban, warn
+      ).toHaveLength(4); // delete, timeout, ban, warn (pin moved to context menu)
     });
 
     it("does not render the inline divider when modActionsFirst is on (the message content already separates the strips)", () => {

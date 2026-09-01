@@ -69,7 +69,6 @@ function TwitchMessageContentBase({
     onTimeoutUser,
     onUntimeoutUser,
     onWarnUser,
-    onPinMessage,
   } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const isMentioned =
@@ -204,7 +203,6 @@ function TwitchMessageContentBase({
     return (
       <MessageModActions
         onDelete={() => onDeleteMessage?.(msg.id)}
-        onPin={onPinMessage ? () => onPinMessage(msg.id) : undefined}
         onTimeout={(e) => onTimeoutMenu(e?.clientX || 0, e?.clientY || 0, msg.userId || "", msg.author)}
         onBan={() => onBanUser?.(msg.userId || "", msg.author)}
         onWarn={() => onWarnUser?.(msg.author)}
