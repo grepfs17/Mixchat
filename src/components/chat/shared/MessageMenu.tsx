@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import type { TwitchMessage } from "../../../lib/types";
 import type { UnifiedEntry, YTMessage } from "../unified/types";
 import { useModerationContext } from "../../../contexts/ModerationContext";
@@ -244,8 +245,8 @@ export default function MessageMenu({
     });
   }
 
-  return (
-    <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
+  const menuItems = (
+    <>
       <div className="context-menu-header">@{author}</div>
       {items.map((it) =>
         "divider" in it ? (
@@ -261,6 +262,59 @@ export default function MessageMenu({
           </button>
         ),
       )}
+    </>
+  );
+
+  // On mobile the menu becomes a full-width bottom sheet anchored to the
+  // top edge of the fixed message input(s) instead of floating at the
+  // press point. The sheet's bottom sits just above the bottom-most input
+  // so it can never cover the input row.
+  if (isMobile) {
+    // Anchor to the bottom-most input on screen so the sheet never covers
+    // any input row; fall back to a 64px placeholder when none is found.
+    let inputTop = window.innerHeight - 64;
+    let lowestBottom = -1;
+    document
+      .querySelectorAll<HTMLElement>(
+        ".unified-input, .message-input, .youtube-input-wrapper",
+      )
+      .forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.height <= 0) return;
+        if (rect.bottom > lowestBottom) {
+          lowestBottom = rect.bottom;
+          inputTop = rect.top;
+        }
+      });
+    return createPortal(
+      <div
+        role="menu"
+        tabIndex={-1}
+        aria-label="Context menu"
+        className="context-menu message-context-menu message-context-menu--mobile"
+        onContextMenu={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") e.stopPropagation();
+        }}
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          width: "100%",
+          bottom: window.innerHeight - inputTop + 4,
+          zIndex: 9999,
+        }}
+      >
+        {menuItems}
+      </div>,
+      document.body,
+    );
+  }
+
+  return (
+    <ContextMenuShell x={x} y={y} extraClass="message-context-menu">
+      {menuItems}
     </ContextMenuShell>
   );
 }

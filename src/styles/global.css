@@ -282,6 +282,28 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .message-context-menu {
     min-width: 180px;
 }
+/* Mobile: full-width bottom sheet anchored just above the fixed message
+   input. Positioning (left/right/bottom) is applied inline by MessageMenu. */
+.message-context-menu--mobile {
+    min-width: 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    animation: menuSlideUp 0.18s ease-out;
+}
+
+@keyframes menuSlideUp {
+    from {
+        transform: translateY(16px);
+        opacity: 0.6;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
 .context-menu-divider {
     height: 1px;
     margin: 6px 4px;
