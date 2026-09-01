@@ -70,11 +70,16 @@ export function useChatTouchGestures<T>({
       if (onLongPress) {
         longPressTimer.current = setTimeout(() => {
           longPressTimer.current = null;
+          // Only the app's long-press action should fire for a hold — drop
+          // any native text selection the OS may have started.
+          window.getSelection()?.removeAllRanges();
           onLongPress(msg);
         }, 500);
       } else if (onReply && canReply?.(msg) !== false) {
         longPressTimer.current = setTimeout(() => {
           longPressTimer.current = null;
+          // Same as above: never let the OS selection accompany the reply.
+          window.getSelection()?.removeAllRanges();
           onReply(msg);
         }, 500);
       }

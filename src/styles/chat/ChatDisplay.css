@@ -390,6 +390,21 @@
     border-radius: var(--radius-md);
 }
 
+/* On touch devices a long-press is reserved for the app's chat context
+   menu (long-press -> MessageMenu). Suppress the native text-selection UI
+   (handles, magnifier, iOS callout) so holding a message only opens the
+   menu and never selects text. Mouse selection on desktop is unaffected. */
+@media (pointer: coarse) {
+    .message,
+    .message-text {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+}
+
 .message:hover {
     background: var(--color-bg-message-hover);
     border-left-color: rgba(255, 255, 255, 0.15);
