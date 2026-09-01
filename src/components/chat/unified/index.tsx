@@ -33,6 +33,7 @@ interface UnifiedChatProps {
     connected: boolean;
     loading: boolean;
     error: string | null;
+    reconnecting: boolean;
   };
   ytLoading?: boolean;
   ytError?: string | null;
@@ -297,6 +298,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             {ytState &&
               (() => {
                 const isLive = ytState.connected;
+                const isReconnecting = !!ytState.reconnecting;
                 const isSseLoading = ytState.loading && !isLive;
                 const isSearching = ytLoading && !isLive && !isSseLoading;
                 const hasError = ytState.error || ytError;
@@ -305,7 +307,11 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 let statusText = "YouTube";
                 let dotClass = "platform-status-dot";
 
-                if (isLive) {
+                if (isReconnecting) {
+                  statusClass += " platform-status--loading";
+                  statusText = "YouTube: Reconnecting\u2026";
+                  dotClass += " platform-status-dot--loading";
+                } else if (isLive) {
                   statusClass += " platform-status--connected";
                   statusText = "YouTube Live";
                 } else if (isSseLoading) {

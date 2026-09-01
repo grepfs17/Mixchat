@@ -33,6 +33,7 @@ interface YouTubeChatProps {
     connected: boolean;
     loading: boolean;
     error: string | null;
+    reconnecting: boolean;
   }) => void;
   /** When true, deleted messages are dimmed instead of removed */
   showDeletedMessages?: boolean;
@@ -68,6 +69,11 @@ interface SSEEndEvent {
   reason: string;
 }
 
+interface SSENoticeEvent {
+  /** Server-driven reconnection status (transient YouTube block). */
+  status?: "reconnecting" | "reconnected";
+}
+
 function getTextContent(m: ChatMessage) {
   return m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
 }
@@ -97,6 +103,13 @@ export default function YouTubeChat({
   const retryCountRef = useRef(0);
   const eventSourceRef = useRef<EventSource | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  /**
+   * Server-driven reconnect state: idle → reconnecting (transient YouTube
+   * block, SSE stays open) → reconnected (brief flash) → idle.
+   */
+  const [reconnectStatus, setReconnectStatus] = useState<
+    "idle" | "reconnecting" | "reconnected"
+  >("idle");
 
   const mergedMessages = useMemo(() => {
     if (!optimisticMessages?.length) return messages;
@@ -137,6 +150,7 @@ export default function YouTubeChat({
     setIsLoading(true);
     setIsConnected(false);
     setError(null);
+    setReconnectStatus("idle");
     if (isInitialConnect) setMessages([]);
 
     const connect = async () => {
@@ -249,6 +263,7 @@ export default function YouTubeChat({
         setError(null);
         errorRef.current = null;
         retryCountRef.current = 0;
+        setReconnectStatus("idle");
       });
 
       es.addEventListener("message", (e: Event) => {
@@ -326,6 +341,26 @@ export default function YouTubeChat({
         });
       });
 
+      es.addEventListener("notice", (e: Event) => {
+        if (!isMounted) return;
+        try {
+          const data = JSON.parse((e as MessageEvent).data) as SSENoticeEvent;
+          if (data.status === "reconnecting") {
+            setReconnectStatus("reconnecting");
+          } else if (data.status === "reconnected") {
+            setReconnectStatus("reconnected");
+            // Brief "reconnected" flash, then back to idle.
+            setTimeout(() => {
+              if (isMounted) {
+                setReconnectStatus((cur) =>
+                  cur === "reconnected" ? "idle" : cur,
+                );
+              }
+            }, 2500);
+          }
+        } catch {}
+      });
+
       es.addEventListener("error", (e: Event) => {
         if (!isMounted) return;
         let errorMsg: string;
@@ -337,6 +372,7 @@ export default function YouTubeChat({
           errorMsg = "Connection lost";
         }
         setIsConnected(false);
+        setReconnectStatus("idle");
         setIsLoading(false);
         setError(errorMsg);
         errorRef.current = errorMsg;
@@ -360,6 +396,7 @@ export default function YouTubeChat({
         const data = JSON.parse((e as MessageEvent).data) as SSEEndEvent;
         console.log("[YouTubeChat] Stream ended:", data.reason);
         setIsConnected(false);
+        setReconnectStatus("idle");
         setIsLoading(false);
         setError("Live stream has ended");
         es.close();
@@ -370,6 +407,7 @@ export default function YouTubeChat({
         if (!isMounted) return;
         retryCountRef.current++;
         setIsConnected(false);
+        setReconnectStatus("idle");
 
         if (!errorRef.current) {
           setError("Connection lost");
@@ -433,9 +471,14 @@ export default function YouTubeChat({
   // Notify parent of connection state changes
   useEffect(() => {
     if (onConnectionChange) {
-      onConnectionChange({ connected: isConnected, loading: isLoading, error });
+      onConnectionChange({
+        connected: isConnected,
+        loading: isLoading,
+        error,
+        reconnecting: reconnectStatus === "reconnecting",
+      });
     }
-  }, [isConnected, isLoading, error, onConnectionChange]);
+  }, [isConnected, isLoading, error, reconnectStatus, onConnectionChange]);
 
   const isEnded = error === "Live stream has ended";
 
@@ -483,6 +526,20 @@ export default function YouTubeChat({
       {isEnded && (
         <div className="yt-chat-error-banner">
           <span>⚠️ {error}</span>
+        </div>
+      )}
+      {reconnectStatus !== "idle" && (
+        <div
+          className={`yt-chat-reconnecting-banner${reconnectStatus === "reconnected" ? " yt-chat-reconnected" : ""}`}
+        >
+          <AiOutlineLoading3Quarters
+            className={reconnectStatus === "reconnecting" ? "animate-spin" : ""}
+          />
+          <span>
+            {reconnectStatus === "reconnecting"
+              ? "YouTube chat reconnecting…"
+              : "YouTube chat reconnected"}
+          </span>
         </div>
       )}
       <div

@@ -57,6 +57,48 @@ const CHAT_FAILURE_COOLDOWN_MS = parseInt(
 const blockedChatFailures = new Map<string, number>();
 
 /**
+ * Transient YouTube blocks (proxy 503s / bot checks) are recoverable after
+ * a short backoff — unlike hard 403s, the underlying session is still good,
+ * so we reconnect the LiveChat in place instead of tearing it down.
+ */
+const TRANSIENT_BLOCK_BASE_MS = 30_000;
+const TRANSIENT_BLOCK_MAX_MS = 5 * 60_000;
+const TRANSIENT_BLOCK_MAX_ATTEMPTS = 8;
+
+/** videoId -> { until, attempt } backoff state for transient blocks. */
+const transientChatFailures = new Map<
+  string,
+  { until: number; attempt: number }
+>();
+
+/**
+ * True when a LiveChat error is a *recoverable* YouTube block — typically a
+ * proxy 503 ("YouTube temporarily blocked"), a bot-check response that
+ * youtubei.js fails to parse as a chat continuation, or a transient rate
+ * limit. Unlike 403s (which force a session cleanup), these clear up after
+ * a short backoff, so the chat can reconnect in place.
+ */
+export function isTransientChatBlock(msg: string): boolean {
+  return (
+    /incremental continuation/.test(msg) ||
+    /temporarily blocked/i.test(msg) ||
+    /YouTube blocked/i.test(msg) ||
+    /\b503\b/.test(msg) ||
+    /\b429\b/.test(msg) ||
+    /Request failed with status code (?:503|429)/.test(msg)
+  );
+}
+
+/** Cancel a pending transient-block reconnect for a session. */
+function clearChatRestart(session: ChatSession, videoId: string): void {
+  if (session.restartTimer) {
+    clearTimeout(session.restartTimer);
+    session.restartTimer = null;
+  }
+  transientChatFailures.delete(videoId);
+}
+
+/**
  * Cooldown for terminal playability errors (video unavailable, private,
  * removed, etc.). These don't change with retries, so we cache the failure
  * for a few minutes to stop hammering YouTube.
@@ -121,9 +163,13 @@ interface ChatSession {
    * for the lifetime of the chat session.
    */
   recentHostHandoffs: Set<string>;
+  /** Sticky map of message ids marked deleted; survives buffer shifts. */
+  deletedIds: Map<string, string>;
   clients: Map<string, SSEClient>;
   lastUpdate: number;
   destroyTimer: ReturnType<typeof setTimeout> | null;
+  /** Pending timer for an in-place reconnect after a transient block. */
+  restartTimer: ReturnType<typeof setTimeout> | null;
   ready: Promise<void>;
 }
 
@@ -131,6 +177,7 @@ const activeLiveChats = new Map<string, ChatSession>();
 
 function shutdownActiveSessions() {
   for (const [key, session] of activeLiveChats) {
+    clearChatRestart(session, key);
     for (const client of session.clients.values()) {
       try {
         client.controller.close();
@@ -715,6 +762,7 @@ function reapIdleSessions() {
   const nowMs = Date.now();
   for (const [key, session] of activeLiveChats) {
     if (nowMs - session.lastUpdate > MAX_IDLE_MS) {
+      clearChatRestart(session, key);
       for (const client of session.clients.values()) {
         try {
           client.controller.close();
@@ -775,21 +823,6 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     }
   }
 
-  const yt = await getInnertube();
-  let info;
-  try {
-    info = await yt.getInfo(videoId);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (isPlayabilityError(msg)) {
-      playabilityErrors.set(videoId, {
-        message: msg,
-        until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
-      });
-    }
-    throw err;
-  }
-  const chat = info.getLiveChat();
   const messages: ChatMessage[] = [];
   const seenIds = new Set<string>();
   const authorByChannel = new Map<string, string>();
@@ -808,11 +841,6 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
    * re-publishes it after the buffer has cycled past it.
    */
   const deletedIds = new Map<string, string>();
-
-  let resolveReady: () => void;
-  const ready = new Promise<void>((resolve) => {
-    resolveReady = resolve;
-  });
 
   const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
@@ -888,6 +916,33 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     broadcast(session!, "message", systemMsg, systemMsg.id);
     return true;
   };
+
+  // ── startChat(): build, wire, and start the LiveChat for this video. ──
+  // The chat.on(...) handlers below belong to this closure; starting a chat
+  // is just calling it again. That lets a transient block reconnect in
+  // place — the message buffer, dedupe sets, and SSE clients all survive by
+  // reusing the same session state.
+  const startChat = async (): Promise<{ chat: any; ready: Promise<void> }> => {
+    const yt = await getInnertube();
+    let info;
+    try {
+      info = await yt.getInfo(videoId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (isPlayabilityError(msg)) {
+        playabilityErrors.set(videoId, {
+          message: msg,
+          until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
+        });
+      }
+      throw err;
+    }
+    const chat = info.getLiveChat();
+
+    let resolveReady: () => void;
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve;
+    });
 
   chat.on("start", (initialData: any) => {
     console.log(
@@ -1021,6 +1076,15 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           continue;
         }
       }
+    }
+    // On a session reconnect, the start replay carries messages posted
+    // while the connection was down — resync existing clients so the gap
+    // isn't lost (the client merges + de-dupes by message id).
+    if (session && session.clients.size > 0) {
+      broadcast(session, "connected", {
+        messages: session.messages,
+        count: session.messages.length,
+      });
     }
     resolveReady();
   });
@@ -1209,6 +1273,13 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       chat.stop();
     } catch {}
     const s = activeLiveChats.get(videoId);
+    // Ignore events from a LiveChat that was already replaced on reconnect.
+    if (!s || s.chat !== chat) return;
+    // A transient block surfaces as an error followed by a synthetic "end"
+    // — the error handler is reconnecting this session in place, so the
+    // teardown below must not run.
+    if (transientChatFailures.has(videoId)) return;
+    clearChatRestart(s, videoId);
     if (s) {
       for (const c of s.clients.values()) {
         try {
@@ -1229,7 +1300,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     console.error("YouTube LiveChat error:", errMsg);
 
     const s = activeLiveChats.get(videoId);
-    if (!s) return;
+    // Ignore events from a LiveChat that was already replaced on reconnect.
+    if (!s || s.chat !== chat) return;
 
     if (errMsg.includes("403")) {
       blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
@@ -1238,6 +1310,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         videoId,
         "— cleaning up session ( Innertube left intact for other videos )",
       );
+      clearChatRestart(s, videoId);
       for (const c of s.clients.values()) {
         try {
           c.controller.enqueue(
@@ -1258,7 +1331,23 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       return;
     }
 
+    // Transient block (proxy 503 / bot check): reconnect in place with
+    // backoff instead of tearing the session down. The SSE stream stays
+    // open — tell connected clients so they can surface a status.
+    if (isTransientChatBlock(errMsg)) {
+      for (const c of s.clients.values()) {
+        try {
+          c.controller.enqueue(
+            sseEvent(JSON.stringify({ status: "reconnecting" }), "notice"),
+          );
+        } catch {}
+      }
+      armTransientReconnect();
+      return;
+    }
+
     // Non-403 error: wait 30s then clean up
+    clearChatRestart(s, videoId);
     setTimeout(() => {
       const current = activeLiveChats.get(videoId);
       if (current?.chat === chat) {
@@ -1283,8 +1372,127 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     }, 30000);
   });
 
-  console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
-  chat.start();
+    console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
+    chat.start();
+
+    return { chat, ready };
+  };
+  // ── end startChat() ─────────────────────────────────────────────────
+
+  /**
+   * Reconnect planner for transient YouTube blocks (proxy 503 / bot
+   * checks). The block usually clears within seconds, so instead of
+   * tearing the session down (which disconnects every SSE client and
+   * loses buffered history), we back off and rebuild just the LiveChat,
+   * swapping it into the existing session.
+   */
+  const armTransientReconnect = () => {
+    const s = session;
+    if (!s) return;
+    if (activeLiveChats.get(videoId) !== s) return;
+    // A reconnect is already scheduled for this episode — hold until it
+    // runs (or fails there and escalates).
+    if (s.restartTimer) return;
+
+    const attempt = (transientChatFailures.get(videoId)?.attempt ?? 0) + 1;
+    if (attempt > TRANSIENT_BLOCK_MAX_ATTEMPTS) {
+      console.error(
+        `[YouTube Chat] Giving up on reconnecting ${videoId} after ${TRANSIENT_BLOCK_MAX_ATTEMPTS} attempts`,
+      );
+      clearChatRestart(s, videoId);
+      for (const c of s.clients.values()) {
+        try {
+          c.controller.enqueue(
+            sseEvent(
+              JSON.stringify({
+                error: "YouTube chat temporarily unavailable",
+              }),
+              "error",
+            ),
+          );
+        } catch {}
+        try {
+          c.controller.close();
+        } catch {}
+      }
+      try {
+        s.chat?.stop();
+      } catch {}
+      activeLiveChats.delete(videoId);
+      return;
+    }
+
+    const backoff = Math.min(
+      TRANSIENT_BLOCK_BASE_MS * 2 ** (attempt - 1),
+      TRANSIENT_BLOCK_MAX_MS,
+    );
+    transientChatFailures.set(videoId, {
+      until: Date.now() + backoff,
+      attempt,
+    });
+    console.warn(
+      `[YouTube Chat] Transient block for ${videoId} — reconnecting in ${Math.round(backoff / 1000)}s (attempt ${attempt}/${TRANSIENT_BLOCK_MAX_ATTEMPTS})`,
+    );
+
+    s.restartTimer = setTimeout(() => {
+      s.restartTimer = null;
+      void (async () => {
+        if (activeLiveChats.get(videoId) !== s) return;
+        // No viewers left to serve — let the session idle out and be reaped.
+        if (s.clients.size === 0) {
+          transientChatFailures.delete(videoId);
+          return;
+        }
+        try {
+          const oldChat = s.chat;
+          const { chat: nextChat, ready: nextReady } = await startChat();
+          try {
+            oldChat?.stop();
+          } catch {}
+          s.chat = nextChat;
+          s.ready = nextReady;
+          s.lastUpdate = Date.now();
+          transientChatFailures.delete(videoId);
+          console.log(
+            `[YouTube Chat] Reconnected live chat for video ${videoId}`,
+          );
+          // Let connected clients know the chat is back (they then get the
+          // "connected" resync once the new connection's start replay lands).
+          broadcast(s, "notice", { status: "reconnected" });
+        } catch (err2) {
+          const msg2 = err2 instanceof Error ? err2.message : String(err2);
+          if (isPlayabilityError(msg2)) {
+            // The stream ended while we were retrying — real teardown.
+            console.warn(
+              `[YouTube Chat] Stream ${videoId} ended during reconnect: ${msg2}`,
+            );
+            clearChatRestart(s, videoId);
+            for (const c of s.clients.values()) {
+              try {
+                c.controller.enqueue(
+                  sseEvent(JSON.stringify({ reason: "ended" }), "end"),
+                );
+              } catch {}
+              try {
+                c.controller.close();
+              } catch {}
+            }
+            try {
+              s.chat?.stop();
+            } catch {}
+            if (activeLiveChats.get(videoId) === s) {
+              activeLiveChats.delete(videoId);
+            }
+            return;
+          }
+          // Still blocked — escalate to the next backoff step.
+          armTransientReconnect();
+        }
+      })();
+    }, backoff);
+  };
+
+  const { chat, ready } = await startChat();
 
   session = {
     chat,
@@ -1293,9 +1501,11 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     authorByChannel,
     recentRemovals,
     recentHostHandoffs,
+    deletedIds,
     clients: new Map(),
     lastUpdate: Date.now(),
     destroyTimer: null,
+    restartTimer: null,
     ready,
   };
   activeLiveChats.set(videoId, session);
@@ -1378,6 +1588,23 @@ export const GET: APIRoute = async ({ request, url }) => {
           videoId,
         }),
         { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (isTransientChatBlock(rawMsg)) {
+      // Transient YouTube block (proxy 503 / bot check) during session
+      // setup — retryable; the client will back off and reconnect.
+      return new Response(
+        JSON.stringify({
+          error:
+            "Live chat temporarily unavailable (YouTube is blocking requests)",
+        }),
+        {
+          status: 503,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "30",
+          },
+        },
       );
     }
     console.error("[YouTube Chat] Error setting up chat for", videoId, rawMsg);

@@ -46,6 +46,7 @@ interface YtConnectionState {
   connected: boolean;
   loading: boolean;
   error: string | null;
+  reconnecting: boolean;
 }
 
 export default function ChatApp(props: ChatAppStateProps) {
@@ -124,7 +125,7 @@ export default function ChatApp(props: ChatAppStateProps) {
   } = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
-    { connected: false, loading: true, error: null },
+    { connected: false, loading: true, error: null, reconnecting: false },
   );
   const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
     setYtConnectionState(state);
@@ -164,7 +165,12 @@ export default function ChatApp(props: ChatAppStateProps) {
     // eslint-disable-next-line no-adjust-state-on-prop-change
     useEffect(() => {
       if (!linkedYoutubeUrl || !youtubeVideoId) {
-        setYtConnectionState({ connected: false, loading: false, error: null });
+        setYtConnectionState({
+          connected: false,
+          loading: false,
+          error: null,
+          reconnecting: false,
+        });
       }
     }, [linkedYoutubeUrl, youtubeVideoId]);
 

@@ -97,6 +97,27 @@
     font-size: 11px;
 }
 
+/* Server-side reconnect status (transient YouTube block — SSE stays open) */
+.yt-chat-reconnecting-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: rgba(249, 115, 22, 0.15);
+    border-bottom: 1px solid rgba(249, 115, 22, 0.35);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.yt-chat-reconnecting-banner.yt-chat-reconnected {
+    background-color: rgba(34, 197, 94, 0.12);
+    border-bottom-color: rgba(34, 197, 94, 0.3);
+    color: var(--color-text-white);
+}
+
 .yt-chat-placeholder {
     color: var(--color-text-muted);
     text-align: center;

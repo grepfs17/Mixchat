@@ -30,6 +30,7 @@ interface YouTubePanelProps {
     connected: boolean;
     loading: boolean;
     error: string | null;
+    reconnecting: boolean;
   }) => void;
   onUsernameClick?: (
     e: React.MouseEvent,
