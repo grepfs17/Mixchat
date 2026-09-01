@@ -43,6 +43,18 @@
     align-items: center;
 }
 
+/* Clickable links inside YouTube message text rendered in the unified chat
+   (styled to match the Twitch chat's linkifyUrl look: indigo, underline) */
+.yt-message-link {
+    color: #6366f1;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.yt-message-link:hover {
+    text-decoration: none;
+}
+
 .author.twitch-author:hover {
     text-decoration: underline;
 }

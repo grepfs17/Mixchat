@@ -229,6 +229,18 @@
     color: #cbd5e1;
 }
 
+/* Clickable links inside YouTube message text (styled to match the Twitch
+   chat's linkifyUrl look: indigo, underline) */
+.yt-message-link {
+    color: #6366f1;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.yt-message-link:hover {
+    text-decoration: none;
+}
+
 /* Clickable author names */
 .yt-chat-container .message .author {
     cursor: pointer;

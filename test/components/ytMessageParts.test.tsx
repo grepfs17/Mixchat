@@ -257,5 +257,77 @@ describe("YTMessageParts Twemoji rendering (Unicode emojis)", () => {
   });
 });
 
+describe("YTMessageParts URL linkification", () => {
+  it("renders http URLs in text parts as clickable links", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "check https://example.com now" }]}
+        variant="standalone"
+      />,
+    );
+    const links = container.querySelectorAll("a.yt-message-link");
+    expect(links.length).toBe(1);
+    expect(links[0].getAttribute("href")).toBe("https://example.com");
+    expect(links[0].getAttribute("target")).toBe("_blank");
+    expect(links[0].getAttribute("rel")).toContain("noopener");
+    // Surrounding text (including whitespace) is preserved
+    expect(container.textContent).toBe("check https://example.com now");
+  });
+
+  it("linkifies in the unified variant too", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "go https://example.com" }]}
+        variant="unified"
+      />,
+    );
+    const link = container.querySelector("a.yt-message-link");
+    expect(link?.getAttribute("href")).toBe("https://example.com");
+    expect(container.textContent).toBe("go https://example.com");
+  });
+
+  it("normalizes www. URLs to https://", () => {
+    const { container } = render(
+      <YTMessageParts parts={[{ type: "text", text: "www.example.com" }]} />,
+    );
+    const link = container.querySelector("a.yt-message-link");
+    expect(link?.getAttribute("href")).toBe("https://www.example.com");
+  });
+
+  it("preserves non-URL text verbatim", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "just words no links" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll("a.yt-message-link").length).toBe(0);
+    expect(container.textContent).toBe("just words no links");
+  });
+
+  it("links URLs in text tokens when third-party emotes are enabled", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "go https://example.com Clap" }]}
+        variant="unified"
+        renderThirdPartyEmotes={true}
+      />,
+    );
+    const link = container.querySelector("a.yt-message-link");
+    expect(link?.getAttribute("href")).toBe("https://example.com");
+  });
+
+  it("does not linkify URLs embedded mid-word", () => {
+    const { container } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "prehttps://example.com" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll("a.yt-message-link").length).toBe(0);
+    expect(container.textContent).toBe("prehttps://example.com");
+  });
+});
+
 // keep vi import live for global mocks
 void vi;

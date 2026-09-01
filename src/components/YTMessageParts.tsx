@@ -5,7 +5,7 @@ import {
   useEmoteMapVersion,
   type YoutubeEmoteToken,
 } from "../lib/emotes";
-import { renderUnicodeEmojis } from "../lib/emotes/utils";
+import { renderUnicodeEmojis, parseUrlWord } from "../lib/emotes/utils";
 import TwitchLinkPreview from "./chat/TwitchLinkPreview";
 import { parseTwitchUrl } from "../lib/twitchLink";
 
@@ -41,6 +41,33 @@ const emoteImgStyle: React.CSSProperties = {
   margin: "0 2px",
   cursor: "pointer",
 };
+
+/**
+ * Quick test used to skip the split+walk when a text part contains no
+ * URL-shaped words. Conservative (may return true more often than needed)
+ * but must never return false for a word `parseUrlWord` would linkify.
+ */
+const URL_DETECT_REGEX = /(^|\s)(https?:\/\/|www\.)/i;
+
+/**
+ * Renders a single whitespace-delimited word as a clickable link when it is
+ * an http(s):// or www. URL, otherwise as plain text. Shared by the plain
+ * and third-party-emote rendering paths so both linkify identically.
+ */
+function LinkifiedWord({ word }: { word: string }) {
+  const href = parseUrlWord(word);
+  if (!href) return <>{word}</>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="yt-message-link"
+    >
+      {word}
+    </a>
+  );
+}
 
 function ThirdPartyEmoteNode({
   token,
@@ -111,8 +138,20 @@ export default function YTMessageParts({
 
   const renderText = useCallback(
     (text: string, key: React.Key): React.ReactNode => {
-      if (!renderThirdPartyEmotes)
-        return <React.Fragment key={key}>{text}</React.Fragment>;
+      if (!renderThirdPartyEmotes) {
+        // Fast path: verbatim text unless a URL-shaped word is present, in
+        // which case split on whitespace (keeping it) and linkify URL words.
+        if (!URL_DETECT_REGEX.test(text)) {
+          return <React.Fragment key={key}>{text}</React.Fragment>;
+        }
+        return (
+          <React.Fragment key={key}>
+            {text.split(/(\s+)/).map((word, i) => (
+              <LinkifiedWord key={`u-${i}`} word={word} />
+            ))}
+          </React.Fragment>
+        );
+      }
       const tokens = tokenizeThirdPartyEmotesForYoutube(
         text,
         disabledEmotes,
@@ -129,7 +168,7 @@ export default function YTMessageParts({
           out.push(
             <React.Fragment key={`${key}-t-${i}`}>
               {needSpace ? " " : ""}
-              {tok.text}
+              <LinkifiedWord word={tok.text ?? ""} />
             </React.Fragment>,
           );
           needSpace = Boolean(tok.text);

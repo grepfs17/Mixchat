@@ -65,31 +65,39 @@ export function escapeHtml(text: string): string {
  * Check if a word is a URL and convert to clickable link
  */
 export function linkifyUrl(word: string): string {
-  // Only match http(s) or www-prefixed URLs
+  const href = parseUrlWord(word);
+  if (!href) return "";
+
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" style="color: #6366f1; text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+}
+
+/**
+ * Returns the clickable href for `word` when it is a whole-word http(s) or
+ * www-prefixed URL (www. is normalised to https://), or `null` when it is
+ * not a link. Shared by the HTML linkifyUrl renderer and the React-based
+ * YouTube message renderer so both chats linkify URLs identically.
+ */
+export function parseUrlWord(word: string): string | null {
+  // Only match http(s) or www-prefixed URLs as a whole word
   const urlPattern = /^(https?:\/\/|www\.)[^\s]+$/i;
+  if (!urlPattern.test(word)) return null;
 
-  if (urlPattern.test(word)) {
-    let url = word;
-    if (word.toLowerCase().startsWith("www.")) {
-      url = "https://" + word;
-    }
-
-    // Explicitly block dangerous schemes even if the regex above is ever relaxed.
-    // URL objects normalise the protocol to lowercase, making detection reliable.
-    try {
-      const parsed = new URL(url);
-      const scheme = parsed.protocol; // e.g. "javascript:", "data:", "https:"
-      if (scheme !== "https:" && scheme !== "http:") {
-        return escapeHtml(word); // render as plain text
-      }
-    } catch {
-      return escapeHtml(word); // invalid URL — render as plain text
-    }
-
-    return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="color: #6366f1; text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+  let url = word;
+  if (word.toLowerCase().startsWith("www.")) {
+    url = "https://" + word;
   }
 
-  return "";
+  // Explicitly block dangerous schemes even if the regex above is ever
+  // relaxed. URL objects normalise the protocol to lowercase, making
+  // detection reliable.
+  try {
+    const parsed = new URL(url);
+    const scheme = parsed.protocol; // e.g. "javascript:", "data:", "https:"
+    if (scheme !== "https:" && scheme !== "http:") return null;
+    return url;
+  } catch {
+    return null; // invalid URL — treat as plain text
+  }
 }
 
 /**
