@@ -4,6 +4,29 @@ import React from "react";
 import UnifiedChat from "../../src/components/chat/unified";
 import type { TwitchMessage } from "../../src/lib/types";
 
+function parity(message: Element): "odd" | "even" {
+  if (message.classList.contains("odd")) return "odd";
+  return "even";
+}
+
+function makeTwitchMessage(
+  id: string,
+  author: string,
+  content: string,
+  timestamp: Date,
+): TwitchMessage {
+  return { id, platform: "twitch", author, content, timestamp };
+}
+
+function makeYtMessage(id: string, author: string, text: string, timestamp: Date) {
+  return {
+    id,
+    author,
+    parts: [{ type: "text", text } as const],
+    timestamp,
+  };
+}
+
 describe("UnifiedChat component", () => {
   it("renders messages from both Twitch and YouTube", () => {
     const twitchMessages: TwitchMessage[] = [
@@ -41,6 +64,100 @@ describe("UnifiedChat component", () => {
     // Check for platform tags (icons)
     expect(screen.getByTitle("Twitch")).toBeInTheDocument();
     expect(screen.getByTitle("YouTube")).toBeInTheDocument();
+  });
+
+  it("alternates odd/even across the merged list (not per platform) with split chat enabled", () => {
+    const now = new Date();
+    const t0 = makeTwitchMessage(
+      "t0",
+      "TwitchA",
+      "twitch message 0",
+      new Date(now.getTime() - 4000),
+    );
+    const t1 = makeTwitchMessage(
+      "t1",
+      "TwitchB",
+      "twitch message 1",
+      new Date(now.getTime() - 2000),
+    );
+    const y0 = makeYtMessage(
+      "y0",
+      "YTA",
+      "yt message 0",
+      new Date(now.getTime() - 3000),
+    );
+    const y1 = makeYtMessage(
+      "y1",
+      "YTB",
+      "yt message 1",
+      new Date(now.getTime() - 1000),
+    );
+
+    const { container } = render(
+      <UnifiedChat
+        channelName="testchannel"
+        splitChatEnabled
+        twitchMessages={[t0, t1]}
+        ytMessages={[y0, y1]}
+      />,
+    );
+
+    // Merged order by timestamp: t0, y0, t1, y1
+    const messages = Array.from(container.querySelectorAll(".message"));
+    expect(messages.map(parity)).toEqual(["even", "odd", "even", "odd"]);
+  });
+
+  it("updates parity when the merged list shifts (memo must not freeze striping)", () => {
+    const now = new Date();
+    const t0 = makeTwitchMessage(
+      "t0",
+      "TwitchA",
+      "twitch message 0",
+      new Date(now.getTime() - 4000),
+    );
+    const t1 = makeTwitchMessage(
+      "t1",
+      "TwitchB",
+      "twitch message 1",
+      new Date(now.getTime() - 2000),
+    );
+    const y0 = makeYtMessage(
+      "y0",
+      "YTA",
+      "yt message 0",
+      new Date(now.getTime() - 3000),
+    );
+    const y1 = makeYtMessage(
+      "y1",
+      "YTB",
+      "yt message 1",
+      new Date(now.getTime() - 1000),
+    );
+
+    const { container, rerender } = render(
+      <UnifiedChat
+        channelName="testchannel"
+        splitChatEnabled
+        twitchMessages={[t0, t1]}
+        ytMessages={[y0, y1]}
+      />,
+    );
+
+    // y0 disappears (deleted / timed out), shifting t1 from index 2 to index 1.
+    // Reuse the exact same message objects so only the memoized components
+    // decide whether the parity can be recomputed.
+    rerender(
+      <UnifiedChat
+        channelName="testchannel"
+        splitChatEnabled
+        twitchMessages={[t0, t1]}
+        ytMessages={[y1]}
+      />,
+    );
+
+    const messages = Array.from(container.querySelectorAll(".message"));
+    expect(messages.map(parity)).toEqual(["even", "odd", "even"]);
+    expect(messages[1].textContent).toContain("twitch message 1");
   });
 
   it("sorts messages by timestamp", () => {

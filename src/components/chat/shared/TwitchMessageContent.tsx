@@ -337,6 +337,8 @@ export const TwitchMessageContent = memo(
     return (
       prev.msg.id === next.msg.id &&
       prev.msg === next.msg &&
+      prev.index === next.index &&
+      prev.previousMsg === next.previousMsg &&
       prev.currentUserDisplayName === next.currentUserDisplayName
     );
   },

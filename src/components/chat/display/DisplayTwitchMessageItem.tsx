@@ -145,6 +145,7 @@ export const DisplayTwitchMessageItem = memo(DisplayTwitchMessageItemBase, (prev
   return (
     prev.msg.id === next.msg.id &&
     prev.msg === next.msg &&
+    prev.index === next.index &&
     prev.currentUserDisplayName === next.currentUserDisplayName
   );
 });

@@ -86,6 +86,7 @@ export const UnifiedTwitchMessageItem = memo(UnifiedTwitchMessageItemBase, (prev
   return (
     prev.entry === next.entry &&
     prev.entry.msg.id === next.entry.msg.id &&
+    prev.index === next.index &&
     prev.currentUserDisplayName === next.currentUserDisplayName
   );
 });
