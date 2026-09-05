@@ -1,11 +1,11 @@
-import React, { useMemo, useCallback, useRef, useLayoutEffect } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   tokenizeThirdPartyEmotesForYoutube,
   useDisabledEmotes,
   useEmoteMapVersion,
   type YoutubeEmoteToken,
 } from "../lib/emotes";
-import { renderUnicodeEmojis, parseUrlWord } from "../lib/emotes/utils";
+import { escapeHtml, renderUnicodeEmojis, parseUrlWord } from "../lib/emotes/utils";
 import TwitchLinkPreview from "./chat/TwitchLinkPreview";
 import { parseTwitchUrl } from "../lib/twitchLink";
 
@@ -50,13 +50,36 @@ const emoteImgStyle: React.CSSProperties = {
 const URL_DETECT_REGEX = /(^|\s)(https?:\/\/|www\.)/i;
 
 /**
+ * Renders plain text, converting any Unicode emoji into Twemoji <img> markup
+ * at render time.
+ *
+ * The emoji are intentionally NOT post-processed by mutating the mounted
+ * DOM: running twemoji.parse on a React-rendered node replaces React-created
+ * text nodes behind React's back, so the next re-render of that node makes
+ * ReactDOM throw `NotFoundError: Failed to execute 'insertBefore' on 'Node':
+ * The node before which the new node is to be inserted is not a child of
+ * this node`. Instead the escaped string is handed to React as static markup
+ * through dangerouslySetInnerHTML (never diffed afterwards) — the same
+ * approach the Twitch HTML message renderer already uses.
+ */
+function EmojiText({ text }: { text: string }) {
+  // twemoji.parse leaves a string untouched when it contains no emoji, so
+  // comparing against the escaped input doubles as the emoji check and keeps
+  // emoji-free words as plain (React-escaped) text.
+  const escaped = escapeHtml(text);
+  const html = renderUnicodeEmojis(escaped);
+  if (html === escaped) return <>{text}</>;
+  return <span dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/**
  * Renders a single whitespace-delimited word as a clickable link when it is
  * an http(s):// or www. URL, otherwise as plain text. Shared by the plain
  * and third-party-emote rendering paths so both linkify identically.
  */
 function LinkifiedWord({ word }: { word: string }) {
   const href = parseUrlWord(word);
-  if (!href) return <>{word}</>;
+  if (!href) return <EmojiText text={word} />;
   return (
     <a
       href={href}
@@ -64,7 +87,7 @@ function LinkifiedWord({ word }: { word: string }) {
       rel="noopener noreferrer"
       className="yt-message-link"
     >
-      {word}
+      <EmojiText text={word} />
     </a>
   );
 }
@@ -142,7 +165,11 @@ export default function YTMessageParts({
         // Fast path: verbatim text unless a URL-shaped word is present, in
         // which case split on whitespace (keeping it) and linkify URL words.
         if (!URL_DETECT_REGEX.test(text)) {
-          return <React.Fragment key={key}>{text}</React.Fragment>;
+          return (
+            <React.Fragment key={key}>
+              <EmojiText text={text} />
+            </React.Fragment>
+          );
         }
         return (
           <React.Fragment key={key}>
@@ -259,18 +286,5 @@ export default function YTMessageParts({
     [parts, variant, renderText],
   );
 
-  // After React renders text nodes, convert any Unicode emoji characters
-  // (e.g. 🇨🇦) into Twemoji <img> tags for consistent cross-platform display.
-  // Twemoji only touches text content — existing <img> elements (YouTube
-  // custom emojis, 7TV/BTTV/FFZ emotes) are left untouched.
-  const containerRef = useRef<HTMLSpanElement>(null);
-  // renderUnicodeEmojis is a stable imported helper
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useLayoutEffect(() => {
-    if (containerRef.current) {
-      renderUnicodeEmojis(containerRef.current);
-    }
-  }, [rendered]);
-
-  return <span ref={containerRef}>{rendered}</span>;
+  return <span>{rendered}</span>;
 }

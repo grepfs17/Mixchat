@@ -255,6 +255,53 @@ describe("YTMessageParts Twemoji rendering (Unicode emojis)", () => {
     expect(container.querySelectorAll('img.emoji').length).toBe(0);
     expect(container.textContent).toBe("Hello World");
   });
+
+  it("safely re-renders when an emoji text part changes (regression: NotFoundError insertBefore)", () => {
+    const { container, rerender } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Hi 😀" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll("img.emoji").length).toBe(1);
+
+    // Old code converted emoji by mutating the mounted DOM in a layout
+    // effect (twemoji.parse on a React-rendered node). Re-rendering that
+    // node afterwards made ReactDOM throw NotFoundError on insertBefore.
+    // Re-renders must never touch React-owned DOM outside of React.
+    expect(() =>
+      rerender(
+        <YTMessageParts
+          parts={[{ type: "text", text: "Bye 😀 👍" }]}
+          variant="standalone"
+        />,
+      ),
+    ).not.toThrow();
+
+    const emojiImgs = container.querySelectorAll("img.emoji");
+    expect(emojiImgs.length).toBe(2);
+    expect(emojiImgs[0].getAttribute("src")).toContain("1f600.svg");
+    expect(container.textContent).toContain("Bye");
+  });
+
+  it("replaces stale Twemoji output when emoji content is removed on re-render", () => {
+    const { container, rerender } = render(
+      <YTMessageParts
+        parts={[{ type: "text", text: "Go 😀 go" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll("img.emoji").length).toBe(1);
+
+    rerender(
+      <YTMessageParts
+        parts={[{ type: "text", text: "plain now" }]}
+        variant="standalone"
+      />,
+    );
+    expect(container.querySelectorAll("img.emoji").length).toBe(0);
+    expect(container.textContent).toBe("plain now");
+  });
 });
 
 describe("YTMessageParts URL linkification", () => {
