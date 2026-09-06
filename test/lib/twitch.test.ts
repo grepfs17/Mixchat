@@ -64,6 +64,56 @@ describe("twitch lib mocked HTTP tests", () => {
     expect(m.isPreloaded).toBe(true);
   });
 
+  it("getRecentMessages parses the gifs tag on preloaded messages", async () => {
+    const rawMsg = `@badge-info=;badges=;color=;display-name=Viewer;emotes=;gifs=0-23|gifid123|https://media.giphy.com/media/gifid123/giphy.gif;tmi-sent-ts=${Date.now()};user-id=789 :viewer!viewer@viewer.tmi.twitch.tv PRIVMSG #channel :[YAY Yes GIF by Author]`;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ messages: [rawMsg] }),
+      }),
+    );
+
+    const messages = await getRecentMessages("channel");
+    expect(messages).toHaveLength(1);
+    const m = messages[0];
+    expect(m.gifs).toEqual([
+      {
+        id: "gifid123",
+        url: "https://media.giphy.com/media/gifid123/giphy.gif",
+        start: 0,
+        end: 23,
+      },
+    ]);
+  });
+
+  it("getRecentMessages shifts gif ranges when stripping a reply prefix", async () => {
+    const content = "[YAY Yes GIF by Author]";
+    const rawMsg = `@reply-parent-msg-id=parent1;reply-parent-display-name=Mod;reply-parent-msg-body=p%20w;badges=;color=;display-name=Viewer;emotes=;gifs=5-28|gifid123|https://media.giphy.com/media/gifid123/giphy.gif;tmi-sent-ts=${Date.now()};user-id=789 :viewer!viewer@viewer.tmi.twitch.tv PRIVMSG #channel :@mod ${content}`;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ messages: [rawMsg] }),
+      }),
+    );
+
+    const messages = await getRecentMessages("channel");
+    expect(messages).toHaveLength(1);
+    const m = messages[0];
+    expect(m.content).toBe(content);
+    expect(m.gifs).toEqual([
+      {
+        id: "gifid123",
+        url: "https://media.giphy.com/media/gifid123/giphy.gif",
+        start: 0,
+        end: 23,
+      },
+    ]);
+  });
+
   it("getRecentMessages returns empty array on non-ok response", async () => {
     vi.stubGlobal(
       "fetch",

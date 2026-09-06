@@ -657,6 +657,21 @@ img.emoji {
     object-fit: contain;
 }
 
+/* Giphy GIF chat messages (Twitch GIF Keyboard). The image replaces the
+   GIF caption text; sizing mirrors what twitch.tv renders (~240px wide). */
+.chat-gif {
+    display: inline-block;
+    max-width: 240px;
+    max-height: 180px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    margin: 2px 0;
+    vertical-align: middle;
+    user-select: none;
+}
+
 /* In reply preview, match emote sizing */
 .reply-target-content img.emoji {
     height: 1.1em !important;

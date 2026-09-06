@@ -1,3 +1,5 @@
+import type { TwitchGif } from "./twitchGifs";
+
 export type Platform = "twitch" | "youtube";
 
 export const MAX_DISPLAYED_MESSAGES = 150;
@@ -77,6 +79,13 @@ export interface TwitchMessage {
   messageEffectId?: string;
   /** True when this message is the user's first message in the channel (from the first-msg IRC tag). */
   isFirstMessage?: boolean;
+  /**
+   * Giphy GIFs attached to this message (from the IRC `gifs` tag). Each
+   * entry carries the Giphy id, the full media URL (used as-is), and the
+   * character range it occupies within `content` (which holds the GIF
+   * caption text). The renderer splices an `<img>` in place of that range.
+   */
+  gifs?: TwitchGif[];
 }
 
 export interface PlatformSession {

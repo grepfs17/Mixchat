@@ -9,6 +9,7 @@ import MessageBadges from "../../MessageBadges";
 import AutomodActions from "./AutomodActions";
 import TwitchLinkPreview from "../TwitchLinkPreview";
 import { rebaseEmotesForSegment, splitByTwitchLinks } from "../../../lib/twitchLink";
+import { splitMessageByGifs, type TwitchGif } from "../../../lib/twitchGifs";
 import { MessageModActions } from "./MessageModActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { TwitchMessage } from "../../../lib/types";
@@ -302,6 +303,7 @@ function TwitchMessageContentBase({
               content={msg.content}
               emotes={msg.emotes}
               gigantified={msg.isGigantifiedEmote}
+              gifs={msg.gifs}
             />
           )}
           {msg.messageType === "automod" && isModerator && (
@@ -358,25 +360,61 @@ function TwitchMessageTextBase({
   content,
   emotes,
   gigantified,
+  gifs,
 }: {
   content: string;
   emotes?: Record<string, string[]>;
   gigantified?: boolean;
+  gifs?: TwitchGif[];
 }) {
+  const gifSegments = React.useMemo(
+    () => splitMessageByGifs(content, gifs),
+    [content, gifs],
+  );
   const segments = React.useMemo(() => splitByTwitchLinks(content), [content]);
+  const hasGifs = gifSegments.some((s) => s.type === "gif");
+  const hasTwitchLinks = segments.some((s) => s.type === "twitch-link");
+  const html = React.useMemo(() => {
+    if (hasTwitchLinks || hasGifs) return null;
+    return parseMessageWithEmotes(content, emotes, {
+      gigantified,
+    });
+  }, [content, emotes, gigantified, hasTwitchLinks, hasGifs]);
+
+  // Giphy GIF messages: splice the image in where the GIF range sits and
+  // keep the surrounding caption text on the regular emote pipeline. The
+  // segments from splitMessageByGifs carry absolute offsets, so the emote
+  // re-basing inside TwitchMessageTextSegment still lines up with `content`.
+  if (hasGifs) {
+    return (
+      <span className="message-text">
+        {gifSegments.map((seg, i) =>
+          seg.type === "gif" ? (
+            <img
+              key={`tw-gif-${i}-${seg.id}`}
+              className="chat-gif"
+              src={seg.url}
+              alt={content.slice(seg.start, seg.end)}
+              loading="lazy"
+              draggable={false}
+            />
+          ) : (
+            <TwitchMessageTextSegment
+              key={`tw-seg-${i}-text`}
+              segment={seg}
+              emotes={emotes}
+              gigantified={gigantified}
+            />
+          ),
+        )}
+      </span>
+    );
+  }
 
   // Quick path: no Twitch URLs in the message. The original logic used
   // `dangerouslySetInnerHTML` once for emotes + unicode emoji + general
   // link wrapping. We keep that exact behaviour here to avoid behavioural
   // changes for messages without a twitch URL.
-  const hasTwitchLinks = segments.some((s) => s.type === "twitch-link");
-  const html = React.useMemo(() => {
-    if (hasTwitchLinks) return null;
-    return parseMessageWithEmotes(content, emotes, {
-      gigantified,
-    });
-  }, [content, emotes, gigantified, hasTwitchLinks]);
-
   if (!hasTwitchLinks && html !== null) {
     return (
       <span

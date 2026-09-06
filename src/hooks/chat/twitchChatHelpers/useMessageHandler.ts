@@ -10,6 +10,7 @@ import {
   getCachedSourceChannelInfo,
 } from "../../../lib/twitchChatCache";
 import { extractBadges } from "../../../lib/twitchChatMessages";
+import { parseGifsTag } from "../../../lib/twitchGifs";
 import { playEventSound } from "../../../lib/eventSounds";
 import { playMentionSound } from "../../../lib/twitchChatAudio";
 import type { MentionSoundType } from "../../../lib/twitchChatAudio";
@@ -103,6 +104,7 @@ export function useTwitchChatMessageHandler({
           ? getCachedRewardInfo(msg.rewardId)
           : undefined;
       const isFirstMessage = rawTags?.get("first-msg") === "1";
+      const gifs = parseGifsTag(rawTags?.get("gifs"));
       const isSharedChat = Boolean(
         sourceRoomId && msg.channelId && sourceRoomId !== msg.channelId,
       );
@@ -152,6 +154,7 @@ export function useTwitchChatMessageHandler({
         messageEffectId:
           powerUpType === "message_effect" ? messageEffectId : undefined,
         isFirstMessage,
+        gifs: gifs.length ? gifs : undefined,
       };
 
       // The anonymous connection can't receive USERSTATE, so derive the

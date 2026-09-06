@@ -1,5 +1,6 @@
 import type { TwitchMessage } from "./types.js";
 import { getBadgeDetail } from "./badges.js";
+import { parseGifsTag, type TwitchGif } from "./twitchGifs.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
@@ -1095,6 +1096,8 @@ export const getRecentMessages = async (
             );
           }
 
+          let gifs: TwitchGif[] = parseGifsTag(tags["gifs"]);
+
           // Parse reply-parent tags (present when this message is itself a reply)
           let replyTo:
             { id: string; author: string; content: string } | undefined =
@@ -1142,6 +1145,23 @@ export const getRecentMessages = async (
                 }
                 emotes = adjusted;
               }
+
+              // GIF ranges live in the same coordinate space as emotes, so
+              // shift them left by the stripped prefix length too.
+              if (gifs.length > 0) {
+                const shiftedGifs: TwitchGif[] = [];
+                for (const gif of gifs) {
+                  const start = gif.start - emoteOffset;
+                  if (start >= 0) {
+                    shiftedGifs.push({
+                      ...gif,
+                      start,
+                      end: gif.end - emoteOffset,
+                    });
+                  }
+                }
+                gifs = shiftedGifs;
+              }
             }
           }
 
@@ -1162,6 +1182,7 @@ export const getRecentMessages = async (
             badges,
             badgeDetails,
             emotes,
+            gifs: gifs.length ? gifs : undefined,
             isBot: tags["bot"] === "1",
             mentionsUser: false,
             isPreloaded: true, // Mark as preloaded historical message

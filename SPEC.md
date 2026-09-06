@@ -52,6 +52,7 @@ mixchat/
 │   │   └── ui/              # Generic UI hooks (countdown timer)
 │   ├── lib/                 # Pure business logic & utilities (no React import)
 │   │   ├── twitch.ts        # Twitch Helix API client (moderation, users, streams, follows)
+│   │   ├── twitchGifs.ts    # Twitch Giphy GIF tag parsing + chat text segmentation
 │   │   ├── youtube.ts       # YouTube InnerTube client (proxy-aware, PoToken, throttled)
 │   │   ├── emotes/          # Emote system (7TV, BTTV, FFZ, Twitch, search, parser)
 │   │   ├── songQueue/       # Song queue system (server+client: types, IDB, API, extraction)
@@ -87,7 +88,7 @@ mixchat/
 ### 1. Data Flow
 
 - **Auth**: OAuth popup → callback page → postMessage → parent window stores session in localStorage
-- **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message).
+- **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message). Giphy GIF chat messages (GIF Keyboard) are parsed from the IRC `gifs` tag (`start-end|<gifID>|<gifURL>`) in `src/lib/twitchGifs.ts` and rendered inline as `<img class="chat-gif">` in `TwitchMessageContent`.
 - **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component
 - **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available.
 - **Server State**: Song queue uses server-side in-memory store (`songQueueStore`) with live polling via API routes.
