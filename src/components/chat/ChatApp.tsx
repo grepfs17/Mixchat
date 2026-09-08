@@ -523,6 +523,58 @@ export default function ChatApp(props: ChatAppStateProps) {
           />
         )}
 
+        {/* Streamer tool bars (music player, song queue, giveaway) stay above
+         * event banners (hype train, poll, prediction, celebration, pinned
+         * chat) so they are always visible while the streamer is chatting. */}
+        {showModTools && showMusicBar && (
+          <MusicPlayerMinimizedBar
+            player={musicPlayer}
+            hidden={streamerToolsOpen}
+            onOpen={() => openStreamerTools("music-player")}
+          />
+        )}
+
+        {showModTools && songQueue.phase === "open" && (
+          <SongQueueMinimizedBar
+            queue={songQueue}
+            hidden={streamerToolsOpen}
+            onOpen={() => openStreamerTools("song-queue")}
+            onEnd={async () => {
+              await songQueue.end();
+            }}
+          />
+        )}
+
+        {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
+          <GiveawayIndicator
+            giveaway={giveaway}
+            onOpen={() => openStreamerTools("giveaway")}
+          />
+        )}
+
+        {streamerToolsOpen && (
+          <StreamerToolsModal
+            giveaway={giveaway}
+            songQueue={songQueue}
+            musicPlayer={musicPlayer}
+            onAnnounce={handleAnnounceWinner}
+            onMinimize={closeStreamerTools}
+            onClose={closeStreamerTools}
+            initialTool={streamerToolsInitialTool}
+            youtubeConnected={!!youtubeSession}
+            publicOrigin={
+              typeof window !== "undefined" ? window.location.origin : ""
+            }
+            channelKey={songChannelKey}
+            streamGameId={
+              // Only expose the category id when on own channel (privacy).
+              isOnOwnChannel ? streamGameId : ""
+            }
+            streamGameName={streamGameName}
+            onSearchCategories={handleSearchCategories}
+          />
+        )}
+
         {/* Hype Train notification */}
         {hypeTrain && (
           <HypeTrainBanner
@@ -555,55 +607,6 @@ export default function ChatApp(props: ChatAppStateProps) {
           <PinnedChatBanner
             highlight={pinnedHighlight}
             onDismiss={pinned.dismiss}
-          />
-        )}
-
-        {streamerToolsOpen && (
-          <StreamerToolsModal
-            giveaway={giveaway}
-            songQueue={songQueue}
-            musicPlayer={musicPlayer}
-            onAnnounce={handleAnnounceWinner}
-            onMinimize={closeStreamerTools}
-            onClose={closeStreamerTools}
-            initialTool={streamerToolsInitialTool}
-            youtubeConnected={!!youtubeSession}
-            publicOrigin={
-              typeof window !== "undefined" ? window.location.origin : ""
-            }
-            channelKey={songChannelKey}
-            streamGameId={
-              // Only expose the category id when on own channel (privacy).
-              isOnOwnChannel ? streamGameId : ""
-            }
-            streamGameName={streamGameName}
-            onSearchCategories={handleSearchCategories}
-          />
-        )}
-
-        {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
-          <GiveawayIndicator
-            giveaway={giveaway}
-            onOpen={() => openStreamerTools("giveaway")}
-          />
-        )}
-
-        {showModTools && songQueue.phase === "open" && (
-          <SongQueueMinimizedBar
-            queue={songQueue}
-            hidden={streamerToolsOpen}
-            onOpen={() => openStreamerTools("song-queue")}
-            onEnd={async () => {
-              await songQueue.end();
-            }}
-          />
-        )}
-
-        {showModTools && showMusicBar && (
-          <MusicPlayerMinimizedBar
-            player={musicPlayer}
-            hidden={streamerToolsOpen}
-            onOpen={() => openStreamerTools("music-player")}
           />
         )}
 
