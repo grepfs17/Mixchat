@@ -24,11 +24,7 @@
 
 .hype-train-progress-fill {
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        var(--color-twitch) 0%,
-        var(--color-indigo) 100%
-    );
+    background: var(--color-twitch);
     border-radius: 4px;
     transition: width 0.5s ease-out;
 }

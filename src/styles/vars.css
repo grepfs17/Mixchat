@@ -102,6 +102,10 @@
     /* Pill / capsule border radius */
     --radius-pill: 999px;
 
+    /* Shared edge margin for the chat overlay stack (event banners, pinned
+       message and streamer-tool bars) so they all share the same width. */
+    --chat-bar-margin: 8px;
+
     /* Platform glow shadows */
     --shadow-glow-accent: 0 0 20px rgba(158, 64, 115, 0.4);
     --shadow-glow-twitch: 0 0 12px rgba(145, 71, 255, 0.35);

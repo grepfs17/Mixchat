@@ -13,7 +13,7 @@
     border-left: 3px solid var(--color-border-twitch-event);
     border-radius: var(--radius-lg);
     padding: 10px 12px;
-    margin: 8px;
+    margin: var(--chat-bar-margin, 8px);
     box-shadow: var(--shadow-sm);
     animation: bannerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     flex-shrink: 0;

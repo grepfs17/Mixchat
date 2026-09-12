@@ -31,22 +31,14 @@
 
 .poll-banner-choice-bar-fill {
     height: 100%;
-    background: linear-gradient(
-        90deg,
-        var(--color-twitch) 0%,
-        var(--color-indigo) 100%
-    );
+    background: var(--color-twitch);
     border-radius: var(--radius-md);
     transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     min-width: 4px;
 }
 
 .poll-banner-choice--winner .poll-banner-choice-bar-fill {
-    background: linear-gradient(
-        90deg,
-        var(--color-green) 0%,
-        #22c55e 100%
-    );
+    background: var(--color-green);
 }
 
 .poll-banner-choice-content {

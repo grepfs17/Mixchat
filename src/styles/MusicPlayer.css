@@ -12,14 +12,14 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
     padding: 6px 10px;
 }
 
 .music-player-panel-header-icon {
-    color: var(--color-accent, #6366f1);
+    color: var(--color-accent, var(--color-indigo));
     display: inline-flex;
     align-items: center;
 }
@@ -27,10 +27,10 @@
 .music-player-select {
     flex: 1;
     min-width: 0;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 13px;
     padding: 4px 8px;
     cursor: pointer;
@@ -38,7 +38,7 @@
 
 .music-player-select:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--color-indigo);
 }
 
 .music-player-rename {
@@ -49,7 +49,7 @@
 .music-player-icon-btn {
     background: none;
     border: 1px solid transparent;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     width: 26px;
     height: 26px;
     border-radius: 5px;
@@ -64,9 +64,9 @@
 }
 
 .music-player-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f1f1f1;
-    border-color: #2c2c2c;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-medium);
 }
 
 .music-player-icon-btn--danger:hover {
@@ -84,16 +84,16 @@
 .music-player-field-label {
     font-size: 11px;
     font-weight: 600;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
 .music-player-input {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 13px;
     padding: 8px 10px;
     font-family: inherit;
@@ -103,7 +103,7 @@
 
 .music-player-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--color-indigo);
 }
 
 .music-player-input:disabled {
@@ -133,14 +133,14 @@
     transition:
         background 0.15s,
         opacity 0.15s;
-    background: rgba(255, 255, 255, 0.06);
-    color: #d6d6d6;
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
 }
 
 .music-player-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #f1f1f1;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .music-player-btn:disabled {
@@ -149,14 +149,14 @@
 }
 
 .music-player-btn--primary {
-    background: #6366f1;
+    background: var(--color-indigo);
     color: #fff;
-    border: 1px solid #6366f1;
+    border: 1px solid var(--color-indigo);
 }
 
 .music-player-btn--primary:hover:not(:disabled) {
-    background: #7c7ff5;
-    border-color: #7c7ff5;
+    background: var(--color-indigo-hover);
+    border-color: var(--color-indigo-hover);
 }
 
 .music-player-btn--small {
@@ -176,21 +176,21 @@
 }
 
 .music-player-btn--play-minibar {
-    background: #6366f1;
+    background: var(--color-indigo);
     color: #fff;
-    border: 1px solid #6366f1;
+    border: 1px solid var(--color-indigo);
     justify-content: center;
 }
 
 .music-player-btn--play-minibar:hover:not(:disabled) {
-    background: #7c7ff5;
-    border-color: #7c7ff5;
+    background: var(--color-indigo-hover);
+    border-color: var(--color-indigo-hover);
 }
 
 .music-player-btn--icon {
     background: none;
     border: none;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     padding: 4px;
     width: 24px;
     height: 24px;
@@ -202,8 +202,8 @@
 }
 
 .music-player-btn--icon:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-    color: #f1f1f1;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .music-player-btn--icon-danger:hover:not(:disabled) {
@@ -216,7 +216,7 @@
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: #c5c5c5;
+    color: var(--color-text-secondary);
     cursor: pointer;
 }
 
@@ -225,8 +225,8 @@
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
 }
 
@@ -235,8 +235,8 @@
     align-items: flex-start;
     gap: 2px;
     padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    color: #9a9a9a;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-muted);
     font-style: italic;
 }
 
@@ -245,7 +245,7 @@
     height: 36px;
     border-radius: 4px;
     object-fit: cover;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
     flex-shrink: 0;
 }
 
@@ -261,20 +261,20 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #c5c8ff;
+    color: var(--color-indigo);
     font-weight: 600;
 }
 
 .music-player-now-playing-position {
     margin-left: 6px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     font-weight: 500;
 }
 
 .music-player-now-playing-title {
     font-size: 13px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -282,7 +282,7 @@
 
 .music-player-now-playing-sub {
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -306,19 +306,19 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
 .music-player-track-list-count {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border-medium);
     border-radius: 999px;
     padding: 1px 6px;
     font-size: 10px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .music-player-track-list {
@@ -352,8 +352,8 @@
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
     cursor: grab;
     transition:
@@ -363,13 +363,13 @@
 }
 
 .music-player-track:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: #3a3a3a;
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
 }
 
 .music-player-track--active {
-    border-color: rgba(99, 102, 241, 0.5);
-    background: rgba(99, 102, 241, 0.08);
+    border-color: color-mix(in srgb, var(--color-indigo) 50%, transparent);
+    background: color-mix(in srgb, var(--color-indigo) 8%, transparent);
 }
 
 .music-player-track--dragging {
@@ -377,7 +377,7 @@
 }
 
 .music-player-track-handle {
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
@@ -387,7 +387,7 @@
 
 .music-player-track-index {
     font-size: 10px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     width: 16px;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -399,7 +399,7 @@
     height: 24px;
     border-radius: 3px;
     object-fit: cover;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
     flex-shrink: 0;
 }
 
@@ -414,7 +414,7 @@
 .music-player-track-title {
     font-size: 12px;
     font-weight: 500;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -422,7 +422,7 @@
 
 .music-player-track-sub {
     font-size: 10px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -441,12 +441,12 @@
 }
 
 .music-player-empty {
-    border: 1px dashed #2c2c2c;
+    border: 1px dashed var(--color-border-medium);
     border-radius: 6px;
     padding: 14px;
     text-align: center;
     font-size: 12px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .music-player-empty-state {
@@ -454,14 +454,14 @@
     flex-direction: column;
     gap: 10px;
     padding: 12px;
-    border: 1px dashed #2c2c2c;
+    border: 1px dashed var(--color-border-medium);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--color-bg-tertiary);
     text-align: center;
 }
 
 .music-player-empty-state-icon {
-    color: #c5c8ff;
+    color: var(--color-indigo);
     display: flex;
     justify-content: center;
     margin-bottom: 4px;
@@ -471,13 +471,13 @@
     margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
 }
 
 .music-player-empty-state-desc {
     margin: 0;
     font-size: 12px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .music-player-actions {
@@ -492,7 +492,7 @@
     padding: 12px;
     text-align: center;
     font-size: 12px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     font-style: italic;
 }
 
@@ -545,8 +545,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 25%, transparent);
     border-radius: 6px;
     padding: 6px 10px;
     align-self: flex-start;
@@ -554,14 +554,14 @@
 
 .music-player-category-chip-name {
     font-size: 12px;
-    color: #c5c8ff;
+    color: var(--color-indigo);
     font-weight: 500;
 }
 
 .music-player-category-chip-remove {
     background: none;
     border: none;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 2px;
     display: inline-flex;
@@ -584,7 +584,7 @@
 .music-player-category-search-icon {
     position: absolute;
     left: 10px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     pointer-events: none;
 }
 
@@ -600,8 +600,8 @@
     right: 0;
     z-index: 20;
     margin-top: 2px;
-    background: #1a1a1a;
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
     max-height: 180px;
     overflow-y: auto;
@@ -613,7 +613,7 @@
     width: 100%;
     background: none;
     border: none;
-    color: #d6d6d6;
+    color: var(--color-text-primary);
     font-size: 12px;
     padding: 8px 12px;
     text-align: left;
@@ -623,6 +623,6 @@
 }
 
 .music-player-category-option:hover {
-    background: rgba(99, 102, 241, 0.15);
+    background: color-mix(in srgb, var(--color-indigo) 15%, transparent);
     color: #fff;
 }

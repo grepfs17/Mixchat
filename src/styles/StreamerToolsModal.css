@@ -1,14 +1,14 @@
 /* Streamer Tools Modal — Streamer tools list + active tool container. */
 .streamer-tools-modal {
     position: relative;
-    background: linear-gradient(160deg, #1a1a1a 0%, #141414 100%);
-    border: 1px solid #2a2a2a;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 12px;
     width: min(560px, 92vw);
     max-height: 88vh;
     display: flex;
     flex-direction: column;
-    color: #e7e7e7;
+    color: var(--color-text-primary);
     box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
     overflow: hidden;
 }
@@ -18,7 +18,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid #262626;
+    border-bottom: 1px solid var(--color-border-dark);
 }
 
 .streamer-tools-header-actions {
@@ -30,7 +30,7 @@
 .streamer-tools-header-btn {
     background: none;
     border: 1px solid transparent;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     width: 30px;
     height: 30px;
     border-radius: 6px;
@@ -45,9 +45,9 @@
 }
 
 .streamer-tools-header-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f1f1f1;
-    border-color: #2c2c2c;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-medium);
 }
 
 .streamer-tools-header-btn:disabled {
@@ -62,7 +62,7 @@
     margin: 0;
     font-size: 17px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
 }
 
 .streamer-tools-body {
@@ -105,8 +105,8 @@
     justify-content: space-between;
     gap: 12px;
     padding: 14px 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 8px;
     transition:
         background 0.15s,
@@ -114,8 +114,8 @@
 }
 
 .streamer-tools-list-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: #3a3a3a;
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
 }
 
 .streamer-tools-list-meta {
@@ -128,16 +128,16 @@
 .streamer-tools-list-label {
     font-weight: 600;
     font-size: 14px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
 }
 
 .streamer-tools-list-desc {
     font-size: 12px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .streamer-tools-list-open {
-    background: #6366f1;
+    background: var(--color-indigo);
     color: #fff;
     border: none;
     padding: 6px 14px;
@@ -149,7 +149,7 @@
 }
 
 .streamer-tools-list-open:hover {
-    background: #7c7ff5;
+    background: var(--color-indigo-hover);
 }
 
 .streamer-tools-active {
@@ -161,7 +161,7 @@
 /* Recent winners (history) */
 .streamer-tools-history {
     margin-top: 18px;
-    border-top: 1px solid #262626;
+    border-top: 1px solid var(--color-border-dark);
     padding-top: 14px;
     display: flex;
     flex-direction: column;
@@ -169,11 +169,11 @@
 }
 
 .streamer-tools-history--empty {
-    border: 1px dashed #2c2c2c;
+    border: 1px dashed var(--color-border-medium);
     border-radius: 6px;
     padding: 12px;
     font-size: 12px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     text-align: center;
 }
 
@@ -188,13 +188,13 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .streamer-tools-history-clear {
     background: none;
-    border: 1px solid #2c2c2c;
-    color: #9a9a9a;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-muted);
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 4px;
@@ -247,8 +247,8 @@
     justify-content: space-between;
     gap: 10px;
     padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
 }
 
@@ -266,7 +266,7 @@
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     min-width: 0;
 }
 
@@ -275,13 +275,13 @@
     height: 18px;
     border-radius: 50%;
     object-fit: cover;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
     flex-shrink: 0;
 }
 
 .streamer-tools-history-avatar--placeholder {
     display: inline-block;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
 }
 
 .streamer-tools-history-name {
@@ -291,7 +291,7 @@
 }
 
 .streamer-tools-history-platform {
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
 }
@@ -308,11 +308,11 @@
 
 .streamer-tools-history-keyword {
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .streamer-tools-history-keyword strong {
-    color: #c5c8ff;
+    color: var(--color-indigo);
     font-weight: 600;
 }
 
@@ -322,13 +322,13 @@
     align-items: flex-end;
     gap: 2px;
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     text-align: right;
     white-space: nowrap;
 }
 
 .streamer-tools-history-date {
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .streamer-tools-back {
@@ -338,7 +338,7 @@
     gap: 6px;
     background: none;
     border: 1px solid transparent;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     cursor: pointer;
     font-size: 12px;
     padding: 4px 10px;
@@ -350,15 +350,15 @@
 }
 
 .streamer-tools-back:hover {
-    color: #e7e7e7;
-    background: rgba(255, 255, 255, 0.04);
-    border-color: #2c2c2c;
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-medium);
 }
 
 /* Past song-queue playlists (history) */
 .past-playlists {
     margin-top: 14px;
-    border-top: 1px solid #262626;
+    border-top: 1px solid var(--color-border-dark);
     padding-top: 14px;
     display: flex;
     flex-direction: column;
@@ -366,17 +366,17 @@
 }
 
 .past-playlists--empty {
-    border: 1px dashed #2c2c2c;
+    border: 1px dashed var(--color-border-medium);
     border-radius: 6px;
     padding: 12px;
     font-size: 12px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     text-align: center;
 }
 
 .past-playlists--detail {
     margin-top: 14px;
-    border-top: 1px solid #262626;
+    border-top: 1px solid var(--color-border-dark);
     padding-top: 14px;
     display: flex;
     flex-direction: column;
@@ -394,14 +394,14 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-clear,
 .past-playlists-delete {
     background: none;
-    border: 1px solid #2c2c2c;
-    color: #9a9a9a;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-muted);
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 4px;
@@ -457,15 +457,15 @@
     display: flex;
     align-items: stretch;
     gap: 4px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
     overflow: hidden;
 }
 
 .past-playlists-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: #3a3a3a;
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
 }
 
 .past-playlists-item-button {
@@ -495,7 +495,7 @@
 .past-playlists-item-title {
     font-size: 13px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -507,7 +507,7 @@
     flex-shrink: 0;
     border-radius: 3px;
     overflow: hidden;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
 }
 
 .past-playlists-item-thumb {
@@ -519,23 +519,23 @@
 
 .past-playlists-item-thumb--empty {
     display: block;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
 }
 
 .past-playlists-item-source {
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     font-weight: 600;
 }
 
 .past-playlists-item[data-source="server"] .past-playlists-item-source {
-    color: var(--color-accent, #6366f1);
+    color: var(--color-accent, var(--color-indigo));
 }
 
 .past-playlists-item[data-source="local"] .past-playlists-item-source {
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-server-error {
@@ -549,14 +549,14 @@
 
 .past-playlists-detail-loading {
     font-size: 12px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     text-align: center;
     padding: 20px 8px;
 }
 
 .past-playlists-item-sub {
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-item-meta {
@@ -565,21 +565,21 @@
     align-items: flex-end;
     gap: 2px;
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     text-align: right;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .past-playlists-item-date {
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-item-delete {
     background: none;
     border: none;
-    border-left: 1px solid #262626;
-    color: #7e7e7e;
+    border-left: 1px solid var(--color-border-dark);
+    color: var(--color-text-muted);
     width: 32px;
     display: inline-flex;
     align-items: center;
@@ -597,8 +597,8 @@
 .past-playlists-item-copy {
     background: none;
     border: none;
-    border-left: 1px solid #262626;
-    color: #7e7e7e;
+    border-left: 1px solid var(--color-border-dark);
+    color: var(--color-text-muted);
     width: 32px;
     display: inline-flex;
     align-items: center;
@@ -611,9 +611,9 @@
 }
 
 .past-playlists-item-copy:hover {
-    color: #c5c8ff;
-    background: rgba(99, 102, 241, 0.08);
-    border-left-color: rgba(99, 102, 241, 0.4);
+    color: var(--color-indigo);
+    background: color-mix(in srgb, var(--color-indigo) 8%, transparent);
+    border-left-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
 }
 
 .past-playlists-detail-actions {
@@ -624,8 +624,8 @@
 
 .past-playlists-copy {
     background: none;
-    border: 1px solid #2c2c2c;
-    color: #9a9a9a;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-muted);
     font-size: 11px;
     padding: 3px 8px;
     border-radius: 4px;
@@ -640,9 +640,9 @@
 }
 
 .past-playlists-copy:hover {
-    background: rgba(99, 102, 241, 0.1);
-    color: #c5c8ff;
-    border-color: rgba(99, 102, 241, 0.4);
+    background: color-mix(in srgb, var(--color-indigo) 10%, transparent);
+    color: var(--color-indigo);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
 }
 
 .past-playlists-copy--disabled {
@@ -652,13 +652,13 @@
 
 .past-playlists-copy--disabled:hover {
     background: none;
-    color: #9a9a9a;
-    border-color: #2c2c2c;
+    color: var(--color-text-muted);
+    border-color: var(--color-border-medium);
 }
 
 .past-playlists-share {
-    background: #6366f1;
-    border: 1px solid #6366f1;
+    background: var(--color-indigo);
+    border: 1px solid var(--color-indigo);
     color: #fff;
     font-size: 11px;
     padding: 3px 8px;
@@ -675,8 +675,8 @@
 }
 
 .past-playlists-share:hover:not(:disabled) {
-    background: #7c7ff5;
-    border-color: #7c7ff5;
+    background: var(--color-indigo-hover);
+    border-color: var(--color-indigo-hover);
 }
 
 .past-playlists-share:disabled {
@@ -698,7 +698,7 @@
     gap: 6px;
     background: none;
     border: 1px solid transparent;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     cursor: pointer;
     font-size: 12px;
     padding: 4px 10px;
@@ -710,9 +710,9 @@
 }
 
 .past-playlists-back:hover {
-    color: #e7e7e7;
-    background: rgba(255, 255, 255, 0.04);
-    border-color: #2c2c2c;
+    color: var(--color-text-primary);
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-medium);
 }
 
 .past-playlists-detail-meta {
@@ -720,13 +720,13 @@
     flex-direction: column;
     gap: 2px;
     padding: 4px 2px 8px;
-    border-bottom: 1px solid #262626;
+    border-bottom: 1px solid var(--color-border-dark);
 }
 
 .past-playlists-detail-title {
     font-size: 14px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -734,12 +734,12 @@
 
 .past-playlists-detail-stats {
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-detail-date {
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .past-playlists-detail-list {
@@ -777,8 +777,8 @@
     align-items: center;
     gap: 10px;
     padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
 }
 
@@ -787,13 +787,13 @@
 }
 
 .past-playlists-detail-item[data-status="skipped"] {
-    border-left: 3px solid #7e7e7e;
+    border-left: 3px solid var(--color-text-muted);
     opacity: 0.7;
 }
 
 .past-playlists-detail-item[data-status="pending"],
 .past-playlists-detail-item[data-status="playing"] {
-    border-left: 3px solid #6366f1;
+    border-left: 3px solid var(--color-indigo);
 }
 
 .past-playlists-detail-thumb {
@@ -804,7 +804,7 @@
     height: 36px;
     border-radius: 4px;
     overflow: hidden;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
 }
 
 .past-playlists-detail-thumb img {
@@ -819,7 +819,7 @@
     right: 2px;
     bottom: 2px;
     background: rgba(0, 0, 0, 0.8);
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 10px;
     padding: 1px 4px;
     border-radius: 3px;
@@ -836,7 +836,7 @@
 .past-playlists-detail-song-title {
     font-size: 12px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -844,7 +844,7 @@
 
 .past-playlists-detail-song-channel {
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -852,7 +852,7 @@
 
 .past-playlists-detail-submitter {
     font-size: 10px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -866,15 +866,15 @@
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     flex-shrink: 0;
     font-weight: 600;
 }
 
 .past-playlists-detail-copy {
     background: none;
-    border: 1px solid #2c2c2c;
-    color: #9a9a9a;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-muted);
     font-size: 10px;
     padding: 3px 7px;
     border-radius: 4px;
@@ -890,9 +890,9 @@
 }
 
 .past-playlists-detail-copy:hover {
-    background: rgba(99, 102, 241, 0.1);
-    color: #c5c8ff;
-    border-color: rgba(99, 102, 241, 0.4);
+    background: color-mix(in srgb, var(--color-indigo) 10%, transparent);
+    color: var(--color-indigo);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
 }
 
 /* Giveaway indicator (minimized state) */
@@ -905,14 +905,10 @@
     align-items: center;
     gap: 10px;
     padding: 6px 12px 6px 10px;
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.18) 0%,
-        rgba(168, 85, 247, 0.18) 100%
-    );
-    border: 1px solid rgba(168, 85, 247, 0.5);
+    background: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 50%, transparent);
     border-radius: 999px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
@@ -926,36 +922,24 @@
 
 .giveaway-indicator:hover {
     transform: translateY(-1px);
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.28) 0%,
-        rgba(168, 85, 247, 0.28) 100%
-    );
-    border-color: rgba(168, 85, 247, 0.7);
+    background: var(--color-bg-hover);
+    border-color: color-mix(in srgb, var(--color-indigo) 70%, transparent);
 }
 
 .giveaway-indicator--revealed {
-    background: linear-gradient(
-        135deg,
-        rgba(15, 157, 88, 0.2) 0%,
-        rgba(99, 102, 241, 0.2) 100%
-    );
+    background: var(--color-bg-tertiary);
     border-color: rgba(15, 157, 88, 0.5);
 }
 
 .giveaway-indicator--revealed:hover {
-    background: linear-gradient(
-        135deg,
-        rgba(15, 157, 88, 0.3) 0%,
-        rgba(99, 102, 241, 0.3) 100%
-    );
+    background: var(--color-bg-hover);
     border-color: rgba(15, 157, 88, 0.75);
 }
 
 .giveaway-indicator-icon {
     display: inline-flex;
     align-items: center;
-    color: #c5c8ff;
+    color: var(--color-indigo);
     flex-shrink: 0;
 }
 
@@ -973,14 +957,14 @@
 
 .giveaway-indicator-title {
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 11px;
     letter-spacing: 0.02em;
 }
 
 .giveaway-indicator-sub {
     font-size: 11px;
-    color: #b8b8b8;
+    color: var(--color-text-secondary);
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -991,14 +975,14 @@
 }
 
 .giveaway-indicator-sub strong {
-    color: #c5c8ff;
+    color: var(--color-indigo);
     font-weight: 600;
 }
 
 .giveaway-indicator-platform {
     display: inline-flex;
     align-items: center;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     margin-left: 2px;
 }
 
@@ -1018,7 +1002,7 @@
     font-weight: 500;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #b8b8b8;
+    color: var(--color-text-secondary);
     font-family: inherit;
     margin-top: 2px;
 }
@@ -1048,21 +1032,21 @@
 .giveaway-field-label {
     font-size: 12px;
     font-weight: 600;
-    color: #c5c5c5;
+    color: var(--color-text-secondary);
     letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
 .giveaway-field-hint {
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .giveaway-input {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 14px;
     padding: 8px 10px;
     font-family: inherit;
@@ -1071,7 +1055,7 @@
 
 .giveaway-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--color-indigo);
 }
 
 .giveaway-input-suffix {
@@ -1100,9 +1084,9 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #7e7e7e;
-    background: rgba(0, 0, 0, 0.25);
-    border-left: 1px solid #2c2c2c;
+    color: var(--color-text-muted);
+    background: var(--color-bg-tertiary);
+    border-left: 1px solid var(--color-border-medium);
     border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
     pointer-events: none;
@@ -1127,9 +1111,9 @@
 }
 
 .giveaway-preset {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #2c2c2c;
-    color: #c5c5c5;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-secondary);
     font-size: 12px;
     padding: 4px 10px;
     border-radius: 999px;
@@ -1141,15 +1125,15 @@
 }
 
 .giveaway-preset:hover {
-    background: rgba(99, 102, 241, 0.12);
-    border-color: rgba(99, 102, 241, 0.4);
-    color: #e7e7e7;
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
+    color: var(--color-text-primary);
 }
 
 .giveaway-preset--active,
 .giveaway-preset--active:hover {
-    background: rgba(99, 102, 241, 0.2);
-    border-color: #6366f1;
+    background: color-mix(in srgb, var(--color-indigo) 20%, transparent);
+    border-color: var(--color-indigo);
     color: #fff;
 }
 
@@ -1164,7 +1148,7 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #d6d6d6;
+    color: var(--color-text-primary);
     cursor: pointer;
 }
 
@@ -1204,22 +1188,22 @@
 }
 
 .giveaway-btn--primary {
-    background: #6366f1;
+    background: var(--color-indigo);
     color: #fff;
 }
 
 .giveaway-btn--primary:hover:not(:disabled) {
-    background: #7c7ff5;
+    background: var(--color-indigo-hover);
 }
 
 .giveaway-btn--secondary {
-    background: rgba(255, 255, 255, 0.06);
-    color: #d6d6d6;
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
 }
 
 .giveaway-btn--secondary:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-hover);
 }
 
 .giveaway-running {
@@ -1236,9 +1220,9 @@
 }
 
 .giveaway-keyword-chip {
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    color: #c5c8ff;
+    background: color-mix(in srgb, var(--color-indigo) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 35%, transparent);
+    color: var(--color-indigo);
     font-size: 12px;
     padding: 4px 10px;
     border-radius: 999px;
@@ -1248,7 +1232,7 @@
     font-family: "Inter", "Roboto Mono", monospace;
     font-size: 28px;
     font-weight: 700;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     letter-spacing: 0.04em;
 }
 
@@ -1257,11 +1241,11 @@
     align-items: center;
     justify-content: space-between;
     font-size: 12px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .giveaway-running-stats strong {
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 14px;
 }
 
@@ -1272,7 +1256,7 @@
     margin-left: 8px;
     font-size: 11px;
     font-weight: 500;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .giveaway-running-breakdown-item {
@@ -1280,25 +1264,25 @@
     align-items: center;
     gap: 3px;
     padding: 1px 6px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 999px;
-    color: #b8b8b8;
+    color: var(--color-text-secondary);
 }
 
 .giveaway-running-breakdown-item[data-platform="twitch"] {
     color: var(--color-twitch, #c5a8ff);
-    border-color: rgba(145, 70, 255, 0.35);
+    border-color: color-mix(in srgb, var(--color-twitch) 35%, transparent);
 }
 
 .giveaway-running-breakdown-item[data-platform="youtube"] {
     color: var(--color-youtube, #ff8888);
-    border-color: rgba(255, 34, 34, 0.35);
+    border-color: color-mix(in srgb, var(--color-youtube) 35%, transparent);
 }
 
 .giveaway-running-meta {
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .giveaway-entries {
@@ -1310,8 +1294,8 @@
     gap: 4px;
     max-height: 220px;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid #262626;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 6px;
     padding: 6px;
     scrollbar-width: thin;
@@ -1341,12 +1325,12 @@
     gap: 8px;
     padding: 4px 8px;
     font-size: 12px;
-    color: #d6d6d6;
+    color: var(--color-text-primary);
     border-radius: 4px;
 }
 
 .giveaway-entry-row:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-bg-tertiary);
 }
 
 .giveaway-entry-avatar {
@@ -1354,13 +1338,13 @@
     height: 18px;
     border-radius: 50%;
     object-fit: cover;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
     flex-shrink: 0;
 }
 
 .giveaway-entry-avatar--placeholder {
     display: inline-block;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
 }
 
 .giveaway-entry-name {
@@ -1372,7 +1356,7 @@
 }
 
 .giveaway-entry-platform {
-    color: #7e7e7e;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
 }
@@ -1388,12 +1372,8 @@
     align-items: center;
     gap: 14px;
     padding: 16px;
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.18) 0%,
-        rgba(168, 85, 247, 0.18) 100%
-    );
-    border: 1px solid rgba(168, 85, 247, 0.4);
+    background: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 40%, transparent);
     border-radius: 10px;
 }
 
@@ -1402,13 +1382,13 @@
     height: 56px;
     border-radius: 50%;
     object-fit: cover;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
     flex-shrink: 0;
 }
 
 .giveaway-winner-avatar--placeholder {
     display: inline-block;
-    background: #2a2a2a;
+    background: var(--color-bg-tertiary);
 }
 
 .giveaway-winner-meta {
@@ -1423,7 +1403,7 @@
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: #c5c8ff;
+    color: var(--color-indigo);
 }
 
 .giveaway-winner-name {
@@ -1439,18 +1419,18 @@
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     text-transform: capitalize;
 }
 
 .giveaway-winner-summary {
     margin: 0;
     font-size: 12px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .giveaway-winner-summary strong {
-    color: #f1f1f1;
+    color: var(--color-text-primary);
 }
 
 .giveaway-checkbox {
@@ -1458,14 +1438,14 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #d6d6d6;
+    color: var(--color-text-primary);
     cursor: pointer;
 }
 
 .giveaway-notify-hint {
     margin: 0;
     font-size: 11px;
-    color: #6e6e6e;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -1474,9 +1454,9 @@
 .giveaway-empty {
     margin: 0;
     font-size: 13px;
-    color: #9a9a9a;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #2c2c2c;
+    color: var(--color-text-muted);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
     padding: 12px;
 }
@@ -1492,9 +1472,9 @@
     margin: 0;
     padding: 10px 12px;
     border-radius: 6px;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.25);
-    color: #c7d2fe;
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 25%, transparent);
+    color: var(--color-indigo);
     font-size: 12px;
 }
 
@@ -1510,14 +1490,14 @@
 .song-queue-field-label {
     font-size: 12px;
     font-weight: 600;
-    color: #c5c5c5;
+    color: var(--color-text-secondary);
     letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
 .song-queue-field-hint {
     font-size: 11px;
-    color: #7e7e7e;
+    color: var(--color-text-muted);
 }
 
 .song-queue-warning {
@@ -1526,10 +1506,10 @@
 }
 
 .song-queue-input {
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     font-size: 14px;
     padding: 8px 10px;
     font-family: inherit;
@@ -1538,7 +1518,7 @@
 
 .song-queue-input:focus {
     outline: none;
-    border-color: #6366f1;
+    border-color: var(--color-indigo);
 }
 
 .song-queue-options-row {
@@ -1552,7 +1532,7 @@
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #d1d5db;
+    color: var(--color-text-secondary);
     cursor: pointer;
 }
 
@@ -1567,7 +1547,7 @@
     height: 14px;
     border: 1.5px solid var(--color-border-medium, #4b5563);
     border-radius: 50%;
-    background: var(--color-bg-secondary, #141414);
+    background: var(--color-bg-secondary, var(--color-bg-secondary));
     cursor: pointer;
     position: relative;
     transition: border-color 0.12s ease, background 0.12s ease;
@@ -1576,21 +1556,21 @@
 
 .giveaway-radio input[type="radio"]:hover,
 .song-queue-radio input[type="radio"]:hover {
-    border-color: var(--color-accent, #6366f1);
+    border-color: var(--color-accent, var(--color-indigo));
 }
 
 .giveaway-radio input[type="radio"]:checked,
 .song-queue-radio input[type="radio"]:checked {
-    border-color: var(--color-accent, #6366f1);
-    background: var(--color-accent, #6366f1);
-    box-shadow: inset 0 0 0 3px var(--color-bg-secondary, #141414);
+    border-color: var(--color-accent, var(--color-indigo));
+    background: var(--color-accent, var(--color-indigo));
+    box-shadow: inset 0 0 0 3px var(--color-bg-secondary, var(--color-bg-secondary));
 }
 
 .giveaway-radio input[type="radio"]:focus-visible,
 .song-queue-radio input[type="radio"]:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--color-bg-secondary, #141414),
-        0 0 0 4px var(--color-accent, #6366f1);
+    box-shadow: 0 0 0 2px var(--color-bg-secondary, var(--color-bg-secondary)),
+        0 0 0 4px var(--color-accent, var(--color-indigo));
 }
 
 .song-queue-actions {
@@ -1601,10 +1581,10 @@
 }
 
 .song-queue-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
-    color: #e5e7eb;
+    color: var(--color-text-primary);
     font-size: 13px;
     padding: 7px 12px;
     cursor: pointer;
@@ -1613,8 +1593,8 @@
 }
 
 .song-queue-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #3a3a3a;
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
 }
 
 .song-queue-btn:disabled {
@@ -1623,18 +1603,18 @@
 }
 
 .song-queue-btn--primary {
-    background: #6366f1;
-    border-color: #6366f1;
+    background: var(--color-indigo);
+    border-color: var(--color-indigo);
     color: #fff;
 }
 
 .song-queue-btn--primary:hover:not(:disabled) {
-    background: #4f46e5;
-    border-color: #4f46e5;
+    background: var(--color-indigo-hover);
+    border-color: var(--color-indigo-hover);
 }
 
 .song-queue-btn--secondary {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-bg-tertiary);
 }
 
 .song-queue-btn--icon {
@@ -1680,13 +1660,13 @@
     flex-direction: column;
     gap: 2px;
     padding: 8px 10px;
-    background: rgba(0, 0, 0, 0.6);
-    color: #e5e7eb;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
 }
 
 .song-queue-player-channel {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -1703,8 +1683,8 @@
 }
 
 .song-queue-details {
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
     padding: 8px 12px;
 }
@@ -1712,7 +1692,7 @@
 .song-queue-details > summary {
     cursor: pointer;
     font-size: 12px;
-    color: #d1d5db;
+    color: var(--color-text-secondary);
     user-select: none;
 }
 
@@ -1731,7 +1711,7 @@
     gap: 8px;
     align-items: center;
     font-size: 13px;
-    color: #d1d5db;
+    color: var(--color-text-secondary);
 }
 
 .song-queue-public-link {
@@ -1743,12 +1723,12 @@
 
 .song-queue-public-link code {
     flex: 1;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
     padding: 6px 8px;
     font-size: 12px;
-    color: #c7d2fe;
+    color: var(--color-indigo);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1763,7 +1743,7 @@
 .song-queue-section-title {
     margin: 0;
     font-size: 12px;
-    color: #c5c5c5;
+    color: var(--color-text-secondary);
     letter-spacing: 0.02em;
     text-transform: uppercase;
     display: flex;
@@ -1772,9 +1752,9 @@
 }
 
 .song-queue-section-count {
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 11px;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--color-bg-secondary);
     padding: 2px 6px;
     border-radius: 999px;
 }
@@ -1795,8 +1775,8 @@
     align-items: center;
     gap: 10px;
     padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 6px;
 }
 
@@ -1824,7 +1804,7 @@
 
 .song-queue-item-title {
     font-size: 13px;
-    color: #f3f4f6;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1832,7 +1812,7 @@
 
 .song-queue-item-sub {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -1846,9 +1826,9 @@
 .song-queue-empty {
     margin: 0;
     padding: 12px;
-    border: 1px dashed #2c2c2c;
+    border: 1px dashed var(--color-border-medium);
     border-radius: 6px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 12px;
     text-align: center;
     display: flex;
@@ -1858,12 +1838,12 @@
 
 .song-queue-hint {
     margin: 0;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .song-queue-hint code {
-    background: rgba(99, 102, 241, 0.18);
-    color: #c7d2fe;
+    background: color-mix(in srgb, var(--color-indigo) 18%, transparent);
+    color: var(--color-indigo);
     padding: 1px 5px;
     border-radius: 3px;
     font-size: 11px;
@@ -1877,8 +1857,8 @@
     display: flex;
     align-items: stretch;
     gap: 4px;
-    background: linear-gradient(160deg, #1f1f1f 0%, #141414 100%);
-    border: 1px solid #2a2a2a;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-dark);
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     z-index: 50;
@@ -1901,11 +1881,11 @@
 }
 
 .song-queue-indicator-btn:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-bg-tertiary);
 }
 
 .song-queue-indicator-icon {
-    color: #818cf8;
+    color: var(--color-indigo);
     font-size: 18px;
     flex-shrink: 0;
 }
@@ -1919,7 +1899,7 @@
 
 .song-queue-indicator-title {
     font-size: 12px;
-    color: #f3f4f6;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1927,14 +1907,14 @@
 
 .song-queue-indicator-sub {
     font-size: 10px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .song-queue-indicator-copy {
     padding: 6px 10px;
-    background: rgba(99, 102, 241, 0.16);
+    background: color-mix(in srgb, var(--color-indigo) 16%, transparent);
     border: none;
-    color: #c7d2fe;
+    color: var(--color-indigo);
     cursor: pointer;
     font-size: 11px;
     font-family: inherit;
@@ -1944,7 +1924,7 @@
 }
 
 .song-queue-indicator-copy:hover {
-    background: rgba(99, 102, 241, 0.28);
+    background: color-mix(in srgb, var(--color-indigo) 28%, transparent);
 }
 
 /* Song Queue: now-playing header inside the modal (replaces the
@@ -1954,8 +1934,8 @@
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 8px;
 }
 
@@ -1978,14 +1958,14 @@
 
 .song-queue-now-playing-label {
     font-size: 10px;
-    color: #818cf8;
+    color: var(--color-indigo);
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .song-queue-now-playing-title {
     font-size: 14px;
-    color: #f3f4f6;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1994,7 +1974,7 @@
 
 .song-queue-now-playing-sub {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .song-queue-now-playing-controls {
@@ -2007,7 +1987,7 @@
     margin: 0;
     width: 100%;
     text-align: center;
-    color: #6b7280;
+    color: var(--color-text-muted);
     font-size: 12px;
 }
 
@@ -2019,12 +1999,14 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    width: 100%;
-    background: linear-gradient(160deg, #1f1f1f 0%, #141414 100%);
-    border-top: 1px solid #2a2a2a;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-dark);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     transition: max-height 0.18s ease;
     max-height: 60vh;
+    margin: var(--chat-bar-margin, 8px);
+    box-sizing: border-box;
 }
 
 .song-queue-bar--collapsed .song-queue-bar-body {
@@ -2059,7 +2041,7 @@
 .song-queue-bar-toggle {
     background: transparent;
     border: none;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 6px;
     display: inline-flex;
@@ -2070,8 +2052,8 @@
 }
 
 .song-queue-bar-toggle:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #e5e7eb;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .song-queue-bar-title {
@@ -2091,11 +2073,11 @@
 }
 
 .song-queue-bar-title:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-bg-tertiary);
 }
 
 .song-queue-bar-icon {
-    color: #818cf8;
+    color: var(--color-indigo);
     font-size: 16px;
     flex-shrink: 0;
 }
@@ -2109,7 +2091,7 @@
 
 .song-queue-bar-title-text {
     font-size: 12px;
-    color: #f3f4f6;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2117,7 +2099,7 @@
 
 .song-queue-bar-sub {
     font-size: 10px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .song-queue-bar-controls {
@@ -2128,9 +2110,9 @@
 }
 
 .song-queue-bar-btn {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--color-bg-tertiary);
     border: 1px solid transparent;
-    color: #c5c5c5;
+    color: var(--color-text-secondary);
     font-size: 11px;
     font-family: inherit;
     padding: 5px 8px;
@@ -2144,9 +2126,9 @@
 }
 
 .song-queue-bar-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-    border-color: #3a3a3a;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-light);
 }
 
 .song-queue-bar-btn:disabled {
@@ -2155,15 +2137,15 @@
 }
 
 .song-queue-bar-btn--primary {
-    background: rgba(99, 102, 241, 0.24);
-    color: #a5b4fc;
-    border-color: rgba(99, 102, 241, 0.4);
+    background: color-mix(in srgb, var(--color-indigo) 24%, transparent);
+    color: var(--color-indigo);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
 }
 
 .song-queue-bar-btn--primary:hover:not(:disabled) {
-    background: rgba(99, 102, 241, 0.38);
-    color: #e0e7ff;
-    border-color: rgba(99, 102, 241, 0.6);
+    background: color-mix(in srgb, var(--color-indigo) 38%, transparent);
+    color: var(--color-indigo-hover);
+    border-color: color-mix(in srgb, var(--color-indigo) 60%, transparent);
 }
 
 .song-queue-bar-btn--end {
@@ -2193,7 +2175,7 @@
     height: 4px;
     -webkit-appearance: none;
     appearance: none;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--color-border-medium);
     border-radius: 2px;
     outline: none;
     cursor: pointer;
@@ -2205,37 +2187,37 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #9ca3af;
+    background: var(--color-text-muted);
     cursor: pointer;
     border: none;
     transition: background 0.15s;
 }
 
 .song-queue-bar-volume-slider::-webkit-slider-thumb:hover {
-    background: #d1d5db;
+    background: var(--color-text-secondary);
 }
 
 .song-queue-bar-volume-slider::-moz-range-thumb {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #9ca3af;
+    background: var(--color-text-muted);
     cursor: pointer;
     border: none;
 }
 
 .song-queue-bar-volume-slider::-moz-range-thumb:hover {
-    background: #d1d5db;
+    background: var(--color-text-secondary);
 }
 
 .song-queue-bar-volume-slider::-moz-range-track {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--color-border-medium);
     border-radius: 2px;
     height: 4px;
 }
 
 .song-queue-bar-body {
-    border-top: 1px solid #2c2c2c;
+    border-top: 1px solid var(--color-border-medium);
     padding: 8px;
     display: flex;
     flex-direction: row;
@@ -2288,19 +2270,19 @@
     flex-direction: column;
     gap: 1px;
     padding: 0 2px 6px;
-    border-bottom: 1px solid #2c2c2c;
+    border-bottom: 1px solid var(--color-border-medium);
     margin-bottom: 4px;
     flex-shrink: 0;
 }
 
 .song-queue-bar-now-playing-channel {
     font-size: 10px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
 }
 
 .song-queue-bar-now-playing-title {
     font-size: 12px;
-    color: #d1d5db;
+    color: var(--color-text-secondary);
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2309,7 +2291,7 @@
 
 .song-queue-bar-now-playing-sub {
     font-size: 10px;
-    color: #6b7280;
+    color: var(--color-text-muted);
     display: flex;
     align-items: center;
     gap: 3px;
@@ -2329,8 +2311,8 @@
     align-items: center;
     gap: 8px;
     padding: 4px 6px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #2c2c2c;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
 }
 
@@ -2353,7 +2335,7 @@
 
 .song-queue-bar-item-title {
     font-size: 11px;
-    color: #e5e7eb;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2361,16 +2343,16 @@
 
 .song-queue-bar-item-sub {
     font-size: 10px;
-    color: #9ca3af;
+    color: var(--color-text-muted);
     display: inline-flex;
     align-items: center;
     gap: 3px;
 }
 
 .song-queue-bar-item-btn {
-    background: rgba(99, 102, 241, 0.16);
+    background: color-mix(in srgb, var(--color-indigo) 16%, transparent);
     border: none;
-    color: #c7d2fe;
+    color: var(--color-indigo);
     cursor: pointer;
     font-size: 10px;
     font-family: inherit;
@@ -2379,7 +2361,7 @@
 }
 
 .song-queue-bar-item-btn:hover {
-    background: rgba(99, 102, 241, 0.28);
+    background: color-mix(in srgb, var(--color-indigo) 28%, transparent);
 }
 
 .song-queue-bar-item[data-status="played"],
@@ -2388,12 +2370,12 @@
 }
 
 .song-queue-bar-item--active {
-    border-color: rgba(99, 102, 241, 0.5);
-    background: rgba(99, 102, 241, 0.1);
+    border-color: color-mix(in srgb, var(--color-indigo) 50%, transparent);
+    background: color-mix(in srgb, var(--color-indigo) 10%, transparent);
 }
 
 .song-queue-bar-item--active .song-queue-bar-item-title {
-    color: #a5b4fc;
+    color: var(--color-indigo);
 }
 
 /* Music Player mini bar — streamer-only mini player live in the chat.
@@ -2401,17 +2383,13 @@
    the streamer can keep both tools open at once without confusion. */
 .music-player-bar {
     position: relative;
-    background: linear-gradient(
-        135deg,
-        rgba(99, 102, 241, 0.18) 0%,
-        rgba(168, 85, 247, 0.18) 100%
-    );
-    border: 1px solid rgba(168, 85, 247, 0.45);
-    border-radius: 8px;
-    color: #f1f1f1;
+    background: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 45%, transparent);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-primary);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
     overflow: hidden;
-    margin: 0 12px 8px;
+    margin: var(--chat-bar-margin, 8px);
 }
 
 .music-player-bar--hidden {
@@ -2433,7 +2411,7 @@
 .music-player-bar-toggle {
     background: none;
     border: 1px solid transparent;
-    color: #c5c8ff;
+    color: var(--color-indigo);
     width: 22px;
     height: 22px;
     border-radius: 4px;
@@ -2446,12 +2424,13 @@
 }
 
 .music-player-bar-toggle:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-hover);
 }
 
 .music-player-bar-title {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -2464,7 +2443,7 @@
 }
 
 .music-player-bar-icon {
-    color: #c5c8ff;
+    color: var(--color-indigo);
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
@@ -2473,16 +2452,18 @@
 .music-player-bar-meta {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1px;
+    flex: 1;
     min-width: 0;
 }
 
 .music-player-bar-title-text {
     font-size: 12px;
     font-weight: 600;
-    color: #f1f1f1;
-    max-width: 220px;
+    color: var(--color-text-primary);
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2490,8 +2471,9 @@
 
 .music-player-bar-sub {
     font-size: 11px;
-    color: #b8b8b8;
-    max-width: 240px;
+    color: var(--color-text-secondary);
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2507,7 +2489,7 @@
 .music-player-bar-btn {
     background: none;
     border: 1px solid transparent;
-    color: #c5c8ff;
+    color: var(--color-indigo);
     width: 22px;
     height: 22px;
     border-radius: 4px;
@@ -2520,7 +2502,7 @@
 }
 
 .music-player-bar-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-hover);
     color: #fff;
 }
 
@@ -2530,19 +2512,19 @@
 }
 
 .music-player-bar-btn--primary {
-    background: #6366f1;
+    background: var(--color-indigo);
     color: #fff;
-    border: 1px solid #6366f1;
+    border: 1px solid var(--color-indigo);
 }
 
 .music-player-bar-btn--primary:hover:not(:disabled) {
-    background: #7c7ff5;
-    border-color: #7c7ff5;
+    background: var(--color-indigo-hover);
+    border-color: var(--color-indigo-hover);
     color: #fff;
 }
 
 .music-player-bar-btn--close {
-    color: #9a9a9a;
+    color: var(--color-text-muted);
 }
 
 .music-player-bar-btn--close:hover:not(:disabled) {
@@ -2559,13 +2541,13 @@
 }
 
 .music-player-bar-volume-icon {
-    color: #c5c8ff;
+    color: var(--color-indigo);
 }
 
 .music-player-bar-volume-slider {
     width: 56px;
     height: 4px;
-    accent-color: #6366f1;
+    accent-color: var(--color-indigo);
 }
 
 .music-player-bar-body {
@@ -2581,7 +2563,7 @@
     flex-shrink: 0;
     width: 160px;
     aspect-ratio: 16 / 9;
-    background: #0a0a0a;
+    background: var(--color-bg-primary);
     border-radius: 6px;
     overflow: hidden;
     align-self: flex-start;
@@ -2615,7 +2597,7 @@
 
 .music-player-bar-now-playing-channel {
     font-size: 10px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2624,7 +2606,7 @@
 .music-player-bar-now-playing-title {
     font-size: 12px;
     font-weight: 600;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2657,15 +2639,15 @@
     align-items: center;
     gap: 8px;
     padding: 4px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     border-radius: 4px;
     font-size: 11px;
 }
 
 .music-player-bar-item--active {
-    border-color: rgba(168, 85, 247, 0.6);
-    background: rgba(168, 85, 247, 0.15);
+    border-color: color-mix(in srgb, var(--color-indigo) 60%, transparent);
+    background: color-mix(in srgb, var(--color-indigo) 15%, transparent);
 }
 
 .music-player-bar-item-thumb {
@@ -2673,7 +2655,7 @@
     height: 18px;
     object-fit: cover;
     border-radius: 3px;
-    background: #1a1a1a;
+    background: var(--color-bg-primary);
     flex-shrink: 0;
 }
 
@@ -2686,7 +2668,7 @@
 
 .music-player-bar-item-title {
     font-size: 11px;
-    color: #f1f1f1;
+    color: var(--color-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2694,7 +2676,7 @@
 
 .music-player-bar-item-sub {
     font-size: 10px;
-    color: #9a9a9a;
+    color: var(--color-text-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2702,8 +2684,8 @@
 
 .music-player-bar-item-btn {
     background: none;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #c5c8ff;
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-indigo);
     border-radius: 3px;
     padding: 2px 6px;
     font-size: 10px;
@@ -2714,7 +2696,7 @@
 }
 
 .music-player-bar-item-btn:hover {
-    background: rgba(99, 102, 241, 0.18);
+    background: color-mix(in srgb, var(--color-indigo) 18%, transparent);
     color: #fff;
 }
 
@@ -2733,7 +2715,7 @@
 .music-player-bar-time--inline {
     width: auto;
     flex: 1 1 0;
-    min-width: 100px;
+    min-width: 80px;
     margin-top: 0;
     padding: 0 4px;
 }
@@ -2741,7 +2723,7 @@
 .music-player-bar-time-current,
 .music-player-bar-time-duration {
     font-size: 10px;
-    color: #a0a0a0;
+    color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
     min-width: 28px;
     flex-shrink: 0;
@@ -2759,7 +2741,7 @@
     flex: 1;
     min-width: 0;
     height: 4px;
-    accent-color: #6366f1;
+    accent-color: var(--color-indigo);
     cursor: pointer;
 }
 

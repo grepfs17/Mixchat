@@ -14,10 +14,9 @@ interface PredictionBannerProps {
 }
 
 const outcomeBarColor = (color: string, isWinner: boolean): string => {
-  if (isWinner) return "linear-gradient(90deg, #22c55e 0%, #4ade80 100%)";
-  if (color === "blue")
-    return "linear-gradient(90deg, var(--color-twitch) 0%, var(--color-indigo) 100%)";
-  return "linear-gradient(90deg, var(--color-accent) 0%, #d946ef 100%)";
+  if (isWinner) return "var(--color-green)";
+  if (color === "blue") return "var(--color-twitch)";
+  return "var(--color-accent)";
 };
 
 /**
