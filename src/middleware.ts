@@ -96,6 +96,15 @@ function buildCSP(nonce?: string): string {
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
 
+  // Dev-only routes (e.g. the chat styling preview) must not be reachable in
+  // production builds. `import.meta.env.DEV` is statically false there.
+  if (
+    (pathname === "/dev" || pathname.startsWith("/dev/")) &&
+    !import.meta.env.DEV
+  ) {
+    return new Response("Not Found", { status: 404 });
+  }
+
   // Generate a nonce only for auth callback pages — those are plain API route
   // handlers where we write the entire HTML output and can stamp every <script>
   // with the nonce ourselves.  All other pages are rendered by Astro and include

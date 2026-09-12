@@ -35,6 +35,7 @@ mixchat/
 │   │   │   ├── ChatApp.tsx  # Central chat orchestrator component
 │   │   │   ├── SplitLayout.tsx
 │   │   │   └── ThemeMascots.tsx
+│   │   ├── dev/             # Dev-only components (chat styling gallery)
 │   │   ├── AppContainer.tsx # Root app component (layout, sidebar, auth, grid)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
@@ -74,6 +75,7 @@ mixchat/
 │   │   ├── index.astro      # Main app page
 │   │   ├── channel/[name].astro  # Direct channel link page
 │   │   ├── s/[sessionId].astro   # Embed page (stripped-down chat)
+│   │   ├── dev/chat-preview.astro # Dev-only chat styling gallery (blocked in prod by middleware)
 │   │   ├── auth/            # OAuth callback pages (twitch, youtube)
 │   │   └── api/             # API endpoints (song-queue, youtube-proxy, moderation, etc.)
 │   ├── styles/              # CSS stylesheets (theme system, component styles)

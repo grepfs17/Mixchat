@@ -139,10 +139,7 @@ export default function PredictionBanner({
                 />
               </div>
               <div className="prediction-banner-outcome-content">
-                <span
-                  className="prediction-banner-outcome-title"
-                  style={{ color: isWinner ? "var(--color-green)" : undefined }}
-                >
+                <span className="prediction-banner-outcome-title">
                   {outcome.title}
                 </span>
                 <span className="prediction-banner-outcome-meta">

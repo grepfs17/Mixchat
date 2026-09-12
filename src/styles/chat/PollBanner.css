@@ -62,9 +62,9 @@
 }
 
 .poll-banner-choice-votes {
-    color: var(--color-text-secondary);
+    color: var(--color-text-primary);
     font-weight: 600;
     font-size: 11px;
     white-space: nowrap;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }

@@ -1,0 +1,25 @@
+---
+import ChatPreview from "../../components/dev/ChatPreview";
+import "../../styles/global.css";
+import "../../styles/themes.css";
+import "../../styles/chat/ChatDisplay.css";
+import "../../styles/chat/YouTubeChat.css";
+import "../../styles/chat/UnifiedChat.css";
+import "../../styles/chat/TwitchLinkPreview.css";
+
+// Dev-only styling gallery. Middleware hard-blocks /dev/* outside
+// development, so this page never ships to production.
+---
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Chat styling preview (dev)</title>
+    </head>
+    <body>
+        <ChatPreview client:only="react" />
+    </body>
+</html>
