@@ -14,23 +14,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: 10px 12px;
     background: var(--color-bg-primary);
-    color: var(--color-text-white);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border-dark);
     gap: 8px;
 }
 
 .header-button {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     color: var(--color-text-secondary);
     padding: 6px 12px;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
     /* spacing handled by .chat-header-actions gap */
     display: inline-flex;
     align-items: center;
@@ -38,9 +41,9 @@
 }
 
 .header-button:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: var(--color-text-white);
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
+    color: var(--color-text-primary);
 }
 
 .header-button:disabled {
@@ -112,7 +115,7 @@
     gap: 8px;
     padding: 6px 12px;
     background: var(--color-bg-primary);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-border-dark);
     overflow: hidden;
 }
 
@@ -128,13 +131,13 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 4px;
-    border-radius: var(--radius-sm, 3px);
+    padding: 2px 6px;
+    border-radius: var(--radius-md);
     transition: background 0.15s ease;
 }
 
 .stream-info-title:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-hover);
 }
 
 .stream-info-title--readonly {
@@ -211,7 +214,7 @@
 }
 
 .stream-info-action-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-hover);
     color: var(--color-text-primary);
 }
 
@@ -339,10 +342,10 @@
     min-height: 0; /* required for flex child to shrink and give input room */
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 8px;
+    padding: 10px 8px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     font-size: var(--chat-font-size, 0.9rem);
     font-family: var(--chat-font-family, inherit);
 }
@@ -381,11 +384,11 @@
 
 .message {
     background: transparent;
-    padding: 6px 10px 6px 12px;
-    border-left: 2px solid transparent;
+    padding: 6px 10px;
+    border-left: 3px solid transparent;
     transition:
-        background-color 0.15s ease,
-        border-left-color 0.15s ease;
+        background-color 0.12s ease,
+        border-left-color 0.12s ease;
     cursor: pointer;
     border-radius: var(--radius-md);
 }
@@ -407,7 +410,7 @@
 
 .message:hover {
     background: var(--color-bg-message-hover);
-    border-left-color: rgba(255, 255, 255, 0.15);
+    border-left-color: var(--color-border-light);
 }
 
 .message-single-line {
@@ -415,6 +418,7 @@
     align-items: center;
     gap: 6px;
     font-size: var(--chat-font-size, 0.85rem);
+    line-height: 1.55;
     flex-wrap: wrap;
 }
 
@@ -494,7 +498,7 @@ button.stream-info-category {
     word-wrap: break-word;
     overflow-wrap: break-word;
     word-break: break-word;
-    line-height: 1.3;
+    line-height: 1.55;
     font-size: var(--chat-font-size, 0.9rem);
     flex: 1;
 }
@@ -516,15 +520,19 @@ button.stream-info-category {
 }
 
 .action-button {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
     color: var(--color-text-secondary);
     cursor: pointer;
     padding: 4px 10px;
     font-size: 11px;
     font-weight: 500;
-    opacity: 0.7;
-    transition: all 0.2s ease;
+    opacity: 0.85;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        opacity 0.15s ease;
     flex-shrink: 0;
     border-radius: var(--radius-md);
 }
@@ -550,8 +558,10 @@ button.stream-info-category {
 }
 
 .timestamp {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     color: var(--color-text-timestamp);
+    opacity: 0.85;
+    font-variant-numeric: tabular-nums;
     flex-shrink: 0;
 }
 
@@ -566,24 +576,27 @@ button.stream-info-category {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(30, 30, 38, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    color: #ffffff;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    color: var(--color-text-primary);
     padding: 7px 14px;
     border-radius: var(--radius-pill, 999px);
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
-    backdrop-filter: blur(6px);
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
     z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-md);
     white-space: nowrap;
 }
 
 .chat-paused-button:hover {
-    background: rgba(45, 45, 56, 0.98);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-lighter);
+    box-shadow: var(--shadow-lg);
 }
 
 .chat-paused-button:active {
@@ -1253,10 +1266,10 @@ img.emoji {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 3px 8px;
-    font-size: 0.68rem;
-    color: #475569;
-    letter-spacing: 0.06em;
+    padding: 6px 8px;
+    font-size: 0.66rem;
+    color: var(--color-text-muted);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     user-select: none;
 }
@@ -1266,7 +1279,7 @@ img.emoji {
     content: "";
     flex: 1;
     height: 1px;
-    background: #1e293b;
+    background: var(--color-border-medium);
 }
 
 .message.deleted {
@@ -1319,15 +1332,15 @@ button.deleted-clickable {
 
 .twitch-event-label {
     display: inline-block;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     border: 1px solid;
-    border-radius: 4px;
-    padding: 1px 6px;
-    margin-bottom: 3px;
-    opacity: 0.9;
+    border-radius: var(--radius-pill, 999px);
+    padding: 2px 8px;
+    margin-bottom: 5px;
+    opacity: 1;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1431,7 +1444,8 @@ button.deleted-clickable {
 .message.celebration,
 .message.gigantified-emote {
     background-color: var(--event-bg);
-    border-left: 2px solid var(--event-color);
+    border-left: 3px solid var(--event-color);
+    border-radius: var(--radius-md);
 }
 
 .message.gigantified-emote {
@@ -1496,12 +1510,20 @@ button.deleted-clickable {
 
 .message.mention {
     background-color: var(--color-bg-mention);
-    border-left: 2px solid var(--color-border-mention);
+    border-left: 3px solid var(--color-border-mention);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, var(--color-border-mention) 25%, transparent);
+}
+
+.message.highlight {
+    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.25);
 }
 
 .message.first-message {
     background: var(--event-bg);
     border-left: 3px solid var(--event-color);
+    border-radius: var(--radius-md);
 }
 
 .message.notice .message-text {
@@ -1511,14 +1533,14 @@ button.deleted-clickable {
 }
 
 .reply-info {
-    font-size: 0.85em;
+    font-size: 0.78em;
     color: var(--color-text-muted);
-    margin-bottom: 2px;
-    font-style: italic;
-    opacity: 0.8;
+    margin-bottom: 3px;
+    font-style: normal;
     display: flex;
     align-items: center;
     gap: 4px;
+    line-height: 1.4;
 }
 
 .reply-info-label {
@@ -1545,7 +1567,7 @@ button.reply-info {
 
 .reply-info-clickable:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-hover);
 }
 
 @keyframes message-highlight-pulse {
@@ -1585,13 +1607,10 @@ button.reply-info {
 }
 
 .author.self {
-    background: linear-gradient(
-        135deg,
-        var(--color-accent) 0%,
-        var(--color-accent-hover) 100%
-    );
-    padding: 2px 8px;
-    border-radius: var(--radius-md);
+    background: var(--color-accent);
+    color: #fff;
+    padding: 1px 8px;
+    border-radius: var(--radius-pill, 999px);
     font-weight: 600;
 }
 

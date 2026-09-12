@@ -12,11 +12,50 @@
 .reply-indicator {
     order: -1;
     margin-bottom: 8px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
 }
 
-.reply-indicator > div:first-child {
-    order: 1;
-    margin-right: auto;
+.reply-indicator-text {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reply-indicator-author {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.reply-indicator-preview {
+    margin-left: 8px;
+    font-style: italic;
+    opacity: 0.85;
+}
+
+.reply-indicator-cancel {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.reply-indicator-cancel:hover {
+    color: var(--color-text-primary);
 }
 
 .platform-selector {
@@ -523,14 +562,15 @@
     justify-content: flex-end;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px;
-    background: #0f172a;
-    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
 }
 
 .unified-reply-text {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--color-text-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -539,12 +579,13 @@
 .unified-reply-cancel {
     background: transparent;
     border: none;
-    color: #94a3b8;
+    color: var(--color-text-secondary);
     cursor: pointer;
     padding: 0 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .unified-reply-cancel:hover {

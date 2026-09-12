@@ -10,7 +10,7 @@
 }
 
 .pinned-banner .pinned-banner-badge {
-    background: linear-gradient(135deg, #9146ff 0%, #6441a5 100%);
+    background: var(--color-twitch);
     animation: none;
 }
 
@@ -26,18 +26,16 @@
 .pinned-banner-message {
     color: var(--color-text-primary);
     font-size: 12px;
-    line-height: 1.35;
+    line-height: 1.5;
     word-break: break-word;
     white-space: pre-wrap;
 }
 
 /* `linkifyUrl` (`src/lib/emotes/utils.ts`) embeds an inline `color: #6366f1`
- * on every anchor, which is unreadable against the pinned banner's purple
- * Twitch background. Override with white + kept underline via !important to
- * win against the inline style — scoped to the pinned banner only so the
- * regular chat line keeps its existing accent colour. */
+ * on every anchor. Pin the accent colour with !important so the link stays
+ * legible against the themed banner surface while keeping the underline. */
 .pinned-banner-message a {
-    color: #ffffff !important;
+    color: var(--color-indigo) !important;
     text-decoration: underline;
     cursor: pointer;
 }

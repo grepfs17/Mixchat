@@ -74,40 +74,21 @@ function MessageInput({
   return (
     <div className="message-input">
       {replyingTo && (
-        <div
-          className="reply-indicator"
-          style={{
-            padding: "8px 12px",
-            background: "#0f172a",
-            borderRadius: "4px",
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            gap: "12px",
-          }}
-        >
-          <div style={{ fontSize: "0.9rem", color: "#94a3b8" }}>
-            <span style={{ fontWeight: "bold" }}>
+        <div className="reply-indicator">
+          <div className="reply-indicator-text">
+            <span className="reply-indicator-author">
               Replying to @{replyingTo.author}
             </span>
-            <span style={{ marginLeft: "8px", fontStyle: "italic" }}>
+            <span className="reply-indicator-preview">
               {replyingTo.content.substring(0, 50)}
               {replyingTo.content.length > 50 ? "..." : ""}
             </span>
           </div>
           {onCancelReply && (
-            <button type="button"
+            <button
+              type="button"
               onClick={onCancelReply}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#94a3b8",
-                cursor: "pointer",
-                padding: "0 8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className="reply-indicator-cancel"
               title="Cancel reply"
             >
               <FaTimes size={16} />
