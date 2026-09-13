@@ -304,7 +304,8 @@
 .channel-item.selected {
     position: relative;
     background: var(--color-bg-mention);
-    box-shadow: var(--shadow-accent-sm);
+    box-shadow: 0 0 0 3px
+        color-mix(in srgb, var(--color-border-mention) 15%, transparent);
 }
 
 /* Accent stripe drawn as a rounded left border so it traces the selected
