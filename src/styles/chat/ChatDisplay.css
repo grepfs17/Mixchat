@@ -75,8 +75,10 @@
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    /* Opaque tints mixed over the header background (the header sits on
+       --color-bg-primary) so the chip never shows the backdrop through it. */
+    background: color-mix(in srgb, #6366f1 12%, var(--color-bg-primary));
+    border: 1px solid color-mix(in srgb, #6366f1 25%, var(--color-bg-primary));
     border-radius: var(--radius-sm, 3px);
     color: #818cf8;
     cursor: pointer;
@@ -86,8 +88,8 @@
 }
 
 .ignored-messages-badge:hover {
-    background: rgba(99, 102, 241, 0.2);
-    border-color: rgba(99, 102, 241, 0.4);
+    background: color-mix(in srgb, #6366f1 20%, var(--color-bg-primary));
+    border-color: color-mix(in srgb, #6366f1 40%, var(--color-bg-primary));
 }
 
 .ignored-badge-icon {
@@ -1512,12 +1514,6 @@ button.deleted-clickable {
     background-color: var(--color-bg-mention);
     border-left: 3px solid var(--color-border-mention);
     border-radius: var(--radius-md);
-    box-shadow: inset 0 0 0 1px
-        color-mix(in srgb, var(--color-border-mention) 25%, transparent);
-}
-
-.message.highlight {
-    box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.25);
 }
 
 .message.first-message {
