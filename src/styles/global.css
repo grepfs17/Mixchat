@@ -149,6 +149,22 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     transition: opacity 0.3s;
 }
 
+/* Draggable panel splitter used by the stream/chat grid and the chat split
+   layout. Colors come from theme tokens so every theme gets its own handle. */
+.panel-resizer {
+    background-color: var(--color-border-dark);
+    transition: background-color 0.2s ease;
+}
+
+.panel-resizer:hover,
+.panel-resizer:focus-visible {
+    background-color: var(--color-indigo);
+}
+
+.panel-resizer--dragging {
+    transition: none;
+}
+
 /* Improve font rendering for chat and tooltip layers on mobile devices. */
 .messages-container,
 .messages-container *,
@@ -167,7 +183,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
     border-radius: var(--radius-lg);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    box-shadow: var(--shadow-lg);
     padding: 6px;
     min-width: 140px;
     display: flex;
@@ -180,8 +196,8 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     padding: 6px 12px;
     font-size: 11px;
     font-weight: 600;
-    color: #888;
-    border-bottom: 1px solid #333;
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-border-medium);
     margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -199,7 +215,10 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     font-size: 13px;
     cursor: pointer;
     border-radius: var(--radius-md);
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
     display: flex;
     align-items: center;
 }
@@ -215,7 +234,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
     border-radius: var(--radius-xl);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+    box-shadow: var(--shadow-lg);
     padding: 8px;
     min-width: 150px;
     display: flex;
@@ -229,7 +248,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--color-text-secondary);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--color-border-dark);
     margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -305,7 +324,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .context-menu-divider {
     height: 1px;
     margin: 6px 4px;
-    background: var(--color-border, rgba(255, 255, 255, 0.12));
+    background: var(--color-border-medium);
     pointer-events: none;
 }
 
@@ -316,11 +335,11 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     margin: auto;
     z-index: 10000;
     animation: tooltipFade 0.12s ease-out;
-    background: #1f1f23;
+    background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
     padding: 24px 24px 20px;
     min-width: 360px;
     max-width: 92vw;
@@ -337,12 +356,12 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-timeout-title {
     font-size: 18px;
     font-weight: 600;
-    color: #fff;
+    color: var(--color-text-primary);
 }
 
 .yt-timeout-subtitle {
     font-size: 12px;
-    color: #aaa;
+    color: var(--color-text-secondary);
     margin-top: -8px;
 }
 
@@ -353,24 +372,27 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .yt-timeout-preset {
-    background: #2a2a30;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 999px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-pill);
     padding: 8px 16px;
     font-size: 13px;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.05s ease;
 }
 
 .yt-timeout-preset:hover {
-    background: #353540;
+    background: var(--color-bg-hover);
 }
 
 .yt-timeout-preset.is-selected {
-    background: var(--color-accent, #3ea6ff);
-    border-color: var(--color-accent, #3ea6ff);
-    color: #fff;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-text-white);
     font-weight: 600;
 }
 
@@ -387,7 +409,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-timeout-link {
     background: none;
     border: none;
-    color: var(--color-accent, #3ea6ff);
+    color: var(--color-accent);
     font-size: 13px;
     cursor: pointer;
     padding: 4px 0;
@@ -405,10 +427,10 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .yt-timeout-input {
-    background: #2a2a30;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
     width: 100px;
@@ -416,14 +438,14 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .yt-timeout-input:focus {
-    border-color: var(--color-accent, #3ea6ff);
+    border-color: var(--color-accent);
 }
 
 .yt-timeout-unit {
-    background: #2a2a30;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
     outline: none;
@@ -438,12 +460,14 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 
 .yt-timeout-btn {
     border: none;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     padding: 9px 18px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s, transform 0.05s;
+    transition:
+        background-color 0.15s ease,
+        transform 0.05s ease;
 }
 
 .yt-timeout-btn:active {
@@ -452,17 +476,17 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 
 .yt-timeout-btn--cancel {
     background: transparent;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-light);
 }
 
 .yt-timeout-btn--cancel:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-hover);
 }
 
 .yt-timeout-btn--ok {
-    background: var(--color-accent, #3ea6ff);
-    color: #fff;
+    background: var(--color-accent);
+    color: var(--color-text-white);
     font-weight: 700;
 }
 
@@ -471,7 +495,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .yt-timeout-btn--ok:disabled {
-    background: #3a3a42;
-    color: #777;
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-muted);
     cursor: not-allowed;
 }

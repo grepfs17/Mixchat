@@ -11,15 +11,15 @@
 
 .favorites-modal {
     background: var(--color-bg-primary);
-    border: 1px solid var(--color-accent);
-    border-radius: 12px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-xl);
     padding: 0;
     max-width: 480px;
     width: 90%;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-accent-lg);
+    box-shadow: var(--shadow-lg);
     color: var(--color-text-primary);
     overflow: hidden;
 }
@@ -50,13 +50,13 @@
     padding: 4px;
     display: flex;
     align-items: center;
-    border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .favorites-modal-close:hover {
     color: var(--color-text-primary);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-hover);
 }
 
 .favorites-modal-subtitle {
@@ -84,11 +84,11 @@
     padding: 10px 34px 10px 36px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     color: var(--color-text-primary);
     font-size: 13px;
     font-family: var(--font-ui);
-    transition: border-color 0.2s;
+    transition: border-color 0.15s ease;
     box-sizing: border-box;
 }
 
@@ -114,8 +114,8 @@
     padding: 4px;
     display: flex;
     align-items: center;
-    border-radius: 4px;
-    transition: color 0.15s;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease;
 }
 
 .favorites-search-clear:hover {
@@ -139,7 +139,7 @@
 
 .favorites-list-container::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: 3px;
+    border-radius: var(--radius-pill);
 }
 
 .favorites-list-container::-webkit-scrollbar-thumb:hover {
@@ -174,8 +174,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 10px;
-    border-radius: 8px;
-    transition: background 0.15s;
+    border-radius: var(--radius-md);
+    transition: background-color 0.15s ease;
     gap: 8px;
 }
 
@@ -212,7 +212,7 @@
 .favorites-channel-avatar {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     object-fit: cover;
     flex-shrink: 0;
 }
@@ -251,14 +251,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
-    transition: color 0.15s, background 0.15s, transform 0.1s;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
     flex-shrink: 0;
 }
 
 .favorites-star-btn:hover {
     color: var(--color-favorite);
-    background: rgba(251, 191, 36, 0.1);
+    background: color-mix(in srgb, var(--color-favorite) 12%, transparent);
     transform: scale(1.1);
 }
 
@@ -268,7 +268,7 @@
 
 .favorites-star-btn--active:hover {
     color: var(--color-text-muted);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-hover);
 }
 
 .favorites-empty {
@@ -298,12 +298,14 @@
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-weight: 600;
     font-size: 13px;
     font-family: var(--font-ui);
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .favorites-close-btn:hover {

@@ -392,7 +392,6 @@ export default function AppContainer() {
               : "1fr",
           gap: "0",
           overflow: "hidden",
-          backgroundColor: "#1a1a1a",
         }}
         data-app-grid
         className={`app-grid${streamTransition ? " app-grid--transitioning" : ""}`}
@@ -666,26 +665,19 @@ export default function AppContainer() {
             {showStreamEmbed && (
               <div
                 data-resizer
+                className={`panel-resizer${
+                  isDragging ? " panel-resizer--dragging" : ""
+                }`}
                 style={{
                   width: "8px",
-                  backgroundColor: "#1a1a1a",
                   cursor: "col-resize",
                   userSelect: "none",
-                  transition: isDragging ? "none" : "background-color 0.2s",
                 }}
                 role="separator"
-        aria-orientation="vertical"
-        aria-label="Panel resizer"
-        tabIndex={0}
-        onMouseDown={() => setIsDragging(true)}
-                onMouseEnter={(e) =>
-                  !isDragging &&
-                  (e.currentTarget.style.backgroundColor = "#6366f1")
-                }
-                onMouseLeave={(e) =>
-                  !isDragging &&
-                  (e.currentTarget.style.backgroundColor = "#1a1a1a")
-                }
+                aria-orientation="vertical"
+                aria-label="Panel resizer"
+                tabIndex={0}
+                onMouseDown={() => setIsDragging(true)}
                 title="Drag to resize"
               />
             )}

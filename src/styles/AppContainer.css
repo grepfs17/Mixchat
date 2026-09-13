@@ -2,6 +2,12 @@
 
 /* AppContainer responsive layout */
 
+/* Grid gap behind the panel resizer. Uses a theme border token so the handle
+   blends with the active theme instead of a fixed dark grey. */
+.app-grid {
+    background-color: var(--color-border-dark);
+}
+
 /* Sidebar collapse transition */
 .sidebar-collapsed {
     border-right-color: transparent !important;
@@ -88,10 +94,10 @@
     display: flex;
     align-items: center;
     padding: 6px 10px;
-    background: linear-gradient(135deg, #0e0e0e 0%, #111111 100%);
-    border-bottom: 1px solid #1c1c1c;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border-dark);
     font-size: 11px;
-    color: #777;
+    color: var(--color-text-muted);
     gap: 8px;
     flex-shrink: 0;
 }
@@ -99,7 +105,7 @@
 .stream-embed-title {
     font-size: 10px;
     font-weight: 700;
-    color: #555;
+    color: var(--color-text-muted);
     letter-spacing: 1.2px;
     text-transform: uppercase;
     flex-shrink: 0;
@@ -107,13 +113,16 @@
 
 .sidebar-toggle-button--in-embed {
     padding: 4px 8px;
-    background-color: rgba(255, 255, 255, 0.05);
-    color: #777;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 11px;
-    transition: all 0.2s ease;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -121,9 +130,9 @@
 }
 
 .sidebar-toggle-button--in-embed:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.15);
-    color: #ccc;
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-border-light);
+    color: var(--color-text-secondary);
 }
 
 .player-type-center {
@@ -137,67 +146,69 @@
     display: flex;
     gap: 2px;
     align-items: center;
-    background: #0d0d0d;
+    background: var(--color-bg-tertiary);
     padding: 2px;
-    border-radius: 8px;
-    border: 1px solid #1e1e1e;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-dark);
 }
 
 .player-type-btn {
     background: transparent;
     border: none;
-    color: #555;
+    color: var(--color-text-muted);
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
     padding: 3px 10px;
-    border-radius: 6px;
-    transition: all 0.18s ease;
+    border-radius: var(--radius-sm);
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
     letter-spacing: 0.3px;
     font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
 }
 
 .player-type-btn:hover {
-    color: #999;
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-hover);
 }
 
 .player-type-btn.active-twitch {
-    background: linear-gradient(135deg, #9146ff 0%, #6a24c9 100%);
-    color: #fff;
-    box-shadow: 0 1px 8px rgba(145, 70, 255, 0.38);
+    background: var(--color-twitch);
+    color: var(--color-text-white);
+    box-shadow: var(--shadow-glow-twitch);
 }
 
 .player-type-btn.active-m3u8 {
-    background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-    color: #fff;
-    box-shadow: 0 1px 8px rgba(99, 102, 241, 0.38);
+    background: var(--color-indigo);
+    color: var(--color-text-white);
+    box-shadow: var(--shadow-glow-indigo);
 }
 
 .player-type-btn.active-youtube {
-    background: linear-gradient(135deg, #ff2222 0%, #c80000 100%);
-    color: #fff;
-    box-shadow: 0 1px 8px rgba(255, 0, 0, 0.32);
+    background: var(--color-youtube);
+    color: var(--color-text-white);
+    box-shadow: var(--shadow-glow-youtube);
 }
 
 .stream-embed-close {
     background: none;
     border: none;
-    color: #555;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 4px;
     line-height: 1;
     display: flex;
     align-items: center;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     transition:
-        color 0.15s,
-        background 0.15s;
+        color 0.15s ease,
+        background-color 0.15s ease;
 }
 
 .stream-embed-close:hover {
-    color: #aaa;
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text-secondary);
+    background: var(--color-bg-hover);
 }
 
 /* ── Stream transition overlay ────────────────────────────────────────────── */
@@ -219,7 +230,7 @@
     position: absolute;
     bottom: 16px;
     left: 20px;
-    color: #fff;
+    color: var(--color-text-white);
     font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
     font-size: 18px;
     font-weight: 700;
@@ -245,7 +256,7 @@
     position: absolute;
     inset: 0;
     z-index: 2;
-    background: #0a0a0a;
+    background: var(--color-bg-primary);
     overflow: hidden;
 }
 
@@ -266,10 +277,9 @@
     inset: 0;
     background: linear-gradient(
         135deg,
-        rgba(99, 102, 241, 0.08) 0%,
-        rgba(145, 70, 255, 0.06) 100%
+        color-mix(in srgb, var(--color-indigo) 8%, transparent) 0%,
+        color-mix(in srgb, var(--color-twitch) 6%, transparent) 100%
     );
-    backdrop-filter: blur(2px);
 }
 
 .stream-embed-placeholder__spinner {
@@ -281,7 +291,7 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    color: #ccc;
+    color: var(--color-text-secondary);
     font-size: 13px;
     font-family: var(--font-ui, "Figtree", system-ui, sans-serif);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
@@ -290,9 +300,9 @@
 .stream-embed-placeholder__spinner-ring {
     width: 32px;
     height: 32px;
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top-color: var(--color-indigo, #6366f1);
-    border-radius: 50%;
+    border: 3px solid var(--color-border-light);
+    border-top-color: var(--color-indigo);
+    border-radius: var(--radius-full);
     animation: stream-spin 0.8s linear infinite;
 }
 

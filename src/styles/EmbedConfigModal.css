@@ -20,7 +20,7 @@
     max-height: 90svh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    box-shadow: var(--shadow-lg);
 }
 
 /* Scrollbar style for Embed Config Modal (match chat messages scrollbar) */
@@ -84,7 +84,7 @@
     color: var(--color-text-primary);
     font-size: 13px;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s ease;
 }
 
 .embed-config-search-input:focus {
@@ -105,8 +105,8 @@
     padding: 2px;
     display: flex;
     align-items: center;
-    border-radius: 50%;
-    transition: color 0.15s;
+    border-radius: var(--radius-full);
+    transition: color 0.15s ease;
 }
 
 .embed-config-search-clear:hover {
@@ -226,7 +226,9 @@
     font-size: 13px;
     font-weight: 500;
     border-radius: var(--radius-sm);
-    transition: all 0.15s;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
     white-space: nowrap;
 }
 
@@ -237,7 +239,7 @@
 
 .embed-config-sidebar-item--active {
     background-color: var(--color-indigo);
-    color: #fff;
+    color: var(--color-text-white);
 }
 
 .embed-config-sidebar-item--active:hover {
@@ -439,7 +441,9 @@
     border: 2px solid var(--color-border-medium);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .embed-config-theme-btn:hover {
@@ -449,13 +453,17 @@
 
 .embed-config-theme-btn--active {
     border-color: var(--color-indigo);
-    background-color: #1e1e3f;
+    background-color: color-mix(
+        in srgb,
+        var(--color-indigo) 15%,
+        var(--color-bg-primary)
+    );
 }
 
 .embed-config-theme-preview {
     width: 40px;
     height: 32px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
     position: relative;
     border: 1px solid var(--color-border-dark);
@@ -480,8 +488,8 @@
     right: 4px;
     width: 8px;
     height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-sm);
 }
 
 .embed-config-theme-label {
@@ -548,7 +556,7 @@
     color: var(--color-text-primary);
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background-color 0.15s ease;
 }
 
 .embed-config-sound-btn:hover {
@@ -557,7 +565,11 @@
 
 .embed-config-sound-btn--active {
     border: 2px solid var(--color-indigo);
-    background-color: #1e1e3f;
+    background-color: color-mix(
+        in srgb,
+        var(--color-indigo) 15%,
+        var(--color-bg-primary)
+    );
 }
 
 .embed-config-sound-hint {
@@ -584,10 +596,12 @@
     border: 1px solid var(--color-border-medium);
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 14px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .embed-config-footer-btn:hover {
@@ -632,7 +646,9 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .embed-config-backup-btn:hover {
@@ -669,7 +685,7 @@
     height: 12px;
     border: 2px solid var(--color-text-muted);
     border-top-color: transparent;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     animation: embed-config-spin 0.6s linear infinite;
     vertical-align: middle;
 }
@@ -690,7 +706,7 @@
 
 .embed-config-reauth-btn:hover {
     background-color: var(--color-indigo) !important;
-    color: #fff !important;
+    color: var(--color-text-white) !important;
 }
 
 /* Share link */
@@ -759,10 +775,10 @@
     height: 18px;
     padding: 0 5px;
     background-color: var(--color-indigo);
-    color: #fff;
+    color: var(--color-text-white);
     font-size: 10px;
     font-weight: 600;
-    border-radius: 9px;
+    border-radius: var(--radius-pill);
 }
 
 .embed-config-event-sounds {
@@ -803,7 +819,7 @@
     color: var(--color-text-primary);
     font-size: 12px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background-color 0.15s ease;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -819,7 +835,11 @@
 }
 
 .embed-config-event-sound-btn--play:hover {
-    background-color: rgba(99, 102, 241, 0.1);
+    background-color: color-mix(
+        in srgb,
+        var(--color-indigo) 12%,
+        transparent
+    );
 }
 
 .embed-config-event-sound-btn--remove {
@@ -828,7 +848,11 @@
 }
 
 .embed-config-event-sound-btn--remove:hover {
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: color-mix(
+        in srgb,
+        var(--color-notification-error) 12%,
+        transparent
+    );
 }
 
 .embed-config-event-sound-btn--upload {
@@ -837,7 +861,7 @@
 }
 
 .embed-config-event-sound-btn--upload:hover {
-    background-color: rgba(34, 197, 94, 0.1);
+    background-color: color-mix(in srgb, var(--color-green) 12%, transparent);
 }
 
 /* Ignored Users */
@@ -850,39 +874,39 @@
 .embed-config-ignored-users-input {
     flex: 1;
     padding: 6px 10px;
-    background: var(--color-bg-secondary, #1e1e1e);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-sm, 3px);
-    color: var(--color-text-primary, #fff);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
     font-size: 0.85rem;
     outline: none;
     transition: border-color 0.15s ease;
 }
 
 .embed-config-ignored-users-input:focus {
-    border-color: var(--color-indigo, #6366f1);
+    border-color: var(--color-indigo);
 }
 
 .embed-config-ignored-users-input::placeholder {
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-text-muted);
 }
 
 .embed-config-ignored-users-add-btn {
     padding: 6px 14px;
-    background: var(--color-indigo, #6366f1);
+    background: var(--color-indigo);
     border: none;
-    border-radius: var(--radius-sm, 3px);
-    color: #fff;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-white);
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
     transition:
-        background 0.15s ease,
+        background-color 0.15s ease,
         opacity 0.15s ease;
 }
 
 .embed-config-ignored-users-add-btn:hover:not(:disabled) {
-    background: #4f46e5;
+    background: var(--color-indigo-hover);
 }
 
 .embed-config-ignored-users-add-btn:disabled {
@@ -902,34 +926,38 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: var(--radius-sm, 3px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border-dark);
 }
 
 .embed-config-ignored-user-name {
     font-size: 0.85rem;
-    color: var(--color-text-primary, #fff);
+    color: var(--color-text-primary);
     font-weight: 500;
 }
 
 .embed-config-ignored-user-remove {
     background: none;
     border: none;
-    color: var(--color-text-muted, #6b7280);
+    color: var(--color-text-muted);
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
     padding: 2px 6px;
-    border-radius: var(--radius-sm, 3px);
+    border-radius: var(--radius-sm);
     transition:
         color 0.15s ease,
-        background 0.15s ease;
+        background-color 0.15s ease;
 }
 
 .embed-config-ignored-user-remove:hover {
-    color: var(--color-notification-error, #ef4444);
-    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-notification-error);
+    background: color-mix(
+        in srgb,
+        var(--color-notification-error) 12%,
+        transparent
+    );
 }
 
 /* ── Mobile styles ─────────────────────────────────────────────────────── */
@@ -1062,11 +1090,11 @@
     gap: 10px;
     padding: 10px 16px;
     margin: 0 16px 8px;
-    background: rgba(99, 102, 241, 0.15);
-    border: 1px solid rgba(99, 102, 241, 0.35);
+    background: color-mix(in srgb, var(--color-indigo) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 35%, transparent);
     border-radius: var(--radius-sm);
     font-size: 13px;
-    color: #a5b4fc;
+    color: color-mix(in srgb, var(--color-indigo) 55%, var(--color-text-white));
 }
 
 .embed-config-reload-banner span {
@@ -1075,25 +1103,25 @@
 
 .embed-config-reload-banner button {
     padding: 4px 12px;
-    border: 1px solid rgba(99, 102, 241, 0.5);
-    border-radius: 4px;
-    background: rgba(99, 102, 241, 0.25);
-    color: #e0e7ff;
+    border: 1px solid color-mix(in srgb, var(--color-indigo) 50%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-indigo) 25%, transparent);
+    color: color-mix(in srgb, var(--color-indigo) 30%, var(--color-text-white));
     font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
 }
 
 .embed-config-reload-banner button:hover {
-    background: rgba(99, 102, 241, 0.4);
+    background: color-mix(in srgb, var(--color-indigo) 40%, transparent);
 }
 
 .embed-config-reload-dismiss {
-    border-color: rgba(255, 255, 255, 0.15) !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #999 !important;
+    border-color: var(--color-border-light) !important;
+    background: var(--color-bg-hover) !important;
+    color: var(--color-text-muted) !important;
 }
 
 .embed-config-reload-dismiss:hover {
-    background: rgba(255, 255, 255, 0.14) !important;
+    background: var(--color-bg-tertiary) !important;
 }

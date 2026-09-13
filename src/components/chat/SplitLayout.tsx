@@ -102,27 +102,20 @@ export default function SplitChat({
 
       {linkedYoutubeUrl && showYoutubeSection && (
         <div
+          className={`panel-resizer${
+            isDraggingChatSplit ? " panel-resizer--dragging" : ""
+          }`}
           style={{
             height: "8px",
-            backgroundColor: "#1a1a1a",
             cursor: "row-resize",
             userSelect: "none",
             zIndex: 10,
-            transition: isDraggingChatSplit ? "none" : "background-color 0.2s",
           }}
           role="separator"
         aria-orientation="vertical"
         aria-label="Chat split resizer"
         tabIndex={0}
         onMouseDown={() => onSetIsDraggingChatSplit(true)}
-          onMouseEnter={(e) =>
-            !isDraggingChatSplit &&
-            (e.currentTarget.style.backgroundColor = "#6366f1")
-          }
-          onMouseLeave={(e) =>
-            !isDraggingChatSplit &&
-            (e.currentTarget.style.backgroundColor = "#1a1a1a")
-          }
         />
       )}
 

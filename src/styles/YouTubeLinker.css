@@ -11,15 +11,15 @@
 
 .ytlinker-manager {
     background: var(--color-bg-primary);
-    border: 1px solid var(--color-accent);
-    border-radius: 12px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-xl);
     padding: 28px;
     max-width: 540px;
     width: 90%;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-accent-lg);
+    box-shadow: var(--shadow-lg);
     color: var(--color-text-primary);
 }
 
@@ -73,11 +73,11 @@
     padding: 10px 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--color-text-primary);
     font-size: 13px;
     cursor: text;
-    transition: border-color 0.2s;
+    transition: border-color 0.15s ease;
     box-sizing: border-box;
 }
 
@@ -96,7 +96,7 @@
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
     border-top: none;
-    border-radius: 0 0 6px 6px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     max-height: 200px;
     overflow-y: auto;
     z-index: 10;
@@ -133,7 +133,7 @@
     border-bottom: 1px solid var(--color-border-dark);
     color: var(--color-text-primary);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.15s ease;
     text-align: left;
     font-size: 13px;
 }
@@ -171,24 +171,24 @@
     padding: 6px 10px;
     background: var(--color-bg-mention);
     border: 1px solid var(--color-border-mention);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--color-accent);
     font-size: 12px;
     font-weight: 600;
 }
 
 .ytlinker-error {
-    color: #ef4444;
+    color: var(--color-notification-error);
     font-size: 12px;
     padding: 4px 0;
 }
 
 .ytlinker-add-button {
     padding: 10px 16px;
-    background: #ff0000;
-    color: white;
+    background: var(--color-youtube);
+    color: var(--color-text-white);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
@@ -196,12 +196,14 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease;
     white-space: nowrap;
 }
 
 .ytlinker-add-button:hover:not(:disabled) {
-    background: #cc0000;
+    background: var(--color-youtube-hover);
     transform: translateY(-1px);
 }
 
@@ -228,7 +230,7 @@
 
 .ytlinker-items::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: 3px;
+    border-radius: var(--radius-pill);
 }
 
 .ytlinker-items::-webkit-scrollbar-thumb:hover {
@@ -251,9 +253,11 @@
     padding: 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-bottom: 8px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .ytlinker-item:hover {
@@ -293,7 +297,7 @@
 
 .ytlinker-item-url {
     font-size: 12px;
-    color: #ffffff;
+    color: var(--color-text-white);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -308,19 +312,21 @@
 .ytlinker-remove-button {
     background: none;
     border: none;
-    color: #ff0000;
+    color: var(--color-youtube);
     cursor: pointer;
     padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition:
+        color 0.15s ease,
+        transform 0.15s ease;
     flex-shrink: 0;
     font-size: 14px;
 }
 
 .ytlinker-remove-button:hover {
-    color: #cc0000;
+    color: var(--color-youtube-hover);
     transform: scale(1.1);
 }
 
@@ -344,10 +350,10 @@
 .ytlinker-toggle-track {
     width: 36px;
     height: 20px;
-    border-radius: 10px;
-    background: #555;
+    border-radius: var(--radius-pill);
+    background: var(--color-border-lighter);
     position: relative;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
 .ytlinker-toggle--active .ytlinker-toggle-track {
@@ -357,12 +363,12 @@
 .ytlinker-toggle-thumb {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
-    background: white;
+    border-radius: var(--radius-full);
+    background: var(--color-text-white);
     position: absolute;
     top: 2px;
     left: 2px;
-    transition: transform 0.2s;
+    transition: transform 0.2s ease;
 }
 
 .ytlinker-toggle--active .ytlinker-toggle-thumb {
@@ -386,7 +392,7 @@
     padding: 5px 8px;
     background: var(--color-bg-primary);
     border: 1px solid var(--color-accent);
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     color: var(--color-text-primary);
     font-size: 12px;
     box-sizing: border-box;
@@ -400,13 +406,13 @@
 .ytlinker-edit-button {
     background: none;
     border: none;
-    color: #999;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: color 0.15s ease;
     flex-shrink: 0;
     font-size: 13px;
 }
@@ -416,42 +422,42 @@
 }
 
 .ytlinker-edit-save {
-    background: #22c55e;
+    background: var(--color-notification-success);
     border: none;
-    color: white;
+    color: var(--color-text-white);
     cursor: pointer;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.15s ease;
     flex-shrink: 0;
 }
 
 .ytlinker-edit-save:hover {
-    background: #16a34a;
+    background: var(--color-notification-success-border);
 }
 
 .ytlinker-edit-cancel {
     background: none;
     border: none;
-    color: #999;
+    color: var(--color-text-muted);
     cursor: pointer;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: color 0.15s ease;
     flex-shrink: 0;
 }
 
 .ytlinker-edit-cancel:hover {
-    color: #ef4444;
+    color: var(--color-notification-error);
 }
 
 /* Footer */
@@ -474,11 +480,13 @@
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .ytlinker-close-button:hover {

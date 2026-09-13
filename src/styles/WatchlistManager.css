@@ -11,15 +11,15 @@
 
 .watchlist-manager {
     background: var(--color-bg-primary);
-    border: 1px solid var(--color-accent);
-    border-radius: 12px;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-xl);
     padding: 28px;
     max-width: 500px;
     width: 90%;
     max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-accent-lg);
+    box-shadow: var(--shadow-lg);
     color: var(--color-text-primary);
 }
 
@@ -48,11 +48,11 @@
     padding: 10px 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--color-text-primary);
     font-size: 13px;
     cursor: text;
-    transition: border-color 0.2s;
+    transition: border-color 0.15s ease;
 }
 
 .channel-search:hover,
@@ -69,7 +69,7 @@
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
     border-top: none;
-    border-radius: 0 0 6px 6px;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
     max-height: 300px;
     overflow-y: auto;
     z-index: 10;
@@ -106,7 +106,7 @@
     border-bottom: 1px solid var(--color-border-dark);
     color: var(--color-text-primary);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.15s ease;
     text-align: left;
     font-size: 13px;
 }
@@ -122,7 +122,7 @@
 .channel-thumb {
     width: 32px;
     height: 32px;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
     object-fit: cover;
     flex-shrink: 0;
 }
@@ -152,7 +152,7 @@
     padding: 10px 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     color: var(--color-text-primary);
     font-size: 13px;
     white-space: nowrap;
@@ -164,16 +164,18 @@
 .add-button {
     padding: 10px 16px;
     background: var(--color-accent);
-    color: white;
+    color: var(--color-text-white);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease;
     white-space: nowrap;
 }
 
@@ -198,7 +200,7 @@
     padding: 10px 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
 }
 
@@ -216,7 +218,7 @@
     margin-left: 6px;
     cursor: help;
     display: inline-flex;
-    transition: color 0.15s;
+    transition: color 0.15s ease;
 }
 
 .watchlist-info-icon:hover {
@@ -229,12 +231,12 @@
     height: 22px;
     background: var(--color-bg-tertiary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 11px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     padding: 0;
     transition:
-        background 0.2s,
-        border-color 0.2s;
+        background-color 0.2s ease,
+        border-color 0.2s ease;
     flex-shrink: 0;
 }
 
@@ -249,9 +251,9 @@
     left: 2px;
     width: 16px;
     height: 16px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 0.2s;
+    background: var(--color-text-white);
+    border-radius: var(--radius-full);
+    transition: transform 0.2s ease;
     pointer-events: none;
 }
 
@@ -276,7 +278,7 @@
 
 .watchlist-items::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: 3px;
+    border-radius: var(--radius-pill);
 }
 
 .watchlist-items::-webkit-scrollbar-thumb:hover {
@@ -298,9 +300,11 @@
     padding: 12px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-bottom: 8px;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .watchlist-item:hover {
@@ -319,7 +323,7 @@
 .item-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     object-fit: cover;
     flex-shrink: 0;
 }
@@ -355,7 +359,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition:
+        color 0.15s ease,
+        transform 0.15s ease;
     flex-shrink: 0;
     font-size: 14px;
 }
@@ -384,11 +390,13 @@
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-medium);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease;
 }
 
 .close-button:hover {
