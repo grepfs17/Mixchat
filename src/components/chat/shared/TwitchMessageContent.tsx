@@ -268,12 +268,16 @@ function TwitchMessageContentBase({
             {msg.timestamp.toLocaleTimeString()}
           </span>
           {children}
-          {msg.messageType === "redemption" && msg.rewardTitle && (
-            <span className="reward-title-badge">
-              {msg.rewardTitle}
-              {typeof msg.rewardCost === "number" ? ` (${msg.rewardCost})` : ""}
-            </span>
-          )}
+          {msg.messageType === "redemption" &&
+            msg.rewardTitle &&
+            !msg.isGigantifiedEmote && (
+              <span className="reward-title-badge">
+                {msg.rewardTitle}
+                {typeof msg.rewardCost === "number" && msg.rewardCost > 0
+                  ? ` (${msg.rewardCost})`
+                  : ""}
+              </span>
+            )}
           <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
           <a
             href={`https://twitch.tv/${msg.author}`}

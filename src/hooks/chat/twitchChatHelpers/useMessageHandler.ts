@@ -90,6 +90,10 @@ export function useTwitchChatMessageHandler({
         rawTags?.get("source-room-id") || undefined;
       const isGigantifiedEmote =
         rawTags?.get("msg-id") === "gigantified-emote-message";
+      // Twitch sends power-ups (Bits) through the same redemption-shaped IRC
+      // message. They are not channel-points rewards, so never classify them
+      // as redemptions or attach reward title/cost to them.
+      const isRedemption = msg.isRedemption && !isGigantifiedEmote;
       const powerUpTag = rawTags?.get("msg-param-power-up-type") || undefined;
       const powerUpType: "message_effect" | "celebration" | undefined =
         powerUpTag === "message_effect"
@@ -100,7 +104,7 @@ export function useTwitchChatMessageHandler({
       const messageEffectId =
         rawTags?.get("msg-param-power-up-id") || undefined;
       const cachedRewardInfo =
-        msg.isRedemption && msg.rewardId
+        isRedemption && msg.rewardId
           ? getCachedRewardInfo(msg.rewardId)
           : undefined;
       const isFirstMessage = rawTags?.get("first-msg") === "1";
@@ -136,16 +140,16 @@ export function useTwitchChatMessageHandler({
         badges: badgeImages,
         badgeDetails,
         isCurrentUser,
-        messageType: msg.isRedemption
+        messageType: isRedemption
           ? "redemption"
           : msg.isHighlight
             ? "highlight"
             : msg.isCheer
               ? "cheer"
               : "chat",
-        rewardId: msg.isRedemption ? msg.rewardId || undefined : undefined,
-        rewardTitle: cachedRewardInfo?.title,
-        rewardCost: cachedRewardInfo?.cost,
+        rewardId: isRedemption ? msg.rewardId || undefined : undefined,
+        rewardTitle: isRedemption ? cachedRewardInfo?.title : undefined,
+        rewardCost: isRedemption ? cachedRewardInfo?.cost : undefined,
         sourceChannelId: isSharedChat ? sourceRoomId : undefined,
         sourceChannelLogin: cachedSourceInfo?.login || undefined,
         sourceChannelAvatar: cachedSourceInfo?.avatar || undefined,
