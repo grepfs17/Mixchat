@@ -6,6 +6,7 @@ import EmoteMenu from "../../EmoteMenu";
 import PresetMessages from "./PresetMessages";
 import AutocompleteMenu, { MenuItem } from "./AutocompleteMenu";
 import { useChatInputCore } from "../../../hooks/chat/useChatInputCore";
+import type { UseAutocompleteReturn } from "../../../hooks/chat/useAutocomplete";
 
 const SELECTED_PLATFORMS: Platform[] = ["twitch"];
 
@@ -27,6 +28,33 @@ interface MessageInputProps {
   isFollowing?: boolean | null;
   channelName?: string;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
+}
+
+interface ChatAutocompleteProps<T> {
+  ac: UseAutocompleteReturn<T>;
+  menuRect: DOMRect | null;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  renderItem: (item: T, index: number, isSelected: boolean) => React.ReactNode;
+}
+
+/* Shared wiring for the emote / username / command autocomplete menus. */
+function ChatAutocomplete<T>({
+  ac,
+  menuRect,
+  menuRef,
+  renderItem,
+}: ChatAutocompleteProps<T>) {
+  return (
+    <AutocompleteMenu
+      isOpen={ac.isOpen}
+      results={ac.results}
+      selectedIndex={ac.selectedIndex}
+      menuRect={menuRect}
+      menuRef={menuRef}
+      onSelect={ac.select}
+      renderItem={renderItem}
+    />
+  );
 }
 
 function MessageInput({
@@ -127,19 +155,16 @@ function MessageInput({
           autoCapitalize="off"
         />
 
-        <AutocompleteMenu
-          isOpen={core.emoteAC.isOpen}
-          results={core.emoteAC.results}
-          selectedIndex={core.emoteAC.selectedIndex}
+        <ChatAutocomplete
+          ac={core.emoteAC}
           menuRect={core.menuRect}
           menuRef={core.menuRef}
-          onSelect={(i) => core.emoteAC.select(i)}
           renderItem={(emote, index, isSelected) => (
             <MenuItem
               key={`${emote.source}-${emote.name}`}
               index={index}
               isSelected={isSelected}
-              onSelect={(i) => core.emoteAC.select(i)}
+              onSelect={core.emoteAC.select}
               title={emote.name}
             >
               <img
@@ -155,18 +180,16 @@ function MessageInput({
           )}
         />
 
-        <AutocompleteMenu
-          isOpen={core.usernameAC.isOpen}
-          results={core.usernameAC.results}
-          selectedIndex={core.usernameAC.selectedIndex}
+        <ChatAutocomplete
+          ac={core.usernameAC}
           menuRect={core.menuRect}
-          onSelect={(i) => core.usernameAC.select(i)}
+          menuRef={core.menuRef}
           renderItem={(username, index, isSelected) => (
             <MenuItem
               key={username}
               index={index}
               isSelected={isSelected}
-              onSelect={(i) => core.usernameAC.select(i)}
+              onSelect={core.usernameAC.select}
               style={{ fontSize: "0.95rem" }}
             >
               @{username}
@@ -174,18 +197,16 @@ function MessageInput({
           )}
         />
 
-        <AutocompleteMenu
-          isOpen={core.commandAC.isOpen}
-          results={core.commandAC.results}
-          selectedIndex={core.commandAC.selectedIndex}
+        <ChatAutocomplete
+          ac={core.commandAC}
           menuRect={core.menuRect}
-          onSelect={(i) => core.commandAC.select(i)}
+          menuRef={core.menuRef}
           renderItem={(cmd, index, isSelected) => (
             <MenuItem
               key={cmd.name}
               index={index}
               isSelected={isSelected}
-              onSelect={(i) => core.commandAC.select(i)}
+              onSelect={core.commandAC.select}
               className="autocomplete-command-item"
             >
               <div className="autocomplete-command-header">
