@@ -1,8 +1,13 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import PinnedChatBanner, {
   type PinnedChatHighlightState,
 } from "../../src/components/chat/shared/PinnedChatBanner";
+import {
+  setEmotes7tv,
+  bumpEmoteMapVersion,
+  notifyEmotesReloaded,
+} from "../../src/lib/emotes";
 
 vi.mock("react-icons/fa", () => ({
   FaThumbtack: () => <span data-testid="fa-thumbtack" />,
@@ -19,6 +24,11 @@ const baseHighlight: PinnedChatHighlightState = {
 };
 
 describe("PinnedChatBanner", () => {
+  beforeEach(() => {
+    setEmotes7tv({});
+    bumpEmoteMapVersion();
+    notifyEmotesReloaded();
+  });
   it("renders the PINNED label and the sender display name", () => {
     render(
       <PinnedChatBanner highlight={baseHighlight} onDismiss={vi.fn()} />,
@@ -110,6 +120,35 @@ describe("PinnedChatBanner", () => {
     ).toBeNull();
     expect(screen.queryByText(/Pinned by/)).toBeNull();
     expect(screen.queryByText(/in #/)).toBeNull();
+  });
+
+  it("re-parses the message and renders emotes once the emote maps load", () => {
+    // The banner mounts before the 7TV/BTTV/FFZ/Twitch maps have resolved —
+    // exactly the page-load race where the pinned poll beats the emote
+    // providers. The message must first render as plain text.
+    const withEmote = { ...baseHighlight, message: "hello Cool" };
+    render(<PinnedChatBanner highlight={withEmote} onDismiss={vi.fn()} />);
+
+    expect(
+      document.querySelector(".pinned-banner-message img"),
+    ).toBeNull();
+    expect(screen.getByText(/hello/)).toBeInTheDocument();
+
+    // Emote source resolves + maps are bumped and the reload event fires —
+    // the banner must re-parse and now show the emote image.
+    act(() => {
+      setEmotes7tv({ Cool: "https://cdn.7tv.app/emote/cool/1x.webp" });
+      bumpEmoteMapVersion();
+      notifyEmotesReloaded();
+    });
+
+    const img = document.querySelector(
+      ".pinned-banner-message img[data-emote-source='7TV']",
+    );
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe(
+      "https://cdn.7tv.app/emote/cool/1x.webp",
+    );
   });
 
   it("escapes arbitrary HTML in the message payload (no XSS)", () => {

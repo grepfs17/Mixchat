@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { FaThumbtack } from "react-icons/fa";
-import { parseMessageWithEmotes } from "../../../lib/emotes";
+import {
+  parseMessageWithEmotes,
+  useEmoteMapVersion,
+} from "../../../lib/emotes";
 import "../../../styles/chat/PinnedChatBanner.css";
 import "../../../styles/chat/BannerShell.css";
 import BannerShell from "./BannerShell";
@@ -34,9 +37,14 @@ export default function PinnedChatBanner({
   // The pinned-message payload from GQL is plain text only — no Twitch
   // emote positions — so we go through the third-party emote + link +
   // @mention path of `parseMessageWithEmotes` by passing no twitchEmotes.
+  // Subscribe to the emote map version so a banner that rendered before the
+  // 7TV/BTTV/FFZ/Twitch maps finished loading re-parses (and re-renders its
+  // emotes) once a source resolves — the banner can persist for hours, so it
+  // must not stay stuck on the emote-less parse from page load.
+  const emoteVersion = useEmoteMapVersion();
   const messageHtml = useMemo(
     () => parseMessageWithEmotes(highlight.message),
-    [highlight.message],
+    [highlight.message, emoteVersion],
   );
 
   return (
