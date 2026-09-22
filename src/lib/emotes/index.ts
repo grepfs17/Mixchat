@@ -28,6 +28,7 @@ export type {
 } from "./types";
 
 export { parseMessageWithEmotes } from "./parser";
+export { applyMentionColors } from "./parser";
 export { tokenizeThirdPartyEmotesForYoutube } from "./parser";
 export type { YoutubeEmoteToken } from "./parser";
 

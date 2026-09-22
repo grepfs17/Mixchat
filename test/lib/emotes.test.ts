@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   initializeEmotes,
   parseMessageWithEmotes,
+  applyMentionColors,
   searchEmotes,
   setEmotes7tv,
   setEmotesBttv,
@@ -654,6 +655,67 @@ describe("emotes lib", () => {
         name: "Solo",
         url: "https://cdn.7tv.app/emote/solo/1x.webp",
       });
+    });
+  });
+
+  describe("mention colours", () => {
+    it("renders @mentions as bold by default", () => {
+      expect(parseMessageWithEmotes("hi @friend")).toBe(
+        "hi <strong>@friend</strong>",
+      );
+    });
+
+    it("applies the mentioned user's colour when known", () => {
+      const mentionColors = new Map([["friend", "#ff0000"]]);
+      const result = parseMessageWithEmotes("hi @friend", undefined, {
+        mentionColors,
+      });
+      expect(result).toBe('hi <strong style="color:#ff0000">@friend</strong>');
+    });
+
+    it("matches case-insensitively and tolerates trailing punctuation", () => {
+      const mentionColors = new Map([["friend", "#00ff00"]]);
+      const result = parseMessageWithEmotes("@Friend, hello", undefined, {
+        mentionColors,
+      });
+      expect(result).toContain(
+        '<strong style="color:#00ff00">@Friend,</strong>',
+      );
+    });
+
+    it("leaves unknown mentions uncoloured", () => {
+      const mentionColors = new Map([["other", "#123456"]]);
+      const result = parseMessageWithEmotes("hi @friend", undefined, {
+        mentionColors,
+      });
+      expect(result).toBe("hi <strong>@friend</strong>");
+    });
+
+    it("rejects unsafe colour values", () => {
+      const mentionColors = new Map([
+        ["friend", "red;background:url(x)"],
+      ]);
+      const result = parseMessageWithEmotes("hi @friend", undefined, {
+        mentionColors,
+      });
+      expect(result).toBe("hi <strong>@friend</strong>");
+    });
+
+    it("applies colours on cache hits too", () => {
+      expect(parseMessageWithEmotes("ping @friend")).toContain(
+        "<strong>@friend</strong>",
+      );
+      const mentionColors = new Map([["friend", "#abcdef"]]);
+      expect(
+        parseMessageWithEmotes("ping @friend", undefined, { mentionColors }),
+      ).toContain('style="color:#abcdef"');
+    });
+
+    it("applies colours to already-parsed HTML", () => {
+      const mentionColors = new Map([["friend", "#abcdef"]]);
+      expect(
+        applyMentionColors("<strong>@friend</strong>", mentionColors),
+      ).toBe('<strong style="color:#abcdef">@friend</strong>');
     });
   });
 });

@@ -54,6 +54,7 @@ mixchat/
 │   ├── lib/                 # Pure business logic & utilities (no React import)
 │   │   ├── twitch.ts        # Twitch Helix API client (moderation, users, streams, follows)
 │   │   ├── twitchGifs.ts    # Twitch Giphy GIF tag parsing + chat text segmentation
+│   │   ├── twitchReply.ts   # Twitch reply mention-prefix stripping for quoted previews
 │   │   ├── youtube.ts       # YouTube InnerTube client (proxy-aware, PoToken, throttled)
 │   │   ├── emotes/          # Emote system (7TV, BTTV, FFZ, Twitch, search, parser)
 │   │   ├── songQueue/       # Song queue system (server+client: types, IDB, API, extraction)
@@ -90,7 +91,7 @@ mixchat/
 ### 1. Data Flow
 
 - **Auth**: OAuth popup → callback page → postMessage → parent window stores session in localStorage
-- **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message). Giphy GIF chat messages (GIF Keyboard) are parsed from the IRC `gifs` tag (`start-end|<gifID>|<gifURL>`) in `src/lib/twitchGifs.ts` and rendered inline as `<img class="chat-gif">` in `TwitchMessageContent`.
+- **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message). Giphy GIF chat messages (GIF Keyboard) are parsed from the IRC `gifs` tag (`start-end|<gifID>|<gifURL>`) in `src/lib/twitchGifs.ts` and rendered inline as `<img class="chat-gif">` in `TwitchMessageContent`. `@mentions` are rendered in the mentioned user's chat colour (username → colour map built from loaded messages in `src/lib/chatColors.ts`), and reply previews colour the `@author` header and strip a repeated `@author` prefix from the quoted content (`src/lib/twitchReply.ts`).
 - **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component
 - **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available.
 - **Server State**: Song queue uses server-side in-memory store (`songQueueStore`) with live polling via API routes.

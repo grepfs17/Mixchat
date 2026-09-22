@@ -10,6 +10,7 @@ import AutomodActions from "./AutomodActions";
 import TwitchLinkPreview from "../TwitchLinkPreview";
 import { rebaseEmotesForSegment, splitByTwitchLinks } from "../../../lib/twitchLink";
 import { splitMessageByGifs, type TwitchGif } from "../../../lib/twitchGifs";
+import { stripReplyMention } from "../../../lib/twitchReply";
 import { MessageModActions } from "./MessageModActions";
 import TwitchEventIcon, { EVENT_CONFIG } from "../../TwitchEventIcon";
 import type { TwitchMessage } from "../../../lib/types";
@@ -20,6 +21,7 @@ interface TwitchMessageContentProps {
   previousMsg: TwitchMessage | null;
   currentUserDisplayName?: string;
   authorColorById?: Map<string, string>;
+  mentionColors?: Map<string, string>;
   onReply?: (msg: TwitchMessage) => void;
   onCopy: (msg: TwitchMessage) => void;
   onUsernameClick?: (
@@ -47,6 +49,7 @@ function TwitchMessageContentBase({
   previousMsg,
   currentUserDisplayName,
   authorColorById,
+  mentionColors,
   onReply,
   onCopy,
   onUsernameClick,
@@ -129,10 +132,17 @@ function TwitchMessageContentBase({
     onContextMenu(e, msg);
   };
 
-  const replyAuthorColor = authorColorById
-    ? getReadableUsernameColor(authorColorById.get(msg.replyTo?.id ?? "")) ||
-    "#94a3b8"
-    : "#94a3b8";
+  const replyAuthorName = msg.replyTo?.author;
+  const replyAuthorColor =
+    (replyAuthorName
+      ? mentionColors?.get(replyAuthorName.toLowerCase())
+      : undefined) ||
+    getReadableUsernameColor(authorColorById?.get(msg.replyTo?.id ?? "")) ||
+    "#94a3b8";
+
+  const replyContent = msg.replyTo
+    ? stripReplyMention(msg.replyTo.content, msg.replyTo.author)
+    : "";
 
   const isMobile = isMobileDevice();
   const modActionsAlwaysVisible = isMobile && modModeActive;
@@ -241,12 +251,14 @@ function TwitchMessageContentBase({
               <span style={{ color: replyAuthorColor }}>
                 @{msg.replyTo.author}:
               </span>
-              {msg.replyTo.content && (
+              {replyContent && (
                 <>
                   <span
                     className="reply-target-content"
                     dangerouslySetInnerHTML={{
-                      __html: parseMessageWithEmotes(msg.replyTo.content),
+                      __html: parseMessageWithEmotes(replyContent, undefined, {
+                        mentionColors,
+                      }),
                     }}
                   />
                 </>
@@ -308,6 +320,7 @@ function TwitchMessageContentBase({
               emotes={msg.emotes}
               gigantified={msg.isGigantifiedEmote}
               gifs={msg.gifs}
+              mentionColors={mentionColors}
             />
           )}
           {msg.messageType === "automod" && isModerator && (
@@ -343,7 +356,8 @@ export const TwitchMessageContent = memo(
       prev.msg === next.msg &&
       prev.index === next.index &&
       prev.previousMsg === next.previousMsg &&
-      prev.currentUserDisplayName === next.currentUserDisplayName
+      prev.currentUserDisplayName === next.currentUserDisplayName &&
+      prev.mentionColors === next.mentionColors
     );
   },
 );
@@ -365,11 +379,13 @@ function TwitchMessageTextBase({
   emotes,
   gigantified,
   gifs,
+  mentionColors,
 }: {
   content: string;
   emotes?: Record<string, string[]>;
   gigantified?: boolean;
   gifs?: TwitchGif[];
+  mentionColors?: Map<string, string>;
 }) {
   const gifSegments = React.useMemo(
     () => splitMessageByGifs(content, gifs),
@@ -382,8 +398,9 @@ function TwitchMessageTextBase({
     if (hasTwitchLinks || hasGifs) return null;
     return parseMessageWithEmotes(content, emotes, {
       gigantified,
+      mentionColors,
     });
-  }, [content, emotes, gigantified, hasTwitchLinks, hasGifs]);
+  }, [content, emotes, gigantified, hasTwitchLinks, hasGifs, mentionColors]);
 
   // Giphy GIF messages: splice the image in where the GIF range sits and
   // keep the surrounding caption text on the regular emote pipeline. The
@@ -408,6 +425,7 @@ function TwitchMessageTextBase({
               segment={seg}
               emotes={emotes}
               gigantified={gigantified}
+              mentionColors={mentionColors}
             />
           ),
         )}
@@ -436,6 +454,7 @@ function TwitchMessageTextBase({
           segment={seg}
           emotes={emotes}
           gigantified={gigantified}
+          mentionColors={mentionColors}
         />
       ))}
     </span>
@@ -452,10 +471,12 @@ function TwitchMessageTextSegmentBase({
   segment,
   emotes,
   gigantified,
+  mentionColors,
 }: {
   segment: ReturnType<typeof splitByTwitchLinks>[number];
   emotes?: Record<string, string[]>;
   gigantified?: boolean;
+  mentionColors?: Map<string, string>;
 }) {
   // Compute the emote rebase and the parsed HTML unconditionally so the
   // hooks order stays stable across renders regardless of segment type.
@@ -471,8 +492,9 @@ function TwitchMessageTextSegmentBase({
         ? ""
         : parseMessageWithEmotes(segText, segEmotes, {
             gigantified,
+            mentionColors,
           }),
-    [segText, segEmotes, gigantified, isTwitchLink],
+    [segText, segEmotes, gigantified, isTwitchLink, mentionColors],
   );
 
   if (isTwitchLink) {

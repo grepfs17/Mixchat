@@ -47,17 +47,48 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
   FORCE_BODY: false,
 };
 
+const MENTION_STRONG_RE = /<strong>@([^<]*)<\/strong>/g;
+const SAFE_CSS_COLOR_RE =
+  /^(#[0-9a-fA-F]{3,8}|(?:rgb|hsl)a?\([^)"';]*\))$/;
+
+function isSafeCssColor(color: string): boolean {
+  return SAFE_CSS_COLOR_RE.test(color.trim());
+}
+
+/**
+ * Apply each mentioned user's chat colour to the inline `@mention` markup
+ * emitted by the emote parser. Runs on already-sanitised HTML, so the colour
+ * is strictly validated before being injected into a `style` attribute.
+ */
+export function applyMentionColors(
+  html: string,
+  mentionColors?: Map<string, string>,
+): string {
+  if (!mentionColors || mentionColors.size === 0 || !html.includes("@")) {
+    return html;
+  }
+  return html.replace(MENTION_STRONG_RE, (match, rawName: string) => {
+    const name = rawName.replace(/[^\w]+$/, "").toLowerCase();
+    if (!name) return match;
+    const color = mentionColors.get(name);
+    if (!color || !isSafeCssColor(color)) return match;
+    return `<strong style="color:${color}">@${rawName}</strong>`;
+  });
+}
+
 /**
  * Parse message text and replace emote codes with HTML image tags
  * @param text - The message text
  * @param twitchEmotes - Twitch emote data from message tags (emoteId -> positions array)
  * @param opts - Render hints. `gigantified` true renders every emote in the
  *   message at the "Gigantify an Emote" power-up size (Twitch, 100 bits).
+ *   `mentionColors` maps a lowercased username to the colour it should be
+ *   rendered with when mentioned via `@username`.
  */
 export function parseMessageWithEmotes(
   text: string,
   twitchEmotes?: Record<string, string[]>,
-  opts?: { gigantified?: boolean },
+  opts?: { gigantified?: boolean; mentionColors?: Map<string, string> },
 ): string {
   const gigantified = Boolean(opts?.gigantified);
   const cacheKey =
@@ -66,7 +97,9 @@ export function parseMessageWithEmotes(
       : `v${emoteMapVersion}|g${gigantified ? 1 : 0}|${text}`;
 
   const cached = parseCache.get(cacheKey);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    return applyMentionColors(cached, opts?.mentionColors);
+  }
   let raw: string;
 
   if (twitchEmotes && Object.keys(twitchEmotes).length > 0) {
@@ -113,7 +146,7 @@ export function parseMessageWithEmotes(
     if (firstKey !== undefined) parseCache.delete(firstKey);
   }
   parseCache.set(cacheKey, result);
-  return result;
+  return applyMentionColors(result, opts?.mentionColors);
 }
 
 /**

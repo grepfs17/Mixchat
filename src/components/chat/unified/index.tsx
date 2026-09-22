@@ -12,6 +12,7 @@ import type { TwitchMessage, ChatFont, Platform } from "../../../lib/types";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
+import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { UnifiedTwitchMessageItem } from "./UnifiedTwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
@@ -184,6 +185,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
         ? merged.slice(-MAX_DISPLAYED_MESSAGES)
         : merged;
     }, [twitchMessages, ytMessages, ignoredSet]);
+
+    const mentionColors = useMentionColorMap(twitchMessages);
 
     const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
       containerRef,
@@ -362,6 +365,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   index={index}
                   entries={entries}
                   currentUserDisplayName={currentUserDisplayName}
+                  mentionColors={mentionColors}
                   onReply={onReply}
                   onCopyMessage={onCopyMessage}
                   onTimeoutMenu={(x, y, userId, username) =>

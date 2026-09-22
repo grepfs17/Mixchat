@@ -13,6 +13,7 @@ import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
+import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
 import { DisplayTwitchMessageItem } from "./DisplayTwitchMessageItem";
@@ -295,6 +296,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       return map;
     }, [messages]);
 
+    const mentionColors = useMentionColorMap(messages);
+
     const handlePointerMove = useCallback((e: PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === "IMG" && target.classList.contains("chat-emote")) {
@@ -430,6 +433,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
                   index={index}
                   filteredMessages={filteredMessages}
                   authorColorById={authorColorById}
+                  mentionColors={mentionColors}
                   currentUserDisplayName={currentUserDisplayName}
                   onReply={onReply}
                   onCopy={handleCopy}

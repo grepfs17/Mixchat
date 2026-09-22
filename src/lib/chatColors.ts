@@ -129,3 +129,28 @@ export function getReadableUsernameColor(color: string | undefined): string {
   }
   return color;
 }
+
+interface ColorSource {
+  author: string;
+  userName?: string;
+  authorColor?: string;
+}
+
+/**
+ * Build a lowercased username (display name and login) → chat colour map from
+ * the currently visible messages, so `@mentions` can be rendered in the
+ * mentioned user's colour. Colours go through the same readability pass as the
+ * username itself.
+ */
+export function buildMentionColorMap(
+  messages: ReadonlyArray<ColorSource>,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const message of messages) {
+    if (!message.authorColor) continue;
+    const color = getReadableUsernameColor(message.authorColor);
+    if (message.author) map.set(message.author.toLowerCase(), color);
+    if (message.userName) map.set(message.userName.toLowerCase(), color);
+  }
+  return map;
+}

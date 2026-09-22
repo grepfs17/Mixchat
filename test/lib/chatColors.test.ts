@@ -3,6 +3,7 @@ import {
   getReadableUsernameColor,
   setThemeBackgroundColor,
   getColorFromName,
+  buildMentionColorMap,
 } from "../../src/lib/chatColors";
 
 // Matches the default --color-bg-primary from styles/vars.css
@@ -50,5 +51,30 @@ describe("getReadableUsernameColor", () => {
     // …but on a lighter background it also clears the floor.
     setThemeBackgroundColor("#ffffff");
     expect(getReadableUsernameColor("#0000ff")).toBe("#0000ff");
+  });
+});
+
+describe("buildMentionColorMap", () => {
+  beforeEach(() => {
+    setThemeBackgroundColor(DARK_BG);
+  });
+
+  it("maps both the display name and login (lowercased) to the colour", () => {
+    const map = buildMentionColorMap([
+      { author: "CoolUser", userName: "cooluser", authorColor: "#ff7f50" },
+    ]);
+    expect(map.get("cooluser")).toBe("#ff7f50");
+    expect(map.get("CoolUser".toLowerCase())).toBe("#ff7f50");
+  });
+
+  it("skips messages without a colour", () => {
+    expect(buildMentionColorMap([{ author: "NoColor" }]).size).toBe(0);
+  });
+
+  it("applies the readability pass to stored colours", () => {
+    const map = buildMentionColorMap([
+      { author: "Blue", authorColor: "#0000ff" },
+    ]);
+    expect(map.get("blue")).toBe("#ffffff");
   });
 });
