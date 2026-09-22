@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { stripReplyMention } from "../../src/lib/twitchReply";
+import {
+  stripReplyMention,
+  stripReplyMentionFromContent,
+} from "../../src/lib/twitchReply";
 
 describe("stripReplyMention", () => {
   it("strips a leading mention that matches the reply author", () => {
@@ -38,5 +41,41 @@ describe("stripReplyMention", () => {
   it("returns the content when author or content is missing", () => {
     expect(stripReplyMention("@friend hello", "")).toBe("@friend hello");
     expect(stripReplyMention("", "friend")).toBe("");
+  });
+});
+
+describe("stripReplyMentionFromContent", () => {
+  it("shifts emote offsets after stripping the prefix", () => {
+    const result = stripReplyMentionFromContent("@friend Kappa", "friend", {
+      "25": ["8-12"],
+    });
+    expect(result.content).toBe("Kappa");
+    expect(result.emotes).toEqual({ "25": ["0-4"] });
+  });
+
+  it("drops emotes that fall inside the stripped prefix", () => {
+    const result = stripReplyMentionFromContent("@friend hi", "friend", {
+      "1": ["0-6"],
+    });
+    expect(result.emotes).toEqual({});
+  });
+
+  it("shifts GIF ranges after stripping the prefix", () => {
+    const result = stripReplyMentionFromContent(
+      "@friend [gif]",
+      "friend",
+      {},
+      [{ id: "g", url: "u", start: 8, end: 12 }],
+    );
+    expect(result.content).toBe("[gif]");
+    expect(result.gifs).toEqual([{ id: "g", url: "u", start: 0, end: 4 }]);
+  });
+
+  it("returns the original data when there is no reply prefix", () => {
+    const emotes = { "25": ["0-4"] };
+    const result = stripReplyMentionFromContent("Kappa", "friend", emotes);
+    expect(result.content).toBe("Kappa");
+    expect(result.emotes).toBe(emotes);
+    expect(result.gifs).toBeUndefined();
   });
 });

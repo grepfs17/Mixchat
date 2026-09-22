@@ -11,6 +11,7 @@ import {
 } from "../../../lib/twitchChatCache";
 import { extractBadges } from "../../../lib/twitchChatMessages";
 import { parseGifsTag } from "../../../lib/twitchGifs";
+import { stripReplyMentionFromContent } from "../../../lib/twitchReply";
 import { playEventSound } from "../../../lib/eventSounds";
 import { playMentionSound } from "../../../lib/twitchChatAudio";
 import type { MentionSoundType } from "../../../lib/twitchChatAudio";
@@ -122,20 +123,35 @@ export function useTwitchChatMessageHandler({
         msg.userInfo.userName.toLowerCase() ===
         usernameRef.current.toLowerCase();
 
+      // Twitch prepends "@login " to a reply's raw text; drop it so the body
+      // doesn't repeat the username already shown in the "response to" header.
+      const {
+        content,
+        emotes,
+        gifs: replyGifs,
+      } = replyInfo
+        ? stripReplyMentionFromContent(
+            message,
+            replyInfo.author,
+            twitchEmotes,
+            gifs,
+          )
+        : { content: message, emotes: twitchEmotes, gifs };
+
       const chatMessage: TwitchMessage = {
         id: msg.id,
         platform: "twitch",
         author:
           msg.userInfo.displayName || msg.userInfo.userName || "Anonymous",
         userName: msg.userInfo.userName,
-        content: message,
+        content,
         timestamp: msg.date,
         userId: msg.userInfo.userId,
         authorColor: msg.userInfo.color || "#FFFFFF",
         authorAvatar,
         replyTo: replyInfo,
         mentionsUser,
-        emotes: twitchEmotes,
+        emotes,
         isBot,
         badges: badgeImages,
         badgeDetails,
@@ -158,7 +174,7 @@ export function useTwitchChatMessageHandler({
         messageEffectId:
           powerUpType === "message_effect" ? messageEffectId : undefined,
         isFirstMessage,
-        gifs: gifs.length ? gifs : undefined,
+        gifs: replyGifs && replyGifs.length ? replyGifs : undefined,
       };
 
       // The anonymous connection can't receive USERSTATE, so derive the
