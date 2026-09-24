@@ -27,6 +27,11 @@ export const MOD_COMMANDS = [
     usage: "/pin <message>",
   },
   {
+    name: "/unpin",
+    description: "Unpin the currently pinned chat message",
+    usage: "/unpin",
+  },
+  {
     name: "/shoutout",
     description: "Promote another channel",
     usage: "/shoutout <username>",

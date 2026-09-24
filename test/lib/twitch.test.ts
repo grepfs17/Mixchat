@@ -3,6 +3,8 @@ import {
   getStreamStatuses,
   getRecentMessages,
   pinTwitchMessage,
+  unpinTwitchMessage,
+  getPinnedTwitchMessageId,
 } from "../../src/lib/twitch";
 
 describe("twitch lib mocked HTTP tests", () => {
@@ -137,5 +139,47 @@ describe("twitch lib mocked HTTP tests", () => {
     );
     expect(opts.method).toBe("PUT");
     expect(JSON.parse(opts.body)).toEqual({ message_id: "msg-1" });
+  });
+
+  it("getPinnedTwitchMessageId returns the pinned message id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ message_id: "msg-1" }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getPinnedTwitchMessageId("123", "456");
+
+    expect(result).toBe("msg-1");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=123&moderator_id=456",
+    );
+  });
+
+  it("getPinnedTwitchMessageId returns null when nothing is pinned", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: [] }) }),
+    );
+
+    const result = await getPinnedTwitchMessageId("123", "456");
+    expect(result).toBeNull();
+  });
+
+  it("unpinTwitchMessage deletes the pin with the message id", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await unpinTwitchMessage("123", "456", "msg-1");
+
+    expect(result).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=123&moderator_id=456&message_id=msg-1",
+    );
+    expect(opts.method).toBe("DELETE");
   });
 });

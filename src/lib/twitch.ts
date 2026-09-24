@@ -360,6 +360,76 @@ export const pinTwitchMessage = async (
 };
 
 /**
+ * Fetch the ID of the currently pinned chat message for a broadcaster.
+ * Requires moderator:read:chat_messages (or moderator:manage:chat_messages).
+ * Returns null when nothing is pinned.
+ */
+export const getPinnedTwitchMessageId = async (
+  broadcasterId: string,
+  moderatorId: string,
+): Promise<string | null> => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}`,
+      {
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to get pinned message: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    return (data?.data?.[0]?.message_id as string | undefined) ?? null;
+  } catch (error) {
+    console.error("getPinnedTwitchMessageId failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Unpin a chat message from the broadcaster's chat room.
+ * Requires moderator:manage:chat_messages scope.
+ */
+export const unpinTwitchMessage = async (
+  broadcasterId: string,
+  moderatorId: string,
+  messageId: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=${encodeURIComponent(
+        resolvedBroadcasterId,
+      )}&moderator_id=${encodeURIComponent(moderatorId)}&message_id=${encodeURIComponent(messageId)}`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to unpin message: ${res.status} ${text}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("unpinTwitchMessage failed:", error);
+    throw error;
+  }
+};
+
+/**
  * Send a shoutout via Helix API.
  * Requires moderator:manage:shoutouts scope.
  */

@@ -13,6 +13,8 @@ import {
   sendShoutout,
   sendHelixMessage,
   pinTwitchMessage,
+  unpinTwitchMessage,
+  getPinnedTwitchMessageId,
 } from "../../../lib/twitch";
 import type {
   TwitchMessage,
@@ -185,6 +187,19 @@ async function executeModCommand(
       }
       await pinTwitchMessage(channelId, session.userId, messageId);
       notify(deps, "Message pinned!", "success");
+      return { handled: true };
+    } catch (err) { return catchErr(err, action); }
+  }
+
+  if (action === "/unpin") {
+    try {
+      const messageId = await getPinnedTwitchMessageId(channelId, session.userId);
+      if (!messageId) {
+        notify(deps, "No pinned message to unpin", "error");
+        return { handled: true };
+      }
+      await unpinTwitchMessage(channelId, session.userId, messageId);
+      notify(deps, "Message unpinned!", "success");
       return { handled: true };
     } catch (err) { return catchErr(err, action); }
   }
