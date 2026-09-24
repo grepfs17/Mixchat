@@ -254,5 +254,22 @@ export function useChatAutoScroll({
     pendingScrollFrameRef.current = scrollFrameId;
   }, [containerRef]);
 
+  // Late image decode safety net. The ResizeObserver above observes the
+  // scroll container itself, whose own box does not change when its content
+  // grows — so it never fires for a GIF/emote/avatar finishing its load.
+  // `load` does not bubble, but a capture-phase listener on the container
+  // still receives it from descendant <img>s. Re-pin to the bottom only while
+  // the user is already there.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleMediaLoad = () => {
+      if (!isAtBottomRef.current) return;
+      scrollToBottom();
+    };
+    el.addEventListener("load", handleMediaLoad, true);
+    return () => el.removeEventListener("load", handleMediaLoad, true);
+  }, [containerRef, scrollToBottom]);
+
   return { isAtBottom, newMessagesCount, scrollToBottom };
 }

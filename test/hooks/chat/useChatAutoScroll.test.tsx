@@ -33,10 +33,14 @@ function createContainer() {
   const origRemove = el.removeEventListener.bind(el);
 
   vi.spyOn(el, "addEventListener").mockImplementation(
-    (type: string, listener: EventListenerOrEventListenerObject) => {
+    (
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
+    ) => {
       if (!listeners.has(type)) listeners.set(type, new Set());
       listeners.get(type)!.add(listener);
-      return origAdd(type, listener);
+      return origAdd(type, listener, options);
     },
   );
   vi.spyOn(el, "removeEventListener").mockImplementation(
@@ -614,6 +618,60 @@ describe("useChatAutoScroll", () => {
     // until the rAF clears the flag and scrolls.
     flushAllRAF();
     expect(container.el.scrollTop).toBe(700);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Late image/GIF load safety net
+  // ---------------------------------------------------------------------------
+  it("re-scrolls to bottom when a descendant image finishes loading", () => {
+    container.el.scrollHeight = 500;
+    container.el.scrollTop = 500 - 400; // at bottom
+    container.el.clientHeight = 400;
+
+    renderAutoScroll(container.el, [{ id: "a" }]);
+
+    // Flush the initial auto-scroll rAF so isAutoScrollingRef is cleared.
+    flushAllRAF();
+
+    // Simulate a GIF/emote image loading late and growing the content.
+    const img = document.createElement("img");
+    container.el.appendChild(img);
+    container.el.scrollHeight = 700;
+
+    act(() => {
+      img.dispatchEvent(new Event("load"));
+    });
+
+    flushRAF();
+    expect(container.el.scrollTop).toBe(700);
+  });
+
+  it("does NOT re-scroll on image load when the user has scrolled up", () => {
+    container.el.scrollHeight = 2000;
+    container.el.scrollTop = 0;
+    container.el.clientHeight = 400;
+
+    const { result } = renderAutoScroll(container.el, [{ id: "a" }]);
+    flushAllRAF();
+
+    // The initial rAF scrolled to the bottom; move back up to simulate the
+    // user having scrolled away before the image loads.
+    container.el.scrollTop = 0;
+    const handler = [...container.listeners.get("scroll")!][0] as EventListener;
+    act(() => handler(new Event("scroll")));
+    expect(result.current.isAtBottom).toBe(false);
+
+    const scrollTopBefore = container.el.scrollTop;
+    const img = document.createElement("img");
+    container.el.appendChild(img);
+    container.el.scrollHeight = 2200;
+
+    act(() => {
+      img.dispatchEvent(new Event("load"));
+    });
+    flushAllRAF();
+
+    expect(container.el.scrollTop).toBe(scrollTopBefore);
   });
 
   // ---------------------------------------------------------------------------
