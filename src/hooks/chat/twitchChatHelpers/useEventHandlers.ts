@@ -18,6 +18,37 @@ import {
 import { playEventSound } from "../../../lib/eventSounds";
 import type { MentionSoundType } from "../../../lib/twitchChatAudio";
 
+function formatSubTier(plan: string): string {
+  if (plan === "Prime") return "Prime";
+  if (plan === "3000") return "Tier 3";
+  if (plan === "2000") return "Tier 2";
+  return "Tier 1";
+}
+
+function formatSubDuration(months: number): string {
+  const count = Number.isFinite(months) && months > 0 ? months : 1;
+  return `${count} ${count === 1 ? "month" : "months"}`;
+}
+
+/**
+ * Twitch sends the multi-month ("pay for 3/6 months in advance") purchase
+ * length as the undocumented `msg-param-multimonth-duration` tag on sub and
+ * resub USERNOTICEs. Twurple does not surface it on `subInfo`, so read it
+ * from the raw tags. Returns 0 when the subscription is a normal 1-month plan.
+ */
+function parseMultiMonthDuration(msg: UserNotice): number {
+  const value = Number(msg.tags.get("msg-param-multimonth-duration"));
+  return Number.isFinite(value) && value > 1 ? value : 0;
+}
+
+function formatSubDetails(plan: string, multiMonthDuration: number): string {
+  const details = [formatSubTier(plan)];
+  if (multiMonthDuration > 1) {
+    details.push(`${multiMonthDuration} months in advance`);
+  }
+  return details.join(", ");
+}
+
 interface UseTwitchChatEventHandlersOptions {
   client: ChatClient | null;
   enabled: boolean;
@@ -198,15 +229,8 @@ export function useTwitchChatEventHandlers({
     client.onSub((_channel, _user, subInfo, msg) => {
       if (!active) return;
       maybeLoadOwnBadges(msg);
-      const tier =
-        subInfo.plan === "Prime"
-          ? "Prime"
-          : subInfo.plan === "3000"
-            ? "3"
-            : subInfo.plan === "2000"
-              ? "2"
-              : "1";
-      const prefix = `subscribed with ${subInfo.plan === "Prime" ? "Prime Gaming" : `a Tier ${tier} subscription`}`;
+      const multiMonth = parseMultiMonthDuration(msg);
+      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth)})`;
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
@@ -231,9 +255,8 @@ export function useTwitchChatEventHandlers({
     client.onResub((_channel, _user, subInfo, msg) => {
       if (!active) return;
       maybeLoadOwnBadges(msg);
-      const monthsCount = subInfo.months;
-      const monthLabel = monthsCount === 1 ? "month" : "months";
-      const prefix = `resubscribed for ${monthsCount} ${monthLabel}`;
+      const multiMonth = parseMultiMonthDuration(msg);
+      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth)})`;
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
@@ -258,9 +281,12 @@ export function useTwitchChatEventHandlers({
     client.onSubGift((_channel, recipient, subInfo, msg) => {
       if (!active) return;
       maybeLoadOwnBadges(msg);
-      const tier =
-        subInfo.plan === "3000" ? "3" : subInfo.plan === "2000" ? "2" : "1";
-      const content = `gifted a Tier ${tier} subscription to ${recipient}`;
+      const giftMonths =
+        Number.isFinite(subInfo.giftDuration) && subInfo.giftDuration > 1
+          ? subInfo.giftDuration
+          : 0;
+      const durationLabel = giftMonths ? `${giftMonths}-month ` : "";
+      const content = `gifted a ${durationLabel}${formatSubTier(subInfo.plan)} subscription to ${recipient}`;
 
       onMessageRef.current(
         buildUserTwitchMessage(msg, content, usernameRef.current, {

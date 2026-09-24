@@ -199,7 +199,7 @@ const EVENTS_TWITCH: Array<{ label: string; msg: TwitchMessage }> = [
     label: "Subscription",
     msg: twitch({
       author: "new_sub",
-      content: "subscribed with Prime!",
+      content: "subscribed for 1 month (Prime)",
       messageType: "subscription",
       authorColor: "#bf94ff",
     }),
@@ -208,7 +208,7 @@ const EVENTS_TWITCH: Array<{ label: string; msg: TwitchMessage }> = [
     label: "Resub",
     msg: twitch({
       author: "loyal_sub",
-      content: "resubscribed for 12 months!",
+      content: "subscribed for 12 months (Tier 2)",
       messageType: "resub",
       authorColor: "#bf94ff",
     }),
