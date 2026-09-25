@@ -2,7 +2,37 @@ import type { TwitchGif } from "./twitchGifs";
 
 export type Platform = "twitch" | "youtube";
 
-export const MAX_DISPLAYED_MESSAGES = 150;
+export const MAX_DISPLAYED_MESSAGES = 200;
+
+export const MAX_DISPLAYED_MESSAGES_STORAGE_KEY =
+  "mixchat_max_displayed_messages";
+
+/**
+ * How long chat messages are retained in IndexedDB before pruning (5 days).
+ * This is the "stored" limit that backs lazy-loading of older messages; it is
+ * intentionally much larger than the in-memory rendered window.
+ */
+export const CHAT_HISTORY_MAX_AGE_HOURS = 120;
+
+/**
+ * Reads the user-configured chat message cap from localStorage, falling back
+ * to {@link MAX_DISPLAYED_MESSAGES}. Safe on the server (no localStorage).
+ * Used by message-append paths that run outside React render, so the latest
+ * value is always applied without re-subscribing to chat streams.
+ */
+export function getMaxDisplayedMessages(): number {
+  if (typeof localStorage === "undefined") return MAX_DISPLAYED_MESSAGES;
+  try {
+    const raw = localStorage.getItem(MAX_DISPLAYED_MESSAGES_STORAGE_KEY);
+    if (raw === null) return MAX_DISPLAYED_MESSAGES;
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0
+      ? Math.floor(parsed)
+      : MAX_DISPLAYED_MESSAGES;
+  } catch {
+    return MAX_DISPLAYED_MESSAGES;
+  }
+}
 
 /**
  * Window (ms) during which the same `rewardId + userId` redemption is

@@ -14,6 +14,7 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
+import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import ChatHeader from "./ChatHeader";
 import { DisplayTwitchMessageItem } from "./DisplayTwitchMessageItem";
@@ -64,6 +65,7 @@ interface ChatDisplayProps {
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
+  maxDisplayedMessages?: number;
 }
 
 export interface ChatDisplayHandle {
@@ -109,6 +111,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       subscriptionStatuses,
       redemptionPubSubStatus,
       isOnOwnChannel = false,
+      maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
   ) {
@@ -225,10 +228,38 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         (msg) => !ignoredSet.has(msg.author.toLowerCase()),
       );
 
-      return filtered.length > MAX_DISPLAYED_MESSAGES
-        ? filtered.slice(-MAX_DISPLAYED_MESSAGES)
+      return filtered.length > maxDisplayedMessages
+        ? filtered.slice(-maxDisplayedMessages)
         : filtered;
-    }, [messages, selectedPlatforms, ignoredUsers]);
+    }, [messages, selectedPlatforms, ignoredUsers, maxDisplayedMessages]);
+
+    // Lazily-loaded older messages from IndexedDB. Disabled when this pane is
+    // only acting as the header for the unified chat (unifiedChatSlot).
+    const { history: olderMessages } = useLazyChatHistory<TwitchMessage>({
+      channel: channelName,
+      enabled: !unifiedChatSlot,
+      live: messages,
+      platforms: ["twitch"],
+      containerRef: messagesContainerRef,
+      keyOf: (msg) => `twitch:${msg.id}`,
+      timestampOf: (msg) => msg.timestamp.getTime(),
+      isOptimistic: (msg) => msg.optimistic === true,
+      mapStored: (msg) => msg as TwitchMessage,
+      maxHistory: maxDisplayedMessages,
+      liveCap: maxDisplayedMessages,
+    });
+
+    const renderedMessages = useMemo(() => {
+      if (olderMessages.length === 0) return filteredMessages;
+      const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
+      const liveIds = new Set(filteredMessages.map((m) => m.id));
+      const older = olderMessages.filter(
+        (m) => !liveIds.has(m.id) && !ignoredSet.has(m.author.toLowerCase()),
+      );
+      return older.length === 0
+        ? filteredMessages
+        : [...older, ...filteredMessages];
+    }, [olderMessages, filteredMessages, ignoredUsers]);
 
     const ignoredCount = useMemo(() => {
       const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
@@ -281,22 +312,22 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
 
     const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
       containerRef: messagesContainerRef,
-      messages: filteredMessages,
+      messages: renderedMessages,
     });
 
     useImperativeHandle(ref, () => ({ scrollToBottom }));
 
     const authorColorById = useMemo(() => {
       const map = new Map<string, string>();
-      messages.forEach((message) => {
+      renderedMessages.forEach((message) => {
         if (message.authorColor) {
           map.set(message.id, message.authorColor);
         }
       });
       return map;
-    }, [messages]);
+    }, [renderedMessages]);
 
-    const mentionColors = useMentionColorMap(messages);
+    const mentionColors = useMentionColorMap(renderedMessages);
 
     const handlePointerMove = useCallback((e: PointerEvent) => {
       const target = e.target as HTMLElement;
@@ -421,17 +452,17 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
               } as React.CSSProperties
             }
           >
-            {filteredMessages.length === 0 ? (
+            {renderedMessages.length === 0 ? (
               <div className="no-messages">
                 <p>No messages yet. Start chatting!</p>
               </div>
             ) : (
-              filteredMessages.map((msg, index) => (
+              renderedMessages.map((msg, index) => (
                 <DisplayTwitchMessageItem
                   key={msg.id}
                   msg={msg}
                   index={index}
-                  filteredMessages={filteredMessages}
+                  filteredMessages={renderedMessages}
                   authorColorById={authorColorById}
                   mentionColors={mentionColors}
                   currentUserDisplayName={currentUserDisplayName}

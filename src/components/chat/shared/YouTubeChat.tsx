@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import type { ChatFont } from "../../../lib/types";
-import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
+import { FONT_FAMILY_MAP, getMaxDisplayedMessages } from "../../../lib/types";
 import { useScrollToBottomOnKeyboard } from "../../../hooks/chat/useScrollToBottomOnKeyboard";
+import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
 import { YouTubeMessageContent } from "./YouTubeMessageContent";
 import type { MessagePart, YTMessage as UnifiedYTMessage } from "../unified/types";
@@ -49,6 +50,12 @@ interface YouTubeChatProps {
    * images, using the same emote set the Twitch side is currently using.
    */
   renderThirdPartyEmotes?: boolean;
+  /**
+   * When true (default), older messages are lazily loaded from IndexedDB as
+   * the user scrolls to the top. Disabled for the hidden YouTubeChat used by
+   * unified chat, where UnifiedChat owns history loading.
+   */
+  enableLazyHistory?: boolean;
 }
 
 interface SSEMessageEvent {
@@ -91,10 +98,12 @@ export default function YouTubeChat({
   onUsernameClick,
   onMessageDeleted,
   renderThirdPartyEmotes = false,
+  enableLazyHistory = true,
 }: YouTubeChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +143,56 @@ export default function YouTubeChat({
 
     return unmatched.length ? [...messages, ...unmatched] : messages;
   }, [messages, optimisticMessages]);
+
+  // Older YouTube messages loaded from IndexedDB as the user scrolls up.
+  const { history: olderMessages } = useLazyChatHistory<ChatMessage>({
+    channel,
+    enabled: enableLazyHistory && !!videoId,
+    live: mergedMessages,
+    platforms: ["youtube"],
+    containerRef: messagesContainerRef,
+    keyOf: (msg) => `youtube:${msg.id}`,
+    timestampOf: (msg) => msg.timestamp.getTime(),
+    isOptimistic: (msg) => msg.optimistic === true,
+    mapStored: (message) => {
+      const stored = message as unknown as Record<string, unknown>;
+      const parts = stored.parts as MessagePart[] | undefined;
+      return {
+        id: String(stored.id),
+        author: String(stored.author ?? ""),
+        authorAvatar: stored.authorAvatar as string | undefined,
+        badges: stored.badges as Record<string, string> | undefined,
+        parts:
+          Array.isArray(parts) && parts.length > 0
+            ? parts
+            : [{ type: "text", text: String(stored.content ?? "") }],
+        timestamp:
+          message.timestamp instanceof Date
+            ? message.timestamp
+            : new Date(message.timestamp),
+        authorChannelId: stored.authorChannelId as string | undefined,
+        messageType: stored.messageType as string | undefined,
+        giftCount: stored.giftCount as number | undefined,
+        recipientName: stored.recipientName as string | undefined,
+        superchat: stored.superchat as ChatMessage["superchat"],
+        isDeleted: stored.isDeleted as boolean | undefined,
+        deletedByText: stored.deletedByText as string | undefined,
+        targetUsername: stored.targetUsername as string | undefined,
+        authorIsModerator: stored.authorIsModerator as boolean | undefined,
+        authorIsOwner: stored.authorIsOwner as boolean | undefined,
+        authorIsMember: stored.authorIsMember as boolean | undefined,
+      };
+    },
+    maxHistory: getMaxDisplayedMessages(),
+    liveCap: getMaxDisplayedMessages(),
+  });
+
+  const renderedMessages = useMemo(() => {
+    if (olderMessages.length === 0) return mergedMessages;
+    const liveIds = new Set(mergedMessages.map((m) => m.id));
+    const older = olderMessages.filter((m) => !liveIds.has(m.id));
+    return older.length === 0 ? mergedMessages : [...older, ...mergedMessages];
+  }, [olderMessages, mergedMessages]);
 
   const prevVideoIdRef = useRef<string | null>(null);
 
@@ -238,6 +297,7 @@ export default function YouTubeChat({
                   content: m.parts
                     .map((p) => p.text || p.emojiText || p.alt || "")
                     .join(""),
+                  parts: m.parts,
                   timestamp: m.timestamp,
                   authorAvatar: m.authorAvatar,
                   authorChannelId: m.authorChannelId,
@@ -254,9 +314,8 @@ export default function YouTubeChat({
             (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
           );
 
-          return merged.length > MAX_DISPLAYED_MESSAGES
-            ? merged.slice(-MAX_DISPLAYED_MESSAGES)
-            : merged;
+          const max = getMaxDisplayedMessages();
+          return merged.length > max ? merged.slice(-max) : merged;
         });
         setIsConnected(true);
         setIsLoading(false);
@@ -301,6 +360,7 @@ export default function YouTubeChat({
                 content: newMsg.parts
                   .map((p) => p.text || p.emojiText || p.alt || "")
                   .join(""),
+                parts: newMsg.parts,
                 timestamp: newMsg.timestamp,
                 authorAvatar: newMsg.authorAvatar,
                 authorChannelId: newMsg.authorChannelId,
@@ -313,9 +373,8 @@ export default function YouTubeChat({
           }
 
           const next = [...prev, newMsg];
-          return next.length > MAX_DISPLAYED_MESSAGES
-            ? next.slice(-MAX_DISPLAYED_MESSAGES)
-            : next;
+          const max = getMaxDisplayedMessages();
+          return next.length > max ? next.slice(-max) : next;
         });
       });
 
@@ -447,15 +506,28 @@ export default function YouTubeChat({
     };    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [videoId, reloadKey]);
 
-  // Keep the view pinned to the newest message.
+  // Track whether the view is pinned to the bottom so auto-scroll does not
+  // fight the user reading older history.
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 85);
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [isLoading, error, isConnected]);
+
+  // Keep the view pinned to the newest message while at the bottom.
   // Defer via rAF so the browser finishes layout of new messages first.
   useEffect(() => {
+    if (!isAtBottom) return;
     const el = messagesContainerRef.current;
     if (!el) return;
     requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
-  }, [mergedMessages]);
+  }, [renderedMessages, isAtBottom]);
 
   // Handle mobile keyboard - scroll to bottom when keyboard closes (viewport expands)
   useScrollToBottomOnKeyboard(messagesContainerRef);
@@ -482,7 +554,7 @@ export default function YouTubeChat({
 
   const isEnded = error === "Live stream has ended";
 
-  if (isLoading && mergedMessages.length === 0) {
+  if (isLoading && renderedMessages.length === 0) {
     return (
       <div className="yt-chat-status">
         <AiOutlineLoading3Quarters className="animate-spin" /> Connecting to
@@ -491,7 +563,7 @@ export default function YouTubeChat({
     );
   }
 
-  if (error && mergedMessages.length === 0) {
+  if (error && renderedMessages.length === 0) {
     return (
       <div className="yt-chat-status yt-chat-error">
         <div>⚠️ {error}</div>
@@ -557,10 +629,10 @@ export default function YouTubeChat({
             Reconnecting to YouTube chat...
           </div>
         )}
-        {isConnected && mergedMessages.length === 0 && (
+        {isConnected && renderedMessages.length === 0 && (
           <div className="yt-chat-placeholder">Waiting for messages...</div>
         )}
-        {mergedMessages.map((msg, index) => (
+        {renderedMessages.map((msg, index) => (
           <YouTubeMessageContent
             key={msg.id}
             msg={msg}

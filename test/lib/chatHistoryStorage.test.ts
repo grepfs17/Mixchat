@@ -12,6 +12,7 @@ import {
 import {
   saveMessage,
   getUserHistory,
+  getChannelHistory,
   pruneMessages,
 } from "../../src/lib/chatHistoryStorage";
 import type { TwitchMessage } from "../../src/lib/types";
@@ -237,6 +238,111 @@ describe("chatHistoryStorage", () => {
       expect(twitchHistory[0].content).toBe("Twitch msg");
       expect(ytHistory).toHaveLength(1);
       expect(ytHistory[0].content).toBe("YouTube msg");
+    });
+  });
+
+  describe("getChannelHistory", () => {
+    const at = (offsetMs: number) => new Date(Date.now() + offsetMs);
+
+    it("returns the newest messages for a channel in ascending order", async () => {
+      for (let i = 0; i < 5; i++) {
+        await saveMessage(
+          {
+            ...makeMessage(`t${i}`, "User", `Message ${i}`),
+            timestamp: at(-5000 + i * 1000),
+          },
+          "testchannel",
+        );
+      }
+
+      const page = await getChannelHistory("testchannel", { limit: 3 });
+      expect(page.map((m) => m.content)).toEqual([
+        "Message 2",
+        "Message 3",
+        "Message 4",
+      ]);
+    });
+
+    it("returns only messages strictly older than `before`", async () => {
+      const now = Date.now();
+      const newTs = now - 1000;
+      await saveMessage(
+        { ...makeMessage("old", "User", "Old"), timestamp: new Date(now - 2000) },
+        "testchannel",
+      );
+      await saveMessage(
+        { ...makeMessage("new", "User", "New"), timestamp: new Date(newTs) },
+        "testchannel",
+      );
+
+      const page = await getChannelHistory("testchannel", {
+        before: newTs,
+        limit: 10,
+      });
+      expect(page.map((m) => m.content)).toEqual(["Old"]);
+    });
+
+    it("filters by platform", async () => {
+      await saveMessage(
+        {
+          ...makeMessage("t1", "A", "Twitch", "twitch"),
+          timestamp: at(-2000),
+        },
+        "testchannel",
+      );
+      await saveMessage(
+        {
+          ...makeMessage("y1", "B", "YouTube", "youtube"),
+          timestamp: at(-1000),
+        },
+        "testchannel",
+      );
+
+      const twitchOnly = await getChannelHistory("testchannel", {
+        platforms: ["twitch"],
+      });
+      expect(twitchOnly.map((m) => m.content)).toEqual(["Twitch"]);
+
+      const ytOnly = await getChannelHistory("testchannel", {
+        platforms: ["youtube"],
+      });
+      expect(ytOnly.map((m) => m.content)).toEqual(["YouTube"]);
+    });
+
+    it("scopes results to the requested channel", async () => {
+      await saveMessage(
+        { ...makeMessage("a", "A", "In channel A"), timestamp: at(-1000) },
+        "channel-a",
+      );
+      await saveMessage(
+        { ...makeMessage("b", "B", "In channel B"), timestamp: at(-1000) },
+        "channel-b",
+      );
+
+      const page = await getChannelHistory("channel-a", { limit: 10 });
+      expect(page.map((m) => m.content)).toEqual(["In channel A"]);
+    });
+
+    it("ignores messages older than the retention window", async () => {
+      await saveMessage(
+        {
+          ...makeMessage("old", "A", "Ancient"),
+          timestamp: at(-200 * 3600_000),
+        },
+        "testchannel",
+      );
+      await saveMessage(
+        { ...makeMessage("new", "A", "Recent"), timestamp: at(-1000) },
+        "testchannel",
+      );
+
+      const page = await getChannelHistory("testchannel", { limit: 10 });
+      expect(page.map((m) => m.content)).toEqual(["Recent"]);
+    });
+
+    it("returns an empty array without a channel", async () => {
+      const page = await getChannelHistory("");
+      expect(page).toEqual([]);
     });
   });
 

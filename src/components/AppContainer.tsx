@@ -105,6 +105,7 @@ export default function AppContainer() {
     setMentionSoundType,
     showDeletedMessages,
     setShowDeletedMessages,
+    maxDisplayedMessages,
     compactActions,
     setCompactActions,
     keepModActionsVisible,
@@ -714,6 +715,7 @@ export default function AppContainer() {
                 mentionVolume={mentionVolume}
                 mentionSoundType={mentionSoundType}
                 showDeletedMessages={showDeletedMessages}
+                maxDisplayedMessages={maxDisplayedMessages}
                 compactActions={compactActions}
                 keepModActionsVisible={keepModActionsVisible}
                 modActionsFirst={modActionsFirst}

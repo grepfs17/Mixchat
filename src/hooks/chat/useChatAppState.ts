@@ -18,7 +18,7 @@ import type {
   ChatTheme,
   EmoteAutocompleteMode,
 } from "../../lib/types";
-import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
+import { getMaxDisplayedMessages } from "../../lib/types";
 import type { ChatDisplayHandle } from "../../components/chat/display";
 import type { UnifiedChatHandle } from "../../components/chat/unified";
 import type { HypeTrainState } from "../../components/chat/shared/HypeTrainBanner";
@@ -59,6 +59,7 @@ export interface ChatAppStateProps {
   mentionVolume?: number;
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
+  maxDisplayedMessages?: number;
   splitChatEnabled?: boolean;
   chatTheme?: ChatTheme;
   hideViewerCount?: boolean;
@@ -528,8 +529,9 @@ export function useChatAppState({
                   if (optimisticIdExists) return prev;
 
                   const updated = [...prev, optimisticMessage];
-                  return updated.length > MAX_DISPLAYED_MESSAGES
-                    ? updated.slice(-MAX_DISPLAYED_MESSAGES)
+                  const max = getMaxDisplayedMessages();
+                  return updated.length > max
+                    ? updated.slice(-max)
                     : updated;
                 });
               } else {

@@ -19,7 +19,7 @@ import { useBitsPowerUpEventSub } from "../eventSubHelpers/useBitsPowerUpEventSu
 import type { CelebrationState } from "../../../components/chat/shared/CelebrationBanner";
 import type { HypeTrainState } from "../../../components/chat/shared/HypeTrainBanner";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
-import { MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
+import { getMaxDisplayedMessages } from "../../../lib/types";
 import type { TwitchMessage } from "../../../lib/types";
 import type { SubscribeFn } from "../useEventSub";
 
@@ -110,9 +110,8 @@ export function useLiveEvents({
         };
         setMessages((prev) => {
           const updated = [...prev, chatMsg];
-          return updated.length > MAX_DISPLAYED_MESSAGES
-            ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-            : updated;
+          const max = getMaxDisplayedMessages();
+          return updated.length > max ? updated.slice(-max) : updated;
         });
       },
       [setMessages],
@@ -204,9 +203,8 @@ export function useLiveEvents({
         saveMessage(message, selectedTwitchChannelName);
 
         const updated = [...prev, message];
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
+        const max = getMaxDisplayedMessages();
+        return updated.length > max ? updated.slice(-max) : updated;
       });
     },
     [selectedTwitchChannelName, setMessages, recentRedemptionsRef],

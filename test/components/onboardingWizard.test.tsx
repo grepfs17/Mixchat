@@ -33,6 +33,8 @@ function makeSettings(
     setMentionSoundType: noop,
     showDeletedMessages: true,
     setShowDeletedMessages: noop,
+    maxDisplayedMessages: 300,
+    setMaxDisplayedMessages: noop,
     compactActions: false,
     setCompactActions: noop,
     keepModActionsVisible: false,

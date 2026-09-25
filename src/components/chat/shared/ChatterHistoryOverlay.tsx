@@ -9,6 +9,7 @@ import {
 import { FaYoutube, FaTwitch } from "react-icons/fa";
 import { resolveBroadcasterId } from "../../../lib/twitch";
 import type { TwitchMessage, Platform } from "../../../lib/types";
+import { CHAT_HISTORY_MAX_AGE_HOURS } from "../../../lib/types";
 import { getUserHistory } from "../../../lib/chatHistoryStorage";
 import { parseMessageWithEmotes } from "../../../lib/emotes";
 import { useModerationContext } from "../../../contexts/ModerationContext";
@@ -87,7 +88,7 @@ export default function ChatterHistoryOverlay({
     let mounted = true;
     setLoading(true);
 
-    getUserHistory(author, channel, 48, platform)
+    getUserHistory(author, channel, CHAT_HISTORY_MAX_AGE_HOURS, platform)
       .then((data) => {
         if (mounted) {
           setHistory(data);

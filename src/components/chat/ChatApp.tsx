@@ -27,6 +27,7 @@ import type {
   Platform,
   TwitchMessage,
 } from "../../lib/types";
+import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
 import type { YTMessage } from "./unified/types";
 import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
@@ -145,6 +146,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     chatFont = "inter" as ChatFont,
     splitChatEnabled = false,
     showDeletedMessages = true,
+    maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
     hideViewerCount = false,
     compactActions = false,
     keepModActionsVisible = false,
@@ -262,8 +264,9 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   // Ingest new messages into the giveaway's entry buffer.
   //
-  // The chat's `messages` array is capped at MAX_DISPLAYED_MESSAGES (100) and
-  // rolls over, so we cannot derive entries from it after the buffer rotates.
+  // The chat's `messages` array is capped at the user's max displayed
+  // messages and rolls over, so we cannot derive entries from it after the
+  // buffer rotates.
   // Instead, the hook maintains its own buffer that survives the chat cap.
   // Here we feed it each new chat message exactly once. We track which
   // message ids have already been ingested so re-renders don't replay.
@@ -627,6 +630,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   splitChatEnabled={splitChatEnabled}
                   showDeletedMessages={true}
                   renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
+                  enableLazyHistory={false}
                 />
               </div>
             )}
@@ -676,6 +680,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                 subscriptionStatuses={subscriptionStatuses}
                 redemptionPubSubStatus={redemptionPubSubStatus}
                 isOnOwnChannel={isOnOwnChannel}
+                maxDisplayedMessages={maxDisplayedMessages}
                 /* Override messages area with UnifiedChat */
                 unifiedChatSlot={
                   <UnifiedChat
@@ -720,6 +725,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     splitChatEnabled={splitChatEnabled}
                     ignoredUsers={ignoredUsers}
                     showDeletedMessages={showDeletedMessages}
+                    maxDisplayedMessages={maxDisplayedMessages}
                     renderThirdPartyEmotesOnYoutube={
                       renderThirdPartyEmotesOnYoutube
                     }
@@ -811,6 +817,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     subscriptionStatuses={subscriptionStatuses}
                     redemptionPubSubStatus={redemptionPubSubStatus}
                     isOnOwnChannel={isOnOwnChannel}
+                    maxDisplayedMessages={maxDisplayedMessages}
                   />
                 </div>
                 <MessageInput

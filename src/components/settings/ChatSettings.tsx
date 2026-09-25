@@ -10,6 +10,8 @@ export interface ChatSettingsProps {
   onUseYoutubeEmbedChange: (v: boolean) => void;
   showDeletedMessages: boolean;
   onShowDeletedMessagesChange: (v: boolean) => void;
+  maxDisplayedMessages: number;
+  onMaxDisplayedMessagesChange: (v: number) => void;
   emoteAutocompleteMode: EmoteAutocompleteMode;
   onEmoteAutocompleteModeChange: (v: EmoteAutocompleteMode) => void;
   renderThirdPartyEmotesOnYoutube: boolean;
@@ -89,6 +91,45 @@ function ShowDeletedSetting({
       <p className="embed-config-description embed-config-description--indented">
         When enabled, deleted messages are hidden behind a click-to-reveal
         link. When disabled, they are removed from chat entirely.
+      </p>
+    </div>
+  );
+}
+
+function MaxDisplayedMessagesSetting({
+  maxDisplayedMessages,
+  onMaxDisplayedMessagesChange,
+}: Pick<
+  ChatSettingsProps,
+  "maxDisplayedMessages" | "onMaxDisplayedMessagesChange"
+>) {
+  return (
+    <div className="embed-config-section">
+      <div className="embed-config-inline-row">
+        <label
+          className="embed-config-label"
+          htmlFor="chat-max-displayed-messages"
+        >
+          Max messages in chat
+        </label>
+        <input
+          id="chat-max-displayed-messages"
+          type="number"
+          min="1"
+          step="1"
+          value={maxDisplayedMessages}
+          onChange={(e) => {
+            const parsed = parseInt(e.target.value, 10);
+            if (Number.isFinite(parsed) && parsed > 0) {
+              onMaxDisplayedMessagesChange(parsed);
+            }
+          }}
+          className="embed-config-select"
+        />
+      </div>
+      <p className="embed-config-description">
+        How many messages to keep loaded in chat. Older messages are dropped
+        once this limit is reached. Higher values use more memory.
       </p>
     </div>
   );
@@ -309,6 +350,18 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
         <ShowDeletedSetting
           showDeletedMessages={props.showDeletedMessages}
           onShowDeletedMessagesChange={props.onShowDeletedMessagesChange}
+        />
+      ),
+    },
+    {
+      id: "max-displayed-messages",
+      group: "chat",
+      label: "Max messages in chat",
+      description: "How many messages to keep loaded in chat",
+      render: () => (
+        <MaxDisplayedMessagesSetting
+          maxDisplayedMessages={props.maxDisplayedMessages}
+          onMaxDisplayedMessagesChange={props.onMaxDisplayedMessagesChange}
         />
       ),
     },

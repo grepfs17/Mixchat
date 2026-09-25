@@ -46,7 +46,7 @@ mixchat/
 │   │   └── ...              # Misc components (WatchlistManager, YouTubeLinker, etc.)
 │   ├── hooks/               # Custom React hooks
 │   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor)
-│   │   ├── chat/            # Chat hooks (state, messages, moderation, emotes, song queue)
+│   │   ├── chat/            # Chat hooks (state, messages, moderation, emotes, song queue, lazy history)
 │   │   │   ├── chatAppStateHelpers/  # Decomposed helpers for ChatApp state
 │   │   │   ├── twitchChatHelpers/     # Twitch connection lifecycle helpers
 │   │   │   └── eventSubHelpers/       # EventSub consumer hooks
@@ -93,7 +93,7 @@ mixchat/
 - **Auth**: OAuth popup → callback page → postMessage → parent window stores session in localStorage
 - **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message). Giphy GIF chat messages (GIF Keyboard) are parsed from the IRC `gifs` tag (`start-end|<gifID>|<gifURL>`) in `src/lib/twitchGifs.ts` and rendered inline as `<img class="chat-gif">` in `TwitchMessageContent`. `@mentions` are rendered in the mentioned user's chat colour (username → colour map built from loaded messages in `src/lib/chatColors.ts`), and reply previews colour the `@author` header and strip a repeated `@author` prefix from the quoted content (`src/lib/twitchReply.ts`).
 - **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component
-- **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available.
+- **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available. Chat messages are additionally persisted to IndexedDB (`src/lib/chatHistoryStorage.ts`) for lazy-loading older history (see §11).
 - **Server State**: Song queue uses server-side in-memory store (`songQueueStore`) with live polling via API routes.
 
 ### 2. Component Architecture
@@ -154,6 +154,14 @@ mixchat/
 - Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, bits, automod.
 - Uses Twitch Helix EventSub API with subscription deduplication.
 - Channel point redemptions are **not** EventSub-based (the old broadcaster-only `channel.channel_points_custom_reward_redemption.add` subscription was removed). `eventSubHelpers/useChannelPointRedemptionsPubSub.ts` is the redemption feed: it listens on Twitch PubSub topic `community-points-channel-v1.<broadcasterId>` and works for any authenticated user on any channel. Duplicate redemptions across IRC / PubSub are collapsed by a shared `rewardId+userId` window in `useChatMessages` / `useLiveEvents`; its connection state is surfaced in the chat header status dropdown. Requires the PubSub websocket origin in the CSP (`wss://pubsub-edge.twitch.tv`).
+
+### 11. Chat History & Lazy Loading
+
+- **Rendered limit vs stored limit**: chat surfaces only keep a bounded in-memory window (the "Max messages in chat" setting, default 200). Older messages stay in IndexedDB (retained for `CHAT_HISTORY_MAX_AGE_HOURS`, currently 5 days).
+- **Storage**: `src/lib/chatHistoryStorage.ts` persists every message keyed `platform:id` per channel. A `channel_timestamp` compound index (DB v4) backs paged reads via `getChannelHistory(channel, { before, limit, platforms })`, newest-first internally, returned ascending.
+- **Lazy loading**: `src/hooks/chat/useLazyChatHistory.ts` is shared by `ChatDisplay`, `UnifiedChat`, and `YouTubeChat`. Scrolling near the top fetches the next page, prepends it, and restores scroll position (anchoring) so the viewport does not jump. Loaded history is bounded by `maxHistory`.
+- **No gaps**: messages that roll off the front of the live window while it is full are absorbed into the loaded-history window, keeping the timeline contiguous. Removals from a not-yet-full window are treated as deletions and are **not** resurrected.
+- **Pruning**: `pruneMessages` runs hourly (and on mount) to drop records older than the retention window.
 
 ## Project Conventions
 

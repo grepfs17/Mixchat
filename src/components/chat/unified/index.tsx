@@ -13,6 +13,7 @@ import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
+import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { UnifiedTwitchMessageItem } from "./UnifiedTwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
@@ -47,6 +48,7 @@ interface UnifiedChatProps {
   splitChatEnabled?: boolean;
   ignoredUsers?: string[];
   showDeletedMessages?: boolean;
+  maxDisplayedMessages?: number;
   renderThirdPartyEmotesOnYoutube?: boolean;
 }
 
@@ -74,6 +76,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       splitChatEnabled = false,
       ignoredUsers = EMPTY_STRING_ARRAY,
       showDeletedMessages = false,
+      maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
       renderThirdPartyEmotesOnYoutube = false,
     }: UnifiedChatProps,
     ref: React.ForwardedRef<UnifiedChatHandle>,
@@ -181,16 +184,63 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       const yt: UnifiedEntry[] = ytMessages
         .flatMap((m) => (!ignoredSet.has(m.author.toLowerCase()) ? [{ source: "youtube" as const, msg: m }] : []));
       const merged = [...tw, ...yt].sort((a, b) => getTime(a) - getTime(b));
-      return merged.length > MAX_DISPLAYED_MESSAGES
-        ? merged.slice(-MAX_DISPLAYED_MESSAGES)
+      return merged.length > maxDisplayedMessages
+        ? merged.slice(-maxDisplayedMessages)
         : merged;
-    }, [twitchMessages, ytMessages, ignoredSet]);
+    }, [twitchMessages, ytMessages, ignoredSet, maxDisplayedMessages]);
+
+    // Older messages loaded from IndexedDB (both platforms), kept contiguous
+    // with the live window so the timeline never shows a gap.
+    const { history: olderEntries } = useLazyChatHistory<UnifiedEntry>({
+      channel: channelName,
+      enabled: true,
+      live: entries,
+      containerRef,
+      keyOf: getKey,
+      timestampOf: getTime,
+      isOptimistic: (entry) => entry.msg.optimistic === true,
+      mapStored: (message) => {
+        if (message.platform === "youtube") {
+          const stored = message as unknown as Record<string, unknown>;
+          const parts = stored.parts as YTMessage["parts"] | undefined;
+          return {
+            source: "youtube",
+            msg: {
+              ...stored,
+              timestamp:
+                message.timestamp instanceof Date
+                  ? message.timestamp
+                  : new Date(message.timestamp),
+              parts:
+                Array.isArray(parts) && parts.length > 0
+                  ? parts
+                  : [{ type: "text", text: String(stored.content ?? "") }],
+            } as YTMessage,
+          };
+        }
+        return { source: "twitch", msg: message as TwitchMessage };
+      },
+      maxHistory: maxDisplayedMessages,
+      liveCap: maxDisplayedMessages,
+    });
+
+    const renderedEntries = useMemo(() => {
+      if (olderEntries.length === 0) return entries;
+      const liveKeys = new Set(entries.map(getKey));
+      const older = olderEntries.filter(
+        (entry) =>
+          !liveKeys.has(getKey(entry)) &&
+          !ignoredSet.has(entry.msg.author.toLowerCase()),
+      );
+      if (older.length === 0) return entries;
+      return [...older, ...entries].sort((a, b) => getTime(a) - getTime(b));
+    }, [olderEntries, entries, ignoredSet]);
 
     const mentionColors = useMentionColorMap(twitchMessages);
 
     const { isAtBottom, newMessagesCount, scrollToBottom } = useChatAutoScroll({
       containerRef,
-      messages: entries,
+      messages: renderedEntries,
     });
 
     const scrollToMessage = useCallback((targetId: string) => {
@@ -351,19 +401,19 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
             } as React.CSSProperties
           }
         >
-          {entries.length === 0 && (
+          {renderedEntries.length === 0 && (
             <div className="no-messages">
               <p>No messages yet. Start chatting!</p>
             </div>
           )}
-          {entries.map((entry, index) => {
+          {renderedEntries.map((entry, index) => {
             if (entry.source === "twitch") {
               return (
                 <UnifiedTwitchMessageItem
                   key={getKey(entry)}
                   entry={entry}
                   index={index}
-                  entries={entries}
+                  entries={renderedEntries}
                   currentUserDisplayName={currentUserDisplayName}
                   mentionColors={mentionColors}
                   onReply={onReply}

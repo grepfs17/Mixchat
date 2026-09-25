@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatFont, ChatTheme, EmoteAutocompleteMode } from "../../lib/types";
+import {
+  MAX_DISPLAYED_MESSAGES,
+  MAX_DISPLAYED_MESSAGES_STORAGE_KEY,
+} from "../../lib/types";
 import { applyTheme } from "../../lib/themes";
 import { loadEventSounds, saveEventSounds } from "../../lib/eventSoundStorage";
 import type { MentionSoundType } from "../chat/useTwitchChat";
@@ -48,6 +52,8 @@ export type UseChatSettingsResult = {
   setMentionSoundType: React.Dispatch<React.SetStateAction<MentionSoundType>>;
   showDeletedMessages: boolean;
   setShowDeletedMessages: React.Dispatch<React.SetStateAction<boolean>>;
+  maxDisplayedMessages: number;
+  setMaxDisplayedMessages: React.Dispatch<React.SetStateAction<number>>;
   compactActions: boolean;
   setCompactActions: React.Dispatch<React.SetStateAction<boolean>>;
   keepModActionsVisible: boolean;
@@ -139,6 +145,11 @@ export function useChatSettings(): UseChatSettingsResult {
     );
   const [showDeletedMessages, setShowDeletedMessages] =
     useLocalStorageState<boolean>("mixchat_show_deleted_messages", true);
+  const [maxDisplayedMessages, setMaxDisplayedMessages] =
+    useLocalStorageState<number>(
+      MAX_DISPLAYED_MESSAGES_STORAGE_KEY,
+      MAX_DISPLAYED_MESSAGES,
+    );
   const [compactActions, setCompactActions] = useLocalStorageState<boolean>(
     "mixchat_compact_actions",
     false,
@@ -283,6 +294,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setMentionSoundType,
     showDeletedMessages,
     setShowDeletedMessages,
+    maxDisplayedMessages,
+    setMaxDisplayedMessages,
     compactActions,
     setCompactActions,
     keepModActionsVisible,
@@ -341,6 +354,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setMentionSoundType,
       showDeletedMessages,
       setShowDeletedMessages,
+      maxDisplayedMessages,
+      setMaxDisplayedMessages,
       compactActions,
       setCompactActions,
       keepModActionsVisible,

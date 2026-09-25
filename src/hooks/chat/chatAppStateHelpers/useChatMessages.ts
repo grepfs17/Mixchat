@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getRecentMessages } from "../../../lib/twitch";
 import { saveMessage, pruneMessages } from "../../../lib/chatHistoryStorage";
 import {
-  MAX_DISPLAYED_MESSAGES,
+  CHAT_HISTORY_MAX_AGE_HOURS,
+  getMaxDisplayedMessages,
   REDEMPTION_DEDUP_MS,
 } from "../../../lib/types";
 import type { TwitchMessage, PlatformSession } from "../../../lib/types";
@@ -66,9 +67,12 @@ export function useChatMessages({
   const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
-    pruneMessages(48);
+    pruneMessages(CHAT_HISTORY_MAX_AGE_HOURS);
 
-    const interval = setInterval(() => pruneMessages(48), 3600000);
+    const interval = setInterval(
+      () => pruneMessages(CHAT_HISTORY_MAX_AGE_HOURS),
+      3600000,
+    );
     return () => clearInterval(interval);
   }, []);
 
@@ -97,7 +101,10 @@ export function useChatMessages({
           (msg, index, self) =>
             index === self.findIndex((t) => t.id === msg.id),
         );
-        if (!cancelled) setMessages(uniqueRecent);
+        if (!cancelled) {
+          const max = getMaxDisplayedMessages();
+          setMessages(uniqueRecent.slice(-max));
+        }
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to load recent messages:", error);
@@ -234,9 +241,8 @@ export function useChatMessages({
             saveMessage(message, selectedTwitchChannelName);
             const copy = [...prev];
             copy[matchIndex] = message;
-            return copy.length > MAX_DISPLAYED_MESSAGES
-              ? copy.slice(-MAX_DISPLAYED_MESSAGES)
-              : copy;
+            const max = getMaxDisplayedMessages();
+            return copy.length > max ? copy.slice(-max) : copy;
           }
         }
 
@@ -244,9 +250,8 @@ export function useChatMessages({
 
         saveMessage(message, selectedTwitchChannelName);
 
-        return updated.length > MAX_DISPLAYED_MESSAGES
-          ? updated.slice(-MAX_DISPLAYED_MESSAGES)
-          : updated;
+        const max = getMaxDisplayedMessages();
+        return updated.length > max ? updated.slice(-max) : updated;
       });
     },
     [twitchSession, selectedTwitchChannelName, currentUserBadgesRef],

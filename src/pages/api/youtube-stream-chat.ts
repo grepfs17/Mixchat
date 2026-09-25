@@ -49,6 +49,12 @@ const MAX_ACTIVE_SESSIONS = parseInt(process.env.YT_MAX_SESSIONS || "200", 10);
 /** Maximum idle time (ms) before a session is reaped. */
 const MAX_IDLE_MS = 10 * 60_000;
 
+/**
+ * Maximum number of messages retained per session for replay to newly
+ * connected clients. Mirrors the client's default chat cap.
+ */
+const MAX_SESSION_MESSAGES = 300;
+
 /** Cooldown after a 403 block. */
 const CHAT_FAILURE_COOLDOWN_MS = parseInt(
   process.env.YT_CHAT_COOLDOWN_MS || "60000",
@@ -881,7 +887,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     if (!seenIds.has(systemMsg.id)) {
       seenIds.add(systemMsg.id);
       messages.push(systemMsg);
-      if (messages.length > 200) {
+      if (messages.length > MAX_SESSION_MESSAGES) {
         const removed = messages.shift()!;
         seenIds.delete(removed.id);
       }
@@ -908,7 +914,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     if (!seenIds.has(systemMsg.id)) {
       seenIds.add(systemMsg.id);
       messages.push(systemMsg);
-      if (messages.length > 200) {
+      if (messages.length > MAX_SESSION_MESSAGES) {
         const removed = messages.shift()!;
         seenIds.delete(removed.id);
       }
@@ -976,7 +982,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             seenIds.add(msg.id);
             messages.push(msg);
             indexAuthor(msg);
-            if (messages.length > 200) {
+            if (messages.length > MAX_SESSION_MESSAGES) {
               const removed = messages.shift()!;
               seenIds.delete(removed.id);
             }
@@ -1067,7 +1073,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             seenIds.add(msg.id);
             messages.push(msg);
             indexAuthor(msg);
-            if (messages.length > 200) {
+            if (messages.length > MAX_SESSION_MESSAGES) {
               const removed = messages.shift()!;
               seenIds.delete(removed.id);
             }
@@ -1125,7 +1131,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           seenIds.add(msg.id);
           messages.push(msg);
           indexAuthor(msg);
-          if (messages.length > 200) {
+          if (messages.length > MAX_SESSION_MESSAGES) {
             const removed = messages.shift()!;
             seenIds.delete(removed.id);
             // The shifted message is still in deletedIds if it was
@@ -1237,7 +1243,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         if (!seenIds.has(msg.id)) {
           seenIds.add(msg.id);
           messages.push(msg);
-          if (messages.length > 200) {
+          if (messages.length > MAX_SESSION_MESSAGES) {
             const removed = messages.shift()!;
             seenIds.delete(removed.id);
           }

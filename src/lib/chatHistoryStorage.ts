@@ -1,8 +1,12 @@
 import type { TwitchMessage, Platform } from "./types";
+import { CHAT_HISTORY_MAX_AGE_HOURS } from "./types";
 
 const DB_NAME = "mixchat_history";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const STORE_NAME = "chatMessages";
+
+/** Compound index used to page older messages for a channel by time. */
+const CHANNEL_TIMESTAMP_INDEX = "channel_timestamp";
 
 function isIDBAvailable(): boolean {
   return typeof window !== "undefined" && !!window.indexedDB;
@@ -20,34 +24,29 @@ function openDB(): Promise<IDBDatabase> {
       // song-queue mirror in a different DB) shares this DB name with a
       // higher version number. Always re-create the indexes so the
       // schema stays consistent across upgrades.
+      const indexSpecs: Array<[string, string | string[]]> = [
+        ["author", "authorLower"],
+        ["platform", "platform"],
+        ["channel", "channel"],
+        ["timestamp", "timestamp"],
+        ["author_channel", ["authorLower", "channel"]],
+        [CHANNEL_TIMESTAMP_INDEX, ["channel", "timestamp"]],
+      ];
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         const store = db.createObjectStore(STORE_NAME, {
           keyPath: "messageKey",
         });
-        store.createIndex("author", "authorLower", { unique: false });
-        store.createIndex("platform", "platform", { unique: false });
-        store.createIndex("channel", "channel", { unique: false });
-        store.createIndex("timestamp", "timestamp", { unique: false });
-        store.createIndex("author_channel", ["authorLower", "channel"], {
-          unique: false,
-        });
+        for (const [name, keyPath] of indexSpecs) {
+          store.createIndex(name, keyPath, { unique: false });
+        }
       } else {
-        // Existing store: verify the indexes are present (they will be in
-        // any pre-existing v2 DB created by this same code).
+        // Existing store: (re-)create any missing indexes so the schema stays
+        // consistent across upgrades (e.g. adding channel_timestamp in v4).
         const tx = (event.target as IDBOpenDBRequest).transaction!;
         const store = tx.objectStore(STORE_NAME);
-        const want = [
-          "author",
-          "platform",
-          "channel",
-          "timestamp",
-          "author_channel",
-        ];
-        for (const name of want) {
+        for (const [name, keyPath] of indexSpecs) {
           if (!store.indexNames.contains(name)) {
-            store.createIndex(name, name === "author_channel"
-              ? ["authorLower", "channel"]
-              : name, { unique: false });
+            store.createIndex(name, keyPath, { unique: false });
           }
         }
       }
@@ -136,10 +135,90 @@ export async function getUserHistory(
   }
 }
 
+export interface GetChannelHistoryOptions {
+  /** Return messages strictly older than this epoch-ms timestamp. */
+  before?: number;
+  /** Maximum number of messages to return. */
+  limit?: number;
+  /** Restrict to these platforms. When omitted, all platforms are returned. */
+  platforms?: Platform[];
+  /** Override the retention window; older messages are ignored. */
+  maxAgeHours?: number;
+}
+
+/**
+ * Pages a channel's persisted history, newest-first internally, and resolves
+ * with the requested slice in ascending chronological order. Walks the
+ * `channel_timestamp` compound index so only the relevant range is read.
+ */
+export async function getChannelHistory(
+  channel: string,
+  options: GetChannelHistoryOptions = {},
+): Promise<TwitchMessage[]> {
+  if (!isIDBAvailable() || !channel) return [];
+
+  const {
+    before = Date.now() + 1,
+    limit = 100,
+    platforms,
+    maxAgeHours = CHAT_HISTORY_MAX_AGE_HOURS,
+  } = options;
+
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index(CHANNEL_TIMESTAMP_INDEX);
+
+    const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
+    const lower = Math.max(cutoff, 0);
+    const range = IDBKeyRange.bound(
+      [channel, lower],
+      [channel, before],
+      false,
+      true,
+    );
+
+    const collected: any[] = [];
+    const toMessages = () =>
+      collected
+        .map((m) => ({ ...m, timestamp: new Date(m.timestamp) }))
+        .sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+        ) as TwitchMessage[];
+
+    return new Promise((resolve, reject) => {
+      const request = index.openCursor(range, "prev");
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(toMessages());
+          return;
+        }
+        const value = cursor.value;
+        if (!platforms || platforms.includes(value.platform)) {
+          collected.push(value);
+          if (collected.length >= limit) {
+            resolve(toMessages());
+            return;
+          }
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error("Failed to fetch channel history from IndexedDB:", err);
+    return [];
+  }
+}
+
 /**
  * Prunes messages older than maxAgeHours.
  */
-export async function pruneMessages(maxAgeHours: number = 24): Promise<void> {
+export async function pruneMessages(
+  maxAgeHours: number = CHAT_HISTORY_MAX_AGE_HOURS,
+): Promise<void> {
   if (!isIDBAvailable()) return;
 
   try {
