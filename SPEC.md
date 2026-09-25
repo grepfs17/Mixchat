@@ -163,6 +163,13 @@ mixchat/
 - **No gaps**: messages that roll off the front of the live window while it is full are absorbed into the loaded-history window, keeping the timeline contiguous. Removals from a not-yet-full window are treated as deletions and are **not** resurrected.
 - **Pruning**: `pruneMessages` runs hourly (and on mount) to drop records older than the retention window.
 
+### 12. Chat Stats
+
+- **Entry point**: A bar-chart button in the stream-info actions row (`ChatHeader` → `StreamInfoBar`) opens an overlay next to the "Open Twitch moderator page" button.
+- **Stats**: The accumulator in `src/lib/chatStats.ts` folds messages in as they stream by, so counts survive the in-memory window cap (evicted messages are already accounted for). It tracks unique chatters, unique users with the Twitch moderator badge, and repeated-message groups (content normalized case-insensitively with whitespace collapsed). Deleted/optimistic and non-chat message types are excluded from message counts. The accumulator resets on channel switch.
+- **Full history**: When the overlay opens, `getAllChannelHistory` (`src/lib/chatHistoryStorage.ts`) pages through the channel's retained IndexedDB history (Twitch only) and backfills the accumulator, so stats cover the full retention window rather than just the live window. The backfill runs once per channel per session.
+- **Rendering**: `src/components/chat/shared/ChatStatsOverlay.tsx` (styles in `src/styles/chat/ChatStatsOverlay.css`) shows Chatters and Messages summary cards on one row, followed by an always-expanded Mods section listing the moderator users. The collapsed-by-default "Most repeated messages" section expands the top-50 repeated messages (count ≥ 2), each listing its users. Both lists have a "Copy names" action.
+
 ## Project Conventions
 
 ### Naming

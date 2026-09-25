@@ -213,6 +213,61 @@ export async function getChannelHistory(
   }
 }
 
+export interface GetAllChannelHistoryOptions {
+  maxAgeHours?: number;
+  platforms?: Platform[];
+  pageSize?: number;
+  maxMessages?: number;
+}
+
+/**
+ * Reads the full retained history for a channel by paging through the
+ * `channel_timestamp` index until the retention window (or `maxMessages`) is
+ * exhausted. Results are deduplicated and returned in ascending order.
+ */
+export async function getAllChannelHistory(
+  channel: string,
+  options: GetAllChannelHistoryOptions = {},
+): Promise<TwitchMessage[]> {
+  if (!isIDBAvailable() || !channel) return [];
+
+  const {
+    maxAgeHours = CHAT_HISTORY_MAX_AGE_HOURS,
+    platforms,
+    pageSize = 1000,
+    maxMessages = 200_000,
+  } = options;
+
+  const all: TwitchMessage[] = [];
+  const seen = new Set<string>();
+  let before = Date.now() + 1;
+
+  while (all.length < maxMessages) {
+    const page = await getChannelHistory(channel, {
+      before,
+      limit: pageSize,
+      platforms,
+      maxAgeHours,
+    });
+    if (page.length === 0) break;
+
+    for (const msg of page) {
+      const key = `${msg.platform || "twitch"}:${msg.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      all.push(msg);
+    }
+
+    const nextBefore = page[0].timestamp.getTime();
+    if (nextBefore >= before) break;
+    before = nextBefore;
+    if (page.length < pageSize) break;
+  }
+
+  all.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  return all;
+}
+
 /**
  * Prunes messages older than maxAgeHours.
  */

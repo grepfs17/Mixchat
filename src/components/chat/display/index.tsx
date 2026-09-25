@@ -16,6 +16,14 @@ import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
 import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
 import { useModerationContext } from "../../../contexts/ModerationContext";
+import {
+  accumulateChatStats,
+  buildChatStats,
+  createChatStatsStore,
+  CHAT_STATS_MAX_RESULTS,
+  type ChatStatsResult,
+} from "../../../lib/chatStats";
+import { getAllChannelHistory } from "../../../lib/chatHistoryStorage";
 import ChatHeader from "./ChatHeader";
 import { DisplayTwitchMessageItem } from "./DisplayTwitchMessageItem";
 import EmoteTooltip from "../shared/EmoteTooltip";
@@ -23,6 +31,7 @@ import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import MessageMenu from "../shared/MessageMenu";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
+import ChatStatsOverlay from "../shared/ChatStatsOverlay";
 import type {
   EmoteTooltipState,
   MessageMenuState,
@@ -141,6 +150,66 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       platform: Platform;
       authorAvatar?: string;
     } | null>(null);
+    const [chatStatsOpen, setChatStatsOpen] = useState(false);
+    const [chatStats, setChatStats] = useState<ChatStatsResult | null>(null);
+    const [chatStatsLoading, setChatStatsLoading] = useState(false);
+    const chatStatsStore = useRef(createChatStatsStore(channelName));
+    const historyLoadedChannelRef = useRef<string | null>(null);
+    const historyInFlightRef = useRef<string | null>(null);
+
+    const openChatStats = useCallback(() => setChatStatsOpen(true), []);
+    const closeChatStats = useCallback(() => setChatStatsOpen(false), []);
+
+    const messagesEmpty = messages.length === 0;
+
+    // Fold live messages into the session-long accumulator as they stream by,
+    // so counts survive the in-memory window cap. An empty window (or a channel
+    // change) starts a fresh accumulator. The ranked result is only rebuilt
+    // while the overlay is open.
+    useEffect(() => {
+      if (messagesEmpty || chatStatsStore.current.channel !== channelName) {
+        chatStatsStore.current = createChatStatsStore(channelName);
+        historyLoadedChannelRef.current = null;
+      } else {
+        accumulateChatStats(chatStatsStore.current, messages);
+      }
+      if (chatStatsOpen) {
+        setChatStats(
+          buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
+        );
+      }
+    }, [messages, messagesEmpty, chatStatsOpen, channelName]);
+
+    // When the overlay opens, backfill the accumulator from IndexedDB so the
+    // ranking covers the full retained history, not just the live window.
+    useEffect(() => {
+      if (!chatStatsOpen || !channelName) return;
+      if (historyLoadedChannelRef.current === channelName) return;
+      if (historyInFlightRef.current === channelName) return;
+
+      const targetChannel = channelName;
+      historyInFlightRef.current = targetChannel;
+      setChatStatsLoading(true);
+
+      getAllChannelHistory(targetChannel, { platforms: ["twitch"] })
+        .then((history) => {
+          if (chatStatsStore.current.channel !== targetChannel) return;
+          accumulateChatStats(chatStatsStore.current, history);
+          historyLoadedChannelRef.current = targetChannel;
+          setChatStats(
+            buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
+          );
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (historyInFlightRef.current === targetChannel) {
+            historyInFlightRef.current = null;
+          }
+          if (chatStatsStore.current.channel === targetChannel) {
+            setChatStatsLoading(false);
+          }
+        });
+    }, [chatStatsOpen, channelName, messagesEmpty]);
 
     const handleViewHistory = useCallback(
       (
@@ -437,6 +506,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           subscriptionStatuses={subscriptionStatuses}
           redemptionPubSubStatus={redemptionPubSubStatus}
           isOnOwnChannel={isOnOwnChannel}
+          onOpenChatStats={openChatStats}
         />
 
         {unifiedChatSlot ? (
@@ -552,6 +622,14 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
             authorAvatar={chatterHistory.authorAvatar}
             channel={channelName || ""}
             onClose={() => setChatterHistory(null)}
+          />
+        )}
+
+        {chatStatsOpen && chatStats && (
+          <ChatStatsOverlay
+            stats={chatStats}
+            loading={chatStatsLoading}
+            onClose={closeChatStats}
           />
         )}
       </div>

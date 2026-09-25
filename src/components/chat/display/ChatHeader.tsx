@@ -8,6 +8,7 @@ import {
   MdMoreVert,
   MdBuild,
   MdTv,
+  MdBarChart,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -80,6 +81,7 @@ interface ChatHeaderProps {
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
+  onOpenChatStats?: () => void;
 }
 
 const FRIENDLY_NAMES: Record<string, string> = {
@@ -247,6 +249,7 @@ function StreamInfoBar({
   youtubeVideoId,
   channelName,
   showTwitchModButton,
+  onOpenChatStats,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
@@ -257,6 +260,7 @@ function StreamInfoBar({
   youtubeVideoId?: string | null;
   channelName?: string;
   showTwitchModButton?: boolean;
+  onOpenChatStats?: () => void;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -485,6 +489,17 @@ function StreamInfoBar({
               </a>
             </>
           )}
+          {onOpenChatStats && (
+            <button
+              type="button"
+              className="stream-info-action-btn"
+              title="Chat stats"
+              data-chat-stats-trigger
+              onClick={onOpenChatStats}
+            >
+              <MdBarChart size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -590,6 +605,7 @@ export default function ChatHeader({
   subscriptionStatuses,
   redemptionPubSubStatus,
   isOnOwnChannel = false,
+  onOpenChatStats,
 }: ChatHeaderProps) {
   const {
     isModerator,
@@ -932,6 +948,7 @@ export default function ChatHeader({
         youtubeVideoId={youtubeVideoId}
         channelName={channelName}
         showTwitchModButton={isModerator || isOnOwnChannel}
+        onOpenChatStats={onOpenChatStats}
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}

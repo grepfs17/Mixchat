@@ -13,6 +13,7 @@ import {
   saveMessage,
   getUserHistory,
   getChannelHistory,
+  getAllChannelHistory,
   pruneMessages,
 } from "../../src/lib/chatHistoryStorage";
 import type { TwitchMessage } from "../../src/lib/types";
@@ -343,6 +344,61 @@ describe("chatHistoryStorage", () => {
     it("returns an empty array without a channel", async () => {
       const page = await getChannelHistory("");
       expect(page).toEqual([]);
+    });
+  });
+
+  describe("getAllChannelHistory", () => {
+    const at = (offsetMs: number) => new Date(Date.now() + offsetMs);
+
+    it("pages through the full history in ascending order", async () => {
+      for (let i = 0; i < 7; i++) {
+        await saveMessage(
+          {
+            ...makeMessage(`t${i}`, "User", `Message ${i}`),
+            timestamp: at(-10_000 + i * 1000),
+          },
+          "testchannel",
+        );
+      }
+
+      const all = await getAllChannelHistory("testchannel", { pageSize: 2 });
+      expect(all.map((m) => m.content)).toEqual([
+        "Message 0",
+        "Message 1",
+        "Message 2",
+        "Message 3",
+        "Message 4",
+        "Message 5",
+        "Message 6",
+      ]);
+    });
+
+    it("filters by platform and ignores other channels", async () => {
+      await saveMessage(
+        { ...makeMessage("t1", "A", "Twitch"), timestamp: at(-2000) },
+        "testchannel",
+      );
+      await saveMessage(
+        {
+          ...makeMessage("y1", "B", "YouTube", "youtube"),
+          timestamp: at(-1000),
+        },
+        "testchannel",
+      );
+      await saveMessage(
+        { ...makeMessage("o1", "C", "Other"), timestamp: at(-1000) },
+        "otherchannel",
+      );
+
+      const all = await getAllChannelHistory("testchannel", {
+        platforms: ["twitch"],
+        pageSize: 1,
+      });
+      expect(all.map((m) => m.content)).toEqual(["Twitch"]);
+    });
+
+    it("returns an empty array without a channel", async () => {
+      expect(await getAllChannelHistory("")).toEqual([]);
     });
   });
 
