@@ -20,6 +20,8 @@ import {
   accumulateChatStats,
   buildChatStats,
   createChatStatsStore,
+  resetChatStatEntry,
+  resetChatStatEntries,
   CHAT_STATS_MAX_RESULTS,
   type ChatStatsResult,
 } from "../../../lib/chatStats";
@@ -159,6 +161,18 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
 
     const openChatStats = useCallback(() => setChatStatsOpen(true), []);
     const closeChatStats = useCallback(() => setChatStatsOpen(false), []);
+    const handleResetChatStatEntry = useCallback((key: string) => {
+      resetChatStatEntry(chatStatsStore.current, key);
+      setChatStats(
+        buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
+      );
+    }, []);
+    const handleResetChatStatEntries = useCallback(() => {
+      resetChatStatEntries(chatStatsStore.current);
+      setChatStats(
+        buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
+      );
+    }, []);
 
     const messagesEmpty = messages.length === 0;
 
@@ -630,6 +644,8 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
             stats={chatStats}
             loading={chatStatsLoading}
             onClose={closeChatStats}
+            onResetEntry={handleResetChatStatEntry}
+            onResetEntries={handleResetChatStatEntries}
           />
         )}
       </div>

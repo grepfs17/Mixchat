@@ -4,6 +4,8 @@ import {
   accumulateChatStats,
   buildChatStats,
   createChatStatsStore,
+  resetChatStatEntry,
+  resetChatStatEntries,
 } from "../../src/lib/chatStats";
 
 let nextId = 0;
@@ -127,6 +129,61 @@ describe("chatStats", () => {
     const result = buildChatStats(store);
     expect(result.chatters).toBe(2);
     expect(result.totalMessages).toBe(2);
+  });
+
+  it("resets a single repeated entry and starts its count over", () => {
+    const store = createChatStatsStore();
+    accumulateChatStats(store, [
+      msg("Alice", "spam"),
+      msg("Bob", "spam"),
+      msg("Alice", "hi"),
+      msg("Bob", "hi"),
+    ]);
+
+    const before = buildChatStats(store);
+    const spamKey = before.entries.find((e) => e.content === "spam")!.key;
+
+    resetChatStatEntry(store, spamKey);
+
+    const after = buildChatStats(store);
+    expect(after.entries.map((e) => e.content)).toEqual(["hi"]);
+    expect(after.repeatedTotal).toBe(1);
+
+    // New duplicates of the reset message begin a fresh count.
+    accumulateChatStats(store, [msg("Carol", "spam"), msg("Dave", "spam")]);
+    const fresh = buildChatStats(store).entries.find(
+      (e) => e.content === "spam",
+    )!;
+    expect(fresh.count).toBe(2);
+    expect(fresh.users.map((u) => u.author)).toEqual(["Carol", "Dave"]);
+  });
+
+  it("resets every repeated entry but keeps the other stats", () => {
+    const store = createChatStatsStore();
+    accumulateChatStats(store, [
+      msg("Alice", "spam"),
+      msg("Bob", "spam"),
+      msg("Alice", "hi"),
+      msg("Bob", "hi"),
+      msg("ModOne", "behave", { badges: { moderator: "1" } }),
+    ]);
+
+    resetChatStatEntries(store);
+
+    const result = buildChatStats(store);
+    expect(result.entries).toEqual([]);
+    expect(result.repeatedTotal).toBe(0);
+    expect(result.totalMessages).toBe(5);
+    expect(result.chatters).toBe(3);
+    expect(result.mods.map((m) => m.author)).toEqual(["ModOne"]);
+
+    // Live-window messages stay seen, so new duplicates start a fresh count.
+    accumulateChatStats(store, [msg("Carol", "spam"), msg("Dave", "spam")]);
+    const fresh = buildChatStats(store).entries.find(
+      (e) => e.content === "spam",
+    )!;
+    expect(fresh.count).toBe(2);
+    expect(fresh.users.map((u) => u.author)).toEqual(["Carol", "Dave"]);
   });
 
   it("sorts by count then alphabetically and respects the limit", () => {

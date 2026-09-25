@@ -110,21 +110,29 @@
 .chat-stats-section-header {
     display: flex;
     align-items: center;
-    gap: 4px;
     width: 100%;
-    padding: 12px 16px;
-    background: transparent;
-    border: none;
     border-bottom: 1px solid #1f1f23;
     color: #adadb8;
-    font: inherit;
-    cursor: pointer;
-    text-align: left;
 }
 
 .chat-stats-section-header:hover {
     color: #efeff1;
     background: rgba(255, 255, 255, 0.03);
+}
+
+.chat-stats-section-toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
 }
 
 .chat-stats-section-title {
@@ -238,6 +246,43 @@
     border: 1px solid rgba(145, 70, 255, 0.35);
     border-radius: 999px;
     padding: 1px 8px;
+}
+
+.chat-stats-reset {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0;
+    color: #adadb8;
+    background: transparent;
+    border: 1px solid #3a3a40;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.chat-stats-section-header > .chat-stats-reset {
+    margin-right: 12px;
+}
+
+.chat-stats-reset:hover {
+    color: #efeff1;
+    border-color: #9146ff;
+    background: rgba(145, 70, 255, 0.12);
+}
+
+.chat-stats-reset--confirm,
+.chat-stats-reset--confirm:hover {
+    color: #efeff1;
+    border-color: #eb5757;
+    background: rgba(235, 87, 87, 0.18);
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .chat-stats-users {

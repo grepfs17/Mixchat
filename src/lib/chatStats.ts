@@ -158,6 +158,27 @@ export function accumulateChatStats(
   }
 }
 
+/**
+ * Clears a repeated-message group so its count starts over. The group is
+ * dropped entirely; already-seen messages stay in `seen` (so they are not
+ * re-counted) and only newly arriving duplicates begin accumulating again.
+ */
+export function resetChatStatEntry(store: ChatStatsStore, key: string): void {
+  store.repeated.delete(key);
+  store.groups.delete(key);
+}
+
+/**
+ * Clears every repeated-message counter. Total messages, chatters and mods are
+ * left untouched, and `seen` is kept so the live window is not recounted.
+ * `groups` must be cleared too: promotion into `repeated` only happens once a
+ * group reaches a count of two, so stale counts would never re-promote.
+ */
+export function resetChatStatEntries(store: ChatStatsStore): void {
+  store.repeated.clear();
+  store.groups.clear();
+}
+
 export function buildChatStats(
   store: ChatStatsStore,
   limit = CHAT_STATS_MAX_RESULTS,

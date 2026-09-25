@@ -6,6 +6,7 @@ import {
   MdCheck,
   MdExpandMore,
   MdExpandLess,
+  MdRefresh,
 } from "react-icons/md";
 import { FaTwitch, FaYoutube } from "react-icons/fa";
 import type { Platform } from "../../../lib/types";
@@ -20,6 +21,8 @@ interface ChatStatsOverlayProps {
   stats: ChatStatsResult;
   loading?: boolean;
   onClose: () => void;
+  onResetEntry?: (key: string) => void;
+  onResetEntries?: () => void;
 }
 
 function platformIcon(platform: Platform) {
@@ -54,17 +57,34 @@ export default function ChatStatsOverlay({
   stats,
   loading = false,
   onClose,
+  onResetEntry,
+  onResetEntries,
 }: ChatStatsOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const copyResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [repeatedOpen, setRepeatedOpen] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const confirmResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      if (confirmResetRef.current) clearTimeout(confirmResetRef.current);
     };
   }, []);
+
+  const handleResetEntries = useCallback(() => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      if (confirmResetRef.current) clearTimeout(confirmResetRef.current);
+      confirmResetRef.current = setTimeout(() => setConfirmReset(false), 3000);
+      return;
+    }
+    if (confirmResetRef.current) clearTimeout(confirmResetRef.current);
+    setConfirmReset(false);
+    onResetEntries?.();
+  }, [confirmReset, onResetEntries]);
 
   const handleCopyUsers = useCallback((key: string, users: ChatStatUser[]) => {
     const text = users
@@ -179,20 +199,42 @@ export default function ChatStatsOverlay({
           )}
         </div>
 
-        <button
-          type="button"
-          className="chat-stats-section-header"
-          onClick={() => setRepeatedOpen((v) => !v)}
-          aria-expanded={repeatedOpen}
-        >
-          {repeatedOpen ? (
-            <MdExpandLess size={16} />
-          ) : (
-            <MdExpandMore size={16} />
+        <div className="chat-stats-section-header">
+          <button
+            type="button"
+            className="chat-stats-section-toggle"
+            onClick={() => setRepeatedOpen((v) => !v)}
+            aria-expanded={repeatedOpen}
+          >
+            {repeatedOpen ? (
+              <MdExpandLess size={16} />
+            ) : (
+              <MdExpandMore size={16} />
+            )}
+            <span className="chat-stats-section-title">
+              Most repeated messages
+            </span>
+            <span className="chat-stats-section-count">{repeatedTotal}</span>
+          </button>
+          {onResetEntries && repeatedTotal > 0 && (
+            <button
+              type="button"
+              className={`chat-stats-reset${confirmReset ? " chat-stats-reset--confirm" : ""}`}
+              onClick={handleResetEntries}
+              title={
+                confirmReset ? "Click again to confirm" : "Reset all counters"
+              }
+              aria-label={
+                confirmReset
+                  ? "Confirm reset all repeated message counters"
+                  : "Reset all repeated message counters"
+              }
+            >
+              <MdRefresh size={13} />
+              {confirmReset && <span>Confirm</span>}
+            </button>
           )}
-          <span className="chat-stats-section-title">Most repeated messages</span>
-          <span className="chat-stats-section-count">{repeatedTotal}</span>
-        </button>
+        </div>
 
         {repeatedOpen &&
           (entries.length === 0 ? (
@@ -209,6 +251,17 @@ export default function ChatStatsOverlay({
                       {entry.content}
                     </span>
                     <span className="chat-stats-count">{entry.count}×</span>
+                    {onResetEntry && (
+                      <button
+                        type="button"
+                        className="chat-stats-reset"
+                        onClick={() => onResetEntry(entry.key)}
+                        title="Reset counter"
+                        aria-label={`Reset counter for ${entry.content}`}
+                      >
+                        <MdRefresh size={13} />
+                      </button>
+                    )}
                   </div>
                   <div className="chat-stats-users">
                     {entry.users.map((user) => (
