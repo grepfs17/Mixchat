@@ -113,8 +113,10 @@ export default function GiveawayPanel({
               autoFocus
             />
             <span className="giveaway-field-hint">
-              Viewers must type this exact word in chat to enter. The channel
-              owner is always excluded.
+              Viewers must type this exact word in chat to enter. Surrounding
+              punctuation is ignored, so command keywords like{" "}
+              <strong>!enter</strong> work. The channel owner is always
+              excluded.
             </span>
           </label>
 

@@ -246,6 +246,10 @@ export function useGiveaway({
       setError("Keyword must be 32 characters or fewer.");
       return;
     }
+    if (!normalizeKeyword(trimmed)) {
+      setError("Keyword must contain at least one letter or number.");
+      return;
+    }
     const durationError = validateDuration(duration);
     if (durationError) {
       setError(durationError);

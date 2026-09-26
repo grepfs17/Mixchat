@@ -33,8 +33,19 @@ export interface GiveawayEntry {
 /** Backward-compat alias for the shared message shape. */
 export type GiveawayMessage = StreamerToolsMessage;
 
+/**
+ * Strips leading/trailing non-alphanumeric characters from a token so that
+ * `!enter`, `"enter"`, and `enter` all normalize to `enter`. Applied to both
+ * the configured keyword and each chat token so commands work as keywords.
+ */
+const TOKEN_EDGE_PUNCTUATION = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu;
+
+function stripTokenEdges(token: string): string {
+  return token.replace(TOKEN_EDGE_PUNCTUATION, "");
+}
+
 export function normalizeKeyword(raw: string): string {
-  return raw.normalize("NFKC").trim().toLowerCase();
+  return stripTokenEdges(raw.normalize("NFKC").trim().toLowerCase());
 }
 
 export function messageMatchesKeyword(
@@ -46,7 +57,7 @@ export function messageMatchesKeyword(
     .normalize("NFKC")
     .toLowerCase()
     .split(/\s+/)
-    .map((t) => t.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .map(stripTokenEdges)
     .filter(Boolean);
   return tokens.includes(keywordNormalized);
 }

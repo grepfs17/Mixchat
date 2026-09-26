@@ -213,4 +213,41 @@ describe("useGiveaway — buffer survives chat cap", () => {
     const ids = result.current.liveEntries.map((e) => e.userId);
     expect(ids).toEqual(["u2"]);
   });
+
+  it("registers command-style keywords like !enter", () => {
+    const { result } = renderHook(() =>
+      useGiveaway({ owner: {}, enabled: true }),
+    );
+
+    act(() => {
+      result.current.setKeyword("!enter");
+    });
+    act(() => {
+      result.current.start();
+    });
+    act(() => {
+      result.current.ingestMessage(twitchItem("m1", "u1", "Alice", "!enter"));
+      result.current.ingestMessage(twitchItem("m2", "u2", "Bob", "!ENTER"));
+      result.current.ingestMessage(twitchItem("m3", "u3", "Carol", "hello"));
+    });
+
+    const ids = result.current.liveEntries.map((e) => e.userId);
+    expect(ids).toEqual(["u1", "u2"]);
+  });
+
+  it("rejects keywords that contain no letters or numbers", () => {
+    const { result } = renderHook(() =>
+      useGiveaway({ owner: {}, enabled: true }),
+    );
+
+    act(() => {
+      result.current.setKeyword("!!!");
+    });
+    act(() => {
+      result.current.start();
+    });
+
+    expect(result.current.phase).toBe("config");
+    expect(result.current.error).toMatch(/letter or number/i);
+  });
 });

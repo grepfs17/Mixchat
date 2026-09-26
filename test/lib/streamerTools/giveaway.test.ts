@@ -61,8 +61,16 @@ describe("normalizeKeyword", () => {
   it("trims, lowercases, NFKC-normalizes", () => {
     expect(normalizeKeyword("  𝐊𝐄𝐘  ")).toBe("key");
   });
+  it("strips surrounding punctuation so commands work", () => {
+    expect(normalizeKeyword("!enter")).toBe("enter");
+    expect(normalizeKeyword("  !ENTER!  ")).toBe("enter");
+    expect(normalizeKeyword('"key"')).toBe("key");
+  });
   it("returns empty string for whitespace", () => {
     expect(normalizeKeyword("   ")).toBe("");
+  });
+  it("returns empty string for punctuation-only", () => {
+    expect(normalizeKeyword("!!!")).toBe("");
   });
 });
 
@@ -70,6 +78,11 @@ describe("messageMatchesKeyword", () => {
   it("matches exact whole word", () => {
     expect(messageMatchesKeyword("KEY", "key")).toBe(true);
     expect(messageMatchesKeyword("type KEY now", "key")).toBe(true);
+  });
+  it("matches command-style keywords", () => {
+    expect(messageMatchesKeyword("!enter", "enter")).toBe(true);
+    expect(messageMatchesKeyword("!ENTER", "enter")).toBe(true);
+    expect(messageMatchesKeyword("please !enter now", "enter")).toBe(true);
   });
   it("strips surrounding punctuation", () => {
     expect(messageMatchesKeyword("KEY!", "key")).toBe(true);
