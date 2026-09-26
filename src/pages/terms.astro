@@ -64,7 +64,10 @@ const description = IS_TWITCH_ONLY
     <p class="meta">Last updated: March 29, 2026</p>
 
     <h2>1. Disclaimer</h2>
-    <p>Mixchat is an unofficial app with no connection to Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"}.</p>
+    <p>
+        Mixchat is an unofficial app with no connection to Twitch
+        {IS_TWITCH_ONLY ? "" : " or YouTube"}.
+    </p>
     <p>
         The app is provided "as is." If it breaks, or if platforms change their
         APIs, Mixchat is not liable for service interruptions or account
@@ -75,25 +78,32 @@ const description = IS_TWITCH_ONLY
     <p>By using Mixchat, you're promising to:</p>
     <ul>
         <li>
-            Follow the official <a
+            Follow the official{" "}
+            <a
                 href="https://www.twitch.tv/legal/terms-of-service"
-                target="_blank">Twitch Terms</a
-            > and <a
+                target="_blank"
+            >
+                Twitch Terms
+            </a>{" "}
+            and{" "}
+            <a
                 href="https://www.twitch.tv/legal/community-guidelines"
-                target="_blank">Community Guidelines</a
-            >.
+                target="_blank"
+            >
+                Community Guidelines
+            </a>
+            .
         </li>
         <li>Don't use the app to spam, harass, or crawl data unfairly.</li>
-        <li>
-            Don't try to break the app or its API endpoints.
-        </li>
+        <li>Don't try to break the app or its API endpoints.</li>
         {!IS_TWITCH_ONLY && (
-        <li>
-            If you link your YouTube, follow <a
-                href="https://www.youtube.com/t/terms"
-                target="_blank">Google's rules</a
-            > too.
-        </li>
+            <li>
+                If you link your YouTube, follow{" "}
+                <a href="https://www.youtube.com/t/terms" target="_blank">
+                    Google's rules
+                </a>{" "}
+                too.
+            </li>
         )}
     </ul>
 
@@ -106,8 +116,9 @@ const description = IS_TWITCH_ONLY
 
     <h2>4. Open Source & License</h2>
     <p>
-        Mixchat is open source and licensed under the AGPL-3.0 License. Feel free to
-        peek at the code or contribute. Just respect the trademarks of Twitch,
+        Mixchat is open source and licensed under the AGPL-3.0 License. Feel
+        free to peek at the code or contribute. Just respect the trademarks of
+        Twitch,
         {IS_TWITCH_ONLY ? "" : "Google, "}7TV, etc.
     </p>
 
@@ -120,15 +131,14 @@ const description = IS_TWITCH_ONLY
     <h2>6. Contact</h2>
     <p>
         Questions? Reach out on
-        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
-            >Forgejo</a
-        >.
+        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank">
+            Forgejo
+        </a>
+        .
     </p>
 
     <hr style="margin-top: 50px; border: none; border-top: 1px solid #333;" />
-    <p
-        style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
-    >
+    <p style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;">
         <a href="/">Back to Mixchat</a>
     </p>
 </ContentLayout>

@@ -70,46 +70,52 @@ const description =
         the user logs out or clears their cache, session data is removed.
     </p>
     <p>
-        The one exception is the optional <strong>Song Queue</strong> streamer tool,
-        which creates a small server-side session record so the streamer can share
-        a read-only listening page with chatters. See section 3.1 below for the full
-        details.
+        The one exception is the optional <strong>Song Queue</strong> streamer
+        tool, which creates a small server-side session record so the streamer
+        can share a read-only listening page with chatters. See section 3.1
+        below for the full details.
     </p>
 
     <h2>2. Data Collection</h2>
 
-    <h3>2.1 Logging In{IS_TWITCH_ONLY ? " (Twitch)" : " (Twitch & YouTube)"}</h3>
+    <h3>
+        2.1 Logging In{IS_TWITCH_ONLY ? " (Twitch)" : " (Twitch & YouTube)"}
+    </h3>
     <p>
-        When connecting a Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"} account, the browser gets "keys"
-        (OAuth tokens) from {IS_TWITCH_ONLY ? "the service" : "those services"}.
+        When connecting a Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"} account,
+        the browser gets "keys" (OAuth tokens) from{" "}
+        {IS_TWITCH_ONLY ? "the service" : "those services"}.
     </p>
     <ul>
         <li>
-            <strong>Secure Storage:</strong> Key tokens are stored as <code
-                >httpOnly</code
-            > cookies. This helps block outside scripts from seeing them.
+            <strong>Secure Storage:</strong> Key tokens are stored as{" "}
+            <code>httpOnly</code> cookies. This helps block outside scripts from
+            seeing them.
         </li>
         <li>
-            <strong>UI Session:</strong> A little bit of info (like your username
-            and profile picture) is saved in <code>localStorage</code> so the app
-            remembers who you are on refresh.
+            <strong>UI Session:</strong> A little bit of info (like your
+            username and profile picture) is saved in <code>localStorage</code>{" "}
+            so the app remembers who you are on refresh.
         </li>
     </ul>
 
     <h3>2.2 Your Messages</h3>
     <p>
-        Mixchat is a real-time client. Chat messages flow from Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"}
+        Mixchat is a real-time client. Chat messages flow from Twitch
+        {IS_TWITCH_ONLY ? "" : " or YouTube"}
         directly to the screen. They are kept in the browser's memory during a
         session and are not archived.
     </p>
 
     {!IS_TWITCH_ONLY && (
-    <h3>2.3 YouTube Integration</h3>
-    <p>
-        By linking a YouTube channel, Mixchat uses the official YouTube Data
-        API. It only requests public info to show live status and stream
-        metadata properly.
-    </p>
+        <>
+            <h3>2.3 YouTube Integration</h3>
+            <p>
+                By linking a YouTube channel, Mixchat uses the official YouTube
+                Data API. It only requests public info to show live status and
+                stream metadata properly.
+            </p>
+        </>
     )}
 
     <h2>3. Third-Party Services</h2>
@@ -118,12 +124,13 @@ const description =
     </p>
     <ul>
         <li>
-            <strong>Twitch{IS_TWITCH_ONLY ? "" : " & YouTube"}:</strong> For the chat and video feeds.
+            <strong>Twitch{IS_TWITCH_ONLY ? "" : " & YouTube"}:</strong> For the
+            chat and video feeds.
         </li>
         <li>
-            <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those custom
-            emotes everyone loves. These services might see which channel you're watching
-            so they can serve the right emote pack.
+            <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those
+            custom emotes everyone loves. These services might see which channel
+            you're watching so they can serve the right emote pack.
         </li>
     </ul>
 
@@ -145,10 +152,10 @@ const description =
         </li>
     </ul>
     <p>
-        If the streamer toggles <strong>Public link</strong> on, anyone with the link
-        can read a stripped-down view of the queue (video ids, titles, submitter display
-        names) at <code>/s/&lt;id&gt;</code>. Public viewers cannot see
-        submitter user ids or the streamer's account.
+        If the streamer toggles <strong>Public link</strong> on, anyone with the
+        link can read a stripped-down view of the queue (video ids, titles,
+        submitter display names) at <code>/s/&lt;id&gt;</code>. Public viewers
+        cannot see submitter user ids or the streamer's account.
     </p>
     <p>
         No OAuth tokens, email addresses, or passwords are stored in the song
@@ -171,10 +178,9 @@ const description =
     <h2>5. Data Retention and Deletion</h2>
     <p>
         Since no data is stored, "deleting an account" is straightforward.
-        Clicking
-        <strong>Logout</strong> wipes the cookies and session info from the browser.
-        Closing the tab clears the memory usage. For total assurance, clear the site
-        data in the browser settings.
+        Clicking <strong>Logout</strong> wipes the cookies and session info from
+        the browser. Closing the tab clears the memory usage. For total
+        assurance, clear the site data in the browser settings.
     </p>
 
     <h2>6. Security</h2>
@@ -194,15 +200,15 @@ const description =
     <h2>8. Contact</h2>
     <p>
         If you have questions about any of this, open an issue on the
-        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank"
-            > Forgejo repository</a
-        >.
+        <a href="https://forgejo.grepfs.xyz/grepfs17/Mixchat" target="_blank">
+            {" "}
+            Forgejo repository
+        </a>
+        .
     </p>
 
     <hr style="margin-top: 50px; border: none; border-top: 1px solid #333;" />
-    <p
-        style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;"
-    >
+    <p style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;">
         <a href="/">Back to Mixchat</a>
     </p>
 </ContentLayout>
