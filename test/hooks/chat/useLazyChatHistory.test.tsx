@@ -126,6 +126,32 @@ describe("useLazyChatHistory", () => {
     expect(result.current.history[0].id).toBe("a");
   });
 
+  it("does not resurrect a message removed from a full live window", async () => {
+    const now = Date.now();
+    const a = makeMessage("a", now - 3000);
+    const b = makeMessage("b", now - 2000);
+    const c = makeMessage("c", now - 1000);
+
+    const { result, rerender } = renderHook(
+      ({ live }: { live: TwitchMessage[] }) =>
+        useLazyChatHistory<TwitchMessage>({
+          ...baseOptions(),
+          live,
+          liveCap: 3,
+        }),
+      { initialProps: { live: [a, b, c] } },
+    );
+
+    // Full window, then a message is removed (e.g. an automod hold resolved
+    // via Allow/Deny). This is a deletion, not a cap eviction.
+    rerender({ live: [a, c] });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.history).toHaveLength(0);
+  });
+
   it("does not carry messages across a channel switch when the live window was full", async () => {
     const now = Date.now();
     const oldLive = Array.from({ length: 5 }, (_, i) =>

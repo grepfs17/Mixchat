@@ -168,6 +168,10 @@ export function useLazyChatHistory<T>({
     // Only cap evictions can be absorbed. A message leaving a not-yet-full
     // live window is a deletion and must not be resurrected from history.
     if (prevItems.length < liveCap) return;
+    // Evictions only happen while appending to a full window, so the window
+    // stays full. If it shrank, items left because they were removed (message
+    // deletion, resolved automod hold) — absorbing them would resurrect them.
+    if (live.length < liveCap) return;
 
     const liveKeys = new Set(live.map((item) => keyOfRef.current(item)));
     const historyKeys = new Set(
