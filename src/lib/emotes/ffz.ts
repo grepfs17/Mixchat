@@ -9,7 +9,7 @@ export const authorsFfz: Record<string, string> = {};
  * Fetch FFZ global emotes
  */
 export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
-  const cacheKey = "emotes_ffz_global";
+  const cacheKey = "emotes_ffz_global_v2";
   const cached = await getCachedEmotes(cacheKey);
   if (cached) {
     const cachedAuthors = await getCachedAuthors(cacheKey);
@@ -28,6 +28,9 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
       Object.values(data.sets).forEach((set: any) => {
         if (set.emoticons) {
           set.emoticons.forEach((emote: any) => {
+            // Modifier emotes (ffzX, ffzW, ffzCursed, …) are effect words, not
+            // renderable emotes. They are handled by the parser in modifiers.ts.
+            if (emote.modifier) return;
             emotes[emote.name] =
               `https://cdn.frankerfacez.com/emote/${emote.id}/${EMOTE_SIZE}`;
             const ownerName = emote.owner?.display_name;
@@ -48,7 +51,7 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
  * Fetch FFZ emotes for a given channel
  */
 export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
-  const cacheKey = `emotes_ffz_${channelName}`;
+  const cacheKey = `emotes_ffz_v2_${channelName}`;
   const cached = await getCachedEmotes(cacheKey);
   if (cached) {
     const cachedAuthors = await getCachedAuthors(cacheKey);
@@ -67,6 +70,7 @@ export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
       const setId = data.room.set;
       if (data.sets[setId]) {
         data.sets[setId].emoticons.forEach((emote: any) => {
+          if (emote.modifier) return;
           emotes[emote.name] =
             `https://cdn.frankerfacez.com/emote/${emote.id}/${EMOTE_SIZE}`;
         });

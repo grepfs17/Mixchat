@@ -32,6 +32,9 @@ export { applyMentionColors } from "./parser";
 export { tokenizeThirdPartyEmotesForYoutube } from "./parser";
 export type { YoutubeEmoteToken } from "./parser";
 
+export { describeEffects, normalizeEffects, isFfzEffectWord } from "./modifiers";
+export type { EmoteEffect } from "./modifiers";
+
 export {
   searchEmotes,
   getDisabledEmotes,

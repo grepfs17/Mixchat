@@ -17,6 +17,7 @@ import {
 } from "../../src/lib/emotes";
 import { renderUnicodeEmojis } from "../../src/lib/emotes/utils";
 import { setEmotesTwitchByChannel } from "../../src/lib/emotes/state";
+import { fetchFFZGlobalEmotes } from "../../src/lib/emotes/ffz";
 
 describe("emotes lib", () => {
   beforeEach(() => {
@@ -655,6 +656,210 @@ describe("emotes lib", () => {
         name: "Solo",
         url: "https://cdn.7tv.app/emote/solo/1x.webp",
       });
+    });
+  });
+
+  describe("emote modifiers", () => {
+    beforeEach(() => {
+      setEmotes7tv({});
+      setEmotesBttv({});
+      setEmotesFfz({});
+    });
+
+    it("applies an attached BTTV wide prefix", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const result = parseMessageWithEmotes("w!KEKW");
+      expect(result).toContain("width: 4em");
+      expect(result).toContain("cdn.betterttv.net/emote/kekw/2");
+      expect(result).not.toContain("w!KEKW");
+    });
+
+    it("applies a bare BTTV horizontal flip prefix", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const result = parseMessageWithEmotes("h! KEKW");
+      expect(result).toContain("transform: scaleX(-1)");
+    });
+
+    it("supports the !h prefix form", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const result = parseMessageWithEmotes("!h KEKW");
+      expect(result).toContain("transform: scaleX(-1)");
+    });
+
+    it("chains multiple BTTV prefixes", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const result = parseMessageWithEmotes("w!h!KEKW");
+      expect(result).toContain("width: 4em");
+      expect(result).toContain("transform: scaleX(-1)");
+    });
+
+    it("z! overlays onto the preceding emote", () => {
+      setEmotesBttv({
+        Base: "https://cdn.betterttv.net/emote/base/2",
+        Top: "https://cdn.betterttv.net/emote/top/2",
+      });
+      const result = parseMessageWithEmotes("Base z!Top");
+      expect(result).toContain('class="emote-overlay-container"');
+      expect(result).toContain('class="emote-overlay"');
+      expect(result).toContain("cdn.betterttv.net/emote/base/2");
+      expect(result).toContain("cdn.betterttv.net/emote/top/2");
+    });
+
+    it("attaches an FFZ effect word to the preceding emote", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzX");
+      expect(result).toContain("transform: scaleX(-1)");
+      expect(result).not.toContain("ffzX");
+    });
+
+    it("applies multiple adjacent FFZ effect words", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzW ffzRainbow");
+      expect(result).toContain("width: 4em");
+      expect(result).toContain("ffz-effect-rainbow");
+    });
+
+    it("ports the exact FFZ cursed filter", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzCursed");
+      expect(result).toContain("grayscale(1) brightness(0.7) contrast(2.5)");
+    });
+
+    it("composes the rainbow animation with a static filter", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzCursed ffzRainbow");
+      expect(result).toContain("grayscale(1) brightness(0.7) contrast(2.5)");
+      expect(result).toContain("ffz-effect-rainbow-filter");
+    });
+
+    it("renders the slide effect as a repeating background", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzSlide");
+      expect(result).toContain("ffz-effect-slide");
+      expect(result).toContain("background-image");
+      expect(result).toContain("opacity: 0");
+      expect(result).toContain("--ffz-width: 2em");
+    });
+
+    it("ports the exact FFZ hyper filter and shake animation", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzHyper");
+      expect(result).toContain("sepia(1)");
+      expect(result).toContain("ffz-effect-shake");
+    });
+
+    it("ports the exact FFZ spin rotate animation", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const result = parseMessageWithEmotes("KEKW ffzSpin");
+      expect(result).toContain("ffz-effect-rotate 1.5s infinite linear");
+    });
+
+    it("renders an orphan FFZ effect word as text", () => {
+      const result = parseMessageWithEmotes("hello ffzX");
+      expect(result).toContain("ffzX");
+      expect(result).not.toContain("scaleX");
+    });
+
+    it("renders pending prefixes verbatim when no emote follows", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const result = parseMessageWithEmotes("w! hello");
+      expect(result).toContain("w! hello");
+      expect(result).not.toContain("width: 4em");
+    });
+
+    it("excludes FFZ Hidden modifier emotes from the emote map", async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          sets: {
+            "1": {
+              emoticons: [
+                { id: 1, name: "CatBag" },
+                { id: 2, name: "ffzW", modifier: true },
+              ],
+            },
+          },
+        }),
+      } as Response);
+      const emotes = await fetchFFZGlobalEmotes();
+      expect(emotes.CatBag).toBeTruthy();
+      expect(emotes.ffzW).toBeUndefined();
+    });
+
+    it("applies a BTTV prefix to an IRC-rendered Twitch emote", () => {
+      const result = parseMessageWithEmotes("w! Kappa", { "25": ["3-7"] });
+      expect(result).toContain("width: 4em");
+      expect(result).toContain("25/default/dark/2.0");
+      expect(result).not.toContain("w! Kappa");
+    });
+
+    it("applies an attached BTTV prefix to an IRC-rendered Twitch emote", () => {
+      const result = parseMessageWithEmotes("h!Kappa", { "25": ["2-6"] });
+      expect(result).toContain("transform: scaleX(-1)");
+      expect(result).toContain("25/default/dark/2.0");
+    });
+
+    it("applies an FFZ effect word after an IRC-rendered Twitch emote", () => {
+      const result = parseMessageWithEmotes("Kappa ffzX", { "25": ["0-4"] });
+      expect(result).toContain("transform: scaleX(-1)");
+      expect(result).not.toContain("ffzX");
+    });
+
+    it("overlays an IRC-rendered Twitch emote onto a preceding emote with z!", () => {
+      setEmotesBttv({ Base: "https://cdn.betterttv.net/emote/base/2" });
+      const result = parseMessageWithEmotes("Base z! Kappa", {
+        "25": ["8-12"],
+      });
+      expect(result).toContain('class="emote-overlay-container"');
+      expect(result).toContain('class="emote-overlay"');
+      expect(result).toContain("cdn.betterttv.net/emote/base/2");
+      expect(result).toContain("25/default/dark/2.0");
+    });
+
+    it("preserves spacing between a Twitch IRC emote and surrounding text", () => {
+      const result = parseMessageWithEmotes("hello Kappa world", {
+        "25": ["6-10"],
+      });
+      expect(result).toContain("hello ");
+      expect(result).toContain(" world");
+    });
+
+    it("tokenizes BTTV modifiers for YouTube with effects", () => {
+      setEmotesBttv({ KEKW: "https://cdn.betterttv.net/emote/kekw/2" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("w!KEKW");
+      expect(tokens).toEqual([
+        {
+          type: "emote",
+          url: "https://cdn.betterttv.net/emote/kekw/2",
+          name: "KEKW",
+          provider: "BTTV",
+          author: undefined,
+          effects: ["wide"],
+          overlays: undefined,
+        },
+      ]);
+    });
+
+    it("tokenizes z! as an overlay on the previous emote", () => {
+      setEmotesBttv({
+        Base: "https://cdn.betterttv.net/emote/base/2",
+        Top: "https://cdn.betterttv.net/emote/top/2",
+      });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("Base z!Top");
+      expect(tokens).toHaveLength(1);
+      expect(tokens[0]).toMatchObject({
+        type: "emote",
+        name: "Base",
+        overlays: [
+          { name: "Top", url: "https://cdn.betterttv.net/emote/top/2" },
+        ],
+      });
+    });
+
+    it("adds FFZ effects to YouTube tokens", () => {
+      setEmotesFfz({ KEKW: "https://cdn.frankerfacez.com/emote/1/2" });
+      const tokens = tokenizeThirdPartyEmotesForYoutube("KEKW ffzCursed");
+      expect(tokens[0]).toMatchObject({ name: "KEKW", effects: ["cursed"] });
     });
   });
 

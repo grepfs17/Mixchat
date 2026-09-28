@@ -118,9 +118,13 @@ mixchat/
 
 - `src/lib/emotes/` — modular providers: `7tv.ts`, `bttv.ts`, `ffz.ts`, `twitch.ts`.
 - `parser.ts` — parses message text, replaces emote codes with `<img>` elements.
+- `modifiers.ts` — BTTV (`w!`, `h!`, `v!`, `z!`, …) and FFZ (`ffzX`, `ffzW`, `ffzCursed`, …) emote modifier vocabulary and CSS-effect mapping.
 - `search.ts` — global emote search across all providers.
 - `hooks.ts` — React hooks for fetching emotes per channel.
 - `state.ts` — global emote cache (Map-based, populated from provider APIs).
+- Supports BTTV prefix modifiers (attached/chained, e.g. `w!h!KEKW`) and FFZ
+  effect words typed after an emote (`KEKW ffzX`); `z!` overlays an emote onto
+  the preceding one. FFZ Hidden modifier emotes are excluded from the emote map.
 - All emotes rendered via CSS `background-image` with lazy loading.
 
 ### 6. Moderation

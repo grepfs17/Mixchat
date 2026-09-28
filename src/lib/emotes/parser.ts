@@ -10,6 +10,7 @@ import {
   MAX_PARSE_CACHE,
 } from "./state";
 import {
+  applyEmoteEffects,
   createEmoteImg,
   createZeroWidthEmoteImg,
   escapeHtml,
@@ -18,6 +19,12 @@ import {
   linkifyUrl,
   renderUnicodeEmojis,
 } from "./utils";
+import {
+  FFZ_EFFECTS,
+  normalizeEffects,
+  parseBttvPrefixes,
+  type EmoteEffect,
+} from "./modifiers";
 
 /**
  * DOMPurify configuration — only the elements and attributes our emote
@@ -197,18 +204,75 @@ function parseThirdPartyEmotes(text: string): string {
   const parts = text.split(/(<img[^>]*>)/);
 
   const parsedParts: string[] = [];
-  let i = 0;
 
+  // BTTV prefixes are carried across a text → <img> boundary so a bare prefix
+  // written before an IRC-rendered Twitch emote (`w! <img>`) still applies.
+  let pendingEffects: EmoteEffect[] = [];
+  let pendingZeroWidth = false;
+  let pendingRaw: string[] = [];
+
+  const flushPending = () => {
+    if (pendingRaw.length === 0) return;
+    const raw = renderUnicodeEmojis(escapeHtml(pendingRaw.join(" ")));
+    // Preserve the separating space when there is preceding output.
+    if (raw !== "" && parsedParts.length > 0 && parsedParts[parsedParts.length - 1] !== "") {
+      parsedParts.push(" ", raw);
+    } else {
+      parsedParts.push(raw);
+    }
+    pendingRaw = [];
+    pendingEffects = [];
+    pendingZeroWidth = false;
+  };
+
+  // Overlay `overlayHtml` (a `.emote-overlay` span) onto the most recently
+  // emitted base in `parsedParts`.
+  const overlayOntoPrevious = (overlayHtml: string) => {
+    const prevIdx = parsedParts.length - 1;
+    if (prevIdx < 0) {
+      parsedParts.push(overlayHtml);
+      return;
+    }
+    const prev = parsedParts[prevIdx];
+    if (prev.endsWith("</span>") && prev.includes("emote-overlay-container")) {
+      parsedParts[prevIdx] = prev.replace(
+        /<\/span>\s*$/,
+        `${overlayHtml}</span>`,
+      );
+      return;
+    }
+    const imgStart = prev.lastIndexOf("<img");
+    if (imgStart >= 0) {
+      const imgEnd = prev.indexOf(">", imgStart) + 1;
+      parsedParts[prevIdx] =
+        prev.slice(0, imgStart) +
+        `<span class="emote-overlay-container">${prev.slice(imgStart, imgEnd)}${overlayHtml}</span>` +
+        prev.slice(imgEnd);
+      return;
+    }
+    parsedParts.push(overlayHtml);
+  };
+
+  let i = 0;
   while (i < parts.length) {
     const part = parts[i];
 
-    // Skip if it's already an HTML tag (our emote)
+    // Already-rendered <img> (e.g. an IRC Twitch emote). It can absorb BTTV
+    // prefixes carried from the preceding text segment, plus FFZ effect words
+    // and 7TV zero-width overlays from the following text segment.
     if (part.startsWith("<img")) {
-      // Look ahead for 7TV zero-width overlays in the next text segment
+      const inheritedEffects = pendingEffects;
+      const inheritedZw = pendingZeroWidth;
+      pendingEffects = [];
+      pendingZeroWidth = false;
+      pendingRaw = [];
+
       const overlays: string[] = [];
+      const trailingEffects: EmoteEffect[] = [];
+
       if (i + 1 < parts.length && !parts[i + 1].startsWith("<img")) {
-        const nextText = parts[i + 1];
-        const words = nextText.split(" ");
+        const words = parts[i + 1].split(" ");
+        const hadLeadingSpace = words[0] === "";
         let j = 0;
         // Skip leading empty word if text starts with space
         if (words[j] === "") j++;
@@ -216,6 +280,14 @@ function parseThirdPartyEmotes(text: string): string {
         while (j < words.length) {
           const word = words[j];
           if (word === "") break;
+
+          const ffz = FFZ_EFFECTS[word];
+          if (ffz && !lookupEmote(word)) {
+            trailingEffects.push(ffz);
+            j++;
+            continue;
+          }
+
           const nextUrl = emotes7tv[word];
           if (nextUrl && isZeroWidthUrl(nextUrl)) {
             overlays.push(
@@ -227,118 +299,191 @@ function parseThirdPartyEmotes(text: string): string {
               ),
             );
             j++;
-          } else {
-            break;
+            continue;
           }
+          break;
         }
 
-        if (overlays.length > 0) {
-          // Wrap the <img> with overlays
-          parsedParts.push(
-            `<span class="emote-overlay-container">${part}${overlays.join("")}</span>`,
-          );
-          // Remove consumed overlay words from the next text segment
-          const remainingWords = words.slice(j);
-          parts[i + 1] = remainingWords.join(" ");
-        } else {
-          parsedParts.push(part);
+        if (overlays.length > 0 || trailingEffects.length > 0) {
+          // Remove consumed words from the next text segment, keeping the
+          // separating space when text remains.
+          const remaining = words.slice(j).join(" ");
+          parts[i + 1] =
+            remaining && hadLeadingSpace ? ` ${remaining}` : remaining;
         }
+      }
+
+      const base = applyEmoteEffects(
+        part,
+        normalizeEffects([...inheritedEffects, ...trailingEffects]),
+      );
+
+      if (inheritedZw) {
+        overlayOntoPrevious(`<span class="emote-overlay">${base}</span>`);
+      } else if (overlays.length > 0) {
+        parsedParts.push(
+          `<span class="emote-overlay-container">${base}${overlays.join("")}</span>`,
+        );
       } else {
-        parsedParts.push(part);
+        parsedParts.push(base);
       }
       i++;
       continue;
     }
 
-    // Process words with a while-loop so we can do lookahead for 7TV zero-width
-    // (overlay) emotes that must be grouped with the preceding base emote.
+    // Process words with a while-loop so we can look ahead for BTTV prefixes,
+    // FFZ effect words and 7TV zero-width (overlay) emotes that attach to the
+    // emote currently being rendered.
     const words = part.split(" ");
     const output: string[] = [];
+    // Index in `output` of the most recently emitted base emote, so `z!` can
+    // retroactively overlay onto it.
+    let lastBaseIndex = -1;
     let wi = 0;
+
+    const flushToOutput = () => {
+      if (pendingRaw.length === 0) return;
+      output.push(renderUnicodeEmojis(escapeHtml(pendingRaw.join(" "))));
+      pendingRaw = [];
+      pendingEffects = [];
+      pendingZeroWidth = false;
+      lastBaseIndex = -1;
+    };
+
     while (wi < words.length) {
       const word = words[wi];
 
-      // Check for URLs first
-      const linkified = linkifyUrl(word);
-      if (linkified) {
-        output.push(linkified);
+      // Preserve whitespace-only tokens so joins keep the original spacing.
+      if (word === "") {
+        output.push("");
         wi++;
         continue;
       }
 
-      // Check for @mention
-      if (word.startsWith("@")) {
-        output.push(`<strong>${escapeHtml(word)}</strong>`);
+      const {
+        effects: prefixEffects,
+        zeroWidth: prefixZw,
+        rest,
+      } = parseBttvPrefixes(word);
+
+      // A word made entirely of modifier prefixes applies to the next word.
+      if (rest === "") {
+        pendingEffects.push(...prefixEffects);
+        pendingZeroWidth = pendingZeroWidth || prefixZw;
+        pendingRaw.push(word);
         wi++;
         continue;
       }
 
       // Unified emote lookup across all providers
-      const match = lookupEmote(word);
-      if (match) {
-        if (isZeroWidthUrl(match.url)) {
-          // Orphan zero-width emote (no preceding base) — render as normal emote
-          output.push(
-            createEmoteImg(
-              getEmoteUrl(match.url),
-              word,
-              match.provider,
-              false,
-              match.author,
-            ),
-          );
-          wi++;
+      const match = lookupEmote(rest);
+      if (!match) {
+        // Modifiers that never found an emote are shown verbatim.
+        flushToOutput();
+        const linkified = linkifyUrl(word);
+        if (linkified) {
+          output.push(linkified);
+        } else if (word.startsWith("@")) {
+          output.push(`<strong>${escapeHtml(word)}</strong>`);
         } else {
-          // Any emote from any provider can be a base.
-          // Look ahead for 7TV zero-width overlays only.
-          const baseHtml = createEmoteImg(
-            match.url,
-            word,
-            match.provider,
-            false,
-            match.author,
-          );
-          const overlays: string[] = [];
-          let j = wi + 1;
-          while (j < words.length) {
-            const nextWord = words[j];
-            const nextUrl = emotes7tv[nextWord];
-            if (nextUrl && isZeroWidthUrl(nextUrl)) {
-              overlays.push(
-                createZeroWidthEmoteImg(
-                  getEmoteUrl(nextUrl),
-                  nextWord,
-                  "7TV",
-                  emoteAuthors[nextWord],
-                ),
-              );
-              j++;
-            } else {
-              break;
-            }
-          }
-          if (overlays.length > 0) {
-            output.push(
-              `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`,
-            );
-            wi = j; // skip consumed zero-width words
-          } else {
-            output.push(baseHtml);
-            wi++;
-          }
+          output.push(renderUnicodeEmojis(escapeHtml(word)));
         }
+        lastBaseIndex = -1;
+        wi++;
         continue;
       }
 
-      // Plain text — escape HTML then replace Unicode emoji with Twemoji images
-      output.push(renderUnicodeEmojis(escapeHtml(word)));
-      wi++;
+      // Any emote from any provider can be a base. Look ahead for FFZ effect
+      // words and 7TV zero-width overlays attached to it (adjacent, with no
+      // intervening text).
+      const overlays: string[] = [];
+      const ffzEffects: EmoteEffect[] = [];
+      let j = wi + 1;
+      while (j < words.length) {
+        const nextWord = words[j];
+        const ffz = FFZ_EFFECTS[nextWord];
+        if (ffz && !lookupEmote(nextWord)) {
+          ffzEffects.push(ffz);
+          j++;
+          continue;
+        }
+        const nextUrl = emotes7tv[nextWord];
+        if (nextUrl && isZeroWidthUrl(nextUrl)) {
+          overlays.push(
+            createZeroWidthEmoteImg(
+              getEmoteUrl(nextUrl),
+              nextWord,
+              "7TV",
+              emoteAuthors[nextWord],
+            ),
+          );
+          j++;
+          continue;
+        }
+        break;
+      }
+
+      const effects = normalizeEffects([
+        ...pendingEffects,
+        ...prefixEffects,
+        ...ffzEffects,
+      ]);
+      const zeroWidth = pendingZeroWidth || prefixZw;
+      pendingEffects = [];
+      pendingZeroWidth = false;
+      pendingRaw = [];
+
+      if (zeroWidth) {
+        // `z!` turns this emote into a zero-width overlay on the previous one.
+        const overlayImg = createZeroWidthEmoteImg(
+          isZeroWidthUrl(match.url) ? getEmoteUrl(match.url) : match.url,
+          rest,
+          match.provider,
+          match.author,
+        );
+        const overlayHtml = applyEmoteEffects(overlayImg, effects);
+        if (lastBaseIndex >= 0) {
+          output[lastBaseIndex] =
+            `<span class="emote-overlay-container">${output[lastBaseIndex]}${overlayHtml}</span>`;
+        } else {
+          // No preceding base — render as a normal (orphan) emote.
+          output.push(overlayHtml);
+          lastBaseIndex = output.length - 1;
+        }
+        wi = j;
+        continue;
+      }
+
+      const baseHtml = applyEmoteEffects(
+        createEmoteImg(
+          isZeroWidthUrl(match.url) ? getEmoteUrl(match.url) : match.url,
+          rest,
+          match.provider,
+          false,
+          match.author,
+        ),
+        effects,
+      );
+
+      if (overlays.length > 0) {
+        output.push(
+          `<span class="emote-overlay-container">${baseHtml}${overlays.join("")}</span>`,
+        );
+      } else {
+        output.push(baseHtml);
+      }
+      lastBaseIndex = output.length - 1;
+      wi = j; // skip consumed modifier / overlay words
     }
 
+    // Do NOT flush here: leftover BTTV prefixes may still apply to an
+    // IRC-rendered Twitch emote in the next part. The outer flushPending()
+    // handles the end of the message.
     parsedParts.push(output.join(" "));
     i++;
   }
 
+  flushPending();
   return parsedParts.join("");
 }
 
@@ -387,20 +532,23 @@ export interface YoutubeEmoteToken {
   provider?: "7TV" | "BTTV" | "FFZ";
   /** Emote author, if known. */
   author?: string;
+  /** BTTV / FFZ modifier effects to render on this emote. */
+  effects?: EmoteEffect[];
   /**
    * 7TV zero-width overlays that follow the base emote and should be stacked
    * on top of it. Empty for non-base tokens. Each entry contains the overlay
    * name and resolved CDN URL (no ZW: prefix).
    */
-  overlays?: { name: string; url: string }[];
+  overlays?: { name: string; url: string; effects?: EmoteEffect[] }[];
 }
 
 /**
  * Tokenize a YouTube message text part into a flat list of text and emote
- * tokens, applying 7TV zero-width overlay grouping. The same scope as the
- * Twitch emote set is used (whatever is currently loaded in
- * `emotes7tv` / `emotesBttv` / `emotesFfz`), matching how Twitch chat resolves
- * third-party emotes. Disabled emotes are passed through as plain text.
+ * tokens, applying BTTV / FFZ modifier effects and 7TV zero-width overlay
+ * grouping. The same scope as the Twitch emote set is used (whatever is
+ * currently loaded in `emotes7tv` / `emotesBttv` / `emotesFfz`), matching how
+ * Twitch chat resolves third-party emotes. Disabled emotes are passed through
+ * as plain text.
  *
  * Pure function with no React/DOM dependencies so it can be tested in Node.
  */
@@ -411,7 +559,19 @@ export function tokenizeThirdPartyEmotesForYoutube(
   if (!text) return [];
   const tokens: YoutubeEmoteToken[] = [];
   const words = text.split(" ");
+  let pendingEffects: EmoteEffect[] = [];
+  let pendingZeroWidth = false;
+  let pendingRaw: string[] = [];
   let wi = 0;
+
+  const flushPending = () => {
+    if (pendingRaw.length === 0) return;
+    tokens.push({ type: "text", text: pendingRaw.join(" ") });
+    pendingRaw = [];
+    pendingEffects = [];
+    pendingZeroWidth = false;
+  };
+
   while (wi < words.length) {
     const word = words[wi];
     if (word === "") {
@@ -420,51 +580,99 @@ export function tokenizeThirdPartyEmotesForYoutube(
     }
 
     if (disabledSet?.has(word)) {
+      flushPending();
       tokens.push({ type: "text", text: word });
       wi++;
       continue;
     }
 
-    const match = lookupThirdPartyEmote(word);
-    if (match) {
-      if (isZeroWidthUrl(match.url)) {
-        tokens.push({
-          type: "emote",
-          url: getEmoteUrl(match.url),
-          name: word,
-          provider: match.provider,
-          author: match.author,
-        });
-        wi++;
+    const {
+      effects: prefixEffects,
+      zeroWidth: prefixZw,
+      rest,
+    } = parseBttvPrefixes(word);
+
+    if (rest === "") {
+      pendingEffects.push(...prefixEffects);
+      pendingZeroWidth = pendingZeroWidth || prefixZw;
+      pendingRaw.push(word);
+      wi++;
+      continue;
+    }
+
+    const match = lookupThirdPartyEmote(rest);
+    if (!match) {
+      flushPending();
+      tokens.push({ type: "text", text: word });
+      wi++;
+      continue;
+    }
+
+    // Look ahead for FFZ effect words and 7TV zero-width overlays.
+    const overlays: { name: string; url: string }[] = [];
+    const ffzEffects: EmoteEffect[] = [];
+    let j = wi + 1;
+    while (j < words.length) {
+      const nextWord = words[j];
+      if (disabledSet?.has(nextWord)) break;
+      const ffz = FFZ_EFFECTS[nextWord];
+      if (ffz && !lookupThirdPartyEmote(nextWord)) {
+        ffzEffects.push(ffz);
+        j++;
         continue;
       }
-      const overlays: { name: string; url: string }[] = [];
-      let j = wi + 1;
-      while (j < words.length) {
-        const nextWord = words[j];
-        if (disabledSet?.has(nextWord)) break;
-        const nextUrl = emotes7tv[nextWord];
-        if (nextUrl && isZeroWidthUrl(nextUrl)) {
-          overlays.push({ name: nextWord, url: getEmoteUrl(nextUrl) });
-          j++;
-        } else {
-          break;
-        }
+      const nextUrl = emotes7tv[nextWord];
+      if (nextUrl && isZeroWidthUrl(nextUrl)) {
+        overlays.push({ name: nextWord, url: getEmoteUrl(nextUrl) });
+        j++;
+        continue;
       }
-      tokens.push({
-        type: "emote",
-        url: getEmoteUrl(match.url),
-        name: word,
-        provider: match.provider,
-        author: match.author,
-        overlays: overlays.length ? overlays : undefined,
-      });
+      break;
+    }
+
+    const effects = normalizeEffects([
+      ...pendingEffects,
+      ...prefixEffects,
+      ...ffzEffects,
+    ]);
+    const zeroWidth = pendingZeroWidth || prefixZw;
+    pendingEffects = [];
+    pendingZeroWidth = false;
+    pendingRaw = [];
+
+    const token: YoutubeEmoteToken = {
+      type: "emote",
+      url: getEmoteUrl(match.url),
+      name: rest,
+      provider: match.provider,
+      author: match.author,
+      effects: effects.length > 0 ? effects : undefined,
+      overlays: overlays.length > 0 ? overlays : undefined,
+    };
+
+    if (zeroWidth) {
+      // `z!` overlays this emote onto the immediately-preceding emote token.
+      const prev = tokens[tokens.length - 1];
+      if (prev && prev.type === "emote") {
+        prev.overlays = [
+          ...(prev.overlays ?? []),
+          {
+            name: rest,
+            url: token.url ?? "",
+            effects: effects.length > 0 ? effects : undefined,
+          },
+        ];
+      } else {
+        tokens.push(token);
+      }
       wi = j;
       continue;
     }
 
-    tokens.push({ type: "text", text: word });
-    wi++;
+    tokens.push(token);
+    wi = j;
   }
+
+  flushPending();
   return tokens;
 }

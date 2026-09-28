@@ -1,4 +1,5 @@
 import twemoji from "twemoji";
+import { describeEffects, type EmoteEffect } from "./modifiers";
 
 export const EMOTE_SIZE = "2";
 
@@ -172,4 +173,59 @@ export function createZeroWidthEmoteImg(
   }
   const authorAttr = author ? ` data-emote-author="${escapeHtml(author)}"` : "";
   return `<span class="emote-overlay"><img src="${emoteUrl}" alt="${escapeHtml(emoteName)}" title="${escapeHtml(emoteName)}" data-tooltip-url="${highQualityUrl}" data-emote-name="${escapeHtml(emoteName)}" data-emote-source="${escapeHtml(source)}"${authorAttr} class="chat-emote" style="height: 2em; cursor: pointer;" /></span>`;
+}
+
+/**
+ * Apply BTTV / FFZ emote modifier effects to an already-built emote HTML
+ * fragment (a single `<img>` or an overlay `<span>`). Geometry effects are
+ * merged into the image's inline `style`; filter/motion effects wrap the
+ * fragment in a `.emote-mod` span so CSS animations cannot clobber the inline
+ * transform. The `slide` effect renders the emote as a repeating background on
+ * the wrapper (the image is hidden but kept for tooltips/hover).
+ *
+ * Returns the input unchanged when there are no renderable effects.
+ */
+export function applyEmoteEffects(
+  html: string,
+  effects: EmoteEffect[],
+): string {
+  const info = describeEffects(effects);
+  if (!info) return html;
+
+  let out = html;
+  const imageStyles: string[] = [];
+  if (info.width) imageStyles.push(`width: ${info.width}`);
+  if (info.transform) imageStyles.push(`transform: ${info.transform}`);
+  if (info.background) imageStyles.push("opacity: 0");
+  if (imageStyles.length > 0) {
+    const style = `${imageStyles.join("; ")}; `;
+    if (out.includes('style="')) {
+      out = out.replace('style="', `style="${style}`);
+    } else {
+      out = out.replace("<img", `<img style="${style}"`);
+    }
+  }
+
+  const wrapperStyles: string[] = [];
+  if (info.filter) {
+    wrapperStyles.push(`--ffz-effect-filters: ${info.filter}`);
+    wrapperStyles.push("filter: var(--ffz-effect-filters)");
+  }
+  if (info.transformOrigin) {
+    wrapperStyles.push(`transform-origin: ${info.transformOrigin}`);
+  }
+  if (info.animation) wrapperStyles.push(`animation: ${info.animation}`);
+  if (info.background) {
+    const src = /src="([^"]*)"/.exec(html)?.[1] ?? "";
+    wrapperStyles.push(`background-image: url(${src})`);
+    wrapperStyles.push("background-size: 100% auto");
+    wrapperStyles.push("background-repeat: repeat");
+    wrapperStyles.push("line-height: 0");
+    wrapperStyles.push(`--ffz-width: ${info.slideWidthEm}em`);
+    wrapperStyles.push(`--ffz-speed-x: ${info.slideSpeed}`);
+  }
+
+  if (wrapperStyles.length === 0) return out;
+  const className = info.background ? "emote-mod emote-mod--slide" : "emote-mod";
+  return `<span class="${className}" style="${wrapperStyles.join("; ")}">${out}</span>`;
 }

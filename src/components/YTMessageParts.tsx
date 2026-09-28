@@ -1,8 +1,10 @@
 import React, { useMemo, useCallback } from "react";
 import {
+  describeEffects,
   tokenizeThirdPartyEmotesForYoutube,
   useDisabledEmotes,
   useEmoteMapVersion,
+  type EmoteEffect,
   type YoutubeEmoteToken,
 } from "../lib/emotes";
 import { escapeHtml, renderUnicodeEmojis, parseUrlWord } from "../lib/emotes/utils";
@@ -41,6 +43,60 @@ const emoteImgStyle: React.CSSProperties = {
   margin: "0 2px",
   cursor: "pointer",
 };
+
+/**
+ * Resolve a set of BTTV / FFZ modifier effects into the wrapper class, image
+ * style and wrapper style a React emote should render with. Geometry effects
+ * use the image's inline style; filter/motion effects use a `.emote-mod`
+ * wrapper so an animation cannot clobber the inline transform. The `slide`
+ * effect renders the emote as a repeating background on the wrapper.
+ */
+function resolveEffectStyle(
+  effects: EmoteEffect[] | undefined,
+  url: string,
+): {
+  wrapperClass?: string;
+  style: React.CSSProperties;
+  wrapperStyle?: React.CSSProperties;
+} {
+  const style: React.CSSProperties = { ...emoteImgStyle };
+  if (!effects?.length) return { style };
+  const info = describeEffects(effects);
+  if (!info) return { style };
+
+  if (info.width) style.width = info.width;
+  if (info.transform) style.transform = info.transform;
+  if (info.background) style.opacity = 0;
+
+  const wrapperStyle: React.CSSProperties = {};
+  let wrapperClass = "emote-mod";
+
+  if (info.filter) {
+    (wrapperStyle as Record<string, string>)["--ffz-effect-filters"] =
+      info.filter;
+    wrapperStyle.filter = "var(--ffz-effect-filters)";
+  }
+  if (info.transformOrigin) wrapperStyle.transformOrigin = info.transformOrigin;
+  if (info.animation) wrapperStyle.animation = info.animation;
+  if (info.background) {
+    wrapperClass = "emote-mod emote-mod--slide";
+    wrapperStyle.backgroundImage = `url("${url}")`;
+    wrapperStyle.backgroundSize = "100% auto";
+    wrapperStyle.backgroundRepeat = "repeat";
+    wrapperStyle.lineHeight = 0;
+    (wrapperStyle as Record<string, string>)["--ffz-width"] =
+      `${info.slideWidthEm}em`;
+    (wrapperStyle as Record<string, string>)["--ffz-speed-x"] =
+      info.slideSpeed ?? "";
+  }
+
+  const hasWrapper = Object.keys(wrapperStyle).length > 0;
+  return {
+    wrapperClass: hasWrapper ? wrapperClass : undefined,
+    style,
+    wrapperStyle: hasWrapper ? wrapperStyle : undefined,
+  };
+}
 
 /**
  * Quick test used to skip the split+walk when a text part contains no
@@ -102,37 +158,55 @@ function ThirdPartyEmoteNode({
   if (!token.url || !token.name || !token.provider) return null;
   const className =
     variant === "unified" ? "chat-emote" : "yt-emoji yt-emoji--third-party";
-  const img = (
-    <img
-      src={token.url}
-      alt={token.name}
-      title={token.name}
-      data-tooltip-url={token.url}
-      data-emote-name={token.name}
-      data-emote-source={token.provider}
-      data-emote-author={token.author}
-      className={className}
-      loading="lazy"
-      style={emoteImgStyle}
-    />
+
+  const renderImage = (
+    src: string,
+    name: string,
+    provider: string,
+    author: string | undefined,
+    effects: EmoteEffect[] | undefined,
+  ) => {
+    const { wrapperClass, style, wrapperStyle } = resolveEffectStyle(
+      effects,
+      src,
+    );
+    const img = (
+      <img
+        src={src}
+        alt={name}
+        title={name}
+        data-tooltip-url={src}
+        data-emote-name={name}
+        data-emote-source={provider}
+        data-emote-author={author}
+        className={className}
+        loading="lazy"
+        style={style}
+      />
+    );
+    return wrapperClass ? (
+      <span className={wrapperClass} style={wrapperStyle}>
+        {img}
+      </span>
+    ) : (
+      img
+    );
+  };
+
+  const img = renderImage(
+    token.url,
+    token.name,
+    token.provider,
+    token.author,
+    token.effects,
   );
   if (!token.overlays?.length) return img;
   return (
     <span className="emote-overlay-container">
       {img}
-      {token.overlays.map((ov) => (
-        <span className="emote-overlay" key={ov.name}>
-          <img
-            src={ov.url}
-            alt={ov.name}
-            title={ov.name}
-            data-tooltip-url={ov.url}
-            data-emote-name={ov.name}
-            data-emote-source="7TV"
-            className="chat-emote"
-            loading="lazy"
-            style={{ height: "2em", cursor: "pointer" }}
-          />
+      {token.overlays.map((ov, i) => (
+        <span className="emote-overlay" key={`${ov.name}-${i}`}>
+          {renderImage(ov.url, ov.name, "7TV", undefined, ov.effects)}
         </span>
       ))}
     </span>
