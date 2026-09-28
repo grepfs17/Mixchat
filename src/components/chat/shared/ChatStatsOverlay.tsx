@@ -10,16 +10,21 @@ import {
 } from "react-icons/md";
 import { FaTwitch, FaYoutube } from "react-icons/fa";
 import type { Platform } from "../../../lib/types";
-import type {
-  ChatStatEntry,
-  ChatStatUser,
-  ChatStatsResult,
+import {
+  CHAT_STATS_WINDOWS,
+  type ChatStatEntry,
+  type ChatStatUser,
+  type ChatStatsResult,
+  type ChatStatsWindow,
 } from "../../../lib/chatStats";
 import "../../../styles/chat/ChatStatsOverlay.css";
 
 interface ChatStatsOverlayProps {
   stats: ChatStatsResult;
   loading?: boolean;
+  timeWindow: ChatStatsWindow;
+  onTimeWindowChange: (window: ChatStatsWindow) => void;
+  streamStartedAt?: Date | null;
   onClose: () => void;
   onResetEntry?: (key: string) => void;
   onResetEntries?: () => void;
@@ -56,6 +61,9 @@ function UserChip({ user }: { user: ChatStatUser }) {
 export default function ChatStatsOverlay({
   stats,
   loading = false,
+  timeWindow,
+  onTimeWindowChange,
+  streamStartedAt,
   onClose,
   onResetEntry,
   onResetEntries,
@@ -121,6 +129,21 @@ export default function ChatStatsOverlay({
 
   const { entries, repeatedTotal, totalMessages, chatters, mods } = stats;
 
+  const streamStartedLabel = streamStartedAt
+    ? streamStartedAt.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+  const scopeLabel = streamStartedAt ? "this stream" : "this session";
+  const footerLabel =
+    timeWindow === "all"
+      ? streamStartedAt
+        ? `This stream · since ${streamStartedLabel}`
+        : "This session"
+      : (CHAT_STATS_WINDOWS.find((option) => option.id === timeWindow)
+          ?.footerLabel ?? "");
+
   return (
     <div
       ref={overlayRef}
@@ -133,7 +156,11 @@ export default function ChatStatsOverlay({
           <MdBarChart size={20} className="chat-stats-header-icon" />
           <div>
             <h2 className="chat-stats-title">Chat Stats</h2>
-            <span className="chat-stats-subtitle">Channel activity</span>
+            <span className="chat-stats-subtitle">
+              {streamStartedAt
+                ? `Stream activity · since ${streamStartedLabel}`
+                : "Session activity · no live stream"}
+            </span>
           </div>
         </div>
         <button
@@ -144,6 +171,20 @@ export default function ChatStatsOverlay({
         >
           <MdClose size={24} />
         </button>
+      </div>
+
+      <div className="chat-stats-filters" role="group" aria-label="Time range">
+        {CHAT_STATS_WINDOWS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={option.id === timeWindow}
+            className={`chat-stats-filter${option.id === timeWindow ? " chat-stats-filter--active" : ""}`}
+            onClick={() => onTimeWindowChange(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       <div className="chat-stats-summary">
@@ -290,8 +331,10 @@ export default function ChatStatsOverlay({
       </div>
 
       <div className="chat-stats-footer">
-        <span>{repeatedTotal} repeated messages</span>
-        <span>Full retained history</span>
+        <span>
+          {repeatedTotal} repeated messages · {scopeLabel}
+        </span>
+        <span>{footerLabel}</span>
       </div>
     </div>
   );

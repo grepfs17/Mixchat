@@ -24,6 +24,7 @@ import {
   resetChatStatEntries,
   CHAT_STATS_MAX_RESULTS,
   type ChatStatsResult,
+  type ChatStatsWindow,
 } from "../../../lib/chatStats";
 import { getAllChannelHistory } from "../../../lib/chatHistoryStorage";
 import ChatHeader from "./ChatHeader";
@@ -51,6 +52,7 @@ interface ChatDisplayProps {
   streamGameName?: string;
   isStreamLive?: boolean;
   streamUptime?: string;
+  streamStartedAt?: Date | null;
   viewerCount?: number | null;
   onRefreshEmotes?: () => void;
   isRefreshingEmotes?: boolean;
@@ -99,6 +101,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       streamGameName,
       isStreamLive,
       streamUptime,
+      streamStartedAt,
       viewerCount,
       onRefreshEmotes,
       isRefreshingEmotes = false,
@@ -155,75 +158,121 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     const [chatStatsOpen, setChatStatsOpen] = useState(false);
     const [chatStats, setChatStats] = useState<ChatStatsResult | null>(null);
     const [chatStatsLoading, setChatStatsLoading] = useState(false);
+    const [chatStatsWindow, setChatStatsWindow] =
+      useState<ChatStatsWindow>("all");
+    const chatStatsWindowRef = useRef<ChatStatsWindow>("all");
     const chatStatsStore = useRef(createChatStatsStore(channelName));
-    const historyLoadedChannelRef = useRef<string | null>(null);
-    const historyInFlightRef = useRef<string | null>(null);
+    const statsScopeRef = useRef<string | null>(null);
+    const historyLoadedScopeRef = useRef<string | null>(null);
+    const historyInFlightScopeRef = useRef<string | null>(null);
+
+    // Stats are scoped to the current stream. Without a stream start (offline)
+    // they fall back to messages observed this session only.
+    const streamStartMs = streamStartedAt ? streamStartedAt.getTime() : undefined;
+    const statsScope = `${channelName ?? ""}:${streamStartMs ?? "session"}`;
+
+    const statsLiveMessages = useMemo(() => {
+      if (streamStartMs === undefined) {
+        return messages.filter((msg) => !msg.isPreloaded);
+      }
+      return messages.filter((msg) => msg.timestamp.getTime() >= streamStartMs);
+    }, [messages, streamStartMs]);
+
+    const rebuildChatStats = useCallback(() => {
+      setChatStats(
+        buildChatStats(
+          chatStatsStore.current,
+          CHAT_STATS_MAX_RESULTS,
+          chatStatsWindowRef.current,
+          streamStartMs,
+        ),
+      );
+    }, [streamStartMs]);
 
     const openChatStats = useCallback(() => setChatStatsOpen(true), []);
     const closeChatStats = useCallback(() => setChatStatsOpen(false), []);
-    const handleResetChatStatEntry = useCallback((key: string) => {
-      resetChatStatEntry(chatStatsStore.current, key);
-      setChatStats(
-        buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
-      );
-    }, []);
+    const handleResetChatStatEntry = useCallback(
+      (key: string) => {
+        resetChatStatEntry(chatStatsStore.current, key);
+        rebuildChatStats();
+      },
+      [rebuildChatStats],
+    );
     const handleResetChatStatEntries = useCallback(() => {
       resetChatStatEntries(chatStatsStore.current);
-      setChatStats(
-        buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
-      );
-    }, []);
+      rebuildChatStats();
+    }, [rebuildChatStats]);
+    const handleChatStatsWindowChange = useCallback(
+      (next: ChatStatsWindow) => {
+        chatStatsWindowRef.current = next;
+        setChatStatsWindow(next);
+        rebuildChatStats();
+      },
+      [rebuildChatStats],
+    );
 
     const messagesEmpty = messages.length === 0;
 
-    // Fold live messages into the session-long accumulator as they stream by,
-    // so counts survive the in-memory window cap. An empty window (or a channel
-    // change) starts a fresh accumulator. The ranked result is only rebuilt
-    // while the overlay is open.
+    // Fold live messages into the per-stream accumulator as they stream by, so
+    // counts survive the in-memory window cap. A channel or stream change (or an
+    // empty window) starts a fresh accumulator. The ranked result is only
+    // rebuilt while the overlay is open.
     useEffect(() => {
-      if (messagesEmpty || chatStatsStore.current.channel !== channelName) {
+      if (messagesEmpty || statsScopeRef.current !== statsScope) {
         chatStatsStore.current = createChatStatsStore(channelName);
-        historyLoadedChannelRef.current = null;
-      } else {
-        accumulateChatStats(chatStatsStore.current, messages);
+        statsScopeRef.current = statsScope;
+        historyLoadedScopeRef.current = null;
       }
-      if (chatStatsOpen) {
-        setChatStats(
-          buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
-        );
-      }
-    }, [messages, messagesEmpty, chatStatsOpen, channelName]);
+      accumulateChatStats(chatStatsStore.current, statsLiveMessages);
+      if (chatStatsOpen) rebuildChatStats();
+    }, [
+      statsLiveMessages,
+      messagesEmpty,
+      chatStatsOpen,
+      channelName,
+      statsScope,
+      rebuildChatStats,
+    ]);
 
     // When the overlay opens, backfill the accumulator from IndexedDB so the
-    // ranking covers the full retained history, not just the live window.
+    // ranking covers the whole current stream, not just the live window. Older
+    // streams stay in IndexedDB (5-day retention) but are excluded here.
     useEffect(() => {
-      if (!chatStatsOpen || !channelName) return;
-      if (historyLoadedChannelRef.current === channelName) return;
-      if (historyInFlightRef.current === channelName) return;
+      if (!chatStatsOpen || !channelName || streamStartMs === undefined) return;
+      if (historyLoadedScopeRef.current === statsScope) return;
+      if (historyInFlightScopeRef.current === statsScope) return;
 
-      const targetChannel = channelName;
-      historyInFlightRef.current = targetChannel;
+      historyInFlightScopeRef.current = statsScope;
       setChatStatsLoading(true);
 
-      getAllChannelHistory(targetChannel, { platforms: ["twitch"] })
+      getAllChannelHistory(channelName, {
+        platforms: ["twitch"],
+        since: streamStartMs,
+      })
         .then((history) => {
-          if (chatStatsStore.current.channel !== targetChannel) return;
+          if (statsScopeRef.current !== statsScope) return;
           accumulateChatStats(chatStatsStore.current, history);
-          historyLoadedChannelRef.current = targetChannel;
-          setChatStats(
-            buildChatStats(chatStatsStore.current, CHAT_STATS_MAX_RESULTS),
-          );
+          historyLoadedScopeRef.current = statsScope;
+          rebuildChatStats();
         })
         .catch(() => {})
         .finally(() => {
-          if (historyInFlightRef.current === targetChannel) {
-            historyInFlightRef.current = null;
+          if (historyInFlightScopeRef.current === statsScope) {
+            historyInFlightScopeRef.current = null;
           }
-          if (chatStatsStore.current.channel === targetChannel) {
+          if (statsScopeRef.current === statsScope) {
             setChatStatsLoading(false);
           }
         });
-    }, [chatStatsOpen, channelName, messagesEmpty]);
+    }, [chatStatsOpen, channelName, streamStartMs, statsScope, rebuildChatStats]);
+
+    // Relative windows age as time passes even when no new messages arrive, so
+    // periodically rebuild the ranking while a non-"all" window is selected.
+    useEffect(() => {
+      if (!chatStatsOpen || chatStatsWindow === "all") return;
+      const interval = setInterval(rebuildChatStats, 15000);
+      return () => clearInterval(interval);
+    }, [chatStatsOpen, chatStatsWindow, rebuildChatStats]);
 
     const handleViewHistory = useCallback(
       (
@@ -644,6 +693,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           <ChatStatsOverlay
             stats={chatStats}
             loading={chatStatsLoading}
+            timeWindow={chatStatsWindow}
+            onTimeWindowChange={handleChatStatsWindowChange}
+            streamStartedAt={streamStartedAt ?? null}
             onClose={closeChatStats}
             onResetEntry={handleResetChatStatEntry}
             onResetEntries={handleResetChatStatEntries}

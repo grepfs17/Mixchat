@@ -139,6 +139,7 @@ export function useChatAppState({
   const {
     streamIsLive,
     streamUptime,
+    streamStartedAt,
     streamTitle,
     streamGameName,
     streamGameId,
@@ -727,6 +728,7 @@ export function useChatAppState({
     replyingTo,
     streamIsLive,
     streamUptime,
+    streamStartedAt,
     streamTitle,
     streamGameName,
     streamGameId,

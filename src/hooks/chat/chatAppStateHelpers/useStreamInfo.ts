@@ -35,6 +35,7 @@ export interface UseStreamInfoOptions {
 export interface UseStreamInfoReturn {
   streamIsLive: boolean;
   streamUptime: string;
+  streamStartedAt: Date | null;
   streamStartedAtRef: React.RefObject<Date | null>;
   streamTitle: string;
   streamGameName: string;
@@ -59,6 +60,7 @@ export function useStreamInfo({
 }: UseStreamInfoOptions): UseStreamInfoReturn {
   const [streamIsLive, setStreamIsLive] = useState(false);
   const [streamUptime, setStreamUptime] = useState("");
+  const [streamStartedAt, setStreamStartedAt] = useState<Date | null>(null);
   const streamStartedAtRef = useRef<Date | null>(null);
   const [streamTitle, setStreamTitle] = useState("");
   const [streamGameName, setStreamGameName] = useState("");
@@ -140,9 +142,11 @@ export function useStreamInfo({
           setStreamGameName(status.isLive ? status.gameName || "" : "");
           if (status.isLive && status.startedAt) {
             streamStartedAtRef.current = status.startedAt;
+            setStreamStartedAt(status.startedAt);
             setStreamUptime(calculateUptime(status.startedAt));
           } else {
             streamStartedAtRef.current = null;
+            setStreamStartedAt(null);
             setStreamUptime("");
           }
         } catch (error) {
@@ -169,6 +173,15 @@ export function useStreamInfo({
       clearInterval(uptimeInterval);
     };
   }, [selectedTwitchChannel, twitchAccessToken]);
+
+  // Drop the previous stream's start immediately on channel switch; the poll
+  // above repopulates it once the new channel's status resolves.
+  useEffect(() => {
+    streamStartedAtRef.current = null;
+    setStreamStartedAt(null);
+    setStreamIsLive(false);
+    setStreamUptime("");
+  }, [selectedTwitchChannel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -259,6 +272,7 @@ export function useStreamInfo({
   return {
     streamIsLive,
     streamUptime,
+    streamStartedAt,
     streamStartedAtRef,
     streamTitle,
     streamGameName,

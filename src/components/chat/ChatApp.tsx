@@ -66,6 +66,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     replyingTo,
     streamIsLive,
     streamUptime,
+    streamStartedAt,
     streamTitle,
     streamGameId,
     streamGameName,
@@ -655,6 +656,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                 streamGameName={streamGameName}
                 isStreamLive={streamIsLive}
                 streamUptime={streamUptime}
+
+                streamStartedAt={streamStartedAt}
                 viewerCount={viewerCount}
                 hideViewerCount={hideViewerCount}
                 onRefreshEmotes={handleRefreshEmotes}
@@ -792,6 +795,8 @@ export default function ChatApp(props: ChatAppStateProps) {
                     streamGameName={streamGameName}
                     isStreamLive={streamIsLive}
                     streamUptime={streamUptime}
+
+                    streamStartedAt={streamStartedAt}
                     viewerCount={viewerCount}
                     hideViewerCount={hideViewerCount}
                     onRefreshEmotes={handleRefreshEmotes}

@@ -138,6 +138,8 @@ export async function getUserHistory(
 export interface GetChannelHistoryOptions {
   /** Return messages strictly older than this epoch-ms timestamp. */
   before?: number;
+  /** Ignore messages older than this epoch-ms timestamp. */
+  since?: number;
   /** Maximum number of messages to return. */
   limit?: number;
   /** Restrict to these platforms. When omitted, all platforms are returned. */
@@ -159,6 +161,7 @@ export async function getChannelHistory(
 
   const {
     before = Date.now() + 1,
+    since = 0,
     limit = 100,
     platforms,
     maxAgeHours = CHAT_HISTORY_MAX_AGE_HOURS,
@@ -171,7 +174,7 @@ export async function getChannelHistory(
     const index = store.index(CHANNEL_TIMESTAMP_INDEX);
 
     const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
-    const lower = Math.max(cutoff, 0);
+    const lower = Math.max(cutoff, since, 0);
     const range = IDBKeyRange.bound(
       [channel, lower],
       [channel, before],
@@ -215,6 +218,8 @@ export async function getChannelHistory(
 
 export interface GetAllChannelHistoryOptions {
   maxAgeHours?: number;
+  /** Ignore messages older than this epoch-ms timestamp. */
+  since?: number;
   platforms?: Platform[];
   pageSize?: number;
   maxMessages?: number;
@@ -233,6 +238,7 @@ export async function getAllChannelHistory(
 
   const {
     maxAgeHours = CHAT_HISTORY_MAX_AGE_HOURS,
+    since = 0,
     platforms,
     pageSize = 1000,
     maxMessages = 200_000,
@@ -245,6 +251,7 @@ export async function getAllChannelHistory(
   while (all.length < maxMessages) {
     const page = await getChannelHistory(channel, {
       before,
+      since,
       limit: pageSize,
       platforms,
       maxAgeHours,

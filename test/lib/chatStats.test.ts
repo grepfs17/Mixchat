@@ -200,4 +200,100 @@ describe("chatStats", () => {
     expect(result.entries[0].content).toBe("beta");
     expect(result.repeatedTotal).toBe(2);
   });
+
+  it("filters repeated messages, totals and chatters by time window", () => {
+    const store = createChatStatsStore();
+    const now = Date.now();
+    const old = new Date(now - 10 * 60 * 1000);
+    const recent = new Date(now - 60 * 1000);
+    accumulateChatStats(store, [
+      msg("Alice", "old stuff", { timestamp: old }),
+      msg("Bob", "old stuff", { timestamp: old }),
+      msg("Carol", "new stuff", { timestamp: recent }),
+      msg("Dave", "new stuff", { timestamp: recent }),
+      msg("Erin", "one off", { timestamp: recent }),
+    ]);
+
+    const all = buildChatStats(store, 50, "all");
+    expect(all.entries.map((e) => e.content)).toEqual([
+      "new stuff",
+      "old stuff",
+    ]);
+    expect(all.totalMessages).toBe(5);
+    expect(all.chatters).toBe(5);
+
+    const recent5 = buildChatStats(store, 50, "5m");
+    expect(recent5.entries.map((e) => e.content)).toEqual(["new stuff"]);
+    expect(recent5.totalMessages).toBe(3);
+    expect(recent5.chatters).toBe(3);
+    expect(recent5.entries[0].count).toBe(2);
+  });
+
+  it("does not recount a counted message that rolled out of the live window", () => {
+    const store = createChatStatsStore();
+    const first = msg("Alice", "PogChamp");
+    const second = msg("Bob", "other");
+    accumulateChatStats(store, [first]);
+    // The message leaves the rendered window as newer messages arrive.
+    accumulateChatStats(store, [second]);
+    // Opening the overlay backfills history, which still contains it.
+    accumulateChatStats(store, [first, second]);
+
+    const result = buildChatStats(store);
+    expect(result.entries.find((e) => e.content === "PogChamp")).toBeUndefined();
+    expect(result.totalMessages).toBe(2);
+  });
+
+  it("scopes the whole result to a stream start floor", () => {
+    const store = createChatStatsStore();
+    const now = Date.now();
+    const beforeStream = new Date(now - 3 * 60 * 60 * 1000);
+    const streamStart = now - 60 * 60 * 1000;
+    const inStream = new Date(now - 10 * 60 * 1000);
+    accumulateChatStats(store, [
+      msg("Alice", "old meme", { timestamp: beforeStream }),
+      msg("Bob", "old meme", { timestamp: beforeStream }),
+      msg("Carol", "new meme", { timestamp: inStream }),
+      msg("Dave", "new meme", { timestamp: inStream }),
+    ]);
+
+    const scoped = buildChatStats(store, 50, "all", streamStart);
+    expect(scoped.entries.map((e) => e.content)).toEqual(["new meme"]);
+    expect(scoped.totalMessages).toBe(2);
+    expect(scoped.chatters).toBe(2);
+
+    // Without a floor, the full retained history is still available.
+    const unscoped = buildChatStats(store, 50, "all");
+    expect(unscoped.totalMessages).toBe(4);
+    expect(unscoped.repeatedTotal).toBe(2);
+  });
+
+  it("applies the stream floor on top of a relative window", () => {
+    const store = createChatStatsStore();
+    const now = Date.now();
+    const streamStart = now - 3 * 60 * 1000;
+    accumulateChatStats(store, [
+      msg("Alice", "spam", { timestamp: new Date(now - 20 * 60 * 1000) }),
+      msg("Bob", "spam", { timestamp: new Date(now - 20 * 60 * 1000) }),
+      msg("Carol", "spam", { timestamp: new Date(now - 60 * 1000) }),
+      msg("Dave", "spam", { timestamp: new Date(now - 60 * 1000) }),
+    ]);
+
+    // "30m" would include all four, but the stream only started 3m ago.
+    const scoped = buildChatStats(store, 50, "30m", streamStart);
+    expect(scoped.entries[0].count).toBe(2);
+    expect(scoped.totalMessages).toBe(2);
+  });
+
+  it("requires at least two occurrences inside the window", () => {
+    const store = createChatStatsStore();
+    const now = Date.now();
+    accumulateChatStats(store, [
+      msg("Alice", "spam", { timestamp: new Date(now - 10 * 60 * 1000) }),
+      msg("Bob", "spam", { timestamp: new Date(now - 60 * 1000) }),
+    ]);
+
+    expect(buildChatStats(store, 50, "5m").entries).toEqual([]);
+    expect(buildChatStats(store, 50, "30m").entries[0].count).toBe(2);
+  });
 });
