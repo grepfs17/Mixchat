@@ -327,6 +327,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       keyOf: (msg) => `twitch:${msg.id}`,
       timestampOf: (msg) => msg.timestamp.getTime(),
       isOptimistic: (msg) => msg.optimistic === true,
+      isEphemeral: (msg) => msg.messageType === "automod",
       mapStored: (msg) => msg as TwitchMessage,
       maxHistory: maxDisplayedMessages,
       liveCap: maxDisplayedMessages,

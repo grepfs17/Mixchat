@@ -151,7 +151,14 @@ export function useChatMessages({
         return;
       }
 
-      setMessages((prev) => {
+      setMessages((rawPrev) => {
+        // An approved AutoMod hold is published to chat with the same message
+        // id as the held message. Drop the ephemeral placeholder so it doesn't
+        // linger once the real message arrives (e.g. approved by another mod).
+        const automodPlaceholderId = `automod-${message.id}`;
+        const prev = rawPrev.some((m) => m.id === automodPlaceholderId)
+          ? rawPrev.filter((m) => m.id !== automodPlaceholderId)
+          : rawPrev;
         const existingIdx = prev.findIndex(
           (m) => m.id === message.id || m.id === `optimistic_${message.id}`,
         );

@@ -154,6 +154,7 @@ export default function YouTubeChat({
     keyOf: (msg) => `youtube:${msg.id}`,
     timestampOf: (msg) => msg.timestamp.getTime(),
     isOptimistic: (msg) => msg.optimistic === true,
+    isEphemeral: (msg) => msg.messageType === "automod",
     mapStored: (message) => {
       const stored = message as unknown as Record<string, unknown>;
       const parts = stored.parts as MessagePart[] | undefined;

@@ -31,6 +31,12 @@ export interface UseLazyChatHistoryOptions<T> {
   keyOf: (item: T) => string;
   timestampOf: (item: T) => number;
   isOptimistic?: (item: T) => boolean;
+  /**
+   * Ephemeral items (e.g. AutoMod holds) are transient UI state that is never
+   * persisted. They must never be absorbed into history, or resolving them
+   * would leave a stale copy rendering from the history window.
+   */
+  isEphemeral?: (item: T) => boolean;
   /** Adapts a persisted message into the surface's item shape. */
   mapStored: (message: TwitchMessage) => T;
   pageSize?: number;
@@ -79,6 +85,7 @@ export function useLazyChatHistory<T>({
   keyOf,
   timestampOf,
   isOptimistic,
+  isEphemeral,
   mapStored,
   pageSize = DEFAULT_PAGE_SIZE,
   maxHistory,
@@ -103,12 +110,14 @@ export function useLazyChatHistory<T>({
   const keyOfRef = useRef(keyOf);
   const timestampOfRef = useRef(timestampOf);
   const isOptimisticRef = useRef(isOptimistic);
+  const isEphemeralRef = useRef(isEphemeral);
   const mapStoredRef = useRef(mapStored);
   const platformsRef = useRef(platforms);
   useEffect(() => {
     keyOfRef.current = keyOf;
     timestampOfRef.current = timestampOf;
     isOptimisticRef.current = isOptimistic;
+    isEphemeralRef.current = isEphemeral;
     mapStoredRef.current = mapStored;
     platformsRef.current = platforms;
   });
@@ -179,6 +188,7 @@ export function useLazyChatHistory<T>({
     );
     const evicted = prevItems.filter((item) => {
       if (isOptimisticRef.current?.(item)) return false;
+      if (isEphemeralRef.current?.(item)) return false;
       const key = keyOfRef.current(item);
       return !liveKeys.has(key) && !historyKeys.has(key);
     });

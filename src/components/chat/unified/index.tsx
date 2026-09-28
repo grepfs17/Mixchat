@@ -199,6 +199,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       keyOf: getKey,
       timestampOf: getTime,
       isOptimistic: (entry) => entry.msg.optimistic === true,
+      isEphemeral: (entry) => entry.msg.messageType === "automod",
       mapStored: (message) => {
         if (message.platform === "youtube") {
           const stored = message as unknown as Record<string, unknown>;

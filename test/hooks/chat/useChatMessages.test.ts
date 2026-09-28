@@ -134,6 +134,42 @@ describe("useChatMessages — redemption dedup", () => {
     expect(result.current.messages).toHaveLength(2);
   });
 
+  it("removes an AutoMod held placeholder when the approved message arrives", () => {
+    const { result } = renderMessages();
+
+    act(() => {
+      result.current.handleTwitchMessage({
+        id: "automod-held-1",
+        platform: "twitch",
+        author: "User1",
+        content: "bad word",
+        timestamp: new Date("2024-01-01T00:00:00Z"),
+        userId: "u-1",
+        messageType: "automod",
+        targetUsername: "held-1",
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].id).toBe("automod-held-1");
+
+    // The approved hold is published to chat with the held message's id.
+    act(() => {
+      result.current.handleTwitchMessage({
+        id: "held-1",
+        platform: "twitch",
+        author: "User1",
+        content: "bad word",
+        timestamp: new Date("2024-01-01T00:00:01Z"),
+        userId: "u-1",
+        messageType: "chat",
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(1);
+    expect(result.current.messages[0].id).toBe("held-1");
+  });
+
   it("does not dedup regular chat messages", () => {
     const { result } = renderMessages();
 
