@@ -354,18 +354,6 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
       ),
     },
     {
-      id: "max-displayed-messages",
-      group: "chat",
-      label: "Max messages in chat",
-      description: "How many messages to keep loaded in chat",
-      render: () => (
-        <MaxDisplayedMessagesSetting
-          maxDisplayedMessages={props.maxDisplayedMessages}
-          onMaxDisplayedMessagesChange={props.onMaxDisplayedMessagesChange}
-        />
-      ),
-    },
-    {
       id: "render-third-party-emotes-on-youtube",
       group: "chat",
       label: "Render 7TV / BTTV / FFZ emotes in YouTube chat",
@@ -437,6 +425,18 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
           onDoubleClickConfirmModActionsChange={
             props.onDoubleClickConfirmModActionsChange
           }
+        />
+      ),
+    },
+    {
+      id: "max-displayed-messages",
+      group: "chat",
+      label: "Max messages in chat",
+      description: "How many messages to keep loaded in chat",
+      render: () => (
+        <MaxDisplayedMessagesSetting
+          maxDisplayedMessages={props.maxDisplayedMessages}
+          onMaxDisplayedMessagesChange={props.onMaxDisplayedMessagesChange}
         />
       ),
     },
