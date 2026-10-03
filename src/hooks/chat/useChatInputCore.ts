@@ -95,6 +95,8 @@ export interface UseChatInputCoreResult {
   insertAtPosition: (before: string, text: string, after?: string) => void;
   /** Replace the word at the cursor. */
   replaceCurrentWord: (text: string) => void;
+  /** Prepend an @mention for the given username to the message. */
+  insertMention: (username: string) => void;
 
   /** Stable author names for @mention autocomplete. */
   allAuthors: string[];
@@ -168,7 +170,7 @@ export function useChatInputCore(
   }, [chatMessages, ytChatMessages, mentionSource]);
 
   // ---- Insert at cursor ----
-  const { insertWithPrefix, insertAtPosition, replaceCurrentWord } =
+  const { insertWithPrefix, insertAtPosition, replaceCurrentWord, insertMention } =
     useInsertAtCursor({ message, setMessage, inputRef });
 
   // Ref to `closeAll` so `handleSend` can call it without depending on it
@@ -411,6 +413,7 @@ export function useChatInputCore(
     insertWithPrefix,
     insertAtPosition,
     replaceCurrentWord,
+    insertMention,
     allAuthors,
     handleChange,
     handleKeyDown,

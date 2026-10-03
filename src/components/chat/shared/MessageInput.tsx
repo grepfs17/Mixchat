@@ -1,4 +1,11 @@
-import React, { useState, useRef, memo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  memo,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import { FaTimes, FaSmile } from "react-icons/fa";
 import type { Platform, TwitchMessage, EmoteAutocompleteMode } from "../../../lib/types";
 import { useModerationContext } from "../../../contexts/ModerationContext";
@@ -30,6 +37,10 @@ interface MessageInputProps {
   emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
+export interface MessageInputHandle {
+  insertMention: (username: string) => void;
+}
+
 interface ChatAutocompleteProps<T> {
   ac: UseAutocompleteReturn<T>;
   menuRect: DOMRect | null;
@@ -57,21 +68,24 @@ function ChatAutocomplete<T>({
   );
 }
 
-function MessageInput({
-  onSendMessage,
-  isLoading,
-  isConnected: _isConnected,
-  replyingTo,
-  onCancelReply,
-  chatMessages = [],
-  currentUsername = "",
-  onInputFocus,
-  slowModeWaitTime = null,
-  followerModeMinutes = null,
-  isFollowing = null,
-  channelName = "",
-  emoteAutocompleteMode = "default",
-}: MessageInputProps) {
+const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
+  function MessageInput({
+    onSendMessage,
+    isLoading,
+    isConnected: _isConnected,
+    replyingTo,
+    onCancelReply,
+    chatMessages = [],
+    currentUsername = "",
+    onInputFocus,
+    slowModeWaitTime = null,
+    followerModeMinutes = null,
+    isFollowing = null,
+    channelName = "",
+    emoteAutocompleteMode = "default",
+  }: MessageInputProps,
+  ref: React.ForwardedRef<MessageInputHandle>,
+) {
   const { isModerator } = useModerationContext();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
@@ -98,6 +112,12 @@ function MessageInput({
     slowModeWaitTime,
     onSend,
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({ insertMention: core.insertMention }),
+    [core.insertMention],
+  );
 
   return (
     <div className="message-input">
@@ -261,6 +281,7 @@ function MessageInput({
       )}
     </div>
   );
-}
+  },
+);
 
 export default memo(MessageInput);

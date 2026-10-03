@@ -46,6 +46,7 @@ interface ChatDisplayProps {
   isLoading: boolean;
   selectedPlatforms: Platform[];
   onReply?: (message: TwitchMessage) => void;
+  onMentionUser?: (username: string) => void;
   channelName?: string;
   channelDisplayName?: string;
   streamTitle?: string;
@@ -95,6 +96,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       isLoading,
       selectedPlatforms,
       onReply,
+      onMentionUser,
       channelName,
       channelDisplayName,
       streamTitle,
@@ -286,17 +288,12 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     );
 
     const handleUsernameClick = useCallback(
-      (
-        e: React.MouseEvent,
-        author: string,
-        platform: Platform,
-        authorAvatar?: string,
-      ) => {
+      (e: React.MouseEvent, author: string) => {
         e.preventDefault();
         e.stopPropagation();
-        handleViewHistory(author, platform, authorAvatar);
+        onMentionUser?.(author);
       },
-      [handleViewHistory],
+      [onMentionUser],
     );
 
     useEffect(() => {
@@ -603,12 +600,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
                   onReply={onReply}
                   onCopy={handleCopy}
                   onUsernameClick={(e, author) =>
-                    handleUsernameClick(
-                      e,
-                      author,
-                      msg.platform,
-                      msg.authorAvatar,
-                    )
+                    handleUsernameClick(e, author)
                   }
                   fontSize={fontSize}
                   onTimeoutMenu={(state) =>

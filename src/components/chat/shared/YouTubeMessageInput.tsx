@@ -4,6 +4,8 @@ import React, {
   useRef,
   useState,
   useMemo,
+  forwardRef,
+  useImperativeHandle,
 } from "react";
 import { createPortal } from "react-dom";
 import { FaRegSmile } from "react-icons/fa";
@@ -39,13 +41,23 @@ interface YouTubeMessageInputProps {
 
 const EMPTY_YT_MESSAGES: YTMessage[] = [];
 
-export default function YouTubeMessageInput({
-  youtubeVideoId,
-  chatMessages = [] as YTMessage[],
-  onError,
-  onOptimisticMessage,
-  onOptimisticFailed,
-}: YouTubeMessageInputProps) {
+export interface YouTubeMessageInputHandle {
+  insertMention: (username: string) => void;
+}
+
+const YouTubeMessageInput = forwardRef<
+  YouTubeMessageInputHandle,
+  YouTubeMessageInputProps
+>(function YouTubeMessageInput(
+  {
+    youtubeVideoId,
+    chatMessages = [] as YTMessage[],
+    onError,
+    onOptimisticMessage,
+    onOptimisticFailed,
+  }: YouTubeMessageInputProps,
+  ref: React.ForwardedRef<YouTubeMessageInputHandle>,
+) {
   const [ytMessage, setYtMessage] = useState("");
   const [ytSending, setYtSending] = useState(false);
   const colonPosRef = useRef(-1);
@@ -69,7 +81,7 @@ export default function YouTubeMessageInput({
   }, [chatMessages]);
 
   // --- Insert at cursor helper ---
-  const { insertAtPosition } = useInsertAtCursor({
+  const { insertAtPosition, insertMention } = useInsertAtCursor({
     message: ytMessage,
     setMessage: setYtMessage,
     inputRef,
@@ -115,7 +127,7 @@ export default function YouTubeMessageInput({
     [ytMessage, insertAtPosition],
   );
 
-  const insertMention = useCallback(
+  const insertMentionFromAutocomplete = useCallback(
     (author: string) => {
       if (mentionPosRef.current === -1) return;
       const before = ytMessage.substring(0, mentionPosRef.current);
@@ -138,6 +150,12 @@ export default function YouTubeMessageInput({
     [ytMessage, insertAtPosition],
   );
 
+  useImperativeHandle(
+    ref,
+    () => ({ insertMention }),
+    [insertMention],
+  );
+
   // --- Autocomplete instances ---
   const emojiAC = useAutocomplete<EmojiEntry>({
     onSelect: (entry) => insertEmoji(entry),
@@ -145,7 +163,7 @@ export default function YouTubeMessageInput({
   });
 
   const mentionAC = useAutocomplete<string>({
-    onSelect: (author) => insertMention(author),
+    onSelect: (author) => insertMentionFromAutocomplete(author),
     onSend: handleSend,
   });
 
@@ -383,4 +401,6 @@ export default function YouTubeMessageInput({
       </div>
     </div>
   );
-}
+});
+
+export default YouTubeMessageInput;

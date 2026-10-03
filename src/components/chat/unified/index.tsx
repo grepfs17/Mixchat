@@ -41,6 +41,7 @@ interface UnifiedChatProps {
   ytError?: string | null;
   twitchConnected?: boolean;
   onReply?: (message: TwitchMessage) => void;
+  onMentionUser?: (username: string) => void;
   onCopyMessage?: () => void;
   currentUserDisplayName?: string;
   fontSize?: number;
@@ -69,6 +70,7 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       ytError,
       twitchConnected,
       onReply,
+      onMentionUser,
       onCopyMessage,
       currentUserDisplayName,
       fontSize = 14,
@@ -140,12 +142,10 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
     const handleUsernameClick = (
       e: React.MouseEvent,
       author: string,
-      platform: Platform,
-      authorAvatar?: string,
     ) => {
       e.preventDefault();
       e.stopPropagation();
-      handleViewHistory(author, platform, authorAvatar);
+      onMentionUser?.(author);
     };
 
     // Close menus when clicking elsewhere
@@ -425,8 +425,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   onMessageMenu={(x, y, e) =>
                     setMessageMenu({ x, y, entry: e })
                   }
-                  onUsernameClick={(e, author, avatar) =>
-                    handleUsernameClick(e, author, "twitch", avatar)
+                  onUsernameClick={(e, author) =>
+                    handleUsernameClick(e, author)
                   }
                   onTouchStart={handleTouchStart}
                   onTouchEnd={handleTouchEnd}
@@ -447,8 +447,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 onTimeoutMenu={(x, y, channelId, username) =>
                   setYtTimeoutDialog({ channelId, username })
                 }
-                onUsernameClick={(e, author, avatar) =>
-                  handleUsernameClick(e, author, "youtube", avatar)
+                onUsernameClick={(e, author) =>
+                  handleUsernameClick(e, author)
                 }
                 showDeletedMessages={showDeletedMessages}
                 renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}

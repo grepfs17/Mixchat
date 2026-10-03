@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useRef } from "react";
 import YouTubeChat from "./YouTubeChat";
-import YouTubeMessageInput from "./YouTubeMessageInput";
-import ChatterHistoryOverlay from "./ChatterHistoryOverlay";
-import type { PlatformSession, ChatFont, Platform } from "../../../lib/types";
+import YouTubeMessageInput, {
+  type YouTubeMessageInputHandle,
+} from "./YouTubeMessageInput";
+import type { PlatformSession, ChatFont } from "../../../lib/types";
 import type { YTMessage } from "../unified/types";
 
 interface YouTubePanelProps {
@@ -82,18 +83,16 @@ export default function YouTubePanel({
   style,
   renderThirdPartyEmotes,
 }: YouTubePanelProps) {
-  const [chatterHistory, setChatterHistory] = useState<{
-    author: string;
-    platform: Platform;
-    authorAvatar?: string;
-  } | null>(null);
+  const messageInputRef = useRef<YouTubeMessageInputHandle>(null);
 
   const handleUsernameClick = (
     e: React.MouseEvent,
     author: string,
     avatar?: string,
   ) => {
-    setChatterHistory({ author, platform: "youtube", authorAvatar: avatar });
+    e.preventDefault();
+    e.stopPropagation();
+    messageInputRef.current?.insertMention(author);
     onUsernameClick?.(e, author, avatar);
   };
 
@@ -131,15 +130,6 @@ export default function YouTubePanel({
                 onConnectionChange={onConnectionChange}
                 onUsernameClick={handleUsernameClick}
                 renderThirdPartyEmotes={renderThirdPartyEmotes}
-              />
-            )}
-            {chatterHistory && (
-              <ChatterHistoryOverlay
-                author={chatterHistory.author}
-                platform={chatterHistory.platform}
-                authorAvatar={chatterHistory.authorAvatar}
-                channel={channel || ""}
-                onClose={() => setChatterHistory(null)}
               />
             )}
             <div
@@ -187,6 +177,7 @@ export default function YouTubePanel({
           {!useYoutubeEmbed &&
             (youtubeSession ? (
               <YouTubeMessageInput
+                ref={messageInputRef}
                 youtubeVideoId={youtubeVideoId}
                 chatMessages={ytMessages}
                 onOptimisticMessage={onOptimisticMessage}

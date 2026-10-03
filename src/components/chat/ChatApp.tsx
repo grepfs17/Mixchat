@@ -1,7 +1,11 @@
 import ChatDisplay from "./display";
 import MobileTouchHintModal from "./shared/MobileTouchHintModal";
-import UnifiedInput from "./shared/UnifiedInput";
-import MessageInput from "./shared/MessageInput";
+import UnifiedInput, {
+  type UnifiedInputHandle,
+} from "./shared/UnifiedInput";
+import MessageInput, {
+  type MessageInputHandle,
+} from "./shared/MessageInput";
 import Notification from "./shared/Notification";
 import YouTubeChat from "./shared/YouTubeChat";
 import UnifiedChat from "./unified";
@@ -131,6 +135,13 @@ export default function ChatApp(props: ChatAppStateProps) {
   );
   const handleYtConnectionChange = useCallback((state: YtConnectionState) => {
     setYtConnectionState(state);
+  }, []);
+
+  const messageInputRef = useRef<MessageInputHandle>(null);
+  const unifiedInputRef = useRef<UnifiedInputHandle>(null);
+  const handleMentionUser = useCallback((username: string) => {
+    messageInputRef.current?.insertMention(username);
+    unifiedInputRef.current?.insertMention(username);
   }, []);
 
   const {
@@ -650,6 +661,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                 isLoading={isLoading}
                 selectedPlatforms={selectedPlatforms}
                 onReply={(message) => setReplyingTo(message)}
+                onMentionUser={handleMentionUser}
                 channelName={selectedTwitchChannelName}
                 channelDisplayName={selectedTwitchChannelDisplayName}
                 streamTitle={streamTitle}
@@ -719,6 +731,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     ytError={ytError}
                     twitchConnected={twitchConnected}
                     onReply={setReplyingTo}
+                    onMentionUser={handleMentionUser}
                     onCopyMessage={() => {
                       showNotification("Message copied!", "success");
                     }}
@@ -739,6 +752,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
             {/* Unified input */}
             <UnifiedInput
+              ref={unifiedInputRef}
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
               replyingTo={replyingTo}
@@ -789,6 +803,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                     isLoading={isLoading}
                     selectedPlatforms={selectedPlatforms}
                     onReply={(message) => setReplyingTo(message)}
+                    onMentionUser={handleMentionUser}
                     channelName={selectedTwitchChannelName}
                     channelDisplayName={selectedTwitchChannelDisplayName}
                     streamTitle={streamTitle}
@@ -826,6 +841,7 @@ export default function ChatApp(props: ChatAppStateProps) {
                   />
                 </div>
                 <MessageInput
+                  ref={messageInputRef}
                   onSendMessage={handleSendMessage}
                   isLoading={isLoading}
                   isConnected={{ twitch: twitchConnected }}

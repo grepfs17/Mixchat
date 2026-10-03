@@ -10,6 +10,7 @@ interface UseInsertAtCursorReturn {
   insertWithPrefix: (name: string, prefix?: string) => void;
   insertAtPosition: (before: string, text: string, after?: string) => void;
   replaceCurrentWord: (text: string) => void;
+  insertMention: (username: string) => void;
 }
 
 export function useInsertAtCursor({
@@ -67,5 +68,26 @@ export function useInsertAtCursor({
     [message, setMessage, inputRef, focusInput],
   );
 
-  return { insertWithPrefix, insertAtPosition, replaceCurrentWord };
+  const insertMention = useCallback(
+    (username: string) => {
+      if (!inputRef.current) return;
+      const name = username.replace(/^@/, "");
+      if (!name) return;
+      const mention = `@${name}`;
+      const trimmed = message.replace(/^\s+/, "");
+      const alreadyMentioned =
+        trimmed.toLowerCase() === mention.toLowerCase() ||
+        trimmed.toLowerCase().startsWith(`${mention.toLowerCase()} `);
+      if (alreadyMentioned) {
+        focusInput(message.length);
+        return;
+      }
+      const newVal = trimmed ? `${mention} ${message}` : `${mention} `;
+      setMessage(newVal);
+      focusInput(newVal.length);
+    },
+    [message, setMessage, inputRef, focusInput],
+  );
+
+  return { insertWithPrefix, insertAtPosition, replaceCurrentWord, insertMention };
 }

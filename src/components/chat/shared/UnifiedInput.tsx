@@ -3,6 +3,8 @@ import React, {
   useRef,
   useEffect,
   useCallback,
+  forwardRef,
+  useImperativeHandle,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -61,25 +63,32 @@ interface UnifiedInputProps {
 
 const EMPTY_YT_MSG_ARRAY: YTMessage[] = [];
 
-export default function UnifiedInput({
-  onSendMessage,
-  isLoading,
-  replyingTo,
-  onCancelReply,
-  chatMessages = EMPTY_YT_MSG_ARRAY as any,
-  currentUsername = "",
-  onInputFocus,
-  slowModeWaitTime = null,
-  followerModeMinutes = null,
-  isFollowing = null,
-  channelName = "",
-  youtubeVideoId = null,
-  ytChatMessages = EMPTY_YT_MSG_ARRAY,
-  onOptimisticYoutube,
-  onOptimisticYoutubeFailed,
-  youtubeAvailable = false,
-  emoteAutocompleteMode = "default",
-}: UnifiedInputProps) {
+export interface UnifiedInputHandle {
+  insertMention: (username: string) => void;
+}
+
+const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
+  function UnifiedInput({
+    onSendMessage,
+    isLoading,
+    replyingTo,
+    onCancelReply,
+    chatMessages = EMPTY_YT_MSG_ARRAY as any,
+    currentUsername = "",
+    onInputFocus,
+    slowModeWaitTime = null,
+    followerModeMinutes = null,
+    isFollowing = null,
+    channelName = "",
+    youtubeVideoId = null,
+    ytChatMessages = EMPTY_YT_MSG_ARRAY,
+    onOptimisticYoutube,
+    onOptimisticYoutubeFailed,
+    youtubeAvailable = false,
+    emoteAutocompleteMode = "default",
+  }: UnifiedInputProps,
+  ref: React.ForwardedRef<UnifiedInputHandle>,
+) {
   const { isModerator } = useModerationContext();
   const [sendTarget, setSendTarget] = useState<SendTarget>("twitch");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +160,12 @@ export default function UnifiedInput({
     slowModeWaitTime: (sendTarget === "twitch" || sendTarget === "both") ? slowModeWaitTime : null,
     onSend,
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({ insertMention: core.insertMention }),
+    [core.insertMention],
+  );
 
   // Reset send target when YouTube becomes unavailable
   useEffect(() => {
@@ -495,4 +510,7 @@ export default function UnifiedInput({
         )}
     </div>
   );
-}
+  },
+);
+
+export default UnifiedInput;
