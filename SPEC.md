@@ -33,9 +33,12 @@ mixchat/
 │   │   │   ├── unified/     # Unified chat (merged Twitch+YouTube)
 │   │   │   ├── display/     # Display-mode chat components
 │   │   │   ├── ChatApp.tsx  # Central chat orchestrator component
+│   │   │   ├── ChatAppChrome.tsx  # Chat banners + streamer tool chrome
+│   │   │   ├── ChatAppContent.tsx # Split/unified chat layout branches
 │   │   │   ├── SplitLayout.tsx
 │   │   │   └── ThemeMascots.tsx
 │   │   ├── dev/             # Dev-only components (chat styling gallery)
+│   │   ├── wheel/           # Wheel Spin tool (canvas wheel, options, history, manager)
 │   │   ├── AppContainer.tsx # Root app component (layout, sidebar, auth, grid)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
@@ -60,6 +63,7 @@ mixchat/
 │   │   ├── songQueue/       # Song queue system (server+client: types, IDB, API, extraction)
 │   │   ├── musicPlayer/     # Music player (client-side IndexedDB)
 │   │   ├── streamerTools/   # Giveaways, history, chat helpers, past playlists
+│   │   ├── wheel/           # Wheel Spin (types, client API, canvas draw, IDB owner tokens)
 │   │   ├── settings/        # Settings types
 │   │   ├── themes.ts        # Chat themes (CSS variable definitions)
 │   │   ├── types.ts         # Core types (TwitchMessage, PlatformSession, ChatTheme, etc.)
@@ -71,14 +75,21 @@ mixchat/
 │   ├── server/              # Server-side state stores
 │   │   ├── songQueueStore.ts   # In-memory song queue storage
 │   │   ├── songQueueConfig.ts  # Song queue configuration (rate limits, etc.)
-│   │   └── songQueueApi.ts     # Song queue API route helpers
+│   │   ├── songQueueApi.ts     # Song queue API route helpers
+│   │   ├── wheelStore.ts       # Wheel Spin JSON file store (create/update/delete/public read)
+│   │   ├── wheelConfig.ts      # Wheel store base directory resolution
+│   │   ├── wheelApi.ts         # Wheel API route helpers (json, owner token, channel parsing)
+│   │   ├── wheelAuth.ts        # Server-verified channel ownership (Twitch/YouTube cookie identity)
+│   │   └── providerTokens.ts   # Refresh provider access tokens from httpOnly refresh cookies
 │   ├── pages/               # Astro pages + API routes
 │   │   ├── index.astro      # Main app page
 │   │   ├── channel/[name].astro  # Direct channel link page
 │   │   ├── s/[sessionId].astro   # Embed page (stripped-down chat)
+│   │   ├── wheel/index.astro     # Wheel Spin manager (opens from streamer tools in a new tab)
+│   │   ├── wheel/[wheelId].astro # Shared/public wheel page
 │   │   ├── dev/chat-preview.astro # Dev-only chat styling gallery (blocked in prod by middleware)
 │   │   ├── auth/            # OAuth callback pages (twitch, youtube)
-│   │   └── api/             # API endpoints (song-queue, youtube-proxy, moderation, etc.)
+│   │   └── api/             # API endpoints (song-queue, wheel, youtube-proxy, moderation, etc.)
 │   ├── styles/              # CSS stylesheets (theme system, component styles)
 │   ├── contexts/            # React contexts (ModerationContext)
 │   └── client/              # Client-side entry points (songQueuePublic)
@@ -174,6 +185,17 @@ mixchat/
 - **Per-stream scope**: Stats cover the current broadcast only, bounded below by `streamStartedAt` from `useStreamInfo` (plumbed through `useChatAppState` → `ChatApp` → `ChatDisplay`). Live folding ignores pre-stream messages, and the backfill reads IndexedDB with `getAllChannelHistory(channel, { since: streamStart })`. When the channel is not live there is no stream start, so stats fall back to the current session (non-preloaded messages only). The 5-day IndexedDB retention is unchanged; only the stats scope is limited.
 - **Time window**: A filter bar selects `Stream` (default, the whole current stream), `30 min`, `5 min`, or `2 min`. `buildChatStats(store, limit, window, notBefore)` rebuilds the whole result against `max(notBefore, window cutoff)` (repeated entries need count ≥ 2 inside it; messages, chatters and mods are counted inside it too). Relative windows are refreshed every 15s while the overlay is open so they age even when chat is idle. The overlay header and footer state which scope is shown ("This stream · since HH:MM" or "This session").
 - **Rendering**: `src/components/chat/shared/ChatStatsOverlay.tsx` (styles in `src/styles/chat/ChatStatsOverlay.css`) shows a time-window filter bar, then Chatters and Messages summary cards on one row, followed by an always-expanded Mods section listing the moderator users. The collapsed-by-default "Most repeated messages" section expands the top-50 repeated messages (count ≥ 2), each listing its users. Both lists have a "Copy names" action. Repeated-message counts can be cleared per entry (refresh icon on each row) or all at once via a "reset all counters" button on the section header, which requires a second confirming click. Resetting entries leaves the Chatters/Messages/Mods stats intact.
+
+### 13. Wheel Spin (streamer tool)
+
+- **Entry point**: The "Wheel Spin" item in the streamer tools list (`src/components/chat/shared/StreamerToolsModal.tsx`). Unlike the in-modal tools it opens in a **new browser tab** at `/wheel?channel=<channelKey>`; the tool only appears on the streamer's own channel (`showModTools`).
+- **Page**: `src/pages/wheel/index.astro` (manager) and `src/pages/wheel/[wheelId].astro` (shared/public view) both render `src/components/wheel/WheelApp.tsx` (`client:only="react"`). Styles live in `src/styles/wheel.css` and use the app theme tokens (`vars.css` / `themes.css`); the stored chat theme is applied on mount.
+- **Canvas wheel**: `src/lib/wheel/draw.ts` (pure) renders the slices with the app accent palette; `src/components/wheel/WheelStage.tsx` owns rotation, the 8s CSS spin transition, the spin/win sounds (`public/wheel/wheel-effect.mp3`, `public/wheel/win-effect.mp3`), and derives the winner from the final angle. The option list is snapshotted at spin start (and editing controls are disabled while spinning) so the drawn slices always agree with the announced winner.
+- **Data model**: `WheelRecord` (id, name, options[], channelName/channelPlatform, `ownerTokenHash`, timestamps, `isPublic`, `version`) in `src/lib/wheel/types.ts`. Options are sanitized (trim, dedupe case-insensitively, capped at `MAX_WHEEL_OPTIONS`).
+- **Persistence**: One JSON file per wheel at `{baseDir}/{wheelId}.json` via `src/server/wheelStore.ts` (atomic temp-file + rename, per-wheel in-process mutex). Base dir resolves from `MIXCHAT_WHEEL_DIR`, else `<cwd>/data/wheels` (`src/server/wheelConfig.ts`). Public reads strip `ownerTokenHash`.
+- **API**: `GET/POST /api/wheel` (list by channel / create) and `GET/PATCH/DELETE /api/wheel/[wheelId]` (public-or-owner read; owner-token **or** channel-trust mutations). `POST` with `X-HTTP-Method-Override: DELETE` is supported for proxies. Helpers in `src/server/wheelApi.ts`; rate-limited via `src/lib/rateLimit.ts`.
+- **Authorization**: A `channelKey` is only a claim. The channel-trust path (list, create, channel read, channel mutate/delete) additionally requires a server-verified identity from the httpOnly provider cookie — `src/server/wheelAuth.ts` resolves the Twitch login (`/helix/users`) or YouTube channel id (`channels.list?mine=true`) and compares it to the claimed channel. When the access-token cookie is missing or rejected, it mints a new one from the refresh-token cookie via `src/server/providerTokens.ts` (the same refresh used by `/api/refresh-token`) and retries, so the standalone `/wheel` page self-heals expired sessions. Verified identities are cached briefly; failed refreshes are cooled down. Owner tokens (IndexedDB, `src/lib/wheel/tokenStore.ts`) bypass the provider check but never grant access to another channel's wheel. Provider lookup failures fail closed (401/403).
+- **CRUD & sharing**: The manager can create, rename, edit options, delete and toggle `isPublic`. Sharing copies `${origin}/wheel/<id>`; anyone can open a public wheel to spin it, while editing requires the owner token or a verified matching channel identity. Winner history is per-wheel in localStorage (`src/lib/wheel/history.ts`).
 
 ## Project Conventions
 

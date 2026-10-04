@@ -57,6 +57,7 @@ export interface UseModerationReturn {
   ) => Promise<void>;
   handleUntimeout: (userName: string) => Promise<void>;
   handleWarn: (userName: string) => Promise<void>;
+  handleShoutout: (userName: string) => Promise<void>;
   handlePinMessage: (messageId: string) => Promise<void>;
   handleCancelRaid: () => Promise<void>;
   handleOwnBadgesLoaded: (
@@ -539,6 +540,36 @@ export function useModeration({
     [selectedTwitchChannel, twitchSession, notificationIdRef, setNotification],
   );
 
+  const handleShoutout = useCallback(
+    async (userName: string) => {
+      if (!selectedTwitchChannel || !twitchSession) return;
+      const target = userName.replace(/^@/, "").trim();
+      if (!target) return;
+      try {
+        await sendShoutout(
+          selectedTwitchChannel,
+          target,
+          twitchSession.userId,
+        );
+        notificationIdRef.current += 1;
+        setNotification({
+          message: `Shoutout sent to ${target}!`,
+          type: "success",
+          id: notificationIdRef.current,
+        });
+      } catch (err: any) {
+        console.error("Failed to send shoutout:", err);
+        notificationIdRef.current += 1;
+        setNotification({
+          message: err.message || "Failed to send shoutout",
+          type: "error",
+          id: notificationIdRef.current,
+        });
+      }
+    },
+    [selectedTwitchChannel, twitchSession, notificationIdRef, setNotification],
+  );
+
   const handlePinMessage = useCallback(
     async (messageId: string) => {
       if (!twitchSession || !selectedTwitchChannel) return;
@@ -647,6 +678,7 @@ export function useModeration({
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleShoutout,
     handlePinMessage,
     handleCancelRaid,
     handleOwnBadgesLoaded,

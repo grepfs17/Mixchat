@@ -22,6 +22,7 @@ export interface ModerationContextValue {
   ) => void;
   onUntimeoutUser?: (userName: string) => void;
   onWarnUser?: (userName: string) => void;
+  onShoutoutUser?: (userName: string) => void;
   onPinMessage?: (messageId: string) => void;
   onDeleteYouTubeMessage?: (messageId: string) => void;
   onBanYouTubeUser?: (channelId: string, displayName?: string) => void;

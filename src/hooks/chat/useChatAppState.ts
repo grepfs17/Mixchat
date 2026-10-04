@@ -210,6 +210,7 @@ export function useChatAppState({
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleShoutout,
     handlePinMessage,
     handleCancelRaid,
     handleOwnBadgesLoaded,
@@ -782,6 +783,7 @@ export function useChatAppState({
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleShoutout,
     handlePinMessage,
     handleCancelRaid,
     handleUpdateTitle,
@@ -801,3 +803,5 @@ export function useChatAppState({
     ignoredUsers,
   };
 }
+
+export type ChatAppState = ReturnType<typeof useChatAppState>;

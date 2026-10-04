@@ -1,63 +1,32 @@
-import ChatDisplay from "./display";
 import MobileTouchHintModal from "./shared/MobileTouchHintModal";
-import UnifiedInput, {
-  type UnifiedInputHandle,
-} from "./shared/UnifiedInput";
-import MessageInput, {
-  type MessageInputHandle,
-} from "./shared/MessageInput";
-import Notification from "./shared/Notification";
-import YouTubeChat from "./shared/YouTubeChat";
-import UnifiedChat from "./unified";
-import RaidNotification from "./shared/RaidNotification";
-import HypeTrainBanner from "./shared/HypeTrainBanner";
-import PollBanner from "./shared/PollBanner";
-import PredictionBanner from "./shared/PredictionBanner";
-import CelebrationBanner from "./shared/CelebrationBanner";
-import PinnedChatBanner from "./shared/PinnedChatBanner";
+import type { UnifiedInputHandle } from "./shared/UnifiedInput";
+import type { MessageInputHandle } from "./shared/MessageInput";
 import { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
-import SplitLayout from "./SplitLayout";
-import StreamerToolsModal from "./shared/StreamerToolsModal";
+import ChatAppChrome from "./ChatAppChrome";
+import ChatAppContent, { type YtConnectionState } from "./ChatAppContent";
+import ThemeMascots from "./ThemeMascots";
 import {
   useChatAppState,
   type ChatAppStateProps,
 } from "../../hooks/chat/useChatAppState";
-import type { SubscriptionStatus } from "../../hooks/chat/useEventSub";
 import { ModerationContext } from "../../contexts/ModerationContext";
 import type { ModModeTarget } from "../../contexts/ModerationContext";
-import type {
-  ChatFont,
-  ChatTheme,
-  Platform,
-  TwitchMessage,
-} from "../../lib/types";
-import { MAX_DISPLAYED_MESSAGES } from "../../lib/types";
+import type { ChatTheme, Platform, TwitchMessage } from "../../lib/types";
 import type { YTMessage } from "./unified/types";
 import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
-import GiveawayIndicator from "./shared/GiveawayIndicator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { SongQueueItem } from "../../lib/songQueue/types";
-import SongQueuePanel from "./shared/SongQueuePanel";
-import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
-import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import { sendHelixMessage } from "../../lib/twitch";
 import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
-import ThemeMascots from "./ThemeMascots";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-
-interface YtConnectionState {
-  connected: boolean;
-  loading: boolean;
-  error: string | null;
-  reconnecting: boolean;
-}
 
 export default function ChatApp(props: ChatAppStateProps) {
   const currentModModeTarget: ModModeTarget =
     props.modModeTargets?.[props.selectedTwitchChannel ?? ""] ?? "off";
 
+  const chatState = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
   const {
     messages,
     isLoading,
@@ -110,6 +79,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     handleTimeout,
     handleUntimeout,
     handleWarn,
+    handleShoutout,
     handlePinMessage,
     handleCancelRaid,
     handleUpdateTitle,
@@ -128,7 +98,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     ignoredUsers,
     subscriptionStatuses,
     redemptionPubSubStatus,
-  } = useChatAppState({ ...props, modModeTarget: currentModModeTarget });
+  } = chatState;
 
   const [ytConnectionState, setYtConnectionState] = useState<YtConnectionState>(
     { connected: false, loading: true, error: null, reconnecting: false },
@@ -145,48 +115,32 @@ export default function ChatApp(props: ChatAppStateProps) {
   }, []);
 
   const {
-    twitchConnected,
     selectedTwitchChannel,
     selectedTwitchChannelName,
-    selectedTwitchChannelDisplayName,
     twitchSession,
     linkedYoutubeUrl,
     youtubeSession,
-    unifyChatEnabled,
-    useYoutubeEmbed = true,
-    fontSize = 14,
-    chatFont = "inter" as ChatFont,
-    splitChatEnabled = false,
-    showDeletedMessages = true,
-    maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
-    hideViewerCount = false,
     compactActions = false,
     keepModActionsVisible = false,
     modActionsFirst = false,
     doubleClickConfirmModActions = false,
     chatTheme = "default" as ChatTheme,
-    viewerCount,
-    onToggleSidebar,
-    sidebarVisible = true,
-    showStreamEmbed = true,
-    onToggleStreamEmbed,
-    onFollowRaid,
     streamerToolsEnabled = false,
     isOnOwnChannel = false,
-    renderThirdPartyEmotesOnYoutube = false,
-    emoteAutocompleteMode = "default",
-  } = props;    // Reset YouTube connection when URL/video changes — intentional
-    // eslint-disable-next-line no-adjust-state-on-prop-change
-    useEffect(() => {
-      if (!linkedYoutubeUrl || !youtubeVideoId) {
-        setYtConnectionState({
-          connected: false,
-          loading: false,
-          error: null,
-          reconnecting: false,
-        });
-      }
-    }, [linkedYoutubeUrl, youtubeVideoId]);
+  } = props;
+
+  // Reset YouTube connection when URL/video changes — intentional
+  // eslint-disable-next-line no-adjust-state-on-prop-change
+  useEffect(() => {
+    if (!linkedYoutubeUrl || !youtubeVideoId) {
+      setYtConnectionState({
+        connected: false,
+        loading: false,
+        error: null,
+        reconnecting: false,
+      });
+    }
+  }, [linkedYoutubeUrl, youtubeVideoId]);
 
   const showNotification = useCallback(
     (message: string, type: "success" | "error" | "info") => {
@@ -211,20 +165,23 @@ export default function ChatApp(props: ChatAppStateProps) {
   >(null);
   const showModTools = streamerToolsEnabled && isOnOwnChannel;
 
-  const openStreamerTools = (
-    initialTool:
-      | "giveaway"
-      | "song-queue"
-      | "music-player"
-      | null = null,
-  ) => {
-    setStreamerToolsInitialTool(initialTool);
-    setStreamerToolsOpen(true);
-  };
-  const closeStreamerTools = () => {
+  const openStreamerTools = useCallback(
+    (
+      initialTool:
+        | "giveaway"
+        | "song-queue"
+        | "music-player"
+        | null = null,
+    ) => {
+      setStreamerToolsInitialTool(initialTool);
+      setStreamerToolsOpen(true);
+    },
+    [],
+  );
+  const closeStreamerTools = useCallback(() => {
     setStreamerToolsOpen(false);
     setStreamerToolsInitialTool(null);
-  };
+  }, []);
 
   const handleAnnounceWinner = useCallback(
     async (winner: GiveawayEntry, message: string) => {
@@ -253,7 +210,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         );
       }
     },
-    [handleSendMessage, youtubeVideoId],
+    [handleSendMessage, youtubeVideoId, showNotification],
   );
 
   // Poll the Twitch GQL pinnedChatHighlight for the currently-viewed Twitch
@@ -469,6 +426,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       onTimeoutUser: handleTimeout,
       onUntimeoutUser: handleUntimeout,
       onWarnUser: handleWarn,
+      onShoutoutUser: handleShoutout,
       onPinMessage: handlePinMessage,
       onDeleteYouTubeMessage: handleYtDelete,
       onBanYouTubeUser: handleYtBan,
@@ -491,6 +449,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       handleTimeout,
       handleUntimeout,
       handleWarn,
+      handleShoutout,
       handlePinMessage,
       handleYtDelete,
       handleYtBan,
@@ -510,383 +469,42 @@ export default function ChatApp(props: ChatAppStateProps) {
           position: "relative",
         }}
       >
-        {notification && (
-          <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={() => setNotification(null)}
-          />
-        )}
+        <ChatAppChrome
+          state={chatState}
+          appProps={props}
+          giveaway={giveaway}
+          songQueue={songQueue}
+          musicPlayer={musicPlayer}
+          showModTools={showModTools}
+          showMusicBar={showMusicBar}
+          streamerToolsOpen={streamerToolsOpen}
+          streamerToolsInitialTool={streamerToolsInitialTool}
+          pinned={pinned}
+          showPinnedBanner={showPinnedBanner}
+          onOpenStreamerTools={openStreamerTools}
+          onCloseStreamerTools={closeStreamerTools}
+          onAnnounceWinner={handleAnnounceWinner}
+          youtubeConnected={!!youtubeSession}
+          publicOrigin={
+            typeof window !== "undefined" ? window.location.origin : ""
+          }
+          channelKey={songChannelKey}
+        />
 
-        {/* Outgoing raid notification */}
-        {pendingRaid && (
-          <RaidNotification
-            raid={pendingRaid}
-            isInitiator={isRaidInitiator}
-            broadcasterChannel={selectedTwitchChannelName}
-            onRaidNow={() => {
-              onFollowRaid?.(pendingRaid.targetLogin);
-              setPendingRaid(null);
-              setIsRaidInitiator(false);
-            }}
-            onCancelRaid={handleCancelRaid}
-            onFollowRaid={() => {
-              onFollowRaid?.(pendingRaid.targetLogin);
-              setPendingRaid(null);
-            }}
-            onDismiss={() => setPendingRaid(null)}
-          />
-        )}
+        <ChatAppContent
+          state={chatState}
+          appProps={props}
+          ytConnectionState={ytConnectionState}
+          onYtConnectionChange={handleYtConnectionChange}
+          messageInputRef={messageInputRef}
+          unifiedInputRef={unifiedInputRef}
+          onMentionUser={handleMentionUser}
+          onOpenModTools={openStreamerTools}
+          onNotification={showNotification}
+          showModTools={showModTools}
+        />
 
-        {/* Streamer tool bars (music player, song queue, giveaway) stay above
-         * event banners (hype train, poll, prediction, celebration, pinned
-         * chat) so they are always visible while the streamer is chatting. */}
-        {showModTools && showMusicBar && (
-          <MusicPlayerMinimizedBar
-            player={musicPlayer}
-            hidden={streamerToolsOpen}
-            onOpen={() => openStreamerTools("music-player")}
-          />
-        )}
-
-        {showModTools && songQueue.phase === "open" && (
-          <SongQueueMinimizedBar
-            queue={songQueue}
-            hidden={streamerToolsOpen}
-            onOpen={() => openStreamerTools("song-queue")}
-            onEnd={async () => {
-              await songQueue.end();
-            }}
-          />
-        )}
-
-        {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
-          <GiveawayIndicator
-            giveaway={giveaway}
-            onOpen={() => openStreamerTools("giveaway")}
-          />
-        )}
-
-        {streamerToolsOpen && (
-          <StreamerToolsModal
-            giveaway={giveaway}
-            songQueue={songQueue}
-            musicPlayer={musicPlayer}
-            onAnnounce={handleAnnounceWinner}
-            onMinimize={closeStreamerTools}
-            onClose={closeStreamerTools}
-            initialTool={streamerToolsInitialTool}
-            youtubeConnected={!!youtubeSession}
-            publicOrigin={
-              typeof window !== "undefined" ? window.location.origin : ""
-            }
-            channelKey={songChannelKey}
-            streamGameId={
-              // Only expose the category id when on own channel (privacy).
-              isOnOwnChannel ? streamGameId : ""
-            }
-            streamGameName={streamGameName}
-            onSearchCategories={handleSearchCategories}
-          />
-        )}
-
-        {/* Hype Train notification */}
-        {hypeTrain && (
-          <HypeTrainBanner
-            hypeTrain={hypeTrain}
-            onDismiss={() => setHypeTrain(null)}
-          />
-        )}
-
-        {/* Poll notification */}
-        {poll && <PollBanner poll={poll} onDismiss={() => setPoll(null)} />}
-
-        {/* Prediction notification */}
-        {prediction && (
-          <PredictionBanner
-            prediction={prediction}
-            onDismiss={() => setPrediction(null)}
-          />
-        )}
-
-        {/* Celebration notification */}
-        {celebration && (
-          <CelebrationBanner
-            celebration={celebration}
-            onDismiss={() => setCelebration(null)}
-          />
-        )}
-
-        {/* Twitch pinned chat message — persists until the streamer unpins. */}
-        {pinnedHighlight && showPinnedBanner && (
-          <PinnedChatBanner
-            highlight={pinnedHighlight}
-            onDismiss={pinned.dismiss}
-          />
-        )}
-
-        {/* UNIFIED CHAT MODE */}
-        {unifyChatEnabled ? (
-          <>
-            {/* Hidden YouTubeChat to keep polling YouTube messages */}
-            {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && (
-              <div style={{ display: "none" }} aria-hidden="true">
-                <YouTubeChat
-                  videoId={youtubeVideoId}
-                  channel={selectedTwitchChannelName}
-                  onMessages={handleYtMessages}
-                  onMessageDeleted={markYtMessageDeleted}
-                  onConnectionChange={handleYtConnectionChange}
-                  fontSize={fontSize}
-                  chatFont={chatFont}
-                  splitChatEnabled={splitChatEnabled}
-                  showDeletedMessages={true}
-                  renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
-                  enableLazyHistory={false}
-                />
-              </div>
-            )}
-
-            {/* Twitch ChatDisplay header + unified messages body */}
-            <div
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-              }}
-            >
-              <ChatDisplay
-                messages={messages}
-                isLoading={isLoading}
-                selectedPlatforms={selectedPlatforms}
-                onReply={(message) => setReplyingTo(message)}
-                onMentionUser={handleMentionUser}
-                channelName={selectedTwitchChannelName}
-                channelDisplayName={selectedTwitchChannelDisplayName}
-                streamTitle={streamTitle}
-                streamGameName={streamGameName}
-                isStreamLive={streamIsLive}
-                streamUptime={streamUptime}
-
-                streamStartedAt={streamStartedAt}
-                viewerCount={viewerCount}
-                hideViewerCount={hideViewerCount}
-                onRefreshEmotes={handleRefreshEmotes}
-                isRefreshingEmotes={isRefreshingEmotes}
-                onToggleSidebar={onToggleSidebar}
-                sidebarVisible={sidebarVisible}
-                onCopyMessage={() => {
-                  showNotification("Message copied!", "success");
-                }}
-                showStreamEmbed={showStreamEmbed}
-                onToggleStreamEmbed={onToggleStreamEmbed}
-                currentUserDisplayName={twitchSession?.displayName}
-                fontSize={fontSize}
-                chatFont={chatFont}
-                splitChatEnabled={splitChatEnabled}
-                onUpdateTitle={handleUpdateTitle}
-                onUpdateCategory={handleUpdateCategory}
-                onSearchCategories={handleSearchCategories}
-                ignoredUsers={ignoredUsers}
-                ytMessages={ytMessages}
-                showModTools={showModTools}
-                onOpenModTools={() => openStreamerTools()}
-                subscriptionStatuses={subscriptionStatuses}
-                redemptionPubSubStatus={redemptionPubSubStatus}
-                isOnOwnChannel={isOnOwnChannel}
-                maxDisplayedMessages={maxDisplayedMessages}
-                /* Override messages area with UnifiedChat */
-                unifiedChatSlot={
-                  <UnifiedChat
-                    ref={unifiedChatRef}
-                    twitchMessages={messages}
-                    channelName={selectedTwitchChannelName || ""}
-                    ytMessages={[
-                      ...ytMessages,
-                      ...ytOptimisticMessages.filter((opt) => {
-                        const norm = (s: string) =>
-                          s.normalize("NFKC").trim().toLowerCase();
-                        const optText = norm(getYtMessageText(opt));
-                        const optAuthor = norm(opt.author);
-
-                        return !ytMessages.some((m) => {
-                          const mText = norm(getYtMessageText(m));
-                          if (opt.authorChannelId && m.authorChannelId) {
-                            return (
-                              m.authorChannelId === opt.authorChannelId &&
-                              mText === optText
-                            );
-                          }
-                          return (
-                            norm(m.author) === optAuthor && mText === optText
-                          );
-                        });
-                      }),
-                    ]}
-                    ytConnectionState={
-                      linkedYoutubeUrl ? ytConnectionState : undefined
-                    }
-                    ytLoading={ytLoading}
-                    ytError={ytError}
-                    twitchConnected={twitchConnected}
-                    onReply={setReplyingTo}
-                    onMentionUser={handleMentionUser}
-                    onCopyMessage={() => {
-                      showNotification("Message copied!", "success");
-                    }}
-                    currentUserDisplayName={twitchSession?.displayName}
-                    fontSize={fontSize}
-                    chatFont={chatFont}
-                    splitChatEnabled={splitChatEnabled}
-                    ignoredUsers={ignoredUsers}
-                    showDeletedMessages={showDeletedMessages}
-                    maxDisplayedMessages={maxDisplayedMessages}
-                    renderThirdPartyEmotesOnYoutube={
-                      renderThirdPartyEmotesOnYoutube
-                    }
-                  />
-                }
-              />
-            </div>
-
-            {/* Unified input */}
-            <UnifiedInput
-              ref={unifiedInputRef}
-              onSendMessage={handleSendMessage}
-              isLoading={isLoading}
-              replyingTo={replyingTo}
-              onCancelReply={() => setReplyingTo(undefined)}
-              chatMessages={messages}
-              currentUsername={twitchSession?.username || ""}
-              onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
-              slowModeWaitTime={slowModeWaitTime}
-              followerModeMinutes={followerModeMinutes}
-              isFollowing={isFollowingChannelState}
-              channelName={selectedTwitchChannelName}
-              youtubeVideoId={youtubeVideoId}
-              ytChatMessages={ytMessages}
-              onOptimisticYoutube={handleYtOptimisticMessage}
-              onOptimisticYoutubeFailed={handleYtOptimisticFailed}
-              youtubeAvailable={
-                !!(
-                  linkedYoutubeUrl &&
-                  youtubeVideoId &&
-                  youtubeSession
-                )
-              }
-              emoteAutocompleteMode={emoteAutocompleteMode}
-            />
-          </>
-        ) : (
-          <SplitLayout
-            chatSlot={
-              <div
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: 0,
-                  }}
-                >
-                  <ChatDisplay
-                    ref={chatDisplayRef}
-                    messages={messages}
-                    isLoading={isLoading}
-                    selectedPlatforms={selectedPlatforms}
-                    onReply={(message) => setReplyingTo(message)}
-                    onMentionUser={handleMentionUser}
-                    channelName={selectedTwitchChannelName}
-                    channelDisplayName={selectedTwitchChannelDisplayName}
-                    streamTitle={streamTitle}
-                    streamGameName={streamGameName}
-                    isStreamLive={streamIsLive}
-                    streamUptime={streamUptime}
-
-                    streamStartedAt={streamStartedAt}
-                    viewerCount={viewerCount}
-                    hideViewerCount={hideViewerCount}
-                    onRefreshEmotes={handleRefreshEmotes}
-                    isRefreshingEmotes={isRefreshingEmotes}
-                    onToggleSidebar={onToggleSidebar}
-                    sidebarVisible={sidebarVisible}
-                    onCopyMessage={() =>
-                      showNotification("Message copied!", "success")
-                    }
-                    showStreamEmbed={showStreamEmbed}
-                    onToggleStreamEmbed={onToggleStreamEmbed}
-                    currentUserDisplayName={twitchSession?.displayName}
-                    fontSize={fontSize}
-                    chatFont={chatFont}
-                    splitChatEnabled={splitChatEnabled}
-                    onUpdateTitle={handleUpdateTitle}
-                    onUpdateCategory={handleUpdateCategory}
-                    onSearchCategories={handleSearchCategories}
-                    ignoredUsers={ignoredUsers}
-                    ytMessages={ytMessages}
-                    showModTools={showModTools}
-                    onOpenModTools={() => openStreamerTools()}
-                    subscriptionStatuses={subscriptionStatuses}
-                    redemptionPubSubStatus={redemptionPubSubStatus}
-                    isOnOwnChannel={isOnOwnChannel}
-                    maxDisplayedMessages={maxDisplayedMessages}
-                  />
-                </div>
-                <MessageInput
-                  ref={messageInputRef}
-                  onSendMessage={handleSendMessage}
-                  isLoading={isLoading}
-                  isConnected={{ twitch: twitchConnected }}
-                  replyingTo={replyingTo}
-                  onCancelReply={() => setReplyingTo(undefined)}
-                  chatMessages={messages}
-                  currentUsername={twitchSession?.username || ""}
-                  onInputFocus={() => chatDisplayRef.current?.scrollToBottom()}
-                  slowModeWaitTime={slowModeWaitTime}
-                  followerModeMinutes={followerModeMinutes}
-                  isFollowing={isFollowingChannelState}
-                  channelName={selectedTwitchChannelName}
-                  emoteAutocompleteMode={emoteAutocompleteMode}
-                />
-              </div>
-            }
-            linkedYoutubeUrl={linkedYoutubeUrl}
-            showYoutubeSection={showYoutubeSection}
-            chatSplitRatio={chatSplitRatio}
-            isDraggingChatSplit={isDraggingChatSplit}
-            onSetIsDraggingChatSplit={setIsDraggingChatSplit}
-            youtubeVideoId={youtubeVideoId}
-            useYoutubeEmbed={useYoutubeEmbed}
-            ytMessages={ytMessages}
-            ytOptimisticMessages={ytOptimisticMessages}
-            ytLoading={ytLoading}
-            ytError={ytError}
-            onSetManualVideoId={setManualVideoId}
-            onSetShowYoutubeSection={setShowYoutubeSection}
-            fontSize={fontSize}
-            chatFont={chatFont}
-            splitChatEnabled={splitChatEnabled}
-            showDeletedMessages={showDeletedMessages}
-            onYtMessages={handleYtMessages}
-            youtubeSession={youtubeSession}
-            onOptimisticMessage={handleYtOptimisticMessage}
-            onOptimisticFailed={handleYtOptimisticFailed}
-            onShowError={(msg) => showNotification(msg, "error")}
-            onYtConnectionChange={handleYtConnectionChange}
-            channelName={selectedTwitchChannelName}
-            renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-          />
-        )}
-
-        <MobileTouchHintModal twitchConnected={twitchConnected} />
+        <MobileTouchHintModal twitchConnected={props.twitchConnected} />
         <ThemeMascots chatTheme={chatTheme} />
       </div>
     </ModerationContext.Provider>

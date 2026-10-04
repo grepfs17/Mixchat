@@ -1,7 +1,10 @@
 import { createPortal } from "react-dom";
 import type { TwitchMessage } from "../../../lib/types";
 import type { UnifiedEntry, YTMessage } from "../unified/types";
-import { useModerationContext } from "../../../contexts/ModerationContext";
+import {
+  useModerationContext,
+  type ModerationContextValue,
+} from "../../../contexts/ModerationContext";
 import { isMobileDevice } from "../../../lib/device";
 import { ContextMenuShell } from "./ContextMenuShell";
 
@@ -31,60 +34,55 @@ interface MessageMenuProps {
   onClose: () => void;
 }
 
-export default function MessageMenu({
-  x,
-  y,
-  entry,
-  onReply,
-  onCopy,
-  onViewHistory,
-  onOpenYouTubeTimeoutMenu,
-  onOpenTwitchTimeoutMenu,
-  onClose,
-}: MessageMenuProps) {
-  const {
-    isModerator,
-    modModeActive,
-    compactActions,
-    keepModActionsVisible,
-    isYouTubeModerator,
-    youtubeModModeActive,
-    youtubeOwnChannelId,
-    onDeleteMessage,
-    onTimeoutUser,
-    onBanUser,
-    onWarnUser,
-    onPinMessage,
-    onDeleteYouTubeMessage,
-    onTimeoutYouTubeUser,
-    onBanYouTubeUser,
-  } = useModerationContext();
-  // Normalize entry to a common format for logic
+type MenuItem = {
+  key: string;
+  label: string;
+  title?: string;
+  onClick: () => void;
+};
+type MenuDivider = { key: string; divider: true };
+type MenuEntry = MenuItem | MenuDivider;
+
+interface NormalizedEntry {
+  isTwitch: boolean;
+  isYouTube: boolean;
+  chatMsg: TwitchMessage | null;
+  ytMsg: YTMessage | null;
+  isSystemMessage: boolean | "" | undefined;
+  author: string;
+  authorAvatar?: string;
+}
+
+function normalizeEntry(entry: MessageMenuProps["entry"]): NormalizedEntry {
   const isUnified = "source" in entry;
   const source = isUnified ? entry.source : "twitch";
   const msg = isUnified ? entry.msg : entry;
-
   const isTwitch = source === "twitch";
   const isYouTube = source === "youtube";
-  const isTwitchMessage = isTwitch; // In this app, only twitch uses TwitchMessage directly
   const chatMsg = isTwitch ? (msg as TwitchMessage) : null;
   const ytMsg = isYouTube ? (msg as YTMessage) : null;
 
-  const isSystemMessage =
-    chatMsg?.messageType && chatMsg.messageType !== "chat";
-  const author = chatMsg ? chatMsg.author : ytMsg?.author || "Unknown";
-  const authorAvatar = chatMsg?.authorAvatar || ytMsg?.authorAvatar;
-
-  type MenuItem = {
-    key: string;
-    label: string;
-    title?: string;
-    onClick: () => void;
+  return {
+    isTwitch,
+    isYouTube,
+    chatMsg,
+    ytMsg,
+    isSystemMessage:
+      chatMsg?.messageType && chatMsg.messageType !== "chat",
+    author: chatMsg ? chatMsg.author : ytMsg?.author || "Unknown",
+    authorAvatar: chatMsg?.authorAvatar || ytMsg?.authorAvatar,
   };
-  type MenuDivider = { key: string; divider: true };
-  const items: Array<MenuItem | MenuDivider> = [];
+}
 
-  // Reply (Twitch only for now)
+function buildBaseItems(
+  props: MessageMenuProps,
+  normalized: NormalizedEntry,
+  moderation: ModerationContextValue,
+): MenuItem[] {
+  const { entry, onReply, onCopy, onViewHistory, onClose } = props;
+  const { isTwitch, chatMsg, isSystemMessage, author, authorAvatar } = normalized;
+  const items: MenuItem[] = [];
+
   if (isTwitch && !isSystemMessage && onReply && chatMsg) {
     items.push({
       key: "reply",
@@ -96,7 +94,6 @@ export default function MessageMenu({
     });
   }
 
-  // Copy
   items.push({
     key: "copy",
     label: "Copy message",
@@ -106,7 +103,6 @@ export default function MessageMenu({
     },
   });
 
-  // View History
   if (onViewHistory) {
     items.push({
       key: "history",
@@ -118,9 +114,49 @@ export default function MessageMenu({
     });
   }
 
-  // Twitch moderation
-  const isMobile = isMobileDevice();
-  const twitchModActionsVisibleInline =
+  if (
+    isTwitch &&
+    !isSystemMessage &&
+    moderation.isModerator &&
+    chatMsg &&
+    moderation.onShoutoutUser &&
+    !chatMsg.isCurrentUser &&
+    !chatMsg.badges?.["broadcaster"]
+  ) {
+    items.push({
+      key: "shoutout",
+      label: "Shoutout",
+      title: `Send a shoutout to @${author}`,
+      onClick: () => {
+        moderation.onShoutoutUser?.(author);
+        onClose();
+      },
+    });
+  }
+
+  return items;
+}
+
+function buildTwitchModerationItems(
+  normalized: NormalizedEntry,
+  moderation: ModerationContextValue,
+  props: MessageMenuProps,
+  isMobile: boolean,
+): MenuEntry[] {
+  const { chatMsg, isTwitch, isSystemMessage } = normalized;
+  const {
+    isModerator,
+    modModeActive,
+    compactActions,
+    keepModActionsVisible,
+    onBanUser,
+    onDeleteMessage,
+    onPinMessage,
+    onTimeoutUser,
+    onWarnUser,
+  } = moderation;
+  const items: MenuEntry[] = [];
+  const inlineActionsVisible =
     isTwitch &&
     !isSystemMessage &&
     isModerator &&
@@ -135,26 +171,26 @@ export default function MessageMenu({
     const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
     const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
     const canModerate = !isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser;
-    if (canModerate && !twitchModActionsVisibleInline) {
+    if (canModerate && !inlineActionsVisible) {
       items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
         key: "ban",
         label: "Ban",
         onClick: () => {
           onBanUser?.(chatMsg.userId || "", chatMsg.author);
-          onClose();
+          props.onClose();
         },
       });
       items.push({
         key: "timeout",
         label: "Timeout...",
         onClick: () => {
-          if (onOpenTwitchTimeoutMenu && chatMsg.userId) {
-            onOpenTwitchTimeoutMenu(chatMsg.userId, chatMsg.author);
+          if (props.onOpenTwitchTimeoutMenu && chatMsg.userId) {
+            props.onOpenTwitchTimeoutMenu(chatMsg.userId, chatMsg.author);
           } else {
             onTimeoutUser?.(chatMsg.userId || "", 600, chatMsg.author);
           }
-          onClose();
+          props.onClose();
         },
       });
       items.push({
@@ -162,7 +198,7 @@ export default function MessageMenu({
         label: "Warn",
         onClick: () => {
           onWarnUser?.(chatMsg.author);
-          onClose();
+          props.onClose();
         },
       });
       items.push({
@@ -170,14 +206,14 @@ export default function MessageMenu({
         label: "Delete",
         onClick: () => {
           onDeleteMessage?.(chatMsg.id);
-          onClose();
+          props.onClose();
         },
       });
     }
-    // Pin works on any message (broadcaster, moderator, or the current user
-    // included) and has no inline button, so it always lives here. It needs
-    // a divider only when it is not grouped with the mod action items above.
-    if (!canModerate || twitchModActionsVisibleInline) {
+
+    // Pin works on any message and has no inline button, so it always lives
+    // here. Separate it only when it is not grouped with the mod actions.
+    if (!canModerate || inlineActionsVisible) {
       items.push({ key: "pin-divider", divider: true });
     }
     items.push({
@@ -185,34 +221,46 @@ export default function MessageMenu({
       label: "Pin message",
       onClick: () => {
         onPinMessage?.(chatMsg.id);
-        onClose();
+        props.onClose();
       },
     });
   }
 
-  // YouTube moderation
-  const youtubeModActionsVisibleInline =
-    isYouTube &&
-    ytMsg &&
-    isYouTubeModerator &&
-    youtubeModModeActive &&
-    ytMsg.authorChannelId &&
-    !ytMsg.authorIsModerator &&
-    !ytMsg.authorIsOwner &&
-    !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId) &&
-    (isMobile || !compactActions || keepModActionsVisible);
+  return items;
+}
 
-  if (
+function buildYouTubeModerationItems(
+  normalized: NormalizedEntry,
+  moderation: ModerationContextValue,
+  props: MessageMenuProps,
+  isMobile: boolean,
+): MenuEntry[] {
+  const { isYouTube, ytMsg } = normalized;
+  const {
+    isYouTubeModerator,
+    youtubeModModeActive,
+    youtubeOwnChannelId,
+    compactActions,
+    keepModActionsVisible,
+    onBanYouTubeUser,
+    onDeleteYouTubeMessage,
+    onTimeoutYouTubeUser,
+  } = moderation;
+  const items: MenuEntry[] = [];
+  const canModerate = Boolean(
     isYouTube &&
-    ytMsg &&
-    isYouTubeModerator &&
-    youtubeModModeActive &&
-    ytMsg.authorChannelId &&
-    !ytMsg.authorIsModerator &&
-    !ytMsg.authorIsOwner &&
-    !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId) &&
-    !youtubeModActionsVisibleInline
-  ) {
+      ytMsg &&
+      isYouTubeModerator &&
+      youtubeModModeActive &&
+      ytMsg.authorChannelId &&
+      !ytMsg.authorIsModerator &&
+      !ytMsg.authorIsOwner &&
+      !(youtubeOwnChannelId && ytMsg.authorChannelId === youtubeOwnChannelId),
+  );
+  const inlineActionsVisible =
+    canModerate && (isMobile || !compactActions || keepModActionsVisible);
+
+  if (canModerate && !inlineActionsVisible && ytMsg) {
     items.push({ key: "mod-divider-youtube", divider: true });
     items.push({
       key: "yt-ban",
@@ -220,19 +268,24 @@ export default function MessageMenu({
       title: "Data API only supports per-broadcast bans",
       onClick: () => {
         onBanYouTubeUser?.(ytMsg.authorChannelId!, ytMsg.author);
-        onClose();
+        props.onClose();
       },
     });
     items.push({
       key: "yt-timeout",
       label: "Timeout…",
       onClick: () => {
-        if (onOpenYouTubeTimeoutMenu && ytMsg.authorChannelId) {
-          onOpenYouTubeTimeoutMenu(x, y, ytMsg.authorChannelId, ytMsg.author);
+        if (props.onOpenYouTubeTimeoutMenu && ytMsg.authorChannelId) {
+          props.onOpenYouTubeTimeoutMenu(
+            props.x,
+            props.y,
+            ytMsg.authorChannelId,
+            ytMsg.author,
+          );
         } else {
           onTimeoutYouTubeUser?.(ytMsg.authorChannelId!, 600, ytMsg.author);
         }
-        onClose();
+        props.onClose();
       },
     });
     items.push({
@@ -240,10 +293,78 @@ export default function MessageMenu({
       label: "Delete",
       onClick: () => {
         onDeleteYouTubeMessage?.(ytMsg.id);
-        onClose();
+        props.onClose();
       },
     });
   }
+
+  return items;
+}
+
+export default function MessageMenu({
+  x,
+  y,
+  entry,
+  onReply,
+  onCopy,
+  onViewHistory,
+  onOpenYouTubeTimeoutMenu,
+  onOpenTwitchTimeoutMenu,
+  onClose,
+}: MessageMenuProps) {
+  const moderation = useModerationContext();
+  const normalized = normalizeEntry(entry);
+  const author = normalized.author;
+  const isMobile = isMobileDevice();
+  const items: MenuEntry[] = [
+    ...buildBaseItems(
+      {
+        x,
+        y,
+        entry,
+        onReply,
+        onCopy,
+        onViewHistory,
+        onOpenYouTubeTimeoutMenu,
+        onOpenTwitchTimeoutMenu,
+        onClose,
+      },
+      normalized,
+      moderation,
+    ),
+    ...buildTwitchModerationItems(
+      normalized,
+      moderation,
+      {
+        x,
+        y,
+        entry,
+        onReply,
+        onCopy,
+        onViewHistory,
+        onOpenYouTubeTimeoutMenu,
+        onOpenTwitchTimeoutMenu,
+        onClose,
+      },
+      isMobile,
+    ),
+    ...buildYouTubeModerationItems(
+      normalized,
+      moderation,
+      {
+        x,
+        y,
+        entry,
+        onReply,
+        onCopy,
+        onViewHistory,
+        onOpenYouTubeTimeoutMenu,
+        onOpenTwitchTimeoutMenu,
+        onClose,
+      },
+      isMobile,
+    ),
+  ];
 
   const menuItems = (
     <>

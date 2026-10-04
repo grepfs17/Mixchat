@@ -49,7 +49,7 @@ interface StreamerToolsModalProps {
   ) => Promise<Array<{ id: string; name: string }>>;
 }
 
-type ToolId = "music-player" | "giveaway" | "song-queue";
+type ToolId = "music-player" | "giveaway" | "song-queue" | "wheel";
 
 interface ToolDescriptor {
   id: ToolId;
@@ -73,6 +73,12 @@ const TOOLS: ToolDescriptor[] = [
     id: "song-queue",
     label: "Song Queue",
     description: "Let viewers queue YouTube songs in chat.",
+  },
+  {
+    id: "wheel",
+    label: "Wheel Spin",
+    description:
+      "Spin a wheel to pick a winner. Opens in a new tab; save and share wheels.",
   },
 ];
 
@@ -553,6 +559,16 @@ export default function StreamerToolsModal({
     [activeTool],
   );
 
+  const openWheelTool = useCallback(() => {
+    const origin =
+      publicOrigin ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const query = channelKey
+      ? `?channel=${encodeURIComponent(channelKey)}`
+      : "";
+    window.open(`${origin}/wheel${query}`, "_blank", "noopener,noreferrer");
+  }, [channelKey, publicOrigin]);
+
   return (
     <div
       role="presentation"
@@ -610,9 +626,15 @@ export default function StreamerToolsModal({
                     </div>
                     <button type="button"
                       className="streamer-tools-list-open"
-                      onClick={() => setActiveTool(t.id)}
+                      onClick={() => {
+                        if (t.id === "wheel") {
+                          openWheelTool();
+                          return;
+                        }
+                        setActiveTool(t.id);
+                      }}
                     >
-                      Open
+                      {t.id === "wheel" ? "Open in new tab" : "Open"}
                     </button>
                   </li>
                 ))}
