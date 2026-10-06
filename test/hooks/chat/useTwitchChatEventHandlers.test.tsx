@@ -138,6 +138,19 @@ describe("useTwitchChatEventHandlers — subscription duration", () => {
     );
   });
 
+  it("ignores bogus multi-month values Twitch sends on resubs", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onResub(
+      "chan",
+      "someone",
+      makeSubInfo({ months: 7 }),
+      makeNotice({ "msg-param-multimonth-duration": "14" }),
+    );
+
+    expect(lastMessage().content).toBe("subscribed for 7 months (Tier 1)");
+  });
+
   it("falls back to 1 month when cumulative months is missing", () => {
     const { lastMessage } = renderHandlers();
 

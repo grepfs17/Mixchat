@@ -30,6 +30,8 @@ function formatSubDuration(months: number): string {
   return `${count} ${count === 1 ? "month" : "months"}`;
 }
 
+const MULTI_MONTH_PLANS = new Set([3, 6]);
+
 /**
  * Twitch sends the multi-month ("pay for 3/6 months in advance") purchase
  * length as the undocumented `msg-param-multimonth-duration` tag on sub and
@@ -43,7 +45,10 @@ function parseMultiMonthDuration(msg: UserNotice): number {
 
 function formatSubDetails(plan: string, multiMonthDuration: number): string {
   const details = [formatSubTier(plan)];
-  if (multiMonthDuration > 1) {
+  // Twitch is known to emit bogus multi-month values on resubs (see
+  // twitchdev/issues/1112), so only label the message when it matches a real
+  // plan. This affects nothing but the "in advance" suffix.
+  if (MULTI_MONTH_PLANS.has(multiMonthDuration)) {
     details.push(`${multiMonthDuration} months in advance`);
   }
   return details.join(", ");
