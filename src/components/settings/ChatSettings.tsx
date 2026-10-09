@@ -119,7 +119,7 @@ function MaxDisplayedMessagesSetting({
           step="1"
           value={maxDisplayedMessages}
           onChange={(e) => {
-            const parsed = parseInt(e.target.value, 10);
+            const parsed = e.currentTarget.valueAsNumber;
             if (Number.isFinite(parsed) && parsed > 0) {
               onMaxDisplayedMessagesChange(parsed);
             }

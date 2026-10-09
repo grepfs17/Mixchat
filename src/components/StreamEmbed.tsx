@@ -189,6 +189,115 @@ function TwitchJSEmbed({
   );
 }
 
+function PlaceholderOverlay({
+  show,
+  thumbnailUrl,
+  fading,
+  showSpinner,
+}: {
+  show: boolean;
+  thumbnailUrl?: string;
+  fading: boolean;
+  showSpinner?: boolean;
+}) {
+  if (!show || !thumbnailUrl) return null;
+  return (
+    <StreamEmbedPlaceholder
+      thumbnailUrl={thumbnailUrl}
+      fading={fading}
+      showSpinner={showSpinner}
+    />
+  );
+}
+
+function TwitchEmbedView({
+  channelName,
+  parentDomain,
+  twitchConnected,
+  twitchAccessToken,
+  tokenWaitExpired,
+  showPlaceholder,
+  placeholderThumbnailUrl,
+  placeholderFading,
+}: {
+  channelName: string;
+  parentDomain: string | null;
+  twitchConnected?: boolean;
+  twitchAccessToken?: string;
+  tokenWaitExpired: boolean;
+  showPlaceholder: boolean;
+  placeholderThumbnailUrl?: string;
+  placeholderFading: boolean;
+}) {
+  // Wait for the parent domain to resolve before mounting the player.
+  // Mounting with 'localhost' then immediately remounting with the real domain
+  // fires two Kasada fingerprint requests in quick succession → 429.
+  if (!parentDomain) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          backgroundColor: "#0a0a0a",
+        }}
+      >
+        <PlaceholderOverlay
+          show={showPlaceholder}
+          thumbnailUrl={placeholderThumbnailUrl}
+          fading={placeholderFading}
+        />
+      </div>
+    );
+  }
+  // Wait for the OAuth token to arrive after page reload so the player is
+  // created with oauth_token from the start.  Browsers that block third-party
+  // cookies (Firefox ETP, Brave Shields) can't fall back to Twitch cookies,
+  // so the token is the only way the player can authenticate the viewer.
+  // After 5 s the wait expires to avoid blocking if the refresh fails.
+  if (twitchConnected && !twitchAccessToken && !tokenWaitExpired) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          backgroundColor: "#0a0a0a",
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#999",
+          fontSize: "13px",
+        }}
+      >
+        <PlaceholderOverlay
+          show={showPlaceholder}
+          thumbnailUrl={placeholderThumbnailUrl}
+          fading={placeholderFading}
+          showSpinner={false}
+        />
+        Authenticating…
+      </div>
+    );
+  }
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div style={{ position: "absolute", inset: 0 }}>
+        <TwitchJSEmbed
+          channelName={channelName}
+          parentDomain={parentDomain}
+          oauthToken={twitchAccessToken}
+        />
+      </div>
+      <PlaceholderOverlay
+        show={showPlaceholder}
+        thumbnailUrl={placeholderThumbnailUrl}
+        fading={placeholderFading}
+      />
+    </div>
+  );
+}
+
 export default function StreamEmbed({
   channelName,
   playerType = "embed",
@@ -527,65 +636,17 @@ export default function StreamEmbed({
   }, [channelName, playerType, twitchConnected]);
 
   if (playerType === "embed") {
-    // Wait for the parent domain to resolve before mounting the player.
-    // Mounting with 'localhost' then immediately remounting with the real domain
-    // fires two Kasada fingerprint requests in quick succession → 429.
-    if (!parentDomain) {
-      return (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            backgroundColor: "#0a0a0a",
-          }}
-        >
-          {showPlaceholder && placeholderThumbnailUrl && (
-            <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
-          )}
-        </div>
-      );
-    }
-    // Wait for the OAuth token to arrive after page reload so the player is
-    // created with oauth_token from the start.  Browsers that block third-party
-    // cookies (Firefox ETP, Brave Shields) can't fall back to Twitch cookies,
-    // so the token is the only way the player can authenticate the viewer.
-    // After 5 s the wait expires to avoid blocking if the refresh fails.
-    if (twitchConnected && !twitchAccessToken && !tokenWaitExpired) {
-      return (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            backgroundColor: "#0a0a0a",
-            position: "relative",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#999",
-            fontSize: "13px",
-          }}
-        >
-          {showPlaceholder && placeholderThumbnailUrl && (
-            <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} showSpinner={false} />
-          )}
-          Authenticating…
-        </div>
-      );
-    }
     return (
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        <div style={{ position: "absolute", inset: 0 }}>
-          <TwitchJSEmbed
-            channelName={channelName}
-            parentDomain={parentDomain}
-            oauthToken={twitchAccessToken}
-          />
-        </div>
-        {showPlaceholder && placeholderThumbnailUrl && (
-          <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
-        )}
-      </div>
+      <TwitchEmbedView
+        channelName={channelName}
+        parentDomain={parentDomain}
+        twitchConnected={twitchConnected}
+        twitchAccessToken={twitchAccessToken}
+        tokenWaitExpired={tokenWaitExpired}
+        showPlaceholder={showPlaceholder}
+        placeholderThumbnailUrl={placeholderThumbnailUrl}
+        placeholderFading={placeholderFading}
+      />
     );
   }
 
@@ -624,9 +685,11 @@ export default function StreamEmbed({
       {twitchConnected && (
         <StreamAuthBadge authenticated={streamAuthenticated} />
       )}
-      {showPlaceholder && placeholderThumbnailUrl && (
-        <StreamEmbedPlaceholder thumbnailUrl={placeholderThumbnailUrl} fading={placeholderFading} />
-      )}
+      <PlaceholderOverlay
+        show={showPlaceholder}
+        thumbnailUrl={placeholderThumbnailUrl}
+        fading={placeholderFading}
+      />
       {!showPlaceholder && loading && (
         <div className="stream-loading">
           <div className="stream-loading__spinner" />

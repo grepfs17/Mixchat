@@ -43,6 +43,464 @@ interface TwitchMessageContentProps {
   children?: React.ReactNode;
 }
 
+function computeEventStyle(
+  msg: TwitchMessage,
+): React.CSSProperties | undefined {
+  const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
+  const powerUpCfg = msg.powerUpType
+    ? EVENT_CONFIG[msg.powerUpType.replace(/_/g, "-")]
+    : undefined;
+  const gigantifiedCfg = msg.isGigantifiedEmote
+    ? EVENT_CONFIG["gigantified-emote"]
+    : undefined;
+  const firstMessageCfg = msg.isFirstMessage
+    ? EVENT_CONFIG["first-message"]
+    : undefined;
+  const activeCfg = cfg || powerUpCfg || gigantifiedCfg || firstMessageCfg;
+  return activeCfg
+    ? ({
+      "--event-color": activeCfg.color,
+      "--event-bg": activeCfg.bg,
+    } as React.CSSProperties)
+    : undefined;
+}
+
+function computeMessageClasses(
+  msg: TwitchMessage,
+  parityClass: string,
+  isMentioned: boolean,
+): string {
+  const powerUpClass =
+    msg.powerUpType === "message_effect"
+      ? "message-effect"
+      : msg.powerUpType === "celebration"
+        ? "celebration"
+        : "";
+  const gigantifiedClass = msg.isGigantifiedEmote ? "gigantified-emote" : "";
+  return [
+    "message",
+    msg.messageType || "chat",
+    powerUpClass,
+    gigantifiedClass,
+    msg.isPreloaded ? "preloaded" : "",
+    msg.isDeleted ? "deleted" : "",
+    msg.isBot ? "bot" : "",
+    (msg.mentionsUser || isMentioned) && !msg.isBot ? "mention" : "",
+    msg.isFirstMessage ? "first-message" : "",
+    parityClass,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function computeIdentity(
+  msg: TwitchMessage,
+  index: number,
+  previousMsg: TwitchMessage | null,
+  currentUserDisplayName?: string,
+): {
+  isFirstLive: boolean;
+  messageClasses: string;
+  isUnmoderatable: boolean;
+} {
+  const isMentioned = Boolean(
+    currentUserDisplayName && msg.content.includes(currentUserDisplayName),
+  );
+  const isFirstLive = Boolean(
+    !msg.isPreloaded && previousMsg !== null && previousMsg.isPreloaded,
+  );
+  const parityClass = index % 2 === 0 ? "even" : "odd";
+  const messageClasses = computeMessageClasses(msg, parityClass, isMentioned);
+  const isBroadcaster = Boolean(msg.badges && msg.badges["broadcaster"]);
+  const isModeratorMsg = Boolean(msg.badges && msg.badges["moderator"]);
+  const isUnmoderatable = Boolean(
+    isBroadcaster || isModeratorMsg || msg.isCurrentUser,
+  );
+  return { isFirstLive, messageClasses, isUnmoderatable };
+}
+
+function computeShowActionsStrip(
+  msg: TwitchMessage,
+  isModerator: boolean,
+  modActionsAlwaysVisible: boolean,
+  compactActions: boolean,
+  keepModActionsVisible: boolean | undefined,
+): boolean {
+  return Boolean(
+    (modActionsAlwaysVisible || !compactActions || keepModActionsVisible) &&
+      (!msg.messageType ||
+        msg.messageType === "chat" ||
+        ((msg.messageType === "timeout" || msg.messageType === "ban") &&
+          isModerator &&
+          msg.targetUsername)),
+  );
+}
+
+function computeReplyAuthorColor(
+  msg: TwitchMessage,
+  mentionColors?: Map<string, string>,
+  authorColorById?: Map<string, string>,
+): string {
+  const replyAuthorName = msg.replyTo?.author;
+  return (
+    (replyAuthorName
+      ? mentionColors?.get(replyAuthorName.toLowerCase())
+      : undefined) ||
+    getReadableUsernameColor(authorColorById?.get(msg.replyTo?.id ?? "")) ||
+    "#94a3b8"
+  );
+}
+
+function computeModActionStripShown(
+  showActionsStrip: boolean,
+  isModAction: boolean,
+  isModerator: boolean,
+  modModeActive: boolean,
+): boolean {
+  return showActionsStrip && (isModAction || (isModerator && modModeActive));
+}
+
+function computeInlineActionsShown(
+  showInlineActions: boolean,
+  showActionsStrip: boolean,
+  isModAction: boolean,
+): boolean {
+  return showInlineActions && showActionsStrip && !isModAction;
+}
+
+function computeDividerShown(
+  inlineActionsShown: boolean,
+  modActionStripShown: boolean,
+  modActionsFirst: boolean | undefined,
+): boolean {
+  return inlineActionsShown && modActionStripShown && !modActionsFirst;
+}
+
+function TwitchReplyInfo({
+  replyTo,
+  authorColor,
+  content,
+  mentionColors,
+  onScrollToMessage,
+}: {
+  replyTo: TwitchMessage["replyTo"];
+  authorColor: string;
+  content: string;
+  mentionColors?: Map<string, string>;
+  onScrollToMessage: (id: string) => void;
+}) {
+  if (!replyTo) return null;
+  return (
+    <button
+      type="button"
+      className="reply-info reply-info-clickable"
+      onClick={() => onScrollToMessage(replyTo.id)}
+      title="Jump to original message"
+    >
+      <span className="reply-info-label">
+        <span>response to <span>&nbsp;</span></span>
+        <span style={{ color: authorColor }}>
+          @{replyTo.author}:
+        </span>
+        {content && (
+          <span
+            className="reply-target-content"
+            dangerouslySetInnerHTML={{
+              __html: parseMessageWithEmotes(content, undefined, {
+                mentionColors,
+              }),
+            }}
+          />
+        )}
+      </span>
+    </button>
+  );
+}
+
+function TwitchInlineActions({
+  msg,
+  onReply,
+  onCopy,
+}: {
+  msg: TwitchMessage;
+  onReply?: (msg: TwitchMessage) => void;
+  onCopy: (msg: TwitchMessage) => void;
+}) {
+  return (
+    <div className="message-actions">
+      {onReply && (
+        <button type="button"
+          onClick={() => onReply(msg)}
+          className="action-button"
+          title="Reply to this message"
+          style={{ display: "flex", alignItems: "center", gap: "4px" }}
+        >
+          <MdReply size={12} />
+        </button>
+      )}
+      <button type="button"
+        onClick={() => onCopy(msg)}
+        className="action-button"
+        title="Copy message"
+        style={{ display: "flex", alignItems: "center", gap: "4px" }}
+      >
+        <MdContentCopy size={12} />
+      </button>
+    </div>
+  );
+}
+
+function TwitchModActionButtons({
+  isModAction,
+  modActionsAlwaysVisible,
+  msg,
+  isUnmoderatable,
+  doubleClickConfirmModActions,
+  onUntimeoutUser,
+  onDeleteMessage,
+  onTimeoutMenu,
+  onBanUser,
+  onWarnUser,
+}: {
+  isModAction: boolean;
+  modActionsAlwaysVisible: boolean;
+  msg: TwitchMessage;
+  isUnmoderatable: boolean;
+  doubleClickConfirmModActions: boolean | undefined;
+  onUntimeoutUser?: (userName: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onTimeoutMenu: TwitchMessageContentProps["onTimeoutMenu"];
+  onBanUser?: (userId: string, displayName?: string) => void;
+  onWarnUser?: (userName: string) => void;
+}) {
+  if (isModAction) {
+    return (
+      <div className={`message-actions${modActionsAlwaysVisible ? " message-actions--mod-active" : ""}`}>
+        <button type="button"
+          onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
+          className="action-button mod-action"
+          title="Undo moderation action"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            border: "1px solid currentColor",
+            borderRadius: "4px",
+            padding: "2px 6px",
+            fontSize: "11px",
+            marginTop: "2px",
+          }}
+        >
+          Undo
+        </button>
+      </div>
+    );
+  }
+  return (
+    <MessageModActions
+      onDelete={() => onDeleteMessage?.(msg.id)}
+      onTimeout={(e) => onTimeoutMenu(e?.clientX || 0, e?.clientY || 0, msg.userId || "", msg.author)}
+      onBan={() => onBanUser?.(msg.userId || "", msg.author)}
+      onWarn={() => onWarnUser?.(msg.author)}
+      showUserActions={!isUnmoderatable}
+      doubleClickConfirm={doubleClickConfirmModActions}
+      forceVisible={modActionsAlwaysVisible}
+    />
+  );
+}
+
+function TwitchRedemptionBadge({ msg }: { msg: TwitchMessage }) {
+  if (
+    msg.messageType !== "redemption" ||
+    !msg.rewardTitle ||
+    msg.isGigantifiedEmote
+  ) {
+    return null;
+  }
+  return (
+    <span className="reward-title-badge">
+      {msg.rewardTitle}
+      {typeof msg.rewardCost === "number" && msg.rewardCost > 0
+        ? ` (${msg.rewardCost})`
+        : ""}
+    </span>
+  );
+}
+
+function TwitchAuthorLink({
+  msg,
+  onUsernameClick,
+}: {
+  msg: TwitchMessage;
+  onUsernameClick?: TwitchMessageContentProps["onUsernameClick"];
+}) {
+  return (
+    <a
+      href={`https://twitch.tv/${msg.author}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`author author-link ${msg.isCurrentUser ? "self" : ""}`}
+      style={{
+        color: msg.isCurrentUser
+          ? "#ffffff"
+          : getReadableUsernameColor(msg.authorColor),
+      }}
+      onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
+    >
+      {renderAuthorLabel(msg.author, msg.userName)}
+    </a>
+  );
+}
+
+function TwitchMessageBody({
+  msg,
+  deletedRevealed,
+  onReveal,
+  mentionColors,
+}: {
+  msg: TwitchMessage;
+  deletedRevealed: boolean;
+  onReveal: () => void;
+  mentionColors?: Map<string, string>;
+}) {
+  if (msg.isDeleted && !deletedRevealed) {
+    return (
+      <button
+        type="button"
+        className="message-text deleted-clickable"
+        onClick={onReveal}
+      >
+        click to see the deleted message
+      </button>
+    );
+  }
+  return (
+    <TwitchMessageText
+      content={msg.content}
+      emotes={msg.emotes}
+      gigantified={msg.isGigantifiedEmote}
+      gifs={msg.gifs}
+      mentionColors={mentionColors}
+    />
+  );
+}
+
+function TwitchMessageLine({
+  msg,
+  children,
+  mentionColors,
+  modActionsFirst,
+  modActionStripShown,
+  inlineActionsShown,
+  dividerShown,
+  modActionsAlwaysVisible,
+  isModAction,
+  isModerator,
+  isUnmoderatable,
+  doubleClickConfirmModActions,
+  deletedRevealed,
+  onReveal,
+  onReply,
+  onCopy,
+  onUsernameClick,
+  onTimeoutMenu,
+  onDeleteMessage,
+  onBanUser,
+  onWarnUser,
+  onUntimeoutUser,
+}: {
+  msg: TwitchMessage;
+  children?: React.ReactNode;
+  mentionColors?: Map<string, string>;
+  modActionsFirst?: boolean;
+  modActionStripShown: boolean;
+  inlineActionsShown: boolean;
+  dividerShown: boolean;
+  modActionsAlwaysVisible: boolean;
+  isModAction: boolean;
+  isModerator: boolean;
+  isUnmoderatable: boolean;
+  doubleClickConfirmModActions: boolean | undefined;
+  deletedRevealed: boolean;
+  onReveal: () => void;
+  onReply?: TwitchMessageContentProps["onReply"];
+  onCopy: (msg: TwitchMessage) => void;
+  onUsernameClick?: TwitchMessageContentProps["onUsernameClick"];
+  onTimeoutMenu: TwitchMessageContentProps["onTimeoutMenu"];
+  onDeleteMessage?: (messageId: string) => void;
+  onBanUser?: (userId: string, displayName?: string) => void;
+  onWarnUser?: (userName: string) => void;
+  onUntimeoutUser?: (userName: string) => void;
+}) {
+  return (
+    <div className="message-single-line">
+      {modActionsFirst && modActionStripShown && (
+        <TwitchModActionButtons
+          isModAction={isModAction}
+          modActionsAlwaysVisible={modActionsAlwaysVisible}
+          msg={msg}
+          isUnmoderatable={isUnmoderatable}
+          doubleClickConfirmModActions={doubleClickConfirmModActions}
+          onUntimeoutUser={onUntimeoutUser}
+          onDeleteMessage={onDeleteMessage}
+          onTimeoutMenu={onTimeoutMenu}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+        />
+      )}
+      <span className="timestamp">
+        {msg.timestamp.toLocaleTimeString()}
+      </span>
+      {children}
+      <TwitchRedemptionBadge msg={msg} />
+      <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
+      <TwitchAuthorLink msg={msg} onUsernameClick={onUsernameClick} />
+      <span className="message-separator">:</span>
+      <TwitchMessageBody
+        msg={msg}
+        deletedRevealed={deletedRevealed}
+        onReveal={onReveal}
+        mentionColors={mentionColors}
+      />
+      {msg.messageType === "automod" && isModerator && (
+        <AutomodActions
+          heldMsgId={msg.targetUsername || ""}
+          userId={msg.userId || ""}
+          username={msg.author}
+        />
+      )}
+      {inlineActionsShown && (
+        <TwitchInlineActions
+          msg={msg}
+          onReply={onReply}
+          onCopy={onCopy}
+        />
+      )}
+      {dividerShown && (
+        <div
+          className="message-actions-divider"
+          role="separator"
+          aria-orientation="vertical"
+        />
+      )}
+      {!modActionsFirst && modActionStripShown && (
+        <TwitchModActionButtons
+          isModAction={isModAction}
+          modActionsAlwaysVisible={modActionsAlwaysVisible}
+          msg={msg}
+          isUnmoderatable={isUnmoderatable}
+          doubleClickConfirmModActions={doubleClickConfirmModActions}
+          onUntimeoutUser={onUntimeoutUser}
+          onDeleteMessage={onDeleteMessage}
+          onTimeoutMenu={onTimeoutMenu}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+        />
+      )}
+    </div>
+  );
+}
+
 function TwitchMessageContentBase({
   msg,
   index,
@@ -75,56 +533,13 @@ function TwitchMessageContentBase({
     onWarnUser,
   } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
-  const isMentioned =
-    currentUserDisplayName && msg.content.includes(currentUserDisplayName);
-  const isFirstLive =
-    !msg.isPreloaded && previousMsg !== null && previousMsg.isPreloaded;
-  const parityClass = index % 2 === 0 ? "even" : "odd";
-  const powerUpClass =
-    msg.powerUpType === "message_effect"
-      ? "message-effect"
-      : msg.powerUpType === "celebration"
-        ? "celebration"
-        : "";
-  const gigantifiedClass = msg.isGigantifiedEmote ? "gigantified-emote" : "";
-  const messageClasses = [
-    "message",
-    msg.messageType || "chat",
-    powerUpClass,
-    gigantifiedClass,
-    msg.isPreloaded ? "preloaded" : "",
-    msg.isDeleted ? "deleted" : "",
-    msg.isBot ? "bot" : "",
-    (msg.mentionsUser || isMentioned) && !msg.isBot ? "mention" : "",
-    msg.isFirstMessage ? "first-message" : "",
-    parityClass,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const isBroadcaster = Boolean(msg.badges && msg.badges["broadcaster"]);
-  const isModeratorMsg = Boolean(msg.badges && msg.badges["moderator"]);
-  const isUnmoderatable = isBroadcaster || isModeratorMsg || msg.isCurrentUser;
-
-  const eventStyle = (() => {
-    const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
-    const powerUpCfg = msg.powerUpType
-      ? EVENT_CONFIG[msg.powerUpType.replace(/_/g, "-")]
-      : undefined;
-    const gigantifiedCfg = msg.isGigantifiedEmote
-      ? EVENT_CONFIG["gigantified-emote"]
-      : undefined;
-    const firstMessageCfg = msg.isFirstMessage
-      ? EVENT_CONFIG["first-message"]
-      : undefined;
-    const activeCfg = cfg || powerUpCfg || gigantifiedCfg || firstMessageCfg;
-    return activeCfg
-      ? ({
-        "--event-color": activeCfg.color,
-        "--event-bg": activeCfg.bg,
-      } as React.CSSProperties)
-      : undefined;
-  })();
+  const { isFirstLive, messageClasses, isUnmoderatable } = computeIdentity(
+    msg,
+    index,
+    previousMsg,
+    currentUserDisplayName,
+  );
+  const eventStyle = computeEventStyle(msg);
 
   const handleCtx = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -132,13 +547,11 @@ function TwitchMessageContentBase({
     onContextMenu(e, msg);
   };
 
-  const replyAuthorName = msg.replyTo?.author;
-  const replyAuthorColor =
-    (replyAuthorName
-      ? mentionColors?.get(replyAuthorName.toLowerCase())
-      : undefined) ||
-    getReadableUsernameColor(authorColorById?.get(msg.replyTo?.id ?? "")) ||
-    "#94a3b8";
+  const replyAuthorColor = computeReplyAuthorColor(
+    msg,
+    mentionColors,
+    authorColorById,
+  );
 
   const replyContent = msg.replyTo
     ? stripReplyMention(msg.replyTo.content, msg.replyTo.author)
@@ -147,82 +560,33 @@ function TwitchMessageContentBase({
   const isMobile = isMobileDevice();
   const modActionsAlwaysVisible = isMobile && modModeActive;
 
-  const showActionsStrip =
-    (modActionsAlwaysVisible || !compactActions || keepModActionsVisible) &&
-    (!msg.messageType ||
-      msg.messageType === "chat" ||
-      ((msg.messageType === "timeout" || msg.messageType === "ban") &&
-        isModerator &&
-        msg.targetUsername));
+  const showActionsStrip = computeShowActionsStrip(
+    msg,
+    isModerator,
+    modActionsAlwaysVisible,
+    compactActions,
+    keepModActionsVisible,
+  );
 
   const showInlineActions = !compactActions && !modActionsAlwaysVisible;
-
   const isModAction =
     msg.messageType === "timeout" || msg.messageType === "ban";
-
-  const inlineActionButtons = showInlineActions &&
-    showActionsStrip &&
-    !isModAction && (
-      <div className="message-actions">
-        {onReply && (
-          <button type="button"
-            onClick={() => onReply(msg)}
-            className="action-button"
-            title="Reply to this message"
-            style={{ display: "flex", alignItems: "center", gap: "4px" }}
-          >
-            <MdReply size={12} />
-          </button>
-        )}
-        <button type="button"
-          onClick={() => onCopy(msg)}
-          className="action-button"
-          title="Copy message"
-          style={{ display: "flex", alignItems: "center", gap: "4px" }}
-        >
-          <MdContentCopy size={12} />
-        </button>
-      </div>
-    );
-
-  const modActionButtons = (() => {
-    if (!showActionsStrip) return null;
-    if (isModAction) {
-      return (
-        <div className={`message-actions${modActionsAlwaysVisible ? " message-actions--mod-active" : ""}`}>
-          <button type="button"
-            onClick={() => onUntimeoutUser?.(msg.targetUsername!)}
-            className="action-button mod-action"
-            title="Undo moderation action"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              border: "1px solid currentColor",
-              borderRadius: "4px",
-              padding: "2px 6px",
-              fontSize: "11px",
-              marginTop: "2px",
-            }}
-          >
-            Undo
-          </button>
-        </div>
-      );
-    }
-    if (!isModerator || !modModeActive) return null;
-    return (
-      <MessageModActions
-        onDelete={() => onDeleteMessage?.(msg.id)}
-        onTimeout={(e) => onTimeoutMenu(e?.clientX || 0, e?.clientY || 0, msg.userId || "", msg.author)}
-        onBan={() => onBanUser?.(msg.userId || "", msg.author)}
-        onWarn={() => onWarnUser?.(msg.author)}
-        showUserActions={!isUnmoderatable}
-        doubleClickConfirm={doubleClickConfirmModActions}
-        forceVisible={modActionsAlwaysVisible}
-      />
-    );
-  })();
+  const modActionStripShown = computeModActionStripShown(
+    showActionsStrip,
+    isModAction,
+    isModerator,
+    modModeActive,
+  );
+  const inlineActionsShown = computeInlineActionsShown(
+    showInlineActions,
+    showActionsStrip,
+    isModAction,
+  );
+  const dividerShown = computeDividerShown(
+    inlineActionsShown,
+    modActionStripShown,
+    modActionsFirst,
+  );
 
   return (
     <React.Fragment key={msg.id}>
@@ -240,32 +604,13 @@ function TwitchMessageContentBase({
         onTouchMove={onTouchMove}
         onContextMenu={handleCtx}
       >
-        {msg.replyTo && (            <button
-              type="button"
-              className="reply-info reply-info-clickable"
-              onClick={() => onScrollToMessage(msg.replyTo!.id)}
-              title="Jump to original message"
-            >
-            <span className="reply-info-label">
-              <span>response to <span>&nbsp;</span></span>
-              <span style={{ color: replyAuthorColor }}>
-                @{msg.replyTo.author}:
-              </span>
-              {replyContent && (
-                <>
-                  <span
-                    className="reply-target-content"
-                    dangerouslySetInnerHTML={{
-                      __html: parseMessageWithEmotes(replyContent, undefined, {
-                        mentionColors,
-                      }),
-                    }}
-                  />
-                </>
-              )}
-            </span>
-          </button>
-        )}
+        <TwitchReplyInfo
+          replyTo={msg.replyTo}
+          authorColor={replyAuthorColor}
+          content={replyContent}
+          mentionColors={mentionColors}
+          onScrollToMessage={onScrollToMessage}
+        />
 
         <TwitchEventIcon
           messageType={msg.messageType}
@@ -274,72 +619,31 @@ function TwitchMessageContentBase({
           isFirstMessage={msg.isFirstMessage}
         />
 
-        <div className="message-single-line">
-          {modActionsFirst && modActionButtons}
-          <span className="timestamp">
-            {msg.timestamp.toLocaleTimeString()}
-          </span>
-          {children}
-          {msg.messageType === "redemption" &&
-            msg.rewardTitle &&
-            !msg.isGigantifiedEmote && (
-              <span className="reward-title-badge">
-                {msg.rewardTitle}
-                {typeof msg.rewardCost === "number" && msg.rewardCost > 0
-                  ? ` (${msg.rewardCost})`
-                  : ""}
-              </span>
-            )}
-          <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
-          <a
-            href={`https://twitch.tv/${msg.author}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`author author-link ${msg.isCurrentUser ? "self" : ""}`}
-            style={{
-              color: msg.isCurrentUser
-                ? "#ffffff"
-                : getReadableUsernameColor(msg.authorColor),
-            }}
-            onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
-          >
-            {renderAuthorLabel(msg.author, msg.userName)}
-          </a>
-          <span className="message-separator">:</span>
-          {msg.isDeleted && !deletedRevealed ? (
-        <button
-          type="button"
-          className="message-text deleted-clickable"
-          onClick={() => setDeletedRevealed(true)}
+        <TwitchMessageLine
+          msg={msg}
+          mentionColors={mentionColors}
+          modActionsFirst={modActionsFirst}
+          modActionStripShown={modActionStripShown}
+          inlineActionsShown={inlineActionsShown}
+          dividerShown={dividerShown}
+          modActionsAlwaysVisible={modActionsAlwaysVisible}
+          isModAction={isModAction}
+          isModerator={isModerator}
+          isUnmoderatable={isUnmoderatable}
+          doubleClickConfirmModActions={doubleClickConfirmModActions}
+          deletedRevealed={deletedRevealed}
+          onReveal={() => setDeletedRevealed(true)}
+          onReply={onReply}
+          onCopy={onCopy}
+          onUsernameClick={onUsernameClick}
+          onTimeoutMenu={onTimeoutMenu}
+          onDeleteMessage={onDeleteMessage}
+          onBanUser={onBanUser}
+          onWarnUser={onWarnUser}
+          onUntimeoutUser={onUntimeoutUser}
         >
-              click to see the deleted message
-            </button>
-          ) : (
-            <TwitchMessageText
-              content={msg.content}
-              emotes={msg.emotes}
-              gigantified={msg.isGigantifiedEmote}
-              gifs={msg.gifs}
-              mentionColors={mentionColors}
-            />
-          )}
-          {msg.messageType === "automod" && isModerator && (
-            <AutomodActions
-              heldMsgId={msg.targetUsername || ""}
-              userId={msg.userId || ""}
-              username={msg.author}
-            />
-          )}
-          {inlineActionButtons}
-          {inlineActionButtons && modActionButtons && !modActionsFirst && (
-            <div
-              className="message-actions-divider"
-              role="separator"
-              aria-orientation="vertical"
-            />
-          )}
-          {!modActionsFirst && modActionButtons}
-        </div>
+          {children}
+        </TwitchMessageLine>
         {msg.isDeleted && (
           <div className="deleted-notice">Deleted by a moderator</div>
         )}

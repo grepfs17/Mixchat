@@ -39,7 +39,8 @@ mixchat/
 │   │   │   └── ThemeMascots.tsx
 │   │   ├── dev/             # Dev-only components (chat styling gallery)
 │   │   ├── wheel/           # Wheel Spin tool (canvas wheel, options, history, manager)
-│   │   ├── AppContainer.tsx # Root app component (layout, sidebar, auth, grid)
+│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals)
+│   │   ├── AppContainer.tsx # Root app component (orchestrates hooks, delegates layout to app/)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
 │   │   ├── StreamGrid.tsx   # Grid of live channels
@@ -48,7 +49,7 @@ mixchat/
 │   │   ├── FirefoxTrackingProtectionModal.tsx  # Firefox ETP notice popup (home + global)
 │   │   └── ...              # Misc components (WatchlistManager, YouTubeLinker, etc.)
 │   ├── hooks/               # Custom React hooks
-│   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor)
+│   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor, onboarding, loading, selection)
 │   │   ├── chat/            # Chat hooks (state, messages, moderation, emotes, song queue, lazy history)
 │   │   │   ├── chatAppStateHelpers/  # Decomposed helpers for ChatApp state
 │   │   │   ├── twitchChatHelpers/     # Twitch connection lifecycle helpers
@@ -109,7 +110,7 @@ mixchat/
 
 ### 2. Component Architecture
 
-- **AppContainer** is the root component managing layout (sidebar + main area + modals), orchestrating sessions, channels, embed, settings, and stream monitoring.
+- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks.
 - **ChatApp** is the central chat component receiving all settings as props and delegating to individual chat panels, banners, and modal overlays.
 - All `useXxx` hooks are self-contained custom hooks that own their state, effects, and derived values.
 

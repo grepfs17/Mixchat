@@ -41,6 +41,8 @@ export interface YouTubeMessageContentProps {
   renderThirdPartyEmotes?: boolean;
 }
 
+type YTEventConfig = { label: string; color: string; bg: string };
+
 const YT_EVENT_CONFIG: Record<
   string,
   { label: string; color: string; bg: string }
@@ -87,7 +89,7 @@ const YT_EVENT_CONFIG: Record<
   },
 };
 
-function getConfig(msg: YTMessage) {
+function getConfig(msg: YTMessage): YTEventConfig | null {
   if (msg.messageType && YT_EVENT_CONFIG[msg.messageType])
     return YT_EVENT_CONFIG[msg.messageType];
   if (msg.superchat)
@@ -161,6 +163,426 @@ function expandPartsWithTwitchLinks(parts: MessagePart[]): MessagePart[] {
   return out;
 }
 
+function YouTubeMessageHead({
+  msg,
+  showPlatformTag,
+  isMod,
+  authorColor,
+  modActionsFirst,
+  modActions,
+  onUsernameClick,
+}: {
+  msg: YTMessage;
+  showPlatformTag: boolean;
+  isMod: boolean;
+  authorColor: string;
+  modActionsFirst: boolean | undefined;
+  modActions: React.ReactNode;
+  onUsernameClick?: YouTubeMessageContentProps["onUsernameClick"];
+}) {
+  return (
+    <>
+      {modActionsFirst && modActions}
+      <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
+      {showPlatformTag && <PlatformTag source="youtube" />}
+      {msg.authorAvatar && (
+        <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
+      )}
+      {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
+      <button
+        type="button"
+        className="author"
+        style={{ color: authorColor }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onUsernameClick?.(e, msg.author, msg.authorAvatar);
+        }}
+      >
+        {msg.author}
+      </button>
+      <span className="message-separator">:</span>
+    </>
+  );
+}
+
+function YouTubeModActions({
+  msg,
+  showModActions,
+  isMobile,
+  youtubeModModeActive,
+  isUnmoderatable,
+  doubleClickConfirmModActions,
+  onDeleteYouTubeMessage,
+  onTimeoutMenu,
+  onBanYouTubeUser,
+}: {
+  msg: YTMessage;
+  showModActions: boolean;
+  isMobile: boolean;
+  youtubeModModeActive: boolean | undefined;
+  isUnmoderatable: boolean;
+  doubleClickConfirmModActions: boolean | undefined;
+  onDeleteYouTubeMessage?: (messageId: string) => void;
+  onTimeoutMenu?: (e: React.MouseEvent) => void;
+  onBanYouTubeUser?: (channelId: string, displayName?: string) => void;
+}) {
+  if (!showModActions) return null;
+  return (
+    <MessageModActions
+      onDelete={() => onDeleteYouTubeMessage?.(msg.id)}
+      onTimeout={(e) => {
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
+        onTimeoutMenu?.(e);
+      }}
+      onTimeoutContextMenu={(e) => {
+        e.preventDefault();
+      }}
+      onBan={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
+      banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
+      showUserActions={!isUnmoderatable && Boolean(msg.authorChannelId)}
+      doubleClickConfirm={doubleClickConfirmModActions}
+      forceVisible={isMobile && youtubeModModeActive}
+    />
+  );
+}
+
+function YouTubeEventBody({
+  msg,
+  expandedParts,
+  variant,
+  renderThirdPartyEmotes,
+}: {
+  msg: YTMessage;
+  expandedParts: MessagePart[];
+  variant: "unified" | "standalone";
+  renderThirdPartyEmotes: boolean;
+}) {
+  if (msg.messageType === "membership") {
+    return (
+      <>
+        <span
+          className="yt-superchat-amount-inline"
+          style={{ marginRight: "5px" }}
+        >
+          [{msg.superchat!.amount}]
+        </span>
+        {msg.parts.length > 0 && (
+          <YTMessageParts
+            parts={expandedParts}
+            variant={variant}
+            renderThirdPartyEmotes={renderThirdPartyEmotes}
+          />
+        )}
+      </>
+    );
+  }
+  if (msg.messageType === "gift-purchase") {
+    return (
+      <>
+        Bought {msg.giftCount || 1} gift
+        {msg.giftCount !== 1 ? "s" : ""}
+      </>
+    );
+  }
+  if (msg.messageType === "gift-redemption") {
+    return <>Received a gift membership</>;
+  }
+  if (
+    msg.messageType === "redirect" ||
+    msg.messageType === "automod" ||
+    msg.messageType === "removed" ||
+    msg.messageType === "mod-hidden" ||
+    msg.messageType === "raidHost"
+  ) {
+    return (
+      <YTMessageParts
+        parts={expandedParts}
+        variant={variant}
+        renderThirdPartyEmotes={renderThirdPartyEmotes}
+      />
+    );
+  }
+  if (msg.superchat && !msg.messageType) {
+    return (
+      <>
+        <span
+          className="yt-superchat-amount-inline"
+          style={{ marginRight: "5px" }}
+        >
+          [{msg.superchat.amount}]
+        </span>
+        {msg.parts.length > 0 && (
+          <YTMessageParts
+            parts={expandedParts}
+            variant={variant}
+            renderThirdPartyEmotes={renderThirdPartyEmotes}
+          />
+        )}
+      </>
+    );
+  }
+  return null;
+}
+
+function YouTubeAutomodButtons({
+  msg,
+  showModActions,
+  config,
+  youtubeVideoId,
+}: {
+  msg: YTMessage;
+  showModActions: boolean;
+  config: YTEventConfig;
+  youtubeVideoId: string | null | undefined;
+}) {
+  if (!showModActions || !(msg as any).automodButtons) return null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "6px",
+        marginTop: "4px",
+        flexWrap: "wrap" as const,
+      }}
+    >
+      {(msg as any).automodButtons
+        .filter((b: any) => !b.is_disabled)
+        .map((b: any, i: number) => (
+          <button
+            key={i}
+            type="button"
+            className="action-button mod-action"
+            onClick={async () => {
+              if (!youtubeVideoId || !b.text) return;
+              const decision = b.text.toLowerCase().includes("deny")
+                ? "deny"
+                : "approve";
+              try {
+                if (decision === "approve") {
+                  await approveYouTubeMessage(youtubeVideoId, msg.id);
+                } else {
+                  await denyYouTubeMessage(youtubeVideoId, msg.id);
+                }
+                // The SSE stream will send RemoveChatItemAction to
+                // remove the automod message from the UI naturally.
+              } catch (e) {
+                console.error("[Automod] Action failed:", e);
+              }
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              border: "1px solid",
+              borderRadius: "4px",
+              padding: "2px 8px",
+              fontSize: "11px",
+              cursor: "pointer",
+              borderColor: config.color,
+              color: config.color,
+              background: config.bg,
+            }}
+          >
+            {b.text || "Action"}
+          </button>
+        ))}
+    </div>
+  );
+}
+
+function YouTubeSuperchatSticker({ msg }: { msg: YTMessage }) {
+  if (!msg.superchat?.sticker) return null;
+  return (
+    <div className="yt-superchat-sticker-row">
+      <img
+        src={msg.superchat.sticker.url}
+        alt={msg.superchat.sticker.alt}
+        className="yt-superchat-sticker"
+        style={{
+          width: "72px",
+          height: "72px",
+          marginTop: "4px",
+          objectFit: "contain",
+        }}
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
+function YouTubeMessageBody({
+  msg,
+  expandedParts,
+  variant,
+  renderThirdPartyEmotes,
+  deletedRevealed,
+  onReveal,
+  showDeletedMessages,
+}: {
+  msg: YTMessage;
+  expandedParts: MessagePart[];
+  variant: "unified" | "standalone";
+  renderThirdPartyEmotes: boolean;
+  deletedRevealed: boolean;
+  onReveal: () => void;
+  showDeletedMessages: boolean;
+}) {
+  if (msg.isDeleted && !deletedRevealed) {
+    return (
+      <span className="message-text deleted-clickable">
+        {formatDeletedByText(msg.deletedByText)}{" "}
+        {showDeletedMessages ? (
+          <button
+            type="button"
+            className="yt-deleted-reveal"
+            onClick={onReveal}
+          >
+            View deleted message
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+  return (
+    <span className="message-text">
+      <YTMessageParts
+        parts={expandedParts}
+        variant={variant}
+        renderThirdPartyEmotes={renderThirdPartyEmotes}
+      />
+    </span>
+  );
+}
+
+function YouTubeEventMessage({
+  msg,
+  config,
+  parityClass,
+  expandedParts,
+  variant,
+  renderThirdPartyEmotes,
+  showPlatformTag,
+  modActionsFirst,
+  isMod,
+  isMobile,
+  youtubeModModeActive,
+  isUnmoderatable,
+  doubleClickConfirmModActions,
+  youtubeVideoId,
+  showModActions,
+  onUsernameClick,
+  onTimeoutMenu,
+  onDeleteYouTubeMessage,
+  onBanYouTubeUser,
+  onTouchStart,
+  onTouchEnd,
+  onTouchMove,
+  onContextMenu,
+}: {
+  msg: YTMessage;
+  config: YTEventConfig;
+  parityClass: string;
+  expandedParts: MessagePart[];
+  variant: "unified" | "standalone";
+  renderThirdPartyEmotes: boolean;
+  showPlatformTag: boolean;
+  modActionsFirst: boolean | undefined;
+  isMod: boolean;
+  isMobile: boolean;
+  youtubeModModeActive: boolean | undefined;
+  isUnmoderatable: boolean;
+  doubleClickConfirmModActions: boolean | undefined;
+  youtubeVideoId: string | null | undefined;
+  showModActions: boolean;
+  onUsernameClick?: YouTubeMessageContentProps["onUsernameClick"];
+  onTimeoutMenu?: (e: React.MouseEvent) => void;
+  onDeleteYouTubeMessage?: (messageId: string) => void;
+  onBanYouTubeUser?: (channelId: string, displayName?: string) => void;
+  onTouchStart?: () => void;
+  onTouchEnd?: () => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      className={`message yt-event ${parityClass}`}
+      style={
+        {
+          "--event-color": config.color,
+          "--event-bg": config.bg,
+        } as React.CSSProperties
+      }
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchMove={onTouchMove}
+      onContextMenu={onContextMenu}
+    >
+      <div
+        className="yt-event-label"
+        style={{
+          color: config.color,
+          background: config.bg,
+          borderColor: config.color,
+        }}
+      >
+        {config.label}
+      </div>
+      <div className="message-single-line">
+        <YouTubeMessageHead
+          msg={msg}
+          showPlatformTag={showPlatformTag}
+          isMod={isMod}
+          authorColor={config.color}
+          modActionsFirst={modActionsFirst}
+          modActions={
+            <YouTubeModActions
+              msg={msg}
+              showModActions={showModActions}
+              isMobile={isMobile}
+              youtubeModModeActive={youtubeModModeActive}
+              isUnmoderatable={isUnmoderatable}
+              doubleClickConfirmModActions={doubleClickConfirmModActions}
+              onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+              onTimeoutMenu={onTimeoutMenu}
+              onBanYouTubeUser={onBanYouTubeUser}
+            />
+          }
+          onUsernameClick={onUsernameClick}
+        />
+        <span className="message-text">
+          <YouTubeEventBody
+            msg={msg}
+            expandedParts={expandedParts}
+            variant={variant}
+            renderThirdPartyEmotes={renderThirdPartyEmotes}
+          />
+        </span>
+        {!modActionsFirst && (
+          <YouTubeModActions
+            msg={msg}
+            showModActions={showModActions}
+            isMobile={isMobile}
+            youtubeModModeActive={youtubeModModeActive}
+            isUnmoderatable={isUnmoderatable}
+            doubleClickConfirmModActions={doubleClickConfirmModActions}
+            onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+            onTimeoutMenu={onTimeoutMenu}
+            onBanYouTubeUser={onBanYouTubeUser}
+          />
+        )}
+      </div>
+      <YouTubeAutomodButtons
+        msg={msg}
+        showModActions={showModActions}
+        config={config}
+        youtubeVideoId={youtubeVideoId}
+      />
+      <YouTubeSuperchatSticker msg={msg} />
+    </div>
+  );
+}
+
 export function YouTubeMessageContent({
   msg,
   index = 0,
@@ -204,224 +626,40 @@ export function YouTubeMessageContent({
   );
   const isUnmoderatable = isMod || isOwner || isCurrentUser;
   const isMobile = isMobileDevice();
-  const showModActions =
+  const showModActions = Boolean(
     isYouTubeModerator &&
-    youtubeModModeActive &&
-    !msg.isDeleted &&
-    msg.authorChannelId;
-
-  const renderModActions = () => {
-    if (!showModActions) return null;
-    return (
-      <MessageModActions
-        onDelete={() => onDeleteYouTubeMessage?.(msg.id)}
-        onTimeout={(e) => {
-          e?.preventDefault?.();
-          e?.stopPropagation?.();
-          onTimeoutMenu?.(e);
-        }}
-        onTimeoutContextMenu={(e) => {
-          e.preventDefault();
-        }}
-        onBan={() => onBanYouTubeUser?.(msg.authorChannelId!, msg.author)}
-        banTitle="Ban (this chat) - Data API only supports per-broadcast bans"
-        showUserActions={!isUnmoderatable && Boolean(msg.authorChannelId)}
-        doubleClickConfirm={doubleClickConfirmModActions}
-        forceVisible={isMobile && youtubeModModeActive}
-      />
-    );
-  };
+      youtubeModModeActive &&
+      !msg.isDeleted &&
+      msg.authorChannelId,
+  );
 
   if (config) {
     return (
-      <div
-        className={`message yt-event ${parityClass}`}
-        style={
-          {
-            "--event-color": config.color,
-            "--event-bg": config.bg,
-          } as React.CSSProperties
-        }
+      <YouTubeEventMessage
+        msg={msg}
+        config={config}
+        parityClass={parityClass}
+        expandedParts={expandedParts}
+        variant={variant}
+        renderThirdPartyEmotes={renderThirdPartyEmotes}
+        showPlatformTag={showPlatformTag}
+        modActionsFirst={modActionsFirst}
+        isMod={isMod}
+        isMobile={isMobile}
+        youtubeModModeActive={youtubeModModeActive}
+        isUnmoderatable={isUnmoderatable}
+        doubleClickConfirmModActions={doubleClickConfirmModActions}
+        youtubeVideoId={youtubeVideoId}
+        showModActions={showModActions}
+        onUsernameClick={onUsernameClick}
+        onTimeoutMenu={onTimeoutMenu}
+        onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+        onBanYouTubeUser={onBanYouTubeUser}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         onTouchMove={onTouchMove}
         onContextMenu={onContextMenu}
-      >
-        <div
-          className="yt-event-label"
-          style={{
-            color: config.color,
-            background: config.bg,
-            borderColor: config.color,
-          }}
-        >
-          {config.label}
-        </div>
-        <div className="message-single-line">
-          {modActionsFirst && renderModActions()}
-          <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
-          {showPlatformTag && <PlatformTag source="youtube" />}
-          {msg.authorAvatar && (
-            <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
-          )}
-          {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}
-        <button
-          type="button"
-          className="author"
-          style={{ color: config.color }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onUsernameClick?.(e, msg.author, msg.authorAvatar);
-          }}
-        >
-          {msg.author}
-        </button>
-          <span className="message-separator">:</span>
-          <span className="message-text">
-            {msg.messageType === "membership" && (
-              <>
-                <span
-                  className="yt-superchat-amount-inline"
-                  style={{ marginRight: "5px" }}
-                >
-                  [{msg.superchat!.amount}]
-                </span>
-                {msg.parts.length > 0 && (
-                  <YTMessageParts
-                    parts={expandedParts}
-                    variant={variant}
-                    renderThirdPartyEmotes={renderThirdPartyEmotes}
-                  />
-                )}
-              </>
-            )}
-            {msg.messageType === "gift-purchase" && (
-              <>
-                Bought {msg.giftCount || 1} gift
-                {msg.giftCount !== 1 ? "s" : ""}
-              </>
-            )}
-            {msg.messageType === "gift-redemption" && (
-              <>Received a gift membership</>
-            )}
-            {msg.messageType === "redirect" && (
-              <YTMessageParts
-                parts={expandedParts}
-                variant={variant}
-                renderThirdPartyEmotes={renderThirdPartyEmotes}
-              />
-            )}
-            {msg.superchat && !msg.messageType && (
-              <>
-                <span
-                  className="yt-superchat-amount-inline"
-                  style={{ marginRight: "5px" }}
-                >
-                  [{msg.superchat.amount}]
-                </span>
-                {msg.parts.length > 0 && (
-                  <YTMessageParts
-                    parts={expandedParts}
-                    variant={variant}
-                    renderThirdPartyEmotes={renderThirdPartyEmotes}
-                  />
-                )}
-              </>
-            )}
-            {msg.messageType === "automod" && (
-              <YTMessageParts
-                parts={expandedParts}
-                variant={variant}
-                renderThirdPartyEmotes={renderThirdPartyEmotes}
-              />
-            )}
-            {(msg.messageType === "removed" ||
-              msg.messageType === "mod-hidden") && (
-              <YTMessageParts
-                parts={expandedParts}
-                variant={variant}
-                renderThirdPartyEmotes={renderThirdPartyEmotes}
-              />
-            )}
-            {msg.messageType === "raidHost" && (
-              <YTMessageParts
-                parts={expandedParts}
-                variant={variant}
-                renderThirdPartyEmotes={renderThirdPartyEmotes}
-              />
-            )}
-          </span>
-          {!modActionsFirst && renderModActions()}
-        </div>
-        {showModActions && (msg as any).automodButtons && (
-          <div
-            style={{
-              display: "flex",
-              gap: "6px",
-              marginTop: "4px",
-              flexWrap: "wrap" as const,
-            }}
-          >
-            {(msg as any).automodButtons
-              .filter((b: any) => !b.is_disabled)
-              .map((b: any, i: number) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="action-button mod-action"
-                  onClick={async () => {
-                    if (!youtubeVideoId || !b.text) return;
-                    const decision = b.text.toLowerCase().includes("deny")
-                      ? "deny"
-                      : "approve";
-                    try {
-                      if (decision === "approve") {
-                        await approveYouTubeMessage(youtubeVideoId, msg.id);
-                      } else {
-                        await denyYouTubeMessage(youtubeVideoId, msg.id);
-                      }
-                      // The SSE stream will send RemoveChatItemAction to
-                      // remove the automod message from the UI naturally.
-                    } catch (e) {
-                      console.error("[Automod] Action failed:", e);
-                    }
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    border: "1px solid",
-                    borderRadius: "4px",
-                    padding: "2px 8px",
-                    fontSize: "11px",
-                    cursor: "pointer",
-                    borderColor: config.color,
-                    color: config.color,
-                    background: config.bg,
-                  }}
-                >
-                  {b.text || "Action"}
-                </button>
-              ))}
-          </div>
-        )}
-        {msg.superchat?.sticker && (
-          <div className="yt-superchat-sticker-row">
-            <img
-              src={msg.superchat.sticker.url}
-              alt={msg.superchat.sticker.alt}
-              className="yt-superchat-sticker"
-              style={{
-                width: "72px",
-                height: "72px",
-                marginTop: "4px",
-                objectFit: "contain",
-              }}
-              loading="lazy"
-            />
-          </div>
-        )}
-      </div>
+      />
     );
   }
 
@@ -434,51 +672,50 @@ export function YouTubeMessageContent({
       onContextMenu={onContextMenu}
     >
       <div className="message-single-line">
-        {modActionsFirst && renderModActions()}
-        <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
-        {showPlatformTag && <PlatformTag source="youtube" />}
-        {msg.authorAvatar && (
-          <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
-        )}
-        {isMod && <FaShieldAlt className="yt-mod-shield" title="Moderator" />}        <button
-          type="button"
-          className="author"
-          style={{
-            color: getReadableUsernameColor(getColorFromName(msg.author)),
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onUsernameClick?.(e, msg.author, msg.authorAvatar);
-          }}
-        >
-          {msg.author}
-        </button>
-          <span className="message-separator">:</span>
-          {msg.isDeleted && !deletedRevealed ? (
-          <span className="message-text deleted-clickable">
-            {formatDeletedByText(msg.deletedByText)}{" "}
-            {showDeletedMessages ? (
-              <button
-                type="button"
-                className="yt-deleted-reveal"
-                onClick={() => setDeletedRevealed(true)}
-              >
-                View deleted message
-              </button>
-            ) : null}
-          </span>
-        ) : (
-          <span className="message-text">
-            <YTMessageParts
-              parts={expandedParts}
-              variant={variant}
-              renderThirdPartyEmotes={renderThirdPartyEmotes}
+        <YouTubeMessageHead
+          msg={msg}
+          showPlatformTag={showPlatformTag}
+          isMod={isMod}
+          authorColor={getReadableUsernameColor(getColorFromName(msg.author))}
+          modActionsFirst={modActionsFirst}
+          modActions={
+            <YouTubeModActions
+              msg={msg}
+              showModActions={showModActions}
+              isMobile={isMobile}
+              youtubeModModeActive={youtubeModModeActive}
+              isUnmoderatable={isUnmoderatable}
+              doubleClickConfirmModActions={doubleClickConfirmModActions}
+              onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+              onTimeoutMenu={onTimeoutMenu}
+              onBanYouTubeUser={onBanYouTubeUser}
             />
-          </span>
+          }
+          onUsernameClick={onUsernameClick}
+        />
+        <YouTubeMessageBody
+          msg={msg}
+          expandedParts={expandedParts}
+          variant={variant}
+          renderThirdPartyEmotes={renderThirdPartyEmotes}
+          deletedRevealed={deletedRevealed}
+          onReveal={() => setDeletedRevealed(true)}
+          showDeletedMessages={showDeletedMessages}
+        />
+        {!modActionsFirst && (
+          <YouTubeModActions
+            msg={msg}
+            showModActions={showModActions}
+            isMobile={isMobile}
+            youtubeModModeActive={youtubeModModeActive}
+            isUnmoderatable={isUnmoderatable}
+            doubleClickConfirmModActions={doubleClickConfirmModActions}
+            onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+            onTimeoutMenu={onTimeoutMenu}
+            onBanYouTubeUser={onBanYouTubeUser}
+          />
         )}
-        {!modActionsFirst && renderModActions()}
       </div>
     </div>
   );
 }
-

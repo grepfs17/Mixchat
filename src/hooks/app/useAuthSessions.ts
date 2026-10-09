@@ -272,6 +272,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           window.open(
             `${data.verificationUri}?device-code=${encodeURIComponent(data.userCode)}`,
             "twitch_activate",
+            "noopener,noreferrer",
           );
         } catch {
           /* popup blocked — the modal offers a clickable activation link */
@@ -294,29 +295,48 @@ export function useAuthSessions(): UseAuthSessionsResult {
         if (deviceAbortRef.current) break;
         try {
           const res = await fetch("/api/auth/twitch/device/poll");
-          const data = await res.json().catch(() => ({}));
-          if (data.status === "success" && data.session) {
-            setSessions((prev) => ({ ...prev, twitch: data.session }));
-            setTwitchDevice(null);
-            setIsLoggingIn(false);
+          if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            if (data.status === "success" && data.session) {
+              setSessions((prev) => ({ ...prev, twitch: data.session }));
+              setTwitchDevice(null);
+              setIsLoggingIn(false);
+              return;
+            }
+            if (data.status === "pending") continue;
+            if (data.status === "slow_down") {
+              interval += 5;
+              continue;
+            }
+            if (!deviceAbortRef.current) {
+              setTwitchDevice((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      status: "error",
+                      error: data.message || "Twitch sign-in failed.",
+                    }
+                  : prev,
+              );
+              setIsLoggingIn(false);
+            }
             return;
-          }
-          if (data.status === "pending") continue;
-          if (data.status === "slow_down") {
-            interval += 5;
-            continue;
-          }
-          if (!deviceAbortRef.current) {
-            const msg =
-              data.status === "denied"
-                ? "Authorization was denied."
-                : data.status === "expired"
-                  ? "The code expired — please try again."
-                  : data.message || "Twitch sign-in failed.";
-            setTwitchDevice((prev) =>
-              prev ? { ...prev, status: "error", error: msg } : prev,
-            );
-            setIsLoggingIn(false);
+          } else {
+            // Terminal states (denied / expired / error) are returned with a
+            // 4xx status; read the JSON payload deliberately to surface them.
+            const data = await res.json().catch(() => ({}));
+            if (!deviceAbortRef.current) {
+              const msg =
+                data.status === "denied"
+                  ? "Authorization was denied."
+                  : data.status === "expired"
+                    ? "The code expired — please try again."
+                    : data.message || "Twitch sign-in failed.";
+              setTwitchDevice((prev) =>
+                prev ? { ...prev, status: "error", error: msg } : prev,
+              );
+              setIsLoggingIn(false);
+            }
             return;
           }
         } catch {

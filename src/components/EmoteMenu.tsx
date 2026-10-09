@@ -28,11 +28,394 @@ const THIRD_PARTY_SOURCES = [
 
 const TWITCH_COLOR = "#9146ff";
 
+type EmoteSourceTab = "twitch" | "7tv" | "bttv" | "ffz";
+
+type EmoteNameUrl = { name: string; url: string };
+
+interface EmoteItemProps {
+  emote: EmoteNameUrl;
+  channelDisabled: boolean;
+  disabledSet: Set<string>;
+  aliases: Record<string, string>;
+  aliasTarget: string | null;
+  aliasInput: string;
+  onSelectEmote: (emoteName: string) => void;
+  onClearSearch: () => void;
+  onToggleDisable: (name: string) => void;
+  onAliasInputChange: (value: string) => void;
+  onSubmitAlias: () => void;
+  onRemoveAlias: () => void;
+  onToggleAlias: (name: string) => void;
+}
+
+function EmoteItem({
+  emote,
+  channelDisabled,
+  disabledSet,
+  aliases,
+  aliasTarget,
+  aliasInput,
+  onSelectEmote,
+  onClearSearch,
+  onToggleDisable,
+  onAliasInputChange,
+  onSubmitAlias,
+  onRemoveAlias,
+  onToggleAlias,
+}: EmoteItemProps) {
+  const isDisabled = channelDisabled || disabledSet.has(emote.name);
+  const alias = aliases[emote.name];
+  const isEditingAlias = aliasTarget === emote.name;
+
+  return (
+    <div className={`emote-item ${isDisabled ? "emote-disabled" : ""}`}>
+      {!channelDisabled && (
+        <div className="emote-item-actions emote-item-actions--top">
+          <button type="button"
+            className="emote-disable-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleDisable(emote.name);
+            }}
+            title={isDisabled ? "Enable emote" : "Disable emote"}
+          >
+            {isDisabled ? "Enable" : "Disable"}
+          </button>
+        </div>
+      )}
+      <button
+        type="button"
+        className="emote-select-btn"
+        onClick={() => {
+          if (!isDisabled) {
+            onSelectEmote(emote.name);
+            onClearSearch();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (!isDisabled) onSelectEmote(emote.name);
+          }
+        }}
+        tabIndex={isDisabled ? -1 : 0}
+        title={emote.name}
+      >
+        <img src={emote.url} alt={emote.name} className="emote-image" />
+        <span className="emote-name">{emote.name}</span>
+      </button>
+      {alias && !isEditingAlias && (
+        <div className="emote-alias-display" title={`Alias: ${alias}`}>
+          {alias}
+        </div>
+      )}
+      {isEditingAlias && (
+        <div className="emote-alias-editor">
+          <div className="emote-alias-input-row">
+            <input
+              className="emote-alias-input"
+              value={aliasInput}
+              onChange={(e) => onAliasInputChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSubmitAlias();
+                }
+              }}
+              placeholder={alias ? "Replace alias" : "Add alias"}
+              autoFocus
+            />
+            <button type="button"
+              className="emote-alias-add-btn"
+              onClick={onSubmitAlias}
+              title={alias ? "Replace alias" : "Add alias"}
+            >
+              {alias ? "Save" : "Add"}
+            </button>
+          </div>
+          {alias && (
+            <div className="emote-alias-list">
+              <span className="emote-alias-chip">
+                {alias}
+                <button type="button"
+                  onClick={onRemoveAlias}
+                  title={`Remove alias "${alias}"`}
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="emote-item-actions emote-item-actions--bottom">
+        <button type="button"
+          className="emote-alias-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleAlias(emote.name);
+          }}
+          title="Manage aliases"
+        >
+          Alias
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface EmoteChannelSidebarProps {
+  channels: EmotesBySource["twitchChannels"];
+  activeTwitchChannel: string;
+  onSelectChannel: (channelId: string) => void;
+}
+
+function EmoteChannelSidebar({
+  channels,
+  activeTwitchChannel,
+  onSelectChannel,
+}: EmoteChannelSidebarProps) {
+  return (
+    <div className="emote-channel-sidebar">
+      {/* Global */}
+      <button type="button"
+        className={`emote-channel-avatar-btn ${activeTwitchChannel === TWITCH_GLOBAL_KEY ? "active" : ""}`}
+        onClick={() => onSelectChannel(TWITCH_GLOBAL_KEY)}
+        title="Global"
+      >
+        <div className="emote-channel-avatar emote-channel-avatar--global">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 1a5.5 5.5 0 00-4.47 8.72l.28-.72h1.44l-.5 2H8.5l.5-2h2l.5 2h1.75l-.5-2h1.44l.28.72A5.5 5.5 0 0010 4.5z" />
+          </svg>
+        </div>
+        <span className="emote-channel-label">Global</span>
+      </button>
+
+      {/* Per-channel */}
+      {channels.map((ch) => (
+        <button type="button"
+          key={ch.channelId}
+          className={`emote-channel-avatar-btn ${activeTwitchChannel === ch.channelId ? "active" : ""}`}
+          onClick={() => onSelectChannel(ch.channelId)}
+          title={ch.channelName}
+        >
+          {ch.profileImageUrl ? (
+            <img
+              src={ch.profileImageUrl}
+              alt={ch.channelName}
+              className="emote-channel-avatar emote-channel-avatar--img"
+            />
+          ) : (
+            <div className="emote-channel-avatar emote-channel-avatar--fallback">
+              {ch.channelName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="emote-channel-label">{ch.channelName}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface TwitchSearchResultsProps {
+  filteredEmotes: EmotesBySource;
+  searchQuery: string;
+  disabledChannels: Set<string>;
+  renderEmoteItem: (
+    emote: EmoteNameUrl,
+    channelDisabled?: boolean,
+  ) => React.ReactNode;
+}
+
+function TwitchSearchResults({
+  filteredEmotes,
+  searchQuery,
+  disabledChannels,
+  renderEmoteItem,
+}: TwitchSearchResultsProps) {
+  return (
+    <>
+      {filteredEmotes.twitchGlobal.length > 0 && (
+        <div className="emote-search-group">
+          <div className="emote-search-group-label">
+            Global ({filteredEmotes.twitchGlobal.length})
+          </div>
+          <div className="emote-grid">
+            {filteredEmotes.twitchGlobal.map((e) => renderEmoteItem(e))}
+          </div>
+        </div>
+      )}
+      {filteredEmotes.twitchChannels.reduce<React.ReactNode[]>((acc, ch) => {
+        if (ch.emotes.length === 0) return acc;
+        acc.push(
+          <div key={ch.channelId} className="emote-search-group">
+            <div className="emote-search-group-label">
+              {ch.channelName} ({ch.emotes.length})
+            </div>
+            <div className="emote-grid">
+              {ch.emotes.map((e) =>
+                renderEmoteItem(e, disabledChannels.has(ch.channelId)),
+              )}
+            </div>
+          </div>,
+        );
+        return acc;
+      }, [])}
+      {filteredEmotes.twitchGlobal.length === 0 &&
+        filteredEmotes.twitchChannels.every(
+          (ch) => ch.emotes.length === 0,
+        ) && (
+          <div className="emote-no-results">
+            No Twitch emotes match "{searchQuery}"
+          </div>
+        )}
+    </>
+  );
+}
+
+interface TwitchChannelViewProps {
+  activeTwitchChannel: string;
+  currentTwitchChannelName: string;
+  currentTwitchEmotes: EmoteNameUrl[];
+  isCurrentChannelGlobal: boolean;
+  currentChannelDisabled: boolean;
+  onToggleChannel: (channelId: string) => void;
+  renderEmoteItem: (
+    emote: EmoteNameUrl,
+    channelDisabled?: boolean,
+  ) => React.ReactNode;
+}
+
+function TwitchChannelView({
+  activeTwitchChannel,
+  currentTwitchChannelName,
+  currentTwitchEmotes,
+  isCurrentChannelGlobal,
+  currentChannelDisabled,
+  onToggleChannel,
+  renderEmoteItem,
+}: TwitchChannelViewProps) {
+  return (
+    <>
+      <div className="emote-channel-panel-header">
+        <span className="emote-channel-panel-name">
+          {currentTwitchChannelName}
+        </span>
+        <span className="emote-source-count">
+          ({currentTwitchEmotes.length})
+        </span>
+        {!isCurrentChannelGlobal && (
+          <button type="button"
+            className="emote-channel-disable-btn"
+            onClick={() => onToggleChannel(activeTwitchChannel)}
+            title={
+              currentChannelDisabled
+                ? "Enable all emotes from this channel"
+                : "Disable all emotes from this channel"
+            }
+          >
+            {currentChannelDisabled ? "Enable channel" : "Disable channel"}
+          </button>
+        )}
+      </div>
+      {currentTwitchEmotes.length > 0 ? (
+        <div className="emote-grid">
+          {currentTwitchEmotes.map((e) =>
+            renderEmoteItem(e, currentChannelDisabled),
+          )}
+        </div>
+      ) : (
+        <div className="emote-no-results">
+          {activeTwitchChannel === TWITCH_GLOBAL_KEY
+            ? "No global Twitch emotes loaded"
+            : "No emotes for this channel"}
+        </div>
+      )}
+    </>
+  );
+}
+
+interface ThirdPartyPanelProps {
+  sourceEmotes: EmoteNameUrl[];
+  label: string;
+  color: string;
+  isSearching: boolean;
+  searchQuery: string;
+  renderEmoteItem: (emote: EmoteNameUrl) => React.ReactNode;
+}
+
+function ThirdPartyPanel({
+  sourceEmotes,
+  label,
+  color,
+  isSearching,
+  searchQuery,
+  renderEmoteItem,
+}: ThirdPartyPanelProps) {
+  return (
+    <div className="emote-tab-panel">
+      <div className="emote-channel-content">
+        <div className="emote-channel-panel-header">
+          <span className="emote-channel-panel-name" style={{ color }}>
+            {label}
+          </span>
+          <span className="emote-source-count">({sourceEmotes.length})</span>
+        </div>
+        {sourceEmotes.length > 0 ? (
+          <div className="emote-grid">
+            {sourceEmotes.map((e) => renderEmoteItem(e))}
+          </div>
+        ) : (
+          <div className="emote-no-results">
+            {isSearching
+              ? `No ${label} emotes match "${searchQuery}"`
+              : `No ${label} emotes available`}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface EmoteMenuTabsProps {
+  activeTab: EmoteSourceTab;
+  onSelectTab: (tab: EmoteSourceTab) => void;
+}
+
+function EmoteMenuTabs({ activeTab, onSelectTab }: EmoteMenuTabsProps) {
+  return (
+    <div className="emote-menu-tabs">
+      <button type="button"
+        className={`emote-tab ${activeTab === "twitch" ? "active" : ""}`}
+        onClick={() => onSelectTab("twitch")}
+        style={{
+          color: activeTab === "twitch" ? TWITCH_COLOR : "#cbd5e1",
+          borderBottomColor:
+            activeTab === "twitch" ? TWITCH_COLOR : "transparent",
+        }}
+      >
+        Twitch
+      </button>
+      {THIRD_PARTY_SOURCES.map(({ key, label, color }) => (
+        <button type="button"
+          key={key}
+          className={`emote-tab ${activeTab === key ? "active" : ""}`}
+          onClick={() => onSelectTab(key)}
+          style={{
+            color: activeTab === key ? color : "#cbd5e1",
+            borderBottomColor: activeTab === key ? color : "transparent",
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"twitch" | "7tv" | "bttv" | "ffz">(
-    "twitch",
-  );
+  const [activeTab, setActiveTab] = useState<EmoteSourceTab>("twitch");
   // selected channel within the Twitch tab (TWITCH_GLOBAL_KEY or channelId)
   const [activeTwitchChannel, setActiveTwitchChannel] =
     useState<string>(TWITCH_GLOBAL_KEY);
@@ -141,157 +524,41 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
     setAliases(getEmoteAliases());
   };
 
-  const renderEmoteItem = (
-    emote: { name: string; url: string },
-    channelDisabled = false,
-  ) => {
-    const isDisabled = channelDisabled || disabledSet.has(emote.name);
-    return (
-      <div
-        key={emote.name}
-        className={`emote-item ${isDisabled ? "emote-disabled" : ""}`}
-      >
-        {!channelDisabled && (
-          <div className="emote-item-actions emote-item-actions--top">
-            <button type="button"
-              className="emote-disable-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleDisableEmote(emote.name);
-                setDisabledSet(getDisabledEmotes());
-              }}
-              title={isDisabled ? "Enable emote" : "Disable emote"}
-            >
-              {isDisabled ? "Enable" : "Disable"}
-            </button>
-          </div>
-        )}
-        <button
-          type="button"
-          className="emote-select-btn"
-          onClick={() => {
-            if (!isDisabled) {
-              onSelectEmote(emote.name);
-              setSearchQuery("");
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              if (!isDisabled) onSelectEmote(emote.name);
-            }
-          }}
-          tabIndex={isDisabled ? -1 : 0}
-          title={emote.name}
-        >
-          <img src={emote.url} alt={emote.name} className="emote-image" />
-          <span className="emote-name">{emote.name}</span>
-        </button>
-        {aliases[emote.name] && aliasTarget !== emote.name && (
-          <div
-            className="emote-alias-display"
-            title={`Alias: ${aliases[emote.name]}`}
-          >
-            {aliases[emote.name]}
-          </div>
-        )}
-        {aliasTarget === emote.name && (
-          <div className="emote-alias-editor">
-            <div className="emote-alias-input-row">
-              <input
-                className="emote-alias-input"
-                value={aliasInput}
-                onChange={(e) => setAliasInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitAlias();
-                  }
-                }}
-                placeholder={aliases[emote.name] ? "Replace alias" : "Add alias"}
-                autoFocus
-              />
-              <button type="button"
-                className="emote-alias-add-btn"
-                onClick={submitAlias}
-                title={aliases[emote.name] ? "Replace alias" : "Add alias"}
-              >
-                {aliases[emote.name] ? "Save" : "Add"}
-              </button>
-            </div>
-            {aliases[emote.name] && (
-              <div className="emote-alias-list">
-                <span className="emote-alias-chip">
-                  {aliases[emote.name]}
-                  <button type="button"
-                    onClick={handleRemoveAlias}
-                    title={`Remove alias "${aliases[emote.name]}"`}
-                  >
-                    ×
-                  </button>
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-        <div className="emote-item-actions emote-item-actions--bottom">
-          <button type="button"
-            className="emote-alias-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setAliasTarget(aliasTarget === emote.name ? null : emote.name);
-              setAliasInput("");
-            }}
-            title="Manage aliases"
-          >
-            Alias
-          </button>
-        </div>
-      </div>
-    );
+  const handleToggleDisable = (name: string) => {
+    toggleDisableEmote(name);
+    setDisabledSet(getDisabledEmotes());
   };
 
-  // Twitch panel conten
+  const handleToggleChannel = (channelId: string) => {
+    toggleDisableEmoteChannel(channelId);
+    setDisabledChannels(getDisabledEmoteChannels());
+  };
 
-  const twitchSidebar = (
-    <div className="emote-channel-sidebar">
-      {/* Global */}
-      <button type="button"
-        className={`emote-channel-avatar-btn ${activeTwitchChannel === TWITCH_GLOBAL_KEY ? "active" : ""}`}
-        onClick={() => setActiveTwitchChannel(TWITCH_GLOBAL_KEY)}
-        title="Global"
-      >
-        <div className="emote-channel-avatar emote-channel-avatar--global">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13 6.5 6.5 0 010-13zm0 1a5.5 5.5 0 00-4.47 8.72l.28-.72h1.44l-.5 2H8.5l.5-2h2l.5 2h1.75l-.5-2h1.44l.28.72A5.5 5.5 0 0010 4.5z" />
-          </svg>
-        </div>
-        <span className="emote-channel-label">Global</span>
-      </button>
+  const handleToggleAlias = (name: string) => {
+    setAliasTarget(aliasTarget === name ? null : name);
+    setAliasInput("");
+  };
 
-      {/* Per-channel */}
-      {emotes.twitchChannels.map((ch) => (
-        <button type="button"
-          key={ch.channelId}
-          className={`emote-channel-avatar-btn ${activeTwitchChannel === ch.channelId ? "active" : ""}`}
-          onClick={() => setActiveTwitchChannel(ch.channelId)}
-          title={ch.channelName}
-        >
-          {ch.profileImageUrl ? (
-            <img
-              src={ch.profileImageUrl}
-              alt={ch.channelName}
-              className="emote-channel-avatar emote-channel-avatar--img"
-            />
-          ) : (
-            <div className="emote-channel-avatar emote-channel-avatar--fallback">
-              {ch.channelName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <span className="emote-channel-label">{ch.channelName}</span>
-        </button>
-      ))}
-    </div>
+  const renderEmoteItem = (
+    emote: EmoteNameUrl,
+    channelDisabled = false,
+  ) => (
+    <EmoteItem
+      key={emote.name}
+      emote={emote}
+      channelDisabled={channelDisabled}
+      disabledSet={disabledSet}
+      aliases={aliases}
+      aliasTarget={aliasTarget}
+      aliasInput={aliasInput}
+      onSelectEmote={onSelectEmote}
+      onClearSearch={() => setSearchQuery("")}
+      onToggleDisable={handleToggleDisable}
+      onAliasInputChange={setAliasInput}
+      onSubmitAlias={submitAlias}
+      onRemoveAlias={handleRemoveAlias}
+      onToggleAlias={handleToggleAlias}
+    />
   );
 
   const currentTwitchEmotes =
@@ -312,131 +579,17 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
   const currentChannelDisabled =
     !isCurrentChannelGlobal && disabledChannels.has(activeTwitchChannel);
 
-  const twitchPanel = (
-    <div className="emote-tab-panel emote-tab-panel--twitch">
-      {twitchSidebar}
-      <div className="emote-channel-content">
-        {isSearching ? (
-          // Search: show all channels that have results
-          <>
-            {filteredEmotes.twitchGlobal.length > 0 && (
-              <div className="emote-search-group">
-                <div className="emote-search-group-label">
-                  Global ({filteredEmotes.twitchGlobal.length})
-                </div>
-                <div className="emote-grid">
-                  {filteredEmotes.twitchGlobal.map((e) => renderEmoteItem(e))}
-                </div>
-              </div>
-            )}
-            {filteredEmotes.twitchChannels.reduce<React.ReactNode[]>((acc, ch) => {
-              if (ch.emotes.length === 0) return acc;
-              acc.push(
-                <div key={ch.channelId} className="emote-search-group">
-                  <div className="emote-search-group-label">
-                    {ch.channelName} ({ch.emotes.length})
-                  </div>
-                  <div className="emote-grid">
-                    {ch.emotes.map((e) =>
-                      renderEmoteItem(e, disabledChannels.has(ch.channelId)),
-                    )}
-                  </div>
-                </div>,
-              );
-              return acc;
-            }, [])}
-            {filteredEmotes.twitchGlobal.length === 0 &&
-              filteredEmotes.twitchChannels.every(
-                (ch) => ch.emotes.length === 0,
-              ) && (
-                <div className="emote-no-results">
-                  No Twitch emotes match "{searchQuery}"
-                </div>
-              )}
-          </>
-        ) : (
-          // Normal: show only selected channel
-          <>
-            <div className="emote-channel-panel-header">
-              <span className="emote-channel-panel-name">
-                {currentTwitchChannelName}
-              </span>
-              <span className="emote-source-count">
-                ({currentTwitchEmotes.length})
-              </span>
-              {!isCurrentChannelGlobal && (
-                <button type="button"
-                  className="emote-channel-disable-btn"
-                  onClick={() => {
-                    toggleDisableEmoteChannel(activeTwitchChannel);
-                    setDisabledChannels(getDisabledEmoteChannels());
-                  }}
-                  title={
-                    currentChannelDisabled
-                      ? "Enable all emotes from this channel"
-                      : "Disable all emotes from this channel"
-                  }
-                >
-                  {currentChannelDisabled ? "Enable channel" : "Disable channel"}
-                </button>
-              )}
-            </div>
-            {currentTwitchEmotes.length > 0 ? (
-              <div className="emote-grid">
-                {currentTwitchEmotes.map((e) =>
-                  renderEmoteItem(e, currentChannelDisabled),
-                )}
-              </div>
-            ) : (
-              <div className="emote-no-results">
-                {activeTwitchChannel === TWITCH_GLOBAL_KEY
-                  ? "No global Twitch emotes loaded"
-                  : "No emotes for this channel"}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderThirdPartyPanel = (
-    key: "7tv" | "bttv" | "ffz",
-    label: string,
-    color: string,
-  ) => {
-    const sourceEmotes = filteredEmotes[key];
-    return (
-      <div className="emote-tab-panel">
-        <div className="emote-channel-content">
-          <div className="emote-channel-panel-header">
-            <span className="emote-channel-panel-name" style={{ color }}>
-              {label}
-            </span>
-            <span className="emote-source-count">({sourceEmotes.length})</span>
-          </div>
-          {sourceEmotes.length > 0 ? (
-            <div className="emote-grid">
-              {sourceEmotes.map((e) => renderEmoteItem(e))}
-            </div>
-          ) : (
-            <div className="emote-no-results">
-              {isSearching
-                ? `No ${label} emotes match "${searchQuery}"`
-                : `No ${label} emotes available`}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="emote-menu-overlay">
       <div ref={menuRef} className="emote-menu-modal">
         <div className="emote-menu-header">
           <h2>Emotes</h2>
-          <button type="button" className="emote-menu-close" onClick={onClose}>
+          <button
+            type="button"
+            className="emote-menu-close"
+            onClick={onClose}
+            aria-label="Close emote menu"
+          >
             ✕
           </button>
         </div>
@@ -454,41 +607,68 @@ function EmoteMenu({ emotes, onSelectEmote, isOpen, onClose }: EmoteMenuProps) {
           />
         </div>
 
-        <div className="emote-menu-tabs">
-          <button type="button"
-            className={`emote-tab ${activeTab === "twitch" ? "active" : ""}`}
-            onClick={() => setActiveTab("twitch")}
-            style={{
-              color: activeTab === "twitch" ? TWITCH_COLOR : "#cbd5e1",
-              borderBottomColor:
-                activeTab === "twitch" ? TWITCH_COLOR : "transparent",
-            }}
-          >
-            Twitch
-          </button>
-          {THIRD_PARTY_SOURCES.map(({ key, label, color }) => (
-            <button type="button"
-              key={key}
-              className={`emote-tab ${activeTab === key ? "active" : ""}`}
-              onClick={() => setActiveTab(key)}
-              style={{
-                color: activeTab === key ? color : "#cbd5e1",
-                borderBottomColor: activeTab === key ? color : "transparent",
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <EmoteMenuTabs activeTab={activeTab} onSelectTab={setActiveTab} />
 
         <div className="emote-menu-content">
-          {activeTab === "twitch" && twitchPanel}
-          {activeTab === "7tv" &&
-            renderThirdPartyPanel("7tv", "7TV", "#00d4ff")}
-          {activeTab === "bttv" &&
-            renderThirdPartyPanel("bttv", "BTTV", "#34ae7b")}
-          {activeTab === "ffz" &&
-            renderThirdPartyPanel("ffz", "FFZ", "#faa61a")}
+          {activeTab === "twitch" && (
+            <div className="emote-tab-panel emote-tab-panel--twitch">
+              <EmoteChannelSidebar
+                channels={emotes.twitchChannels}
+                activeTwitchChannel={activeTwitchChannel}
+                onSelectChannel={setActiveTwitchChannel}
+              />
+              <div className="emote-channel-content">
+                {isSearching ? (
+                  <TwitchSearchResults
+                    filteredEmotes={filteredEmotes}
+                    searchQuery={searchQuery}
+                    disabledChannels={disabledChannels}
+                    renderEmoteItem={renderEmoteItem}
+                  />
+                ) : (
+                  <TwitchChannelView
+                    activeTwitchChannel={activeTwitchChannel}
+                    currentTwitchChannelName={currentTwitchChannelName}
+                    currentTwitchEmotes={currentTwitchEmotes}
+                    isCurrentChannelGlobal={isCurrentChannelGlobal}
+                    currentChannelDisabled={currentChannelDisabled}
+                    onToggleChannel={handleToggleChannel}
+                    renderEmoteItem={renderEmoteItem}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+          {activeTab === "7tv" && (
+            <ThirdPartyPanel
+              sourceEmotes={filteredEmotes["7tv"]}
+              label="7TV"
+              color="#00d4ff"
+              isSearching={isSearching}
+              searchQuery={searchQuery}
+              renderEmoteItem={renderEmoteItem}
+            />
+          )}
+          {activeTab === "bttv" && (
+            <ThirdPartyPanel
+              sourceEmotes={filteredEmotes.bttv}
+              label="BTTV"
+              color="#34ae7b"
+              isSearching={isSearching}
+              searchQuery={searchQuery}
+              renderEmoteItem={renderEmoteItem}
+            />
+          )}
+          {activeTab === "ffz" && (
+            <ThirdPartyPanel
+              sourceEmotes={filteredEmotes.ffz}
+              label="FFZ"
+              color="#faa61a"
+              isSearching={isSearching}
+              searchQuery={searchQuery}
+              renderEmoteItem={renderEmoteItem}
+            />
+          )}
         </div>
       </div>
     </div>

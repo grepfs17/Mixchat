@@ -52,6 +52,205 @@ interface LoginPanelProps {
   onYoutubeDriveLogin: () => void;
 }
 
+interface ChannelListItemProps {
+  channel: TwitchChannel;
+  isSelected: boolean;
+  isYoutubeLinked: boolean;
+  isFavorite: boolean;
+  onChannelChange?: (channelId: string) => void;
+  onToggleFavorite?: (channelId: string) => void;
+  onRequestClose?: () => void;
+}
+
+function ChannelListItem({
+  channel,
+  isSelected,
+  isYoutubeLinked,
+  isFavorite,
+  onChannelChange,
+  onToggleFavorite,
+  onRequestClose,
+}: ChannelListItemProps) {
+  return (
+    <div className={`channel-item ${isSelected ? "selected" : ""}`}>
+      <button type="button"
+        className="channel-item-info"
+        onClick={() => {
+          onChannelChange?.(channel.id);
+          onRequestClose?.();
+        }}
+        title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
+      >
+        {channel.profileImageUrl ? (
+          <span className="channel-item-avatar-wrap">
+            <img
+              src={channel.profileImageUrl}
+              alt={channel.displayName}
+              className="channel-item-image"
+            />
+            {isYoutubeLinked && (
+              <FaYoutube
+                size={13}
+                className="channel-item-yt-badge"
+                title="YouTube linked"
+              />
+            )}
+          </span>
+        ) : isYoutubeLinked ? (
+          <span className="channel-item-avatar-wrap">
+            <span className="channel-item-image channel-item-image--placeholder" />
+            <FaYoutube
+              size={13}
+              className="channel-item-yt-badge"
+              title="YouTube linked"
+            />
+          </span>
+        ) : null}
+        <div className="channel-item-details">
+          <span className="channel-item-name">{channel.displayName}</span>
+          {channel.gameName && (
+            <span className="channel-game-name">{channel.gameName}</span>
+          )}
+        </div>
+      </button>
+      {channel.viewerCount !== undefined && channel.viewerCount !== null && (
+        <span className="viewer-count">
+          <FaUsers size={12} /> {channel.viewerCount.toLocaleString()}
+        </span>
+      )}
+      <button type="button"
+        onClick={() => onToggleFavorite?.(channel.id)}
+        className={`favorite-button ${isFavorite ? "active" : ""}`}
+        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      >
+        {isFavorite ? <FaStar size={16} /> : <FaRegStar size={16} />}
+      </button>
+    </div>
+  );
+}
+
+interface ChannelListProps {
+  channels: TwitchChannel[];
+  selectedTwitchChannel: string;
+  linkedYoutubeChannelIds: string[];
+  favoriteChannels: string[];
+  onChannelChange?: (channelId: string) => void;
+  onToggleFavorite?: (channelId: string) => void;
+  onRequestClose?: () => void;
+}
+
+function ChannelList({
+  channels,
+  selectedTwitchChannel,
+  linkedYoutubeChannelIds,
+  favoriteChannels,
+  onChannelChange,
+  onToggleFavorite,
+  onRequestClose,
+}: ChannelListProps) {
+  return (
+    <div className="channel-list">
+      {channels.map((channel) => (
+        <ChannelListItem
+          key={channel.id}
+          channel={channel}
+          isSelected={selectedTwitchChannel === channel.id}
+          isYoutubeLinked={new Set(linkedYoutubeChannelIds).has(channel.id)}
+          isFavorite={new Set(favoriteChannels).has(channel.id)}
+          onChannelChange={onChannelChange}
+          onToggleFavorite={onToggleFavorite}
+          onRequestClose={onRequestClose}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface ManualJoinSectionProps {
+  manualChannel: string;
+  onManualChannelChange: (value: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}
+
+function ManualJoinSection({
+  manualChannel,
+  onManualChannelChange,
+  onSubmit,
+}: ManualJoinSectionProps) {
+  return (
+    <div className="manual-join-section">
+      <label className="section-label" htmlFor="login-manual-join">
+        Or join manually
+      </label>
+      <form onSubmit={onSubmit} className="join-form">
+        <input
+          id="login-manual-join"
+          type="text"
+          value={manualChannel}
+          onChange={(e) => onManualChannelChange(e.target.value)}
+          placeholder="Enter channel name"
+          aria-label="Channel name"
+          className="join-input"
+        />
+        <button
+          type="submit"
+          disabled={!manualChannel.trim()}
+          className="logout-btn"
+          style={{
+            backgroundColor: manualChannel.trim() ? "#555555" : "#333333",
+            cursor: manualChannel.trim() ? "pointer" : "not-allowed",
+          }}
+        >
+          Join
+        </button>
+      </form>
+    </div>
+  );
+}
+
+interface YoutubeLoginSectionProps {
+  youtubeConnected?: boolean;
+  youtubeUser?: string;
+  onYoutubeLogin?: () => void;
+  onYoutubeLogout?: () => void;
+}
+
+function YoutubeLoginSection({
+  youtubeConnected,
+  youtubeUser,
+  onYoutubeLogin,
+  onYoutubeLogout,
+}: YoutubeLoginSectionProps) {
+  if (IS_TWITCH_ONLY) return null;
+  return (
+    <div className="youtube-section">
+      {youtubeConnected ? (
+        <div className="youtube-info-row">
+          <div className="youtube-user-info">
+            <FaYoutube
+              style={{ color: "#FF0000", fontSize: "18px", flexShrink: 0 }}
+            />
+            <span className="youtube-user-name">
+              {youtubeUser || "YouTube"}
+            </span>
+          </div>
+          <button type="button" onClick={onYoutubeLogout} className="logout-btn small">
+            Logout
+          </button>
+        </div>
+      ) : onYoutubeLogin ? (
+        <button type="button"
+          onClick={onYoutubeLogin}
+          className="login-btn youtube-btn"
+          style={{ width: "100%" }}
+        >
+          Login with YouTube
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function LoginPanel({
   twitchConnected,
   twitchUser,
@@ -206,110 +405,21 @@ function LoginPanel({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="channel-search-input"
                 />
-                <div className="channel-list">
-                  {filteredChannels.map((channel) => (
-                    <div
-                      key={channel.id}
-                      className={`channel-item ${selectedTwitchChannel === channel.id ? "selected" : ""}`}
-                    >
-                      <button type="button"
-                        className="channel-item-info"
-                        onClick={() => {
-                          onChannelChange?.(channel.id);
-                          onRequestClose?.();
-                        }}
-                        title={`${channel.displayName}${channel.gameName ? ` • ${channel.gameName}` : ""}`}
-                      >
-                        {channel.profileImageUrl ? (
-                          <span className="channel-item-avatar-wrap">
-                            <img
-                              src={channel.profileImageUrl}
-                              alt={channel.displayName}
-                              className="channel-item-image"
-                            />
-                            {new Set(linkedYoutubeChannelIds).has(channel.id) && (
-                              <FaYoutube
-                                size={13}
-                                className="channel-item-yt-badge"
-                                title="YouTube linked"
-                              />
-                            )}
-                          </span>
-                        ) : new Set(linkedYoutubeChannelIds).has(channel.id) ? (
-                          <span className="channel-item-avatar-wrap">
-                            <span className="channel-item-image channel-item-image--placeholder" />
-                            <FaYoutube
-                              size={13}
-                              className="channel-item-yt-badge"
-                              title="YouTube linked"
-                            />
-                          </span>
-                        ) : null}
-                        <div className="channel-item-details">
-                          <span className="channel-item-name">
-                            {channel.displayName}
-                          </span>
-                          {channel.gameName && (
-                            <span className="channel-game-name">
-                              {channel.gameName}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                      {channel.viewerCount !== undefined &&
-                        channel.viewerCount !== null && (
-                          <span className="viewer-count">
-                            <FaUsers size={12} />{" "}
-                            {channel.viewerCount.toLocaleString()}
-                          </span>
-                        )}
-                      <button type="button"
-                        onClick={() => onToggleFavorite?.(channel.id)}
-                        className={`favorite-button ${new Set(favoriteChannels).has(channel.id) ? "active" : ""}`}
-                        title={
-                          new Set(favoriteChannels).has(channel.id)
-                            ? "Remove from favorites"
-                            : "Add to favorites"
-                        }
-                      >
-                        {new Set(favoriteChannels).has(channel.id) ? (
-                          <FaStar size={16} />
-                        ) : (
-                          <FaRegStar size={16} />
-                          )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <ChannelList
+                  channels={filteredChannels}
+                  selectedTwitchChannel={selectedTwitchChannel}
+                  linkedYoutubeChannelIds={linkedYoutubeChannelIds}
+                  favoriteChannels={favoriteChannels}
+                  onChannelChange={onChannelChange}
+                  onToggleFavorite={onToggleFavorite}
+                  onRequestClose={onRequestClose}
+                />
 
-                <div className="manual-join-section">                  <label className="section-label" htmlFor="login-manual-join">Or join manually</label>
-                  <form onSubmit={handleManualJoin} className="join-form">
-                    <input
-                      id="login-manual-join"
-                      type="text"
-                      value={manualChannel}
-                      onChange={(e) => setManualChannel(e.target.value)}
-                      placeholder="Enter channel name"
-                      aria-label="Channel name"
-                    className="join-input"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!manualChannel.trim()}
-                      className="logout-btn"
-                      style={{
-                        backgroundColor: manualChannel.trim()
-                          ? "#555555"
-                          : "#333333",
-                        cursor: manualChannel.trim()
-                          ? "pointer"
-                          : "not-allowed",
-                      }}
-                    >
-                      Join
-                    </button>
-                  </form>
-                </div>
+                <ManualJoinSection
+                  manualChannel={manualChannel}
+                  onManualChannelChange={setManualChannel}
+                  onSubmit={handleManualJoin}
+                />
               </div>
             )}
           </div>
@@ -320,33 +430,12 @@ function LoginPanel({
         )}
 
         {/* YouTube login/logout */}
-        {!IS_TWITCH_ONLY && (
-        <div className="youtube-section">
-          {youtubeConnected ? (
-            <div className="youtube-info-row">
-              <div className="youtube-user-info">
-                <FaYoutube
-                  style={{ color: "#FF0000", fontSize: "18px", flexShrink: 0 }}
-                />
-                <span className="youtube-user-name">
-                  {youtubeUser || "YouTube"}
-                </span>
-              </div>
-              <button type="button" onClick={onYoutubeLogout} className="logout-btn small">
-                Logout
-              </button>
-            </div>
-          ) : onYoutubeLogin ? (
-            <button type="button"
-              onClick={onYoutubeLogin}
-              className="login-btn youtube-btn"
-              style={{ width: "100%" }}
-            >
-              Login with YouTube
-            </button>
-          ) : null}
-        </div>
-        )}
+        <YoutubeLoginSection
+          youtubeConnected={youtubeConnected}
+          youtubeUser={youtubeUser}
+          onYoutubeLogin={onYoutubeLogin}
+          onYoutubeLogout={onYoutubeLogout}
+        />
       </div>
 
       {showEmbedConfig && (

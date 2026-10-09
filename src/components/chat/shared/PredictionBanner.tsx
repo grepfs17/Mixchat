@@ -19,6 +19,99 @@ const outcomeBarColor = (color: string, isWinner: boolean): string => {
   return "var(--color-accent)";
 };
 
+const getStatusLabel = (status: PredictionState["status"]): string => {
+  if (status === "active") return "Live Prediction";
+  if (status === "locked") return "Locked";
+  if (status === "canceled") return "Canceled";
+  if (status === "resolved") return "Result";
+  return "Prediction";
+};
+
+function PredictionOutcomeRow({
+  outcome,
+  totalPoints,
+  maxPoints,
+  isWinner,
+}: {
+  outcome: PredictionOutcome;
+  totalPoints: number;
+  maxPoints: number;
+  isWinner: boolean;
+}) {
+  const pct =
+    totalPoints > 1
+      ? Math.round((outcome.channelPoints / totalPoints) * 100)
+      : 50;
+  const barWidth = Math.max(4, (outcome.channelPoints / maxPoints) * 100);
+
+  return (
+    <div
+      className={`prediction-banner-outcome${isWinner ? " prediction-banner-outcome--winner" : ""}`}
+    >
+      <div className="prediction-banner-outcome-bar-bg">
+        <div
+          className="prediction-banner-outcome-bar-fill"
+          style={{
+            width: `${barWidth}%`,
+            background: outcomeBarColor(outcome.color, isWinner),
+          }}
+        />
+      </div>
+      <div className="prediction-banner-outcome-content">
+        <span className="prediction-banner-outcome-title">{outcome.title}</span>
+        <span className="prediction-banner-outcome-meta">
+          {outcome.channelPoints.toLocaleString()} pts · {pct}%
+          {outcome.users > 0 && ` · ${outcome.users}`}
+        </span>
+      </div>
+      {isWinner && (
+        <span className="prediction-banner-winner-badge">Winner</span>
+      )}
+    </div>
+  );
+}
+
+function PredictionFooter({
+  prediction,
+  isActive,
+  isLocked,
+  isEnded,
+  totalUsers,
+  timeDisplay,
+}: {
+  prediction: PredictionState;
+  isActive: boolean;
+  isLocked: boolean;
+  isEnded: boolean;
+  totalUsers: number;
+  timeDisplay: string;
+}) {
+  return (
+    <>
+      <span className="prediction-banner-total">
+        {totalUsers.toLocaleString()} predictors ·{" "}
+        {prediction.outcomes
+          .reduce((s, o) => s + o.channelPoints, 0)
+          .toLocaleString()}{" "}
+        points
+      </span>
+      {isActive && prediction.endsAt && (
+        <span className="prediction-banner-timer">Ends in {timeDisplay}</span>
+      )}
+      {isLocked && (
+        <span className="prediction-banner-timer prediction-banner-timer--locked">
+          Locked — waiting for result
+        </span>
+      )}
+      {isEnded && (
+        <span className="prediction-banner-timer prediction-banner-timer--ended">
+          Final result
+        </span>
+      )}
+    </>
+  );
+}
+
 /**
  * Display-mode prediction banner. Renders outcomes with channel-points
  * bars; once the prediction is resolved, the winning outcome gets a
@@ -58,16 +151,6 @@ export default function PredictionBanner({
     [prediction.outcomes],
   );
 
-  const statusLabel = isActive
-    ? "Live Prediction"
-    : isLocked
-      ? "Locked"
-      : prediction.status === "canceled"
-        ? "Canceled"
-        : prediction.status === "resolved"
-          ? "Result"
-          : "Prediction";
-
   return (
     <BannerShell
       tone="prediction"
@@ -77,7 +160,7 @@ export default function PredictionBanner({
         <span
           className={`prediction-banner-badge${isEnded ? " prediction-banner-badge--ended" : ""}${isLocked ? " prediction-banner-badge--locked" : ""}`}
         >
-          {statusLabel}
+          {getStatusLabel(prediction.status)}
         </span>
       }
       icon={<FaMagic className="prediction-banner-icon" size={14} />}
@@ -86,73 +169,26 @@ export default function PredictionBanner({
       }
       onDismiss={onDismiss}
       footer={
-        <>
-          <span className="prediction-banner-total">
-            {totalUsers.toLocaleString()} predictors ·{" "}
-            {prediction.outcomes
-              .reduce((s, o) => s + o.channelPoints, 0)
-              .toLocaleString()}{" "}
-            points
-          </span>
-          {isActive && prediction.endsAt && (
-            <span className="prediction-banner-timer">
-              Ends in {timeDisplay}
-            </span>
-          )}
-          {isLocked && (
-            <span className="prediction-banner-timer prediction-banner-timer--locked">
-              Locked — waiting for result
-            </span>
-          )}
-          {isEnded && (
-            <span className="prediction-banner-timer prediction-banner-timer--ended">
-              Final result
-            </span>
-          )}
-        </>
+        <PredictionFooter
+          prediction={prediction}
+          isActive={isActive}
+          isLocked={isLocked}
+          isEnded={isEnded}
+          totalUsers={totalUsers}
+          timeDisplay={timeDisplay}
+        />
       }
     >
       <div className="prediction-banner-outcomes">
-        {prediction.outcomes.map((outcome) => {
-          const pct =
-            totalPoints > 1
-              ? Math.round((outcome.channelPoints / totalPoints) * 100)
-              : 50;
-          const barWidth = Math.max(
-            4,
-            (outcome.channelPoints / maxPoints) * 100,
-          );
-          const isWinner = prediction.winningOutcomeId === outcome.id;
-
-          return (
-            <div
-              key={outcome.id}
-              className={`prediction-banner-outcome${isWinner ? " prediction-banner-outcome--winner" : ""}`}
-            >
-              <div className="prediction-banner-outcome-bar-bg">
-                <div
-                  className="prediction-banner-outcome-bar-fill"
-                  style={{
-                    width: `${barWidth}%`,
-                    background: outcomeBarColor(outcome.color, isWinner),
-                  }}
-                />
-              </div>
-              <div className="prediction-banner-outcome-content">
-                <span className="prediction-banner-outcome-title">
-                  {outcome.title}
-                </span>
-                <span className="prediction-banner-outcome-meta">
-                  {outcome.channelPoints.toLocaleString()} pts · {pct}%
-                  {outcome.users > 0 && ` · ${outcome.users}`}
-                </span>
-              </div>
-              {isWinner && (
-                <span className="prediction-banner-winner-badge">Winner</span>
-              )}
-            </div>
-          );
-        })}
+        {prediction.outcomes.map((outcome) => (
+          <PredictionOutcomeRow
+            key={outcome.id}
+            outcome={outcome}
+            totalPoints={totalPoints}
+            maxPoints={maxPoints}
+            isWinner={prediction.winningOutcomeId === outcome.id}
+          />
+        ))}
       </div>
     </BannerShell>
   );

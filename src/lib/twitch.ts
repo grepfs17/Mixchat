@@ -173,18 +173,21 @@ export const pollTwitchDeviceToken = async (
       refreshToken: data.refresh_token,
       expiresIn: data.expires_in,
     };
+  } else {
+    // The token endpoint returns the device-flow error (authorization_pending,
+    // slow_down, expired_token, access_denied, …) in the body of the 4xx
+    // response, so read it deliberately.
+    const body = (await res.json().catch(() => ({}))) as {
+      message?: string;
+      error?: string;
+    };
+    const code = (body.message || body.error || "").toLowerCase();
+    if (code.includes("authorization_pending")) return { status: "pending" };
+    if (code.includes("slow_down")) return { status: "slow_down" };
+    if (code.includes("expired_token")) return { status: "expired" };
+    if (code.includes("access_denied")) return { status: "denied" };
+    return { status: "error", message: body.message || `HTTP ${res.status}` };
   }
-
-  const body = (await res.json().catch(() => ({}))) as {
-    message?: string;
-    error?: string;
-  };
-  const code = (body.message || body.error || "").toLowerCase();
-  if (code.includes("authorization_pending")) return { status: "pending" };
-  if (code.includes("slow_down")) return { status: "slow_down" };
-  if (code.includes("expired_token")) return { status: "expired" };
-  if (code.includes("access_denied")) return { status: "denied" };
-  return { status: "error", message: body.message || `HTTP ${res.status}` };
 };
 
 /**

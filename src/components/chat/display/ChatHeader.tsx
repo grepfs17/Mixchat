@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect, useCallback, type RefObject } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  type RefObject,
+  type ReactNode,
+  type KeyboardEvent,
+  type ChangeEvent,
+} from "react";
 import {
   MdRefresh,
   MdEdit,
@@ -154,6 +163,144 @@ function ModModeIcon({
   return <GiCrossedSwords size={16} className="mod-icon" style={{ color: "var(--color-text-muted)" }} />;
 }
 
+function getModModeOptionState(
+  target: ModModeTarget,
+  modModeActive: boolean,
+  youtubeModModeActive?: boolean,
+): { active: boolean; activeVariant: string; checked: boolean } {
+  const yt = !!youtubeModModeActive;
+  switch (target) {
+    case "off":
+      return {
+        active: !modModeActive && !yt,
+        activeVariant: "",
+        checked: modModeActive === false && youtubeModModeActive === false,
+      };
+    case "twitch":
+      return {
+        active: modModeActive && !yt,
+        activeVariant: " twitch",
+        checked: modModeActive === true && youtubeModModeActive === false,
+      };
+    case "youtube":
+      return {
+        active: !modModeActive && yt,
+        activeVariant: " youtube",
+        checked: modModeActive === false && youtubeModModeActive === true,
+      };
+    case "both":
+      return {
+        active: modModeActive && yt,
+        activeVariant: " both",
+        checked: modModeActive === true && youtubeModModeActive === true,
+      };
+  }
+}
+
+function ModModeOption({
+  target,
+  modModeActive,
+  youtubeModModeActive,
+  onSelect,
+  title,
+  icon,
+  label,
+}: {
+  target: ModModeTarget;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSelect: (mode: ModModeTarget) => void;
+  title: string;
+  icon: ReactNode;
+  label: string;
+}) {
+  const { active, activeVariant, checked } = getModModeOptionState(
+    target,
+    modModeActive,
+    youtubeModModeActive,
+  );
+  return (
+    <button type="button"
+      className={`mod-mode-item${active ? ` active${activeVariant}` : ""}`}
+      onClick={() => onSelect(target)}
+      title={title}
+    >
+      {icon}
+      <span>{label}</span>
+      {checked ? <span className="mod-mode-check">✓</span> : null}
+    </button>
+  );
+}
+
+function ModModeDropdownMenu({
+  isModerator,
+  isYouTubeModerator,
+  modModeActive,
+  youtubeModModeActive,
+  onSelectMode,
+  onClose,
+}: {
+  isModerator: boolean;
+  isYouTubeModerator?: boolean;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSelectMode?: (mode: ModModeTarget) => void;
+  onClose: () => void;
+}) {
+  const select = (mode: ModModeTarget) => {
+    onSelectMode?.(mode);
+    onClose();
+  };
+  return (
+    <div className="mod-mode-dropdown">
+      {(isModerator || isYouTubeModerator) && (
+        <ModModeOption
+          target="off"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          title="Disable Mod Mode"
+          icon={<GiCrossedSwords size={14} />}
+          label="Off"
+        />
+      )}
+      {isModerator && (
+        <ModModeOption
+          target="twitch"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          title="Twitch Mod Mode"
+          icon={<FaTwitch size={14} />}
+          label="Twitch"
+        />
+      )}
+      {isYouTubeModerator && (
+        <ModModeOption
+          target="youtube"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          title="YouTube Mod Mode"
+          icon={<FaYoutube size={14} />}
+          label="YouTube"
+        />
+      )}
+      {isModerator && isYouTubeModerator && (
+        <ModModeOption
+          target="both"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          title="Both Platforms Mod Mode"
+          icon={<GiCrossedSwords size={14} />}
+          label="Both"
+        />
+      )}
+    </div>
+  );
+}
+
 function ModModeDropdown({
   isModerator,
   isYouTubeModerator,
@@ -173,11 +320,6 @@ function ModModeDropdown({
   isOpen: boolean;
   onToggle: () => void;
 }) {
-  const check = (tw: boolean, yt: boolean) =>
-    modModeActive === tw && youtubeModModeActive === yt ? (
-      <span className="mod-mode-check">✓</span>
-    ) : null;
-
   return (
     <div className="mod-mode-container" ref={containerRef}>
       <button type="button"
@@ -191,52 +333,238 @@ function ModModeDropdown({
         <span className="mod-label">Mod Mode</span>
       </button>
       {isOpen && (
-        <div className="mod-mode-dropdown">
-          {(isModerator || isYouTubeModerator) && (
-            <button type="button"
-              className={`mod-mode-item${!modModeActive && !youtubeModModeActive ? " active" : ""}`}
-              onClick={() => { onSetMode?.("off"); onToggle(); }}
-              title="Disable Mod Mode"
-            >
-              <GiCrossedSwords size={14} />
-              <span>Off</span>
-              {check(false, false)}
-            </button>
-          )}
-          {isModerator && (
-            <button type="button"
-              className={`mod-mode-item${modModeActive && !youtubeModModeActive ? " active twitch" : ""}`}
-              onClick={() => { onSetMode?.("twitch"); onToggle(); }}
-              title="Twitch Mod Mode"
-            >
-              <FaTwitch size={14} />
-              <span>Twitch</span>
-              {check(true, false)}
-            </button>
-          )}
-          {isYouTubeModerator && (
-            <button type="button"
-              className={`mod-mode-item${youtubeModModeActive && !modModeActive ? " active youtube" : ""}`}
-              onClick={() => { onSetMode?.("youtube"); onToggle(); }}
-              title="YouTube Mod Mode"
-            >
-              <FaYoutube size={14} />
-              <span>YouTube</span>
-              {check(false, true)}
-            </button>
-          )}
-          {isModerator && isYouTubeModerator && (
-            <button type="button"
-              className={`mod-mode-item${modModeActive && youtubeModModeActive ? " active both" : ""}`}
-              onClick={() => { onSetMode?.("both"); onToggle(); }}
-              title="Both Platforms Mod Mode"
-            >
-              <GiCrossedSwords size={14} />
-              <span>Both</span>
-              {check(true, true)}
-            </button>
-          )}
-        </div>
+        <ModModeDropdownMenu
+          isModerator={isModerator}
+          isYouTubeModerator={isYouTubeModerator}
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelectMode={onSetMode}
+          onClose={onToggle}
+        />
+      )}
+    </div>
+  );
+}
+
+function StreamTitleSection({
+  canEdit,
+  editingTitle,
+  titleInput,
+  savingTitle,
+  streamTitle,
+  onTitleChange,
+  onTitleKeyDown,
+  onSaveTitle,
+  onCancelTitleEdit,
+  onStartTitleEdit,
+}: {
+  canEdit?: boolean;
+  editingTitle: boolean;
+  titleInput: string;
+  savingTitle: boolean;
+  streamTitle?: string;
+  onTitleChange: (value: string) => void;
+  onTitleKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  onSaveTitle: () => void;
+  onCancelTitleEdit: () => void;
+  onStartTitleEdit: () => void;
+}) {
+  if (canEdit && editingTitle) {
+    return (
+      <div className="stream-info-edit-group">
+        <input
+          className="stream-info-input"
+          type="text"
+          value={titleInput}
+          onChange={(e) => onTitleChange(e.target.value)}
+          onKeyDown={onTitleKeyDown}
+          placeholder="Stream title"
+          aria-label="Stream title"
+          autoFocus
+          disabled={savingTitle}
+        />
+        <button type="button"
+          className="stream-info-edit-btn stream-info-edit-btn--confirm"
+          onClick={onSaveTitle}
+          disabled={savingTitle}
+          title="Save title"
+        >
+          <MdCheck size={14} />
+        </button>
+        <button type="button"
+          className="stream-info-edit-btn stream-info-edit-btn--cancel"
+          onClick={onCancelTitleEdit}
+          disabled={savingTitle}
+          title="Cancel"
+        >
+          <MdClose size={14} />
+        </button>
+      </div>
+    );
+  }
+  if (canEdit) {
+    return (
+      <button
+        type="button"
+        className="stream-info-title"
+        onClick={onStartTitleEdit}
+        title="Click to edit title"
+      >
+        {streamTitle || "No title set"}
+        <MdEdit size={11} className="stream-info-edit-icon" />
+      </button>
+    );
+  }
+  return (
+    <span className="stream-info-title stream-info-title--readonly">
+      {streamTitle || "No title set"}
+    </span>
+  );
+}
+
+function StreamCategorySection({
+  canEdit,
+  editingCategory,
+  categoryInput,
+  savingCategory,
+  streamGameName,
+  categoryDropdownRef,
+  categoryInputRef,
+  onCategoryChange,
+  onCategoryKeyDown,
+  onCategoryFocus,
+  onCancelCategoryEdit,
+  onStartCategoryEdit,
+}: {
+  canEdit?: boolean;
+  editingCategory: boolean;
+  categoryInput: string;
+  savingCategory: boolean;
+  streamGameName?: string;
+  categoryDropdownRef: RefObject<HTMLDivElement | null>;
+  categoryInputRef: RefObject<HTMLInputElement | null>;
+  onCategoryChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onCategoryKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+  onCategoryFocus: () => void;
+  onCancelCategoryEdit: () => void;
+  onStartCategoryEdit: () => void;
+}) {
+  if (canEdit && editingCategory) {
+    return (
+      <div
+        className="stream-info-edit-group stream-info-category-edit"
+        ref={categoryDropdownRef}
+      >
+        <input
+          ref={categoryInputRef}
+          className="stream-info-input stream-info-input--category"
+          type="text"
+          value={categoryInput}
+          onChange={onCategoryChange}
+          onKeyDown={onCategoryKeyDown}
+          onFocus={onCategoryFocus}
+          placeholder="Search category..."
+          aria-label="Search category"
+          autoFocus
+          disabled={savingCategory}
+        />
+        <button type="button"
+          className="stream-info-edit-btn stream-info-edit-btn--cancel"
+          onClick={onCancelCategoryEdit}
+          disabled={savingCategory}
+          title="Cancel"
+        >
+          <MdClose size={14} />
+        </button>
+      </div>
+    );
+  }
+  if (canEdit) {
+    return (
+      <button
+        type="button"
+        className="stream-info-category"
+        onClick={onStartCategoryEdit}
+        title="Click to change category"
+      >
+        {streamGameName || "No category"}
+        <MdEdit size={11} className="stream-info-edit-icon" />
+      </button>
+    );
+  }
+  return (
+    <span className="stream-info-category stream-info-category--readonly">
+      {streamGameName || "No category"}
+    </span>
+  );
+}
+
+function StreamInfoActions({
+  youtubeVideoId,
+  showTwitchModButton,
+  channelName,
+  onOpenChatStats,
+}: {
+  youtubeVideoId?: string | null;
+  showTwitchModButton?: boolean;
+  channelName?: string;
+  onOpenChatStats?: () => void;
+}) {
+  return (
+    <div className="stream-info-actions">
+      {youtubeVideoId && (
+        <button
+          type="button"
+          className="stream-info-action-btn"
+          title="Open YouTube chat popout"
+          onClick={() => {
+            window.open(
+              `https://www.youtube.com/live_chat?is_popout=1&v=${encodeURIComponent(youtubeVideoId)}`,
+              "yt-chat-popout",
+              "width=400,height=600,noopener,noreferrer",
+            );
+          }}
+        >
+          <FaYoutube size={14} />
+        </button>
+      )}
+      {showTwitchModButton && channelName && (
+        <>
+          <button
+            type="button"
+            className="stream-info-action-btn"
+            title="Open Twitch stream popout"
+            onClick={() => {
+              window.open(
+                `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName)}/player?id=1`,
+                "twitch-stream-popout",
+                "width=1280,height=720,noopener,noreferrer",
+              );
+            }}
+          >
+            <MdTv size={14} />
+          </button>
+          <a
+            href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="stream-info-action-btn"
+            title="Open Twitch moderator page"
+          >
+            <FaTwitch size={14} />
+          </a>
+        </>
+      )}
+      {onOpenChatStats && (
+        <button
+          type="button"
+          className="stream-info-action-btn"
+          title="Chat stats"
+          data-chat-stats-trigger
+          onClick={onOpenChatStats}
+        >
+          <MdBarChart size={14} />
+        </button>
       )}
     </div>
   );
@@ -280,6 +608,12 @@ function StreamInfoBar({
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
+  const resetCategoryEdit = useCallback(() => {
+    setEditingCategory(false);
+    setCategoryResults([]);
+    setCategoryDropdownPos(null);
+  }, []);
+
   const closeCategoryDropdown = useCallback(() => {
     const portalDropdown = document.getElementById("category-dropdown-portal");
     const target = document.activeElement;
@@ -299,6 +633,16 @@ function StreamInfoBar({
     });
   }, [onUpdateTitle, titleInput]);
 
+  const handleTitleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") handleSaveTitle();
+    else if (e.key === "Escape") setEditingTitle(false);
+  };
+
+  const startTitleEdit = () => {
+    setTitleInput(streamTitle || "");
+    setEditingTitle(true);
+  };
+
   const handleSaveCategory = useCallback(
     (id: string, name: string) => {
       setSavingCategory(true);
@@ -312,195 +656,82 @@ function StreamInfoBar({
     [onUpdateCategory],
   );
 
+  const handleCategoryInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCategoryInput(value);
+    if (categorySearchRef.current) clearTimeout(categorySearchRef.current);
+    if (value.trim()) {
+      categorySearchRef.current = setTimeout(() => {
+        onSearchCategories?.(value).then((results) => {
+          setCategoryResults(results);
+          const rect = categoryInputRef.current?.getBoundingClientRect();
+          if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+        });
+      }, 300);
+    } else {
+      setCategoryResults([]);
+      setCategoryDropdownPos(null);
+    }
+  };
+
+  const handleCategoryKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setEditingCategory(false);
+      setCategoryResults([]);
+      setCategoryDropdownPos(null);
+    }
+  };
+
+  const handleCategoryFocus = () => {
+    const rect = categoryInputRef.current?.getBoundingClientRect();
+    if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
+  };
+
+  const startCategoryEdit = () => {
+    setCategoryInput(streamGameName || "");
+    setEditingCategory(true);
+    onSearchCategories?.(streamGameName || "")
+      .then((results) => setCategoryResults(results))
+      .catch(() => {});
+  };
+
   return (
     <>
       <div className="stream-info-bar">
-        {canEdit && editingTitle ? (
-          <div className="stream-info-edit-group">
-            <input
-              className="stream-info-input"
-              type="text"
-              value={titleInput}
-              onChange={(e) => setTitleInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSaveTitle();
-                else if (e.key === "Escape") setEditingTitle(false);
-              }}
-              placeholder="Stream title"
-              aria-label="Stream title"
-              autoFocus
-              disabled={savingTitle}
-            />
-            <button type="button"
-              className="stream-info-edit-btn stream-info-edit-btn--confirm"
-              onClick={handleSaveTitle}
-              disabled={savingTitle}
-              title="Save title"
-            >
-              <MdCheck size={14} />
-            </button>
-            <button type="button"
-              className="stream-info-edit-btn stream-info-edit-btn--cancel"
-              onClick={() => setEditingTitle(false)}
-              disabled={savingTitle}
-              title="Cancel"
-            >
-              <MdClose size={14} />
-            </button>
-          </div>
-        ) : canEdit ? (
-          <button
-            type="button"
-            className="stream-info-title"
-            onClick={() => {
-              setTitleInput(streamTitle || "");
-              setEditingTitle(true);
-            }}
-            title="Click to edit title"
-          >
-            {streamTitle || "No title set"}
-            <MdEdit size={11} className="stream-info-edit-icon" />
-          </button>
-        ) : (
-          <span className="stream-info-title stream-info-title--readonly">
-            {streamTitle || "No title set"}
-          </span>
-        )}
+        <StreamTitleSection
+          canEdit={canEdit}
+          editingTitle={editingTitle}
+          titleInput={titleInput}
+          savingTitle={savingTitle}
+          streamTitle={streamTitle}
+          onTitleChange={setTitleInput}
+          onTitleKeyDown={handleTitleKeyDown}
+          onSaveTitle={handleSaveTitle}
+          onCancelTitleEdit={() => setEditingTitle(false)}
+          onStartTitleEdit={startTitleEdit}
+        />
 
-        {canEdit && editingCategory ? (
-          <div
-            className="stream-info-edit-group stream-info-category-edit"
-            ref={categoryDropdownRef}
-          >
-            <input
-              ref={categoryInputRef}
-              className="stream-info-input stream-info-input--category"
-              type="text"
-              value={categoryInput}
-              onChange={(e) => {
-                setCategoryInput(e.target.value);
-                if (categorySearchRef.current)
-                  clearTimeout(categorySearchRef.current);
-                if (e.target.value.trim()) {
-                  categorySearchRef.current = setTimeout(() => {
-                    onSearchCategories?.(e.target.value).then((results) => {
-                      setCategoryResults(results);
-                      const rect = categoryInputRef.current?.getBoundingClientRect();
-                      if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
-                    });
-                  }, 300);
-                } else {
-                  setCategoryResults([]);
-                  setCategoryDropdownPos(null);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setEditingCategory(false);
-                  setCategoryResults([]);
-                  setCategoryDropdownPos(null);
-                }
-              }}
-              onFocus={() => {
-                const rect = categoryInputRef.current?.getBoundingClientRect();
-                if (rect) setCategoryDropdownPos({ x: rect.left, y: rect.bottom + 4 });
-              }}
-              placeholder="Search category..."
-              aria-label="Search category"
-              autoFocus
-              disabled={savingCategory}
-            />
-            <button type="button"
-              className="stream-info-edit-btn stream-info-edit-btn--cancel"
-              onClick={() => {
-                setEditingCategory(false);
-                setCategoryResults([]);
-                setCategoryDropdownPos(null);
-              }}
-              disabled={savingCategory}
-              title="Cancel"
-            >
-              <MdClose size={14} />
-            </button>
-          </div>
-        ) : canEdit ? (
-          <button
-            type="button"
-            className="stream-info-category"
-            onClick={() => {
-              setCategoryInput(streamGameName || "");
-              setEditingCategory(true);
-              onSearchCategories?.(streamGameName || "")
-                .then((results) => setCategoryResults(results))
-                .catch(() => {});
-            }}
-            title="Click to change category"
-          >
-            {streamGameName || "No category"}
-            <MdEdit size={11} className="stream-info-edit-icon" />
-          </button>
-        ) : (
-          <span className="stream-info-category stream-info-category--readonly">
-            {streamGameName || "No category"}
-          </span>
-        )}
+        <StreamCategorySection
+          canEdit={canEdit}
+          editingCategory={editingCategory}
+          categoryInput={categoryInput}
+          savingCategory={savingCategory}
+          streamGameName={streamGameName}
+          categoryDropdownRef={categoryDropdownRef}
+          categoryInputRef={categoryInputRef}
+          onCategoryChange={handleCategoryInputChange}
+          onCategoryKeyDown={handleCategoryKeyDown}
+          onCategoryFocus={handleCategoryFocus}
+          onCancelCategoryEdit={resetCategoryEdit}
+          onStartCategoryEdit={startCategoryEdit}
+        />
 
-        <div className="stream-info-actions">
-          {youtubeVideoId && (
-            <button
-              type="button"
-              className="stream-info-action-btn"
-              title="Open YouTube chat popout"
-              onClick={() => {
-                window.open(
-                  `https://www.youtube.com/live_chat?is_popout=1&v=${encodeURIComponent(youtubeVideoId)}`,
-                  "yt-chat-popout",
-                  "width=400,height=600,noopener,noreferrer",
-                );
-              }}
-            >
-              <FaYoutube size={14} />
-            </button>
-          )}
-          {showTwitchModButton && channelName && (
-            <>
-              <button
-                type="button"
-                className="stream-info-action-btn"
-                title="Open Twitch stream popout"
-                onClick={() => {
-                  window.open(
-                    `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName)}/player?id=1`,
-                    "twitch-stream-popout",
-                    "width=1280,height=720,noopener,noreferrer",
-                  );
-                }}
-              >
-                <MdTv size={14} />
-              </button>
-              <a
-                href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="stream-info-action-btn"
-                title="Open Twitch moderator page"
-              >
-                <FaTwitch size={14} />
-              </a>
-            </>
-          )}
-          {onOpenChatStats && (
-            <button
-              type="button"
-              className="stream-info-action-btn"
-              title="Chat stats"
-              data-chat-stats-trigger
-              onClick={onOpenChatStats}
-            >
-              <MdBarChart size={14} />
-            </button>
-          )}
-        </div>
+        <StreamInfoActions
+          youtubeVideoId={youtubeVideoId}
+          showTwitchModButton={showTwitchModButton}
+          channelName={channelName}
+          onOpenChatStats={onOpenChatStats}
+        />
       </div>
 
       {canEdit && (
@@ -510,11 +741,7 @@ function StreamInfoBar({
           saving={savingCategory}
           inputRef={categoryInputRef}
           onSelect={handleSaveCategory}
-          onCancel={() => {
-            setEditingCategory(false);
-            setCategoryResults([]);
-            setCategoryDropdownPos(null);
-          }}
+          onCancel={resetCategoryEdit}
         />
       )}
     </>
@@ -579,6 +806,496 @@ function renderStatusSection(
   );
 }
 
+function getMobileModActive(
+  target: ModModeTarget,
+  modModeActive: boolean,
+  youtubeModModeActive?: boolean,
+): boolean {
+  const yt = !!youtubeModModeActive;
+  switch (target) {
+    case "twitch":
+      return modModeActive && !yt;
+    case "youtube":
+      return !modModeActive && yt;
+    case "both":
+      return modModeActive && yt;
+    case "off":
+      return false;
+  }
+}
+
+function MobileModModeButton({
+  target,
+  modModeActive,
+  youtubeModModeActive,
+  onSelect,
+  label,
+  icon,
+}: {
+  target: ModModeTarget;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSelect: (mode: ModModeTarget) => void;
+  label: string;
+  icon: ReactNode;
+}) {
+  const active = getMobileModActive(target, modModeActive, youtubeModModeActive);
+  return (
+    <button type="button"
+      className={`mobile-menu-item${active ? " active" : ""}`}
+      onClick={() => onSelect(target)}
+    >
+      {icon}
+      <span>
+        {label} {active ? "✓" : ""}
+      </span>
+    </button>
+  );
+}
+
+function MobileModModeSection({
+  isModerator,
+  isYouTubeModerator,
+  modModeActive,
+  youtubeModModeActive,
+  onSetModMode,
+  onClose,
+}: {
+  isModerator: boolean;
+  isYouTubeModerator?: boolean;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSetModMode?: (mode: ModModeTarget) => void;
+  onClose: () => void;
+}) {
+  const select = (mode: ModModeTarget) => {
+    onSetModMode?.(mode);
+    onClose();
+  };
+  return (
+    <>
+      <div className="mobile-menu-separator" />
+      {isModerator && (
+        <MobileModModeButton
+          target="twitch"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          label="Twitch Mod"
+          icon={<FaTwitch size={14} />}
+        />
+      )}
+      {isYouTubeModerator && (
+        <MobileModModeButton
+          target="youtube"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          label="YouTube Mod"
+          icon={<FaYoutube size={14} />}
+        />
+      )}
+      {isModerator && isYouTubeModerator && (
+        <MobileModModeButton
+          target="both"
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSelect={select}
+          label="Both Platforms"
+          icon={<GiCrossedSwords size={14} />}
+        />
+      )}
+      {(modModeActive || youtubeModModeActive) && (
+        <button type="button"
+          className="mobile-menu-item"
+          onClick={() => select("off")}
+        >
+          <GiCrossedSwords size={14} />
+          <span>Mod Mode Off</span>
+        </button>
+      )}
+    </>
+  );
+}
+
+function StreamStatusBadge({
+  isStreamLive,
+  isOpen,
+  onToggle,
+  containerRef,
+  subscriptionStatuses,
+  redemptionPubSubStatus,
+}: {
+  isStreamLive?: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  containerRef: RefObject<HTMLDivElement | null>;
+  subscriptionStatuses?: Map<string, SubscriptionStatus>;
+  redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
+}) {
+  return (
+    <span className="status-badge-container" ref={containerRef}>
+      <button
+        type="button"
+        className="status-badge-button"
+        onClick={onToggle}
+        title="Event connection status"
+      >
+        {isStreamLive ? (
+          <span className="status-badge-live">
+            <span className="status-dot pulse" />
+            <span className="status-badge-live-text">LIVE</span>
+          </span>
+        ) : (
+          <span className="status-badge-offline">
+            <span className="status-dot" />
+            <span className="status-badge-offline-text">OFFLINE</span>
+          </span>
+        )}
+      </button>
+      {isOpen && subscriptionStatuses && (
+        <div className="eventsub-status-dropdown">
+          <div className="eventsub-status-header">Event Connections</div>
+          {renderStatusSection("WebSocket", subscriptionStatuses, null)}
+          {renderStatusSection("Automod", subscriptionStatuses, [
+            "automod.message.hold",
+            "automod.message.update",
+          ])}
+          {renderStatusSection("Incoming Raids", subscriptionStatuses, [
+            "channel.raid",
+          ], "to_broadcaster")}
+          {renderStatusSection("Outgoing Raids", subscriptionStatuses, [
+            "channel.raid",
+          ], "from_broadcaster")}
+          {renderStatusSection("Hype Train", subscriptionStatuses, [
+            "channel.hype_train.begin",
+            "channel.hype_train.progress",
+            "channel.hype_train.end",
+          ])}
+          {renderStatusSection("Polls", subscriptionStatuses, [
+            "channel.poll.begin",
+            "channel.poll.progress",
+            "channel.poll.end",
+          ])}
+          {renderStatusSection("Predictions", subscriptionStatuses, [
+            "channel.prediction.begin",
+            "channel.prediction.progress",
+            "channel.prediction.lock",
+            "channel.prediction.end",
+          ])}
+          {renderStatusSection("Bits", subscriptionStatuses, [
+            "channel.bits.use",
+          ])}
+          {redemptionPubSubStatus !== undefined &&
+            renderSimpleStatusSection(
+              "Channel Points (PubSub)",
+              redemptionPubSubStatus,
+            )}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function ChannelTitleSummary({
+  channelName,
+  channelDisplayName,
+  hideViewerCount,
+  viewerCount,
+  streamUptime,
+  isStreamLive,
+}: {
+  channelName?: string;
+  channelDisplayName?: string;
+  hideViewerCount?: boolean;
+  viewerCount?: number | null;
+  streamUptime?: string;
+  isStreamLive?: boolean;
+}) {
+  return (
+    <>
+      <a
+        href={`https://twitch.tv/${channelName}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="channel-link"
+      >
+        {channelDisplayName || channelName || "Chat"}
+      </a>
+      {!hideViewerCount &&
+        viewerCount !== undefined &&
+        viewerCount !== null && (
+          <span className="viewer-count-display">
+            <FaUsers size={14} style={{ paddingTop: "4px" }} />{" "}
+            {viewerCount.toLocaleString()}
+          </span>
+        )}
+      {streamUptime && isStreamLive && (
+        <span className="uptime-display">({streamUptime})</span>
+      )}
+    </>
+  );
+}
+
+function DesktopHeaderActions({
+  ignoredUserCounts,
+  onOpenIgnoredUserOverlay,
+  onRefreshEmotes,
+  isRefreshingEmotes,
+  showModToggle,
+  isModerator,
+  isYouTubeModerator,
+  modModeActive,
+  youtubeModModeActive,
+  onSetModMode,
+  modModeDropdownRef,
+  modModeDropdownOpen,
+  onToggleModModeDropdown,
+  showModTools,
+  onOpenModTools,
+}: {
+  ignoredUserCounts: Map<
+    string,
+    {
+      count: number;
+      displayName: string;
+      authorAvatar?: string;
+      platform: Platform;
+    }
+  >;
+  onOpenIgnoredUserOverlay?: (
+    author: string,
+    authorAvatar?: string,
+    platform?: Platform,
+  ) => void;
+  onRefreshEmotes?: () => void;
+  isRefreshingEmotes?: boolean;
+  showModToggle: boolean;
+  isModerator: boolean;
+  isYouTubeModerator?: boolean;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSetModMode?: (mode: ModModeTarget) => void;
+  modModeDropdownRef: RefObject<HTMLDivElement | null>;
+  modModeDropdownOpen: boolean;
+  onToggleModModeDropdown: () => void;
+  showModTools: boolean;
+  onOpenModTools?: () => void;
+}) {
+  return (
+    <div className="desktop-header-items">
+      {Array.from(ignoredUserCounts.entries()).map(
+        ([key, { count, displayName, authorAvatar, platform }]) => (
+          <button type="button"
+            key={key}
+            className="header-button ignored-messages-badge"
+            title={`${count} hidden message(s) from ${displayName}`}
+            onClick={() =>
+              onOpenIgnoredUserOverlay?.(
+                displayName,
+                authorAvatar,
+                platform,
+              )
+            }
+          >
+            <MdVisibilityOff size={12} className="ignored-badge-icon" />
+            <span className="ignored-badge-user">{displayName}</span>
+            <span className="ignored-badge-count">{count}</span>
+          </button>
+        ),
+      )}
+      {onRefreshEmotes && (
+        <button type="button"
+          onClick={onRefreshEmotes}
+          disabled={isRefreshingEmotes}
+          className="header-button"
+          title={
+            isRefreshingEmotes
+              ? "Reloading emotes..."
+              : "Reload emotes in background"
+          }
+        >
+          <MdRefresh
+            size={14}
+            style={{
+              animation: isRefreshingEmotes
+                ? "spin 1s linear infinite"
+                : "none",
+            }}
+          />
+          <span className="header-button-label">
+            {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
+          </span>
+        </button>
+      )}
+      {showModToggle && (
+        <ModModeDropdown
+          isModerator={isModerator}
+          isYouTubeModerator={isYouTubeModerator}
+          modModeActive={modModeActive}
+          youtubeModModeActive={youtubeModModeActive}
+          onSetMode={onSetModMode}
+          containerRef={modModeDropdownRef}
+          isOpen={modModeDropdownOpen}
+          onToggle={onToggleModModeDropdown}
+        />
+      )}
+      {showModTools && onOpenModTools && (
+        <button type="button"
+          onClick={onOpenModTools}
+          className="header-button mod-tools-trigger"
+          title="Streamer tools (giveaway, etc.)"
+        >
+          <MdBuild size={14} className="mod-icon" />
+          <span className="header-button-label">Streamer tools</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MobileHeaderMenu({
+  isOpen,
+  onToggle,
+  containerRef,
+  ignoredUserCounts,
+  onOpenIgnoredUserOverlay,
+  onRefreshEmotes,
+  isRefreshingEmotes,
+  showModToggle,
+  isModerator,
+  isYouTubeModerator,
+  modModeActive,
+  youtubeModModeActive,
+  onSetModMode,
+  showModTools,
+  onOpenModTools,
+  onClose,
+}: {
+  isOpen: boolean;
+  onToggle: () => void;
+  containerRef: RefObject<HTMLDivElement | null>;
+  ignoredUserCounts: Map<
+    string,
+    {
+      count: number;
+      displayName: string;
+      authorAvatar?: string;
+      platform: Platform;
+    }
+  >;
+  onOpenIgnoredUserOverlay?: (
+    author: string,
+    authorAvatar?: string,
+    platform?: Platform,
+  ) => void;
+  onRefreshEmotes?: () => void;
+  isRefreshingEmotes?: boolean;
+  showModToggle: boolean;
+  isModerator: boolean;
+  isYouTubeModerator?: boolean;
+  modModeActive: boolean;
+  youtubeModModeActive?: boolean;
+  onSetModMode?: (mode: ModModeTarget) => void;
+  showModTools: boolean;
+  onOpenModTools?: () => void;
+  onClose: () => void;
+}) {
+  if (
+    !(
+      onRefreshEmotes ||
+      showModToggle ||
+      ignoredUserCounts.size > 0 ||
+      showModTools
+    )
+  ) {
+    return null;
+  }
+  return (
+    <div className="mobile-header-menu" ref={containerRef}>
+      <button type="button"
+        className="header-button mobile-menu-trigger"
+        onClick={onToggle}
+        title="Menu"
+      >
+        <MdMoreVert />
+      </button>
+      {isOpen && (
+        <div className="mobile-menu-dropdown">
+          {onRefreshEmotes && (
+            <button type="button"
+              className="mobile-menu-item"
+              onClick={() => {
+                onRefreshEmotes();
+                onClose();
+              }}
+              disabled={isRefreshingEmotes}
+            >
+              <MdRefresh
+                size={14}
+                style={{
+                  animation: isRefreshingEmotes
+                    ? "spin 1s linear infinite"
+                    : "none",
+                }}
+              />
+              <span>
+                {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
+              </span>
+            </button>
+          )}
+          {Array.from(ignoredUserCounts.entries()).map(
+            ([key, { count, displayName, authorAvatar, platform }]) => (
+              <button type="button"
+                key={key}
+                className="mobile-menu-item"
+                onClick={() => {
+                  onOpenIgnoredUserOverlay?.(
+                    displayName,
+                    authorAvatar,
+                    platform,
+                  );
+                  onClose();
+                }}
+              >
+                <MdVisibilityOff size={14} />
+                <span>
+                  {displayName} ({count})
+                </span>
+              </button>
+            ),
+          )}
+          {showModToggle && (
+            <MobileModModeSection
+              isModerator={isModerator}
+              isYouTubeModerator={isYouTubeModerator}
+              modModeActive={modModeActive}
+              youtubeModModeActive={youtubeModModeActive}
+              onSetModMode={onSetModMode}
+              onClose={onClose}
+            />
+          )}
+          {showModTools && onOpenModTools && (
+            <>
+              <div className="mobile-menu-separator" />
+              <button type="button"
+                className="mobile-menu-item"
+                onClick={() => {
+                  onOpenModTools();
+                  onClose();
+                }}
+              >
+                <MdBuild size={14} />
+                <span>Streamer tools</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ChatHeader({
   channelName,
   channelDisplayName,
@@ -615,7 +1332,7 @@ export default function ChatHeader({
     youtubeVideoId,
     onSetModMode,
   } = useModerationContext();
-  const showModToggle = isModerator || isYouTubeModerator;
+  const showModToggle = Boolean(isModerator || isYouTubeModerator);
   const modModeDropdownRef = useRef<HTMLDivElement>(null);
   const [modModeDropdownOpen, setModModeDropdownOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -650,292 +1367,61 @@ export default function ChatHeader({
             </button>
           )}
           <h2>
-            <span className="status-badge-container" ref={statusDropdownRef}>
-            <button
-              type="button"
-              className="status-badge-button"
-              onClick={() => setStatusDropdownOpen((v) => !v)}
-              title="Event connection status"
-            >
-                {isStreamLive ? (
-                  <span className="status-badge-live">
-                    <span className="status-dot pulse" />
-                    <span className="status-badge-live-text">LIVE</span>
-                  </span>
-                ) : (
-                  <span className="status-badge-offline">
-                    <span className="status-dot" />
-                    <span className="status-badge-offline-text">OFFLINE</span>
-                  </span>
-                )}
-              </button>
-              {statusDropdownOpen && subscriptionStatuses && (
-                <div className="eventsub-status-dropdown">
-                  <div className="eventsub-status-header">Event Connections</div>
-                  {renderStatusSection("WebSocket", subscriptionStatuses, null)}
-                  {renderStatusSection("Automod", subscriptionStatuses, [
-                    "automod.message.hold",
-                    "automod.message.update",
-                  ])}
-                  {renderStatusSection("Incoming Raids", subscriptionStatuses, [
-                    "channel.raid",
-                  ], "to_broadcaster")}
-                  {renderStatusSection("Outgoing Raids", subscriptionStatuses, [
-                    "channel.raid",
-                  ], "from_broadcaster")}
-                  {renderStatusSection("Hype Train", subscriptionStatuses, [
-                    "channel.hype_train.begin",
-                    "channel.hype_train.progress",
-                    "channel.hype_train.end",
-                  ])}
-                  {renderStatusSection("Polls", subscriptionStatuses, [
-                    "channel.poll.begin",
-                    "channel.poll.progress",
-                    "channel.poll.end",
-                  ])}
-                  {renderStatusSection("Predictions", subscriptionStatuses, [
-                    "channel.prediction.begin",
-                    "channel.prediction.progress",
-                    "channel.prediction.lock",
-                    "channel.prediction.end",
-                  ])}
-                  {renderStatusSection("Bits", subscriptionStatuses, [
-                    "channel.bits.use",
-                  ])}
-                  {redemptionPubSubStatus !== undefined &&
-                    renderSimpleStatusSection(
-                      "Channel Points (PubSub)",
-                      redemptionPubSubStatus,
-                    )}
-                </div>
-              )}
-            </span>
-            <a
-              href={`https://twitch.tv/${channelName}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="channel-link"
-            >
-              {channelDisplayName || channelName || "Chat"}
-            </a>
-            {!hideViewerCount &&
-              viewerCount !== undefined &&
-              viewerCount !== null && (
-                <span className="viewer-count-display">
-                  <FaUsers size={14} style={{ paddingTop: "4px" }} />{" "}
-                  {viewerCount.toLocaleString()}
-                </span>
-              )}
-            {streamUptime && isStreamLive && (
-              <span className="uptime-display">({streamUptime})</span>
-            )}
+            <StreamStatusBadge
+              isStreamLive={isStreamLive}
+              isOpen={statusDropdownOpen}
+              onToggle={() => setStatusDropdownOpen((v) => !v)}
+              containerRef={statusDropdownRef}
+              subscriptionStatuses={subscriptionStatuses}
+              redemptionPubSubStatus={redemptionPubSubStatus}
+            />
+            <ChannelTitleSummary
+              channelName={channelName}
+              channelDisplayName={channelDisplayName}
+              hideViewerCount={hideViewerCount}
+              viewerCount={viewerCount}
+              streamUptime={streamUptime}
+              isStreamLive={isStreamLive}
+            />
           </h2>
         </div>
         <div className="chat-header-actions">
-          <div className="desktop-header-items">
-            {Array.from(ignoredUserCounts.entries()).map(
-              ([key, { count, displayName, authorAvatar, platform }]) => (
-                <button type="button"
-                  key={key}
-                  className="header-button ignored-messages-badge"
-                  title={`${count} hidden message(s) from ${displayName}`}
-                  onClick={() =>
-                    onOpenIgnoredUserOverlay?.(
-                      displayName,
-                      authorAvatar,
-                      platform,
-                    )
-                  }
-                >
-                  <MdVisibilityOff size={12} className="ignored-badge-icon" />
-                  <span className="ignored-badge-user">{displayName}</span>
-                  <span className="ignored-badge-count">{count}</span>
-                </button>
-              ),
-            )}
-            {onRefreshEmotes && (
-              <button type="button"
-                onClick={onRefreshEmotes}
-                disabled={isRefreshingEmotes}
-                className="header-button"
-                title={
-                  isRefreshingEmotes
-                    ? "Reloading emotes..."
-                    : "Reload emotes in background"
-                }
-              >
-                <MdRefresh
-                  size={14}
-                  style={{
-                    animation: isRefreshingEmotes
-                      ? "spin 1s linear infinite"
-                      : "none",
-                  }}
-                />
-                <span className="header-button-label">
-                  {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
-                </span>
-              </button>
-            )}
-            {showModToggle && (
-              <ModModeDropdown
-                isModerator={isModerator}
-                isYouTubeModerator={isYouTubeModerator}
-                modModeActive={modModeActive}
-                youtubeModModeActive={youtubeModModeActive}
-                onSetMode={onSetModMode}
-                containerRef={modModeDropdownRef}
-                isOpen={modModeDropdownOpen}
-                onToggle={() => setModModeDropdownOpen((v) => !v)}
-              />
-            )}
-            {showModTools && onOpenModTools && (
-              <button type="button"
-                onClick={onOpenModTools}
-                className="header-button mod-tools-trigger"
-                title="Streamer tools (giveaway, etc.)"
-              >
-                <MdBuild size={14} className="mod-icon" />
-                <span className="header-button-label">Streamer tools</span>
-              </button>
-            )}
-          </div>
+          <DesktopHeaderActions
+            ignoredUserCounts={ignoredUserCounts}
+            onOpenIgnoredUserOverlay={onOpenIgnoredUserOverlay}
+            onRefreshEmotes={onRefreshEmotes}
+            isRefreshingEmotes={isRefreshingEmotes}
+            showModToggle={showModToggle}
+            isModerator={isModerator}
+            isYouTubeModerator={isYouTubeModerator}
+            modModeActive={modModeActive}
+            youtubeModModeActive={youtubeModModeActive}
+            onSetModMode={onSetModMode}
+            modModeDropdownRef={modModeDropdownRef}
+            modModeDropdownOpen={modModeDropdownOpen}
+            onToggleModModeDropdown={() => setModModeDropdownOpen((v) => !v)}
+            showModTools={showModTools}
+            onOpenModTools={onOpenModTools}
+          />
 
-          {(onRefreshEmotes || showModToggle || ignoredUserCounts.size > 0 || showModTools) && (
-            <div className="mobile-header-menu" ref={mobileMenuRef}>
-              <button type="button"
-                className="header-button mobile-menu-trigger"
-                onClick={() => setMobileMenuOpen((v) => !v)}
-                title="Menu"
-              >
-                <MdMoreVert />
-              </button>
-              {mobileMenuOpen && (
-                <div className="mobile-menu-dropdown">
-                  {onRefreshEmotes && (
-                    <button type="button"
-                      className="mobile-menu-item"
-                      onClick={() => {
-                        onRefreshEmotes();
-                        setMobileMenuOpen(false);
-                      }}
-                      disabled={isRefreshingEmotes}
-                    >
-                      <MdRefresh
-                        size={14}
-                        style={{
-                          animation: isRefreshingEmotes
-                            ? "spin 1s linear infinite"
-                            : "none",
-                        }}
-                      />
-                      <span>
-                        {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
-                      </span>
-                    </button>
-                  )}
-                  {Array.from(ignoredUserCounts.entries()).map(
-                    ([key, { count, displayName, authorAvatar, platform }]) => (
-                      <button type="button"
-                        key={key}
-                        className="mobile-menu-item"
-                        onClick={() => {
-                          onOpenIgnoredUserOverlay?.(
-                            displayName,
-                            authorAvatar,
-                            platform,
-                          );
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <MdVisibilityOff size={14} />
-                        <span>
-                          {displayName} ({count})
-                        </span>
-                      </button>
-                    ),
-                  )}
-                  {showModToggle && (
-                    <>
-                      <div className="mobile-menu-separator" />
-                      {isModerator && (
-                        <button type="button"
-                          className={`mobile-menu-item${modModeActive && !youtubeModModeActive ? " active" : ""}`}
-                          onClick={() => {
-                            onSetModMode?.("twitch");
-                            setMobileMenuOpen(false);
-                          }}
-                        >
-                          <FaTwitch size={14} />
-                          <span>
-                            Twitch Mod{" "}
-                            {modModeActive && !youtubeModModeActive ? "✓" : ""}
-                          </span>
-                        </button>
-                      )}
-                      {isYouTubeModerator && (
-                        <button type="button"
-                          className={`mobile-menu-item${youtubeModModeActive && !modModeActive ? " active" : ""}`}
-                          onClick={() => {
-                            onSetModMode?.("youtube");
-                            setMobileMenuOpen(false);
-                          }}
-                        >
-                          <FaYoutube size={14} />
-                          <span>
-                            YouTube Mod{" "}
-                            {youtubeModModeActive && !modModeActive ? "✓" : ""}
-                          </span>
-                        </button>
-                      )}
-                      {isModerator && isYouTubeModerator && (
-                        <button type="button"
-                          className={`mobile-menu-item${modModeActive && youtubeModModeActive ? " active" : ""}`}
-                          onClick={() => {
-                            onSetModMode?.("both");
-                            setMobileMenuOpen(false);
-                          }}
-                        >
-                          <GiCrossedSwords size={14} />
-                          <span>
-                            Both Platforms{" "}
-                            {modModeActive && youtubeModModeActive ? "✓" : ""}
-                          </span>
-                        </button>
-                      )}
-                      {(modModeActive || youtubeModModeActive) && (
-                        <button type="button"
-                          className="mobile-menu-item"
-                          onClick={() => {
-                            onSetModMode?.("off");
-                            setMobileMenuOpen(false);
-                          }}
-                        >
-                          <GiCrossedSwords size={14} />
-                          <span>Mod Mode Off</span>
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {showModTools && onOpenModTools && (
-                    <>
-                      <div className="mobile-menu-separator" />
-                      <button type="button"
-                        className="mobile-menu-item"
-                        onClick={() => {
-                          onOpenModTools();
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <MdBuild size={14} />
-                        <span>Streamer tools</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          <MobileHeaderMenu
+            isOpen={mobileMenuOpen}
+            onToggle={() => setMobileMenuOpen((v) => !v)}
+            containerRef={mobileMenuRef}
+            ignoredUserCounts={ignoredUserCounts}
+            onOpenIgnoredUserOverlay={onOpenIgnoredUserOverlay}
+            onRefreshEmotes={onRefreshEmotes}
+            isRefreshingEmotes={isRefreshingEmotes}
+            showModToggle={showModToggle}
+            isModerator={isModerator}
+            isYouTubeModerator={isYouTubeModerator}
+            modModeActive={modModeActive}
+            youtubeModModeActive={youtubeModModeActive}
+            onSetModMode={onSetModMode}
+            showModTools={showModTools}
+            onOpenModTools={onOpenModTools}
+            onClose={() => setMobileMenuOpen(false)}
+          />
 
           {isLoading && <span className="loading-indicator">●</span>}
         </div>

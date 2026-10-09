@@ -67,6 +67,228 @@ export interface UnifiedInputHandle {
   insertMention: (username: string) => void;
 }
 
+function getBorderColor(sendTarget: SendTarget): string {
+  if (sendTarget === "twitch") return "#9146ff";
+  if (sendTarget === "youtube") return "#ff0000";
+  return "#9e4073";
+}
+
+function getPlaceholder(sendTarget: SendTarget): string {
+  if (sendTarget === "twitch") return "Send to Twitch...";
+  if (sendTarget === "youtube") return "Send to YouTube...";
+  return "Send to both...";
+}
+
+interface ReplyIndicatorProps {
+  replyingTo?: TwitchMessage;
+  onCancelReply?: () => void;
+}
+
+function ReplyIndicator({ replyingTo, onCancelReply }: ReplyIndicatorProps) {
+  if (!replyingTo) return null;
+  return (
+    <div className="unified-reply-indicator">
+      <div className="unified-reply-text">
+        <span style={{ fontWeight: "bold" }}>
+          Replying to @{replyingTo.author}
+        </span>
+        <span style={{ marginLeft: 8, fontStyle: "italic", opacity: 0.7 }}>
+          {replyingTo.content.substring(0, 50)}
+          {replyingTo.content.length > 50 ? "..." : ""}
+        </span>
+      </div>
+      {onCancelReply && (
+        <button type="button"
+          onClick={onCancelReply}
+          className="unified-reply-cancel"
+          title="Cancel reply"
+        >
+          <FaTimes size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface PickerButtonProps {
+  showYoutubeFeatures: boolean;
+  showTwitchFeatures: boolean;
+  onToggleYtPicker: () => void;
+  onToggleEmotePicker: () => void;
+  ytPickerBtnRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+function PickerButton({
+  showYoutubeFeatures,
+  showTwitchFeatures,
+  onToggleYtPicker,
+  onToggleEmotePicker,
+  ytPickerBtnRef,
+}: PickerButtonProps) {
+  const isYoutubeOnly = showYoutubeFeatures && !showTwitchFeatures;
+  return (
+    <button type="button"
+      ref={isYoutubeOnly ? ytPickerBtnRef : undefined}
+      onClick={() =>
+        isYoutubeOnly ? onToggleYtPicker() : onToggleEmotePicker()
+      }
+      className="unified-icon-btn"
+      title={showTwitchFeatures ? "Browse emotes" : "Browse emoji"}
+    >
+      {showTwitchFeatures ? (
+        <FaSmile size={16} />
+      ) : (
+        <FaRegSmile size={16} />
+      )}
+    </button>
+  );
+}
+
+interface PlatformToggleProps {
+  sendTarget: SendTarget;
+  youtubeAvailable: boolean;
+  onSelectTarget: (target: SendTarget) => void;
+}
+
+function PlatformToggle({
+  sendTarget,
+  youtubeAvailable,
+  onSelectTarget,
+}: PlatformToggleProps) {
+  return (
+    <div className="unified-toggle">
+      <button type="button"
+        onClick={() => onSelectTarget("twitch")}
+        className={`unified-toggle-btn ${sendTarget === "twitch" ? "active twitch" : ""}`}
+        title="Send to Twitch"
+      >
+        <FaTwitch size={14} />
+      </button>
+      {youtubeAvailable && (
+        <button type="button"
+          onClick={() => onSelectTarget("youtube")}
+          className={`unified-toggle-btn ${sendTarget === "youtube" ? "active youtube" : ""}`}
+          title="Send to YouTube"
+        >
+          <FaYoutube size={14} />
+        </button>
+      )}
+      {youtubeAvailable && (
+        <button type="button"
+          onClick={() => onSelectTarget("both")}
+          className={`unified-toggle-btn ${sendTarget === "both" ? "active both" : ""}`}
+          title="Send to both"
+        >
+          <BsFillPeopleFill size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface InputWarningsProps {
+  slowModeCooldown: number;
+  followerModeMinutes: number | null;
+  isFollowing: boolean | null;
+  channelName: string;
+  currentUsername: string;
+}
+
+function InputWarnings({
+  slowModeCooldown,
+  followerModeMinutes,
+  isFollowing,
+  channelName,
+  currentUsername,
+}: InputWarningsProps) {
+  const isBroadcaster =
+    !!channelName &&
+    currentUsername.toLowerCase() === channelName.toLowerCase();
+  return (
+    <>
+      {slowModeCooldown > 0 && (
+        <div className="unified-warning" style={{ color: "#f59e0b" }}>
+          Slow mode: wait {slowModeCooldown}s
+        </div>
+      )}
+      {followerModeMinutes !== null &&
+        isFollowing === false &&
+        !isBroadcaster && (
+          <div className="unified-warning">
+            {followerModeMinutes === 0
+              ? "Follower-only chat — follow this channel to send messages"
+              : `Follower-only chat — follow for at least ${followerModeMinutes < 60 ? `${followerModeMinutes}m` : followerModeMinutes < 1440 ? `${Math.round(followerModeMinutes / 60)}h` : `${Math.round(followerModeMinutes / 1440)}d`}`}
+          </div>
+        )}
+    </>
+  );
+}
+
+interface YoutubeEmojiPickerProps {
+  isOpen: boolean;
+  rect: DOMRect | null;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onPick: (char: string) => void;
+  pickerRef: React.RefObject<HTMLDivElement | null>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
+}
+
+function YoutubeEmojiPicker({
+  isOpen,
+  rect,
+  search,
+  onSearchChange,
+  onPick,
+  pickerRef,
+  searchInputRef,
+}: YoutubeEmojiPickerProps) {
+  if (!isOpen || !rect) return null;
+  return createPortal(
+    <div
+      ref={pickerRef}
+      className="yt-emoji-picker"
+      style={{
+        position: "fixed",
+        bottom: window.innerHeight - rect.top + 8,
+        left: rect.left,
+      }}
+    >
+      <div className="yt-emoji-picker-search">
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="Search emoji..."
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          aria-label="Search emoji"
+          className="yt-emoji-picker-search-input"
+        />
+      </div>
+      <div className="yt-emoji-picker-grid">
+        {(search
+          ? EMOJI_LIST.filter((e) => e.shortcode.includes(search.toLowerCase()))
+          : EMOJI_LIST
+        ).map((entry) => (
+          <button
+            key={entry.shortcode}
+            type="button"
+            className="yt-emoji-picker-item"
+            title={`:${entry.shortcode}:`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onPick(entry.char);
+            }}
+          >
+            {entry.char}
+          </button>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
   function UnifiedInput({
     onSendMessage,
@@ -211,43 +433,12 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
   );
 
   // ---- Render ----
-  const borderColor =
-    sendTarget === "twitch"
-      ? "#9146ff"
-      : sendTarget === "youtube"
-        ? "#ff0000"
-        : "#9e4073";
-  const placeholder =
-    sendTarget === "twitch"
-      ? "Send to Twitch..."
-      : sendTarget === "youtube"
-        ? "Send to YouTube..."
-        : "Send to both...";
+  const borderColor = getBorderColor(sendTarget);
+  const placeholder = getPlaceholder(sendTarget);
 
   return (
     <div className="unified-input">
-      {replyingTo && (
-        <div className="unified-reply-indicator">
-          <div className="unified-reply-text">
-            <span style={{ fontWeight: "bold" }}>
-              Replying to @{replyingTo.author}
-            </span>
-            <span style={{ marginLeft: 8, fontStyle: "italic", opacity: 0.7 }}>
-              {replyingTo.content.substring(0, 50)}
-              {replyingTo.content.length > 50 ? "..." : ""}
-            </span>
-          </div>
-          {onCancelReply && (
-            <button type="button"
-              onClick={onCancelReply}
-              className="unified-reply-cancel"
-              title="Cancel reply"
-            >
-              <FaTimes size={14} />
-            </button>
-          )}
-        </div>
-      )}
+      <ReplyIndicator replyingTo={replyingTo} onCancelReply={onCancelReply} />
 
       <div className="unified-input-row" style={{ borderColor }}>
         <PresetMessages
@@ -262,26 +453,13 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
         />
 
         {/* Emote/Emoji picker button */}
-        <button type="button"
-          ref={
-            showYoutubeFeatures && !showTwitchFeatures
-              ? ytPickerBtnRef
-              : undefined
-          }
-          onClick={() =>
-            showYoutubeFeatures && !showTwitchFeatures
-              ? setShowYtPicker(!showYtPicker)
-              : setShowEmotePicker(!showEmotePicker)
-          }
-          className="unified-icon-btn"
-          title={showTwitchFeatures ? "Browse emotes" : "Browse emoji"}
-        >
-          {showTwitchFeatures ? (
-            <FaSmile size={16} />
-          ) : (
-            <FaRegSmile size={16} />
-          )}
-        </button>
+        <PickerButton
+          showYoutubeFeatures={showYoutubeFeatures}
+          showTwitchFeatures={showTwitchFeatures}
+          onToggleYtPicker={() => setShowYtPicker(!showYtPicker)}
+          onToggleEmotePicker={() => setShowEmotePicker(!showEmotePicker)}
+          ytPickerBtnRef={ytPickerBtnRef}
+        />
 
         <input
           ref={inputRef}
@@ -297,52 +475,20 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
           autoCapitalize="off"
         />
 
-        <div className="unified-toggle">
-          <button type="button"
-            onClick={() => setSendTarget("twitch")}
-            className={`unified-toggle-btn ${sendTarget === "twitch" ? "active twitch" : ""}`}
-            title="Send to Twitch"
-          >
-            <FaTwitch size={14} />
-          </button>
-          {youtubeAvailable && (
-            <button type="button"
-              onClick={() => setSendTarget("youtube")}
-              className={`unified-toggle-btn ${sendTarget === "youtube" ? "active youtube" : ""}`}
-              title="Send to YouTube"
-            >
-              <FaYoutube size={14} />
-            </button>
-          )}
-          {youtubeAvailable && (
-            <button type="button"
-              onClick={() => setSendTarget("both")}
-              className={`unified-toggle-btn ${sendTarget === "both" ? "active both" : ""}`}
-              title="Send to both"
-            >
-              <BsFillPeopleFill size={14} />
-            </button>
-          )}
-        </div>
+        <PlatformToggle
+          sendTarget={sendTarget}
+          youtubeAvailable={youtubeAvailable}
+          onSelectTarget={setSendTarget}
+        />
       </div>
 
-      {core.slowModeCooldown > 0 && (
-        <div className="unified-warning" style={{ color: "#f59e0b" }}>
-          Slow mode: wait {core.slowModeCooldown}s
-        </div>
-      )}
-      {followerModeMinutes !== null &&
-        isFollowing === false &&
-        !(
-          channelName &&
-          currentUsername.toLowerCase() === channelName.toLowerCase()
-        ) && (
-          <div className="unified-warning">
-            {followerModeMinutes === 0
-              ? "Follower-only chat — follow this channel to send messages"
-              : `Follower-only chat — follow for at least ${followerModeMinutes < 60 ? `${followerModeMinutes}m` : followerModeMinutes < 1440 ? `${Math.round(followerModeMinutes / 60)}h` : `${Math.round(followerModeMinutes / 1440)}d`}`}
-          </div>
-        )}
+      <InputWarnings
+        slowModeCooldown={core.slowModeCooldown}
+        followerModeMinutes={followerModeMinutes}
+        isFollowing={isFollowing}
+        channelName={channelName}
+        currentUsername={currentUsername}
+      />
 
       {/* === PORTAL MENUS === */}
 
@@ -461,53 +607,15 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
         onClose={() => setShowEmotePicker(false)}
       />
 
-      {showYtPicker &&
-        ytPickerRect &&
-        createPortal(
-          <div
-            ref={ytPickerRef}
-            className="yt-emoji-picker"
-            style={{
-              position: "fixed",
-              bottom: window.innerHeight - ytPickerRect.top + 8,
-              left: ytPickerRect.left,
-            }}
-          >
-            <div className="yt-emoji-picker-search">
-              <input
-                ref={ytPickerSearchRef}
-                type="text"
-                placeholder="Search emoji..."
-                value={ytPickerSearch}
-                onChange={(e) => setYtPickerSearch(e.target.value)}
-                aria-label="Search emoji"
-                className="yt-emoji-picker-search-input"
-              />
-            </div>
-            <div className="yt-emoji-picker-grid">
-              {(ytPickerSearch
-                ? EMOJI_LIST.filter((e) =>
-                    e.shortcode.includes(ytPickerSearch.toLowerCase()),
-                  )
-                : EMOJI_LIST
-              ).map((entry) => (
-                <button
-                  key={entry.shortcode}
-                  type="button"
-                  className="yt-emoji-picker-item"
-                  title={`:${entry.shortcode}:`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    insertEmojiFromPicker(entry.char);
-                  }}
-                >
-                  {entry.char}
-                </button>
-              ))}
-            </div>
-          </div>,
-          document.body,
-        )}
+      <YoutubeEmojiPicker
+        isOpen={showYtPicker}
+        rect={ytPickerRect}
+        search={ytPickerSearch}
+        onSearchChange={setYtPickerSearch}
+        onPick={insertEmojiFromPicker}
+        pickerRef={ytPickerRef}
+        searchInputRef={ytPickerSearchRef}
+      />
     </div>
   );
   },

@@ -68,6 +68,90 @@ function ChatAutocomplete<T>({
   );
 }
 
+interface ReplyIndicatorProps {
+  replyingTo?: TwitchMessage;
+  onCancelReply?: () => void;
+}
+
+function ReplyIndicator({ replyingTo, onCancelReply }: ReplyIndicatorProps) {
+  if (!replyingTo) return null;
+  return (
+    <div className="reply-indicator">
+      <div className="reply-indicator-text">
+        <span className="reply-indicator-author">
+          Replying to @{replyingTo.author}
+        </span>
+        <span className="reply-indicator-preview">
+          {replyingTo.content.substring(0, 50)}
+          {replyingTo.content.length > 50 ? "..." : ""}
+        </span>
+      </div>
+      {onCancelReply && (
+        <button
+          type="button"
+          onClick={onCancelReply}
+          className="reply-indicator-cancel"
+          title="Cancel reply"
+        >
+          <FaTimes size={16} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function pluralize(value: number, unit: string): string {
+  return `${value} ${unit}${value === 1 ? "" : "s"}`;
+}
+
+function followerModeMessage(minutes: number): string {
+  if (minutes === 0) {
+    return "⚠ Follower-only chat — follow this channel to send messages";
+  }
+  if (minutes < 60) {
+    return `⚠ Follower-only chat — you must have followed for at least ${pluralize(minutes, "minute")}`;
+  }
+  if (minutes < 1440) {
+    return `⚠ Follower-only chat — you must have followed for at least ${pluralize(Math.round(minutes / 60), "hour")}`;
+  }
+  return `⚠ Follower-only chat — you must have followed for at least ${pluralize(Math.round(minutes / 1440), "day")}`;
+}
+
+interface FollowerModeWarningProps {
+  followerModeMinutes: number | null;
+  isFollowing: boolean | null;
+  channelName: string;
+  currentUsername: string;
+}
+
+function FollowerModeWarning({
+  followerModeMinutes,
+  isFollowing,
+  channelName,
+  currentUsername,
+}: FollowerModeWarningProps) {
+  if (followerModeMinutes === null || isFollowing !== false) return null;
+  if (
+    channelName &&
+    currentUsername.toLowerCase() === channelName.toLowerCase()
+  ) {
+    return null;
+  }
+  return (
+    <div
+      className="warning"
+      style={{
+        color: "#9ca3af",
+        fontSize: "0.8rem",
+        padding: "4px 12px",
+        borderTop: "1px solid #1e293b",
+      }}
+    >
+      {followerModeMessage(followerModeMinutes)}
+    </div>
+  );
+}
+
 const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
   function MessageInput({
     onSendMessage,
@@ -119,31 +203,11 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
     [core.insertMention],
   );
 
+  const isDisabled = SELECTED_PLATFORMS.length === 0 || isLoading;
+
   return (
     <div className="message-input">
-      {replyingTo && (
-        <div className="reply-indicator">
-          <div className="reply-indicator-text">
-            <span className="reply-indicator-author">
-              Replying to @{replyingTo.author}
-            </span>
-            <span className="reply-indicator-preview">
-              {replyingTo.content.substring(0, 50)}
-              {replyingTo.content.length > 50 ? "..." : ""}
-            </span>
-          </div>
-          {onCancelReply && (
-            <button
-              type="button"
-              onClick={onCancelReply}
-              className="reply-indicator-cancel"
-              title="Cancel reply"
-            >
-              <FaTimes size={16} />
-            </button>
-          )}
-        </div>
-      )}
+      <ReplyIndicator replyingTo={replyingTo} onCancelReply={onCancelReply} />
       <div className="input-group twitch" style={{ position: "relative" }}>
         <PresetMessages
           onSendMessage={onSendMessage}
@@ -155,7 +219,7 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
         />
         <button type="button"
           onClick={() => setShowEmotePicker(!showEmotePicker)}
-          disabled={SELECTED_PLATFORMS.length === 0 || isLoading}
+          disabled={isDisabled}
           className="emote-picker-button"
           title="Browse emotes"
         >
@@ -169,7 +233,7 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
           onFocus={onInputFocus}
           placeholder="Send to Twitch..."
           aria-label="Send message to Twitch"
-          disabled={SELECTED_PLATFORMS.length === 0 || isLoading}
+          disabled={isDisabled}
           className="message-textarea"
           autoComplete="off"
           autoCapitalize="off"
@@ -249,30 +313,12 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
         onClose={() => setShowEmotePicker(false)}
       />
 
-      {followerModeMinutes !== null &&
-        isFollowing === false &&
-        !(
-          channelName &&
-          currentUsername.toLowerCase() === channelName.toLowerCase()
-        ) && (
-          <div
-            className="warning"
-            style={{
-              color: "#9ca3af",
-              fontSize: "0.8rem",
-              padding: "4px 12px",
-              borderTop: "1px solid #1e293b",
-            }}
-          >
-            {followerModeMinutes === 0
-              ? "⚠ Follower-only chat — follow this channel to send messages"
-              : followerModeMinutes < 60
-                ? `⚠ Follower-only chat — you must have followed for at least ${followerModeMinutes} minute${followerModeMinutes === 1 ? "" : "s"}`
-                : followerModeMinutes < 1440
-                  ? `⚠ Follower-only chat — you must have followed for at least ${Math.round(followerModeMinutes / 60)} hour${Math.round(followerModeMinutes / 60) === 1 ? "" : "s"}`
-                  : `⚠ Follower-only chat — you must have followed for at least ${Math.round(followerModeMinutes / 1440)} day${Math.round(followerModeMinutes / 1440) === 1 ? "" : "s"}`}
-          </div>
-        )}
+      <FollowerModeWarning
+        followerModeMinutes={followerModeMinutes}
+        isFollowing={isFollowing}
+        channelName={channelName}
+        currentUsername={currentUsername}
+      />
 
       {SELECTED_PLATFORMS.length === 0 && (
         <div className="warning">

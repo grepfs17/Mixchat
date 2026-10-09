@@ -13,7 +13,10 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import type { UseMusicPlayerResult } from "../../../hooks/chat/useMusicPlayer";
-import type { MusicPlayerItem } from "../../../lib/musicPlayer/types";
+import type {
+  MusicPlayerItem,
+  MusicPlaylist,
+} from "../../../lib/musicPlayer/types";
 
 interface MusicPlayerPanelProps {
   player: UseMusicPlayerResult;
@@ -28,6 +31,50 @@ interface MusicPlayerPanelProps {
 }
 
 type ConfirmAction = null | "clear";
+
+type CategoryOption = { id: string; name: string };
+
+function useCategorySearch(
+  onSearchCategories?: (query: string) => Promise<CategoryOption[]>,
+) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<CategoryOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!query.trim() || !onSearchCategories) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      const found = await onSearchCategories(query);
+      if (!cancelled) {
+        setResults(found);
+        setOpen(found.length > 0);
+      }
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, onSearchCategories]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return { query, setQuery, results, setResults, open, setOpen, ref, inputRef };
+}
 
 export default function MusicPlayerPanel({
   player,
@@ -67,15 +114,6 @@ export default function MusicPlayerPanel({
   const [dragId, setDragId] = useState<string | null>(null);
   const dragOverIdRef = useRef<string | null>(null);
 
-  // Category search state
-  const [categoryQuery, setCategoryQuery] = useState("");
-  const [categoryResults, setCategoryResults] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const categoryRef = useRef<HTMLDivElement>(null);
-  const categoryInputRef = useRef<HTMLInputElement>(null);
-
   const handleAdd = async () => {
     const trimmed = newUrl.trim();
     if (!trimmed) return;
@@ -96,40 +134,15 @@ export default function MusicPlayerPanel({
     autoSelectedRef.current = true;    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hydrated, streamGameId, playlists, setActivePlaylist]);
 
-  // Category search debounce
-  useEffect(() => {
-    if (!categoryQuery.trim() || !onSearchCategories) {
-      setCategoryResults([]);
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      const results = await onSearchCategories(categoryQuery);
-      if (!cancelled) {
-        setCategoryResults(results);
-        setCategoryOpen(results.length > 0);
-      }
-    }, 300);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [categoryQuery, onSearchCategories]);
+  const category = useCategorySearch(onSearchCategories);
 
-  // Close category popover on outside click
-  useEffect(() => {
-    if (!categoryOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        categoryRef.current &&
-        !categoryRef.current.contains(e.target as Node)
-      ) {
-        setCategoryOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [categoryOpen]);
+  const handleSelectCategory = (cat: CategoryOption) => {
+    if (!activePlaylist) return;
+    setPlaylistCategory(activePlaylist.id, cat.id, cat.name);
+    category.setQuery("");
+    category.setOpen(false);
+    category.setResults([]);
+  };
 
   // Don't render anything — empty or otherwise — until IDB has hydrated.
   // Otherwise we'd briefly show the empty state for users who have saved
@@ -158,148 +171,48 @@ export default function MusicPlayerPanel({
 
   return (
     <div className="music-player-panel">
-      <header className="music-player-panel-header">
-        <span className="music-player-panel-header-icon" aria-hidden="true">
-          <FaMusic size={12} />
-        </span>
-        <select
-          className="music-player-select"
-          value={activePlaylist.id}
-          onChange={(e) => setActivePlaylist(e.target.value)}
-          aria-label="Active playlist"
-          title="Switch active playlist"
-        >
-          {playlists.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        {renamingId === activePlaylist.id ? (
-  <input
-    autoFocus
-    className="music-player-input music-player-rename"
-    aria-label="Rename playlist"
-            value={renameDraft}
-            onChange={(e) => setRenameDraft(e.target.value)}
-            onBlur={() => {
-              renamePlaylist(activePlaylist.id, renameDraft);
-              setRenamingId(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                renamePlaylist(activePlaylist.id, renameDraft);
-                setRenamingId(null);
-              } else if (e.key === "Escape") {
-                setRenamingId(null);
-              }
-            }}
-            maxLength={80}
-          />
-        ) : (
-          <button
-            type="button"
-            className="music-player-icon-btn"
-            onClick={() => {
-              setRenamingId(activePlaylist.id);
-              setRenameDraft(activePlaylist.name);
-            }}
-            title="Rename playlist"
-            aria-label="Rename playlist"
-          >
-            <FaPen size={10} />
-          </button>
-        )}
-        <button
-          type="button"
-          className="music-player-icon-btn"
-          onClick={() => createPlaylist(`Playlist ${playlists.length + 1}`)}
-          title="Create playlist"
-          aria-label="Create new playlist"
-        >
-          <FaPlus size={11} />
-        </button>
-        <button
-          type="button"
-          className="music-player-icon-btn music-player-icon-btn--danger"
-          onClick={() => setConfirm("clear")}
-          title="Delete active playlist"
-          aria-label="Delete playlist"
-        >
-          <FaTrash size={10} />
-        </button>
-      </header>
+      <PlaylistHeader
+        playlists={playlists}
+        activePlaylist={activePlaylist}
+        renamingId={renamingId}
+        renameDraft={renameDraft}
+        onSelectPlaylist={setActivePlaylist}
+        onRenameDraftChange={setRenameDraft}
+        onCommitRename={() => {
+          renamePlaylist(activePlaylist.id, renameDraft);
+          setRenamingId(null);
+        }}
+        onCancelRename={() => setRenamingId(null)}
+        onStartRename={() => {
+          setRenamingId(activePlaylist.id);
+          setRenameDraft(activePlaylist.name);
+        }}
+        onCreatePlaylist={() =>
+          createPlaylist(`Playlist ${playlists.length + 1}`)
+        }
+        onRequestDelete={() => setConfirm("clear")}
+      />
 
-      {/* Category association */}
-      <div className="music-player-category" ref={categoryRef}>
-        <span className="music-player-field-label">
-          <FaTag size={10} /> Twitch category
-        </span>
-        {activePlaylist.categoryId ? (
-          <div className="music-player-category-chip">
-            <span className="music-player-category-chip-name">
-              {activePlaylist.categoryName || "Unknown"}
-            </span>
-            <button
-              type="button"
-              className="music-player-category-chip-remove"
-              onClick={() =>
-                setPlaylistCategory(activePlaylist.id, null, "")
-              }
-              title="Remove category association"
-              aria-label="Remove category"
-            >
-              <FaTimes size={9} />
-            </button>
-          </div>
-        ) : (
-          <div className="music-player-category-search">
-            <FaSearch
-              size={11}
-              className="music-player-category-search-icon"
-            />
-            <input
-              ref={categoryInputRef}
-              type="text"
-              className="music-player-input music-player-category-input"
-              placeholder={
-                streamGameId
-                  ? `e.g. ${streamGameName || "current category"}`
-                  : "Search Twitch category…"
-              }
-              value={categoryQuery}
-              onChange={(e) => setCategoryQuery(e.target.value)}
-              onFocus={() => {
-                if (categoryResults.length > 0) setCategoryOpen(true);
-              }}
-              disabled={!onSearchCategories}
-            />
-            {categoryOpen && categoryResults.length > 0 && (
-              <div className="music-player-category-dropdown">
-                {categoryResults.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    className="music-player-category-option"
-                    onClick={() => {
-                      setPlaylistCategory(
-                        activePlaylist.id,
-                        cat.id,
-                        cat.name,
-                      );
-                      setCategoryQuery("");
-                      setCategoryOpen(false);
-                      setCategoryResults([]);
-                    }}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <PlaylistCategorySection
+        categoryId={activePlaylist.categoryId}
+        categoryName={activePlaylist.categoryName}
+        streamGameId={streamGameId}
+        streamGameName={streamGameName}
+        searchEnabled={Boolean(onSearchCategories)}
+        categoryQuery={category.query}
+        categoryResults={category.results}
+        categoryOpen={category.open}
+        categoryRef={category.ref}
+        categoryInputRef={category.inputRef}
+        onQueryChange={category.setQuery}
+        onFocus={() => {
+          if (category.results.length > 0) category.setOpen(true);
+        }}
+        onSelectCategory={handleSelectCategory}
+        onRemoveCategory={() =>
+          setPlaylistCategory(activePlaylist.id, null, "")
+        }
+      />
 
       <NowPlayingRow
         currentItem={currentItem}
@@ -326,32 +239,12 @@ export default function MusicPlayerPanel({
         </button>
       )}
 
-      <div className="music-player-add">
-        <label htmlFor="music-player-url-input" style={{position:'absolute',width:'1px',height:'1px',padding:0,margin:'-1px',overflow:'hidden',clip:'rect(0,0,0,0)',whiteSpace:'nowrap',border:0}}>Add YouTube URL</label>
-        <input
-          id="music-player-url-input"
-          type="text"
-          className="music-player-input"
-          placeholder="Paste a YouTube URL or video id…"
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void handleAdd();
-            }
-          }}
-          disabled={loadingUrl}
-        />
-        <button
-          type="button"
-          className="music-player-btn music-player-btn--primary"
-          onClick={() => void handleAdd()}
-          disabled={loadingUrl || !newUrl.trim()}
-        >
-          <FaPlus size={10} /> {loadingUrl ? "Adding…" : "Add"}
-        </button>
-      </div>
+      <AddTrackForm
+        newUrl={newUrl}
+        loadingUrl={loadingUrl}
+        onUrlChange={setNewUrl}
+        onSubmit={() => void handleAdd()}
+      />
 
       {error && <p className="music-player-error">{error}</p>}
 
@@ -364,50 +257,30 @@ export default function MusicPlayerPanel({
         <span>Loop playlist when it ends</span>
       </label>
 
-      <div className="music-player-track-list-wrap">
-        <h4 className="music-player-track-list-title">
-          Tracks{" "}
-          <span className="music-player-track-list-count">
-            {activePlaylist.items.length}
-          </span>
-        </h4>
-        {activePlaylist.items.length === 0 ? (
-          <div className="music-player-empty">
-            <p>No tracks yet. Paste a YouTube URL above to get started.</p>
-          </div>
-        ) : (
-          <ul className="music-player-track-list">
-            {activePlaylist.items.map((item, idx) => (
-              <TrackRow
-                key={item.id}
-                item={item}
-                index={idx}
-                active={idx === currentIndex}
-                isDragging={dragId === item.id}
-                onPlayNow={() => playTrackIndex(idx)}
-                onRemove={() => removeTrack(item.id)}
-                onDragStart={() => setDragId(item.id)}
-                onDragEnter={(id) => {
-                  dragOverIdRef.current = id;
-                }}
-                onDragOver={(e) => {
-                  // Required to allow drop.
-                  e.preventDefault();
-                }}
-                onDragEnd={() => {
-                  const fromId = dragId;
-                  const toId = dragOverIdRef.current;
-                  setDragId(null);
-                  dragOverIdRef.current = null;
-                  if (fromId && toId && fromId !== toId) {
-                    reorderTracks(fromId, toId);
-                  }
-                }}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
+      <TrackList
+        items={activePlaylist.items}
+        currentIndex={currentIndex}
+        dragId={dragId}
+        onPlayNow={(idx) => playTrackIndex(idx)}
+        onRemove={(id) => removeTrack(id)}
+        onDragStart={(id) => setDragId(id)}
+        onDragEnter={(id) => {
+          dragOverIdRef.current = id;
+        }}
+        onDragOver={(e) => {
+          // Required to allow drop.
+          e.preventDefault();
+        }}
+        onDragEnd={() => {
+          const fromId = dragId;
+          const toId = dragOverIdRef.current;
+          setDragId(null);
+          dragOverIdRef.current = null;
+          if (fromId && toId && fromId !== toId) {
+            reorderTracks(fromId, toId);
+          }
+        }}
+      />
 
       {confirm === "clear" ? (
         <ConfirmClearRow
@@ -419,6 +292,282 @@ export default function MusicPlayerPanel({
           onCancel={() => setConfirm(null)}
         />
       ) : null}
+    </div>
+  );
+}
+
+function PlaylistHeader({
+  playlists,
+  activePlaylist,
+  renamingId,
+  renameDraft,
+  onSelectPlaylist,
+  onRenameDraftChange,
+  onCommitRename,
+  onCancelRename,
+  onStartRename,
+  onCreatePlaylist,
+  onRequestDelete,
+}: {
+  playlists: MusicPlaylist[];
+  activePlaylist: MusicPlaylist;
+  renamingId: string | null;
+  renameDraft: string;
+  onSelectPlaylist: (id: string) => void;
+  onRenameDraftChange: (value: string) => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
+  onStartRename: () => void;
+  onCreatePlaylist: () => void;
+  onRequestDelete: () => void;
+}) {
+  return (
+    <header className="music-player-panel-header">
+      <span className="music-player-panel-header-icon" aria-hidden="true">
+        <FaMusic size={12} />
+      </span>
+      <select
+        className="music-player-select"
+        value={activePlaylist.id}
+        onChange={(e) => onSelectPlaylist(e.target.value)}
+        aria-label="Active playlist"
+        title="Switch active playlist"
+      >
+        {playlists.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      {renamingId === activePlaylist.id ? (
+        <input
+          autoFocus
+          className="music-player-input music-player-rename"
+          aria-label="Rename playlist"
+          value={renameDraft}
+          onChange={(e) => onRenameDraftChange(e.target.value)}
+          onBlur={onCommitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onCommitRename();
+            } else if (e.key === "Escape") {
+              onCancelRename();
+            }
+          }}
+          maxLength={80}
+        />
+      ) : (
+        <button
+          type="button"
+          className="music-player-icon-btn"
+          onClick={onStartRename}
+          title="Rename playlist"
+          aria-label="Rename playlist"
+        >
+          <FaPen size={10} />
+        </button>
+      )}
+      <button
+        type="button"
+        className="music-player-icon-btn"
+        onClick={onCreatePlaylist}
+        title="Create playlist"
+        aria-label="Create new playlist"
+      >
+        <FaPlus size={11} />
+      </button>
+      <button
+        type="button"
+        className="music-player-icon-btn music-player-icon-btn--danger"
+        onClick={onRequestDelete}
+        title="Delete active playlist"
+        aria-label="Delete playlist"
+      >
+        <FaTrash size={10} />
+      </button>
+    </header>
+  );
+}
+
+function PlaylistCategorySection({
+  categoryId,
+  categoryName,
+  streamGameId,
+  streamGameName,
+  searchEnabled,
+  categoryQuery,
+  categoryResults,
+  categoryOpen,
+  categoryRef,
+  categoryInputRef,
+  onQueryChange,
+  onFocus,
+  onSelectCategory,
+  onRemoveCategory,
+}: {
+  categoryId: string | null;
+  categoryName: string;
+  streamGameId: string;
+  streamGameName: string;
+  searchEnabled: boolean;
+  categoryQuery: string;
+  categoryResults: CategoryOption[];
+  categoryOpen: boolean;
+  categoryRef: React.RefObject<HTMLDivElement | null>;
+  categoryInputRef: React.RefObject<HTMLInputElement | null>;
+  onQueryChange: (value: string) => void;
+  onFocus: () => void;
+  onSelectCategory: (cat: CategoryOption) => void;
+  onRemoveCategory: () => void;
+}) {
+  return (
+    <div className="music-player-category" ref={categoryRef}>
+      <span className="music-player-field-label">
+        <FaTag size={10} /> Twitch category
+      </span>
+      {categoryId ? (
+        <div className="music-player-category-chip">
+          <span className="music-player-category-chip-name">
+            {categoryName || "Unknown"}
+          </span>
+          <button
+            type="button"
+            className="music-player-category-chip-remove"
+            onClick={onRemoveCategory}
+            title="Remove category association"
+            aria-label="Remove category"
+          >
+            <FaTimes size={9} />
+          </button>
+        </div>
+      ) : (
+        <div className="music-player-category-search">
+          <FaSearch size={11} className="music-player-category-search-icon" />
+          <input
+            ref={categoryInputRef}
+            type="text"
+            className="music-player-input music-player-category-input"
+            placeholder={
+              streamGameId
+                ? `e.g. ${streamGameName || "current category"}`
+                : "Search Twitch category…"
+            }
+            value={categoryQuery}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onFocus={onFocus}
+            disabled={!searchEnabled}
+          />
+          {categoryOpen && categoryResults.length > 0 && (
+            <div className="music-player-category-dropdown">
+              {categoryResults.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className="music-player-category-option"
+                  onClick={() => onSelectCategory(cat)}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddTrackForm({
+  newUrl,
+  loadingUrl,
+  onUrlChange,
+  onSubmit,
+}: {
+  newUrl: string;
+  loadingUrl: boolean;
+  onUrlChange: (value: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="music-player-add">
+      <label htmlFor="music-player-url-input" style={{position:'absolute',width:'1px',height:'1px',padding:0,margin:'-1px',overflow:'hidden',clip:'rect(0,0,0,0)',whiteSpace:'nowrap',border:0}}>Add YouTube URL</label>
+      <input
+        id="music-player-url-input"
+        type="text"
+        className="music-player-input"
+        placeholder="Paste a YouTube URL or video id…"
+        value={newUrl}
+        onChange={(e) => onUrlChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+        disabled={loadingUrl}
+      />
+      <button
+        type="button"
+        className="music-player-btn music-player-btn--primary"
+        onClick={onSubmit}
+        disabled={loadingUrl || !newUrl.trim()}
+      >
+        <FaPlus size={10} /> {loadingUrl ? "Adding…" : "Add"}
+      </button>
+    </div>
+  );
+}
+
+function TrackList({
+  items,
+  currentIndex,
+  dragId,
+  onPlayNow,
+  onRemove,
+  onDragStart,
+  onDragEnter,
+  onDragOver,
+  onDragEnd,
+}: {
+  items: MusicPlayerItem[];
+  currentIndex: number;
+  dragId: string | null;
+  onPlayNow: (index: number) => void;
+  onRemove: (id: string) => void;
+  onDragStart: (id: string) => void;
+  onDragEnter: (id: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+}) {
+  return (
+    <div className="music-player-track-list-wrap">
+      <h4 className="music-player-track-list-title">
+        Tracks{" "}
+        <span className="music-player-track-list-count">{items.length}</span>
+      </h4>
+      {items.length === 0 ? (
+        <div className="music-player-empty">
+          <p>No tracks yet. Paste a YouTube URL above to get started.</p>
+        </div>
+      ) : (
+        <ul className="music-player-track-list">
+          {items.map((item, idx) => (
+            <TrackRow
+              key={item.id}
+              item={item}
+              index={idx}
+              active={idx === currentIndex}
+              isDragging={dragId === item.id}
+              onPlayNow={() => onPlayNow(idx)}
+              onRemove={() => onRemove(item.id)}
+              onDragStart={() => onDragStart(item.id)}
+              onDragEnter={onDragEnter}
+              onDragOver={onDragOver}
+              onDragEnd={onDragEnd}
+            />
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
