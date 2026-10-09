@@ -324,7 +324,7 @@ export default function YTMessageParts({
         if (part.type === "emoji") {
           return variant === "unified" ? (
             <img
-              key={part.url}
+              key={`e-${i}`}
               src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}
@@ -343,7 +343,7 @@ export default function YTMessageParts({
             />
           ) : (
             <img
-              key={part.url}
+              key={`e-${i}`}
               src={part.url}
               alt={part.alt || part.emojiText || "🙂"}
               title={part.emojiText || part.alt}

@@ -19,8 +19,12 @@ const STATIC_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   // Allow the page to be framed only by the same origin
   "X-Frame-Options": "SAMEORIGIN",
-  // Limit referrer information sent to third parties
-  "Referrer-Policy": "strict-origin-when-cross-origin",
+  // Send no referrer at all. Google's image CDN (ggpht/googleusercontent)
+  // returns HTTP 429 for requests carrying an insecure `http://localhost`
+  // referer, which Chromium then blocks as ERR_BLOCKED_BY_ORB (the 429 body is
+  // HTML, not an image). omitting the referer keeps YouTube avatars/emotes
+  // loading on localhost and in the desktop app.
+  "Referrer-Policy": "no-referrer",
   // Disable browser features this app does not use
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
   // Enforce HTTPS for 2 years (production only — dev runs over plain HTTP)
