@@ -299,13 +299,28 @@ export function createSystemRemovalMessage(
   };
 }
 
+/**
+ * YouTube sometimes returns protocol-relative (`//host/...`) or `http://` image
+ * URLs (avatars, badges, emoji, stickers). The app's CSP allows only https image
+ * sources, and on a plain-http origin (e.g. http://localhost:3000) such URLs are
+ * blocked, so force them to https.
+ */
+function toHttpsUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("//")) return `https:${url}`;
+  if (url.startsWith("http://")) return `https://${url.slice(7)}`;
+  return url;
+}
+
 function parseRuns(runs: any[]): MessagePart[] {
   const parts: MessagePart[] = [];
   for (const run of runs) {
     if (run.emoji) {
       const emoji = run.emoji;
       const name = emoji.shortcuts?.[0] || emoji.emoji_id || "emoji";
-      const url = Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined;
+      const url = toHttpsUrl(
+        Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined,
+      );
       const isCustom = !!(emoji.is_custom ?? emoji.isCustomEmoji);
       if (!isCustom) {
         if (emoji.emoji_id) parts.push({ type: "text", text: emoji.emoji_id });
@@ -356,12 +371,12 @@ function getBadgeIconUrl(badge: any): string | undefined {
   if (Array.isArray(badge.custom_thumbnail) && badge.custom_thumbnail[0]) {
     const first = badge.custom_thumbnail[0];
     if (Array.isArray(first?.thumbnails) && first.thumbnails[0]?.url) {
-      return first.thumbnails[0].url;
+      return toHttpsUrl(first.thumbnails[0].url);
     }
-    if (first?.url) return first.url;
+    if (first?.url) return toHttpsUrl(first.url);
   }
   if (Array.isArray(badge.thumbnails) && badge.thumbnails[0]?.url) {
-    return badge.thumbnails[0].url;
+    return toHttpsUrl(badge.thumbnails[0].url);
   }
   return undefined;
 }
@@ -470,9 +485,11 @@ function parseTextMessageBase(item: any): ChatMessage {
     id: item.id,
     author: item.author?.name?.toString() || "Unknown",
     authorChannelId: item.author?.id,
-    authorAvatar: Array.isArray(item.author?.thumbnails)
-      ? item.author.thumbnails[0]?.url
-      : undefined,
+    authorAvatar: toHttpsUrl(
+      Array.isArray(item.author?.thumbnails)
+        ? item.author.thumbnails[0]?.url
+        : undefined,
+    ),
     badges: parseBadges(item),
     parts: parseMessageRuns(item),
     timestamp: parseTimestamp(item),
@@ -501,15 +518,18 @@ function parseChatItem(item: any): ChatMessage | null {
     };
   }
   if (item.is(YTNodes.LiveChatPaidSticker)) {
-    const stickerUrl =
-      item.sticker?.thumbnails?.[0]?.url || item.sticker?.image?.[0]?.url;
+    const stickerUrl = toHttpsUrl(
+      item.sticker?.thumbnails?.[0]?.url || item.sticker?.image?.[0]?.url,
+    );
     return {
       id: item.id,
       author: item.author?.name?.toString() || "Unknown",
       authorChannelId: item.author?.id,
-      authorAvatar: Array.isArray(item.author?.thumbnails)
-        ? item.author.thumbnails[0]?.url
-        : undefined,
+      authorAvatar: toHttpsUrl(
+        Array.isArray(item.author?.thumbnails)
+          ? item.author.thumbnails[0]?.url
+          : undefined,
+      ),
       badges: parseBadges(item),
       parts: [],
       timestamp: parseTimestamp(item),
@@ -618,9 +638,11 @@ function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | nu
     parts.push({ type: "text", text: contents.banner_message.toString() });
   }
 
-  const authorAvatar = Array.isArray(contents.author_photo)
-    ? contents.author_photo[0]?.url
-    : undefined;
+  const authorAvatar = toHttpsUrl(
+    Array.isArray(contents.author_photo)
+      ? contents.author_photo[0]?.url
+      : undefined,
+  );
 
   return {
     id: banner.action_id || `redirect-${Date.now()}`,
@@ -729,9 +751,11 @@ export function parseHostHandoffBanner(
       ? "A new raid joined the chat"
       : `Joining raid from ${hostName}`;
 
-  const authorAvatar = Array.isArray(contents.author_photo)
-    ? contents.author_photo[0]?.url
-    : undefined;
+  const authorAvatar = toHttpsUrl(
+    Array.isArray(contents.author_photo)
+      ? contents.author_photo[0]?.url
+      : undefined,
+  );
 
   return {
     id: `system-raidHost-${banner.action_id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1739,9 +1763,11 @@ function parseGiftPurchaseAnnouncement(msg: any): ChatMessage {
     msg.author?.name?.toString() ||
     "Unknown";
   const authorChannelId = msg.author_external_channel_id || msg.author?.id;
-  const authorAvatar = Array.isArray(msg.header?.author_photo)
-    ? msg.header.author_photo[0]?.url
-    : undefined;
+  const authorAvatar = toHttpsUrl(
+    Array.isArray(msg.header?.author_photo)
+      ? msg.header.author_photo[0]?.url
+      : undefined,
+  );
 
   return {
     id: msg.id,
@@ -1788,9 +1814,9 @@ function parseLiveChatMessage(msg: any): ChatMessage {
       if (run.emoji) {
         const emoji = run.emoji;
         const name = emoji.shortcuts?.[0] || emoji.emoji_id || "emoji";
-        const url = Array.isArray(emoji.image)
-          ? emoji.image[0]?.url
-          : undefined;
+        const url = toHttpsUrl(
+          Array.isArray(emoji.image) ? emoji.image[0]?.url : undefined,
+        );
         const isCustom = !!emoji.is_custom;
 
         if (!isCustom) {
@@ -1818,7 +1844,8 @@ function parseLiveChatMessage(msg: any): ChatMessage {
   if (msg.author?.badges) {
     for (const badge of msg.author.badges) {
       if (badge.thumbnails && badge.thumbnails[0]) {
-        badges[badge.label || "badge"] = badge.thumbnails[0].url;
+        const badgeUrl = toHttpsUrl(badge.thumbnails[0].url);
+        if (badgeUrl) badges[badge.label || "badge"] = badgeUrl;
       }
     }
   }
@@ -1835,9 +1862,11 @@ function parseLiveChatMessage(msg: any): ChatMessage {
     id: msg.id,
     author: msg.author?.name?.toString() || "Unknown",
     authorChannelId: msg.author?.id,
-    authorAvatar: Array.isArray(msg.author?.thumbnails)
-      ? msg.author.thumbnails[0]?.url
-      : undefined,
+    authorAvatar: toHttpsUrl(
+      Array.isArray(msg.author?.thumbnails)
+        ? msg.author.thumbnails[0]?.url
+        : undefined,
+    ),
     badges,
     parts,
     timestamp,
