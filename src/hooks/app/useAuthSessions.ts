@@ -2,7 +2,33 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
 import { useTokenRefresh } from "./useTokenRefresh";
-import { IS_TWITCH_ONLY } from "../../lib/constants";
+import {
+  IS_DESKTOP,
+  IS_TWITCH_ONLY,
+  TWITCH_SCOPES,
+} from "../../lib/constants";
+
+export interface TwitchDeviceState {
+  userCode: string;
+  verificationUri: string;
+  status: "waiting" | "error";
+  error?: string;
+}
+
+/**
+ * Fetch a PKCE challenge for the desktop Google flow. The server stores the
+ * matching code_verifier in an httpOnly cookie.
+ */
+async function fetchPkceChallenge(): Promise<string | undefined> {
+  try {
+    const res = await fetch("/api/auth/google/pkce", { method: "POST" });
+    if (!res.ok) return undefined;
+    const body = (await res.json()) as { codeChallenge?: string };
+    return body.codeChallenge;
+  } catch {
+    return undefined;
+  }
+}
 
 const SESSIONS_KEY = "mixchat_sessions:v1";
 
@@ -57,7 +83,11 @@ async function fetchOAuthState(flow?: string): Promise<string> {
  * Module-scope: no closure dependencies on the hook, so useCallback
  * would only add React noise.
  */
-function buildGoogleAuthUrl(scope: string, state: string): string {
+function buildGoogleAuthUrl(
+  scope: string,
+  state: string,
+  codeChallenge?: string,
+): string {
   const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
   const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
   try {
@@ -76,6 +106,11 @@ function buildGoogleAuthUrl(scope: string, state: string): string {
     prompt: "consent",
     state,
   });
+  // Desktop (public client) uses PKCE and sends no client secret.
+  if (codeChallenge) {
+    params.set("code_challenge", codeChallenge);
+    params.set("code_challenge_method", "S256");
+  }
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
@@ -132,12 +167,19 @@ export type UseAuthSessionsResult = {
   youtubeDriveLogin: () => void;
   youtubeLogout: () => void;
   clearTwitchSession: () => void;
+  /** Desktop Device Code Grant modal state (null when closed). */
+  twitchDevice: TwitchDeviceState | null;
+  cancelTwitchDevice: () => void;
 };
 
 export function useAuthSessions(): UseAuthSessionsResult {
   const [sessions, setSessions] = useState<AuthSessions>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [twitchDevice, setTwitchDevice] = useState<TwitchDeviceState | null>(
+    null,
+  );
+  const deviceAbortRef = useRef(false);
 
   // Skip the very first save run: the mount effect closes over the initial
   // `{}` and would clobber the localStorage copy that the load-effect is
@@ -153,6 +195,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
         clearInterval(popupPollRef.current);
         popupPollRef.current = null;
       }
+      deviceAbortRef.current = true;
     };
   }, []);
 
@@ -200,6 +243,87 @@ export function useAuthSessions(): UseAuthSessionsResult {
       delete next.youtube;
       return next;
     });
+  }, []);
+
+  const cancelTwitchDevice = useCallback(() => {
+    deviceAbortRef.current = true;
+    setTwitchDevice(null);
+    setIsLoggingIn(false);
+  }, []);
+
+  const startTwitchDeviceLogin = useCallback(() => {
+    void (async () => {
+      deviceAbortRef.current = false;
+      setIsLoggingIn(true);
+      let interval = 5;
+      try {
+        const res = await fetch("/api/auth/twitch/device/start", {
+          method: "POST",
+        });
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const data = await res.json();
+        interval = data.interval || 5;
+        setTwitchDevice({
+          userCode: data.userCode,
+          verificationUri: data.verificationUri,
+          status: "waiting",
+        });
+        try {
+          window.open(
+            `${data.verificationUri}?device-code=${encodeURIComponent(data.userCode)}`,
+            "twitch_activate",
+          );
+        } catch {
+          /* popup blocked — the modal offers a clickable activation link */
+        }
+      } catch {
+        if (!deviceAbortRef.current) {
+          setTwitchDevice({
+            userCode: "",
+            verificationUri: "",
+            status: "error",
+            error: "Couldn't start Twitch sign-in. Please try again.",
+          });
+          setIsLoggingIn(false);
+        }
+        return;
+      }
+
+      while (!deviceAbortRef.current) {
+        await new Promise((r) => setTimeout(r, interval * 1000));
+        if (deviceAbortRef.current) break;
+        try {
+          const res = await fetch("/api/auth/twitch/device/poll");
+          const data = await res.json().catch(() => ({}));
+          if (data.status === "success" && data.session) {
+            setSessions((prev) => ({ ...prev, twitch: data.session }));
+            setTwitchDevice(null);
+            setIsLoggingIn(false);
+            return;
+          }
+          if (data.status === "pending") continue;
+          if (data.status === "slow_down") {
+            interval += 5;
+            continue;
+          }
+          if (!deviceAbortRef.current) {
+            const msg =
+              data.status === "denied"
+                ? "Authorization was denied."
+                : data.status === "expired"
+                  ? "The code expired — please try again."
+                  : data.message || "Twitch sign-in failed.";
+            setTwitchDevice((prev) =>
+              prev ? { ...prev, status: "error", error: msg } : prev,
+            );
+            setIsLoggingIn(false);
+            return;
+          }
+        } catch {
+          /* transient network error — keep polling */
+        }
+      }
+    })();
   }, []);
 
   useTokenRefresh(
@@ -260,6 +384,12 @@ export function useAuthSessions(): UseAuthSessionsResult {
    * Falls back to a client-generated UUID if the server is unreachable.
    */
   const twitchLogin = useCallback(() => {
+    // Desktop uses the public-client Device Code Grant (no client secret).
+    if (IS_DESKTOP) {
+      startTwitchDeviceLogin();
+      return;
+    }
+
     const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
     const redirectUri = import.meta.env.PUBLIC_TWITCH_REDIRECT_URI;
 
@@ -293,8 +423,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
         client_id: clientId,
         redirect_uri: redirectUri,
         response_type: "code",
-        scope:
-          "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers",
+        scope: TWITCH_SCOPES,
         state,
       });
 
@@ -386,7 +515,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
         window.removeEventListener("storage", onStorage);
       };
     })();
-  }, []);
+  }, [startTwitchDeviceLogin]);
 
   /**
    * Fire-and-forget POST to /api/auth/logout so the server clears the
@@ -428,9 +557,13 @@ export function useAuthSessions(): UseAuthSessionsResult {
 
     void (async () => {
       const state = await fetchOAuthState();
+      const codeChallenge = IS_DESKTOP
+        ? await fetchPkceChallenge()
+        : undefined;
       const url = buildGoogleAuthUrl(
         "https://www.googleapis.com/auth/youtube.force-ssl",
         state,
+        codeChallenge,
       );
       const popup = openCenteredPopup("youtube_oauth", url);
 
@@ -477,9 +610,13 @@ export function useAuthSessions(): UseAuthSessionsResult {
 
     void (async () => {
       const state = await fetchOAuthState("drive");
+      const codeChallenge = IS_DESKTOP
+        ? await fetchPkceChallenge()
+        : undefined;
       const url = buildGoogleAuthUrl(
         "https://www.googleapis.com/auth/drive.file",
         state,
+        codeChallenge,
       );
       const popup = openCenteredPopup("youtube_drive_oauth", url);
 
@@ -584,5 +721,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     youtubeDriveLogin,
     youtubeLogout,
     clearTwitchSession,
+    twitchDevice,
+    cancelTwitchDevice,
   };
 }

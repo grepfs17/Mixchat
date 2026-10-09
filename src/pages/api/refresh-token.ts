@@ -2,7 +2,11 @@ import type { APIRoute } from "astro";
 import { refreshTwitchAccessToken } from "../../lib/twitch";
 import { refreshYoutubeToken } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
-import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
+import {
+  IS_DESKTOP,
+  IS_TWITCH_ONLY,
+  twitchOnlyResponse,
+} from "../../lib/constants";
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const clientAddress =
@@ -49,9 +53,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-      const clientSecret = import.meta.env.TWITCH_CLIENT_SECRET;
+      // Desktop public clients refresh without a secret.
+      const clientSecret = IS_DESKTOP
+        ? undefined
+        : import.meta.env.TWITCH_CLIENT_SECRET;
 
-      if (!clientId || !clientSecret) {
+      if (!clientId || (!IS_DESKTOP && !clientSecret)) {
         console.error("Missing Twitch credentials in environment");
         return new Response(
           JSON.stringify({ error: "Server configuration error" }),
@@ -104,7 +111,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-      const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+      // Google requires the client secret for desktop clients too.
+      const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
 
       if (!clientId || !clientSecret) {
         console.error("Missing YouTube credentials in environment");

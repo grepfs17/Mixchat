@@ -33,6 +33,7 @@ import type { StreamTransitionInfo } from "./StreamGrid";
 import StreamTransitionOverlay from "./StreamTransitionOverlay";
 import LandingPage from "./LandingPage";
 import OnboardingWizard from "./OnboardingWizard";
+import TwitchDeviceLoginModal from "./TwitchDeviceLoginModal";
 import FavoriteChannelsModal from "./FavoriteChannelsModal";
 import FirefoxTrackingProtectionModal from "./FirefoxTrackingProtectionModal";
 
@@ -61,6 +62,8 @@ export default function AppContainer() {
     youtubeDriveLogin: handleYoutubeDriveLogin,
     youtubeLogout: handleYoutubeLogout,
     clearTwitchSession,
+    twitchDevice,
+    cancelTwitchDevice,
   } = useAuthSessions();
   const [streamTransition, setStreamTransition] =
     useState<StreamTransitionInfo | null>(null);
@@ -823,6 +826,11 @@ export default function AppContainer() {
           onComplete={handleOnboardingComplete}
         />
       )}
+
+      <TwitchDeviceLoginModal
+        device={twitchDevice}
+        onCancel={cancelTwitchDevice}
+      />
 
       {/* Firefox Enhanced Tracking Protection notice — only when logged in */}
       {sessions.twitch && <FirefoxTrackingProtectionModal />}

@@ -494,19 +494,25 @@ export async function getInnertube() {
 export async function getYoutubeAccessToken(
   code: string,
   clientId: string,
-  clientSecret: string,
   redirectUri: string,
+  options: { clientSecret?: string; codeVerifier?: string } = {},
 ) {
+  const { clientSecret, codeVerifier } = options;
+  const params = new URLSearchParams({
+    code,
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    grant_type: "authorization_code",
+  });
+  // Confidential (web) clients send the secret; public (desktop) clients use
+  // PKCE and must NOT send a secret.
+  if (clientSecret) params.set("client_secret", clientSecret);
+  if (codeVerifier) params.set("code_verifier", codeVerifier);
+
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: "authorization_code",
-    }),
+    body: params,
   });
 
   if (!res.ok) {
@@ -550,17 +556,19 @@ export async function getYoutubeUser(accessToken: string) {
 export async function refreshYoutubeToken(
   refreshToken: string,
   clientId: string,
-  clientSecret: string,
+  clientSecret?: string,
 ) {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+  // Public (desktop PKCE) clients refresh without a client secret.
+  if (clientSecret) params.set("client_secret", clientSecret);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }),
+    body: params,
   });
 
   if (!res.ok) {

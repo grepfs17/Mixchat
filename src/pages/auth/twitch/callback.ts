@@ -1,7 +1,13 @@
 import type { APIRoute } from "astro";
 import { getTwitchAccessToken, getTwitchUser } from "../../../lib/twitch";
+import { IS_DESKTOP } from "../../../lib/constants";
 
 export const GET: APIRoute = async ({ url, cookies, locals }) => {
+  // The desktop build signs in via the Device Code Grant instead.
+  if (IS_DESKTOP) {
+    return new Response("Not available in desktop mode", { status: 404 });
+  }
+
   const code = url.searchParams.get("code");
   const returnedState = url.searchParams.get("state");
 

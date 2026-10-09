@@ -102,6 +102,92 @@ export const getTwitchAccessToken = async (
 };
 
 /**
+ * Start the OAuth Device Code Grant flow (public client — no secret).
+ * Returns the user-facing code and the URL the user must visit.
+ * Twitch docs: https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow
+ */
+export const startTwitchDeviceAuth = async (
+  clientId: string,
+  scopes: string,
+): Promise<{
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  expiresIn: number;
+  interval: number;
+}> => {
+  const res = await fetch(`${TWITCH_AUTH_BASE}/device`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: clientId, scopes }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Twitch device authorization failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  return {
+    deviceCode: data.device_code,
+    userCode: data.user_code,
+    verificationUri: data.verification_uri,
+    expiresIn: data.expires_in,
+    interval: data.interval || 5,
+  };
+};
+
+export type TwitchDevicePollResult =
+  | { status: "pending" | "slow_down" | "expired" | "denied" }
+  | {
+      status: "success";
+      accessToken: string;
+      refreshToken?: string;
+      expiresIn: number;
+    }
+  | { status: "error"; message: string };
+
+/**
+ * Poll the token endpoint while the user approves the device code.
+ * Public clients exchange/refresh tokens without a client secret.
+ */
+export const pollTwitchDeviceToken = async (
+  clientId: string,
+  deviceCode: string,
+  scopes: string,
+): Promise<TwitchDevicePollResult> => {
+  const res = await fetch(`${TWITCH_AUTH_BASE}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      scopes,
+      device_code: deviceCode,
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+    }),
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    return {
+      status: "success",
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in,
+    };
+  }
+
+  const body = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    error?: string;
+  };
+  const code = (body.message || body.error || "").toLowerCase();
+  if (code.includes("authorization_pending")) return { status: "pending" };
+  if (code.includes("slow_down")) return { status: "slow_down" };
+  if (code.includes("expired_token")) return { status: "expired" };
+  if (code.includes("access_denied")) return { status: "denied" };
+  return { status: "error", message: body.message || `HTTP ${res.status}` };
+};
+
+/**
  * Send a chat message via Helix and return the message ID.
  * Requires user:write:chat scope.
  */
@@ -606,18 +692,20 @@ export const cancelRaid = async (broadcasterId: string) => {
 export const refreshTwitchAccessToken = async (
   refreshToken: string,
   clientId: string,
-  clientSecret: string,
+  clientSecret?: string,
 ) => {
   try {
+    const params = new URLSearchParams({
+      client_id: clientId,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    });
+    // Public clients (desktop device-code flow) refresh without a secret.
+    if (clientSecret) params.set("client_secret", clientSecret);
     const response = await fetch(`${TWITCH_AUTH_BASE}/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: "refresh_token",
-      }),
+      body: params,
     });
 
     if (!response.ok) {
