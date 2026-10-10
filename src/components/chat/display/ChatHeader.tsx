@@ -519,7 +519,7 @@ function StreamInfoActions({
           title="Open YouTube chat popout"
           onClick={() => {
             window.open(
-              `https://www.youtube.com/live_chat?is_popout=1&v=${encodeURIComponent(youtubeVideoId)}`,
+              `https://www.youtube.com/live_chat?is_popout=1&dark_theme=1&v=${encodeURIComponent(youtubeVideoId)}`,
               "yt-chat-popout",
               "width=400,height=600,noopener,noreferrer",
             );
