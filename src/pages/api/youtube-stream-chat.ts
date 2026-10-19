@@ -499,6 +499,19 @@ function parseTextMessageBase(item: any): ChatMessage {
   };
 }
 
+/**
+ * Builds the label shown for a membership event. Milestone announcements
+ * carry the duration in `header_primary_text` (e.g. "Member (6 months)");
+ * `header_subtext` only holds the welcome/tier text. New memberships have
+ * no duration, so fall back to the subtext or a generic "Member".
+ */
+export function getMembershipLabel(msg: any): string {
+  const primary = msg.header_primary_text?.toString?.().trim?.();
+  if (primary) return primary;
+  const subtext = msg.header_subtext?.toString?.().trim?.();
+  return subtext || "Member";
+}
+
 function parseChatItem(item: any): ChatMessage | null {
   if (item.is(YTNodes.LiveChatTextMessage)) {
     return parseTextMessageBase(item);
@@ -555,7 +568,7 @@ function parseChatItem(item: any): ChatMessage | null {
       ...parseTextMessageBase(item),
       messageType: "membership",
       superchat: {
-        amount: item.header_subtext?.toString() || "Member",
+        amount: getMembershipLabel(item),
         color: "#0f9d58",
       },
     };

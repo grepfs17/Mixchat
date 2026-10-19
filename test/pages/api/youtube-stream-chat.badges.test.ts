@@ -11,6 +11,7 @@ import {
   parseBadges,
   isAuthorModerator,
   isAuthorOwner,
+  getMembershipLabel,
 } from "../../../src/pages/api/youtube-stream-chat.badge-bridge";
 
 function makeModBadge() {
@@ -138,6 +139,29 @@ describe("YouTube chat badge parsing", () => {
       expect(
         isAuthorOwner({ author: { badges: [makeModBadge()] } }),
       ).toBe(false);
+    });
+  });
+
+  describe("getMembershipLabel", () => {
+    const text = (value: string) => ({ toString: () => value });
+
+    it("includes the milestone duration from header_primary_text", () => {
+      expect(
+        getMembershipLabel({
+          header_primary_text: text("Member (6 months)"),
+          header_subtext: text("Welcome!"),
+        }),
+      ).toBe("Member (6 months)");
+    });
+
+    it("falls back to header_subtext when there is no primary text", () => {
+      expect(
+        getMembershipLabel({ header_subtext: text("Welcome!") }),
+      ).toBe("Welcome!");
+    });
+
+    it("falls back to 'Member' when neither text is present", () => {
+      expect(getMembershipLabel({})).toBe("Member");
     });
   });
 

@@ -8,4 +8,5 @@ export {
   parseBadges,
   isAuthorModerator,
   isAuthorOwner,
+  getMembershipLabel,
 } from "./youtube-stream-chat";
