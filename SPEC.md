@@ -39,7 +39,8 @@ mixchat/
 │   │   │   └── ThemeMascots.tsx
 │   │   ├── dev/             # Dev-only components (chat styling gallery)
 │   │   ├── wheel/           # Wheel Spin tool (canvas wheel, options, history, manager)
-│   │   ├── AppContainer.tsx # Root app component (layout, sidebar, auth, grid)
+│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals)
+│   │   ├── AppContainer.tsx # Root app component (orchestrates hooks, delegates layout to app/)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
 │   │   ├── StreamGrid.tsx   # Grid of live channels
@@ -48,7 +49,7 @@ mixchat/
 │   │   ├── FirefoxTrackingProtectionModal.tsx  # Firefox ETP notice popup (home + global)
 │   │   └── ...              # Misc components (WatchlistManager, YouTubeLinker, etc.)
 │   ├── hooks/               # Custom React hooks
-│   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor)
+│   │   ├── app/             # App-level hooks (auth, channels, settings, embed, stream monitor, onboarding, loading, selection)
 │   │   ├── chat/            # Chat hooks (state, messages, moderation, emotes, song queue, lazy history)
 │   │   │   ├── chatAppStateHelpers/  # Decomposed helpers for ChatApp state
 │   │   │   ├── twitchChatHelpers/     # Twitch connection lifecycle helpers
@@ -109,7 +110,7 @@ mixchat/
 
 ### 2. Component Architecture
 
-- **AppContainer** is the root component managing layout (sidebar + main area + modals), orchestrating sessions, channels, embed, settings, and stream monitoring.
+- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks.
 - **ChatApp** is the central chat component receiving all settings as props and delegating to individual chat panels, banners, and modal overlays.
 - All `useXxx` hooks are self-contained custom hooks that own their state, effects, and derived values.
 
@@ -232,11 +233,20 @@ mixchat/
 - Settings are backed up to Google Drive via `src/lib/driveSync.ts`.
 
 ### Auth Flow
+
+**Web (hosted site):**
 1. User clicks "Login with Twitch/Google" → popup opens.
-2. Backend handles OAuth callback at `/api/auth/twitch/callback` or `/api/auth/youtube/callback`.
+2. Backend handles OAuth callback at `/auth/twitch/callback` or `/auth/youtube/callback`.
 3. Session data sent back to opener via `postMessage({ type: "mixchat_session", session })`.
 4. Parent window receives, stores in `localStorage`.
 5. On app load, sessions restored from `localStorage` via `useAuthSessions`.
+
+**Desktop (public-client OAuth, built with `PUBLIC_APP_PLATFORM=desktop`):**
+- `src/lib/constants.ts` exposes `IS_DESKTOP` (from `PUBLIC_APP_PLATFORM`) and the shared `TWITCH_SCOPES`.
+- Twitch uses the OAuth **Device Code Grant** via `/api/auth/twitch/device/start` (returns the user code) and `/api/auth/twitch/device/poll` (sets the auth cookies on approval). A Public Twitch app is used, so no client secret. UI: `src/components/TwitchDeviceLoginModal.tsx`.
+- Google/YouTube uses **PKCE** with a Google "Desktop app" OAuth client: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie; `src/pages/auth/youtube/callback.ts` exchanges the code with `code_verifier` **and** the client secret (Google rejects secretless PKCE for its token endpoint, even for desktop clients).
+- Twitch token refresh (`/api/refresh-token`, `src/server/providerTokens.ts`) omits the client secret for desktop builds (Public app). Google refresh (`refresh-token`, `providerTokens`, `gdrive.ts`) still sends its desktop client secret.
+- The confidential web flows are unchanged; `src/pages/auth/twitch/callback.ts` returns 404 in desktop mode.
 
 ## Common Tasks Guide
 

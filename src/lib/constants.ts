@@ -5,6 +5,18 @@ export const YT_USER_AGENT =
 /** When set to "true", disables all Google/YouTube integrations (auth, chat, drive). */
 export const IS_TWITCH_ONLY = import.meta.env.PUBLIC_TWITCH_ONLY === "true";
 
+/**
+ * App platform that this bundle was built for. The desktop build sets
+ * `PUBLIC_APP_PLATFORM=desktop`, which selects public-client OAuth flows
+ * (Twitch Device Code Grant, Google PKCE) so no client secrets are shipped.
+ * Unset/`web` keeps the hosted site's confidential-client flows unchanged.
+ */
+export const IS_DESKTOP = import.meta.env.PUBLIC_APP_PLATFORM === "desktop";
+
+/** Twitch OAuth scopes requested by both the web and desktop login flows. */
+export const TWITCH_SCOPES =
+  "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers";
+
 /** Returns a 403 Response for disabled YouTube API endpoints. */
 export function twitchOnlyResponse(): Response {
   return new Response(

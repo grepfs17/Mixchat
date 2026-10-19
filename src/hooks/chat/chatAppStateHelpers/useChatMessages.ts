@@ -65,6 +65,7 @@ export function useChatMessages({
   const [showPreloadedMessages, setShowPreloadedMessages] = useState(true);
   const preloadedMessagesRef = useRef<Set<string>>(new Set());
   const recentRedemptionsRef = useRef<Map<string, number>>(new Map());
+  const persistedMessageIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     pruneMessages(CHAT_HISTORY_MAX_AGE_HOURS);
@@ -81,6 +82,7 @@ export function useChatMessages({
   useEffect(() => {
     setMessages([]);
     preloadedMessagesRef.current.clear();
+    persistedMessageIdsRef.current.clear();
   }, [selectedTwitchChannelName]);
 
   useEffect(() => {
@@ -151,6 +153,15 @@ export function useChatMessages({
         return;
       }
 
+      // Persist outside the state updater: React may replay a state updater, so
+      // side effects must not run inside it. saveMessage is an idempotent put
+      // keyed by platform:id, and the id set keeps us from rewriting records we
+      // already stored (e.g. enrichment-only updates to an existing message).
+      if (!persistedMessageIdsRef.current.has(message.id)) {
+        persistedMessageIdsRef.current.add(message.id);
+        saveMessage(message, selectedTwitchChannelName);
+      }
+
       setMessages((rawPrev) => {
         // An approved AutoMod hold is published to chat with the same message
         // id as the held message. Drop the ephemeral placeholder so it doesn't
@@ -165,7 +176,6 @@ export function useChatMessages({
         if (existingIdx !== -1) {
           const existing = prev[existingIdx];
           if (existing.optimistic || existing.id.startsWith("optimistic_")) {
-            saveMessage(message, selectedTwitchChannelName);
             const copy = [...prev];
             copy[existingIdx] = message;
             return copy;
@@ -245,7 +255,6 @@ export function useChatMessages({
           }
 
           if (matchIndex !== -1) {
-            saveMessage(message, selectedTwitchChannelName);
             const copy = [...prev];
             copy[matchIndex] = message;
             const max = getMaxDisplayedMessages();
@@ -254,8 +263,6 @@ export function useChatMessages({
         }
 
         const updated = [...prev, message];
-
-        saveMessage(message, selectedTwitchChannelName);
 
         const max = getMaxDisplayedMessages();
         return updated.length > max ? updated.slice(-max) : updated;

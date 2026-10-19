@@ -191,6 +191,508 @@ const BASE_SETTINGS: SettingDef[] = [
   },
 ];
 
+interface OnboardingHeaderProps {
+  step: 1 | 2 | 3;
+  onComplete: () => void;
+}
+
+function OnboardingHeader({ step, onComplete }: OnboardingHeaderProps) {
+  return (
+    <div className="onboarding-header">
+      <div className="onboarding-header-row">
+        <div className="onboarding-step-indicator" aria-hidden="true">
+          <span
+            className={`onboarding-step-dot${
+              step > 1
+                ? " onboarding-step-dot--done"
+                : " onboarding-step-dot--active"
+            }`}
+          />
+          <span
+            className={`onboarding-step-dot${
+              step > 2
+                ? " onboarding-step-dot--done"
+                : step === 2
+                  ? " onboarding-step-dot--active"
+                  : ""
+            }`}
+          />
+          <span
+            className={`onboarding-step-dot${
+              step === 3 ? " onboarding-step-dot--active" : ""
+            }`}
+          />
+          <span style={{ marginLeft: "6px" }}>Step {step} of 3</span>
+        </div>
+        <button
+          type="button"
+          className="onboarding-skip"
+          onClick={onComplete}
+          title="Skip the setup wizard"
+        >
+          Skip setup
+        </button>
+      </div>
+      <h2 className="onboarding-title" id="onboarding-title">
+        {step === 1
+          ? "Do you want help to configure Mixchat?"
+          : step === 2
+            ? "Pick a theme"
+            : "How will you use Mixchat?"}
+      </h2>
+      <p className="onboarding-subtitle">
+        {step === 1
+          ? "If you already configured it to your liking, you can skip this setup. Every option is also available later in Settings."
+          : step === 2
+            ? "Choose how Mixchat looks for you. You can switch any time from Settings."
+            : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
+      </p>
+    </div>
+  );
+}
+
+function WelcomeStep() {
+  return (
+    <div className="onboarding-welcome">
+      <img
+        src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
+        alt="Mixchat"
+        className="onboarding-welcome-logo"
+      />
+      <p className="onboarding-welcome-lead">
+        You're logged in and ready to go.
+      </p>
+      <p className="onboarding-welcome-detail">
+        This short setup will help us pick a theme, font, and chat defaults
+        that match how you use Mixchat. It only takes a moment.
+      </p>
+      <ul className="onboarding-welcome-list">
+        <li>Pick a theme and font for the chat</li>
+        <li>Choose your role (streamer, moderator, or viewer)</li>
+        <li>Review the recommended settings before we apply them</li>
+      </ul>
+    </div>
+  );
+}
+
+function ThemeStep() {
+  const s = useSettingsContext();
+  return (
+    <>
+      <div
+        className="onboarding-preview"
+        style={{
+          "--chat-font-size": `${s.fontSize}px`,
+          "--chat-font-family": FONT_FAMILY_MAP[s.chatFont],
+        } as React.CSSProperties}
+      >
+        <div className="onboarding-preview-header">
+          <span className="onboarding-preview-header-text">Chat preview</span>
+        </div>
+        <div className="messages-container">
+          <div className="message chat">
+            <div className="message-single-line">
+              <span className="timestamp">14:03:52</span>
+              <span className="platform-tag twitch" title="Twitch">
+                <FaTwitch size={14} />
+              </span>
+              <button
+                type="button"
+                className="author author-link"
+                style={{ color: "#c084fc" }}
+              >
+                notmasterofpupis
+              </button>
+              <span className="message-separator">:</span>
+              <span className="message-text">
+                Where Am I?{" "}
+                <img
+                  className="chat-emote"
+                  src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
+                  alt="Clap"
+                  title="Clap"
+                  loading="lazy"
+                  style={{
+                    height: "2em",
+                    verticalAlign: "middle",
+                    margin: "0 2px",
+                    cursor: "pointer",
+                  }}
+                />
+              </span>
+            </div>
+          </div>
+          <div className="message chat mention">
+            <div className="message-single-line">
+              <span className="timestamp">14:03:53</span>
+              <span className="platform-tag twitch" title="Twitch">
+                <FaTwitch size={14} />
+              </span>
+              <button
+                type="button"
+                className="author author-link"
+                style={{ color: "#34d399" }}
+              >
+                nothelder
+              </button>
+              <span className="message-separator">:</span>
+              <span className="message-text">
+                I just realized that my cousin drunk my beverage{" "}
+                <img
+                  className="chat-emote"
+                  src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
+                  alt="Pog"
+                  title="Pog"
+                  loading="lazy"
+                  style={{
+                    height: "2em",
+                    verticalAlign: "middle",
+                    margin: "0 2px",
+                    cursor: "pointer",
+                  }}
+                />
+              </span>
+            </div>
+          </div>
+          <div className="message chat">
+            <div className="message-single-line">
+              <span className="timestamp">14:04:11</span>
+              <span className="platform-tag twitch" title="Twitch">
+                <FaTwitch size={14} />
+              </span>
+              <button
+                type="button"
+                className="author author-link"
+                style={{ color: "#fbbf24" }}
+              >
+                shokastion
+              </button>
+              <span className="message-separator">:</span>
+              <span className="message-text">
+                In your head, in your head{" "}
+                <img
+                  className="chat-emote"
+                  src="https://cdn.7tv.app/emote/01H1V70JZR000CVRT9DGWR9563/2x.avif"
+                  alt="emote"
+                  title="emote"
+                  loading="lazy"
+                  style={{
+                    height: "2em",
+                    verticalAlign: "middle",
+                    margin: "0 2px",
+                    cursor: "pointer",
+                  }}
+                />
+              </span>
+            </div>
+          </div>
+          <div className="message chat yt-event">
+            <div className="message-single-line">
+              <span className="timestamp">14:05:27</span>
+              <span className="platform-tag youtube" title="YouTube">
+                <FaYoutube size={14} />
+              </span>
+              <span className="author" style={{ color: "#f87171" }}>
+                youtube_avg_chatter
+              </span>
+              <span className="message-separator">:</span>
+              <span className="message-text">
+                I love your Irish accent
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="onboarding-theme-grid">
+        {(() => {
+          let lastSection = "";
+          return THEME_OPTIONS.map(({ value, label, preview, section }) => {
+            const showSection = section && section !== lastSection;
+            lastSection = section || lastSection;
+            return (
+              <Fragment key={value}>
+                {showSection && (
+                  <div className="onboarding-theme-section">{section}</div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => s.setChatTheme(value as ChatTheme)}
+                  className={`onboarding-theme-btn${
+                    s.chatTheme === value
+                      ? " onboarding-theme-btn--active"
+                      : ""
+                  }`}
+                >
+                  <div className="onboarding-theme-preview">
+                    <div
+                      className="onboarding-theme-preview-bg"
+                      style={{ backgroundColor: preview.bg }}
+                    />
+                    <div
+                      className="onboarding-theme-preview-hover"
+                      style={{ backgroundColor: preview.hover }}
+                    />
+                    <div
+                      className="onboarding-theme-preview-accent"
+                      style={{ backgroundColor: preview.accent }}
+                    />
+                  </div>
+                  <span className="onboarding-theme-label">{label}</span>
+                  {s.chatTheme === value && (
+                    <span className="onboarding-theme-check">✓</span>
+                  )}
+                </button>
+              </Fragment>
+            );
+          });
+        })()}
+      </div>
+
+      <div className="onboarding-typography">
+        <div className="onboarding-typography-row">
+          <label
+            className="onboarding-typography-label"
+            htmlFor="onboarding-font-size"
+          >
+            Font size
+            <span className="onboarding-typography-value">{s.fontSize}px</span>
+          </label>{" "}
+          <div className="onboarding-typography-controls">
+            <span className="onboarding-typography-bound">A</span>
+            <input
+              id="onboarding-font-size"
+              type="range"
+              min="12"
+              max="22"
+              step="1"
+              value={s.fontSize}
+              onChange={(e) => s.setFontSize(parseInt(e.target.value))}
+              className="onboarding-typography-range"
+            />
+            <span className="onboarding-typography-bound onboarding-typography-bound--large">
+              A
+            </span>
+          </div>
+        </div>
+        <div className="onboarding-typography-row">
+          <span className="onboarding-typography-label" id="onboarding-font-label">
+            Font
+          </span>
+          <div
+            className="onboarding-typography-fonts"
+            role="radiogroup"
+            aria-labelledby="onboarding-font-label"
+          >
+            {CHAT_FONT_OPTIONS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => s.setChatFont(value)}
+                className={`onboarding-typography-font${
+                  s.chatFont === value
+                    ? " onboarding-typography-font--active"
+                    : ""
+                }`}
+                style={{ fontFamily: FONT_FAMILY_MAP[value] }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+interface RoleStepProps {
+  userType: UserType | null;
+  onSelectType: (type: UserType) => void;
+  currentValues: Record<string, boolean>;
+  onSettingToggle: (key: SettingDef["key"]) => void;
+}
+
+function RoleStep({
+  userType,
+  onSelectType,
+  currentValues,
+  onSettingToggle,
+}: RoleStepProps) {
+  return (
+    <>
+      <div
+        className="onboarding-types"
+        role="radiogroup"
+        aria-label="Select your role"
+      >
+        {USER_TYPES.map((t) => {
+          const active = userType === t.value;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onSelectType(t.value)}
+              className={`onboarding-type-card${
+                active ? " onboarding-type-card--active" : ""
+              }`}
+            >
+              <span className="onboarding-type-check" aria-hidden="true">
+                <FaCheck size={11} />
+              </span>
+              <div className="onboarding-type-icon" aria-hidden="true">
+                {t.icon}
+              </div>
+              <div className="onboarding-type-label">{t.label}</div>
+              <div className="onboarding-type-desc">{t.description}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {userType && (
+        <div className="onboarding-settings">
+          <h3 className="onboarding-settings-title">
+            Your recommended settings
+          </h3>
+          <p className="onboarding-settings-hint">
+            Pre-selected to match your role. Toggle the highlighted ones to
+            taste, and adjust everything later in Settings.
+          </p>
+          <div className="onboarding-settings-list">
+            {BASE_SETTINGS.map((setting) => {
+              const value = currentValues[setting.key];
+              const isChoosable = setting.choosableFor.includes(userType);
+              return (
+                <div key={setting.key} className="onboarding-setting">
+                  <div className="onboarding-setting-icon">{setting.icon}</div>
+                  <div className="onboarding-setting-content">
+                    <p className="onboarding-setting-label">{setting.label}</p>
+                    <p className="onboarding-setting-desc">
+                      {setting.description}
+                    </p>
+                  </div>
+                  <div className="onboarding-setting-state">
+                    {isChoosable ? (
+                      <label
+                        className="onboarding-toggle"
+                        title={value ? "Disable" : "Enable"}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={value}
+                          onChange={() => onSettingToggle(setting.key)}
+                          aria-label={setting.label}
+                        />
+                        <span className="onboarding-toggle-slider" />
+                      </label>
+                    ) : (
+                      <span
+                        className={`onboarding-state-pill${
+                          !value ? " onboarding-state-pill--off" : ""
+                        }`}
+                      >
+                        {value ? (
+                          <>
+                            <FaCheck size={10} />
+                            On
+                          </>
+                        ) : (
+                          <>
+                            <FaTimes size={10} />
+                            Off
+                          </>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+interface OnboardingFooterProps {
+  step: 1 | 2 | 3;
+  canFinish: boolean;
+  onBack: () => void;
+  onNext: () => void;
+  onComplete: () => void;
+  onFinish: () => void;
+}
+
+function OnboardingFooter({
+  step,
+  canFinish,
+  onBack,
+  onNext,
+  onComplete,
+  onFinish,
+}: OnboardingFooterProps) {
+  return (
+    <div className="onboarding-footer">
+      <div className="onboarding-footer-hint">
+        <FaInfoCircle size={12} />
+        Everything you set here can be changed later in Settings.
+      </div>
+      <div className="onboarding-footer-actions">
+        {step > 1 && (
+          <button
+            type="button"
+            className="onboarding-btn onboarding-btn--back"
+            onClick={onBack}
+          >
+            <FaArrowLeft size={12} /> Back
+          </button>
+        )}
+        {step === 1 ? (
+          <>
+            <button
+              type="button"
+              className="onboarding-btn onboarding-btn--ghost"
+              onClick={onComplete}
+              title="Skip the setup wizard"
+            >
+              Skip setup
+            </button>
+            <button
+              type="button"
+              className="onboarding-btn onboarding-btn--primary"
+              onClick={onNext}
+            >
+              Continue <FaArrowRight size={12} />
+            </button>
+          </>
+        ) : step === 2 ? (
+          <button
+            type="button"
+            className="onboarding-btn onboarding-btn--primary"
+            onClick={onNext}
+          >
+            Next <FaArrowRight size={12} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="onboarding-btn onboarding-btn--primary"
+            onClick={onFinish}
+            disabled={!canFinish}
+            title={!canFinish ? "Pick a role to continue" : "Finish setup"}
+          >
+            Finish <FaArrowRight size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingWizard({
   onComplete,
 }: OnboardingWizardProps) {
@@ -348,475 +850,31 @@ export default function OnboardingWizard({
       aria-labelledby="onboarding-title"
     >
       <div className="onboarding-card">
-        <div className="onboarding-header">
-          <div className="onboarding-header-row">
-            <div className="onboarding-step-indicator" aria-hidden="true">
-              <span
-                className={`onboarding-step-dot${
-                  step > 1
-                    ? " onboarding-step-dot--done"
-                    : " onboarding-step-dot--active"
-                }`}
-              />
-              <span
-                className={`onboarding-step-dot${
-                  step > 2
-                    ? " onboarding-step-dot--done"
-                    : step === 2
-                      ? " onboarding-step-dot--active"
-                      : ""
-                }`}
-              />
-              <span
-                className={`onboarding-step-dot${
-                  step === 3 ? " onboarding-step-dot--active" : ""
-                }`}
-              />
-              <span style={{ marginLeft: "6px" }}>
-                Step {step} of 3
-              </span>
-            </div>
-            <button
-              type="button"
-              className="onboarding-skip"
-              onClick={onComplete}
-              title="Skip the setup wizard"
-            >
-              Skip setup
-            </button>
-          </div>
-          <h2 className="onboarding-title" id="onboarding-title">
-            {step === 1
-              ? "Do you want help to configure Mixchat?"
-              : step === 2
-                ? "Pick a theme"
-                : "How will you use Mixchat?"}
-          </h2>
-          <p className="onboarding-subtitle">
-            {step === 1
-              ? "If you already configured it to your liking, you can skip this setup. Every option is also available later in Settings."
-              : step === 2
-                ? "Choose how Mixchat looks for you. You can switch any time from Settings."
-                : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
-          </p>
-        </div>
+        <OnboardingHeader step={step} onComplete={onComplete} />
 
         <div className="onboarding-body">
           {step === 1 ? (
-            <div className="onboarding-welcome">
-              <img
-                src={IS_TWITCH_ONLY ? "/logo-twitch.webp" : "/logo.webp"}
-                alt="Mixchat"
-                className="onboarding-welcome-logo"
-              />
-              <p className="onboarding-welcome-lead">
-                You're logged in and ready to go.
-              </p>
-              <p className="onboarding-welcome-detail">
-                This short setup will help us pick a theme, font, and chat
-                defaults that match how you use Mixchat. It only takes a
-                moment.
-              </p>
-              <ul className="onboarding-welcome-list">
-                <li>Pick a theme and font for the chat</li>
-                <li>Choose your role (streamer, moderator, or viewer)</li>
-                <li>Review the recommended settings before we apply them</li>
-              </ul>
-            </div>
+            <WelcomeStep />
           ) : step === 2 ? (
-            <>
-              <div
-                className="onboarding-preview"
-                style={{
-                  "--chat-font-size": `${s.fontSize}px`,
-                  "--chat-font-family": FONT_FAMILY_MAP[s.chatFont],
-                } as React.CSSProperties}
-              >
-                <div className="onboarding-preview-header">
-                  <span className="onboarding-preview-header-text">
-                    Chat preview
-                  </span>
-                </div>
-                <div className="messages-container">
-                  <div className="message chat">
-                    <div className="message-single-line">
-                      <span className="timestamp">14:03:52</span>
-                      <span
-                        className="platform-tag twitch"
-                        title="Twitch"
-                      >
-                        <FaTwitch size={14} />
-                      </span>
-                      <button
-                        type="button"
-                        className="author author-link"
-                        style={{ color: "#c084fc" }}
-                      >
-                        notmasterofpupis
-                      </button>
-                      <span className="message-separator">:</span>
-                      <span className="message-text">
-                        Where Am I?{" "}
-                        <img
-                          className="chat-emote"
-                          src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
-                          alt="Clap"
-                          title="Clap"
-                          loading="lazy"
-                          style={{
-                            height: "2em",
-                            verticalAlign: "middle",
-                            margin: "0 2px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </span>
-                    </div>
-                  </div>
-                  <div className="message chat mention">
-                    <div className="message-single-line">
-                      <span className="timestamp">14:03:53</span>
-                      <span
-                        className="platform-tag twitch"
-                        title="Twitch"
-                      >
-                        <FaTwitch size={14} />
-                      </span>
-                      <button
-                        type="button"
-                        className="author author-link"
-                        style={{ color: "#34d399" }}
-                      >
-                        nothelder
-                      </button>
-                      <span className="message-separator">:</span>
-                      <span className="message-text">
-                        I just realized that my cousin drunk my beverage{" "}
-                        <img
-                          className="chat-emote"
-                          src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
-                          alt="Pog"
-                          title="Pog"
-                          loading="lazy"
-                          style={{
-                            height: "2em",
-                            verticalAlign: "middle",
-                            margin: "0 2px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </span>
-                    </div>
-                  </div>
-                  <div className="message chat">
-                    <div className="message-single-line">
-                      <span className="timestamp">14:04:11</span>
-                      <span
-                        className="platform-tag twitch"
-                        title="Twitch"
-                      >
-                        <FaTwitch size={14} />
-                      </span>
-                      <button
-                        type="button"
-                        className="author author-link"
-                        style={{ color: "#fbbf24" }}
-                      >
-                        shokastion
-                      </button>
-                      <span className="message-separator">:</span>
-                      <span className="message-text">
-                        In your head, in your head{" "}
-                        <img
-                          className="chat-emote"
-                          src="https://cdn.7tv.app/emote/01H1V70JZR000CVRT9DGWR9563/2x.avif"
-                          alt="emote"
-                          title="emote"
-                          loading="lazy"
-                          style={{
-                            height: "2em",
-                            verticalAlign: "middle",
-                            margin: "0 2px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      </span>
-                    </div>
-                  </div>
-                  <div className="message chat yt-event">
-                    <div className="message-single-line">
-                      <span className="timestamp">14:05:27</span>
-                      <span
-                        className="platform-tag youtube"
-                        title="YouTube"
-                      >
-                        <FaYoutube size={14} />
-                      </span>
-                      <span
-                        className="author"
-                        style={{ color: "#f87171" }}
-                      >
-                        youtube_avg_chatter
-                      </span>
-                      <span className="message-separator">:</span>
-                      <span className="message-text">
-                        I love your Irish accent
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="onboarding-theme-grid">
-                {(() => {
-                  let lastSection = "";
-                  return THEME_OPTIONS.map(({ value, label, preview, section }) => {
-                    const showSection = section && section !== lastSection;
-                    lastSection = section || lastSection;
-                    return (
-                      <Fragment key={value}>
-                        {showSection && (
-                          <div className="onboarding-theme-section">
-                            {section}
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => s.setChatTheme(value as ChatTheme)}
-                          className={`onboarding-theme-btn${
-                            s.chatTheme === value
-                              ? " onboarding-theme-btn--active"
-                              : ""
-                          }`}
-                        >
-                          <div className="onboarding-theme-preview">
-                            <div
-                              className="onboarding-theme-preview-bg"
-                              style={{ backgroundColor: preview.bg }}
-                            />
-                            <div
-                              className="onboarding-theme-preview-hover"
-                              style={{ backgroundColor: preview.hover }}
-                            />
-                            <div
-                              className="onboarding-theme-preview-accent"
-                              style={{ backgroundColor: preview.accent }}
-                            />
-                          </div>
-                          <span className="onboarding-theme-label">{label}</span>
-                          {s.chatTheme === value && (
-                            <span className="onboarding-theme-check">✓</span>
-                          )}
-                        </button>
-                      </Fragment>
-                    );
-                  });
-                })()}
-              </div>
-
-              <div className="onboarding-typography">
-                <div className="onboarding-typography-row">
-                  <label className="onboarding-typography-label" htmlFor="onboarding-font-size">
-                    Font size
-                    <span className="onboarding-typography-value">
-                      {s.fontSize}px
-                    </span>
-                  </label>                  <div className="onboarding-typography-controls">
-                    <span className="onboarding-typography-bound">A</span>
-                    <input
-                      id="onboarding-font-size"
-                      type="range"
-                      min="12"
-                      max="22"
-                      step="1"
-                      value={s.fontSize}
-                      onChange={(e) =>
-                        s.setFontSize(parseInt(e.target.value))
-                      }
-                      className="onboarding-typography-range"
-                    />
-                    <span className="onboarding-typography-bound onboarding-typography-bound--large">
-                      A
-                    </span>
-                  </div>
-                </div>
-                <div className="onboarding-typography-row">
-                  <span className="onboarding-typography-label" id="onboarding-font-label">Font</span>
-                  <div className="onboarding-typography-fonts" role="radiogroup" aria-labelledby="onboarding-font-label">
-                    {CHAT_FONT_OPTIONS.map(({ value, label }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => s.setChatFont(value)}
-                        className={`onboarding-typography-font${
-                          s.chatFont === value
-                            ? " onboarding-typography-font--active"
-                            : ""
-                        }`}
-                        style={{ fontFamily: FONT_FAMILY_MAP[value] }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </>
+            <ThemeStep />
           ) : (
-            <>
-              <div className="onboarding-types" role="radiogroup" aria-label="Select your role">
-                {USER_TYPES.map((t) => {
-                  const active = userType === t.value;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => handleSelectType(t.value)}
-                      className={`onboarding-type-card${
-                        active ? " onboarding-type-card--active" : ""
-                      }`}
-                    >
-                      <span className="onboarding-type-check" aria-hidden="true">
-                        <FaCheck size={11} />
-                      </span>
-                      <div className="onboarding-type-icon" aria-hidden="true">
-                        {t.icon}
-                      </div>
-                      <div className="onboarding-type-label">{t.label}</div>
-                      <div className="onboarding-type-desc">
-                        {t.description}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {userType && (
-                <div className="onboarding-settings">
-                  <h3 className="onboarding-settings-title">
-                    Your recommended settings
-                  </h3>
-                  <p className="onboarding-settings-hint">
-                    Pre-selected to match your role. Toggle the highlighted
-                    ones to taste, and adjust everything later in Settings.
-                  </p>
-                  <div className="onboarding-settings-list">
-                    {BASE_SETTINGS.map((setting) => {
-                      const value = currentValues[setting.key];
-                      const isChoosable = setting.choosableFor.includes(userType);
-                      return (
-                        <div key={setting.key} className="onboarding-setting">
-                          <div className="onboarding-setting-icon">
-                            {setting.icon}
-                          </div>
-                          <div className="onboarding-setting-content">
-                            <p className="onboarding-setting-label">
-                              {setting.label}
-                            </p>
-                            <p className="onboarding-setting-desc">
-                              {setting.description}
-                            </p>
-                          </div>
-                          <div className="onboarding-setting-state">
-                            {isChoosable ? (
-                              <label
-                                className="onboarding-toggle"
-                                title={value ? "Disable" : "Enable"}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={value}
-                                  onChange={() => handleSettingToggle(setting.key)}
-                                  aria-label={setting.label}
-                                />
-                                <span className="onboarding-toggle-slider" />
-                              </label>
-                            ) : (
-                              <span
-                                className={`onboarding-state-pill${
-                                  !value ? " onboarding-state-pill--off" : ""
-                                }`}
-                              >
-                                {value ? (
-                                  <>
-                                    <FaCheck size={10} />
-                                    On
-                                  </>
-                                ) : (
-                                  <>
-                                    <FaTimes size={10} />
-                                    Off
-                                  </>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </>
+            <RoleStep
+              userType={userType}
+              onSelectType={handleSelectType}
+              currentValues={currentValues}
+              onSettingToggle={handleSettingToggle}
+            />
           )}
         </div>
 
-        <div className="onboarding-footer">
-          <div className="onboarding-footer-hint">
-            <FaInfoCircle size={12} />
-            Everything you set here can be changed later in Settings.
-          </div>
-          <div className="onboarding-footer-actions">
-            {step > 1 && (
-              <button
-                type="button"
-                className="onboarding-btn onboarding-btn--back"
-                onClick={goBack}
-              >
-                <FaArrowLeft size={12} /> Back
-              </button>
-            )}
-            {step === 1 ? (
-              <>
-                <button
-                  type="button"
-                  className="onboarding-btn onboarding-btn--ghost"
-                  onClick={onComplete}
-                  title="Skip the setup wizard"
-                >
-                  Skip setup
-                </button>
-                <button
-                  type="button"
-                  className="onboarding-btn onboarding-btn--primary"
-                  onClick={goNext}
-                >
-                  Continue <FaArrowRight size={12} />
-                </button>
-              </>
-            ) : step === 2 ? (
-              <button
-                type="button"
-                className="onboarding-btn onboarding-btn--primary"
-                onClick={goNext}
-              >
-                Next <FaArrowRight size={12} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="onboarding-btn onboarding-btn--primary"
-                onClick={handleFinish}
-                disabled={!userType}
-                title={!userType ? "Pick a role to continue" : "Finish setup"}
-              >
-                Finish <FaArrowRight size={12} />
-              </button>
-            )}
-          </div>
-        </div>
+        <OnboardingFooter
+          step={step}
+          canFinish={Boolean(userType)}
+          onBack={goBack}
+          onNext={goNext}
+          onComplete={onComplete}
+          onFinish={handleFinish}
+        />
       </div>
     </div>
   );

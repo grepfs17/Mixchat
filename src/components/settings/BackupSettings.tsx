@@ -77,6 +77,54 @@ function ExportImportSetting({
   );
 }
 
+function getDriveDescription(
+  hasYoutubeSession: boolean,
+  hasDriveScope: boolean,
+): string {
+  if (hasYoutubeSession && hasDriveScope) {
+    return "Save and load your settings directly from your Google Drive. Requires Google sign-in with Drive access.";
+  }
+  if (hasYoutubeSession) {
+    return "Grant Drive access to save and load settings from Google Drive.";
+  }
+  return "Sign in with Google to save and load settings from Google Drive.";
+}
+
+function DriveButton({
+  onClick,
+  disabled,
+  loading,
+  loadingLabel,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  loading: boolean;
+  loadingLabel: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="embed-config-backup-btn embed-config-drive-btn"
+      disabled={disabled}
+    >
+      {loading ? (
+        <>
+          <span className="embed-config-spinner" /> {loadingLabel}
+        </>
+      ) : (
+        <>
+          {icon} {label}
+        </>
+      )}
+    </button>
+  );
+}
+
 function GoogleDriveSetting({
   hasYoutubeSession,
   hasDriveScope,
@@ -90,60 +138,38 @@ function GoogleDriveSetting({
   shareLink,
   linkCopied,
 }: Omit<BackupSettingsProps, "fileInputRef" | "handleImport" | "importMessage">) {
+  const driveDisabled =
+    driveLoading !== null || !hasYoutubeSession || !hasDriveScope;
+  const driveMessageIsSuccess =
+    driveMessage !== null &&
+    (driveMessage.includes("saved") || driveMessage.includes("Loaded"));
+
   return (
     <div className="embed-config-backup-section">
       <p className="embed-config-backup-description">
-        {hasYoutubeSession && hasDriveScope
-          ? "Save and load your settings directly from your Google Drive. Requires Google sign-in with Drive access."
-          : hasYoutubeSession
-            ? "Grant Drive access to save and load settings from Google Drive."
-            : "Sign in with Google to save and load settings from Google Drive."}
+        {getDriveDescription(hasYoutubeSession, hasDriveScope)}
       </p>
       <div className="embed-config-backup-buttons">
-        <button
-          type="button"
+        <DriveButton
           onClick={handleDriveSave}
-          className="embed-config-backup-btn embed-config-drive-btn"
-          disabled={
-            driveLoading !== null ||
-            !hasYoutubeSession ||
-            !hasDriveScope
-          }
-        >
-          {driveLoading === "save" ? (
-            <>
-              <span className="embed-config-spinner" /> Saving...
-            </>
-          ) : (
-            <>
-              <FaCloudUploadAlt size={13} /> Save to Drive
-            </>
-          )}
-        </button>
-        <button
-          type="button"
+          disabled={driveDisabled}
+          loading={driveLoading === "save"}
+          loadingLabel="Saving..."
+          icon={<FaCloudUploadAlt size={13} />}
+          label="Save to Drive"
+        />
+        <DriveButton
           onClick={handleDriveLoad}
-          className="embed-config-backup-btn embed-config-drive-btn"
-          disabled={
-            driveLoading !== null ||
-            !hasYoutubeSession ||
-            !hasDriveScope
-          }
-        >
-          {driveLoading === "load" ? (
-            <>
-              <span className="embed-config-spinner" /> Loading...
-            </>
-          ) : (
-            <>
-              <FaCloudDownloadAlt size={13} /> Load from Drive
-            </>
-          )}
-        </button>
+          disabled={driveDisabled}
+          loading={driveLoading === "load"}
+          loadingLabel="Loading..."
+          icon={<FaCloudDownloadAlt size={13} />}
+          label="Load from Drive"
+        />
       </div>
       {driveMessage && (
         <p
-          className={`embed-config-backup-message ${driveMessage.includes("saved") || driveMessage.includes("Loaded") ? "embed-config-backup-message--success" : "embed-config-backup-message--error"}`}
+          className={`embed-config-backup-message ${driveMessageIsSuccess ? "embed-config-backup-message--success" : "embed-config-backup-message--error"}`}
         >
           {driveMessage}
         </p>

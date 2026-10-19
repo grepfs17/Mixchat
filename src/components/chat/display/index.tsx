@@ -88,6 +88,125 @@ export interface ChatDisplayHandle {
 
 const EMPTY_STRING_ARRAY: string[] = [];
 
+interface ChatDisplayOverlaysProps {
+  emoteTooltip: EmoteTooltipState | null;
+  twitchTimeoutDialog: { userId: string; username: string } | null;
+  messageMenu: MessageMenuState | null;
+  chatterHistory: {
+    author: string;
+    platform: Platform;
+    authorAvatar?: string;
+  } | null;
+  channelName?: string;
+  streamStartedAt?: Date | null;
+  chatStatsOpen: boolean;
+  chatStats: ChatStatsResult | null;
+  chatStatsLoading: boolean;
+  chatStatsWindow: ChatStatsWindow;
+  onReply?: (message: TwitchMessage) => void;
+  onCopy: (msg: TwitchMessage) => void;
+  onViewHistory: (
+    author: string,
+    platform?: Platform,
+    authorAvatar?: string,
+  ) => void;
+  onConfirmTimeout: (userId: string, seconds: number, username: string) => void;
+  onCloseTimeout: () => void;
+  onOpenTimeoutMenu: (userId: string, username: string) => void;
+  onCloseMessageMenu: () => void;
+  onCloseChatterHistory: () => void;
+  onChatStatsWindowChange: (next: ChatStatsWindow) => void;
+  onCloseChatStats: () => void;
+  onResetChatStatEntry: (key: string) => void;
+  onResetChatStatEntries: () => void;
+}
+
+function ChatDisplayOverlays({
+  emoteTooltip,
+  twitchTimeoutDialog,
+  messageMenu,
+  chatterHistory,
+  channelName,
+  streamStartedAt,
+  chatStatsOpen,
+  chatStats,
+  chatStatsLoading,
+  chatStatsWindow,
+  onReply,
+  onCopy,
+  onViewHistory,
+  onConfirmTimeout,
+  onCloseTimeout,
+  onOpenTimeoutMenu,
+  onCloseMessageMenu,
+  onCloseChatterHistory,
+  onChatStatsWindowChange,
+  onCloseChatStats,
+  onResetChatStatEntry,
+  onResetChatStatEntries,
+}: ChatDisplayOverlaysProps) {
+  return (
+    <>
+      {emoteTooltip && (
+        <EmoteTooltip
+          url={emoteTooltip.url}
+          name={emoteTooltip.name}
+          source={emoteTooltip.source}
+          x={emoteTooltip.x}
+          y={emoteTooltip.y}
+        />
+      )}
+
+      {twitchTimeoutDialog && (
+        <TwitchTimeoutDialog
+          userId={twitchTimeoutDialog.userId}
+          username={twitchTimeoutDialog.username}
+          onConfirm={onConfirmTimeout}
+          onClose={onCloseTimeout}
+        />
+      )}
+
+      {messageMenu && (
+        <MessageMenu
+          entry={messageMenu.message}
+          x={messageMenu.x}
+          y={messageMenu.y}
+          onReply={onReply}
+          onCopy={onCopy}
+          onViewHistory={(author) =>
+            onViewHistory(author, messageMenu.message.platform)
+          }
+          onOpenTwitchTimeoutMenu={onOpenTimeoutMenu}
+          onClose={onCloseMessageMenu}
+        />
+      )}
+
+      {chatterHistory && (
+        <ChatterHistoryOverlay
+          author={chatterHistory.author}
+          platform={chatterHistory.platform}
+          authorAvatar={chatterHistory.authorAvatar}
+          channel={channelName || ""}
+          onClose={onCloseChatterHistory}
+        />
+      )}
+
+      {chatStatsOpen && chatStats && (
+        <ChatStatsOverlay
+          stats={chatStats}
+          loading={chatStatsLoading}
+          timeWindow={chatStatsWindow}
+          onTimeWindowChange={onChatStatsWindowChange}
+          streamStartedAt={streamStartedAt ?? null}
+          onClose={onCloseChatStats}
+          onResetEntry={onResetChatStatEntry}
+          onResetEntries={onResetChatStatEntries}
+        />
+      )}
+    </>
+  );
+}
+
 const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
   function ChatDisplay(
     {
@@ -163,7 +282,14 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     const [chatStatsWindow, setChatStatsWindow] =
       useState<ChatStatsWindow>("all");
     const chatStatsWindowRef = useRef<ChatStatsWindow>("all");
-    const chatStatsStore = useRef(createChatStatsStore(channelName));
+    // useRef has no lazy initializer, so allocate the store once instead of
+    // rebuilding (and discarding) it on every render.
+    const chatStatsStore = useRef<ReturnType<
+      typeof createChatStatsStore
+    > | null>(null);
+    if (chatStatsStore.current === null) {
+      chatStatsStore.current = createChatStatsStore(channelName);
+    }
     const statsScopeRef = useRef<string | null>(null);
     const historyLoadedScopeRef = useRef<string | null>(null);
     const historyInFlightScopeRef = useRef<string | null>(null);
@@ -183,7 +309,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     const rebuildChatStats = useCallback(() => {
       setChatStats(
         buildChatStats(
-          chatStatsStore.current,
+          chatStatsStore.current!,
           CHAT_STATS_MAX_RESULTS,
           chatStatsWindowRef.current,
           streamStartMs,
@@ -195,13 +321,13 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
     const closeChatStats = useCallback(() => setChatStatsOpen(false), []);
     const handleResetChatStatEntry = useCallback(
       (key: string) => {
-        resetChatStatEntry(chatStatsStore.current, key);
+        resetChatStatEntry(chatStatsStore.current!, key);
         rebuildChatStats();
       },
       [rebuildChatStats],
     );
     const handleResetChatStatEntries = useCallback(() => {
-      resetChatStatEntries(chatStatsStore.current);
+      resetChatStatEntries(chatStatsStore.current!);
       rebuildChatStats();
     }, [rebuildChatStats]);
     const handleChatStatsWindowChange = useCallback(
@@ -225,7 +351,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         statsScopeRef.current = statsScope;
         historyLoadedScopeRef.current = null;
       }
-      accumulateChatStats(chatStatsStore.current, statsLiveMessages);
+      accumulateChatStats(chatStatsStore.current!, statsLiveMessages);
       if (chatStatsOpen) rebuildChatStats();
     }, [
       statsLiveMessages,
@@ -253,7 +379,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       })
         .then((history) => {
           if (statsScopeRef.current !== statsScope) return;
-          accumulateChatStats(chatStatsStore.current, history);
+          accumulateChatStats(chatStatsStore.current!, history);
           historyLoadedScopeRef.current = statsScope;
           rebuildChatStats();
         })
@@ -632,67 +758,35 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
           />
         )}
 
-        {emoteTooltip && (
-          <EmoteTooltip
-            url={emoteTooltip.url}
-            name={emoteTooltip.name}
-            source={emoteTooltip.source}
-            x={emoteTooltip.x}
-            y={emoteTooltip.y}
-          />
-        )}
-
-        {twitchTimeoutDialog && (
-          <TwitchTimeoutDialog
-            userId={twitchTimeoutDialog.userId}
-            username={twitchTimeoutDialog.username}
-            onConfirm={(userId, seconds, username) => {
-              onTimeoutUser?.(userId, seconds, username);
-              setTwitchTimeoutDialog(null);
-            }}
-            onClose={() => setTwitchTimeoutDialog(null)}
-          />
-        )}
-
-        {messageMenu && (
-          <MessageMenu
-            entry={messageMenu.message}
-            x={messageMenu.x}
-            y={messageMenu.y}
-            onReply={onReply}
-            onCopy={handleCopy}
-            onViewHistory={(author) =>
-              handleViewHistory(author, messageMenu.message.platform)
-            }
-            onOpenTwitchTimeoutMenu={(userId, username) =>
-              setTwitchTimeoutDialog({ userId, username })
-            }
-            onClose={() => setMessageMenu(null)}
-          />
-        )}
-
-        {chatterHistory && (
-          <ChatterHistoryOverlay
-            author={chatterHistory.author}
-            platform={chatterHistory.platform}
-            authorAvatar={chatterHistory.authorAvatar}
-            channel={channelName || ""}
-            onClose={() => setChatterHistory(null)}
-          />
-        )}
-
-        {chatStatsOpen && chatStats && (
-          <ChatStatsOverlay
-            stats={chatStats}
-            loading={chatStatsLoading}
-            timeWindow={chatStatsWindow}
-            onTimeWindowChange={handleChatStatsWindowChange}
-            streamStartedAt={streamStartedAt ?? null}
-            onClose={closeChatStats}
-            onResetEntry={handleResetChatStatEntry}
-            onResetEntries={handleResetChatStatEntries}
-          />
-        )}
+        <ChatDisplayOverlays
+          emoteTooltip={emoteTooltip}
+          twitchTimeoutDialog={twitchTimeoutDialog}
+          messageMenu={messageMenu}
+          chatterHistory={chatterHistory}
+          channelName={channelName}
+          streamStartedAt={streamStartedAt}
+          chatStatsOpen={chatStatsOpen}
+          chatStats={chatStats}
+          chatStatsLoading={chatStatsLoading}
+          chatStatsWindow={chatStatsWindow}
+          onReply={onReply}
+          onCopy={handleCopy}
+          onViewHistory={handleViewHistory}
+          onConfirmTimeout={(userId, seconds, username) => {
+            onTimeoutUser?.(userId, seconds, username);
+            setTwitchTimeoutDialog(null);
+          }}
+          onCloseTimeout={() => setTwitchTimeoutDialog(null)}
+          onOpenTimeoutMenu={(userId, username) =>
+            setTwitchTimeoutDialog({ userId, username })
+          }
+          onCloseMessageMenu={() => setMessageMenu(null)}
+          onCloseChatterHistory={() => setChatterHistory(null)}
+          onChatStatsWindowChange={handleChatStatsWindowChange}
+          onCloseChatStats={closeChatStats}
+          onResetChatStatEntry={handleResetChatStatEntry}
+          onResetChatStatEntries={handleResetChatStatEntries}
+        />
       </div>
     );
   },

@@ -85,6 +85,156 @@ function getTextContent(m: ChatMessage) {
   return m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
 }
 
+type ReconnectStatus = "idle" | "reconnecting" | "reconnected";
+
+function getChatStatus(
+  isLoading: boolean,
+  error: string | null,
+  messageCount: number,
+): "loading" | "error" | "ready" {
+  if (isLoading && messageCount === 0) return "loading";
+  if (error && messageCount === 0) return "error";
+  return "ready";
+}
+
+function YouTubeChatLoadingState() {
+  return (
+    <div className="yt-chat-status">
+      <AiOutlineLoading3Quarters className="animate-spin" /> Connecting to
+      YouTube chat...
+    </div>
+  );
+}
+
+function YouTubeChatErrorState({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="yt-chat-status yt-chat-error">
+      <div>⚠️ {error}</div>
+      <button
+        type="button"
+        className="yt-chat-reload-btn"
+        onClick={onRetry}
+        style={{ marginTop: "8px" }}
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+function YouTubeChatBanners({
+  error,
+  isEnded,
+  reconnectStatus,
+  onReload,
+}: {
+  error: string | null;
+  isEnded: boolean;
+  reconnectStatus: ReconnectStatus;
+  onReload: () => void;
+}) {
+  return (
+    <>
+      {error && !isEnded && (
+        <div className="yt-chat-error-banner">
+          <span>⚠️ {error}</span>
+          <button
+            type="button"
+            className="yt-chat-reload-btn"
+            onClick={onReload}
+          >
+            Reload
+          </button>
+        </div>
+      )}
+      {isEnded && (
+        <div className="yt-chat-error-banner">
+          <span>⚠️ {error}</span>
+        </div>
+      )}
+      {reconnectStatus !== "idle" && (
+        <div
+          className={`yt-chat-reconnecting-banner${reconnectStatus === "reconnected" ? " yt-chat-reconnected" : ""}`}
+        >
+          <AiOutlineLoading3Quarters
+            className={reconnectStatus === "reconnecting" ? "animate-spin" : ""}
+          />
+          <span>
+            {reconnectStatus === "reconnecting"
+              ? "YouTube chat reconnecting…"
+              : "YouTube chat reconnected"}
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+function YouTubeChatMessageList({
+  containerRef,
+  splitChatEnabled,
+  fontSize,
+  chatFont,
+  isConnected,
+  messages,
+  onUsernameClick,
+  showDeletedMessages,
+  renderThirdPartyEmotes,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  splitChatEnabled?: boolean;
+  fontSize?: number;
+  chatFont?: ChatFont;
+  isConnected: boolean;
+  messages: ChatMessage[];
+  onUsernameClick?: (
+    e: React.MouseEvent,
+    author: string,
+    avatar?: string,
+  ) => void;
+  showDeletedMessages: boolean;
+  renderThirdPartyEmotes: boolean;
+}) {
+  return (
+    <div
+      ref={containerRef}
+      className={`yt-chat-container${splitChatEnabled ? " split-chat" : ""}`}
+      style={
+        {
+          "--chat-font-size": `${fontSize}px`,
+          "--chat-font-family": FONT_FAMILY_MAP[chatFont ?? "inter"],
+        } as React.CSSProperties
+      }
+    >
+      {!isConnected && (
+        <div className="yt-chat-placeholder">
+          Reconnecting to YouTube chat...
+        </div>
+      )}
+      {isConnected && messages.length === 0 && (
+        <div className="yt-chat-placeholder">Waiting for messages...</div>
+      )}
+      {messages.map((msg, index) => (
+        <YouTubeMessageContent
+          key={msg.id}
+          msg={msg}
+          index={index}
+          variant="standalone"
+          onUsernameClick={onUsernameClick}
+          showDeletedMessages={showDeletedMessages}
+          renderThirdPartyEmotes={renderThirdPartyEmotes}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function YouTubeChat({
   videoId,
   channel,
@@ -283,33 +433,33 @@ export default function YouTubeChat({
           authorIsMember: msg.authorIsMember,
         }));
 
+        if (channel !== undefined) {
+          for (const m of fetchedMessages) {
+            saveMessage(
+              {
+                id: m.id,
+                platform: "youtube",
+                author: m.author,
+                content: m.parts
+                  .map((p) => p.text || p.emojiText || p.alt || "")
+                  .join(""),
+                parts: m.parts,
+                timestamp: m.timestamp,
+                authorAvatar: m.authorAvatar,
+                authorChannelId: m.authorChannelId,
+                messageType: m.messageType,
+                badges: m.badges,
+                isDeleted: m.isDeleted,
+              } as any,
+              channel,
+            );
+          }
+        }
+
         setMessages((prev) => {
           const uniqueMap = new Map<string, ChatMessage>();
           for (const m of prev) uniqueMap.set(m.id, m);
           for (const m of fetchedMessages) uniqueMap.set(m.id, m);
-
-          if (channel !== undefined) {
-            for (const m of fetchedMessages) {
-              saveMessage(
-                {
-                  id: m.id,
-                  platform: "youtube",
-                  author: m.author,
-                  content: m.parts
-                    .map((p) => p.text || p.emojiText || p.alt || "")
-                    .join(""),
-                  parts: m.parts,
-                  timestamp: m.timestamp,
-                  authorAvatar: m.authorAvatar,
-                  authorChannelId: m.authorChannelId,
-                  messageType: m.messageType,
-                  badges: m.badges,
-                  isDeleted: m.isDeleted,
-                } as any,
-                channel,
-              );
-            }
-          }
 
           const merged = Array.from(uniqueMap.values()).sort(
             (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
@@ -349,30 +499,29 @@ export default function YouTubeChat({
           authorIsMember: msg.authorIsMember,
         };
 
+        if (channel !== undefined) {
+          saveMessage(
+            {
+              id: newMsg.id,
+              platform: "youtube",
+              author: newMsg.author,
+              content: newMsg.parts
+                .map((p) => p.text || p.emojiText || p.alt || "")
+                .join(""),
+              parts: newMsg.parts,
+              timestamp: newMsg.timestamp,
+              authorAvatar: newMsg.authorAvatar,
+              authorChannelId: newMsg.authorChannelId,
+              messageType: newMsg.messageType,
+              badges: newMsg.badges,
+              isDeleted: newMsg.isDeleted,
+            } as any,
+            channel,
+          );
+        }
+
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
-
-          if (channel !== undefined) {
-            saveMessage(
-              {
-                id: newMsg.id,
-                platform: "youtube",
-                author: newMsg.author,
-                content: newMsg.parts
-                  .map((p) => p.text || p.emojiText || p.alt || "")
-                  .join(""),
-                parts: newMsg.parts,
-                timestamp: newMsg.timestamp,
-                authorAvatar: newMsg.authorAvatar,
-                authorChannelId: newMsg.authorChannelId,
-                messageType: newMsg.messageType,
-                badges: newMsg.badges,
-                isDeleted: newMsg.isDeleted,
-              } as any,
-              channel,
-            );
-          }
-
           const next = [...prev, newMsg];
           const max = getMaxDisplayedMessages();
           return next.length > max ? next.slice(-max) : next;
@@ -554,97 +703,33 @@ export default function YouTubeChat({
   }, [isConnected, isLoading, error, reconnectStatus, onConnectionChange]);
 
   const isEnded = error === "Live stream has ended";
+  const handleReload = () => setReloadKey((k) => k + 1);
 
-  if (isLoading && renderedMessages.length === 0) {
-    return (
-      <div className="yt-chat-status">
-        <AiOutlineLoading3Quarters className="animate-spin" /> Connecting to
-        YouTube chat...
-      </div>
-    );
-  }
-
-  if (error && renderedMessages.length === 0) {
-    return (
-      <div className="yt-chat-status yt-chat-error">
-        <div>⚠️ {error}</div>
-        <button type="button"
-          className="yt-chat-reload-btn"
-          onClick={() => {
-            setReloadKey((k) => k + 1);
-          }}
-          style={{ marginTop: "8px" }}
-        >
-          Retry
-        </button>
-      </div>
-    );
+  const status = getChatStatus(isLoading, error, renderedMessages.length);
+  if (status === "loading") return <YouTubeChatLoadingState />;
+  if (status === "error") {
+    return <YouTubeChatErrorState error={error!} onRetry={handleReload} />;
   }
 
   return (
     <div ref={containerRef} className="yt-chat-outer">
-      {error && !isEnded && (
-        <div className="yt-chat-error-banner">
-          <span>⚠️ {error}</span>
-          <button type="button"
-            className="yt-chat-reload-btn"
-            onClick={() => {
-              setReloadKey((k) => k + 1);
-            }}
-          >
-            Reload
-          </button>
-        </div>
-      )}
-      {isEnded && (
-        <div className="yt-chat-error-banner">
-          <span>⚠️ {error}</span>
-        </div>
-      )}
-      {reconnectStatus !== "idle" && (
-        <div
-          className={`yt-chat-reconnecting-banner${reconnectStatus === "reconnected" ? " yt-chat-reconnected" : ""}`}
-        >
-          <AiOutlineLoading3Quarters
-            className={reconnectStatus === "reconnecting" ? "animate-spin" : ""}
-          />
-          <span>
-            {reconnectStatus === "reconnecting"
-              ? "YouTube chat reconnecting…"
-              : "YouTube chat reconnected"}
-          </span>
-        </div>
-      )}
-      <div
-        ref={messagesContainerRef}
-        className={`yt-chat-container${splitChatEnabled ? " split-chat" : ""}`}
-        style={
-          {
-            "--chat-font-size": `${fontSize}px`,
-            "--chat-font-family": FONT_FAMILY_MAP[chatFont ?? "inter"],
-          } as React.CSSProperties
-        }
-      >
-        {!isConnected && (
-          <div className="yt-chat-placeholder">
-            Reconnecting to YouTube chat...
-          </div>
-        )}
-        {isConnected && renderedMessages.length === 0 && (
-          <div className="yt-chat-placeholder">Waiting for messages...</div>
-        )}
-        {renderedMessages.map((msg, index) => (
-          <YouTubeMessageContent
-            key={msg.id}
-            msg={msg}
-            index={index}
-            variant="standalone"
-            onUsernameClick={onUsernameClick}
-            showDeletedMessages={showDeletedMessages}
-            renderThirdPartyEmotes={renderThirdPartyEmotes}
-          />
-        ))}
-      </div>
+      <YouTubeChatBanners
+        error={error}
+        isEnded={isEnded}
+        reconnectStatus={reconnectStatus}
+        onReload={handleReload}
+      />
+      <YouTubeChatMessageList
+        containerRef={messagesContainerRef}
+        splitChatEnabled={splitChatEnabled}
+        fontSize={fontSize}
+        chatFont={chatFont}
+        isConnected={isConnected}
+        messages={renderedMessages}
+        onUsernameClick={onUsernameClick}
+        showDeletedMessages={showDeletedMessages}
+        renderThirdPartyEmotes={renderThirdPartyEmotes}
+      />
     </div>
   );
 }

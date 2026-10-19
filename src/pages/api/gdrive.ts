@@ -30,7 +30,7 @@ function driveTokenCookieOptions(expiresIn: number | undefined) {
 async function migrateFromYoutubeToken(
   cookies: any,
   clientId: string,
-  clientSecret: string,
+  clientSecret: string | undefined,
 ): Promise<string | null> {
   // Try the existing YouTube access token first (may still be valid).
   const ytToken = cookies.get("youtube_token")?.value;
@@ -106,7 +106,8 @@ async function getAccessToken(cookies: any, request: any): Promise<string> {
   const refreshToken = cookies.get("drive_refresh_token")?.value;
   if (refreshToken) {
     const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+    // Google requires the client secret for desktop (PKCE) clients too.
+    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
     if (!clientId || !clientSecret) {
       throw new Error("Server configuration error: missing Google credentials.");
     }
@@ -134,7 +135,7 @@ async function getAccessToken(cookies: any, request: any): Promise<string> {
   // drive.file scope, so the youtube_token cookie can serve Drive requests.
   // Copy it to the new cookie name so future requests hit the fast path.
   const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-  const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+  const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
   if (clientId && clientSecret) {
     const migrated = await migrateFromYoutubeToken(
       cookies,

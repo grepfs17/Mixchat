@@ -22,7 +22,12 @@ import {
   getGiveawayHistory,
   type GiveawayHistoryEntry,
 } from "../../../lib/streamerTools/history";
-import { usePastPlaylists } from "../../../hooks/chat/usePastPlaylists";
+import {
+  usePastPlaylists,
+  type CombinedItem,
+} from "../../../hooks/chat/usePastPlaylists";
+import type { PastPlaylistEntry } from "../../../lib/streamerTools/pastPlaylists";
+import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
@@ -211,6 +216,437 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function PastPlaylistsEmpty({ serverError }: { serverError: string | null }) {
+  return (
+    <div className="past-playlists past-playlists--empty">
+      <span>
+        {serverError
+          ? `Couldn't load past queues: ${serverError}`
+          : "No past song queues yet. End a queue and it will show here."}
+      </span>
+    </div>
+  );
+}
+
+function PastPlaylistDetailItem({
+  item,
+  copiedItemId,
+  onCopySongUrl,
+}: {
+  item: SongQueuePublicView["items"][number];
+  copiedItemId: string | null;
+  onCopySongUrl: (itemId: string, videoId: string) => void;
+}) {
+  return (
+    <li
+      className="past-playlists-detail-item"
+      data-status={item.status}
+    >
+      <a
+        className="past-playlists-detail-thumb"
+        href={`https://www.youtube.com/watch?v=${item.videoId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open on YouTube"
+      >
+        <img src={item.thumbnail} alt="" loading="lazy" />
+        <span className="past-playlists-detail-duration">
+          {formatDuration(item.durationSec)}
+        </span>
+      </a>
+      <div className="past-playlists-detail-info">
+        <span className="past-playlists-detail-song-title">
+          {item.title}
+        </span>
+        <span className="past-playlists-detail-song-channel">
+          {item.channelTitle}
+        </span>
+        <span className="past-playlists-detail-submitter">
+          by {item.submitter.author}
+          {item.submitter.platform === "twitch" ? (
+            <FaTwitch
+              size={10}
+              className="past-playlists-detail-platform"
+            />
+          ) : (
+            <FaYoutube
+              size={10}
+              className="past-playlists-detail-platform"
+            />
+          )}
+        </span>
+      </div>
+      <button type="button"
+        className="past-playlists-detail-copy"
+        onClick={() => onCopySongUrl(item.id, item.videoId)}
+        title={`Copy https://www.youtube.com/watch?v=${item.videoId}`}
+        aria-label="Copy song URL"
+      >
+        <FaCopy size={11} />
+        <span>
+          {copiedItemId === item.id ? "Copied" : "Copy URL"}
+        </span>
+      </button>
+      <span className="past-playlists-detail-status">
+        {item.status}
+      </span>
+    </li>
+  );
+}
+
+function PastPlaylistDetailList({
+  loadingDetail,
+  detailError,
+  items,
+  copiedItemId,
+  onCopySongUrl,
+}: {
+  loadingDetail: boolean;
+  detailError: string | null;
+  items: SongQueuePublicView["items"] | null;
+  copiedItemId: string | null;
+  onCopySongUrl: (itemId: string, videoId: string) => void;
+}) {
+  if (loadingDetail) {
+    return <div className="past-playlists-detail-loading">Loading…</div>;
+  }
+  if (detailError) {
+    return (
+      <div className="past-playlists-detail-loading">
+        Failed to load: {detailError}
+      </div>
+    );
+  }
+  if (!items || items.length === 0) {
+    return (
+      <div className="past-playlists-detail-loading">
+        No songs in this queue.
+      </div>
+    );
+  }
+  return (
+    <ul className="past-playlists-detail-list">
+      {items.map((item) => (
+        <PastPlaylistDetailItem
+          key={item.id}
+          item={item}
+          copiedItemId={copiedItemId}
+          onCopySongUrl={onCopySongUrl}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function PastPlaylistDetailHeader({
+  openMeta,
+  openPublicUrl,
+  makingPublic,
+  linkCopied,
+  publicError,
+  onBack,
+  onMakePublic,
+  onCopyPublicUrl,
+  onDelete,
+}: {
+  openMeta: CombinedItem;
+  openPublicUrl: string | null;
+  makingPublic: boolean;
+  linkCopied: boolean;
+  publicError: string | null;
+  onBack: () => void;
+  onMakePublic: (sessionId: string) => void;
+  onCopyPublicUrl: () => void;
+  onDelete: (key: string) => void;
+}) {
+  return (
+    <>
+      <div className="past-playlists-detail-header">
+        <button type="button"
+          className="past-playlists-back"
+          onClick={onBack}
+          title="Back to past playlists"
+        >
+          <FaArrowLeft size={12} />
+          <span>Back</span>
+        </button>
+        <div className="past-playlists-detail-actions">
+          {openMeta.source === "server" && !openMeta.isPublic ? (
+            <button type="button"
+              className="past-playlists-share"
+              onClick={() => onMakePublic(openMeta.sessionId)}
+              disabled={makingPublic}
+              title="Make this playlist public and create a shareable link"
+              aria-label="Make playlist public"
+            >
+              <FaShareSquare size={11} />
+              <span>{makingPublic ? "Sharing…" : "Make public"}</span>
+            </button>
+          ) : null}
+          {openPublicUrl ? (
+            <button type="button"
+              className="past-playlists-copy"
+              onClick={onCopyPublicUrl}
+              title={`Copy ${openPublicUrl}`}
+              aria-label="Copy public URL"
+            >
+              <FaCopy size={11} />
+              <span>{linkCopied ? "Copied" : "Copy link"}</span>
+            </button>
+          ) : (
+            <span
+              className="past-playlists-copy past-playlists-copy--disabled"
+              title="This queue was never shared publicly"
+            >
+              <FaCopy size={11} />
+              <span>Not shared</span>
+            </span>
+          )}
+          <button type="button"
+            className="past-playlists-delete"
+            onClick={() => onDelete(openMeta.key)}
+            title="Delete this playlist"
+            aria-label="Delete playlist"
+          >
+            <FaTrash size={11} />
+            <span>Delete</span>
+          </button>
+        </div>
+      </div>
+      {publicError ? (
+        <div className="past-playlists-server-error">
+          {publicError}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function PastPlaylistDetailMeta({ openMeta }: { openMeta: CombinedItem }) {
+  return (
+    <div className="past-playlists-detail-meta">
+      <span className="past-playlists-detail-title">
+        {openMeta.title || "Untitled queue"}
+      </span>
+      <span className="past-playlists-detail-stats">
+        {openMeta.itemCount} song{openMeta.itemCount === 1 ? "" : "s"} ·{" "}
+        {openMeta.playedCount} played · {openMeta.skippedCount} skipped
+      </span>
+      <span className="past-playlists-detail-date">
+        {openMeta.source === "local" ? "Ended " : "Last seen "}
+        {formatDate(openMeta.endedAt)}
+      </span>
+    </div>
+  );
+}
+
+function PastPlaylistDetail({
+  openMeta,
+  openKey,
+  localEntries,
+  serverDetail,
+  loadingDetail,
+  detailError,
+  openPublicUrl,
+  makingPublic,
+  linkCopied,
+  publicError,
+  copiedItemId,
+  onBack,
+  onMakePublic,
+  onCopyPublicUrl,
+  onCopySongUrl,
+  onDelete,
+}: {
+  openMeta: CombinedItem;
+  openKey: string | null;
+  localEntries: PastPlaylistEntry[];
+  serverDetail: SongQueuePublicView | null;
+  loadingDetail: boolean;
+  detailError: string | null;
+  openPublicUrl: string | null;
+  makingPublic: boolean;
+  linkCopied: boolean;
+  publicError: string | null;
+  copiedItemId: string | null;
+  onBack: () => void;
+  onMakePublic: (sessionId: string) => void;
+  onCopyPublicUrl: () => void;
+  onCopySongUrl: (itemId: string, videoId: string) => void;
+  onDelete: (key: string) => void;
+}) {
+  const localDetail =
+    openMeta.source === "local"
+      ? localEntries.find((e) => `local:${e.id}` === openKey) ?? null
+      : null;
+  const items =
+    openMeta.source === "local" && localDetail
+      ? localDetail.items
+      : (serverDetail?.items ?? null);
+
+  return (
+    <div className="past-playlists past-playlists--detail">
+      <PastPlaylistDetailHeader
+        openMeta={openMeta}
+        openPublicUrl={openPublicUrl}
+        makingPublic={makingPublic}
+        linkCopied={linkCopied}
+        publicError={publicError}
+        onBack={onBack}
+        onMakePublic={onMakePublic}
+        onCopyPublicUrl={onCopyPublicUrl}
+        onDelete={onDelete}
+      />
+      <PastPlaylistDetailMeta openMeta={openMeta} />
+      <PastPlaylistDetailList
+        loadingDetail={loadingDetail}
+        detailError={detailError}
+        items={items}
+        copiedItemId={copiedItemId}
+        onCopySongUrl={onCopySongUrl}
+      />
+    </div>
+  );
+}
+
+function PastPlaylistListItem({
+  entry,
+  publicOrigin,
+  onOpen,
+  onDelete,
+}: {
+  entry: CombinedItem;
+  publicOrigin: string;
+  onOpen: (key: string) => void;
+  onDelete: (key: string) => void;
+}) {
+  const entryUrl =
+    entry.source === "server" && entry.isPublic
+      ? `${publicOrigin}/s/${entry.sessionId}`
+      : null;
+  return (
+    <li
+      className="past-playlists-item"
+      data-source={entry.source}
+    >
+      <button type="button"
+        className="past-playlists-item-button"
+        onClick={() => onOpen(entry.key)}
+        title="View playlist"
+      >
+        <span className="past-playlists-item-thumb-wrap">
+          {entry.thumbnail ? (
+            <img
+              src={entry.thumbnail}
+              alt=""
+              className="past-playlists-item-thumb"
+              loading="lazy"
+            />
+          ) : (
+            <span className="past-playlists-item-thumb past-playlists-item-thumb--empty" />
+          )}
+        </span>
+        <span className="past-playlists-item-main">
+          <span className="past-playlists-item-title">
+            {entry.title || "Untitled queue"}
+          </span>
+          <span className="past-playlists-item-sub">
+            {entry.itemCount} song{entry.itemCount === 1 ? "" : "s"} ·{" "}
+            {entry.playedCount} played · {entry.skippedCount} skipped
+          </span>
+        </span>
+        <span className="past-playlists-item-meta">
+          <span className="past-playlists-item-source">
+            {entry.source === "server" ? "Server" : "Local"}
+          </span>
+          <span className="past-playlists-item-date">
+            {formatDate(entry.endedAt)}
+          </span>
+        </span>
+      </button>
+      {entryUrl ? (
+        <button type="button"
+          className="past-playlists-item-copy"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (typeof navigator === "undefined" || !navigator.clipboard)
+              return;
+            navigator.clipboard
+              .writeText(entryUrl)
+              .then(() => {
+                // Visual feedback handled by linkCopied state
+              })
+              .catch(() => undefined);
+          }}
+          title={`Copy ${entryUrl}`}
+          aria-label="Copy public URL"
+        >
+          <FaCopy size={11} />
+        </button>
+      ) : null}
+      <button type="button"
+        className="past-playlists-item-delete"
+        onClick={() => onDelete(entry.key)}
+        title="Delete this playlist"
+        aria-label="Delete playlist"
+      >
+        <FaTrash size={11} />
+      </button>
+    </li>
+  );
+}
+
+function PastPlaylistsList({
+  combined,
+  publicOrigin,
+  loadingServer,
+  serverError,
+  onOpen,
+  onDelete,
+  onClear,
+}: {
+  combined: CombinedItem[];
+  publicOrigin: string;
+  loadingServer: boolean;
+  serverError: string | null;
+  onOpen: (key: string) => void;
+  onDelete: (key: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="past-playlists">
+      <div className="past-playlists-header">
+        <span className="past-playlists-title">
+          Past song queues{loadingServer ? " (loading…)" : ""}
+        </span>
+        <button type="button"
+          className="past-playlists-clear"
+          onClick={onClear}
+          title="Clear all past playlists"
+        >
+          Clear
+        </button>
+      </div>
+      {serverError ? (
+        <div className="past-playlists-server-error">
+          Server history unavailable: {serverError}
+        </div>
+      ) : null}
+      <ul className="past-playlists-list">
+        {combined.map((entry) => (
+          <PastPlaylistListItem
+            key={entry.key}
+            entry={entry}
+            publicOrigin={publicOrigin}
+            onOpen={onOpen}
+            onDelete={onDelete}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function PastPlaylistsSection({
   channelKey,
   publicOrigin = "",
@@ -242,272 +678,42 @@ function PastPlaylistsSection({
   } = usePastPlaylists(channelKey, publicOrigin);
 
   if (combined.length === 0 && !loadingServer) {
-    return (
-      <div className="past-playlists past-playlists--empty">
-        <span>
-          {serverError
-            ? `Couldn't load past queues: ${serverError}`
-            : "No past song queues yet. End a queue and it will show here."}
-        </span>
-      </div>
-    );
+    return <PastPlaylistsEmpty serverError={serverError} />;
   }
 
   if (openMeta) {
-    const localDetail =
-      openMeta.source === "local"
-        ? localEntries.find((e) => `local:${e.id}` === openKey) ?? null
-        : null;
-    const items =
-      openMeta.source === "local" && localDetail
-        ? localDetail.items
-        : (serverDetail?.items ?? null);
-
     return (
-      <div className="past-playlists past-playlists--detail">
-        <div className="past-playlists-detail-header">
-          <button type="button"
-            className="past-playlists-back"
-            onClick={() => setOpenKey(null)}
-            title="Back to past playlists"
-          >
-            <FaArrowLeft size={12} />
-            <span>Back</span>
-          </button>
-          <div className="past-playlists-detail-actions">
-            {openMeta.source === "server" && !openMeta.isPublic ? (
-              <button type="button"
-                className="past-playlists-share"
-                onClick={() => handleMakePublic(openMeta.sessionId)}
-                disabled={makingPublic}
-                title="Make this playlist public and create a shareable link"
-                aria-label="Make playlist public"
-              >
-                <FaShareSquare size={11} />
-                <span>{makingPublic ? "Sharing…" : "Make public"}</span>
-              </button>
-            ) : null}
-            {openPublicUrl ? (
-              <button type="button"
-                className="past-playlists-copy"
-                onClick={handleCopyPublicUrl}
-                title={`Copy ${openPublicUrl}`}
-                aria-label="Copy public URL"
-              >
-                <FaCopy size={11} />
-                <span>{linkCopied ? "Copied" : "Copy link"}</span>
-              </button>
-            ) : (
-              <span
-                className="past-playlists-copy past-playlists-copy--disabled"
-                title="This queue was never shared publicly"
-              >
-                <FaCopy size={11} />
-                <span>Not shared</span>
-              </span>
-            )}
-            <button type="button"
-              className="past-playlists-delete"
-              onClick={() => handleDelete(openMeta.key)}
-              title="Delete this playlist"
-              aria-label="Delete playlist"
-            >
-              <FaTrash size={11} />
-              <span>Delete</span>
-            </button>
-          </div>
-        </div>
-        {publicError ? (
-          <div className="past-playlists-server-error">
-            {publicError}
-          </div>
-        ) : null}
-        <div className="past-playlists-detail-meta">
-          <span className="past-playlists-detail-title">
-            {openMeta.title || "Untitled queue"}
-          </span>
-          <span className="past-playlists-detail-stats">
-            {openMeta.itemCount} song{openMeta.itemCount === 1 ? "" : "s"} ·{" "}
-            {openMeta.playedCount} played · {openMeta.skippedCount} skipped
-          </span>
-          <span className="past-playlists-detail-date">
-            {openMeta.source === "local" ? "Ended " : "Last seen "}
-            {formatDate(openMeta.endedAt)}
-          </span>
-        </div>
-        {loadingDetail ? (
-          <div className="past-playlists-detail-loading">Loading…</div>
-        ) : detailError ? (
-          <div className="past-playlists-detail-loading">
-            Failed to load: {detailError}
-          </div>
-        ) : !items || items.length === 0 ? (
-          <div className="past-playlists-detail-loading">
-            No songs in this queue.
-          </div>
-        ) : (
-          <ul className="past-playlists-detail-list">
-            {items.map((item) => (
-              <li
-                key={item.id}
-                className="past-playlists-detail-item"
-                data-status={item.status}
-              >
-                <a
-                  className="past-playlists-detail-thumb"
-                  href={`https://www.youtube.com/watch?v=${item.videoId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Open on YouTube"
-                >
-                  <img src={item.thumbnail} alt="" loading="lazy" />
-                  <span className="past-playlists-detail-duration">
-                    {formatDuration(item.durationSec)}
-                  </span>
-                </a>
-                <div className="past-playlists-detail-info">
-                  <span className="past-playlists-detail-song-title">
-                    {item.title}
-                  </span>
-                  <span className="past-playlists-detail-song-channel">
-                    {item.channelTitle}
-                  </span>
-                  <span className="past-playlists-detail-submitter">
-                    by {item.submitter.author}
-                    {item.submitter.platform === "twitch" ? (
-                      <FaTwitch
-                        size={10}
-                        className="past-playlists-detail-platform"
-                      />
-                    ) : (
-                      <FaYoutube
-                        size={10}
-                        className="past-playlists-detail-platform"
-                      />
-                    )}
-                  </span>
-                </div>
-                <button type="button"
-                  className="past-playlists-detail-copy"
-                  onClick={() => handleCopySongUrl(item.id, item.videoId)}
-                  title={`Copy https://www.youtube.com/watch?v=${item.videoId}`}
-                  aria-label="Copy song URL"
-                >
-                  <FaCopy size={11} />
-                  <span>
-                    {copiedItemId === item.id ? "Copied" : "Copy URL"}
-                  </span>
-                </button>
-                <span className="past-playlists-detail-status">
-                  {item.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <PastPlaylistDetail
+        openMeta={openMeta}
+        openKey={openKey}
+        localEntries={localEntries}
+        serverDetail={serverDetail}
+        loadingDetail={loadingDetail}
+        detailError={detailError}
+        openPublicUrl={openPublicUrl}
+        makingPublic={makingPublic}
+        linkCopied={linkCopied}
+        publicError={publicError}
+        copiedItemId={copiedItemId}
+        onBack={() => setOpenKey(null)}
+        onMakePublic={handleMakePublic}
+        onCopyPublicUrl={handleCopyPublicUrl}
+        onCopySongUrl={handleCopySongUrl}
+        onDelete={handleDelete}
+      />
     );
   }
 
   return (
-    <div className="past-playlists">
-      <div className="past-playlists-header">
-        <span className="past-playlists-title">
-          Past song queues{loadingServer ? " (loading…)" : ""}
-        </span>
-        <button type="button"
-          className="past-playlists-clear"
-          onClick={handleClear}
-          title="Clear all past playlists"
-        >
-          Clear
-        </button>
-      </div>
-      {serverError ? (
-        <div className="past-playlists-server-error">
-          Server history unavailable: {serverError}
-        </div>
-      ) : null}
-      <ul className="past-playlists-list">
-        {combined.map((entry) => {
-          const entryUrl =
-            entry.source === "server" && entry.isPublic
-              ? `${publicOrigin}/s/${entry.sessionId}`
-              : null;
-          return (
-            <li
-              key={entry.key}
-              className="past-playlists-item"
-              data-source={entry.source}
-            >
-              <button type="button"
-                className="past-playlists-item-button"
-                onClick={() => setOpenKey(entry.key)}
-                title="View playlist"
-              >
-                <span className="past-playlists-item-thumb-wrap">
-                  {entry.thumbnail ? (
-                    <img
-                      src={entry.thumbnail}
-                      alt=""
-                      className="past-playlists-item-thumb"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="past-playlists-item-thumb past-playlists-item-thumb--empty" />
-                  )}
-                </span>
-                <span className="past-playlists-item-main">
-                  <span className="past-playlists-item-title">
-                    {entry.title || "Untitled queue"}
-                  </span>
-                  <span className="past-playlists-item-sub">
-                    {entry.itemCount} song{entry.itemCount === 1 ? "" : "s"} ·{" "}
-                    {entry.playedCount} played · {entry.skippedCount} skipped
-                  </span>
-                </span>
-                <span className="past-playlists-item-meta">
-                  <span className="past-playlists-item-source">
-                    {entry.source === "server" ? "Server" : "Local"}
-                  </span>
-                  <span className="past-playlists-item-date">
-                    {formatDate(entry.endedAt)}
-                  </span>
-                </span>
-              </button>
-              {entryUrl ? (
-                <button type="button"
-                  className="past-playlists-item-copy"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (typeof navigator === "undefined" || !navigator.clipboard)
-                      return;
-                    navigator.clipboard
-                      .writeText(entryUrl)
-                      .then(() => {
-                        // Visual feedback handled by linkCopied state
-                      })
-                      .catch(() => undefined);
-                  }}
-                  title={`Copy ${entryUrl}`}
-                  aria-label="Copy public URL"
-                >
-                  <FaCopy size={11} />
-                </button>
-              ) : null}
-              <button type="button"
-                className="past-playlists-item-delete"
-                onClick={() => handleDelete(entry.key)}
-                title="Delete this playlist"
-                aria-label="Delete playlist"
-              >
-                <FaTrash size={11} />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <PastPlaylistsList
+      combined={combined}
+      publicOrigin={publicOrigin}
+      loadingServer={loadingServer}
+      serverError={serverError}
+      onOpen={setOpenKey}
+      onDelete={handleDelete}
+      onClear={handleClear}
+    />
   );
 }
 

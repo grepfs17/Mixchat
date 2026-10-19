@@ -63,6 +63,463 @@ function readStoredTheme(): ChatTheme | null {
   }
 }
 
+interface WheelParticle {
+  id: number;
+  big: boolean;
+  left: string;
+  top: string;
+  duration: string;
+  delay: string;
+}
+
+function WheelParticles({ particles }: { particles: WheelParticle[] }) {
+  return (
+    <div className="wheel-particles" aria-hidden="true">
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className={p.big ? "wheel-particle wheel-particle--big" : "wheel-particle"}
+          style={{
+            left: p.left,
+            top: p.top,
+            animationDuration: p.duration,
+            animationDelay: p.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface WheelSidebarProps {
+  wheels: WheelSummary[];
+  activeId: string | null;
+  spinning: boolean;
+  busy: boolean;
+  newWheelName: string;
+  onNewWheelNameChange: (value: string) => void;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
+  onCreate: () => void;
+}
+
+function WheelSidebar({
+  wheels,
+  activeId,
+  spinning,
+  busy,
+  newWheelName,
+  onNewWheelNameChange,
+  onSelect,
+  onDelete,
+  onCreate,
+}: WheelSidebarProps) {
+  return (
+    <aside className="wheel-sidebar">
+      <div className="wheel-sidebar-head">
+        <span>Your wheels</span>
+        <span className="wheel-count">{wheels.length}</span>
+      </div>
+      <div className="wheel-create">
+        <input
+          type="text"
+          value={newWheelName}
+          placeholder="New wheel name"
+          aria-label="New wheel name"
+          disabled={spinning}
+          onChange={(e) => onNewWheelNameChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void onCreate();
+          }}
+        />
+        <button
+          type="button"
+          className="wheel-btn wheel-btn--primary wheel-btn--icon"
+          onClick={() => void onCreate()}
+          disabled={busy || spinning}
+          title="Create wheel"
+          aria-label="Create wheel"
+        >
+          {busy ? <FaSpinner className="wheel-spinner" /> : <FaPlus size={13} />}
+        </button>
+      </div>
+      <ul className="wheel-list">
+        {wheels.map((w) => (
+          <li
+            key={w.id}
+            className={`wheel-list-item${w.id === activeId ? " is-active" : ""}`}
+          >
+            <button
+              type="button"
+              className="wheel-list-btn"
+              onClick={() => void onSelect(w.id)}
+              disabled={spinning}
+            >
+              <span className="wheel-list-name">{w.name}</span>
+              <span className="wheel-list-meta">
+                {w.optionCount} option{w.optionCount === 1 ? "" : "s"}
+                {w.isPublic && (
+                  <FaEye size={10} title="Public" aria-label="Public" />
+                )}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="wheel-list-delete"
+              onClick={() => void onDelete(w.id)}
+              disabled={busy || spinning}
+              title="Delete wheel"
+              aria-label="Delete wheel"
+            >
+              <FaTrash size={11} />
+            </button>
+          </li>
+        ))}
+        {wheels.length === 0 && (
+          <li className="wheel-list-empty">No wheels yet</li>
+        )}
+      </ul>
+    </aside>
+  );
+}
+
+interface WheelMainHeaderProps {
+  editable: boolean;
+  activeName: string;
+  draftName: string;
+  onDraftNameChange: (value: string) => void;
+  spinning: boolean;
+  dirty: boolean;
+  saving: boolean;
+  busy: boolean;
+  isPublic: boolean;
+  copiedLink: boolean;
+  onSave: () => void;
+  onTogglePublic: () => void;
+  onCopyLink: () => void;
+}
+
+function WheelMainHeader({
+  editable,
+  activeName,
+  draftName,
+  onDraftNameChange,
+  spinning,
+  dirty,
+  saving,
+  busy,
+  isPublic,
+  copiedLink,
+  onSave,
+  onTogglePublic,
+  onCopyLink,
+}: WheelMainHeaderProps) {
+  return (
+    <div className="wheel-main-head">
+      {editable ? (
+        <input
+          className="wheel-name-input"
+          value={draftName}
+          maxLength={60}
+          placeholder="Wheel name"
+          aria-label="Wheel name"
+          disabled={spinning}
+          onChange={(e) => onDraftNameChange(e.target.value)}
+        />
+      ) : (
+        <h2 className="wheel-main-title">{activeName}</h2>
+      )}
+      <div className="wheel-main-actions">
+        {editable && dirty && (
+          <button
+            type="button"
+            className="wheel-btn wheel-btn--primary"
+            onClick={() => void onSave()}
+            disabled={saving || spinning}
+          >
+            {saving ? (
+              <FaSpinner className="wheel-spinner" />
+            ) : (
+              <FaCheck size={12} />
+            )}
+            <span>Save changes</span>
+          </button>
+        )}
+        {editable && (
+          <button
+            type="button"
+            className="wheel-btn"
+            onClick={() => void onTogglePublic()}
+            disabled={busy || spinning}
+          >
+            {isPublic ? (
+              <FaEyeSlash size={12} />
+            ) : (
+              <FaShareSquare size={12} />
+            )}
+            <span>{isPublic ? "Make private" : "Share"}</span>
+          </button>
+        )}
+        {isPublic && (
+          <button
+            type="button"
+            className="wheel-btn"
+            onClick={() => void onCopyLink()}
+          >
+            {copiedLink ? <FaCheck size={12} /> : <FaLink size={12} />}
+            <span>{copiedLink ? "Copied" : "Copy link"}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface WheelOptionsPanelProps {
+  editable: boolean;
+  options: string[];
+  spinning: boolean;
+  newOption: string;
+  onNewOptionChange: (value: string) => void;
+  onAddOption: () => void;
+  onRemoveOption: (index: number) => void;
+  copiedOptions: boolean;
+  onCopyAllOptions: () => void;
+  bulkText: string;
+  onBulkTextChange: (value: string) => void;
+  onAddBulk: () => void;
+  onRemoveAllOptions: () => void;
+}
+
+function WheelOptionsPanel({
+  editable,
+  options,
+  spinning,
+  newOption,
+  onNewOptionChange,
+  onAddOption,
+  onRemoveOption,
+  copiedOptions,
+  onCopyAllOptions,
+  bulkText,
+  onBulkTextChange,
+  onAddBulk,
+  onRemoveAllOptions,
+}: WheelOptionsPanelProps) {
+  return (
+    <section className="wheel-panel">
+      <header className="wheel-panel-head">
+        <h3>
+          Options
+          <span className="wheel-panel-count">{options.length}</span>
+        </h3>
+        {editable && options.length > 0 && (
+          <button
+            type="button"
+            className="wheel-icon-btn"
+            onClick={() => void onCopyAllOptions()}
+            title="Copy all options"
+            aria-label="Copy all options"
+          >
+            {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
+          </button>
+        )}
+      </header>
+
+      {editable && (
+        <div className="wheel-option-add">
+          <input
+            type="text"
+            value={newOption}
+            placeholder="Enter a new option"
+            maxLength={MAX_WHEEL_OPTION_LENGTH}
+            aria-label="New option"
+            disabled={spinning}
+            onChange={(e) => onNewOptionChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onAddOption();
+            }}
+          />
+          <button
+            type="button"
+            className="wheel-btn wheel-btn--primary"
+            onClick={onAddOption}
+            disabled={spinning}
+          >
+            <FaPlus size={11} />
+            <span>Add</span>
+          </button>
+        </div>
+      )}
+
+      <ul className="wheel-options-list">
+        {options.map((option, index) => (
+          <li key={`${option}-${index}`} className="wheel-option-item">
+            <span className="wheel-option-text">{option}</span>
+            {editable && (
+              <button
+                type="button"
+                className="wheel-option-delete"
+                onClick={() => onRemoveOption(index)}
+                disabled={spinning}
+                title="Delete option"
+                aria-label={`Delete option ${option}`}
+              >
+                <FaTimes size={11} />
+              </button>
+            )}
+          </li>
+        ))}
+        {options.length === 0 && (
+          <li className="wheel-options-empty">No options yet</li>
+        )}
+      </ul>
+
+      {editable && (
+        <div className="wheel-bulk-wrap">
+          <textarea
+            className="wheel-bulk"
+            rows={3}
+            value={bulkText}
+            placeholder={"Or paste many options here\none line = one option"}
+            aria-label="Bulk options, one per line"
+            disabled={spinning}
+            onChange={(e) => onBulkTextChange(e.target.value)}
+          />
+          <div className="wheel-bulk-actions">
+            <button
+              type="button"
+              className="wheel-btn"
+              onClick={onAddBulk}
+              disabled={!bulkText.trim() || spinning}
+            >
+              Add all lines
+            </button>
+            <button
+              type="button"
+              className="wheel-btn wheel-btn--danger"
+              onClick={onRemoveAllOptions}
+              disabled={options.length === 0 || spinning}
+            >
+              Remove all
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+interface WheelHistoryPanelProps {
+  history: WheelHistoryEntry[];
+  historyOpen: boolean;
+  onToggle: () => void;
+  onCopy: () => void;
+  onClear: () => void;
+}
+
+function WheelHistoryPanel({
+  history,
+  historyOpen,
+  onToggle,
+  onCopy,
+  onClear,
+}: WheelHistoryPanelProps) {
+  return (
+    <section className="wheel-panel wheel-history">
+      <header className="wheel-panel-head">
+        <button
+          type="button"
+          className="wheel-history-toggle"
+          onClick={onToggle}
+        >
+          <FaTrophy size={12} />
+          <span>Latest winners</span>
+          <span className="wheel-badge">{history.length}</span>
+        </button>
+        <div className="wheel-history-actions">
+          <button
+            type="button"
+            className="wheel-btn wheel-btn--small"
+            onClick={() => void onCopy()}
+            disabled={history.length === 0}
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            className="wheel-btn wheel-btn--small"
+            onClick={onClear}
+            disabled={history.length === 0}
+          >
+            Clear
+          </button>
+        </div>
+      </header>
+      {historyOpen &&
+        (history.length === 0 ? (
+          <p className="wheel-history-empty">
+            No winners yet. Spin the wheel to fill this up.
+          </p>
+        ) : (
+          <ul className="wheel-history-list">
+            {history.map((entry, index) => (
+              <li key={`${entry.time}-${index}`}>
+                <span className="wheel-history-name">{entry.name}</span>
+                <small className="wheel-history-time">{entry.time}</small>
+              </li>
+            ))}
+          </ul>
+        ))}
+    </section>
+  );
+}
+
+function WheelEmpty({ canManage }: { canManage: boolean }) {
+  return (
+    <div className="wheel-empty">
+      <FaTrophy size={28} />
+      <p>
+        {canManage
+          ? "Create a wheel or pick one from the list to get started."
+          : "No wheel selected. Open Wheel Spin from the streamer tools."}
+      </p>
+    </div>
+  );
+}
+
+function WheelWinnerOverlay({
+  winner,
+  onClose,
+}: {
+  winner: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="wheel-winner-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Winner"
+      onClick={onClose}
+    >
+      <div className="wheel-winner-box" onClick={(e) => e.stopPropagation()}>
+        <h2>
+          <FaTrophy size={22} /> Winner <FaTrophy size={22} />
+        </h2>
+        <div className="wheel-winner-name">{winner}</div>
+        <button
+          type="button"
+          className="wheel-btn wheel-btn--primary"
+          onClick={onClose}
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
@@ -444,20 +901,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   return (
     <div className="wheel-page">
-      <div className="wheel-particles" aria-hidden="true">
-        {particles.map((p) => (
-          <span
-            key={p.id}
-            className={p.big ? "wheel-particle wheel-particle--big" : "wheel-particle"}
-            style={{
-              left: p.left,
-              top: p.top,
-              animationDuration: p.duration,
-              animationDelay: p.delay,
-            }}
-          />
-        ))}
-      </div>
+      <WheelParticles particles={particles} />
 
       <header className="wheel-header">
         <div className="wheel-header-brand">
@@ -488,71 +932,17 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
       <div className={`wheel-layout${canManage ? "" : " wheel-layout--solo"}`}>
         {canManage && (
-          <aside className="wheel-sidebar">
-            <div className="wheel-sidebar-head">
-              <span>Your wheels</span>
-              <span className="wheel-count">{wheels.length}</span>
-            </div>
-            <div className="wheel-create">
-              <input
-                type="text"
-                value={newWheelName}
-                placeholder="New wheel name"
-                aria-label="New wheel name"
-                disabled={spinning}
-                onChange={(e) => setNewWheelName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleCreate();
-                }}
-              />
-              <button
-                type="button"
-                className="wheel-btn wheel-btn--primary wheel-btn--icon"
-                onClick={() => void handleCreate()}
-                disabled={busy || spinning}
-                title="Create wheel"
-                aria-label="Create wheel"
-              >
-                {busy ? <FaSpinner className="wheel-spinner" /> : <FaPlus size={13} />}
-              </button>
-            </div>
-            <ul className="wheel-list">
-              {wheels.map((w) => (
-                <li
-                  key={w.id}
-                  className={`wheel-list-item${w.id === activeId ? " is-active" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="wheel-list-btn"
-                    onClick={() => void selectWheel(w.id)}
-                    disabled={spinning}
-                  >
-                    <span className="wheel-list-name">{w.name}</span>
-                    <span className="wheel-list-meta">
-                      {w.optionCount} option{w.optionCount === 1 ? "" : "s"}
-                      {w.isPublic && (
-                        <FaEye size={10} title="Public" aria-label="Public" />
-                      )}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="wheel-list-delete"
-                    onClick={() => void handleDelete(w.id)}
-                    disabled={busy || spinning}
-                    title="Delete wheel"
-                    aria-label="Delete wheel"
-                  >
-                    <FaTrash size={11} />
-                  </button>
-                </li>
-              ))}
-              {wheels.length === 0 && (
-                <li className="wheel-list-empty">No wheels yet</li>
-              )}
-            </ul>
-          </aside>
+          <WheelSidebar
+            wheels={wheels}
+            activeId={activeId}
+            spinning={spinning}
+            busy={busy}
+            newWheelName={newWheelName}
+            onNewWheelNameChange={setNewWheelName}
+            onSelect={selectWheel}
+            onDelete={handleDelete}
+            onCreate={handleCreate}
+          />
         )}
 
         <main className="wheel-main">
@@ -562,73 +952,24 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
               <span>Loading…</span>
             </div>
           ) : !active ? (
-            <div className="wheel-empty">
-              <FaTrophy size={28} />
-              <p>
-                {canManage
-                  ? "Create a wheel or pick one from the list to get started."
-                  : "No wheel selected. Open Wheel Spin from the streamer tools."}
-              </p>
-            </div>
+            <WheelEmpty canManage={canManage} />
           ) : (
             <>
-              <div className="wheel-main-head">
-                {editable ? (
-                  <input
-                    className="wheel-name-input"
-                    value={draftName}
-                    maxLength={60}
-                    placeholder="Wheel name"
-                    aria-label="Wheel name"
-                    disabled={spinning}
-                    onChange={(e) => setDraftName(e.target.value)}
-                  />
-                ) : (
-                  <h2 className="wheel-main-title">{active.name}</h2>
-                )}
-                <div className="wheel-main-actions">
-                  {editable && dirty && (
-                    <button
-                      type="button"
-                      className="wheel-btn wheel-btn--primary"
-                      onClick={() => void handleSave()}
-                      disabled={saving || spinning}
-                    >
-                      {saving ? (
-                        <FaSpinner className="wheel-spinner" />
-                      ) : (
-                        <FaCheck size={12} />
-                      )}
-                      <span>Save changes</span>
-                    </button>
-                  )}
-                  {editable && (
-                    <button
-                      type="button"
-                      className="wheel-btn"
-                      onClick={() => void handleTogglePublic()}
-                      disabled={busy || spinning}
-                    >
-                      {active.isPublic ? (
-                        <FaEyeSlash size={12} />
-                      ) : (
-                        <FaShareSquare size={12} />
-                      )}
-                      <span>{active.isPublic ? "Make private" : "Share"}</span>
-                    </button>
-                  )}
-                  {active.isPublic && (
-                    <button
-                      type="button"
-                      className="wheel-btn"
-                      onClick={() => void copyShareLink()}
-                    >
-                      {copiedLink ? <FaCheck size={12} /> : <FaLink size={12} />}
-                      <span>{copiedLink ? "Copied" : "Copy link"}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
+              <WheelMainHeader
+                editable={editable}
+                activeName={active.name}
+                draftName={draftName}
+                onDraftNameChange={setDraftName}
+                spinning={spinning}
+                dirty={dirty}
+                saving={saving}
+                busy={busy}
+                isPublic={active.isPublic}
+                copiedLink={copiedLink}
+                onSave={handleSave}
+                onTogglePublic={handleTogglePublic}
+                onCopyLink={copyShareLink}
+              />
 
               <WheelStage
                 options={draftOptions}
@@ -636,180 +977,36 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
                 onSpinStateChange={setSpinning}
               />
 
-              <section className="wheel-panel">
-                <header className="wheel-panel-head">
-                  <h3>
-                    Options
-                    <span className="wheel-panel-count">{draftOptions.length}</span>
-                  </h3>
-                  {editable && draftOptions.length > 0 && (
-                    <button
-                      type="button"
-                      className="wheel-icon-btn"
-                      onClick={() => void copyAllOptions()}
-                      title="Copy all options"
-                      aria-label="Copy all options"
-                    >
-                      {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
-                    </button>
-                  )}
-                </header>
+              <WheelOptionsPanel
+                editable={editable}
+                options={draftOptions}
+                spinning={spinning}
+                newOption={newOption}
+                onNewOptionChange={setNewOption}
+                onAddOption={addOption}
+                onRemoveOption={removeOption}
+                copiedOptions={copiedOptions}
+                onCopyAllOptions={copyAllOptions}
+                bulkText={bulkText}
+                onBulkTextChange={setBulkText}
+                onAddBulk={addBulk}
+                onRemoveAllOptions={removeAllOptions}
+              />
 
-                {editable && (
-                  <div className="wheel-option-add">
-                    <input
-                      type="text"
-                      value={newOption}
-                      placeholder="Enter a new option"
-                      maxLength={MAX_WHEEL_OPTION_LENGTH}
-                      aria-label="New option"
-                      disabled={spinning}
-                      onChange={(e) => setNewOption(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") addOption();
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="wheel-btn wheel-btn--primary"
-                      onClick={addOption}
-                      disabled={spinning}
-                    >
-                      <FaPlus size={11} />
-                      <span>Add</span>
-                    </button>
-                  </div>
-                )}
-
-                <ul className="wheel-options-list">
-                  {draftOptions.map((option, index) => (
-                    <li key={`${option}-${index}`} className="wheel-option-item">
-                      <span className="wheel-option-text">{option}</span>
-                      {editable && (
-                        <button
-                          type="button"
-                          className="wheel-option-delete"
-                          onClick={() => removeOption(index)}
-                          disabled={spinning}
-                          title="Delete option"
-                          aria-label={`Delete option ${option}`}
-                        >
-                          <FaTimes size={11} />
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                  {draftOptions.length === 0 && (
-                    <li className="wheel-options-empty">No options yet</li>
-                  )}
-                </ul>
-
-                {editable && (
-                  <div className="wheel-bulk-wrap">
-                    <textarea
-                      className="wheel-bulk"
-                      rows={3}
-                      value={bulkText}
-                      placeholder={"Or paste many options here\none line = one option"}
-                      aria-label="Bulk options, one per line"
-                      disabled={spinning}
-                      onChange={(e) => setBulkText(e.target.value)}
-                    />
-                    <div className="wheel-bulk-actions">
-                      <button
-                        type="button"
-                        className="wheel-btn"
-                        onClick={addBulk}
-                        disabled={!bulkText.trim() || spinning}
-                      >
-                        Add all lines
-                      </button>
-                      <button
-                        type="button"
-                        className="wheel-btn wheel-btn--danger"
-                        onClick={removeAllOptions}
-                        disabled={draftOptions.length === 0 || spinning}
-                      >
-                        Remove all
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              <section className="wheel-panel wheel-history">
-                <header className="wheel-panel-head">
-                  <button
-                    type="button"
-                    className="wheel-history-toggle"
-                    onClick={() => setHistoryOpen((o) => !o)}
-                  >
-                    <FaTrophy size={12} />
-                    <span>Latest winners</span>
-                    <span className="wheel-badge">{history.length}</span>
-                  </button>
-                  <div className="wheel-history-actions">
-                    <button
-                      type="button"
-                      className="wheel-btn wheel-btn--small"
-                      onClick={() => void copyHistory()}
-                      disabled={history.length === 0}
-                    >
-                      Copy
-                    </button>
-                    <button
-                      type="button"
-                      className="wheel-btn wheel-btn--small"
-                      onClick={handleClearHistory}
-                      disabled={history.length === 0}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </header>
-                {historyOpen &&
-                  (history.length === 0 ? (
-                    <p className="wheel-history-empty">
-                      No winners yet. Spin the wheel to fill this up.
-                    </p>
-                  ) : (
-                    <ul className="wheel-history-list">
-                      {history.map((entry, index) => (
-                        <li key={`${entry.time}-${index}`}>
-                          <span className="wheel-history-name">{entry.name}</span>
-                          <small className="wheel-history-time">{entry.time}</small>
-                        </li>
-                      ))}
-                    </ul>
-                  ))}
-              </section>
+              <WheelHistoryPanel
+                history={history}
+                historyOpen={historyOpen}
+                onToggle={() => setHistoryOpen((o) => !o)}
+                onCopy={copyHistory}
+                onClear={handleClearHistory}
+              />
             </>
           )}
         </main>
       </div>
 
       {winner !== null && (
-        <div
-          className="wheel-winner-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Winner"
-          onClick={() => setWinner(null)}
-        >
-          <div className="wheel-winner-box" onClick={(e) => e.stopPropagation()}>
-            <h2>
-              <FaTrophy size={22} /> Winner <FaTrophy size={22} />
-            </h2>
-            <div className="wheel-winner-name">{winner}</div>
-            <button
-              type="button"
-              className="wheel-btn wheel-btn--primary"
-              onClick={() => setWinner(null)}
-            >
-              OK
-            </button>
-          </div>
-        </div>
+        <WheelWinnerOverlay winner={winner} onClose={() => setWinner(null)} />
       )}
 
       {toast && <div className="wheel-toast">{toast}</div>}

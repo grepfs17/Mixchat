@@ -57,6 +57,10 @@ interface UseLiveEventsOptions {
   }>;
 }
 
+function allTruthy(...values: unknown[]): boolean {
+  return values.every(Boolean);
+}
+
 export function useLiveEvents({
   subscribe,
   channelId,
@@ -80,7 +84,7 @@ export function useLiveEvents({
   const accessToken = twitchSession?.accessToken;
   const userId = twitchSession?.userId;
   const broadcasterType = twitchSession?.broadcasterType;
-  const enabled = !!(accessToken && channelId);
+  const enabled = allTruthy(accessToken, channelId);
   const isPartnerOrAffiliate =
     broadcasterType === "partner" || broadcasterType === "affiliate";
 
@@ -89,12 +93,12 @@ export function useLiveEvents({
     subscribe,
     channelId,
     moderatorId: userId || "",
-    enabled: !!(
-      accessToken &&
-      userId &&
-      channelId &&
-      badgesReady &&
-      isModerator
+    enabled: allTruthy(
+      accessToken,
+      userId,
+      channelId,
+      badgesReady,
+      isModerator,
     ),
     onHeldMessage: useCallback(
       (heldMsg: HeldMessage) => {
@@ -157,7 +161,7 @@ export function useLiveEvents({
   useRaidDetection({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && channelId !== userId),
+    enabled: allTruthy(accessToken, channelId, channelId !== userId),
     isInitiator: false,
     onRaid: useCallback(() => {}, []),
     onScopeError: onRaidScopeError,
@@ -166,7 +170,7 @@ export function useLiveEvents({
   useRaidDetection({
     subscribe,
     channelId: userId || "",
-    enabled: !!(accessToken && userId),
+    enabled: allTruthy(accessToken, userId),
     isInitiator: true,
     onRaid: onInitiatorRaid,
     onScopeError: onRaidScopeError,
@@ -175,7 +179,7 @@ export function useLiveEvents({
   useRaidDetection({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && channelId !== userId),
+    enabled: allTruthy(accessToken, channelId, channelId !== userId),
     isInitiator: true,
     onRaid: onInitiatorRaid,
     onScopeError: onRaidScopeError,
@@ -218,7 +222,7 @@ export function useLiveEvents({
   const redemptionPubSubStatus = useChannelPointRedemptionsPubSub({
     channelId,
     accessToken: accessToken || "",
-    enabled: !!(accessToken && channelId),
+    enabled: allTruthy(accessToken, channelId),
     onRedemption: handleRedemptionEvent,
   });
 
@@ -270,12 +274,12 @@ export function useLiveEvents({
   useHypeTrainEventSub({
     subscribe,
     channelId,
-    enabled: !!(
-      accessToken &&
-      channelId &&
-      badgesReady &&
-      isOnOwnChannel &&
-      isPartnerOrAffiliate
+    enabled: allTruthy(
+      accessToken,
+      channelId,
+      badgesReady,
+      isOnOwnChannel,
+      isPartnerOrAffiliate,
     ),
     onHypeTrainBegin: handleHypeTrainBegin,
     onHypeTrainProgress: handleHypeTrainProgress,
@@ -353,7 +357,7 @@ export function useLiveEvents({
   usePollEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    enabled: allTruthy(accessToken, channelId, badgesReady, isOnOwnChannel),
     onPollBegin: handlePollBegin,
     onPollProgress: handlePollProgress,
     onPollEnd: handlePollEnd,
@@ -491,7 +495,7 @@ export function useLiveEvents({
   usePredictionEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    enabled: allTruthy(accessToken, channelId, badgesReady, isOnOwnChannel),
     onPredictionBegin: handlePredictionBegin,
     onPredictionProgress: handlePredictionProgress,
     onPredictionLock: handlePredictionLock,
@@ -516,7 +520,7 @@ export function useLiveEvents({
   useBitsPowerUpEventSub({
     subscribe,
     channelId,
-    enabled: !!(accessToken && channelId && badgesReady && isOnOwnChannel),
+    enabled: allTruthy(accessToken, channelId, badgesReady, isOnOwnChannel),
     onCelebration: handleCelebration,
     onScopeError: onCelebrationScopeError,
   });

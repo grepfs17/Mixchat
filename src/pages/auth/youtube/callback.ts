@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getYoutubeAccessToken, getYoutubeUser } from "../../../lib/youtube";
-import { IS_TWITCH_ONLY } from "../../../lib/constants";
+import { IS_DESKTOP, IS_TWITCH_ONLY } from "../../../lib/constants";
 
 export const GET: APIRoute = async ({ url, cookies, locals }) => {
   if (IS_TWITCH_ONLY) {
@@ -58,15 +58,19 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     const isSecure = !isDev;
 
     const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+    // Google requires the client secret even for Desktop-app (PKCE) clients.
+    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
     const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
 
-    const tokenData = await getYoutubeAccessToken(
-      code,
-      clientId,
+    const codeVerifier = IS_DESKTOP
+      ? cookies.get("google_code_verifier")?.value
+      : undefined;
+    if (IS_DESKTOP) cookies.delete("google_code_verifier", { path: "/" });
+
+    const tokenData = await getYoutubeAccessToken(code, clientId, redirectUri, {
       clientSecret,
-      redirectUri,
-    );
+      codeVerifier,
+    });
 
     // Detect which OAuth flow this callback belongs to. The flow type is
     // encoded in the state parameter as "<uuid>:drive" or "<uuid>" (YouTube).

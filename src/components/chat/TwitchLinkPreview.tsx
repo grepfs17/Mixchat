@@ -116,30 +116,100 @@ function PreviewSkeleton({
   );
 }
 
-function PreviewCard({ data }: { data: TwitchLinkPreviewResponse }) {
-  const liveLine =
-    data.kind === "channel" && data.live
-      ? data.gameName
-        ? `${data.gameName} · ${(data.viewers ?? 0).toLocaleString()} viewers`
-        : `${(data.viewers ?? 0).toLocaleString()} viewers`
-      : null;
+function getPreviewMeta(data: TwitchLinkPreviewResponse): string {
   const clipLine = data.creator?.displayName || data.creator?.login;
   const videoLine = data.views
     ? `${data.views.toLocaleString()} views${data.duration ? ` · ${data.duration}` : ""}`
     : data.duration
       ? data.duration
       : null;
-  const meta =
-    data.kind === "clip"
-      ? clipLine
-        ? `Clipped by ${clipLine}`
-        : "Twitch clip"
-      : data.kind === "video"
-        ? videoLine || "Twitch VOD"
-        : data.live
-          ? liveLine || "Live on Twitch"
-          : "Offline";
+  if (data.kind === "clip") {
+    return clipLine ? `Clipped by ${clipLine}` : "Twitch clip";
+  }
+  if (data.kind === "video") {
+    return videoLine || "Twitch VOD";
+  }
+  if (data.live) {
+    const liveLine = data.gameName
+      ? `${data.gameName} · ${(data.viewers ?? 0).toLocaleString()} viewers`
+      : `${(data.viewers ?? 0).toLocaleString()} viewers`;
+    return liveLine || "Live on Twitch";
+  }
+  return "Offline";
+}
 
+function PreviewThumb({ data }: { data: TwitchLinkPreviewResponse }) {
+  return (
+    <div className="twitch-link-preview__thumb">
+      {data.thumbnailUrl ? (
+        <img src={data.thumbnailUrl} alt="" loading="lazy" />
+      ) : (
+        <div className="twitch-link-preview__thumb-placeholder">
+          <FaTwitch size={28} />
+        </div>
+      )}
+      {data.kind !== "clip" && (
+        <span className="twitch-link-preview__kind-badge">
+          <FaTwitch size={10} />
+          <span>
+            {data.kind === "video" ? "VOD" : data.live ? "LIVE" : "TWITCH"}
+          </span>
+        </span>
+      )}
+      {data.kind === "video" && data.duration && (
+        <span className="twitch-link-preview__duration">{data.duration}</span>
+      )}
+      {data.kind === "clip" && (
+        <span className="twitch-link-preview__play">
+          <FaPlay size={11} />
+        </span>
+      )}
+      {data.live && data.viewers !== undefined && (
+        <span className="twitch-link-preview__viewers">
+          {data.viewers.toLocaleString()}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PreviewBody({ data }: { data: TwitchLinkPreviewResponse }) {
+  const meta = getPreviewMeta(data);
+  return (
+    <div className="twitch-link-preview__body">
+      {data.kind === "channel" && data.live && data.gameName && (
+        <div className="twitch-link-preview__game">{data.gameName}</div>
+      )}
+      <div className="twitch-link-preview__title">
+        {data.title ||
+          data.author?.displayName ||
+          data.author?.login ||
+          data.href}
+      </div>
+      <div className="twitch-link-preview__meta">
+        {data.author?.avatarUrl && (
+          <img
+            className="twitch-link-preview__avatar"
+            src={data.author.avatarUrl}
+            alt=""
+            loading="lazy"
+          />
+        )}
+        <span className="twitch-link-preview__meta-text">
+          <strong>
+            {data.author?.displayName ||
+              data.author?.login ||
+              "Twitch channel"}
+          </strong>
+          <span className="twitch-link-preview__meta-divider"> · </span>
+          <span>{meta}</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PreviewCard({ data }: { data: TwitchLinkPreviewResponse }) {
   return (
     <a
       href={data.href || data.url}
@@ -150,70 +220,8 @@ function PreviewCard({ data }: { data: TwitchLinkPreviewResponse }) {
       }`}
       title={data.title || data.href || data.url}
     >
-      <div className="twitch-link-preview__thumb">
-        {data.thumbnailUrl ? (
-          <img src={data.thumbnailUrl} alt="" loading="lazy" />
-        ) : (
-          <div className="twitch-link-preview__thumb-placeholder">
-            <FaTwitch size={28} />
-          </div>
-        )}
-        {data.kind !== "clip" && (
-          <span className="twitch-link-preview__kind-badge">
-            <FaTwitch size={10} />
-            <span>
-              {data.kind === "video"
-                ? "VOD"
-                : data.live
-                  ? "LIVE"
-                  : "TWITCH"}
-            </span>
-          </span>
-        )}
-        {data.kind === "video" && data.duration && (
-          <span className="twitch-link-preview__duration">{data.duration}</span>
-        )}
-        {data.kind === "clip" && (
-          <span className="twitch-link-preview__play">
-            <FaPlay size={11} />
-          </span>
-        )}
-        {data.live && data.viewers !== undefined && (
-          <span className="twitch-link-preview__viewers">
-            {data.viewers.toLocaleString()}
-          </span>
-        )}
-      </div>
-      <div className="twitch-link-preview__body">
-        {data.kind === "channel" && data.live && data.gameName && (
-          <div className="twitch-link-preview__game">{data.gameName}</div>
-        )}
-        <div className="twitch-link-preview__title">
-          {data.title ||
-            data.author?.displayName ||
-            data.author?.login ||
-            data.href}
-        </div>
-        <div className="twitch-link-preview__meta">
-          {data.author?.avatarUrl && (
-            <img
-              className="twitch-link-preview__avatar"
-              src={data.author.avatarUrl}
-              alt=""
-              loading="lazy"
-            />
-          )}
-          <span className="twitch-link-preview__meta-text">
-            <strong>
-              {data.author?.displayName ||
-                data.author?.login ||
-                "Twitch channel"}
-            </strong>
-            <span className="twitch-link-preview__meta-divider"> · </span>
-            <span>{meta}</span>
-          </span>
-        </div>
-      </div>
+      <PreviewThumb data={data} />
+      <PreviewBody data={data} />
     </a>
   );
 }

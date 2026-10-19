@@ -58,6 +58,291 @@ function UserChip({ user }: { user: ChatStatUser }) {
   );
 }
 
+function getFooterLabel(
+  timeWindow: ChatStatsWindow,
+  streamStartedAt: Date | null | undefined,
+  streamStartedLabel: string | null,
+): string {
+  if (timeWindow === "all") {
+    return streamStartedAt
+      ? `This stream · since ${streamStartedLabel}`
+      : "This session";
+  }
+  return (
+    CHAT_STATS_WINDOWS.find((option) => option.id === timeWindow)
+      ?.footerLabel ?? ""
+  );
+}
+
+function ChatStatsHeader({
+  streamStartedAt,
+  streamStartedLabel,
+  onClose,
+}: {
+  streamStartedAt?: Date | null;
+  streamStartedLabel: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <div className="chat-stats-header">
+      <div className="chat-stats-header-info">
+        <MdBarChart size={20} className="chat-stats-header-icon" />
+        <div>
+          <h2 className="chat-stats-title">Chat Stats</h2>
+          <span className="chat-stats-subtitle">
+            {streamStartedAt
+              ? `Stream activity · since ${streamStartedLabel}`
+              : "Session activity · no live stream"}
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="overlay-btn-icon"
+        aria-label="Close chat stats"
+      >
+        <MdClose size={24} />
+      </button>
+    </div>
+  );
+}
+
+function ChatStatsFilters({
+  timeWindow,
+  onTimeWindowChange,
+}: {
+  timeWindow: ChatStatsWindow;
+  onTimeWindowChange: (window: ChatStatsWindow) => void;
+}) {
+  return (
+    <div className="chat-stats-filters" role="group" aria-label="Time range">
+      {CHAT_STATS_WINDOWS.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          aria-pressed={option.id === timeWindow}
+          className={`chat-stats-filter${option.id === timeWindow ? " chat-stats-filter--active" : ""}`}
+          onClick={() => onTimeWindowChange(option.id)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ChatStatsSummary({
+  chatters,
+  totalMessages,
+}: {
+  chatters: number;
+  totalMessages: number;
+}) {
+  return (
+    <div className="chat-stats-summary">
+      <div className="chat-stats-summary-card">
+        <span className="chat-stats-summary-value">
+          {chatters.toLocaleString()}
+        </span>
+        <span className="chat-stats-summary-label">Chatters</span>
+      </div>
+      <div className="chat-stats-summary-card">
+        <span className="chat-stats-summary-value">
+          {totalMessages.toLocaleString()}
+        </span>
+        <span className="chat-stats-summary-label">Messages</span>
+      </div>
+    </div>
+  );
+}
+
+function ChatStatsModsSection({
+  mods,
+  loading,
+  copiedKey,
+  onCopy,
+}: {
+  mods: ChatStatUser[];
+  loading: boolean;
+  copiedKey: string | null;
+  onCopy: (key: string, users: ChatStatUser[]) => void;
+}) {
+  return (
+    <div className="chat-stats-mods">
+      <div className="chat-stats-mods-header">
+        <span className="chat-stats-section-title">Mods</span>
+        <span className="chat-stats-section-count">{mods.length}</span>
+        {mods.length > 0 && (
+          <button
+            type="button"
+            className="chat-stats-copy"
+            onClick={() => onCopy("mods", mods)}
+            title="Copy moderators"
+          >
+            {copiedKey === "mods" ? (
+              <MdCheck size={12} />
+            ) : (
+              <MdContentCopy size={12} />
+            )}
+            <span>{copiedKey === "mods" ? "Copied" : "Copy names"}</span>
+          </button>
+        )}
+      </div>
+      {mods.length === 0 ? (
+        <div className="chat-stats-empty chat-stats-empty--inline">
+          {loading ? "Analyzing…" : "No moderators seen yet."}
+        </div>
+      ) : (
+        <div className="chat-stats-users">
+          {mods.map((user) => (
+            <UserChip key={user.author.toLowerCase()} user={user} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RepeatedSectionHeader({
+  repeatedOpen,
+  onToggle,
+  repeatedTotal,
+  onResetEntries,
+  confirmReset,
+  onReset,
+}: {
+  repeatedOpen: boolean;
+  onToggle: () => void;
+  repeatedTotal: number;
+  onResetEntries?: () => void;
+  confirmReset: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <div className="chat-stats-section-header">
+      <button
+        type="button"
+        className="chat-stats-section-toggle"
+        onClick={onToggle}
+        aria-expanded={repeatedOpen}
+      >
+        {repeatedOpen ? <MdExpandLess size={16} /> : <MdExpandMore size={16} />}
+        <span className="chat-stats-section-title">
+          Most repeated messages
+        </span>
+        <span className="chat-stats-section-count">{repeatedTotal}</span>
+      </button>
+      {onResetEntries && repeatedTotal > 0 && (
+        <button
+          type="button"
+          className={`chat-stats-reset${confirmReset ? " chat-stats-reset--confirm" : ""}`}
+          onClick={onReset}
+          title={confirmReset ? "Click again to confirm" : "Reset all counters"}
+          aria-label={
+            confirmReset
+              ? "Confirm reset all repeated message counters"
+              : "Reset all repeated message counters"
+          }
+        >
+          <MdRefresh size={13} />
+          {confirmReset && <span>Confirm</span>}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RepeatedMessagesList({
+  repeatedOpen,
+  entries,
+  loading,
+  copiedKey,
+  onResetEntry,
+  onCopy,
+}: {
+  repeatedOpen: boolean;
+  entries: ChatStatEntry[];
+  loading: boolean;
+  copiedKey: string | null;
+  onResetEntry?: (key: string) => void;
+  onCopy: (key: string, users: ChatStatUser[]) => void;
+}) {
+  if (!repeatedOpen) return null;
+  if (entries.length === 0) {
+    return (
+      <div className="chat-stats-empty chat-stats-empty--inline">
+        {loading ? "Analyzing…" : "No repeated messages yet."}
+      </div>
+    );
+  }
+  return (
+    <div className="chat-stats-list">
+      {entries.map((entry, idx) => (
+        <div key={entry.key} className="chat-stats-item">
+          <div className="chat-stats-item-main">
+            <span className="chat-stats-rank">#{idx + 1}</span>
+            <span className="chat-stats-content" title={entry.content}>
+              {entry.content}
+            </span>
+            <span className="chat-stats-count">{entry.count}×</span>
+            {onResetEntry && (
+              <button
+                type="button"
+                className="chat-stats-reset"
+                onClick={() => onResetEntry(entry.key)}
+                title="Reset counter"
+                aria-label={`Reset counter for ${entry.content}`}
+              >
+                <MdRefresh size={13} />
+              </button>
+            )}
+          </div>
+          <div className="chat-stats-users">
+            {entry.users.map((user) => (
+              <UserChip key={user.author.toLowerCase()} user={user} />
+            ))}
+            <button
+              type="button"
+              className="chat-stats-copy"
+              onClick={() => onCopy(entry.key, entry.users)}
+              title="Copy usernames"
+            >
+              {copiedKey === entry.key ? (
+                <MdCheck size={12} />
+              ) : (
+                <MdContentCopy size={12} />
+              )}
+              <span>
+                {copiedKey === entry.key ? "Copied" : "Copy names"}
+              </span>
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChatStatsFooter({
+  repeatedTotal,
+  scopeLabel,
+  footerLabel,
+}: {
+  repeatedTotal: number;
+  scopeLabel: string;
+  footerLabel: string;
+}) {
+  return (
+    <div className="chat-stats-footer">
+      <span>
+        {repeatedTotal} repeated messages · {scopeLabel}
+      </span>
+      <span>{footerLabel}</span>
+    </div>
+  );
+}
+
 export default function ChatStatsOverlay({
   stats,
   loading = false,
@@ -136,13 +421,11 @@ export default function ChatStatsOverlay({
       })
     : null;
   const scopeLabel = streamStartedAt ? "this stream" : "this session";
-  const footerLabel =
-    timeWindow === "all"
-      ? streamStartedAt
-        ? `This stream · since ${streamStartedLabel}`
-        : "This session"
-      : (CHAT_STATS_WINDOWS.find((option) => option.id === timeWindow)
-          ?.footerLabel ?? "");
+  const footerLabel = getFooterLabel(
+    timeWindow,
+    streamStartedAt,
+    streamStartedLabel,
+  );
 
   return (
     <div
@@ -151,191 +434,58 @@ export default function ChatStatsOverlay({
       role="dialog"
       aria-label="Chat statistics"
     >
-      <div className="chat-stats-header">
-        <div className="chat-stats-header-info">
-          <MdBarChart size={20} className="chat-stats-header-icon" />
-          <div>
-            <h2 className="chat-stats-title">Chat Stats</h2>
-            <span className="chat-stats-subtitle">
-              {streamStartedAt
-                ? `Stream activity · since ${streamStartedLabel}`
-                : "Session activity · no live stream"}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="overlay-btn-icon"
-          aria-label="Close chat stats"
-        >
-          <MdClose size={24} />
-        </button>
-      </div>
+      <ChatStatsHeader
+        streamStartedAt={streamStartedAt}
+        streamStartedLabel={streamStartedLabel}
+        onClose={onClose}
+      />
 
-      <div className="chat-stats-filters" role="group" aria-label="Time range">
-        {CHAT_STATS_WINDOWS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            aria-pressed={option.id === timeWindow}
-            className={`chat-stats-filter${option.id === timeWindow ? " chat-stats-filter--active" : ""}`}
-            onClick={() => onTimeWindowChange(option.id)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <ChatStatsFilters
+        timeWindow={timeWindow}
+        onTimeWindowChange={onTimeWindowChange}
+      />
 
-      <div className="chat-stats-summary">
-        <div className="chat-stats-summary-card">
-          <span className="chat-stats-summary-value">
-            {chatters.toLocaleString()}
-          </span>
-          <span className="chat-stats-summary-label">Chatters</span>
-        </div>
-        <div className="chat-stats-summary-card">
-          <span className="chat-stats-summary-value">
-            {totalMessages.toLocaleString()}
-          </span>
-          <span className="chat-stats-summary-label">Messages</span>
-        </div>
-      </div>
+      <ChatStatsSummary
+        chatters={chatters}
+        totalMessages={totalMessages}
+      />
 
       <div className="chat-stats-body custom-scrollbar">
         {loading && (
           <div className="chat-stats-loading">Loading full history…</div>
         )}
 
-        <div className="chat-stats-mods">
-          <div className="chat-stats-mods-header">
-            <span className="chat-stats-section-title">Mods</span>
-            <span className="chat-stats-section-count">{mods.length}</span>
-            {mods.length > 0 && (
-              <button
-                type="button"
-                className="chat-stats-copy"
-                onClick={() => handleCopyUsers("mods", mods)}
-                title="Copy moderators"
-              >
-                {copiedKey === "mods" ? (
-                  <MdCheck size={12} />
-                ) : (
-                  <MdContentCopy size={12} />
-                )}
-                <span>{copiedKey === "mods" ? "Copied" : "Copy names"}</span>
-              </button>
-            )}
-          </div>
-          {mods.length === 0 ? (
-            <div className="chat-stats-empty chat-stats-empty--inline">
-              {loading ? "Analyzing…" : "No moderators seen yet."}
-            </div>
-          ) : (
-            <div className="chat-stats-users">
-              {mods.map((user) => (
-                <UserChip key={user.author.toLowerCase()} user={user} />
-              ))}
-            </div>
-          )}
-        </div>
+        <ChatStatsModsSection
+          mods={mods}
+          loading={loading}
+          copiedKey={copiedKey}
+          onCopy={handleCopyUsers}
+        />
 
-        <div className="chat-stats-section-header">
-          <button
-            type="button"
-            className="chat-stats-section-toggle"
-            onClick={() => setRepeatedOpen((v) => !v)}
-            aria-expanded={repeatedOpen}
-          >
-            {repeatedOpen ? (
-              <MdExpandLess size={16} />
-            ) : (
-              <MdExpandMore size={16} />
-            )}
-            <span className="chat-stats-section-title">
-              Most repeated messages
-            </span>
-            <span className="chat-stats-section-count">{repeatedTotal}</span>
-          </button>
-          {onResetEntries && repeatedTotal > 0 && (
-            <button
-              type="button"
-              className={`chat-stats-reset${confirmReset ? " chat-stats-reset--confirm" : ""}`}
-              onClick={handleResetEntries}
-              title={
-                confirmReset ? "Click again to confirm" : "Reset all counters"
-              }
-              aria-label={
-                confirmReset
-                  ? "Confirm reset all repeated message counters"
-                  : "Reset all repeated message counters"
-              }
-            >
-              <MdRefresh size={13} />
-              {confirmReset && <span>Confirm</span>}
-            </button>
-          )}
-        </div>
+        <RepeatedSectionHeader
+          repeatedOpen={repeatedOpen}
+          onToggle={() => setRepeatedOpen((v) => !v)}
+          repeatedTotal={repeatedTotal}
+          onResetEntries={onResetEntries}
+          confirmReset={confirmReset}
+          onReset={handleResetEntries}
+        />
 
-        {repeatedOpen &&
-          (entries.length === 0 ? (
-            <div className="chat-stats-empty chat-stats-empty--inline">
-              {loading ? "Analyzing…" : "No repeated messages yet."}
-            </div>
-          ) : (
-            <div className="chat-stats-list">
-              {entries.map((entry, idx) => (
-                <div key={entry.key} className="chat-stats-item">
-                  <div className="chat-stats-item-main">
-                    <span className="chat-stats-rank">#{idx + 1}</span>
-                    <span className="chat-stats-content" title={entry.content}>
-                      {entry.content}
-                    </span>
-                    <span className="chat-stats-count">{entry.count}×</span>
-                    {onResetEntry && (
-                      <button
-                        type="button"
-                        className="chat-stats-reset"
-                        onClick={() => onResetEntry(entry.key)}
-                        title="Reset counter"
-                        aria-label={`Reset counter for ${entry.content}`}
-                      >
-                        <MdRefresh size={13} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="chat-stats-users">
-                    {entry.users.map((user) => (
-                      <UserChip key={user.author.toLowerCase()} user={user} />
-                    ))}
-                    <button
-                      type="button"
-                      className="chat-stats-copy"
-                      onClick={() => handleCopyUsers(entry.key, entry.users)}
-                      title="Copy usernames"
-                    >
-                      {copiedKey === entry.key ? (
-                        <MdCheck size={12} />
-                      ) : (
-                        <MdContentCopy size={12} />
-                      )}
-                      <span>
-                        {copiedKey === entry.key ? "Copied" : "Copy names"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
+        <RepeatedMessagesList
+          repeatedOpen={repeatedOpen}
+          entries={entries}
+          loading={loading}
+          copiedKey={copiedKey}
+          onResetEntry={onResetEntry}
+          onCopy={handleCopyUsers}
+        />
       </div>
 
-      <div className="chat-stats-footer">
-        <span>
-          {repeatedTotal} repeated messages · {scopeLabel}
-        </span>
-        <span>{footerLabel}</span>
-      </div>
+      <ChatStatsFooter
+        repeatedTotal={repeatedTotal}
+        scopeLabel={scopeLabel}
+        footerLabel={footerLabel}
+      />
     </div>
   );
 }

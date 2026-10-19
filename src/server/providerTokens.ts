@@ -8,7 +8,7 @@
  */
 
 import type { AstroCookies } from "astro";
-import { IS_TWITCH_ONLY } from "../lib/constants";
+import { IS_DESKTOP, IS_TWITCH_ONLY } from "../lib/constants";
 import { refreshTwitchAccessToken } from "../lib/twitch";
 import { refreshYoutubeToken } from "../lib/youtube";
 
@@ -35,8 +35,10 @@ export async function refreshProviderAccessToken(
     const refreshToken = cookies.get("twitch_refresh_token")?.value;
     if (!refreshToken) return null;
     const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
-    const clientSecret = import.meta.env.TWITCH_CLIENT_SECRET;
-    if (!clientId || !clientSecret) return null;
+    const clientSecret = IS_DESKTOP
+      ? undefined
+      : import.meta.env.TWITCH_CLIENT_SECRET;
+    if (!clientId || (!IS_DESKTOP && !clientSecret)) return null;
 
     const tokenData = await refreshTwitchAccessToken(
       refreshToken,
@@ -69,7 +71,8 @@ export async function refreshProviderAccessToken(
     const refreshToken = cookies.get("youtube_refresh_token")?.value;
     if (!refreshToken) return null;
     const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
-    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET;
+    // Google requires the client secret even for desktop (PKCE) clients.
+    const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
     if (!clientId || !clientSecret) return null;
 
     const tokenData = await refreshYoutubeToken(
