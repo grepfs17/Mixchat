@@ -80,10 +80,8 @@ function UnifiedTwitchMessageItemBase({
 }
 
 /**
- * Unified-mode Twitch message item. Renders inside the merged Twitch+YouTube
- * chat surface with a `PlatformTag` so the source platform is visible.
- * The runtime toggle `unifyChatEnabled` picks between this variant and the
- * split-chat `DisplayTwitchMessageItem`.
+ * Twitch message item for the merged chat surface, with a `PlatformTag`.
+ * `unifyChatEnabled` selects this vs. `DisplayTwitchMessageItem`.
  */
 export const UnifiedTwitchMessageItem = memo(UnifiedTwitchMessageItemBase, (prev, next) => {
   return (

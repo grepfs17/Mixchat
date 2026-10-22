@@ -177,7 +177,6 @@ function EmoteChannelSidebar({
 }: EmoteChannelSidebarProps) {
   return (
     <div className="emote-channel-sidebar">
-      {/* Global */}
       <button type="button"
         className={`emote-channel-avatar-btn ${activeTwitchChannel === TWITCH_GLOBAL_KEY ? "active" : ""}`}
         onClick={() => onSelectChannel(TWITCH_GLOBAL_KEY)}
@@ -191,7 +190,6 @@ function EmoteChannelSidebar({
         <span className="emote-channel-label">Global</span>
       </button>
 
-      {/* Per-channel */}
       {channels.map((ch) => (
         <button type="button"
           key={ch.channelId}

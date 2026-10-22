@@ -59,7 +59,6 @@ export default function AppSidebar({
         background: "linear-gradient(160deg, #131313 0%, #0d0d0d 100%)",
       }}
     >
-      {/* Close button for mobile */}
       <div
         style={{
           display: "none",

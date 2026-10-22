@@ -139,10 +139,9 @@ function DisplayTwitchMessageItemBase({
 }
 
 /**
- * Display-mode Twitch message item. Renders inside the split-chat ChatDisplay
- * surface (no platform tag), with a Shared Chat source avatar when applicable.
- * The runtime toggle `unifyChatEnabled` picks between this variant and the
- * merged `UnifiedTwitchMessageItem`.
+ * Twitch message item for split chat (no platform tag), with a Shared Chat
+ * source avatar when applicable. `unifyChatEnabled` selects this vs.
+ * `UnifiedTwitchMessageItem`.
  */
 export const DisplayTwitchMessageItem = memo(DisplayTwitchMessageItemBase, (prev, next) => {
   return (

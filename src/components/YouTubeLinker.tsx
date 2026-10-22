@@ -125,7 +125,6 @@ export default function YouTubeLinker({
   const handleAddLink = () => {
     if (!selectedChannelId || !youtubeUrl.trim()) return;
 
-    // Validate URL format
     const trimmed = youtubeUrl.trim();
     if (
       !trimmed.startsWith("https://www.youtube.com/") &&
@@ -199,7 +198,6 @@ export default function YouTubeLinker({
     dispatch({ type: "CANCEL_EDIT" });
   };
 
-  // Close on Escape
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Escape") onClose();

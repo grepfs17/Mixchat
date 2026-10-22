@@ -3,7 +3,7 @@ import HLS from "hls.js";
 import StreamEmbedPlaceholder from "./StreamEmbedPlaceholder";
 import StreamAuthBadge from "./StreamAuthBadge";
 
-// Types for the Twitch Player JS API
+// Twitch Player JS API types
 declare global {
   interface Window {
     Twitch?: {
@@ -69,7 +69,7 @@ interface StreamEmbedProps {
   playerType?: "embed" | "m3u8";
   twitchConnected?: boolean;
   onTwitchLogin?: () => void;
-  /** User's Twitch OAuth access token — passed to the embed player so it can
+  /** User's Twitch OAuth access token, passed to the embed player so it can
    *  authenticate without relying on cookies/localStorage (Brave Shields). */
   twitchAccessToken?: string;
   onQualitiesLoaded?: (
@@ -343,7 +343,7 @@ export default function StreamEmbed({
 
   // Gate the embed player mount on token availability when the user is
   // connected but the access token hasn't been refreshed yet (page reload).
-  // This avoids creating the Twitch Player without oauth_token — critical on
+  // This avoids creating the Twitch Player without oauth_token, critical on
   // Firefox / browsers with strict third-party cookie blocking.
   const [tokenWaitExpired, setTokenWaitExpired] = useState(false);
   useEffect(() => {
@@ -352,7 +352,7 @@ export default function StreamEmbed({
       const timer = setTimeout(() => setTokenWaitExpired(true), 5000);
       return () => clearTimeout(timer);
     }
-    // Token present or not connected — no need to wait.
+    // Token present or not connected, no need to wait.
     setTokenWaitExpired(false);
   }, [twitchConnected, twitchAccessToken]);
 
@@ -365,7 +365,7 @@ export default function StreamEmbed({
         if (!cancelled) setParentDomain(data.parentDomain ?? "localhost");
       })
       .catch(() => {
-        // Silently swallow AbortError on unmount — flag pattern matches the
+        // Silently swallow AbortError on unmount, flag pattern matches the
         // parent cancelled/aborted guard so we don't fall back to "localhost"
         // after the component has already torn down.
         if (cancelled || abortController.signal.aborted) return;
@@ -418,7 +418,6 @@ export default function StreamEmbed({
           return;
         }
 
-        // Clean up previous HLS instance
         if (hlsRef.current) {
           hlsRef.current.destroy();
           hlsRef.current = null;
@@ -427,7 +426,7 @@ export default function StreamEmbed({
         // The server fetches the GQL token and contacts usher.ttvnw.net
         // (which has no CORS headers, so it must be done server-side).
         // It returns all available quality variants on *.ttvnw.net CDN,
-        // which DO support CORS — HLS.js fetches segments directly from
+        // which DO support CORS, HLS.js fetches segments directly from
         // the CDN with zero server bandwidth involved.
         const playlistRes = await fetch(
           `/api/stream-playlist?channel=${encodeURIComponent(channelName)}`,
@@ -438,7 +437,7 @@ export default function StreamEmbed({
         if (!playlistRes.ok) {
           if (playlistRes.status === 401) {
             if (!isRetry && !cancelled) {
-              // The session cookie may not have been refreshed yet — wait 3 s and retry once.
+              // The session cookie may not have been refreshed yet, wait 3 s and retry once.
               setError("Authenticating… retrying in 3 s");
               retryTimer = setTimeout(() => loadStream(true), 3000);
               return;
@@ -452,7 +451,7 @@ export default function StreamEmbed({
           }
           if (playlistRes.status === 429) {
             throw new Error(
-              "Too many requests — please wait a moment and try again",
+              "Too many requests, please wait a moment and try again",
             );
           }
           // Attempt to surface a server-side error message if available
@@ -498,11 +497,11 @@ export default function StreamEmbed({
               hls.destroy();
               return;
             }
-            console.log("[hls] Manifest parsed — stream loaded for:", channelName);
+            console.log("[hls] Manifest parsed, stream loaded for:", channelName);
             console.log("[hls] Quality:", fetchedQualities[0]?.label ?? "unknown", "URL:", playlistUrl);
             console.log("[hls] Ad-free via usher oauth_token: ads are controlled server-side, not by this badge");
             videoRef.current?.play().catch(() => {
-              // Auto-play failed — user will need to click play
+              // Auto-play failed, user will need to click play
             });
           });
 
@@ -549,9 +548,9 @@ export default function StreamEmbed({
     };    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [channelName, playerType]);
 
-  // Check if the user is subscribed to the current channel — only when in
-  // m3u8 mode and Twitch is connected.  Resets to grey on channel change;
-  // turns purple only after Helix confirms an active subscription.
+  // Check if the user is subscribed to the current channel, only when in
+  // m3u8 mode and Twitch is connected.  Resets to grey on channel change.
+  // Turns purple only after Helix confirms an active subscription.
   useEffect(() => {
     setStreamAuthenticated(false);
 
@@ -650,7 +649,6 @@ export default function StreamEmbed({
     );
   }
 
-  // M3U8 mode — error state
   if (error) {
     return (
       <div
@@ -676,7 +674,6 @@ export default function StreamEmbed({
     );
   }
 
-  // M3U8 mode — video player
   return (
     <div className="stream-player">
       {/* Live streams don't have pre-recorded captions */}

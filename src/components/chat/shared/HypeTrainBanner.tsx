@@ -13,9 +13,8 @@ interface HypeTrainBannerProps {
 }
 
 /**
- * Display-mode Hype Train banner. Renders the progress bar and top
- * contributors while the train is active. Self-dismisses when the
- * timer expires, or after a double-click on the close button.
+ * Display-mode Hype Train banner with progress bar and top contributors.
+ * Self-dismisses on timer expiry or double-click.
  */
 export default function HypeTrainBanner({
   hypeTrain,

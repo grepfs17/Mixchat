@@ -22,10 +22,8 @@ import SongQueuePlayer, {
 } from "./SongQueuePlayer";
 
 /**
- * Minimized music-player bar shown in the chat column. The header row
- * (always visible) contains the track title, a compact time progress
- * slider, and playback controls. Expanding reveals the YouTube iframe
- * player and playlist.
+ * Minimized music-player bar in the chat column: always-visible title,
+ * progress slider, and controls. Expanding reveals the iframe and playlist.
  */
 export default function MusicPlayerMinimizedBar({
   player,
@@ -46,14 +44,13 @@ export default function MusicPlayerMinimizedBar({
   const volume = player.volume;
   const playerRef = useRef<SongQueuePlayerHandle | null>(null);
 
-  // ---- Time progress ----
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // Ref that we raise while the user is actively dragging the seek
   // slider, so the polling interval doesn't fight their cursor.
   const seekingRef = useRef(false);
   // Poll the YouTube player for the current playback position.
-  // Always active — the time bar is in the header and visible even
+  // Always active: the time bar is in the header and visible even
   // when collapsed.
   useEffect(() => {
     const iv = window.setInterval(() => {
@@ -135,7 +132,6 @@ export default function MusicPlayerMinimizedBar({
           />
         </button>
 
-        {/* Time progress — compact inline bar between title and controls */}
         <TimeProgress
           currentTime={currentTime}
           duration={duration}
@@ -210,7 +206,7 @@ function TrackTitle({ current, playlist, playerState }: TrackTitleProps) {
       </span>
       <span className="music-player-bar-meta">
         <span className="music-player-bar-title-text">
-          {current ? truncate(current.title, 50) : "Ready — press play"}
+          {current ? truncate(current.title, 50) : "Ready: press play"}
         </span>
         <span className="music-player-bar-sub">
           {playlist?.name ?? ""}

@@ -22,7 +22,7 @@ export default function GiveawayIndicator({
   const { phase, keyword, endsAt, startedAt, liveEntries } =
     giveaway;
 
-  // Local 1s tick for the countdown display — scoped to this small component
+  // Local 1s tick for the countdown display, scoped to this small component
   // so ChatApp never re-renders for the giveaway clock.
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {

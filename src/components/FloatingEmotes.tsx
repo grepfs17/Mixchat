@@ -193,7 +193,6 @@ export default function FloatingEmotes() {
       (s as any)._blur = blur;
     }
 
-    // Pairwise collision
     for (let a = 0; a < n; a++) {
       for (let b = a + 1; b < n; b++) {
         const sa = items[a].state;
@@ -228,7 +227,6 @@ export default function FloatingEmotes() {
       }
     }
 
-    // Write to DOM
     for (let i = 0; i < n; i++) {
       const item = items[i];
       const s = item.state;

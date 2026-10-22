@@ -28,7 +28,7 @@ import type {
 import "../../styles/DevChatPreview.css";
 
 /* ------------------------------------------------------------------ */
-/* Fabricated media helpers (data URIs — no network requests)          */
+/* Fabricated media helpers (data URIs, no network requests)          */
 /* ------------------------------------------------------------------ */
 
 function svgUri(svg: string): string {

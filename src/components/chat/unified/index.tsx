@@ -148,7 +148,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       onMentionUser?.(author);
     };
 
-    // Close menus when clicking elsewhere
     useEffect(() => {
       const handleClick = (e: MouseEvent) => {
         if (
@@ -177,7 +176,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       [ignoredUsers],
     );
 
-    // Merge and sort messages
     const entries: UnifiedEntry[] = useMemo(() => {
       const tw: UnifiedEntry[] = twitchMessages
         .flatMap((m) => (!ignoredSet.has(m.author.toLowerCase()) ? [{ source: "twitch" as const, msg: m }] : []));
@@ -258,7 +256,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
 
     useImperativeHandle(ref, () => ({ scrollToBottom }));
 
-    // Emote tooltip
     useEffect(() => {
       const handlePointerMove = (e: PointerEvent) => {
         const target = e.target as HTMLElement;
@@ -307,7 +304,6 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       };
     }, []);
 
-    // Touch gestures
     const { handleTouchStart, handleTouchEnd, handleTouchMove, handleCopy } =
       useChatTouchGestures<UnifiedEntry>({
         onReply: onReply

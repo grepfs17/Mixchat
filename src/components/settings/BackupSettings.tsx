@@ -41,7 +41,7 @@ function ExportImportSetting({
     <div className="embed-config-backup-section">
       <p className="embed-config-backup-description">
         Export your settings, favorites, and linked YouTube channels to a json
-        file. Import them later to restore — even on a different device.
+        file. Import them later to restore everything, even on a different device.
       </p>
       <div className="embed-config-backup-buttons">
         <button

@@ -63,7 +63,7 @@ export default function GiveawayPanel({
     reveal,
   } = giveaway;
 
-  // Local 1s tick for the countdown display — scoped to this component
+  // Local 1s tick for the countdown display, scoped to this component
   // so ChatApp never re-renders for the giveaway clock.
   const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {

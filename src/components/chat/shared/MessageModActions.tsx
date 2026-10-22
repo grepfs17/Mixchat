@@ -26,10 +26,8 @@ const btnStyle: React.CSSProperties = {
 type PendingAction = "ban" | "timeout" | "warn" | "delete" | null;
 
 /**
- * Renders the moderator action buttons (delete / timeout / ban / warn)
- * inside a `message-actions` strip. Each handler is optional; missing
- * handlers simply skip their button. Used by both Twitch and YouTube
- * message rows so the buttons stay visually consistent.
+ * Moderator action buttons (delete / timeout / ban / warn). Missing
+ * handlers skip their button, shared by Twitch and YouTube message rows.
  */
 export function MessageModActions({
   onDelete,

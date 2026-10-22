@@ -129,7 +129,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     isOnOwnChannel = false,
   } = props;
 
-  // Reset YouTube connection when URL/video changes — intentional
+  // Reset YouTube connection when URL/video changes, intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (!linkedYoutubeUrl || !youtubeVideoId) {
@@ -231,14 +231,9 @@ export default function ChatApp(props: ChatAppStateProps) {
     enabled: showModTools,
   });
 
-  // Ingest new messages into the giveaway's entry buffer.
-  //
-  // The chat's `messages` array is capped at the user's max displayed
-  // messages and rolls over, so we cannot derive entries from it after the
-  // buffer rotates.
-  // Instead, the hook maintains its own buffer that survives the chat cap.
-  // Here we feed it each new chat message exactly once. We track which
-  // message ids have already been ingested so re-renders don't replay.
+  // Feed the giveaway's own buffer one message at a time. The chat window
+  // is capped and rotates, so entries can't be derived from it. Track ids
+  // to avoid replaying messages across re-renders.
   const ingestedIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (giveaway.phase !== "running") return;
@@ -264,23 +259,17 @@ export default function ChatApp(props: ChatAppStateProps) {
     }
   }, [giveaway.phase]);
 
-  // Song Queue: another stream of messages → server-side queue. The hook
-  // dedupes by message id internally, so we can call `ingestMessage` on
-  // every render without worry.
+  // Song Queue dedupes by message id internally, so ingesting every render
+  // is safe.
   const onSongError = useCallback(
     (msg: string) => setNotification({ message: msg, type: "error" }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
-  // Send a chat reply from the song queue (e.g. "song too long" notice).
-  // We use `sendHelixMessage` directly rather than the wrapper
-  // `handleSendMessage` because the wrapper keys replies off of a
-  // `replyingTo` state variable (not its `_replyToId` argument) and
-  // also calls `setReplyingTo(undefined)` + scroll-into-view + sets
-  // `isLoading` — all side-effects we don't want for an automated
-  // reply. The message is sent as the authenticated streamer either
-  // way.
+  // Use `sendHelixMessage` directly (not `handleSendMessage`) for automated
+  // replies: the wrapper relies on `replyingTo` state and triggers reply
+  // reset, scroll-into-view, and loading side effects we don't want.
   const onSongSendChat = useCallback(
     async (platform: "twitch" | "youtube", message: string, replyToMessageId: string) => {
       try {
@@ -318,7 +307,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           }
         }
       } catch (err) {
-        // Best-effort; the rejection is still visible in the streamer UI.
+        // Best-effort. The rejection is still visible in the streamer UI.
         console.warn("[song-queue] chat-send failed", err);
         showNotification(
           err instanceof Error
@@ -332,10 +321,8 @@ export default function ChatApp(props: ChatAppStateProps) {
     [selectedTwitchChannel, twitchSession?.userId, youtubeVideoId, showNotification],
   );
 
-  // Post a "now playing" announcement in chat when a new song starts and
-  // `announceOnPlay` is enabled. Sends to whichever platform(s) the
-  // streamer is actively streaming on; if the streamer is on both (e.g.
-  // Twitch + YouTube restream), it fans out to both.
+  // Announce a new song to every platform the streamer is live on (fans out
+  // to both when restreaming).
   const onSongAnnounce = useCallback(
     async (item: SongQueueItem) => {
       const videoUrl = `https://youtu.be/${item.videoId}`;
@@ -343,7 +330,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       const submitter = item.submitter?.author
         ? ` (added by @${item.submitter.author})`
         : "";
-      const message = `🎵 Now playing: ${item.title}${channelTitle}${submitter} — ${videoUrl}`;
+      const message = `🎵 Now playing: ${item.title}${channelTitle}${submitter} - ${videoUrl}`;
       const platforms: Platform[] = [];
       if (selectedTwitchChannel && twitchSession) platforms.push("twitch");
       if (youtubeVideoId && youtubeSession) platforms.push("youtube");
@@ -388,10 +375,8 @@ export default function ChatApp(props: ChatAppStateProps) {
   });
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
 
-  // Music Player is purely client-side (IndexedDB). The hook is always
-  // created (React hooks can't be conditional), but the visual components
-  // are only rendered when the user is on their own channel with streamer
-  // tools enabled.
+  // Client-side (IndexedDB) hook always runs. Visual components render only
+  // on the user's own channel with streamer tools enabled.
   const musicPlayer = useMusicPlayer();
   const musicHasItems =
     !!musicPlayer.activePlaylist &&

@@ -20,7 +20,7 @@ const YOUTUBE_CONFIG: TimeoutDialogConfig = {
   minSeconds: YOUTUBE_MIN_TIMEOUT_SECONDS,
   maxSeconds: YOUTUBE_MAX_TIMEOUT_SECONDS,
   formatDuration: formatTimeoutDuration,
-  subtitle: "This chat only — applies to the current live broadcast.",
+  subtitle: "This chat only. Applies to the current live broadcast.",
   defaultPresetIndex: 1, // 5 minutes
 };
 

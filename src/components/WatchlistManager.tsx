@@ -49,7 +49,6 @@ export default function WatchlistManager({
     setWatchedStreamers(getWatchedStreamers());
   };
 
-  // Close on Escape
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Escape") onClose();

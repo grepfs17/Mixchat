@@ -214,7 +214,7 @@ function SongQueueBarTitleButton({
           {current
             ? truncate(current.title, 50)
             : hasItems
-              ? "Ready — press play"
+              ? "Ready: press play"
               : "Waiting for the first song…"}
         </span>
         <span className="song-queue-bar-sub">

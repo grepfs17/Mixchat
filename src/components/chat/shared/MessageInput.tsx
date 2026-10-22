@@ -106,15 +106,15 @@ function pluralize(value: number, unit: string): string {
 
 function followerModeMessage(minutes: number): string {
   if (minutes === 0) {
-    return "⚠ Follower-only chat — follow this channel to send messages";
+    return "⚠ Follower-only chat: follow this channel to send messages";
   }
   if (minutes < 60) {
-    return `⚠ Follower-only chat — you must have followed for at least ${pluralize(minutes, "minute")}`;
+    return `⚠ Follower-only chat: you must have followed for at least ${pluralize(minutes, "minute")}`;
   }
   if (minutes < 1440) {
-    return `⚠ Follower-only chat — you must have followed for at least ${pluralize(Math.round(minutes / 60), "hour")}`;
+    return `⚠ Follower-only chat: you must have followed for at least ${pluralize(Math.round(minutes / 60), "hour")}`;
   }
-  return `⚠ Follower-only chat — you must have followed for at least ${pluralize(Math.round(minutes / 1440), "day")}`;
+  return `⚠ Follower-only chat: you must have followed for at least ${pluralize(Math.round(minutes / 1440), "day")}`;
 }
 
 interface FollowerModeWarningProps {

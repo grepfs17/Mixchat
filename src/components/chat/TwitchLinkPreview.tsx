@@ -6,14 +6,10 @@ import type { TwitchLinkPreviewResponse } from "../../pages/api/twitch-link-prev
 type Data = TwitchLinkPreviewResponse | null;
 
 /**
- * Inline Twitch preview card placed where a `twitch.tv/...` URL would
- * otherwise render as a tiny clickable link. Fetches metadata from
- * `/api/twitch-link-preview` once on mount and shows a skeleton until the
- * response arrives. If metadata is unreachable (not logged in, deleted
- * channel…) we silently fall back to a styled text link — the URL still
- * works, just without the card.
- *
- * Click anywhere on the card → opens the linked Twitch URL in a new tab.
+ * Inline preview card for a `twitch.tv/...` URL. Fetches metadata once on
+ * mount with a skeleton fallback. If metadata is unreachable (not logged in,
+ * deleted channel…), it silently renders a styled text link instead.
+ * Clicking the card opens the linked URL in a new tab.
  */
 function TwitchLinkPreviewBase({ url, parts }: { url: string; parts: TwitchLinkParts }) {
   const [data, setData] = useState<Data>(null);

@@ -20,9 +20,9 @@ import type {
 
 interface MusicPlayerPanelProps {
   player: UseMusicPlayerResult;
-  /** Current Twitch category id — used to auto-select a matching playlist. */
+  /** Current Twitch category id, used to auto-select a matching playlist. */
   streamGameId?: string;
-  /** Current Twitch category name — shown in the auto-select chip. */
+  /** Current Twitch category name, shown in the auto-select chip. */
   streamGameName?: string;
   /** Search Twitch categories (same API as the stream-info category picker). */
   onSearchCategories?: (
@@ -122,7 +122,7 @@ export default function MusicPlayerPanel({
   };
 
   // Auto-select playlist when the stream's category matches a playlist's
-  // categoryId. Runs once after hydration; does NOT start playback.
+  // categoryId. Runs once after hydration. Does NOT start playback.
   const autoSelectedRef = useRef(false);
   useEffect(() => {
     if (!hydrated || autoSelectedRef.current) return;
@@ -144,7 +144,7 @@ export default function MusicPlayerPanel({
     category.setResults([]);
   };
 
-  // Don't render anything — empty or otherwise — until IDB has hydrated.
+  // Don't render anything (empty or otherwise) until IDB has hydrated.
   // Otherwise we'd briefly show the empty state for users who have saved
   // playlists, which flashes confusingly.
   if (!hydrated) {
@@ -792,7 +792,7 @@ function MusicPlayerEmptyState({
             const trimmedName = name.trim() || "My playlist";
             const trimmedUrl = url.trim();
             // Create exactly one playlist. Use the returned id to direct
-            // the optional URL into the just-created list — no double
+            // the optional URL into the just-created list, no double
             // createPlaylist, no rAF dance, no stale-closure trap.
             const newPlaylist = onCreate(trimmedName);
             if (trimmedUrl) {

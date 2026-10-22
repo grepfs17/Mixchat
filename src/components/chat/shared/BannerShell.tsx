@@ -34,11 +34,8 @@ interface BannerShellProps {
 }
 
 /**
- * Shared shell for the four banner types (Celebration, HypeTrain, Poll,
- * Prediction). Owns the wrapper, header, close button, and footer slots.
- * Per-tone class names are kept on each element (e.g. `poll-banner`,
- * `poll-banner-header`) so the existing per-banner CSS continues to work
- * without a class-rename pass.
+ * Shared shell for Celebration, HypeTrain, Poll, and Prediction banners.
+ * Per-tone class names preserve the existing per-banner CSS.
  */
 export default function BannerShell({
   tone,

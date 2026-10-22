@@ -12,7 +12,7 @@ import { useAppModals } from "../hooks/app/useAppModals";
 import { useInitialLoading } from "../hooks/app/useInitialLoading";
 import { useChannelSelection } from "../hooks/app/useChannelSelection";
 import { IS_TWITCH_ONLY } from "../lib/constants";
-// storageMigration runs at import time — importing it triggers the migration.
+// storageMigration runs at import time, importing it triggers the migration.
 import "../lib/storageMigration";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import type { StreamTransitionInfo } from "./StreamGrid";
@@ -120,7 +120,6 @@ export default function AppContainer() {
     handleOnboardingComplete,
   } = useAppModals(sessions.twitch);
 
-  // Stream monitoring
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
   const { newLiveStreamer, clearNewNotification } = useStreamMonitor({
     session: sessions.twitch,
@@ -157,7 +156,7 @@ export default function AppContainer() {
     );
   }
 
-  // Not logged in and not loading — show the landing page
+  // Not logged in and not loading, show the landing page
   if (!isLoggingIn && !sessions.twitch) {
     return (
       <LandingPage onTwitchLogin={handleTwitchLogin} twitchOnly={IS_TWITCH_ONLY} />

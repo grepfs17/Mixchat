@@ -32,7 +32,7 @@ export interface YouTubeMessageContentProps {
     author: string,
     avatar?: string,
   ) => void;
-  /** When true, deleted messages are dimmed and clickable to reveal; otherwise they collapse. */
+  /** When true, deleted messages are dimmed and clickable to reveal. Otherwise they collapse. */
   showDeletedMessages?: boolean;
   /**
    * When true, render 7TV / BTTV / FFZ emote names in the message body as
@@ -111,11 +111,8 @@ function formatTimestamp(timestamp: Date | string) {
 }
 
 /**
- * Format the "Message deleted by @..." line. YouTube's
- * `deleted_state_message` already contains the full text in many cases
- * ("Message deleted by @mod", "Message removed by author", etc.), so we
- * trust it when present. Otherwise we fall back to "Message deleted by a
- * moderator" so we never regress to the bare "click to see..." line.
+ * Trust YouTube's `deleted_state_message` when present. Otherwise fall back
+ * to "Message deleted by a moderator" rather than a bare "click to see" line.
  */
 function formatDeletedByText(raw: string | undefined): string {
   const trimmed = (raw ?? "").trim();
@@ -124,12 +121,9 @@ function formatDeletedByText(raw: string | undefined): string {
 }
 
 /**
- * Re-walk each text part of a YouTube message and split it into
- * [text | twitch-link | text | ...] so YTMessageParts can mount a
- * TwitchLinkPreview inline next to the rest of the message body.
- *
- * Memoised on the input parts reference identity — if the message
- * re-renders without new parts, no recomputation.
+ * Split each text part into [text | twitch-link | text | ...] so
+ * YTMessageParts can render TwitchLinkPreview inline. Memoised on parts
+ * identity.
  */
 function expandPartsWithTwitchLinks(parts: MessagePart[]): MessagePart[] {
   const out: MessagePart[] = [];
@@ -611,10 +605,8 @@ export function YouTubeMessageContent({
   const [deletedRevealed, setDeletedRevealed] = useState(false);
   const config = getConfig(msg);
   const parityClass = index % 2 === 0 ? "even" : "odd";
-  // Split Twitch.tv URLs out of text parts so YTMessageParts can render
-  // preview cards next to the message body. The original `msg.parts`
-  // shape is preserved for messages without twitch URLs (memo hits the
-  // reference equality short-circuit).
+  // Split twitch.tv URLs out for inline previews. Messages without them
+  // keep the original parts reference and hit the memo short-circuit.
   const expandedParts = useMemo(
     () => expandPartsWithTwitchLinks(msg.parts),
     [msg.parts],

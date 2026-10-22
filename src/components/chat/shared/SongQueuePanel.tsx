@@ -48,7 +48,7 @@ function labelEligibility(e: SongQueueConfig["eligibility"]): string {
 }
 
 function formatDuration(sec: number): string {
-  if (!sec) return "—";
+  if (!sec) return "-";
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -99,7 +99,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
     return () => clearTimeout(t);
   }, [linkCopied]);
 
-  // Enforce the locked-in hard ceilings client-side; the server enforces
+  // Enforce the locked-in hard ceilings client-side. The server enforces
   // them again.
   const maxLen = Math.min(
     Math.max(1, config.maxQueueLength),
@@ -290,7 +290,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
             <p className="song-queue-hint">
               Tell your chatters to type{" "}
               <code>!songadd &lt;youtube link&gt;</code> in chat. Bare YouTube
-              links are ignored — the <code>!songadd</code> prefix is required.
+              links are ignored: the <code>!songadd</code> prefix is required.
             </p>
           </div>
         ) : (
@@ -311,7 +311,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
                   <span className="song-queue-item-sub">
                     <PlatformIcon platform={item.submitter.platform} />{" "}
                     {item.submitter.author} ·{" "}
-                    {item.durationSec ? formatDuration(item.durationSec) : "—"}
+                    {item.durationSec ? formatDuration(item.durationSec) : "-"}
                   </span>
                 </div>
                 <div className="song-queue-item-actions">

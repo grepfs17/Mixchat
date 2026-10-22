@@ -667,16 +667,10 @@ export const TwitchMessageContent = memo(
 );
 
 /**
- * Renders a Twitch chat message body with rich preview cards swapped in
- * wherever a `twitch.tv/...` URL appears. Text segments between URLs are
- * still parsed via the existing emote+link pipeline so Twitch emotes,
- * third-party emotes, mentions, links and Twemoji all behave exactly as
- * before. Emote character ranges live in absolute coordinates within
- * `content`, so we re-base them for each text segment.
- *
- * Memoised with content/emote-key identity — React reconciliation handles
- * new messages, edits, and message-removal as the parent passes new data;
- * within a single message the segments are stable for its lifetime.
+ * Renders a Twitch message body with preview cards for `twitch.tv/...`
+ * URLs. Surrounding text keeps the normal emote/link pipeline. Emote
+ * ranges use absolute offsets in `content`, so each segment re-bases them.
+ * Memoised on content/emote identity.
  */
 function TwitchMessageTextBase({
   content,
@@ -737,10 +731,8 @@ function TwitchMessageTextBase({
     );
   }
 
-  // Quick path: no Twitch URLs in the message. The original logic used
-  // `dangerouslySetInnerHTML` once for emotes + unicode emoji + general
-  // link wrapping. We keep that exact behaviour here to avoid behavioural
-  // changes for messages without a twitch URL.
+  // Quick path: no Twitch URLs, keep the original single-shot
+  // dangerouslySetInnerHTML emote/link pipeline unchanged.
   if (!hasTwitchLinks && html !== null) {
     return (
       <span
@@ -766,10 +758,9 @@ function TwitchMessageTextBase({
 }
 
 /**
- * Memoised renderer for one segment of a Twitch message body. Pulled out of
- * `TwitchMessageText` so each segment's `parseMessageWithEmotes` call (and
- * the DOMPurify pass it triggers) only re-runs when this segment's text or
- * the re-based emote offsets actually change.
+ * Memoised renderer for one Twitch message segment, so its
+ * parseMessageWithEmotes/DOMPurify pass only re-runs when the text or
+ * re-based emote offsets change.
  */
 function TwitchMessageTextSegmentBase({
   segment,
@@ -782,9 +773,8 @@ function TwitchMessageTextSegmentBase({
   gigantified?: boolean;
   mentionColors?: Map<string, string>;
 }) {
-  // Compute the emote rebase and the parsed HTML unconditionally so the
-  // hooks order stays stable across renders regardless of segment type.
-  // Twitch-link segments skip the parseMessageWithEmotes call.
+  // Compute unconditionally to keep hook order stable. Twitch-link
+  // segments skip parseMessageWithEmotes.
   const isTwitchLink = segment.type === "twitch-link";
   const segEmotes = isTwitchLink
     ? undefined

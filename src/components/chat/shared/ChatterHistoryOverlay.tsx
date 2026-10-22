@@ -119,7 +119,6 @@ export default function ChatterHistoryOverlay({
   useEffect(() => {
     if (loading) return;
 
-    // Try to find it in history first (non-empty ID)
     const idFromHistory = history.find(
       (m) => m.userId && m.userId !== "system",
     )?.userId;
@@ -131,7 +130,6 @@ export default function ChatterHistoryOverlay({
       return;
     }
 
-    // If not found and we are on Twitch, resolve it via API
     if (platform === "twitch") {
       console.log(`[ChatterHistory] Resolving userId via API for ${author}...`);
       resolveBroadcasterId(author).then((id) => {
@@ -236,7 +234,6 @@ export default function ChatterHistoryOverlay({
 
   return (
     <div ref={overlayRef} className="chatter-history-overlay">
-      {/* Header */}
       <div className="history-header">
         <div className="history-header-info">
           {authorAvatar ? (
@@ -288,7 +285,6 @@ export default function ChatterHistoryOverlay({
         </div>
       </div>
 
-      {/* Moderation Toolbar */}
       {canModerate && (platform === "twitch" || platform === "youtube") && (
         <div className="moderation-toolbar">
           <span className="mod-label">MOD:</span>
@@ -342,7 +338,6 @@ export default function ChatterHistoryOverlay({
         </div>
       )}
 
-      {/* History List */}
       <div ref={scrollRef} className="history-list custom-scrollbar">
         {loading ? (
           <div className="history-empty-state">Loading session log...</div>
@@ -398,7 +393,6 @@ export default function ChatterHistoryOverlay({
         )}
       </div>
 
-      {/* Footer */}
       <div className="history-footer">
         <span>Session logs (48h)</span>
         <span>{history.length} messages</span>

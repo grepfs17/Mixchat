@@ -16,10 +16,8 @@ interface PollBannerProps {
 const ENDED_STATUSES = new Set(["completed", "archived", "terminated"]);
 
 /**
- * Display-mode poll banner. Renders choices with vote bars; once a
- * choice wins (status flips to completed/archived/terminated), it gets
- * a green ring. Self-dismisses 5s after the timer expires (when the
- * poll is still active) or 8s after the status flips to ended.
+ * Display-mode poll banner with vote bars. The winning choice gets a
+ * green ring. Self-dismisses 5s after timer expiry or 8s after ending.
  */
 export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
   const isEnded = poll.status !== undefined && ENDED_STATUSES.has(poll.status);

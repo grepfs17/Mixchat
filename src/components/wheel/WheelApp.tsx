@@ -605,7 +605,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         try {
           applyTheme(theme);
         } catch {
-          // Unknown theme — keep defaults.
+          // Unknown theme, keep defaults.
         }
       }
       const params = new URLSearchParams(window.location.search);
@@ -878,7 +878,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const copyHistory = useCallback(async () => {
     if (history.length === 0) return;
-    const text = history.map((h) => `${h.time} — ${h.name}`).join("\n");
+    const text = history.map((h) => `${h.time} - ${h.name}`).join("\n");
     try {
       await navigator.clipboard.writeText(text);
       showToast("History copied");
