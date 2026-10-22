@@ -1,4 +1,4 @@
-# Mixchat — AI Agent Guide
+# Mixchat: AI Agent Guide
 
 ## Overview
 
@@ -6,7 +6,7 @@
 - Complete tech specs and file structure on SPEC.md
 
 ## Operating principles
-- Working code only. Plausibility is not correctness; verify before reporting done.
+- Working code only. Plausibility is not correctness. Verify before reporting done.
 - Never fabricate file paths, APIs, commit hashes, command output, or test results. Read the file, run the command, or say what is unknown.
 - Say when a premise appears wrong before implementing around it.
 - Ask before proceeding only when a request has multiple plausible interpretations and the choice materially affects the result.
