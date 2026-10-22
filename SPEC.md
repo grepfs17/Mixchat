@@ -39,7 +39,7 @@ mixchat/
 │   │   │   └── ThemeMascots.tsx
 │   │   ├── dev/             # Dev-only components (chat styling gallery)
 │   │   ├── wheel/           # Wheel Spin tool (canvas wheel, options, history, manager)
-│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals)
+│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals, loading screen)
 │   │   ├── AppContainer.tsx # Root app component (orchestrates hooks, delegates layout to app/)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
@@ -110,7 +110,7 @@ mixchat/
 
 ### 2. Component Architecture
 
-- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks.
+- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals, LoadingScreen), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks. The initial LoadingScreen renders real stages (session restore, token refresh, followed-channel fetch) with a progress bar instead of a generic spinner.
 - **ChatApp** is the central chat component receiving all settings as props and delegating to individual chat panels, banners, and modal overlays.
 - All `useXxx` hooks are self-contained custom hooks that own their state, effects, and derived values.
 

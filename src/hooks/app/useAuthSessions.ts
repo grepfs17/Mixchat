@@ -160,6 +160,7 @@ export type UseAuthSessionsResult = {
   sessions: AuthSessions;
   isLoggingIn: boolean;
   isLoading: boolean;
+  isRestoringSession: boolean;
   setIsLoading: (value: boolean) => void;
   twitchLogin: () => void;
   twitchLogout: () => void;
@@ -176,6 +177,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
   const [sessions, setSessions] = useState<AuthSessions>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [twitchDevice, setTwitchDevice] = useState<TwitchDeviceState | null>(
     null,
   );
@@ -394,6 +396,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     } else {
       setIsLoading(false);
     }
+    setIsRestoringSession(false);
   }, []);
 
   /**
@@ -731,6 +734,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     sessions,
     isLoggingIn,
     isLoading,
+    isRestoringSession,
     setIsLoading,
     twitchLogin,
     twitchLogout,
