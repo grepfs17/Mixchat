@@ -114,47 +114,140 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 height: 100vh; /* fallback */
                 height: 100dvh; /* adjusts to visual viewport so keyboard doesn't hide chat input */
                 padding: 0;
-                padding-bottom: 30px;
+                padding-bottom: 34px;
                 background: var(--color-bg-primary);
                 overflow: hidden;
             }
 
-            footer {
+            .app-footer {
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 right: 0;
-                border-top: 1px solid var(--color-border-medium);
-                padding: 6px 20px;
-                background: var(--color-bg-primary);
-                font-size: 12px;
-                color: var(--color-text-secondary);
-                text-align: center;
                 z-index: 100;
-                height: 30px;
-                box-sizing: border-box;
+                height: 34px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 12px;
+                padding: 0 20px;
+                border-top: 1px solid
+                    color-mix(
+                        in srgb,
+                        var(--color-border-medium) 75%,
+                        transparent
+                    );
+                background: var(--color-bg-primary);
+                background: color-mix(
+                    in srgb,
+                    var(--color-bg-primary) 88%,
+                    transparent
+                );
+                backdrop-filter: blur(14px) saturate(140%);
+                -webkit-backdrop-filter: blur(14px) saturate(140%);
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.22);
             }
 
-            footer a {
-                color: var(--color-accent);
+            .app-footer__inner {
+                width: 100%;
+                max-width: 1180px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+            }
+
+            .app-footer__brand,
+            .app-footer__legal,
+            .app-footer__actions {
+                display: flex;
+                align-items: center;
+            }
+
+            .app-footer__brand {
+                gap: 4px;
+                font-size: 11px;
+                color: var(--color-text-muted);
+                white-space: nowrap;
+            }
+
+            .app-footer a {
+                color: var(--color-text-secondary);
                 text-decoration: none;
-                margin: 0 12px;
+                transition:
+                    color 0.15s ease,
+                    background 0.15s ease,
+                    border-color 0.15s ease;
             }
 
-            footer a:hover {
-                text-decoration: underline;
+            .app-footer a:hover,
+            .app-footer a:focus-visible {
+                color: var(--color-text-primary);
             }
 
-            footer a.kofi-link {
-                color: #ff5f5f;
+            .app-footer__legal {
+                gap: 2px;
             }
 
-            footer a.tce-link {
-                color: #db9802;
+            .app-footer__legal a {
+                padding: 3px 7px;
+                border-radius: var(--radius-pill);
+                font-size: 11px;
+            }
+
+            .app-footer__legal a:hover,
+            .app-footer__legal a:focus-visible {
+                background: var(--color-bg-hover);
+            }
+
+            .app-footer__actions {
+                gap: 6px;
+            }
+
+            .app-footer__chip {
+                display: inline-flex;
+                align-items: center;
+                padding: 3px 8px;
+                border: 1px solid var(--color-border-medium);
+                border-radius: var(--radius-pill);
+                background: var(--color-bg-secondary);
+                font-size: 10.5px;
+                font-weight: 600;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            .app-footer__chip:hover,
+            .app-footer__chip:focus-visible {
+                border-color: var(--color-accent);
+                background: var(--color-bg-hover);
+            }
+
+            .app-footer__chip--kofi {
+                color: #ff8a8a;
+                border-color: color-mix(
+                    in srgb,
+                    #ff5f5f 35%,
+                    var(--color-border-medium)
+                );
+            }
+
+            .app-footer__chip--clips {
+                color: #f0b74a;
+                border-color: color-mix(
+                    in srgb,
+                    #db9802 35%,
+                    var(--color-border-medium)
+                );
+            }
+
+            .app-footer__version {
+                padding: 2px 5px;
+                border-radius: var(--radius-sm);
+                background: var(--color-bg-tertiary);
+                color: var(--color-text-muted);
+                font-size: 9.5px;
+                font-variant-numeric: tabular-nums;
+                letter-spacing: 0.04em;
             }
 
             /* Only the look lives here. The position/inset/z-index are set inline on
@@ -187,6 +280,21 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 border-color: var(--color-accent);
             }
 
+            @media (max-width: 900px) {
+                .app-footer {
+                    padding: 0 12px;
+                }
+
+                .app-footer__brand,
+                .app-footer__version {
+                    display: none;
+                }
+
+                .app-footer__inner {
+                    justify-content: center;
+                }
+            }
+
             @media (max-width: 768px) {
                 #app {
                     position: fixed;
@@ -199,7 +307,7 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                     overflow: hidden;
                 }
 
-                footer {
+                .app-footer {
                     display: none;
                 }
             }
@@ -210,43 +318,53 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
         <div id="app">
             <AppContainer client:load />
         </div>
-        <footer>
-            <a href="/privacy">Privacy</a>
-            <a href="/terms">Terms</a>
+        <footer class="app-footer">
+            <div class="app-footer__inner">
+                <span class="app-footer__brand">
+                    © 2026 Mixchat by{" "}
+                    <a
+                        href="https://forgejo.grepfs.xyz/grepfs17/Mixchat"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        grepfs17
+                    </a>
+                </span>
 
-            <span>
-                © 2026 Mixchat by{" "}
-                <a
-                    href="https://forgejo.grepfs.xyz/grepfs17/Mixchat"
-                    target="_blank"
-                >
-                    grepfs17
-                </a>{" "}
-                - Licensed under{" "}
-                <a
-                    href="https://www.gnu.org/licenses/agpl-3.0.html"
-                    target="_blank"
-                >
-                    AGPL-3.0
-                </a>{" "}
-                - {DISPLAY_VERSION} -{" "}
-                <a
-                    class="kofi-link"
-                    href="https://ko-fi.com/masterofhollows"
-                    target="_blank"
-                    title="If you want to support the project"
-                >
-                    Suport the project on Ko-fi
-                </a>{" "}
-                -{" "}
-                <a
-                    class="tce-link"
-                    href="https://twitchclipexplorer.grepfs.xyz/"
-                    target="_blank"
-                >
-                    Twitch Clip Explorer
-                </a>
-            </span>
+                <nav class="app-footer__legal" aria-label="Legal">
+                    <a href="/privacy">Privacy</a>
+                    <a href="/terms">Terms</a>
+                    <a
+                        href="https://www.gnu.org/licenses/agpl-3.0.html"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="GNU Affero General Public License v3.0"
+                    >
+                        AGPL-3.0
+                    </a>
+                </nav>
+
+                <div class="app-footer__actions">
+                    <a
+                        class="app-footer__chip app-footer__chip--kofi"
+                        href="https://ko-fi.com/masterofhollows"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Support the project on Ko-fi"
+                    >
+                        Ko-fi
+                    </a>
+                    <a
+                        class="app-footer__chip app-footer__chip--clips"
+                        href="https://twitchclipexplorer.grepfs.xyz/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Clip Explorer
+                    </a>
+                    <span class="app-footer__version">{DISPLAY_VERSION}</span>
+                </div>
+            </div>
         </footer>
         {showDevPreview && (
             <a
@@ -255,7 +373,7 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open the dev chat styling preview in a new tab"
-                style="position:fixed;right:16px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));z-index:999999"
+                style="position:fixed;right:16px;bottom:calc(42px + env(safe-area-inset-bottom, 0px));z-index:999999"
             >
                 Dev preview
             </a>
