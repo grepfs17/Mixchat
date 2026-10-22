@@ -6,7 +6,7 @@ export default function StreamAuthBadge({ authenticated }: StreamAuthBadgeProps)
   return (
     <div
       className={`stream-auth-badge${authenticated ? "" : " stream-auth-badge--guest"}`}
-      title={authenticated ? "Stream authenticated — ads skipped for subscribers" : "Not authenticated — stream may include ads"}
+      title={authenticated ? "Stream authenticated: ads skipped for subscribers" : "Not authenticated: stream may include ads"}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         {authenticated ? (

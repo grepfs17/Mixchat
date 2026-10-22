@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
  * on both popup-based and full-page redirect OAuth flows.
  *
  * Query params:
- *   ?flow=drive  — optional; when present the state is suffixed with ":drive"
+ *   ?flow=drive  - optional. When present, the state is suffixed with ":drive"
  *                  so the YouTube callback can distinguish YouTube vs Drive
  *                  OAuth flows.
  */

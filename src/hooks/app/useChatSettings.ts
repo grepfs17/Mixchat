@@ -100,7 +100,7 @@ export type UseChatSettingsResult = {
 };
 
 export function useChatSettings(): UseChatSettingsResult {
-  // Embed default open is the persisted preference; the runtime embed-visible
+  // Embed default open is the persisted preference. The runtime embed-visible
   // toggle is initialised from it on first render and then lives independently.
   const [embedDefaultOpen, setEmbedDefaultOpen] = useLocalStorageState<boolean>(
     "mixchat_embed_default_open",
@@ -112,7 +112,7 @@ export function useChatSettings(): UseChatSettingsResult {
     useLocalStorageState<boolean>("mixchat_unify_chat", true);
   const [useYoutubeEmbed, setUseYoutubeEmbedRaw] =
     useLocalStorageState<boolean>("mixchat_use_youtube_embed", true);
-  // unifyChat and youtubeEmbed are mutually exclusive — turning one on forces
+  // unifyChat and youtubeEmbed are mutually exclusive. Turning one on forces
   // the other off so the user can't end up with conflicting embed modes.
   const setUnifyChatEnabled = useCallback((value: boolean) => {
     setUnifyChatEnabledRaw(value);
@@ -241,7 +241,6 @@ export function useChatSettings(): UseChatSettingsResult {
       "default",
     );
 
-  // Apply theme to document whenever it changes.
   useEffect(() => {
     applyTheme(chatTheme);
   }, [chatTheme]);
@@ -268,10 +267,8 @@ export function useChatSettings(): UseChatSettingsResult {
     [setModModeTargets],
   );
 
-  // Memoize the entire settings object so the SettingsContext value reference
-  // is stable across AppContainer re-renders that don't change settings. This
-  // prevents every context consumer from re-rendering on unrelated state changes
-  // (e.g. viewer count polls, sidebar toggles).
+  // Stable context value so unrelated AppContainer re-renders (viewer polls,
+  // sidebar toggles) don't re-render every settings consumer.
   return useMemo(
     () => ({
     embedDefaultOpen,

@@ -25,8 +25,8 @@ export interface YTMessagePart {
 interface YTMessagePartsProps {
   parts: YTMessagePart[];
   /**
-   * - `'unified'` used inside UnifiedChat; emoji get `chat-emote` class.
-   * - `'standalone'` used inside YouTubeChat; emoji get `yt-emoji` class.
+   * - `'unified'` used inside UnifiedChat. Emoji get `chat-emote` class.
+   * - `'standalone'` used inside YouTubeChat. Emoji get `yt-emoji` class.
    */
   variant?: "unified" | "standalone";
   /**
@@ -45,11 +45,10 @@ const emoteImgStyle: React.CSSProperties = {
 };
 
 /**
- * Resolve a set of BTTV / FFZ modifier effects into the wrapper class, image
- * style and wrapper style a React emote should render with. Geometry effects
- * use the image's inline style; filter/motion effects use a `.emote-mod`
- * wrapper so an animation cannot clobber the inline transform. The `slide`
- * effect renders the emote as a repeating background on the wrapper.
+ * Resolve BTTV/FFZ modifier effects into classes and styles. Geometry uses
+ * the image's inline style. Filter/motion use a `.emote-mod` wrapper so
+ * animations can't clobber the transform. `slide` renders a repeating
+ * background on the wrapper.
  */
 function resolveEffectStyle(
   effects: EmoteEffect[] | undefined,
@@ -99,24 +98,19 @@ function resolveEffectStyle(
 }
 
 /**
- * Quick test used to skip the split+walk when a text part contains no
- * URL-shaped words. Conservative (may return true more often than needed)
- * but must never return false for a word `parseUrlWord` would linkify.
+ * Skips the split+walk when text has no URL-shaped words. May over-match,
+ * but must never miss a word `parseUrlWord` would linkify.
  */
 const URL_DETECT_REGEX = /(^|\s)(https?:\/\/|www\.)/i;
 
 /**
- * Renders plain text, converting any Unicode emoji into Twemoji <img> markup
- * at render time.
+ * Renders plain text with Unicode emoji converted to Twemoji <img> markup.
  *
- * The emoji are intentionally NOT post-processed by mutating the mounted
- * DOM: running twemoji.parse on a React-rendered node replaces React-created
- * text nodes behind React's back, so the next re-render of that node makes
- * ReactDOM throw `NotFoundError: Failed to execute 'insertBefore' on 'Node':
- * The node before which the new node is to be inserted is not a child of
- * this node`. Instead the escaped string is handed to React as static markup
- * through dangerouslySetInnerHTML (never diffed afterwards) — the same
- * approach the Twitch HTML message renderer already uses.
+ * Emoji are NOT post-processed by mutating the mounted DOM: twemoji.parse
+ * replaces React-created text nodes, so the next re-render throws
+ * `NotFoundError: ... insertBefore ... is not a child of this node`. Instead
+ * the escaped string is passed as static markup via dangerouslySetInnerHTML
+ * (never diffed), matching the Twitch HTML renderer.
  */
 function EmojiText({ text }: { text: string }) {
   // twemoji.parse leaves a string untouched when it contains no emoji, so
@@ -129,9 +123,8 @@ function EmojiText({ text }: { text: string }) {
 }
 
 /**
- * Renders a single whitespace-delimited word as a clickable link when it is
- * an http(s):// or www. URL, otherwise as plain text. Shared by the plain
- * and third-party-emote rendering paths so both linkify identically.
+ * Renders a word as an http(s):// or www. link, otherwise plain text.
+ * Shared by both rendering paths so they linkify identically.
  */
 function LinkifiedWord({ word }: { word: string }) {
   const href = parseUrlWord(word);
@@ -222,15 +215,11 @@ export default function YTMessageParts({
   variant = "standalone",
   renderThirdPartyEmotes = false,
 }: YTMessagePartsProps) {
-  // Subscribe to the emote map version so the memo invalidates as soon as the
-  // underlying 7TV/BTTV/FFZ/Twitch maps change. `useEmoteMapVersion` is
-  // implemented with `useSyncExternalStore` against the `emotes-reloaded`
-  // event so it re-renders exactly when the version bumps, no manual counter
-  // required.
+  // Subscribe to emote map changes so the memo invalidates when
+  // 7TV/BTTV/FFZ/Twitch maps reload.
   const emoteVersion = useEmoteMapVersion();
-  // Cache the disabled-emote set; refreshed only when `emotes-reloaded` fires
-  // (which `toggleDisableEmote` already does) or when another tab updates
-  // the same localStorage key.
+  // Cached disabled-emote set, refreshed on `emotes-reloaded` and cross-tab
+  // localStorage updates.
   const disabledEmotes = useDisabledEmotes();
 
   const renderText = useCallback(
@@ -260,7 +249,7 @@ export default function YTMessageParts({
       if (tokens.length === 0)
         return <React.Fragment key={key}>{text}</React.Fragment>;
       const out: React.ReactNode[] = [];
-      // The tokenizer splits on whitespace and skips empty words; we restore
+      // The tokenizer splits on whitespace and skips empty words. We restore
       // a single space between non-empty tokens to match the original text.
       let needSpace = false;
       for (let i = 0; i < tokens.length; i++) {
@@ -296,11 +285,8 @@ export default function YTMessageParts({
           const url = part.twitchUrl || part.text || "";
           const parsed = parseTwitchUrl(url);
           if (!parsed) {
-            // Defensive fallback: render as plain text link if the URL
-            // somehow can't be classified at render time. Real chat
-            // messages never produce this branch (parts only become
-            // 'twitch-link' after a successful parseTwitchUrl in
-            // expandPartsWithTwitchLinks).
+            // Defensive fallback: parts only become 'twitch-link' after a
+            // successful parseTwitchUrl, so this branch shouldn't occur.
             return (
               <a
                 key={`tw-${i}`}
@@ -352,9 +338,8 @@ export default function YTMessageParts({
             />
           );
         }
-        // Stable position-based key for text parts. Parts never reorder
-        // within a message, so a namespaced index is unique per item and
-        // avoids the raw-index anti-pattern.
+        // Parts never reorder within a message, so a namespaced index is a
+        // stable key.
         return renderText(part.text ?? "", `t-${i}`);
       }),
     [parts, variant, renderText],

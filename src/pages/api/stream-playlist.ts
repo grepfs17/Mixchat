@@ -1,15 +1,14 @@
 import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-// Use configured client id, or fall back to Streamlink's public client id.
-// The public client id is used by many clients and is safe for playback token
-// requests when no private client id is provided.
 function qualityRank(label: string): number {
   if (label === "audio_only") return -1;
   const match = label.match(/^(\d+)p/);
   return match ? parseInt(match[1], 10) : 0;
 }
 
+// Fall back to Streamlink's public client id, which is safe for playback
+// token requests when no private client id is configured.
 const GQL_CLIENT_ID =
   import.meta.env.TWITCH_GQL_CLIENT_ID ?? "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
@@ -129,9 +128,9 @@ async function fetchMasterPlaylist(
 
   if (oauthToken) {
     usherParams.set("oauth_token", oauthToken);
-    console.log("[hls:server] Passing oauth_token to usher — ads will be skipped for subscribers/Turbo (channel:", channel, ")");
+    console.log("[hls:server] Passing oauth_token to usher. Ads will be skipped for subscribers/Turbo (channel:", channel, ")");
   } else {
-    console.log("[hls:server] No oauth_token available — stream may include ads (channel:", channel, ")");
+    console.log("[hls:server] No oauth_token available. The stream may include ads (channel:", channel, ")");
   }
 
   const usherUrl = `https://usher.ttvnw.net/api/channel/hls/${encodeURIComponent(channel)}.m3u8?${usherParams}`;
@@ -152,7 +151,6 @@ function parseMasterPlaylist(
 ): Array<{ label: string; url: string }> {
   const lines = masterText.split("\n");
 
-  // Build GROUP-ID → display name map
   const nameMap = new Map<string, string>();
   for (const line of lines) {
     if (line.startsWith("#EXT-X-MEDIA:TYPE=VIDEO")) {
@@ -162,7 +160,6 @@ function parseMasterPlaylist(
     }
   }
 
-  // Pair each #EXT-X-STREAM-INF with its variant URL
   const qualities: Array<{ label: string; url: string }> = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].startsWith("#EXT-X-STREAM-INF:")) {
@@ -171,7 +168,7 @@ function parseMasterPlaylist(
       if (variantUrl?.startsWith("http")) {
         const label =
           (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
-        // Route through server-side proxy — *.playlist.ttvnw.net URLs are IP-locked.
+        // Route through server-side proxy. *.playlist.ttvnw.net URLs are IP-locked.
         const proxied = `/api/hls-proxy?url=${encodeURIComponent(variantUrl)}`;
         qualities.push({ label, url: proxied });
       }

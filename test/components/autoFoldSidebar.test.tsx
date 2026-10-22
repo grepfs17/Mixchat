@@ -52,7 +52,7 @@ function AutoFoldHarness({
   );
 }
 
-describe("autoFoldSidebar — reload guard (useRef + useEffect)", () => {
+describe("autoFoldSidebar: reload guard (useRef + useEffect)", () => {
   beforeEach(() => {
     localStorage.clear();
   });

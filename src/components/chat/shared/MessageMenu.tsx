@@ -392,7 +392,7 @@ export default function MessageMenu({
   // so it can never cover the input row.
   if (isMobile) {
     // Anchor to the bottom-most input on screen so the sheet never covers
-    // any input row; fall back to a 64px placeholder when none is found.
+    // any input row. Fall back to a 64px placeholder when none is found.
     let inputTop = window.innerHeight - 64;
     let lowestBottom = -1;
     document

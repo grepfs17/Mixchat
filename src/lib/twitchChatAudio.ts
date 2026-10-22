@@ -11,7 +11,7 @@ export const MENTION_SOUND_OPTIONS: {
   { value: "ping", label: "Ping" },
 ];
 
-// Single shared AudioContext — reusing it avoids the browser suspending a
+// Single shared AudioContext. Reusing it avoids the browser suspending a
 // freshly-created context that has no prior user-gesture association.
 let sharedAudioCtx: AudioContext | null = null;
 

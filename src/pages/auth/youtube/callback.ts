@@ -25,7 +25,6 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     return new Response("Authorization code not found", { status: 400 });
   }
 
-  // Require the state parameter to be present on every callback request.
   if (!returnedState) {
     return new Response("Missing state parameter", { status: 400 });
   }
@@ -50,7 +49,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       { status: 403, headers: { "Content-Type": "text/html" } },
     );
   }
-  // State is valid — consume it now so it can't be replayed.
+  // State is valid. Consume it now so it can't be replayed.
   cookies.delete("oauth_state", { path: "/" });
 
   try {
@@ -153,7 +152,6 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       );
     }
 
-    // --- YouTube flow: existing behavior ---
     const user = await getYoutubeUser(tokenData.access_token);
 
     // Store token in secure cookie. Align settings with the refresh endpoint
@@ -176,9 +174,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       });
     }
 
-    // Safely serialize all values with JSON.stringify so that special characters
-    // (quotes, backslashes, newlines, etc.) in any user-controlled field can never
-    // break out of the JavaScript context and execute arbitrary code.
+    // Serialize user-controlled fields so they can't break out of the JS context.
     const sessionPayload = JSON.stringify({
       platform: "youtube",
       userId: user.userId,
@@ -194,10 +190,8 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000,
       timestamp: Date.now(),
     });
-    // Double-stringify for safe JS embedding: the outer JSON.stringify wraps the
-    // JSON string in JS string-literal quotes, escaping all special characters.
-    // The extra replace guards against </script> sequences that would terminate
-
+    // Double-stringify so the payload becomes a safely escaped JS string
+    // literal. The replace guards against </script> sequences.
     const sessionPayloadJson = JSON.stringify(sessionPayload).replace(
       /</g,
       "\\u003c",
@@ -236,7 +230,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     } catch (e) { /* opener may be cross-origin or inaccessible */ }
 
     if (!expectedState) {
-      // Fallback: redirect flow — state lives in this window's sessionStorage.
+      // Fallback: redirect flow. State lives in this window's sessionStorage.
       expectedState = sessionStorage.getItem('youtube_oauth_state');
       sessionStorage.removeItem('youtube_oauth_state');
     }
@@ -264,8 +258,6 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     // and also via a dedicated localStorage key as a reliable fallback.
     // Some browsers null out window.opener after cross-origin navigation.
     try {
-      // Strip the access token and refresh token before writing to
-      // localStorage — they belong only in httpOnly cookies.
       var persistedYT = Object.assign({}, session);
       delete persistedYT.accessToken;
       delete persistedYT.refreshToken;
@@ -278,7 +270,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       }
     } catch (e) { /* cross-origin opener */ }
 
-    // Close the popup if we were opened as one; otherwise do a full redirect.
+    // Close the popup if we were opened as one. Otherwise, do a full redirect.
     if (window.opener) {
       try { window.close(); } catch (e) {}
       // fallback redirect in case close() is blocked

@@ -5,19 +5,16 @@ import {
   useRef,
   useState,
 } from "react";
-// Minimal shape any item stream must satisfy. Both `SongQueueItem` and
-// `MusicPlayerItem` structurally satisfy this — we only read `id` and
-// `videoId` inside the component.
+// Minimal shape shared by `SongQueueItem` and `MusicPlayerItem`. The
+// component only reads `id` and `videoId`.
 export interface SongQueuePlayerItem {
   id: string;
   videoId: string;
 }
 
 /**
- * Shape of `window.YT.Player` we use. The IFrame Player API is loaded
- * asynchronously, so we keep the type loose and use `any` at the call site
- * where we read its methods. Tests inject a fake `window.YT` so we can
- * assert calls without a network round-trip.
+ * Shape of `window.YT.Player` we use. The IFrame API loads asynchronously,
+ * so the type stays loose. Tests inject a fake `window.YT`.
  */
 interface YTPlayer {
   loadVideoById(videoId: string): void;
@@ -103,13 +100,9 @@ interface SongQueuePlayerProps {
 }
 
 /**
- * Load the YouTube IFrame Player API once per page.
- *
- * The IFrame API exposes `window.onYouTubeIframeAPIReady` exactly once,
- * even when multiple components wait for it. We poll for `window.YT.Player`
- * to also cover the case where the script was already loaded by a previous
- * mount of this component (or by the public Astro page on the same origin)
- * and the `load` event has already fired by the time we attach a listener.
+ * Load the YouTube IFrame Player API once per page. Poll for
+ * `window.YT.Player` to cover scripts already loaded by a previous mount
+ * (or the public Astro page) whose `load` event already fired.
  */
 function loadIFrameAPI(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
@@ -206,23 +199,15 @@ const SongQueuePlayerInner = (
   const lastItemsKeyRef = useRef<string>("");
   const lastIndexRef = useRef<number>(-1);
   const lastStateRef = useRef<SongQueuePlayerState>("unstarted");
-  // Track the videoId that is currently loaded in the player so we can
-  // avoid calling loadVideoById when the items array changes but the
+  // Track the loaded videoId to avoid reloading when items change but the
   // current song hasn't.
   const lastVideoIdRef = useRef<string>("");
-  // True once we've called new YT.Player(...). Used to gate the mount
-  // effect so the player is only created once a valid videoId is
-  // available (creating it with undefined puts the IFrame in a broken
-  // state — loadPlaylist later throws "Invalid video id" and the iframe
-  // goes black until reload).
+  // Gate the mount effect: creating a player with videoId undefined breaks
+  // the iframe ("Invalid video id" until reload), so wait for a valid id.
   const createdRef = useRef(false);
-  // Set to true right after loadPlaylist is called; the onStateChange
-  // callback clears it and calls playVideo() once the player reports
-  // CUED or BUFFERING (i.e. the playlist is loaded enough to start).
+  // Cleared by onStateChange. playVideo() fires once CUED/BUFFERING.
   const pendingPlayRef = useRef(false);
-  // Refs to the latest callback props. The mount effect captures these
-  // once so the player isn't destroyed and recreated every render (the
-  // bar passes inline lambdas that get new references on each render).
+  // Latest callback props, so inline lambdas don't recreate the player.
   const onAdvanceRef = useRef(onAdvance);
   const onDurationKnownRef = useRef(onDurationKnown);
   const onReadyRef = useRef(onReady);
@@ -290,11 +275,8 @@ const SongQueuePlayerInner = (
     [],
   );
 
-  // Mount the player once we have a valid videoId. The YouTube IFrame API
-  // breaks if you create a player with videoId: undefined and then call
-  // loadPlaylist later — the iframe goes black and throws "Invalid video
-  // id" until the page is reloaded. So we wait for the first item before
-  // instantiating the player.
+  // Creating a player with videoId undefined breaks later loadVideoById
+  // calls, so wait for the first item before instantiating.
   const initialVideoId = items[currentIndex]?.videoId;
   useEffect(() => {
     if (!containerRef.current) return;
@@ -337,11 +319,8 @@ const SongQueuePlayerInner = (
                 if (current) onDurationKnownRef.current?.(current.id, dur);
               }
             }
-            // Deferred play: after loadPlaylist, the player transitions
-            // through CUED/BUFFERING before PLAYING. Once it reaches either
-            // of those states, explicitly call playVideo() to make sure
-            // playback starts even when the autoplay gesture context has
-            // expired.
+            // Deferred play: call playVideo() on CUED/BUFFERING so playback
+            // starts even after the autoplay gesture context expires.
             if (pendingPlayRef.current) {
               const isReady =
                 (window.YT?.PlayerState.CUED !== undefined && e.data === window.YT.PlayerState.CUED) ||
@@ -356,9 +335,8 @@ const SongQueuePlayerInner = (
       });
       playerRef.current = player;
       createdRef.current = true;
-      // Reset tracking refs so the sync effect always calls loadVideoById
-      // on the first render after a fresh player is created (important for
-      // React 18 strict mode double-mount where refs survive cleanup).
+      // Reset tracking refs so the sync effect reloads the video after a
+      // fresh player (refs survive React 18 strict-mode double mounts).
       lastItemsKeyRef.current = "";
       lastIndexRef.current = -1;
       lastVideoIdRef.current = "";
@@ -373,10 +351,8 @@ const SongQueuePlayerInner = (
       playerRef.current = null;
       createdRef.current = false;
     };
-    // Only re-run when the current videoId changes. The callbacks are
-    // read via refs so the player isn't destroyed when the bar re-renders
-    // with new inline lambdas. `items` is also excluded — adding/removing
-    // items is the sync effect's job.
+    // Only re-run when the current videoId changes. Callbacks are read via
+    // refs and `items` changes are the sync effect's job.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialVideoId]);
 

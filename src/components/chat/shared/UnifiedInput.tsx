@@ -216,8 +216,8 @@ function InputWarnings({
         !isBroadcaster && (
           <div className="unified-warning">
             {followerModeMinutes === 0
-              ? "Follower-only chat — follow this channel to send messages"
-              : `Follower-only chat — follow for at least ${followerModeMinutes < 60 ? `${followerModeMinutes}m` : followerModeMinutes < 1440 ? `${Math.round(followerModeMinutes / 60)}h` : `${Math.round(followerModeMinutes / 1440)}d`}`}
+              ? "Follower-only chat: follow this channel to send messages"
+              : `Follower-only chat: follow for at least ${followerModeMinutes < 60 ? `${followerModeMinutes}m` : followerModeMinutes < 1440 ? `${Math.round(followerModeMinutes / 60)}h` : `${Math.round(followerModeMinutes / 1440)}d`}`}
           </div>
         )}
     </>
@@ -315,10 +315,7 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
   const [sendTarget, setSendTarget] = useState<SendTarget>("twitch");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Emote picker (Twitch full grid)
   const [showEmotePicker, setShowEmotePicker] = useState(false);
-
-  // YouTube emoji picker (full grid)
   const [showYtPicker, setShowYtPicker] = useState(false);
   const [ytPickerSearch, setYtPickerSearch] = useState("");
   const [ytPickerRect, setYtPickerRect] = useState<DOMRect | null>(null);
@@ -330,7 +327,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
   const showYoutubeFeatures =
     (sendTarget === "youtube" || sendTarget === "both") && youtubeAvailable;
 
-  // ---- Send callback ----
   const onSend = useCallback(
     async (text: string) => {
       if (sendTarget === "twitch" || sendTarget === "both") {
@@ -389,13 +385,11 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
     [core.insertMention],
   );
 
-  // Reset send target when YouTube becomes unavailable
   useEffect(() => {
     if (!youtubeAvailable && sendTarget !== "twitch") setSendTarget("twitch");
     // eslint-disable-next-line no-adjust-state-on-prop-change
   }, [youtubeAvailable, sendTarget]);
 
-  // YouTube picker position and auto-focus
   useEffect(() => {
     if (showYtPicker) {
       setYtPickerRect(ytPickerBtnRef.current?.getBoundingClientRect() ?? null);
@@ -405,7 +399,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
     }
   }, [showYtPicker]);
 
-  // Close pickers on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -422,7 +415,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
     return () => document.removeEventListener("mousedown", handler);
   }, [showYtPicker]);
 
-  // Insert emoji from YouTube emoji picker
   const insertEmojiFromPicker = useCallback(
     (char: string) => {
       const cursor = inputRef.current?.selectionStart ?? core.message.length;
@@ -432,7 +424,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
     [core],
   );
 
-  // ---- Render ----
   const borderColor = getBorderColor(sendTarget);
   const placeholder = getPlaceholder(sendTarget);
 
@@ -452,7 +443,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
           emoteAutocompleteMode={emoteAutocompleteMode}
         />
 
-        {/* Emote/Emoji picker button */}
         <PickerButton
           showYoutubeFeatures={showYoutubeFeatures}
           showTwitchFeatures={showTwitchFeatures}
@@ -489,8 +479,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
         channelName={channelName}
         currentUsername={currentUsername}
       />
-
-      {/* === PORTAL MENUS === */}
 
       <AutocompleteMenu
         isOpen={core.emoteAC.isOpen}

@@ -8,7 +8,7 @@ function openStatusDropdown() {
   );
 }
 
-describe("ChatHeader — redemption PubSub status", () => {
+describe("ChatHeader: redemption PubSub status", () => {
   it("shows the PubSub feed status as connected in the dropdown", () => {
     render(
       <ChatHeader

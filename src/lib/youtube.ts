@@ -57,7 +57,7 @@ function selectProxy(
     if (proxyCooldownUntil[proxy] && now < proxyCooldownUntil[proxy]) continue;
     return proxy;
   }
-  return proxies[idx]; // all cooled down — return hash pick anyway
+  return proxies[idx]; // all cooled down, return hash pick anyway
 }
 
 /** Deterministic string hash (djb2 variant). Non-cryptographic, good distribution. */
@@ -78,7 +78,7 @@ function markProxyFailed(proxy: string, cooldownMs?: number): void {
   if (proxyFailCounts[proxy] >= PROXY_MAX_FAILS || cooldownMs) {
     proxyCooldownUntil[proxy] = Date.now() + effectiveCooldown;
     console.warn(
-      `[YouTube Proxy] ${proxy} failed ${proxyFailCounts[proxy]} time(s) — cooling down for ${effectiveCooldown / 1000}s`,
+      `[YouTube Proxy] ${proxy} failed ${proxyFailCounts[proxy]} time(s). Cooling down for ${effectiveCooldown / 1000}s`,
     );
     proxyFailCounts[proxy] = 0;
   }
@@ -237,7 +237,7 @@ async function buildInnertubeOptions(): Promise<Record<string, any>> {
   innertubeOptions.generate_session_locally =
     process.env.YT_GENERATE_SESSION_LOCALLY === "false" ? false : true;
 
-  // Proxies handle PoToken and visitor data; otherwise generate or use env vars.
+  // Proxies handle PoToken and visitor data. Otherwise generate or use env vars.
   if (!YT_PROXIES.length) {
     const envPoToken = process.env.YT_POTOKEN;
     const envVisitorData = process.env.YT_VISITOR_DATA;
@@ -389,7 +389,7 @@ function createInnertubeFetch({
       }
     }
 
-    // Proxy InnerTube API calls; thumbnails and player assets stay direct.
+    // Proxy InnerTube API calls. Thumbnails and player assets stay direct.
     if (YT_PROXIES.length) {
       try {
         const targetUrl = new URL(urlStr);
@@ -505,7 +505,7 @@ function createInnertubeFetch({
 
           console.error("[YouTube Proxy] All proxies failed");
           if (lastStatus === 403 && allowGlobalInvalidation) {
-            // Don't invalidate Innertube here — a 403 on one video
+            // Don't invalidate Innertube here: a 403 on one video
             // doesn't mean the session is broken for other videos.
             last403Time = Date.now();
           }
@@ -550,7 +550,7 @@ function createInnertubeFetch({
     if (res.status === 403) {
       if (allowGlobalInvalidation) {
         last403Time = Date.now();
-        console.error("[YouTube] Direct fetch 403 — invalidating session.", {
+        console.error("[YouTube] Direct fetch 403, invalidating session.", {
           url: urlStr,
         });
         invalidateInnertube();
@@ -573,7 +573,7 @@ export async function getInnertube() {
   if (timeSince403 < COOLDOWN_AFTER_403_MS) {
     const wait = COOLDOWN_AFTER_403_MS - timeSince403;
     throw new Error(
-      `[YouTube] Cooldown after 403 — retry in ${Math.ceil(wait / 1000)}s`,
+      `[YouTube] Cooling down after 403, retrying in ${Math.ceil(wait / 1000)}s`,
     );
   }
 
@@ -662,7 +662,7 @@ export async function getYoutubeAccessToken(
     redirect_uri: redirectUri,
     grant_type: "authorization_code",
   });
-  // Confidential (web) clients send the secret; public (desktop) clients use
+  // Confidential (web) clients send the secret. Public (desktop) clients use
   // PKCE and must NOT send a secret.
   if (clientSecret) params.set("client_secret", clientSecret);
   if (codeVerifier) params.set("code_verifier", codeVerifier);

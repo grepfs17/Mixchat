@@ -14,7 +14,7 @@
 }
 
 @media (max-width: 1365px) {
-    /* Main grid layout — force single column regardless of sidebar state. */
+    /* Main grid layout: force single column regardless of sidebar state. */
     .main-layout {
         grid-template-columns: 1fr !important;
     }
@@ -50,7 +50,7 @@
         height: 100% !important; /* must be definite so flex:1 children resolve correctly */
     }
 
-    /* When stream embed is hidden the chat fills all remaining space — no change needed */
+    /* When stream embed is hidden the chat fills all remaining space. No change needed */
 
     /* Embed fixed at top: height is derived from --initial-vh-px (captured once on
      JS mount, before the keyboard can open) so it never shrinks when the virtual
@@ -73,7 +73,7 @@
         display: none !important;
     }
 
-    /* Chat takes all remaining space; inner messages-container scrolls */
+    /* Chat takes all remaining space. The inner messages-container scrolls */
     .app-grid > [data-chat-section] {
         flex: 1 !important;
         min-height: 0 !important;

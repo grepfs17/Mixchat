@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     });
   }
 
-  // Read the access token from the httpOnly cookie — never from client input.
+  // Read the access token from the httpOnly cookie, never from client input.
   const accessToken = cookies.get("twitch_token")?.value;
   if (!accessToken) {
     return new Response(JSON.stringify({ error: "Not authenticated" }), {

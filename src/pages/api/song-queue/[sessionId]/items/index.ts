@@ -24,7 +24,7 @@ import {
 interface AppendBody {
   videoId: string;
   submitter: SongQueueSubmitter;
-  /** Optional hard cap for this session; defaults to MAX_QUEUE_LENGTH_CEILING. */
+  /** Optional hard cap for this session. Defaults to MAX_QUEUE_LENGTH_CEILING. */
   maxQueueLength?: number;
 }
 

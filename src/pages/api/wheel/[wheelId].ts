@@ -118,7 +118,7 @@ export const PATCH: APIRoute = async ({ request, params, cookies }) => {
     return { wheel: updated, result: publicWheelView(updated) as WheelPublicView };
   };
 
-  // Owner token first; if it doesn't authorize, fall back to channel trust.
+  // Owner token first. If it doesn't authorize, fall back to channel trust.
   if (token) {
     const res = await mutateWheel(opts, wheelId, token, mutator);
     if (res.ok) return json({ wheel: publicWheelView(res.wheel) });
@@ -172,7 +172,7 @@ const deleteHandler: APIRoute = async ({ request, params, cookies }) => {
 
 export const DELETE: APIRoute = deleteHandler;
 
-/** POST fallback — accepts X-HTTP-Method-Override: DELETE for proxies that
+/** POST fallback: accepts X-HTTP-Method-Override: DELETE for proxies that
  *  block the DELETE verb. */
 export const POST: APIRoute = async (ctx) => {
   if (

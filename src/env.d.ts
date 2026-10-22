@@ -2,7 +2,7 @@
 
 declare namespace App {
   interface Locals {
-    /** Per-request CSP nonce — set by middleware, consumed by inline-script pages. */
+    /** Per-request CSP nonce: set by middleware, consumed by inline-script pages. */
     nonce: string;
   }
 }

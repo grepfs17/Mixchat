@@ -429,7 +429,6 @@ function LoginPanel({
           </button>
         )}
 
-        {/* YouTube login/logout */}
         <YoutubeLoginSection
           youtubeConnected={youtubeConnected}
           youtubeUser={youtubeUser}

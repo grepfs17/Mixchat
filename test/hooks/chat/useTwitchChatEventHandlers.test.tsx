@@ -98,7 +98,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("useTwitchChatEventHandlers — subscription duration", () => {
+describe("useTwitchChatEventHandlers: subscription duration", () => {
   it("shows cumulative months and tier on a plain resub", () => {
     const { lastMessage } = renderHandlers();
 
@@ -138,7 +138,56 @@ describe("useTwitchChatEventHandlers — subscription duration", () => {
     );
   });
 
+  it("does not label gifted renewals as paid in advance", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onResub(
+      "chan",
+      "someone",
+      makeSubInfo({ months: 2 }),
+      makeNotice({
+        "msg-param-multimonth-duration": "3",
+        "msg-param-was-gifted": "true",
+      }),
+    );
+
+    expect(lastMessage().content).toBe("subscribed for 2 months (Tier 1)");
+  });
+
+  it("does not label original gift renewals as paid in advance", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onResub(
+      "chan",
+      "someone",
+      makeSubInfo({
+        months: 2,
+        originalGiftInfo: {
+          anonymous: false,
+          duration: 3,
+          redeemedMonth: 2,
+        },
+      }),
+      makeNotice({ "msg-param-multimonth-duration": "3" }),
+    );
+
+    expect(lastMessage().content).toBe("subscribed for 2 months (Tier 1)");
+  });
+
   it("ignores bogus multi-month values Twitch sends on resubs", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onResub(
+      "chan",
+      "someone",
+      makeSubInfo({ months: 7 }),
+      makeNotice({ "msg-param-multimonth-duration": "12" }),
+    );
+
+    expect(lastMessage().content).toBe("subscribed for 7 months (Tier 1)");
+  });
+
+  it("ignores multi-month values above the official plans", () => {
     const { lastMessage } = renderHandlers();
 
     handlers.onResub(
@@ -176,6 +225,36 @@ describe("useTwitchChatEventHandlers — subscription duration", () => {
 
     expect(lastMessage().content).toBe(
       "gifted a 6-month Tier 1 subscription to recipient",
+    );
+  });
+
+  it("shows a 12-month gift duration", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onSubGift(
+      "chan",
+      "recipient",
+      makeSubInfo({ giftDuration: 12 }),
+      makeNotice({}),
+    );
+
+    expect(lastMessage().content).toBe(
+      "gifted a 12-month Tier 1 subscription to recipient",
+    );
+  });
+
+  it("ignores unsupported gift durations", () => {
+    const { lastMessage } = renderHandlers();
+
+    handlers.onSubGift(
+      "chan",
+      "recipient",
+      makeSubInfo({ giftDuration: 2 }),
+      makeNotice({}),
+    );
+
+    expect(lastMessage().content).toBe(
+      "gifted a Tier 1 subscription to recipient",
     );
   });
 });

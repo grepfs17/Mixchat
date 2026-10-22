@@ -6,10 +6,6 @@ import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 
-/**
- * Shared cookie-set options for access tokens. Extracted to avoid duplication
- * between the normal refresh path and the migration fallback.
- */
 function driveTokenCookieOptions(expiresIn: number | undefined) {
   const isSecure = import.meta.env.MODE !== "development";
   return {
@@ -22,17 +18,14 @@ function driveTokenCookieOptions(expiresIn: number | undefined) {
 }
 
 /**
- * One-time migration: when the new `drive_token` cookie is absent but the
- * old combined-scope `youtube_token` cookie still exists (pre-split users),
- * reuse the existing token with Drive scope. The token is copied to the new
- * cookie name so subsequent requests find it directly.
+ * One-time migration for pre-split users: reuse the old combined-scope
+ * `youtube_token` with Drive scope and copy it to `drive_token`.
  */
 async function migrateFromYoutubeToken(
   cookies: any,
   clientId: string,
   clientSecret: string | undefined,
 ): Promise<string | null> {
-  // Try the existing YouTube access token first (may still be valid).
   const ytToken = cookies.get("youtube_token")?.value;
   if (ytToken) {
     const checkRes = await fetch(`${DRIVE_API}/about?fields=user`, {
@@ -40,8 +33,7 @@ async function migrateFromYoutubeToken(
     });
     if (checkRes.ok) {
       cookies.set("drive_token", ytToken, driveTokenCookieOptions(3600));
-      // Also copy the refresh token so future expired-token refreshes
-      // hit the fast path in getAccessToken directly.
+      // Copy the refresh token so future refreshes hit the fast path.
       const ytRefresh = cookies.get("youtube_refresh_token")?.value;
       if (ytRefresh) {
         cookies.set("drive_refresh_token", ytRefresh, {
@@ -56,8 +48,7 @@ async function migrateFromYoutubeToken(
     }
   }
 
-  // YouTube access token is expired — try refreshing with the YouTube
-  // refresh token (which was obtained with the combined YouTube+Drive scope).
+  // The combined-scope YouTube refresh token also carries Drive access.
   const ytRefresh = cookies.get("youtube_refresh_token")?.value;
   if (!ytRefresh) return null;
 
@@ -74,8 +65,7 @@ async function migrateFromYoutubeToken(
     accessToken,
     driveTokenCookieOptions(tokenData.expires_in),
   );
-  // If Google returned a new refresh token, persist it under the Drive
-  // cookie name so future refreshes don't need to fall back again.
+  // Persist rotated refresh tokens so future refreshes skip the fallback.
   if (tokenData.refresh_token) {
     cookies.set("drive_refresh_token", tokenData.refresh_token, {
       httpOnly: true,
@@ -94,15 +84,12 @@ async function getAccessToken(cookies: any, request: any): Promise<string> {
   // YouTube and Drive scopes cannot be combined in a single token.
   const cookieToken = cookies.get("drive_token")?.value;
   if (cookieToken) {
-    // Verify the token is still valid by making a lightweight API call
     const checkRes = await fetch(`${DRIVE_API}/about?fields=user`, {
       headers: { Authorization: `Bearer ${cookieToken}` },
     });
     if (checkRes.ok) return cookieToken;
-    // Token expired — fall through to refresh
   }
 
-  // Try to refresh using the Drive refresh token cookie
   const refreshToken = cookies.get("drive_refresh_token")?.value;
   if (refreshToken) {
     const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
@@ -131,9 +118,7 @@ async function getAccessToken(cookies: any, request: any): Promise<string> {
     return accessToken;
   }
 
-  // Migration: before the split, the YouTube OAuth flow included the
-  // drive.file scope, so the youtube_token cookie can serve Drive requests.
-  // Copy it to the new cookie name so future requests hit the fast path.
+  // Fall back to the pre-split youtube_token (combined scope).
   const clientId = import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID;
   const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
   if (clientId && clientSecret) {
@@ -212,7 +197,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const body = await request.json().catch(() => ({}));
     const { action } = body as { action?: string };
 
-    // Check action: verify the user has valid Google auth with Drive scope
     if (action === "check") {
       try {
         const accessToken = await getAccessToken(cookies, request);
@@ -242,10 +226,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // All other actions require an access token
     const accessToken = await getAccessToken(cookies, request);
 
-    // Find: look for existing settings file in Drive
     if (action === "find") {
       const { name } = body as { name: string };
       const query = `name='${name}' and trashed=false`;
@@ -276,7 +258,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    // Create: upload a new settings file to Drive
     if (action === "create") {
       const { content, name } = body as { content: string; name: string };
 
@@ -338,7 +319,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Update: update an existing file's content
     if (action === "update") {
       const { fileId, content } = body as { fileId: string; content: string };
 
@@ -381,7 +361,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Get: download a file's content
     if (action === "get") {
       const { fileId: getFileId } = body as { fileId: string };
 

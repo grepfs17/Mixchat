@@ -17,7 +17,7 @@ const json = (body: unknown, status = 200) =>
 
 /**
  * Start the Twitch Device Code Grant flow (desktop/public-client only).
- * The device_code is kept server-side in an httpOnly cookie; only the
+ * The device_code is kept server-side in an httpOnly cookie. Only the
  * user-facing code and verification URL are returned to the client.
  */
 export const POST: APIRoute = async ({ request, cookies }) => {

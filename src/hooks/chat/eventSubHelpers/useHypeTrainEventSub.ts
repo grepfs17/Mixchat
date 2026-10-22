@@ -1,6 +1,4 @@
 /**
- * useHypeTrainEventSub
- *
  * Subscribes to `channel.hype_train.begin`, `channel.hype_train.progress`,
  * and `channel.hype_train.end` v2 via the shared EventSub connection.
  *

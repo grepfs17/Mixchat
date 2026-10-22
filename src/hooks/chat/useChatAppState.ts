@@ -305,7 +305,7 @@ export function useChatAppState({
     currentUserBadgesRef,
   });
 
-  // Reset all chat state when switching channels — intentional
+  // Reset all chat state when switching channels. Intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     clearBadgeCache();
@@ -401,16 +401,13 @@ export function useChatAppState({
       localStorage.setItem(STORAGE_KEY, String(Date.now()));
     };
 
-    // Calculate time until next refresh
     const lastRefresh = Number(localStorage.getItem(STORAGE_KEY) || 0);
     const elapsed = Date.now() - lastRefresh;
     const delay = elapsed >= THREE_HOURS ? 0 : THREE_HOURS - elapsed;
 
     const timer = setTimeout(async () => {
       await doRefresh();
-      // After the first refresh, set a regular interval
       const id = setInterval(doRefresh, THREE_HOURS);
-      // Store interval id on a ref so cleanup can clear it
       intervalRef.current = id;
     }, delay);
 

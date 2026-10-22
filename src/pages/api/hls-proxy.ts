@@ -3,7 +3,7 @@ import { checkRateLimit } from "../../lib/rateLimit";
 import { YT_USER_AGENT } from "../../lib/constants";
 
 // Only allow proxying from trusted Twitch CDN domains.
-// Variant playlists live on *.ttvnw.net; segments live on *.twitchsvc.net.
+// Variant playlists live on *.ttvnw.net. Segments live on *.twitchsvc.net.
 const ALLOWED_HOST_RE =
   /^(?:[a-z0-9-]+\.)*ttvnw\.net$|^(?:[a-z0-9-]+\.)*twitchsvc\.net$/;
 
@@ -43,7 +43,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
     request.headers.get("x-real-ip") ||
     "unknown";
-  // Require an active session — prevents open-proxy abuse.
+  // Require an active session to prevent open-proxy abuse.
   const twitchToken = cookies.get("twitch_token")?.value;
   const youtubeToken = cookies.get("youtube_token")?.value;
   if (!twitchToken && !youtubeToken) {

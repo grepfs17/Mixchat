@@ -123,7 +123,7 @@ export function useTwitchChatMessageHandler({
         msg.userInfo.userName.toLowerCase() ===
         usernameRef.current.toLowerCase();
 
-      // Twitch prepends "@login " to a reply's raw text; drop it so the body
+      // Twitch prepends "@login " to a reply's raw text. Drop it so the body
       // doesn't repeat the username already shown in the "response to" header.
       const {
         content,

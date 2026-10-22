@@ -155,7 +155,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
       const automodItem = target.item;
 
-      // Find the approve or deny button on the automod item and execute it.
       const buttons: any[] = Array.isArray(automodItem.moderation_buttons)
         ? automodItem.moderation_buttons
         : [];

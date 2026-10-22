@@ -2,18 +2,20 @@ import { useEffect } from "react";
 import type { PlatformSession } from "../../lib/types";
 
 /**
- * Marks app-level loading complete once the initial channel fetch settles.
- * Mirrors the pre-extraction behavior: if there's no session or the session
- * already has a token, the channel fetch is the last gate before rendering.
+ * Marks app-level loading complete once the followed-channel fetch for the
+ * restored session settles. Without a session there is nothing to wait for,
+ * so the landing page can render immediately.
  */
 export function useInitialLoading(
-  channelsLoading: boolean,
+  channelsReady: boolean,
   twitchSession: PlatformSession | undefined,
+  isRestoringSession: boolean,
   setIsLoading: (value: boolean) => void,
 ) {
   useEffect(() => {
-    if (!channelsLoading && (!twitchSession || twitchSession.accessToken)) {
+    if (isRestoringSession) return;
+    if (!twitchSession || channelsReady) {
       setIsLoading(false);
     }
-  }, [channelsLoading, twitchSession, setIsLoading]);
+  }, [channelsReady, twitchSession, isRestoringSession, setIsLoading]);
 }

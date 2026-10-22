@@ -246,7 +246,7 @@ function buildUrl(parts: TwitchLinkParts): string {
   if (parts.kind === "video") {
     return `https://www.twitch.tv/videos/${encodeURIComponent(parts.videoId!)}`;
   }
-  // Clips.twitch.tv/<slug> canonicalises to clips.twitch.tv/<slug>; only
+  // Clips.twitch.tv/<slug> canonicalises to clips.twitch.tv/<slug>. Only
   // the long form <channel>/clip/<slug> uses www.twitch.tv.
   if (!parts.channel) {
     return `https://clips.twitch.tv/${encodeURIComponent(parts.clipSlug!)}`;

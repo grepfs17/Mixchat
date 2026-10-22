@@ -113,7 +113,6 @@ export default function EmbedConfigModal({
     setNeedsReload(true);
   }, []);
 
-  // Close on Escape
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -353,7 +352,7 @@ export default function EmbedConfigModal({
 
         {needsReload && (
           <div className="embed-config-reload-banner">
-            <span>Default player changed — reload the page to apply.</span>
+            <span>Default player changed. Reload the page to apply.</span>
             <button type="button" onClick={() => window.location.reload()}>Reload now</button>
             <button type="button" className="embed-config-reload-dismiss" onClick={() => setNeedsReload(false)}>Dismiss</button>
           </div>

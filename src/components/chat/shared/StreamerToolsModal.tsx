@@ -44,9 +44,9 @@ interface StreamerToolsModalProps {
   publicOrigin?: string;
   /** Channel key (e.g. "twitch:streamerlogin") used to list past playlists. */
   channelKey?: string | null;
-  /** Current Twitch category id — for playlist auto-select. */
+  /** Current Twitch category id, for playlist auto-select. */
   streamGameId?: string;
-  /** Current Twitch category name — for playlist auto-select hint. */
+  /** Current Twitch category name, for playlist auto-select hint. */
   streamGameName?: string;
   /** Search Twitch categories (same API as stream-info category picker). */
   onSearchCategories?: (
@@ -83,7 +83,7 @@ const TOOLS: ToolDescriptor[] = [
     id: "wheel",
     label: "Wheel Spin",
     description:
-      "Spin a wheel to pick a winner. Opens in a new tab; save and share wheels.",
+      "Spin a wheel to pick a winner. Opens in a new tab. Save and share wheels.",
   },
 ];
 
@@ -574,7 +574,6 @@ function PastPlaylistListItem({
             navigator.clipboard
               .writeText(entryUrl)
               .then(() => {
-                // Visual feedback handled by linkCopied state
               })
               .catch(() => undefined);
           }}
@@ -745,8 +744,8 @@ export default function StreamerToolsModal({
   }, [onClose]);
 
   // Minimize is allowed whenever the active tool has something to keep
-  // running. The giveaway is minimizable while running or revealed; the
-  // song queue is minimizable while open; the music player is minimizable
+  // running. The giveaway is minimizable while running or revealed. The
+  // song queue is minimizable while open. The music player is minimizable
   // as soon as it has at least one track loaded so the mini bar keeps
   // playing while the streamer chats/edit elsewhere.
   const musicHasItems =

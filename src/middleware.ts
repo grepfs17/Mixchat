@@ -27,7 +27,7 @@ const STATIC_HEADERS: Record<string, string> = {
   "Referrer-Policy": "no-referrer",
   // Disable browser features this app does not use
   "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-  // Enforce HTTPS for 2 years (production only — dev runs over plain HTTP)
+  // Enforce HTTPS for 2 years (production only, dev runs over plain HTTP)
   ...(import.meta.env.MODE !== "development"
     ? { "Strict-Transport-Security": "max-age=63072000; includeSubDomains" }
     : {}),
@@ -37,7 +37,7 @@ const STATIC_HEADERS: Record<string, string> = {
  * Build the Content-Security-Policy header value.
  *
  * @param nonce - When provided (auth callback pages), only scripts carrying
- *   this nonce value may execute — no 'unsafe-inline'.  When omitted (all
+ *   this nonce value may execute. No 'unsafe-inline'.  When omitted (all
  *   other pages), 'unsafe-inline' is included so that Astro's own framework
  *   hydration bootstrapping scripts (injected by client:load islands) are not
  *   blocked. Those scripts are static framework code, not user-controlled, so
@@ -108,10 +108,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return new Response("Not Found", { status: 404 });
   }
 
-  // Generate a nonce only for auth callback pages — those are plain API route
+  // Generate a nonce only for auth callback pages. Those are plain API route
   // handlers where we write the entire HTML output and can stamp every <script>
   // with the nonce ourselves.  All other pages are rendered by Astro and include
-  // framework-injected hydration scripts that we cannot add nonces to; they fall
+  // framework-injected hydration scripts that we cannot add nonces to. They fall
   // back to 'unsafe-inline' which is acceptable because those scripts are static
   // framework code (not user-controlled data).
   const isAuthRoute = pathname.startsWith("/auth/");
@@ -120,7 +120,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const response = await next();
 
-  // Skip security headers on SSE streams — they are unnecessary for event-stream
+  // Skip security headers on SSE streams. They are unnecessary for event-stream
   // responses and long CSP values can cause HTTP/2 framing issues on some proxies.
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/event-stream")) {

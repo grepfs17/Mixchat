@@ -15,10 +15,7 @@ export const YOUTUBE_MAX_TIMEOUT_SECONDS = 86400;
 /** Minimum duration accepted by YouTube Data API `banDurationSeconds`. */
 export const YOUTUBE_MIN_TIMEOUT_SECONDS = 1;
 
-/**
- * Formats a duration in seconds as a human-readable label, used for the
- * custom-duration input confirmation and any future status text.
- */
+/** Formats a duration in seconds as a human-readable label (e.g. 90 → "1.5m"). */
 export function formatTimeoutDuration(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;

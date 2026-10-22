@@ -1,4 +1,4 @@
-# Mixchat — AI Agent Guide
+# Mixchat: AI Agent Guide
 
 ## Overview
 
@@ -6,12 +6,14 @@
 - Complete tech specs and file structure on SPEC.md
 
 ## Operating principles
-- Working code only. Plausibility is not correctness; verify before reporting done.
+- Working code only. Plausibility is not correctness. Verify before reporting done.
 - Never fabricate file paths, APIs, commit hashes, command output, or test results. Read the file, run the command, or say what is unknown.
 - Say when a premise appears wrong before implementing around it.
 - Ask before proceeding only when a request has multiple plausible interpretations and the choice materially affects the result.
 - Touch only what the task requires. Avoid drive-by refactors, formatting, or cleanup.
 - Keep communication direct and concise. Skip flattery, filler, ceremonial openings, and emoji.
+- Avoid em dashes (U+2014) and semicolons in comments, prose, and user-facing text. Use commas, colons, periods, or parentheses instead.
+- Add comments only when necessary. Keep them concise and easy to read, and explain non-obvious intent instead of restating the code.
 
 ## Comand execution
 - Use always pnpm, avoid npm commands. In case of using npx use pnpx or pnpm dlx instead.

@@ -27,7 +27,7 @@ function writeAll(map: HistoryMap): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch {
-    // Ignore quota errors — history is a convenience.
+    // Ignore quota errors. History is a convenience.
   }
 }
 

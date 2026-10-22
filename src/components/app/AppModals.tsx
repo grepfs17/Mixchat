@@ -69,7 +69,6 @@ export default function AppModals({
 }: AppModalsProps) {
   return (
     <>
-      {/* Live Notification Popup */}
       {newLiveStreamer && (
         <LiveNotification
           streamer={newLiveStreamer}
@@ -86,7 +85,6 @@ export default function AppModals({
         />
       )}
 
-      {/* Watchlist Manager Modal */}
       {showWatchlistManager && (
         <WatchlistManager
           availableChannels={allTwitchChannels}
@@ -94,7 +92,6 @@ export default function AppModals({
         />
       )}
 
-      {/* YouTube Linker Modal */}
       {showYoutubeLinker && (
         <YouTubeLinker
           availableChannels={allTwitchChannels}
@@ -103,7 +100,6 @@ export default function AppModals({
         />
       )}
 
-      {/* Favorite Channels Modal */}
       {showFavoriteChannels && (
         <FavoriteChannelsModal
           allChannels={allTwitchChannels}
@@ -131,7 +127,6 @@ export default function AppModals({
         />
       )}
 
-      {/* Loading / Login Overlay */}
       {isLoggingIn && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
@@ -139,7 +134,6 @@ export default function AppModals({
         </div>
       )}
 
-      {/* Stream transition animation overlay */}
       {streamTransition && selectedTwitchChannel && (
         <StreamTransitionOverlay
           transitionInfo={streamTransition}
@@ -155,7 +149,7 @@ export default function AppModals({
         onCancel={cancelTwitchDevice}
       />
 
-      {/* Firefox Enhanced Tracking Protection notice — only when logged in */}
+      {/* Firefox Enhanced Tracking Protection notice, only when logged in */}
       {twitchSession && <FirefoxTrackingProtectionModal />}
     </>
   );

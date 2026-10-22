@@ -77,13 +77,11 @@ export default function StreamGrid({
         const af = favoriteChannels.includes(a.id);
         const bf = favoriteChannels.includes(b.id);
         if (af !== bf) return af ? -1 : 1;
-        // Secondary: most viewers
         return (b.viewerCount ?? 0) - (a.viewerCount ?? 0);
       }
       if (sortBy === "name") {
         return a.displayName.localeCompare(b.displayName);
       }
-      // viewers
       return (b.viewerCount ?? 0) - (a.viewerCount ?? 0);
     });
   }, [channels, favoriteChannels, search, sortBy]);

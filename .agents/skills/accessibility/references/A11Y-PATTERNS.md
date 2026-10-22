@@ -35,7 +35,7 @@ function openModal(modal) {
 }
 ```
 
-The native `<dialog>` element handles focus trapping automatically—prefer it when browser support allows.
+The native `<dialog>` element handles focus trapping automatically. Prefer it when browser support allows.
 
 ---
 
@@ -108,7 +108,7 @@ form.addEventListener('submit', (e) => {
 
 ## Form labels
 
-Every input needs an associated label—either explicit (`for`/`id`) or implicit (wrapping `<label>`).
+Every input needs an associated label, either explicit (`for`/`id`) or implicit (wrapping `<label>`).
 
 ```html
 <!-- ❌ No label association -->
@@ -162,7 +162,7 @@ Any action triggered by dragging must offer a single-pointer alternative (WCAG 2
 </ul>
 ```
 
-Also applies to sliders, map panning, colour pickers, and similar drag-based widgets—always provide an equivalent click/tap or keyboard path.
+Also applies to sliders, map panning, colour pickers, and similar drag-based widgets. Always provide an equivalent click/tap or keyboard path.
 
 ---
 
@@ -185,7 +185,7 @@ Tabs require `role="tablist"`, `role="tab"`, and `role="tabpanel"` with proper `
 </div>
 ```
 
-Arrow keys should move focus between tabs; the active tab receives `tabindex="0"` while inactive tabs use `tabindex="-1"`.
+Arrow keys should move focus between tabs. The active tab receives `tabindex="0"` while inactive tabs use `tabindex="-1"`.
 
 ---
 
@@ -194,12 +194,12 @@ Arrow keys should move focus between tabs; the active tab receives `tabindex="0"
 Use `aria-live` to announce dynamic content changes to screen readers without moving focus.
 
 ```html
-<!-- Status updates (polite — waits for pause in speech) -->
+<!-- Status updates (polite, waits for pause in speech) -->
 <div aria-live="polite" aria-atomic="true" class="status">
   <!-- Content updates announced to screen readers -->
 </div>
 
-<!-- Urgent alerts (assertive — interrupts) -->
+<!-- Urgent alerts (assertive, interrupts) -->
 <div role="alert" aria-live="assertive">
   <!-- Interrupts current announcement -->
 </div>

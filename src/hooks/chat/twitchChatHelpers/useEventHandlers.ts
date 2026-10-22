@@ -30,25 +30,40 @@ function formatSubDuration(months: number): string {
   return `${count} ${count === 1 ? "month" : "months"}`;
 }
 
-const MULTI_MONTH_PLANS = new Set([3, 6]);
+// Twitch recurring plans are 3 or 6 months. Gift subs support 3, 6 or 12.
+const SELF_MULTI_MONTH_PLANS = new Set([3, 6]);
+const GIFT_MULTI_MONTH_DURATIONS = new Set([3, 6, 12]);
 
 /**
- * Twitch sends the multi-month ("pay for 3/6 months in advance") purchase
- * length as the undocumented `msg-param-multimonth-duration` tag on sub and
- * resub USERNOTICEs. Twurple does not surface it on `subInfo`, so read it
- * from the raw tags. Returns 0 when the subscription is a normal 1-month plan.
+ * Twitch sends the multi-month purchase length as the undocumented
+ * `msg-param-multimonth-duration` tag on sub and resub USERNOTICEs.
+ * Returns 0 when the subscription is a normal 1-month plan.
  */
 function parseMultiMonthDuration(msg: UserNotice): number {
   const value = Number(msg.tags.get("msg-param-multimonth-duration"));
   return Number.isFinite(value) && value > 1 ? value : 0;
 }
 
-function formatSubDetails(plan: string, multiMonthDuration: number): string {
+function isGiftedSubscription(
+  msg: UserNotice,
+  subInfo: { originalGiftInfo?: unknown },
+): boolean {
+  return (
+    msg.tags.get("msg-param-was-gifted") === "true" ||
+    Boolean(subInfo.originalGiftInfo)
+  );
+}
+
+function formatSubDetails(
+  plan: string,
+  multiMonthDuration: number,
+  gifted: boolean,
+): string {
   const details = [formatSubTier(plan)];
-  // Twitch is known to emit bogus multi-month values on resubs (see
-  // twitchdev/issues/1112), so only label the message when it matches a real
-  // plan. This affects nothing but the "in advance" suffix.
-  if (MULTI_MONTH_PLANS.has(multiMonthDuration)) {
+  // Twitch only offers 3 and 6 month recurring plans. It also emits bogus
+  // 12 month values on resubs, documented in twitchdev/issues/1112. Gifted
+  // renewals are not paid by the viewer, so they do not get the suffix.
+  if (!gifted && SELF_MULTI_MONTH_PLANS.has(multiMonthDuration)) {
     details.push(`${multiMonthDuration} months in advance`);
   }
   return details.join(", ");
@@ -235,7 +250,8 @@ export function useTwitchChatEventHandlers({
       if (!active) return;
       maybeLoadOwnBadges(msg);
       const multiMonth = parseMultiMonthDuration(msg);
-      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth)})`;
+      const gifted = isGiftedSubscription(msg, subInfo);
+      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth, gifted)})`;
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
@@ -261,7 +277,8 @@ export function useTwitchChatEventHandlers({
       if (!active) return;
       maybeLoadOwnBadges(msg);
       const multiMonth = parseMultiMonthDuration(msg);
-      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth)})`;
+      const gifted = isGiftedSubscription(msg, subInfo);
+      const prefix = `subscribed for ${formatSubDuration(subInfo.months)} (${formatSubDetails(subInfo.plan, multiMonth, gifted)})`;
       const content = subInfo.message
         ? `${prefix} - ${subInfo.message}`
         : prefix;
@@ -286,10 +303,9 @@ export function useTwitchChatEventHandlers({
     client.onSubGift((_channel, recipient, subInfo, msg) => {
       if (!active) return;
       maybeLoadOwnBadges(msg);
-      const giftMonths =
-        Number.isFinite(subInfo.giftDuration) && subInfo.giftDuration > 1
-          ? subInfo.giftDuration
-          : 0;
+      const giftMonths = GIFT_MULTI_MONTH_DURATIONS.has(subInfo.giftDuration)
+        ? subInfo.giftDuration
+        : 0;
       const durationLabel = giftMonths ? `${giftMonths}-month ` : "";
       const content = `gifted a ${durationLabel}${formatSubTier(subInfo.plan)} subscription to ${recipient}`;
 
@@ -366,7 +382,7 @@ export function useTwitchChatEventHandlers({
         const prefix = costNum
           ? `${rewardTitle} (${costNum} points)`
           : rewardTitle;
-        const content = userMessage ? `${prefix} — ${userMessage}` : prefix;
+        const content = userMessage ? `${prefix} - ${userMessage}` : prefix;
         const { badges: badgeImages, badgeDetails } = parseBadgeString(
           msg.tags.get("badges") || "",
         );

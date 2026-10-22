@@ -147,7 +147,7 @@
     opacity: 0.9;
 }
 
-/* Grey variant — user is not authenticated, stream may include ads */
+/* Grey variant: user is not authenticated, stream may include ads */
 .stream-auth-badge--guest {
     background: var(--color-offline);
     color: var(--color-text-primary);

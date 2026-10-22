@@ -6,7 +6,7 @@ const userInfoCache = new Map<
 const MAX_CACHE_SIZE = 500;
 
 // Cache for source channel (shared chat) info keyed by channel ID
-// Twitch IRC does NOT send source-room-login — we fetch it from the API
+// Twitch IRC does NOT send source-room-login, so we fetch it from the API
 const sourceChannelInfoCache = new Map<
   string,
   { login: string | null; avatar: string | null }
@@ -28,7 +28,6 @@ function setUserInfoCache(
   userId: string,
   info: { displayName: string; profileImageUrl: string | null },
 ) {
-  // Limit cache size to prevent memory leaks
   if (userInfoCache.size >= MAX_CACHE_SIZE) {
     const firstKey = userInfoCache.keys().next().value;
     if (firstKey !== undefined) {
@@ -38,7 +37,6 @@ function setUserInfoCache(
   userInfoCache.set(userId, info);
 }
 
-// Async function to get user info
 export async function getUserInfo(
   userId: string,
   accessToken: string,
@@ -157,8 +155,7 @@ export async function getRewardInfo(
   return { title: null, cost: null };
 }
 
-/** Pre-fetch ALL custom rewards and cache their titles/costs so
- * that when a redemption IRC message arrives, the info is already in cache. */
+/** Pre-fetches all custom rewards so redemption messages find titles already cached. */
 export async function preCacheRewards(
   broadcasterId: string,
   accessToken: string,
@@ -181,37 +178,33 @@ export async function preCacheRewards(
     } else {
       const body = await rewardsRes.text().catch(() => "(unreadable)");
       console.info(
-        `[useTwitchChat] Could not pre-fetch custom rewards (${rewardsRes.status}) — reward titles will not be shown. This is expected when viewing another broadcaster's channel. Body:`,
+        `[useTwitchChat] Could not pre-fetch custom rewards (${rewardsRes.status}). Reward titles will not be shown. This is expected when viewing another broadcaster's channel. Body:`,
         body,
       );
     }
   } catch {
-    // Non-fatal — viewers will simply not see reward titles
+    // Non-fatal: viewers will simply not see reward titles
   }
 }
 
-/** Get a cached avatar URL for a user ID, if available. */
 export function getCachedAvatar(userId?: string): string | undefined {
   return userId
     ? userInfoCache.get(userId)?.profileImageUrl || undefined
     : undefined;
 }
 
-/** Read a cached reward's title/cost directly (no fetch). */
 export function getCachedRewardInfo(
   rewardId: string,
 ): { title: string; cost: number } | undefined {
   return rewardInfoCache.get(rewardId);
 }
 
-/** Read a cached source channel info directly. */
 export function getCachedSourceChannelInfo(
   sourceRoomId: string,
 ): { login: string | null; avatar: string | null } | undefined {
   return sourceChannelInfoCache.get(sourceRoomId);
 }
 
-/** Read a cached user info directly. */
 export function getCachedUserInfo(
   userId: string,
 ): { displayName: string; profileImageUrl: string | null } | undefined {

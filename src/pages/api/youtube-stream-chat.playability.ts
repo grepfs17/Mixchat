@@ -1,5 +1,5 @@
 /**
- * Substrings that indicate a terminal playability error — the video is
+ * Substrings that indicate a terminal playability error. The video is
  * not playable for a structural reason (unavailable, private, removed,
  * region-locked, age-restricted, etc.). These won't recover on retry
  * within a short window, so we cache them server-side and return early.

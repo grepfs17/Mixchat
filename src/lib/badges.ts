@@ -70,7 +70,6 @@ async function fetchBadgeSets(
   return map;
 }
 
-/** Resolve a broadcaster login name to a numeric ID when necessary. */
 async function resolveChannelId(channelId: string): Promise<string | null> {
   if (/^\d+$/.test(channelId)) return channelId;
   try {
@@ -85,7 +84,6 @@ async function resolveChannelId(channelId: string): Promise<string | null> {
   }
 }
 
-/** Pull down global and channel-specific badges. */
 export async function initializeBadges(
   channelId: string,
   _accessToken?: string,
@@ -106,12 +104,11 @@ export async function initializeBadges(
   badgesChannel = channel;
 }
 
-// Get the raw image URL for a specific badge/version
 export function getBadge(name: string, version: string): string | undefined {
   return getBadgeDetail(name, version)?.url;
 }
 
-// Find the full badge info, checking the channel first (custom badges) then global
+// Channel-specific (custom) badges take precedence over global ones
 export function getBadgeDetail(
   name: string,
   version: string,

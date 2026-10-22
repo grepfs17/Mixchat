@@ -140,8 +140,8 @@ export async function clearAllEmoteCaches(): Promise<void> {
 }
 
 /**
- * One-time migration: move all emotes_* entries from localStorage to IndexedDB.
- * Safe to call multiple times — only migrates keys that still exist in localStorage.
+ * One-time migration: move `emotes_*` entries from localStorage to IndexedDB.
+ * Safe to call repeatedly. Only migrates keys still present.
  */
 export async function migrateEmoteCachesFromLocalStorage(): Promise<void> {
   if (!isIDBAvailable()) return;

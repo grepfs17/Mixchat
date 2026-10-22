@@ -101,7 +101,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("useTwitchChatMessageHandler — gigantified emote", () => {
+describe("useTwitchChatMessageHandler: gigantified emote", () => {
   it("does not surface a gigantified emote as a channel-points redemption", () => {
     const { emit, lastMessage } = renderHandler();
 

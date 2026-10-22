@@ -9,7 +9,7 @@ export const MAX_DISPLAYED_MESSAGES_STORAGE_KEY =
 
 /**
  * How long chat messages are retained in IndexedDB before pruning (5 days).
- * This is the "stored" limit that backs lazy-loading of older messages; it is
+ * This is the "stored" limit that backs lazy-loading of older messages. It is
  * intentionally much larger than the in-memory rendered window.
  */
 export const CHAT_HISTORY_MAX_AGE_HOURS = 120;

@@ -214,7 +214,7 @@ describe("YouTubeMessageContent", () => {
     });
 
     it("does NOT render moderator shield from a label-only 'moderator' badge", () => {
-      // Only the authoritative server-side flag counts now; arbitrary badge
+      // Only the authoritative server-side flag counts now. Arbitrary badge
       // labels can be set by community roles and must not promote a viewer.
       const msg = makeYTMsg({
         badges: { moderator: "https://example.com/mod.png" },

@@ -22,7 +22,7 @@ import { appendGiveawayHistory } from "../../lib/streamerTools/history";
 const DEFAULT_DURATION = 180;
 const MIN_DURATION = 5;
 const MAX_DURATION = 2 * 60 * 60;
-/** `0` means "unlimited" (no countdown; streamer reveals manually). */
+/** `0` means "unlimited" (no countdown, streamer reveals manually). */
 export const UNLIMITED_DURATION = 0;
 export const DURATION_PRESETS_SECONDS: { label: string; value: number }[] = [
   { label: "3 min", value: DEFAULT_DURATION },
@@ -72,7 +72,7 @@ export interface UseGiveawayResult {
   /**
    * Add a single message to the running giveaway's entry buffer. No-op
    * unless the giveaway is in the `running` phase. Caller is expected to
-   * pass each new chat message exactly once; the hook dedupes by message id.
+   * pass each new chat message exactly once. The hook dedupes by message id.
    */
   ingestMessage: (item: GiveawayMessage) => void;
 }
@@ -162,7 +162,7 @@ export function useGiveaway({
   const liveEntries = useMemo<GiveawayEntry[]>(() => {
     if (phase !== "running" && phase !== "revealed") return [];
     return Array.from(bufferRef.current.values());
-    // entriesVersion is the trigger; bufferRef is a stable ref.
+    // entriesVersion is the trigger: bufferRef is a stable ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, entriesVersion]);
 

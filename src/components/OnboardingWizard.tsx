@@ -185,7 +185,7 @@ const BASE_SETTINGS: SettingDef[] = [
     key: "renderThirdPartyEmotesOnYoutube",
     label: "Render 7TV / BTTV / FFZ emotes in YouTube chat",
     description:
-      "Resolve third-party emote names inside YouTube live chat messages as images. Uses the same emote set as Twitch chat (global + channel-specific). Only Mixchat users will see the emotes — the message is still sent as plain text on YouTube and other viewers see the raw names.",
+      "Resolve third-party emote names inside YouTube live chat messages as images. Uses the same emote set as Twitch chat (global + channel-specific). Only Mixchat users will see the emotes: the message is still sent as plain text on YouTube and other viewers see the raw names.",
     choosableFor: ["streamer", "mod", "viewer"],
     icon: <FaInfoCircle size={13} />,
   },
@@ -245,7 +245,7 @@ function OnboardingHeader({ step, onComplete }: OnboardingHeaderProps) {
           ? "If you already configured it to your liking, you can skip this setup. Every option is also available later in Settings."
           : step === 2
             ? "Choose how Mixchat looks for you. You can switch any time from Settings."
-            : "Pick the role that fits you best. We'll set up sensible defaults — you can fine-tune every option afterwards."}
+            : "Pick the role that fits you best. We'll set up sensible defaults. You can fine-tune every option afterwards."}
       </p>
     </div>
   );

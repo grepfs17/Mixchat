@@ -55,7 +55,7 @@ describe("YouTube proxy - getChannel failure", () => {
 
     expect(res.status).toBe(200);
     const data = await res.json();
-    // No live video found — channel is offline or getChannel failed
+    // No live video found, channel is offline or getChannel failed
     expect(data.videoId).toBeNull();
   });
 });

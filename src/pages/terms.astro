@@ -5,8 +5,8 @@ import { IS_TWITCH_ONLY } from "../lib/constants";
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const title = "Terms of Service - Mixchat";
 const description = IS_TWITCH_ONLY
-    ? "Mixchat Terms of Service — unofficial Twitch chat client provided as-is under the AGPL-3.0 License."
-    : "Mixchat Terms of Service — unofficial Twitch and YouTube chat client provided as-is under the AGPL-3.0 License.";
+    ? "Mixchat Terms of Service: unofficial Twitch chat client provided as-is under the AGPL-3.0 License."
+    : "Mixchat Terms of Service: unofficial Twitch and YouTube chat client provided as-is under the AGPL-3.0 License.";
 ---
 
 <ContentLayout {title} {description} ogUrl={`${mainUrl}terms`}>

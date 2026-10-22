@@ -24,7 +24,7 @@ function twitchItem(
   };
 }
 
-describe("useGiveaway — buffer survives chat cap", () => {
+describe("useGiveaway: buffer survives chat cap", () => {
   it("keeps every ingested entry even if the chat array rolls over", () => {
     const { result } = renderHook(() =>
       useGiveaway({ owner: {}, enabled: true }),
@@ -39,7 +39,7 @@ describe("useGiveaway — buffer survives chat cap", () => {
     });
 
     // Simulate 200 unique chatters entering the keyword. The chat's
-    // MAX_DISPLAYED_MESSAGES cap is 100 — only the latest 100 would be in
+    // MAX_DISPLAYED_MESSAGES cap is 100, only the latest 100 would be in
     // `messages` at any time, but ingestMessage sees all 200 individually.
     for (let i = 0; i < 200; i++) {
       const id = `u${i}`;
@@ -53,7 +53,7 @@ describe("useGiveaway — buffer survives chat cap", () => {
     expect(result.current.liveEntries).toHaveLength(200);
   });
 
-  it("dedupes by message id, not by user — same user sending the keyword twice is one entry", () => {
+  it("dedupes by message id, not by user: same user sending the keyword twice is one entry", () => {
     const { result } = renderHook(() =>
       useGiveaway({ owner: {}, enabled: true }),
     );

@@ -1,14 +1,10 @@
 /**
- * useRaidDetection
+ * Subscribes to `channel.raid` for outgoing (isInitiator=true) and incoming
+ * raids. No special OAuth scopes required.
  *
- * Subscribes to `channel.raid` via the shared EventSub connection.
- * Supports both outgoing raids (isInitiator=true) and incoming raids (isInitiator=false).
- *
- * No special OAuth scopes required.
- *
- * The broadcaster ID is resolved in a separate effect from the subscription
- * to avoid a race condition where the async resolution causes the handler
- * to be deleted from the subscription map before notifications arrive.
+ * The broadcaster ID is resolved in a separate effect so async resolution
+ * cannot delete the handler from the subscription map before notifications
+ * arrive.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,14 +46,13 @@ export function useRaidDetection({
     subscribeRef.current = subscribe;
   }, [subscribe]);
 
-  // Derive resolvedId synchronously when channelId is already numeric.
   const derivedId = useMemo(() => {
     if (!enabled || !channelId) return null;
     if (/^\d+$/.test(channelId)) return channelId;
     return null;
   }, [channelId, enabled]);
 
-  // Async resolution for non-numeric channel IDs (username → numeric ID).
+  // Username → numeric ID resolution for non-numeric channel IDs.
   const [asyncResolvedId, setAsyncResolvedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -75,7 +70,7 @@ export function useRaidDetection({
         }
       })
       .catch(() => {
-        // Resolution failed — leave asyncResolvedId as null
+        // Resolution failed. Leave asyncResolvedId as null
       });
 
     return () => {
@@ -83,10 +78,8 @@ export function useRaidDetection({
     };
   }, [channelId, enabled]);
 
-  // Prefer synchronous derivation, fall back to async resolution.
   const resolvedId = derivedId ?? asyncResolvedId;
 
-  // Step 2: Subscribe synchronously when resolved ID is available
   useEffect(() => {
     if (!resolvedId) return;
 

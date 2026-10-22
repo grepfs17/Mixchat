@@ -281,7 +281,7 @@ export function useModeration({
   const modModeActive =
     isModerator && (modModeTarget === "twitch" || modModeTarget === "both");
 
-  // Derive moderator status from session and channel — intentional
+  // Derive moderator status from session and channel. Intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (twitchSession && selectedTwitchChannelName) {

@@ -33,7 +33,7 @@ beforeEach(async () => {
     `mixchat-songqueue-public-${randomBytes(6).toString("hex")}`,
   );
   // global fetch is available in node 20+ but the api helpers use the
-  // global; we mock it here for isolation from the network.
+  // global. We mock it here for isolation from the network.
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {

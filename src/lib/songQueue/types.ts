@@ -1,22 +1,15 @@
 /**
  * Song Queue streamer tool.
  *
- * Architecture:
- * - The streamer-side React app collects YouTube URLs from chat, validates
- *   them via the public `youtube.com/oembed` endpoint, and persists them to a
- *   server-side session JSON file (see `lib/server/songQueueStore.ts`).
- * - The local IDB store (`lib/songQueue/idb.ts`) mirrors the server record
- *   for snappy UI. Mutations are optimistic: IDB first, then server, with
- *   revert on failure.
- * - A public Astro page (`pages/s/[sessionId].astro`) renders the same queue
- *   to anyone with the shareable link, using the YouTube IFrame Player API
- *   for playback.
+ * The streamer app collects YouTube URLs from chat, validates them via the
+ * public `youtube.com/oembed` endpoint, and persists a server-side session
+ * (see `lib/server/songQueueStore.ts`). A local IDB mirror (`idb.ts`) keeps the
+ * UI snappy. Mutations are optimistic (IDB first, then server, revert on
+ * failure). A public Astro page (`pages/s/[sessionId].astro`) renders the queue
+ * via the YouTube IFrame Player API.
  *
- * No new OAuth scopes are required. The only YouTube network calls are:
- * - `https://www.youtube.com/iframe_api` (loaded as a `<script>` for the
- *   player); and
- * - `https://www.youtube.com/oembed?url=...&format=json` for metadata.
- * Neither requires authentication.
+ * No new OAuth scopes: only `youtube.com/iframe_api` and `youtube.com/oembed`
+ * are called, neither authenticated.
  */
 
 export type SongQueueScope = "twitch" | "youtube" | "both";
@@ -39,8 +32,9 @@ export interface SongQueueItem {
   channelTitle: string;
   thumbnail: string;
   /**
-   * Duration in seconds. 0 until the player reports it; updated lazily on
-   * the first PLAYING event for that item. Used to enforce `maxSongDurationSec`.
+   * Duration in seconds. Stays 0 until the player reports it, then updates
+   * lazily on the first PLAYING event for that item. Used to enforce
+   * `maxSongDurationSec`.
    */
   durationSec: number;
   submitter: SongQueueSubmitter;
@@ -74,7 +68,7 @@ export interface SongQueueSession {
   /**
    * Full streamer-side configuration for this session. Optional for
    * backward compatibility with sessions created before this field was
-   * added; absent values fall back to `DEFAULT_SONG_QUEUE_CONFIG`.
+   * added. Absent values fall back to `DEFAULT_SONG_QUEUE_CONFIG`.
    */
   config?: SongQueueConfig;
   currentIndex: number;

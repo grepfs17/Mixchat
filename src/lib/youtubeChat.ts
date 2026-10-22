@@ -1,10 +1,9 @@
 /**
- * Send a chat message to a YouTube live stream via the server-side endpoint.
- * Throws with the server error message on failure.
+ * Sends a chat message via the server-side endpoint, throwing with the server
+ * error message on failure.
  *
- * This function is client-safe (browser fetch only, no Node.js dependencies).
- * It lives in its own file separate from youtube.ts to avoid bundling
- * server-only libraries (Innertube/youtubei.js) into the client bundle.
+ * Kept separate from youtube.ts so server-only Innertube/youtubei.js deps do
+ * not leak into the client bundle (this function only uses browser fetch).
  */
 export async function sendYouTubeChatMessage(
   videoId: string,

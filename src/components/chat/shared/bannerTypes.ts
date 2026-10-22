@@ -1,10 +1,6 @@
 /**
- * Centralized banner state types.
- *
- * The banner components and the upstream EventSub hooks (in
- * src/hooks/chat/eventSubHelpers) all share these shapes. The banner
- * files and the hooks drain down to this single canonical declaration
- * to avoid duplicate-export warnings.
+ * Banner state types shared by banner components and EventSub hooks.
+ * A single canonical declaration avoids duplicate-export warnings.
  */
 
 export interface CelebrationState {

@@ -7,16 +7,13 @@ import type {
 import { getCachedEmotes, setCachedEmotes, CACHE_DURATION } from "./state";
 import { getEmoteCache, setEmoteCache } from "./emoteStorage";
 
-/**
- * Fetch Twitch global emotes
- */
 export async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_twitch_global";
   const cached = await getCachedEmotes(cacheKey);
   if (cached) return cached;
 
   try {
-    // Route through server-side proxy — token comes from httpOnly cookie, not localStorage.
+    // Route through server-side proxy, token comes from httpOnly cookie, not localStorage.
     const response = await fetch(
       "/api/twitch-proxy?path=/helix/chat/emotes/global",
     );
@@ -38,9 +35,6 @@ export async function fetchTwitchGlobalEmotes(): Promise<EmoteMap> {
   }
 }
 
-/**
- * Fetch Twitch channel emotes
- */
 export async function fetchTwitchChannelEmotes(
   channelId: string,
 ): Promise<EmoteMap> {
@@ -49,7 +43,7 @@ export async function fetchTwitchChannelEmotes(
   if (cached) return cached;
 
   try {
-    // Route through server-side proxy — token comes from httpOnly cookie, not localStorage.
+    // Route through server-side proxy, token comes from httpOnly cookie, not localStorage.
     const response = await fetch(
       `/api/twitch-proxy?path=/helix/chat/emotes&broadcaster_id=${encodeURIComponent(channelId)}`,
     );
@@ -77,7 +71,7 @@ const MAX_BROADCASTER_CACHE = 200;
 
 /**
  * Resolve Twitch user IDs to display names + profile images.
- * Uses the existing /api/user-info endpoint, 10 requests in parallel at a time.
+ * Uses /api/user-info, 10 requests in parallel at a time.
  */
 async function fetchBroadcasterInfo(
   ownerIds: string[],
@@ -155,7 +149,6 @@ export async function fetchUserEmotesByChannel(
   }
 
   try {
-    // Collect raw emote data with owner_id
     const rawEmotes: Array<{ name: string; url: string; ownerId: string }> = [];
     let cursor: string | null = null;
 
@@ -189,7 +182,6 @@ export async function fetchUserEmotesByChannel(
       cursor = pageData.pagination?.cursor || null;
     } while (cursor);
 
-    // Group by owner_id
     const groupMap = new Map<string, EmoteMap>();
     for (const emote of rawEmotes) {
       if (!groupMap.has(emote.ownerId)) {
@@ -199,11 +191,9 @@ export async function fetchUserEmotesByChannel(
       if (group) group[emote.name] = emote.url;
     }
 
-    // Resolve owner IDs → display names + profile images
     const ownerIds = Array.from(groupMap.keys());
     const infoMap = await fetchBroadcasterInfo(ownerIds);
 
-    // Build sorted channel groups
     const groups: ChannelEmoteGroup[] = [];
     for (const [channelId, emotes] of groupMap.entries()) {
       const info = infoMap[channelId];
@@ -213,7 +203,7 @@ export async function fetchUserEmotesByChannel(
         profileImageUrl: info?.profileImageUrl,
         emotes,
       });
-      // author population removed — will be handled via hover resolution
+      // author population removed, will be handled via hover resolution
     }
     groups.sort((a, b) => a.channelName.localeCompare(b.channelName));
 

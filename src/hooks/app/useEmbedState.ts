@@ -24,7 +24,7 @@ export type UseEmbedStateOptions = {
   selectedTwitchChannel: string;
   selectedTwitchChannelName: string;
   twitchAccessToken: string | undefined;
-  /** Resolved linked YouTube URL; when the player is in YouTube mode and this
+  /** Resolved linked YouTube URL. When the player is in YouTube mode and this
    * goes away we have to fall back to the Twitch embed. */
   linkedYoutubeUrl: string | null;
   defaultPlayerType?: "embed" | "m3u8";
@@ -83,10 +83,8 @@ export function useEmbedState(
 
   const embedRef = useRef<HTMLDivElement | null>(null);
 
-  // Reset HLS state when the channel or player type changes — the qualities
-  // list and the selected index are per-source and stale values would point
-  // at missing URLs.
-  // Reset HLS state when channel or player type changes — intentional
+  // Reset HLS state on channel/player change. Qualities are per-source and
+  // stale indices would point at missing URLs. Intentional state adjustment.
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     setHlsQualities([]);
@@ -94,10 +92,8 @@ export function useEmbedState(
     setShowHlsQualityMenu(false);
   }, [selectedTwitchChannelName, playerType]);
 
-  // Apply the user's default quality preference when the quality list is
-  // loaded.  Only fires once per channel change (the reset above empties
-  // the list and then this fills it).  Manual quality changes during a
-  // session are respected until the next channel change.
+  // Apply the default quality once per channel change (the reset above empties
+  // the list). Manual changes are respected until the next channel change.
   const prevQualitiesLenRef = useRef(0);
   useEffect(() => {
     if (hlsQualities.length === 0) {
@@ -131,9 +127,8 @@ export function useEmbedState(
     setSelectedHlsQualityIdx(idx);
   }, [hlsQualities, defaultHlsQuality]);
 
-  // If the user is in YouTube-embed mode but the link has been removed
-  // (channel change, link deleted from YouTubeLinker), fall back gracefully.
-  // Fallback to embed when YouTube URL is missing — intentional
+  // Fall back to the Twitch embed if the YouTube link disappears while in
+  // YouTube mode (channel change, link deleted). Intentional state adjustment.
   /* eslint-disable no-adjust-state-on-prop-change */
   useEffect(() => {
     if (playerType === "youtube" && !linkedYoutubeUrl) {

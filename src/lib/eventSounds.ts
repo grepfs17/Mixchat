@@ -1,13 +1,6 @@
-/**
- * Event sound utilities for playing custom sounds for chat events.
- */
-
 const eventSoundCache = new Map<string, HTMLAudioElement>();
 
-/**
- * Play a custom event sound from base64 data URL.
- * Uses caching to avoid re-creating Audio elements.
- */
+/** Plays a sound from a data URL, caching the Audio element per event type. */
 export function playEventSound(
   eventType: string,
   soundDataUrl: string,
@@ -31,16 +24,10 @@ export function playEventSound(
   }
 }
 
-/**
- * Clear the event sound cache for a specific event type.
- */
 function clearEventSoundCache(eventType: string): void {
   eventSoundCache.delete(eventType);
 }
 
-/**
- * Clear all event sound caches.
- */
 function clearAllEventSoundCache(): void {
   eventSoundCache.clear();
 }

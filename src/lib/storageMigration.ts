@@ -1,12 +1,8 @@
 /**
- * One-time localStorage key migration.
+ * One-time localStorage key migration from unversioned keys to `:v1`.
  *
- * React-doctor flagged all storage keys as unversioned. This module migrates
- * existing user data from the old keys to the new `:v1`-versioned keys so
- * nothing is lost on the first load after the update.
- *
- * The migration runs once per key — if the new key already exists it is left
- * untouched, and the old key is removed only after a successful copy.
+ * Runs once per key: if the new key already exists it is left untouched, and
+ * the old key is removed only after a successful copy.
  */
 
 const KEY_MIGRATIONS: Array<[string, string]> = [
@@ -25,18 +21,17 @@ const KEY_MIGRATIONS: Array<[string, string]> = [
 
 function migrateKey(oldKey: string, newKey: string): void {
   try {
-    if (localStorage.getItem(newKey) !== null) return; // already migrated
+    if (localStorage.getItem(newKey) !== null) return;
     const val = localStorage.getItem(oldKey);
-    if (val === null) return; // nothing to migrate
+    if (val === null) return;
     localStorage.setItem(newKey, val);
     localStorage.removeItem(oldKey);
   } catch {
-    // storage quota exceeded or unavailable — skip silently
+    // storage quota exceeded or unavailable, skip silently
   }
 }
 
-// Run migration once at module load time (client-side only).
-// The typeof guard handles SSR where localStorage is unavailable.
+// Runs once per module load. The guard handles SSR where localStorage is unavailable.
 if (typeof localStorage !== "undefined") {
   for (const [oldKey, newKey] of KEY_MIGRATIONS) {
     migrateKey(oldKey, newKey);

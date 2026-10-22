@@ -65,13 +65,10 @@ export { useEmoteMapVersion, useDisabledEmotes } from "./hooks";
 /**
  * Initialize emotes for a given channel.
  *
- * Each provider (7TV, BTTV, FFZ, Twitch) is fetched and applied independently
- * so a slow or failing API (e.g. 7TV returning 504s) cannot block the others.
- * As soon as a source resolves, its module-level map is updated, the parseCache
- * is invalidated via `bumpEmoteMapVersion`, and `emotes-reloaded` fires so the
- * UI (EmoteMenu, MessageInput) refreshes. The returned promise still waits for
- * every source to settle so callers (handleRefreshEmotes) can clear their
- * loading indicator at the end.
+ * Each provider is fetched and applied independently, so a slow or failing API
+ * cannot block the others. As each source resolves, its map updates and
+ * `emotes-reloaded` fires so the UI refreshes. The promise still waits for
+ * every source to settle so callers can clear their loading indicator.
  */
 export async function initializeEmotes(
   channelId: string,
@@ -140,10 +137,8 @@ export async function initializeEmotes(
 }
 
 // Re-export 7TV real-time subscription with a fixed two-argument signature.
-// The internal three-argument opening-event-source implementation lives in
-// ./7tv under the name `subscribeTo7TVChannelUpdates`; this wrapper injects
-// `initializeEmotes` as the reinitialize callback so consumers don't have to
-// thread it through themselves.
+// This wrapper injects `initializeEmotes` as the reinitialize callback so
+// consumers don't have to thread it through themselves.
 export function subscribeTo7TVUpdates(
   channelId: string,
   channelName: string,

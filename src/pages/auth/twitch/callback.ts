@@ -43,7 +43,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       { status: 403, headers: { "Content-Type": "text/html" } },
     );
   }
-  // State is valid — consume it now so it can't be replayed.
+  // State is valid. Consume it now so it can't be replayed.
   cookies.delete("oauth_state", { path: "/" });
 
   try {
@@ -63,7 +63,6 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 
     const user = await getTwitchUser(tokenData.accessToken, clientId);
 
-    // Store token in secure cookie
     cookies.set("twitch_token", tokenData.accessToken, {
       httpOnly: true,
       secure: isSecure,
@@ -82,13 +81,8 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       });
     }
 
-    // Build the session object and then double-stringify it:
-    // - First JSON.stringify turns it into a JSON string.
-    // - Second JSON.stringify (applied in the template below via JSON.stringify(sessionPayload))
-    //   wraps that JSON string in JS string-literal quotes, escaping all special characters
-    //   (backslashes, quotes, U+2028/U+2029 line separators, </script> sequences, etc.)
-    //   so it can never cause a SyntaxError or break out of the <script> context.
-    // The browser then calls JSON.parse() to recover the object.
+    // Double-stringify so the payload becomes a safely escaped JS string
+    // literal. The browser JSON.parse()s it back into an object.
     const sessionPayload = JSON.stringify({
       platform: "twitch",
       userId: user.userId,
@@ -101,18 +95,15 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       expiresAt: Date.now() + (tokenData.expiresIn ?? 3600) * 1000,
       timestamp: Date.now(),
     });
-    // Double-stringify for safe JS embedding (same pattern as returnedStateJson).
+    // Escape </ so neither string can close the <script> block.
     const sessionPayloadJson = JSON.stringify(sessionPayload)
-      // Extra safety: escape </ so the string can never end the <script> block.
       .replace(/</g, "\\u003c");
-    // Pass the returned state value safely so the browser can verify it.
-    // Escape </ to prevent the string from closing the <script> block.
     const returnedStateJson = JSON.stringify(returnedState).replace(
       /</g,
       "\\u003c",
     );
 
-    // Return HTML that stores session in localStorage, posts message to opener, and redirects
+    // Persist the session, notify the opener, then redirect.
     return new Response(
       `<!DOCTYPE html>
 <html>
@@ -247,7 +238,7 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     );
   } catch (error) {
     console.error("Twitch OAuth callback error:", error);
-    // Return a generic error page — never reflect raw error messages to the client.
+    // Return a generic error page. Never reflect raw error messages to the client.
     return new Response(
       `<!DOCTYPE html>
 <html>

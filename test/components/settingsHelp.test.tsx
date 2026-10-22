@@ -168,7 +168,7 @@ describe("MobileTouchHintModal event trigger", () => {
   });
 });
 
-describe("EmbedConfigModal Layout tab — auto-fold sidebar", () => {
+describe("EmbedConfigModal Layout tab: auto-fold sidebar", () => {
   beforeEach(() => {
     localStorage.clear();
   });

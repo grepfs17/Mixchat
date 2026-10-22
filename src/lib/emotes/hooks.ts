@@ -3,12 +3,9 @@ import { emoteMapVersion } from "./state";
 import { DISABLED_EMOTES_KEY, getDisabledEmotes } from "./search";
 
 /**
- * Subscribe to the current emote map version. The version is bumped on every
- * change to `emotes7tv` / `emotesBttv` / `emotesFfz` / `emotesTwitch` (see
- * `bumpEmoteMapVersion` in `./state`) and the `emotes-reloaded` DOM event is
- * fired in lockstep. The hook uses `useSyncExternalStore` so it re-renders
- * exactly when the version changes, no more, no less — without the manual
- * `useState` + counter dance the component would otherwise need.
+ * Subscribe to the current emote map version, which bumps (in lockstep with
+ * the `emotes-reloaded` event) whenever an emote map changes. `useSyncExternalStore`
+ * re-renders only when the version changes.
  */
 export function useEmoteMapVersion(): number {
   return useSyncExternalStore(
@@ -23,18 +20,12 @@ export function useEmoteMapVersion(): number {
 }
 
 /**
- * Returns a `Set<string>` of disabled emote names, refreshed whenever the
- * `emotes-reloaded` event fires (the disabled list is toggled via
- * `toggleDisableEmote`, which also fires that event) or another tab mutates
- * the underlying localStorage entry (cross-tab sync via the `storage` event).
- *
- * The expensive `JSON.parse(localStorage.getItem(...))` is therefore paid at
+ * Returns disabled emote names, refreshed on `emotes-reloaded` and on
+ * cross-tab `storage` mutations of the same key. Parsing therefore happens at
  * most once per change rather than on every chat re-render.
  *
- * Note: useSyncExternalStore would be preferred here but getDisabledEmotes()
- * returns a new Set on every call, which breaks Object.is referential stability
- * and causes cascading re-renders. The useState+useEffect pattern with targeted
- * event listeners is the correct approach for this case.
+ * `useSyncExternalStore` is unsuitable here because `getDisabledEmotes()`
+ * returns a new Set each call, breaking referential stability.
  */
 // eslint-disable-next-line react/prefer-use-sync-external-store
 export function useDisabledEmotes(): Set<string> {

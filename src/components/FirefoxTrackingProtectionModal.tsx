@@ -12,7 +12,7 @@ export default function FirefoxTrackingProtectionModal() {
     try {
       if (localStorage.getItem(STORAGE_KEY) === "1") return;
     } catch {
-      /* localStorage unavailable (private mode / blocked) — still show once */
+      /* localStorage unavailable (private mode / blocked), still show once */
     }
     setVisible(true);
   }, []);

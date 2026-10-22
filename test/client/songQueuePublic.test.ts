@@ -134,7 +134,7 @@ describe("createPlayController", () => {
   it("defers play() until setPlayer() is called", () => {
     const c = createPlayController();
     c.play(2, "VIDEO_ID_2");
-    // No player yet — no call.
+    // No player yet, no call.
     const player = makeFakePlayer();
     c.setPlayer(player);
     expect(player.loadVideoById).toHaveBeenCalledWith("VIDEO_ID_2");
@@ -228,7 +228,7 @@ describe("copyToClipboard", () => {
       value: false,
       configurable: true,
     });
-    // jsdom does not implement execCommand; the fallback returns false.
+    // jsdom does not implement execCommand. The fallback returns false.
     const ok = await copyToClipboard("hello");
     expect(ok).toBe(false);
   });

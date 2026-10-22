@@ -100,7 +100,7 @@ function PredictionFooter({
       )}
       {isLocked && (
         <span className="prediction-banner-timer prediction-banner-timer--locked">
-          Locked — waiting for result
+          Locked: waiting for result
         </span>
       )}
       {isEnded && (
@@ -113,10 +113,9 @@ function PredictionFooter({
 }
 
 /**
- * Display-mode prediction banner. Renders outcomes with channel-points
- * bars; once the prediction is resolved, the winning outcome gets a
- * green ring and "Winner" badge. Self-dismisses 8s after the prediction
- * ends.
+ * Display-mode prediction banner with channel-points bars. The winning
+ * outcome gets a green ring and "Winner" badge. Self-dismisses 8s after
+ * the prediction ends.
  */
 export default function PredictionBanner({
   prediction,

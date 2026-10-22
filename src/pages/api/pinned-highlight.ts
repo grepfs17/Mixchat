@@ -7,7 +7,7 @@ import {
 
 /**
  * Server response shape. We always return `highlight` (possibly null) so
- * the client polling hook can rely on shape stability — even Twitch API
+ * the client polling hook can rely on shape stability. Even Twitch API
  * errors become `{ highlight: null }` instead of an HTTP failure, with the
  * error reason logged server-side.
  */

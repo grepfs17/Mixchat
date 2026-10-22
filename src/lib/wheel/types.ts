@@ -1,5 +1,5 @@
 /**
- * Wheel Spin — shared types and limits.
+ * Wheel Spin: shared types and limits.
  *
  * A "wheel" is a named, ordered list of options the streamer can spin. Wheels
  * are persisted server-side as individual JSON files (see

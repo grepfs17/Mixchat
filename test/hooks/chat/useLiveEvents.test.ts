@@ -116,7 +116,7 @@ beforeEach(() => {
   pubSubStatusReturn = "disconnected";
 });
 
-describe("useLiveEvents — raid subscriptions", () => {
+describe("useLiveEvents: raid subscriptions", () => {
   it("registers three useRaidDetection calls", () => {
     renderHook(() => useLiveEvents(makeOptions()));
 
@@ -175,7 +175,7 @@ describe("useLiveEvents — raid subscriptions", () => {
   });
 
   it("watched-channel raid-out: disabled when no access token", () => {
-    // Pass empty string for accessToken — it's falsy (like "no token")
+    // Pass empty string for accessToken, it's falsy (like "no token")
     // and won't be swallowed by the ?? operator in makeOptions.
     renderHook(() =>
       useLiveEvents(
@@ -295,8 +295,8 @@ describe("useLiveEvents — raid subscriptions", () => {
       rewardCost: 500,
     });
 
-    // IRC already surfaced this redemption (different content shape);
-    // the PubSub copy must be dropped.
+    // IRC already surfaced this redemption (different content shape).
+    // The PubSub copy must be dropped.
     onRedemption(redemption("a", "User1 redeemed Emote"));
     onRedemption(redemption("b", "Emote (500 points)"));
 

@@ -11,7 +11,7 @@ import type { TwitchMessage, PlatformSession } from "../../../lib/types";
 /**
  * Cross-source dedup for channel point redemptions. Twitch delivers the
  * same redemption over IRC (USERNOTICE `channel_points_reward` / PRIVMSG
- * `custom-reward-id`), EventSub and PubSub; the first copy to arrive
+ * `custom-reward-id`), EventSub and PubSub. The first copy to arrive
  * within the window wins. Returns `true` when the redemption is a
  * duplicate that should be dropped.
  */
@@ -77,7 +77,7 @@ export function useChatMessages({
     return () => clearInterval(interval);
   }, []);
 
-  // Clear messages when switching channels — intentional
+  // Clear messages when switching channels. Intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     setMessages([]);
@@ -138,7 +138,7 @@ export function useChatMessages({
       // Dedup redemptions before touching state: the same redemption
       // arrives from IRC AND PubSub (and EventSub on the broadcaster's
       // own channel). Note this deliberately runs outside the setMessages
-      // updater — writing the ref inside a reducer would misbehave under
+      // updater. Writing the ref inside a reducer would misbehave under
       // React StrictMode's double-invocation.
       if (
         message.messageType === "redemption" &&

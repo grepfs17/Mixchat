@@ -673,7 +673,7 @@ img.emoji {
 }
 
 /* Giphy GIF chat messages (Twitch GIF Keyboard). The image replaces the
-   GIF caption text; sizing mirrors what twitch.tv renders (~240px wide). */
+   GIF caption text. Sizing mirrors what twitch.tv renders (~240px wide). */
 .chat-gif {
     display: inline-block;
     max-width: 240px;
@@ -695,7 +695,7 @@ img.emoji {
 
 /* Twitch "Gigantify an Emote" power-up (100 bits). Renders the emote at the
    same display size twitch.tv uses (~112px / 7em). The em keeps the rule
-   responsive to --chat-font-size; max-height caps it for large font users. */
+   responsive to --chat-font-size. Max-height caps it for large font users. */
 .chat-emote--gigantified {
     height: 7em !important;
     max-height: 112px;
@@ -705,7 +705,7 @@ img.emoji {
 /* BTTV / FFZ emote modifier effects (flip, wide, cursed, rainbow, …).
    Keyframes and effect values are ported from FrankerFaceZ's EFFECT_STYLES
    (src/modules/chat/emotes.js). Geometry effects are applied inline to the
-   <img>; filter/motion effects target this wrapper so animations never clobber
+   <img>. Filter/motion effects target this wrapper so animations never clobber
    the image's inline transform. The `slide` effect renders the emote as a
    repeating background on the wrapper (the image is kept at opacity 0). */
 .emote-mod {
@@ -1942,7 +1942,7 @@ button.reply-info {
         padding-bottom: 0;
     }
 
-    /* Fixed input is out of flow; ::after creates real scrollable space at the bottom
+    /* Fixed input is out of flow. ::after creates real scrollable space at the bottom
      that padding-bottom alone cannot guarantee in WebKit/Safari */
     .messages-container::after {
         content: "";

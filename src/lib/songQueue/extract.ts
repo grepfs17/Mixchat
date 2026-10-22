@@ -17,7 +17,7 @@ import {
 
 /**
  * Channel-owner identifiers that are always excluded from queue submissions.
- * Mirrors the giveaway owner shape; see `chatHelpers.ts`.
+ * Mirrors the giveaway owner shape (see `chatHelpers.ts`).
  */
 export type SongQueueOwner = StreamerToolsOwner;
 
@@ -81,23 +81,14 @@ function messageTimestamp(item: SongQueueMessage): string {
 }
 
 /**
- * Extract new song submissions from a chat feed.
- *
- * Rules (mirroring `extractEntries` from giveaway.ts):
- * - Only YouTube URLs are accepted. Other links are ignored.
- * - For YouTube messages, `link` parts are preferred over text scraping.
- * - First submission per (platform, userId, videoId) wins; duplicates ignored.
+ * Extract new song submissions from a chat feed, mirroring giveaway rules:
+ * - Only YouTube URLs are accepted. YouTube `link` parts are preferred.
+ * - First submission per (platform, userId, videoId) wins.
  * - The streamer's account is always excluded.
- * - Eligibility and scope filters applied after dedup.
+ * - Eligibility/scope filters and `perSubmitterLimit` are applied after dedup.
  * - Pre-loaded, deleted, non-chat messages are ignored.
- * - `perSubmitterLimit` enforced after dedup: existing pending items by the
- *   same submitter are kept; the new one is rejected when the count is at
- *   the limit. The caller decides whether to "replace" the existing pick
- *   by setting `perSubmitterLimit: 0` upstream — we keep the logic simple
- *   here.
  *
- * The function is pure; the caller is responsible for persisting accepted
- * submissions and surfacing rejected ones in the UI.
+ * Pure: the caller persists accepted submissions and surfaces rejections.
  */
 export function extractSubmissions(
   messages: SongQueueMessage[],
@@ -129,7 +120,7 @@ export function extractSubmissions(
     }
     const videoIds = extractVideoIdsFromItem(item);
     if (videoIds.length === 0) {
-      // No URL in the message — not a rejection we need to surface; skip silently.
+      // No URL in the message, not a rejection we need to surface, so skip silently.
       continue;
     }
     for (const videoId of videoIds) {

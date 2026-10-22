@@ -1,13 +1,10 @@
 /**
  * IndexedDB mirror for the Song Queue streamer-side session.
  *
- * Purpose: the streamer UI can render the queue instantly without waiting for
- * the network. Mutations are optimistic: write to IDB first, then call the
- * server, and on failure the caller reverts.
- *
- * Keyed by `channelKey` (e.g. "twitch:streamerlogin" or
- * "youtube:UCxxxx") so a streamer running the tool on multiple channels at
- * once doesn't clobber their own state.
+ * Lets the streamer UI render instantly without waiting for the network.
+ * Mutations are optimistic: IDB first, server second, caller reverts on
+ * failure. Keyed by `channelKey` (e.g. "twitch:streamerlogin") so multiple
+ * channels don't clobber each other's state.
  */
 
 import type { SongQueueItem, SongQueueSession } from "./types";

@@ -2,11 +2,8 @@ import type { APIRoute } from "astro";
 import { checkRateLimit } from "../../../lib/rateLimit";
 
 /**
- * Mapping of platform identifiers to the httpOnly cookie names that back them.
- * Kept in one place so the endpoint has a single source of truth for cookie
- * naming. If/when this is needed externally (e.g. by refresh-token.ts or the
- * OAuth callback pages), promote it to a `lib/` module and re-export from
- * there — for now no second consumer exists, so it stays module-private.
+ * Platform id → httpOnly cookie names cleared on logout. Kept module-private
+ * until a second consumer needs it.
  */
 const PLATFORM_COOKIES: Record<string, string[]> = {
   youtube: ["youtube_token", "youtube_refresh_token"],
@@ -44,12 +41,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     body = (await request.json()) as LogoutBody;
   } catch {
-    // Empty / non-JSON body is allowed — defaults to clearing all platforms.
+    // Empty / non-JSON body is allowed. It defaults to clearing all platforms.
   }
 
-  // Body was provided but no platforms field was sent (or it was empty) —
-  // that's almost certainly a caller bug, so reject it instead of silently
-  // clearing everything.
+  // An explicit empty platforms array is almost certainly a caller bug, so
+  // reject it instead of silently clearing everything.
   let requested: string[];
   if (Array.isArray(body.platforms)) {
     if (body.platforms.length === 0) {
@@ -63,7 +59,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
     requested = body.platforms;
   } else {
-    // No body / missing platforms field — default to clearing everything.
     requested = Object.keys(PLATFORM_COOKIES);
   }
 

@@ -19,11 +19,9 @@ function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      // Only create the store if it doesn't exist; preserve any existing
-      // user data and handle the case where another module (such as the
-      // song-queue mirror in a different DB) shares this DB name with a
-      // higher version number. Always re-create the indexes so the
-      // schema stays consistent across upgrades.
+      // Only create the store if it doesn't exist, preserving existing data.
+      // Another module can share this DB name at a higher version. Always
+      // re-create indexes so the schema stays consistent across upgrades.
       const indexSpecs: Array<[string, string | string[]]> = [
         ["author", "authorLower"],
         ["platform", "platform"],
@@ -54,9 +52,6 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-/**
- * Persists a message to IndexedDB.
- */
 export async function saveMessage(
   msg: TwitchMessage,
   channel: string,
@@ -91,9 +86,6 @@ export async function saveMessage(
   }
 }
 
-/**
- * Retrieves chat history for a specific user in a channel.
- */
 export async function getUserHistory(
   author: string,
   channel: string,
@@ -144,7 +136,7 @@ export interface GetChannelHistoryOptions {
   limit?: number;
   /** Restrict to these platforms. When omitted, all platforms are returned. */
   platforms?: Platform[];
-  /** Override the retention window; older messages are ignored. */
+  /** Override the retention window. Older messages are ignored. */
   maxAgeHours?: number;
 }
 
@@ -275,9 +267,6 @@ export async function getAllChannelHistory(
   return all;
 }
 
-/**
- * Prunes messages older than maxAgeHours.
- */
 export async function pruneMessages(
   maxAgeHours: number = CHAT_HISTORY_MAX_AGE_HOURS,
 ): Promise<void> {

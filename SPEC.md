@@ -39,7 +39,7 @@ mixchat/
 │   │   │   └── ThemeMascots.tsx
 │   │   ├── dev/             # Dev-only components (chat styling gallery)
 │   │   ├── wheel/           # Wheel Spin tool (canvas wheel, options, history, manager)
-│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals)
+│   │   ├── app/             # AppContainer sub-components (sidebar, home, chat view, modals, loading screen)
 │   │   ├── AppContainer.tsx # Root app component (orchestrates hooks, delegates layout to app/)
 │   │   ├── LoginPanel.tsx   # Sidebar with channel list + settings
 │   │   ├── StreamEmbed.tsx  # Twitch embed / HLS player
@@ -111,7 +111,7 @@ mixchat/
 
 ### 2. Component Architecture
 
-- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks.
+- **AppContainer** is the root component orchestrating sessions, channels, embed, settings, and stream monitoring. Its layout is delegated to focused sub-components under `src/components/app/` (AppSidebar, HomeChannelView, ChatView, AppModals, LoadingScreen), with onboarding, initial-loading, and channel-selection logic in dedicated `src/hooks/app/` hooks. The initial LoadingScreen renders real stages (session restore, token refresh, followed-channel fetch) with a progress bar instead of a generic spinner.
 - **ChatApp** is the central chat component receiving all settings as props and delegating to individual chat panels, banners, and modal overlays.
 - All `useXxx` hooks are self-contained custom hooks that own their state, effects, and derived values.
 
@@ -129,14 +129,14 @@ mixchat/
 
 ### 5. Emote System
 
-- `src/lib/emotes/` — modular providers: `7tv.ts`, `bttv.ts`, `ffz.ts`, `twitch.ts`.
-- `parser.ts` — parses message text, replaces emote codes with `<img>` elements.
-- `modifiers.ts` — BTTV (`w!`, `h!`, `v!`, `z!`, …) and FFZ (`ffzX`, `ffzW`, `ffzCursed`, …) emote modifier vocabulary and CSS-effect mapping.
-- `search.ts` — global emote search across all providers.
-- `hooks.ts` — React hooks for fetching emotes per channel.
-- `state.ts` — global emote cache (Map-based, populated from provider APIs).
+- `src/lib/emotes/`: modular providers: `7tv.ts`, `bttv.ts`, `ffz.ts`, `twitch.ts`.
+- `parser.ts`: parses message text, replaces emote codes with `<img>` elements.
+- `modifiers.ts`: BTTV (`w!`, `h!`, `v!`, `z!`, …) and FFZ (`ffzX`, `ffzW`, `ffzCursed`, …) emote modifier vocabulary and CSS-effect mapping.
+- `search.ts`: global emote search across all providers.
+- `hooks.ts`: React hooks for fetching emotes per channel.
+- `state.ts`: global emote cache (Map-based, populated from provider APIs).
 - Supports BTTV prefix modifiers (attached/chained, e.g. `w!h!KEKW`) and FFZ
-  effect words typed after an emote (`KEKW ffzX`); `z!` overlays an emote onto
+  effect words typed after an emote (`KEKW ffzX`). `z!` overlays an emote onto
   the preceding one. FFZ Hidden modifier emotes are excluded from the emote map.
 - All emotes rendered via CSS `background-image` with lazy loading.
 
@@ -157,8 +157,8 @@ mixchat/
 
 - **Server**: In-memory store (`songQueueStore`) per channel with rate limiting (`songQueueConfig`). RESTful API routes at `/api/song-queue/`.
 - **Client**: `useSongQueue` hook polls the server. Messages in chat can be "ingested" to auto-detect song requests.
-- **Extraction**: `src/lib/songQueue/extract.ts` — parses YouTube URLs from chat messages, validates via oEmbed/duration probe.
-- **Public API**: `src/client/songQueuePublic.ts` — standalone client for embedding song requests on stream pages.
+- **Extraction**: `src/lib/songQueue/extract.ts`: parses YouTube URLs from chat messages, validates via oEmbed/duration probe.
+- **Public API**: `src/client/songQueuePublic.ts`: standalone client for embedding song requests on stream pages.
 
 ### 9. Music Player
 
@@ -168,10 +168,10 @@ mixchat/
 
 ### 10. EventSub (Twitch)
 
-- `src/hooks/chat/useEventSub.ts` — manages EventSub subscription lifecycle.
+- `src/hooks/chat/useEventSub.ts`: manages EventSub subscription lifecycle.
 - Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, bits, automod.
 - Uses Twitch Helix EventSub API with subscription deduplication.
-- Channel point redemptions are **not** EventSub-based (the old broadcaster-only `channel.channel_points_custom_reward_redemption.add` subscription was removed). `eventSubHelpers/useChannelPointRedemptionsPubSub.ts` is the redemption feed: it listens on Twitch PubSub topic `community-points-channel-v1.<broadcasterId>` and works for any authenticated user on any channel. Duplicate redemptions across IRC / PubSub are collapsed by a shared `rewardId+userId` window in `useChatMessages` / `useLiveEvents`; its connection state is surfaced in the chat header status dropdown. Requires the PubSub websocket origin in the CSP (`wss://pubsub-edge.twitch.tv`).
+- Channel point redemptions are **not** EventSub-based (the old broadcaster-only `channel.channel_points_custom_reward_redemption.add` subscription was removed). `eventSubHelpers/useChannelPointRedemptionsPubSub.ts` is the redemption feed: it listens on Twitch PubSub topic `community-points-channel-v1.<broadcasterId>` and works for any authenticated user on any channel. Duplicate redemptions across IRC / PubSub are collapsed by a shared `rewardId+userId` window in `useChatMessages` / `useLiveEvents`. Its connection state is surfaced in the chat header status dropdown. Requires the PubSub websocket origin in the CSP (`wss://pubsub-edge.twitch.tv`).
 
 ### 11. Chat History & Lazy Loading
 
@@ -185,20 +185,20 @@ mixchat/
 
 - **Entry point**: A bar-chart button in the stream-info actions row (`ChatHeader` → `StreamInfoBar`) opens an overlay next to the "Open Twitch moderator page" button.
 - **Stats**: The accumulator in `src/lib/chatStats.ts` folds messages in as they stream by, so counts survive the in-memory window cap (evicted messages are already accounted for). It tracks unique chatters, unique users with the Twitch moderator badge, and repeated-message groups (content normalized case-insensitively with whitespace collapsed), retaining each entry's timestamps. Deleted/optimistic and non-chat message types are excluded from message counts. Message ids are deduped in a session-scoped `seen` set that is never pruned, so a message counted live is not recounted when it reappears in a stream backfill or a recent-messages reload. The accumulator resets on channel switch or when the stream start changes.
-- **Per-stream scope**: Stats cover the current broadcast only, bounded below by `streamStartedAt` from `useStreamInfo` (plumbed through `useChatAppState` → `ChatApp` → `ChatDisplay`). Live folding ignores pre-stream messages, and the backfill reads IndexedDB with `getAllChannelHistory(channel, { since: streamStart })`. When the channel is not live there is no stream start, so stats fall back to the current session (non-preloaded messages only). The 5-day IndexedDB retention is unchanged; only the stats scope is limited.
-- **Time window**: A filter bar selects `Stream` (default, the whole current stream), `30 min`, `5 min`, or `2 min`. `buildChatStats(store, limit, window, notBefore)` rebuilds the whole result against `max(notBefore, window cutoff)` (repeated entries need count ≥ 2 inside it; messages, chatters and mods are counted inside it too). Relative windows are refreshed every 15s while the overlay is open so they age even when chat is idle. The overlay header and footer state which scope is shown ("This stream · since HH:MM" or "This session").
+- **Per-stream scope**: Stats cover the current broadcast only, bounded below by `streamStartedAt` from `useStreamInfo` (plumbed through `useChatAppState` → `ChatApp` → `ChatDisplay`). Live folding ignores pre-stream messages, and the backfill reads IndexedDB with `getAllChannelHistory(channel, { since: streamStart })`. When the channel is not live there is no stream start, so stats fall back to the current session (non-preloaded messages only). The 5-day IndexedDB retention is unchanged. Only the stats scope is limited.
+- **Time window**: A filter bar selects `Stream` (default, the whole current stream), `30 min`, `5 min`, or `2 min`. `buildChatStats(store, limit, window, notBefore)` rebuilds the whole result against `max(notBefore, window cutoff)` (repeated entries need count ≥ 2 inside it. Messages, chatters and mods are counted inside it too). Relative windows are refreshed every 15s while the overlay is open so they age even when chat is idle. The overlay header and footer state which scope is shown ("This stream · since HH:MM" or "This session").
 - **Rendering**: `src/components/chat/shared/ChatStatsOverlay.tsx` (styles in `src/styles/chat/ChatStatsOverlay.css`) shows a time-window filter bar, then Chatters and Messages summary cards on one row, followed by an always-expanded Mods section listing the moderator users. The collapsed-by-default "Most repeated messages" section expands the top-50 repeated messages (count ≥ 2), each listing its users. Both lists have a "Copy names" action. Repeated-message counts can be cleared per entry (refresh icon on each row) or all at once via a "reset all counters" button on the section header, which requires a second confirming click. Resetting entries leaves the Chatters/Messages/Mods stats intact.
 
 ### 13. Wheel Spin (streamer tool)
 
-- **Entry point**: The "Wheel Spin" item in the streamer tools list (`src/components/chat/shared/StreamerToolsModal.tsx`). Unlike the in-modal tools it opens in a **new browser tab** at `/wheel?channel=<channelKey>`; the tool only appears on the streamer's own channel (`showModTools`).
-- **Page**: `src/pages/wheel/index.astro` (manager) and `src/pages/wheel/[wheelId].astro` (shared/public view) both render `src/components/wheel/WheelApp.tsx` (`client:only="react"`). Styles live in `src/styles/wheel.css` and use the app theme tokens (`vars.css` / `themes.css`); the stored chat theme is applied on mount.
-- **Canvas wheel**: `src/lib/wheel/draw.ts` (pure) renders the slices with the app accent palette; `src/components/wheel/WheelStage.tsx` owns rotation, the 8s CSS spin transition, the spin/win sounds (`public/wheel/wheel-effect.mp3`, `public/wheel/win-effect.mp3`), and derives the winner from the final angle. The option list is snapshotted at spin start (and editing controls are disabled while spinning) so the drawn slices always agree with the announced winner.
+- **Entry point**: The "Wheel Spin" item in the streamer tools list (`src/components/chat/shared/StreamerToolsModal.tsx`). Unlike the in-modal tools it opens in a **new browser tab** at `/wheel?channel=<channelKey>`. The tool only appears on the streamer's own channel (`showModTools`).
+- **Page**: `src/pages/wheel/index.astro` (manager) and `src/pages/wheel/[wheelId].astro` (shared/public view) both render `src/components/wheel/WheelApp.tsx` (`client:only="react"`). Styles live in `src/styles/wheel.css` and use the app theme tokens (`vars.css` / `themes.css`). The stored chat theme is applied on mount.
+- **Canvas wheel**: `src/lib/wheel/draw.ts` (pure) renders the slices with the app accent palette. `src/components/wheel/WheelStage.tsx` owns rotation, the 8s CSS spin transition, the spin/win sounds (`public/wheel/wheel-effect.mp3`, `public/wheel/win-effect.mp3`), and derives the winner from the final angle. The option list is snapshotted at spin start (and editing controls are disabled while spinning) so the drawn slices always agree with the announced winner.
 - **Data model**: `WheelRecord` (id, name, options[], channelName/channelPlatform, `ownerTokenHash`, timestamps, `isPublic`, `version`) in `src/lib/wheel/types.ts`. Options are sanitized (trim, dedupe case-insensitively, capped at `MAX_WHEEL_OPTIONS`).
 - **Persistence**: One JSON file per wheel at `{baseDir}/{wheelId}.json` via `src/server/wheelStore.ts` (atomic temp-file + rename, per-wheel in-process mutex). Base dir resolves from `MIXCHAT_WHEEL_DIR`, else `<cwd>/data/wheels` (`src/server/wheelConfig.ts`). Public reads strip `ownerTokenHash`.
-- **API**: `GET/POST /api/wheel` (list by channel / create) and `GET/PATCH/DELETE /api/wheel/[wheelId]` (public-or-owner read; owner-token **or** channel-trust mutations). `POST` with `X-HTTP-Method-Override: DELETE` is supported for proxies. Helpers in `src/server/wheelApi.ts`; rate-limited via `src/lib/rateLimit.ts`.
-- **Authorization**: A `channelKey` is only a claim. The channel-trust path (list, create, channel read, channel mutate/delete) additionally requires a server-verified identity from the httpOnly provider cookie — `src/server/wheelAuth.ts` resolves the Twitch login (`/helix/users`) or YouTube channel id (`channels.list?mine=true`) and compares it to the claimed channel. When the access-token cookie is missing or rejected, it mints a new one from the refresh-token cookie via `src/server/providerTokens.ts` (the same refresh used by `/api/refresh-token`) and retries, so the standalone `/wheel` page self-heals expired sessions. Verified identities are cached briefly; failed refreshes are cooled down. Owner tokens (IndexedDB, `src/lib/wheel/tokenStore.ts`) bypass the provider check but never grant access to another channel's wheel. Provider lookup failures fail closed (401/403).
-- **CRUD & sharing**: The manager can create, rename, edit options, delete and toggle `isPublic`. Sharing copies `${origin}/wheel/<id>`; anyone can open a public wheel to spin it, while editing requires the owner token or a verified matching channel identity. Winner history is per-wheel in localStorage (`src/lib/wheel/history.ts`).
+- **API**: `GET/POST /api/wheel` (list by channel / create) and `GET/PATCH/DELETE /api/wheel/[wheelId]` (public-or-owner read: owner-token **or** channel-trust mutations). `POST` with `X-HTTP-Method-Override: DELETE` is supported for proxies. Helpers in `src/server/wheelApi.ts`. Rate-limited via `src/lib/rateLimit.ts`.
+- **Authorization**: A `channelKey` is only a claim. The channel-trust path (list, create, channel read, channel mutate/delete) additionally requires a server-verified identity from the httpOnly provider cookie: `src/server/wheelAuth.ts` resolves the Twitch login (`/helix/users`) or YouTube channel id (`channels.list?mine=true`) and compares it to the claimed channel. When the access-token cookie is missing or rejected, it mints a new one from the refresh-token cookie via `src/server/providerTokens.ts` (the same refresh used by `/api/refresh-token`) and retries, so the standalone `/wheel` page self-heals expired sessions. Verified identities are cached briefly. Failed refreshes are cooled down. Owner tokens (IndexedDB, `src/lib/wheel/tokenStore.ts`) bypass the provider check but never grant access to another channel's wheel. Provider lookup failures fail closed (401/403).
+- **CRUD & sharing**: The manager can create, rename, edit options, delete and toggle `isPublic`. Sharing copies `${origin}/wheel/<id>`. Anyone can open a public wheel to spin it, while editing requires the owner token or a verified matching channel identity. Winner history is per-wheel in localStorage (`src/lib/wheel/history.ts`).
 
 ## Project Conventions
 
@@ -246,9 +246,9 @@ mixchat/
 **Desktop (public-client OAuth, built with `PUBLIC_APP_PLATFORM=desktop`):**
 - `src/lib/constants.ts` exposes `IS_DESKTOP` (from `PUBLIC_APP_PLATFORM`) and the shared `TWITCH_SCOPES`.
 - Twitch uses the OAuth **Device Code Grant** via `/api/auth/twitch/device/start` (returns the user code) and `/api/auth/twitch/device/poll` (sets the auth cookies on approval). A Public Twitch app is used, so no client secret. UI: `src/components/TwitchDeviceLoginModal.tsx`.
-- Google/YouTube uses **PKCE** with a Google "Desktop app" OAuth client: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie; `src/pages/auth/youtube/callback.ts` exchanges the code with `code_verifier` **and** the client secret (Google rejects secretless PKCE for its token endpoint, even for desktop clients).
+- Google/YouTube uses **PKCE** with a Google "Desktop app" OAuth client: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie. `src/pages/auth/youtube/callback.ts` exchanges the code with `code_verifier` **and** the client secret (Google rejects secretless PKCE for its token endpoint, even for desktop clients).
 - Twitch token refresh (`/api/refresh-token`, `src/server/providerTokens.ts`) omits the client secret for desktop builds (Public app). Google refresh (`refresh-token`, `providerTokens`, `gdrive.ts`) still sends its desktop client secret.
-- The confidential web flows are unchanged; `src/pages/auth/twitch/callback.ts` returns 404 in desktop mode.
+- The confidential web flows are unchanged. `src/pages/auth/twitch/callback.ts` returns 404 in desktop mode.
 
 ## Common Tasks Guide
 

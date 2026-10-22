@@ -1,23 +1,18 @@
 /**
  * YouTube video duration probe.
  *
- * Loads the YouTube IFrame Player API in a hidden container, cues the video
- * without playing it, reads `getDuration()`, and tears the player down. The
- * goal is to know a video's length *before* adding it to a queue so the
- * streamer-side app can reject over-length songs up-front.
+ * Loads the IFrame Player API in a hidden container, cues the video, reads
+ * `getDuration()`, and tears the player down, so callers can reject over-length
+ * songs before adding them to a queue.
  *
- * Notes:
- * - We deliberately do NOT use the YouTube Data API (`videos.list`) because
- *   it would require an OAuth scope the app currently avoids. The IFrame API
- *   works against the public, no-auth endpoint.
- * - Live streams report NaN / 0 from `getDuration()`; callers should treat
- *   that as "unknown" and decide what to do.
- * - Unavailable / private / region-locked videos fire `onError`; we resolve
- *   with `null` so the caller can fall back gracefully.
+ * - The YouTube Data API is avoided because it needs an OAuth scope. The IFrame
+ *   API works against the public, no-auth endpoint.
+ * - Live streams report NaN / 0. Callers should treat that as "unknown".
+ * - Unavailable / private / region-locked videos fire `onError`. We resolve
+ *   `null` so the caller can fall back gracefully.
  *
- * The `window.YT` / `window.onYouTubeIframeAPIReady` global typings live in
- * `components/chat/shared/SongQueuePlayer.tsx`; we access them via a small
- * structural cast so this module doesn't have to redeclare them.
+ * `window.YT` typings live in `components/chat/shared/SongQueuePlayer.tsx`.
+ * We use a structural cast here instead of redeclaring them.
  */
 
 const PROBE_TIMEOUT_MS = 10_000;
@@ -52,9 +47,9 @@ type WindowWithYT = Window & {
 let apiReadyPromise: Promise<void> | null = null;
 
 /**
- * Ensure the YouTube IFrame Player API is loaded. The script tag is
- * idempotent: subsequent calls reuse the existing `<script>` and resolve
- * when `window.YT.Player` becomes available.
+ * Ensure the IFrame Player API is loaded. The script tag is idempotent:
+ * subsequent calls reuse the existing `<script>` and resolve when
+ * `window.YT.Player` becomes available.
  */
 function ensureYouTubeApiLoaded(): Promise<void> {
   const w = window as WindowWithYT;
@@ -78,7 +73,7 @@ function ensureYouTubeApiLoaded(): Promise<void> {
 
     const existing = document.getElementById(scriptId);
     if (existing) {
-      // Script tag exists but API not yet ready — the onReady callback above
+      // Script tag exists but API not yet ready. The onReady callback above
       // will fire when it loads.
       return;
     }
@@ -170,7 +165,7 @@ export async function probeVideoDuration(videoId: string): Promise<number | null
             if (typeof dur === "number" && dur > 0) {
               finish(dur);
             }
-            // If dur is 0 / NaN, we keep waiting — sometimes the video
+            // If dur is 0 / NaN, we keep waiting. Sometimes the video
             // metadata isn't ready the moment onReady fires. CUED will
             // settle it.
           },

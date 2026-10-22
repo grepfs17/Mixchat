@@ -28,7 +28,7 @@ function makeYoutubeSession(): PlatformSession {
   };
 }
 
-describe("useYoutubeLink — IS_TWITCH_ONLY gating", () => {
+describe("useYoutubeLink: IS_TWITCH_ONLY gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -46,7 +46,7 @@ describe("useYoutubeLink — IS_TWITCH_ONLY gating", () => {
 
     // In both modes, linkedYoutubeUrl should be null when there's no stored
     // link and the user isn't watching their own channel. In Twitch-only
-    // mode this is enforced at the boundary; in normal mode it's simply
+    // mode this is enforced at the boundary. In normal mode it's simply
     // because no link matches.
     expect(result.current.linkedYoutubeUrl).toBeNull();
   });
@@ -73,7 +73,7 @@ describe("useYoutubeLink — IS_TWITCH_ONLY gating", () => {
     const twitchSession = makeTwitchSession();
     const { result } = renderHook(() =>
       useYoutubeLink({
-        // User watching their own channel — in non-Twitch-only mode this
+        // User watching their own channel, in non-Twitch-only mode this
         // would fall back to the YouTube session URL.
         selectedTwitchChannel: twitchSession.userId,
         twitchSession,

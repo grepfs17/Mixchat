@@ -53,10 +53,8 @@ export function useYoutubeLink(
     string | null
   >(null);
 
-  // Derive the linked YouTube URL for the selected Twitch channel. Falls
-  // back to the viewer's own YouTube channel if they're watching themselves.
-  // Computed during render (not in an effect) to avoid unnecessary state
-  // updates and the stale-closure issues they introduce.
+  // Derived during render (not in an effect) to avoid state updates and stale
+  // closures. Falls back to the viewer's own YouTube channel if watching self.
   const linkedYoutubeUrl = useMemo(() => {
     if (!selectedTwitchChannel || IS_TWITCH_ONLY) return null;
     const storedLink = getYoutubeLinkForChannel(selectedTwitchChannel);
@@ -80,8 +78,8 @@ export function useYoutubeLink(
   }, [linkedYoutubeUrl]);
 
   // For channel URLs, poll the proxy every 10 minutes to resolve the live
-  // video ID. This is a legitimate useEffect for periodic async work —
-  // not derivable during render because it depends on a remote API.
+  // video ID. This is a legitimate useEffect for periodic async work.
+  // Not derivable during render because it depends on a remote API.
   // eslint-disable-next-line react/no-fetch-in-effect, react/no-set-state-after-await-in-effect
   useEffect(() => {
     if (!linkedYoutubeUrl || directVideoId) {

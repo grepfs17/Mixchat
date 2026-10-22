@@ -84,7 +84,7 @@
     justify-content: space-between;
 }
 
-/* Default badge styling — per-tone files override the background. */
+/* Default badge styling. Per-tone files override the background. */
 .banner-title > .banner-badge,
 .banner-title > [class*="-badge"] {
     background: var(--color-twitch);
@@ -99,7 +99,7 @@
     animation: none;
 }
 
-/* Default icon styling — per-tone files override the color. */
+/* Default icon styling. Per-tone files override the color. */
 .banner-title > [class*="-icon"] {
     flex-shrink: 0;
     animation: none;

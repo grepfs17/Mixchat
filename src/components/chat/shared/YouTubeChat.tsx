@@ -9,10 +9,8 @@ import { YouTubeMessageContent } from "./YouTubeMessageContent";
 import type { MessagePart, YTMessage as UnifiedYTMessage } from "../unified/types";
 
 /**
- * Standalone YouTubeChat maintains a parallel `ChatMessage` type that
- * mirrors the shape produced by the SSE stream (`/api/youtube-stream-chat`).
- * Server messages don't carry `twitch-link` parts, but we widen the
- * discriminator so a `YTMessage` from the unified chat can be fed back
+ * Standalone YouTubeChat's message type mirrors the SSE stream shape.
+ * The discriminator is widened so unified `YTMessage`s can be rendered
  * through YouTubeMessageContent without a cast.
  */
 type ChatMessage = Omit<UnifiedYTMessage, "parts"> & {
@@ -375,7 +373,6 @@ export default function YouTubeChat({
     const connect = async () => {
       if (!isMounted) return;
 
-      // Close existing connection
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -411,7 +408,7 @@ export default function YouTubeChat({
         probeRes.body?.cancel();
       } catch (err) {
         if (probeAbort.signal.aborted) return;
-        // fetch probe failed (network error, etc.) — fall through to EventSource
+        // fetch probe failed (network error, etc.), fall through to EventSource
       }
 
       if (!isMounted) return;

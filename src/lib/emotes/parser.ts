@@ -27,13 +27,12 @@ import {
 } from "./modifiers";
 
 /**
- * DOMPurify configuration — only the elements and attributes our emote
+ * DOMPurify configuration: only the elements and attributes our emote
  * renderer ever emits are permitted. Everything else is stripped.
  */
 const DOMPURIFY_CONFIG: DOMPurifyConfig = {
   ALLOWED_TAGS: ["img", "a", "strong", "span"],
   ALLOWED_ATTR: [
-    // <img>
     "src",
     "alt",
     "title",
@@ -45,7 +44,6 @@ const DOMPURIFY_CONFIG: DOMPurifyConfig = {
     "data-emote-source",
     "data-emote-author",
     "data-tooltip-url",
-    // <a>
     "href",
     "target",
     "rel",
@@ -63,9 +61,9 @@ function isSafeCssColor(color: string): boolean {
 }
 
 /**
- * Apply each mentioned user's chat colour to the inline `@mention` markup
- * emitted by the emote parser. Runs on already-sanitised HTML, so the colour
- * is strictly validated before being injected into a `style` attribute.
+ * Apply each mentioned user's chat colour to the inline `@mention` markup.
+ * Runs on already-sanitised HTML, so the colour is strictly validated before
+ * being injected into a `style` attribute.
  */
 export function applyMentionColors(
   html: string,
@@ -84,13 +82,11 @@ export function applyMentionColors(
 }
 
 /**
- * Parse message text and replace emote codes with HTML image tags
- * @param text - The message text
+ * Parse message text, replacing emote codes with HTML image tags.
  * @param twitchEmotes - Twitch emote data from message tags (emoteId -> positions array)
- * @param opts - Render hints. `gigantified` true renders every emote in the
- *   message at the "Gigantify an Emote" power-up size (Twitch, 100 bits).
- *   `mentionColors` maps a lowercased username to the colour it should be
- *   rendered with when mentioned via `@username`.
+ * @param opts - `gigantified` renders every emote at the Gigantify power-up
+ *   size (Twitch, 100 bits). `mentionColors` maps lowercased usernames to
+ *   the colour they should render with when mentioned.
  */
 export function parseMessageWithEmotes(
   text: string,
@@ -144,9 +140,8 @@ export function parseMessageWithEmotes(
     raw = parseThirdPartyEmotes(text);
   }
 
-  // Final sanitization pass — strip anything outside the known-safe allowlist.
-  // This is the last line of defence against XSS from malformed emote names,
-  // crafted CDN responses, or future changes to the HTML-building helpers.
+  // Final sanitization pass: strip anything outside the known-safe allowlist.
+  // Last line of defence against XSS from malformed emote names or CDN data.
   const result = DOMPurify.sanitize(raw, DOMPURIFY_CONFIG) as unknown as string;
   if (parseCache.size >= MAX_PARSE_CACHE) {
     const firstKey = parseCache.keys().next().value;
@@ -157,8 +152,8 @@ export function parseMessageWithEmotes(
 }
 
 /**
- * Look up a word across all emote providers (7TV > BTTV > FFZ > Twitch).
- * Returns the emote URL and provider name, or null if not found.
+ * Look up a word across providers in priority order (7TV > BTTV > FFZ >
+ * Twitch), returning the URL and provider, or null.
  */
 function lookupEmote(
   word: string,
@@ -193,14 +188,12 @@ function lookupEmote(
 /**
  * Parse third-party emotes and @mentions in text.
  *
- * NOTE: The Twitch "Gigantify an Emote" power-up only applies to Twitch
- * emotes (those resolved through the IRC `emotes` tag in
- * parseMessageWithEmotes). 7TV / BTTV / FFZ emotes and manually-typed
- * Twitch emote names are always rendered at the standard 2em size here.
+ * Gigantify (Twitch, 100 bits) only applies to Twitch emotes resolved through
+ * the IRC `emotes` tag. 7TV / BTTV / FFZ and typed Twitch names render at 2em.
  */
 function parseThirdPartyEmotes(text: string): string {
-  // Split by HTML tags to avoid breaking emote img tags
-  // We use a capture group so the delimiter (img tag) is included in the result array
+  // Split on <img> tags (capture group keeps them in the result) so emote
+  // image tags aren't broken by word processing.
   const parts = text.split(/(<img[^>]*>)/);
 
   const parsedParts: string[] = [];
@@ -332,8 +325,7 @@ function parseThirdPartyEmotes(text: string): string {
     }
 
     // Process words with a while-loop so we can look ahead for BTTV prefixes,
-    // FFZ effect words and 7TV zero-width (overlay) emotes that attach to the
-    // emote currently being rendered.
+    // FFZ effect words and 7TV zero-width (overlay) emotes.
     const words = part.split(" ");
     const output: string[] = [];
     // Index in `output` of the most recently emitted base emote, so `z!` can
@@ -393,9 +385,8 @@ function parseThirdPartyEmotes(text: string): string {
         continue;
       }
 
-      // Any emote from any provider can be a base. Look ahead for FFZ effect
-      // words and 7TV zero-width overlays attached to it (adjacent, with no
-      // intervening text).
+      // Any emote can be a base. Look ahead for FFZ effect words and 7TV
+      // zero-width overlays attached to it (adjacent, with no intervening text).
       const overlays: string[] = [];
       const ffzEffects: EmoteEffect[] = [];
       let j = wi + 1;
@@ -446,7 +437,7 @@ function parseThirdPartyEmotes(text: string): string {
           output[lastBaseIndex] =
             `<span class="emote-overlay-container">${output[lastBaseIndex]}${overlayHtml}</span>`;
         } else {
-          // No preceding base — render as a normal (orphan) emote.
+          // No preceding base, render as a normal (orphan) emote.
           output.push(overlayHtml);
           lastBaseIndex = output.length - 1;
         }
@@ -473,7 +464,7 @@ function parseThirdPartyEmotes(text: string): string {
         output.push(baseHtml);
       }
       lastBaseIndex = output.length - 1;
-      wi = j; // skip consumed modifier / overlay words
+      wi = j;
     }
 
     // Do NOT flush here: leftover BTTV prefixes may still apply to an
@@ -488,12 +479,9 @@ function parseThirdPartyEmotes(text: string): string {
 }
 
 /**
- * Look up a word in the third-party (non-Twitch) emote providers only:
- * 7TV, then BTTV, then FFZ. Returns the emote URL and provider name, or
- * null if the word is not a known third-party emote name.
- *
- * Twitch emotes are intentionally excluded — they're irrelevant on YouTube
- * chat and would cause false matches against any channel-specific sub emote.
+ * Look up a word in the third-party providers only: 7TV, then BTTV, then FFZ.
+ * Twitch is excluded: it's irrelevant on YouTube chat and would false-match
+ * channel-specific sub emotes.
  */
 function lookupThirdPartyEmote(
   word: string,
@@ -526,11 +514,8 @@ export interface YoutubeEmoteToken {
   text?: string;
   /** Emote URL (without the ZW: prefix) for `type === "emote"`. */
   url?: string;
-  /** Emote name. */
   name?: string;
-  /** Provider name ("7TV" | "BTTV" | "FFZ"). */
   provider?: "7TV" | "BTTV" | "FFZ";
-  /** Emote author, if known. */
   author?: string;
   /** BTTV / FFZ modifier effects to render on this emote. */
   effects?: EmoteEffect[];
@@ -543,14 +528,9 @@ export interface YoutubeEmoteToken {
 }
 
 /**
- * Tokenize a YouTube message text part into a flat list of text and emote
- * tokens, applying BTTV / FFZ modifier effects and 7TV zero-width overlay
- * grouping. The same scope as the Twitch emote set is used (whatever is
- * currently loaded in `emotes7tv` / `emotesBttv` / `emotesFfz`), matching how
- * Twitch chat resolves third-party emotes. Disabled emotes are passed through
- * as plain text.
- *
- * Pure function with no React/DOM dependencies so it can be tested in Node.
+ * Tokenize a YouTube text part into text and emote tokens, applying BTTV /
+ * FFZ effects and 7TV zero-width overlay grouping using the currently loaded
+ * emote maps. Disabled emotes pass through as plain text. Pure, no DOM deps.
  */
 export function tokenizeThirdPartyEmotesForYoutube(
   text: string,

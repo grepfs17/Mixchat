@@ -11,7 +11,7 @@ import type { YTMessage } from "../../components/chat/unified/types";
 
 /**
  * Channel-owner identifiers that are always excluded from streamer-tool
- * entries. Twitch uses the broadcaster's userId; YouTube uses the channel
+ * entries. Twitch uses the broadcaster's userId, while YouTube uses the channel
  * owner id. The Twitch `broadcaster` badge and YouTube `authorIsOwner`
  * signal are also respected automatically.
  */
@@ -56,7 +56,7 @@ function youtubeIsMember(msg: YTMessage): boolean {
 
 /**
  * Returns true if the message qualifies under the given eligibility rule.
- * "everyone" always passes; "subscribers" requires a Twitch sub/founder
+ * "everyone" always passes. "subscribers" requires a Twitch sub/founder
  * badge or a YouTube membership.
  */
 export function isEligibleForSubscribers(item: StreamerToolsMessage): boolean {
@@ -66,7 +66,7 @@ export function isEligibleForSubscribers(item: StreamerToolsMessage): boolean {
 
 /**
  * Returns true if the message comes from the channel owner. The Twitch
- * `broadcaster` badge and YouTube `authorIsOwner` flag are honored; an
+ * `broadcaster` badge and YouTube `authorIsOwner` flag are honored. An
  * explicit id from the caller is also matched (case-insensitive).
  */
 export function isOwnerMessage(
@@ -114,7 +114,6 @@ export function stableUserId(item: StreamerToolsMessage): string | null {
   return id || null;
 }
 
-/** Convenience: filter to a single platform when scope restricts it. */
 function isInScope(
   item: StreamerToolsMessage,
   scope: "twitch" | "youtube" | "both",

@@ -1,6 +1,3 @@
-/**
- * Shared helpers for Song Queue API routes.
- */
 import { readSessionWithToken } from "./songQueueStore";
 import { getSongQueueStoreOptions } from "./songQueueConfig";
 import type { SongQueueSession } from "../lib/songQueue/types";
@@ -37,9 +34,8 @@ export async function loadSessionForOwner(
 }
 
 export function clientAddress(request: Request): string {
-  // Use the rightmost IP in X-Forwarded-For (the last proxy in the chain,
-  // which is closest to the origin). The leftmost IP is the original client
-  // and can be spoofed unless the edge proxy strips incoming XFF headers.
+  // Use the rightmost X-Forwarded-For IP: the proxy closest to the origin.
+  // The leftmost is client-controlled unless the edge strips incoming XFF.
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     const ips = forwarded.split(",");

@@ -13,7 +13,7 @@
  *   https://twitch.tv/<channel>/clip/<slug>→ clip
  *   https://clips.twitch.tv/<slug>         → clip (short form)
  *
- * Anything else is `null` (non-Twitch — handled by the generic link renderer
+ * Anything else is `null` (non-Twitch, handled by the generic link renderer
  * inside parseMessageWithEmotes).
  */
 
@@ -21,11 +21,11 @@ export type TwitchLinkKind = "channel" | "video" | "clip";
 
 export interface TwitchLinkParts {
   kind: TwitchLinkKind;
-  /** Lowercase channel login. Always populated for `channel`/`clip` paths; absent for `clips.twitch.tv` short clips until the API call resolves it. */
+  /** Lowercase channel login. Always populated for `channel`/`clip` paths. Absent for `clips.twitch.tv` short clips until the API call resolves it. */
   channel?: string;
   /** Numeric VOD id (`twitch.tv/videos/<id>` style). */
   videoId?: string;
-  /** Clip slug — `<channel>/clip/<slug>` style OR `clips.twitch.tv/<slug>` short form. */
+  /** Clip slug: `<channel>/clip/<slug>` style OR `clips.twitch.tv/<slug>` short form. */
   clipSlug?: string;
   /** Original URL as the user typed it (after light normalisation). */
   url: string;
@@ -166,14 +166,13 @@ export function parseTwitchUrl(input: string): TwitchLinkParts | null {
   return null;
 }
 
-/** Convenience: returns whether `input` parses as a Twitch URL. */
 export function isTwitchUrl(input: string): boolean {
   return parseTwitchUrl(input) !== null;
 }
 
 export interface TwitchTextSegment {
   type: "text";
-  /** Plain text with Twitch URLs removed; safe for HTML innerText use. */
+  /** Plain text with Twitch URLs removed, safe for HTML innerText use. */
   text: string;
   /** Start offset of this segment within the original input (inclusive). */
   start: number;
@@ -198,7 +197,7 @@ export type TwitchSplitSegment = TwitchTextSegment | TwitchLinkSegment;
  * wherever a Twitch URL is detected. Used by the chat renderers to mount a
  * preview card inline where a URL would otherwise render as a tiny `<a>`.
  *
- * Non-Twitch URLs are preserved verbatim inside `text` segments — those
+ * Non-Twitch URLs are preserved verbatim inside `text` segments. Those
  * still go through the generic link renderer (linkifyUrl) for clickable
  * styling.
  */
@@ -215,7 +214,7 @@ export function splitByTwitchLinks(text: string): TwitchSplitSegment[] {
     const end = start + match[0].length;
     const parts = parseTwitchUrl(match[0]);
     if (!parts) {
-      // Skip — not actually a parseable Twitch URL (e.g. reserved path).
+      // Skip: not actually a parseable Twitch URL (e.g. reserved path).
       continue;
     }
 
@@ -254,7 +253,7 @@ export function splitByTwitchLinks(text: string): TwitchSplitSegment[] {
  * with the substring `text.slice(segStart, segEnd)` (which is what the
  * chat renderer feeds back into `parseMessageWithEmotes`).
  *
- * `emotes` may be undefined; returns undefined in that case. Empty
+ * `emotes` may be undefined, in which case this returns undefined. Empty
  * filtered results also return undefined so `parseMessageWithEmotes`
  * skips the per-emote branch entirely.
  */

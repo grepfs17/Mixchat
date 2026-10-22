@@ -21,7 +21,7 @@ export function useUiState(): UseUiStateResult {
   const [showYoutubeLinker, setShowYoutubeLinker] = useState(false);
 
   // Initialise and re-evaluate on resize. We only ever force the sidebar
-  // open on wide screens; on narrow screens the user is left in whatever
+  // open on wide screens. On narrow screens the user is left in whatever
   // state they chose (so the mobile hamburger button keeps working and the
   // virtual-keyboard resize doesn't slam the sidebar shut).
   useEffect(() => {

@@ -31,7 +31,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-/** Convert a base64 data URL to a Blob without fetch(). */
+/** Converts a base64 data URL to a Blob without fetch(). */
 function dataUrlToBlob(dataUrl: string): Blob {
   const commaIdx = dataUrl.indexOf(",");
   const header = dataUrl.slice(0, commaIdx);
@@ -55,7 +55,6 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([decoded], { type: mime });
 }
 
-/** Convert a Blob back to a base64 data URL. */
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -66,8 +65,8 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /**
- * Persist event sounds to IndexedDB (or localStorage as fallback).
- * Passing an empty object clears the store.
+ * Persists event sounds to IndexedDB (or localStorage as fallback). Passing an
+ * empty object clears the store.
  */
 export async function saveEventSounds(
   sounds: Record<string, string>,
@@ -103,8 +102,8 @@ export async function saveEventSounds(
 }
 
 /**
- * Load event sounds from IndexedDB.
- * Automatically migrates legacy localStorage data on first run.
+ * Loads event sounds from IndexedDB, migrating legacy localStorage data on
+ * first run.
  */
 export async function loadEventSounds(): Promise<Record<
   string,
@@ -150,14 +149,14 @@ export async function loadEventSounds(): Promise<Record<
       },
     );
   } catch {
-    // IndexedDB read failed — will fall through to localStorage legacy check
+    // IndexedDB read failed, will fall through to localStorage legacy check
   }
 
   if (fromDB && Object.keys(fromDB).length > 0) {
     return fromDB;
   }
 
-  // Check for legacy localStorage data and migrate    // Read from the legacy unversioned key to migrate pre-existing user data
+  // Read from the legacy unversioned key to migrate pre-existing user data
     const legacy = localStorage.getItem("mixchat_event_sounds");
     if (legacy) {
       try {
@@ -173,7 +172,6 @@ export async function loadEventSounds(): Promise<Record<
   return null;
 }
 
-/** Remove all persisted event sounds. */
 async function clearEventSounds(): Promise<void> {
   if (!isIDBAvailable()) {
     localStorage.removeItem("mixchat_event_sounds:v1");

@@ -81,7 +81,7 @@ export function usePastPlaylists(
     return { channelName: rest.join(":"), channelPlatform: platform };
   }, [channelKey]);
 
-  // Build a lookup of sessionId → ownerToken from local entries.
+  // Map createdAt → ownerToken so server entries can be cross-referenced.
   const ownerTokenMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const entry of localEntries) {
@@ -242,7 +242,6 @@ export function usePastPlaylists(
       if (!channelParts) return;
       const sessionId = key.slice("server:".length);
 
-      // Find ownerToken for this session.
       const item = combined.find((c) => c.key === key);
       if (!item?.ownerToken) {
         if (typeof window !== "undefined") {
@@ -286,7 +285,6 @@ export function usePastPlaylists(
     clearPastPlaylists();
     refreshLocal();
     if (channelParts) {
-      // Collect ownerTokens for server entries that have them.
       const sessions: Array<{ sessionId: string; ownerToken: string }> = [];
       for (const item of combined) {
         if (item.source === "server" && item.ownerToken && item.sessionId) {
@@ -368,7 +366,6 @@ export function usePastPlaylists(
         return;
       }
 
-      // Find ownerToken for this session.
       const item = combined.find(
         (c) => c.sessionId === sessionId && c.source === "server",
       );

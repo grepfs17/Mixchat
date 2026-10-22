@@ -174,7 +174,7 @@ export function useStreamInfo({
     };
   }, [selectedTwitchChannel, twitchAccessToken]);
 
-  // Drop the previous stream's start immediately on channel switch; the poll
+  // Drop the previous stream's start immediately on channel switch. The poll
   // above repopulates it once the new channel's status resolves.
   useEffect(() => {
     streamStartedAtRef.current = null;

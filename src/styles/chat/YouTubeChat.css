@@ -97,7 +97,7 @@
     font-size: 11px;
 }
 
-/* Server-side reconnect status (transient YouTube block — SSE stays open) */
+/* Server-side reconnect status (transient YouTube block, SSE stays open) */
 .yt-chat-reconnecting-banner {
     display: flex;
     align-items: center;
@@ -153,8 +153,8 @@
     height: 18px;
 }
 
-/* Mobile menus are now portal-rendered with position:fixed via inline styles —
-   no CSS overrides needed here. */
+/* Mobile menus are now portal-rendered with position:fixed via inline styles.
+   No CSS overrides needed here. */
 
 .yt-status-refreshing {
     padding: 6px 12px;
@@ -174,7 +174,7 @@
     text-align: center;
 }
 
-/* YouTube Event Messages (Super Chat, Membership, Gifts) — matches Twitch event style */
+/* YouTube Event Messages (Super Chat, Membership, Gifts), matching Twitch event style */
 .message.yt-event {
     background-color: var(--event-bg);
     border-left: 3px solid var(--event-color);

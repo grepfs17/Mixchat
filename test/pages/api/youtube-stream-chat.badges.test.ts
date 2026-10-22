@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-// Vitest supports importing via the source path with a string; we re-export
+// Vitest supports importing via the source path with a string. We re-export
 // the helpers from a small bridge file to keep this test pure.
 import {
   parseBadges,
@@ -58,7 +58,7 @@ describe("YouTube chat badge parsing", () => {
     });
 
     it("returns true when a badge label contains 'Moderator'", () => {
-      // Labels alone are no longer authoritative — only icon_type="MODERATOR" is.
+      // Labels alone are no longer authoritative, only icon_type="MODERATOR" is.
       expect(
         isAuthorModerator({
           author: {

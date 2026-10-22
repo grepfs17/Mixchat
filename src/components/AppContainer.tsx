@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { SettingsProvider } from "../contexts/SettingsContext";
 import { useStreamMonitor } from "../hooks/app/useStreamMonitor";
 import { useAuthSessions } from "../hooks/app/useAuthSessions";
@@ -12,7 +12,7 @@ import { useAppModals } from "../hooks/app/useAppModals";
 import { useInitialLoading } from "../hooks/app/useInitialLoading";
 import { useChannelSelection } from "../hooks/app/useChannelSelection";
 import { IS_TWITCH_ONLY } from "../lib/constants";
-// storageMigration runs at import time — importing it triggers the migration.
+// storageMigration runs at import time, importing it triggers the migration.
 import "../lib/storageMigration";
 import { primeAudioContext } from "../hooks/chat/useTwitchChat";
 import type { StreamTransitionInfo } from "./StreamGrid";
@@ -21,6 +21,7 @@ import AppSidebar from "./app/AppSidebar";
 import HomeChannelView from "./app/HomeChannelView";
 import ChatView from "./app/ChatView";
 import AppModals from "./app/AppModals";
+import LoadingScreen, { type LoadingStep } from "./app/LoadingScreen";
 
 export interface TwitchChannel {
   id: string;
@@ -38,6 +39,7 @@ export default function AppContainer() {
     sessions,
     isLoggingIn,
     isLoading,
+    isRestoringSession,
     setIsLoading,
     twitchLogin: handleTwitchLogin,
     twitchLogout,
@@ -58,6 +60,7 @@ export default function AppContainer() {
     selectedTwitchChannelName,
     selectedTwitchChannelDisplayName,
     channelsLoading,
+    channelsReady,
     favoriteChannels,
     setChannelData,
     toggleFavorite,
@@ -120,7 +123,6 @@ export default function AppContainer() {
     handleOnboardingComplete,
   } = useAppModals(sessions.twitch);
 
-  // Stream monitoring
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
   const { newLiveStreamer, clearNewNotification } = useStreamMonitor({
     session: sessions.twitch,
@@ -130,7 +132,60 @@ export default function AppContainer() {
   });
 
   // Mark app-level loading complete once the initial channel fetch settles.
-  useInitialLoading(channelsLoading, sessions.twitch, setIsLoading);
+  useInitialLoading(
+    channelsReady,
+    sessions.twitch,
+    isRestoringSession,
+    setIsLoading,
+  );
+
+  const loadingSteps = useMemo<LoadingStep[]>(() => {
+    const hasTwitchSession = !!sessions.twitch;
+    const tokenReady = !!sessions.twitch?.accessToken;
+    const steps: LoadingStep[] = [
+      {
+        id: "session",
+        label: "Restoring your session",
+        detail: isRestoringSession
+          ? "Reading saved preferences"
+          : "Session restored",
+        status: isRestoringSession ? "active" : "complete",
+        weight: 20,
+      },
+    ];
+
+    if (hasTwitchSession) {
+      steps.push({
+        id: "account",
+        label: "Connecting to Twitch",
+        detail: tokenReady ? "Account connected" : "Refreshing access token",
+        status: tokenReady ? "complete" : "active",
+        weight: 30,
+      });
+    }
+
+    steps.push({
+      id: "channels",
+      label: "Loading followed channels",
+      detail: channelsReady
+        ? "Channels ready"
+        : tokenReady
+          ? "Fetching your channel list"
+          : "Waiting for Twitch",
+      status: channelsReady ? "complete" : tokenReady ? "active" : "pending",
+      weight: 45,
+    });
+
+    steps.push({
+      id: "ready",
+      label: "Preparing your workspace",
+      detail: channelsReady ? "All set" : "Waiting for channels",
+      status: channelsReady ? "complete" : "pending",
+      weight: 5,
+    });
+
+    return steps;
+  }, [isRestoringSession, sessions.twitch, channelsReady]);
 
   // Channel selection plus the reload auto-fold guard.
   const { handleChannelSelect } = useChannelSelection({
@@ -147,17 +202,13 @@ export default function AppContainer() {
     resetChannels();
   }, [twitchLogout, resetChannels]);
 
-  // While sessions are being restored from localStorage, render skeleton cards
+  // While sessions are being restored and channels are loading, show the
+  // staged loading screen so the wait is informative.
   if (isLoading) {
-    return (
-      <div className="loading-overlay">
-        <div className="loading-spinner"></div>
-        <div className="loading-text">Loading...</div>
-      </div>
-    );
+    return <LoadingScreen steps={loadingSteps} />;
   }
 
-  // Not logged in and not loading — show the landing page
+  // Not logged in and not loading, show the landing page
   if (!isLoggingIn && !sessions.twitch) {
     return (
       <LandingPage onTwitchLogin={handleTwitchLogin} twitchOnly={IS_TWITCH_ONLY} />

@@ -32,19 +32,10 @@ import {
 /**
  * Streamer-only Music Player hook, persisted via IndexedDB.
  *
- * - Two IDB records per write surface: `musicPlaylists` (one row per
- *   playlist) and `musicPlayerSettings` (one row for the scalar globals).
- * - `hydrated` flips to true once we've finished loading from IDB. The UI
- *   should gate on it so the empty state doesn't flash before the real
- *   playlists read into memory.
- * - "Auto-heal" effect: if `activePlaylistId` is set but the playlist is
- *   missing (deleted from disk, never existed), fall back to the first
- *   remaining playlist or null. This replaces nested setState inside
- *   `deletePlaylist`.
- * - All IDB writes happen OUTSIDE state updaters. React 18 strict mode
- *   runs updater functions twice, which would have caused double writes
- *   for every mutation. The hook also keeps `replacePlaylist` /
- *   `replaceSettings` as the single IDB dispatch path for clarity.
+ * Playlists and scalar settings are separate IDB records. Gate the UI on
+ * `hydrated` so the empty state doesn't flash before hydration. IDB writes
+ * happen outside state updaters because React 18 strict mode runs updaters
+ * twice. A dangling `activePlaylistId` is auto-healed after deletes.
  */
 export interface UseMusicPlayerResult {
   /** True once the initial IDB hydration has completed. */
@@ -69,7 +60,7 @@ export interface UseMusicPlayerResult {
 
   /**
    * Validate `input` via oEmbed and append the resulting track to the
-   * playlist identified by `targetPlaylistId` — defaults to the current
+   * playlist identified by `targetPlaylistId`, defaults to the current
    * active playlist. Passing it explicitly avoids stale-closure bugs in
    * callers that just created a playlist and want to add to it in the
    * same click.
@@ -95,9 +86,8 @@ export interface UseMusicPlayerResult {
     categoryName: string,
   ) => void;
 
-  /** Dismiss the mini bar. Persisted — survives reload. */
+  /** Dismiss the mini bar. Persisted. Survives reload. */
   hideMiniBar: () => void;
-  /** Show the mini bar again. */
   showMiniBar: () => void;
 }
 
@@ -156,11 +146,9 @@ export function useMusicPlayer(): UseMusicPlayerResult {
   }, [activePlaylist, settings.currentIndex]);
 
   // ---- IDB-aware mutators ----
-  // Updates React state synchronously, then schedules the IDB write in
-  // the background. Local state is the source of truth for the UI; the
-  // helpers log IDB failures but never throw so the user never sees a
-  // write failure as a UI error. Writes are deliberately OUTSIDE state
-  // updaters to avoid React 18 strict-mode double-dispatch.
+  // State is the UI source of truth. IDB writes run in the background outside
+  // state updaters (React 18 strict mode double-invokes them). IDB failures
+  // are logged, not thrown.
 
   const commitPlaylist = useCallback(
     (next: MusicPlaylist) => {
@@ -183,9 +171,7 @@ export function useMusicPlayer(): UseMusicPlayerResult {
     [],
   );
 
-  // Persist settings to IDB whenever they change after hydration.
-  // The redundant write on initial hydration is harmless (idempotent
-  // IDB put of the same payload loaded from IDB moments earlier).
+  // The redundant write right after hydration is harmless (idempotent put).
   useEffect(() => {
     if (hydrated) {
       void saveSettings(settings);
@@ -241,9 +227,8 @@ export function useMusicPlayer(): UseMusicPlayerResult {
   const deletePlaylist = useCallback((id: string) => {
     setPlaylists((prev) => prev.filter((p) => p.id !== id));
     void deletePlaylistFromIDB(id);
-    // Auto-heal effect below picks a new active playlist if `id` was
-    // the active one. Keeps the steps independent of React's batch
-    // ordering — no nested setState required.
+    // The auto-heal effect picks a new active playlist if `id` was active,
+    // avoiding nested setState and React batch-ordering assumptions.
   }, []);
 
   const setActivePlaylist = useCallback(
@@ -388,28 +373,12 @@ export function useMusicPlayer(): UseMusicPlayerResult {
           thumbnail: meta.thumbnail,
           durationSec: 0,
         };
-        // Commit the append inside a `flushSync` so the updater runs
-        // against the FRESHEST state React can offer. Without it, when
-        // a caller does `createPlaylist()` then immediately
-        // `addTrackFromUrl(url, returnedId)`, the closure-captured
-        // `playlists` here is still the pre-create snapshot, the
-        // setPlaylists updater fires later with that same stale prev,
-        // and the new playlist is missing — the row was created with
-        // no items. flushSync forces any pending React updates from
-        // createPlaylist to commit first, so the updater sees the
-        // just-created playlist as `prev`.
-        //
-        // The functional updater runs twice under React 18 strict mode
-        // — `savePlaylist` is idempotent (IDB put of the same payload)
-        // so the double-fire is harmless.
-        // Step 1: Force any pending state updates (e.g. from createPlaylist)
-        // to commit so playlistsRef.current reflects the freshest state.
-        // This is necessary when addTrackFromUrl is called immediately after
-        // createPlaylist before React has had a chance to re-render.
+        // flushSync commits pending updates (e.g. createPlaylist) so this
+        // append doesn't read the pre-create snapshot. The updater may run
+        // twice under strict mode: savePlaylist is an idempotent put.
         flushSync(() => setPlaylists((p) => p));
         const freshPlaylists = playlistsRef.current;
 
-        // Step 2: Compute outcome from fresh state (outside the updater).
         const pi = freshPlaylists.findIndex((p) => p.id === resolvedId);
         if (pi === -1) {
           setError("Could not find the target playlist.");
@@ -430,7 +399,6 @@ export function useMusicPlayer(): UseMusicPlayerResult {
           updatedAt: new Date().toISOString(),
         };
 
-        // Step 3: Pure updater — returns only next state, no side effects.
         flushSync(() => {
           setPlaylists((prev) => {
             const i = prev.findIndex((p) => p.id === resolvedId);
@@ -440,7 +408,6 @@ export function useMusicPlayer(): UseMusicPlayerResult {
             return merged;
           });
         });
-        // Persist to IDB after the state updater completes.
         void savePlaylist(updatedPlaylist);
       } catch (err) {
         if (err instanceof VideoValidationError) {

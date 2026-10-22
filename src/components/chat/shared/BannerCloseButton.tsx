@@ -14,12 +14,9 @@ interface BannerCloseButtonProps {
 }
 
 /**
- * Banner close button with the "Press again to close" confirm pattern.
- *
- * The first click reveals a tooltip; the second click (before blur)
- * commits the dismiss. This matches the previous in-line behaviour that
- * was duplicated across CelebrationBanner, HypeTrainBanner, PollBanner,
- * and PredictionBanner.
+ * Banner close button using the "Press again to close" confirm pattern:
+ * the first click shows a tooltip, the second (before blur) dismisses.
+ * Shared by Celebration, HypeTrain, Poll, and Prediction banners.
  */
 export default function BannerCloseButton({
   onDismiss,

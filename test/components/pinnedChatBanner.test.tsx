@@ -123,7 +123,7 @@ describe("PinnedChatBanner", () => {
   });
 
   it("re-parses the message and renders emotes once the emote maps load", () => {
-    // The banner mounts before the 7TV/BTTV/FFZ/Twitch maps have resolved —
+    // The banner mounts before the 7TV/BTTV/FFZ/Twitch maps have resolved,
     // exactly the page-load race where the pinned poll beats the emote
     // providers. The message must first render as plain text.
     const withEmote = { ...baseHighlight, message: "hello Cool" };
@@ -134,7 +134,7 @@ describe("PinnedChatBanner", () => {
     ).toBeNull();
     expect(screen.getByText(/hello/)).toBeInTheDocument();
 
-    // Emote source resolves + maps are bumped and the reload event fires —
+    // Emote source resolves + maps are bumped and the reload event fires,
     // the banner must re-parse and now show the emote image.
     act(() => {
       setEmotes7tv({ Cool: "https://cdn.7tv.app/emote/cool/1x.webp" });
@@ -160,7 +160,7 @@ describe("PinnedChatBanner", () => {
 
     const messageEl = document.querySelector(".pinned-banner-message");
     // The sanitiser must yield NO real <script> element, and the innerHTML
-    // must keep the angle-brackets in escaped form (&lt;script&gt;) rather
+    // must keep the angle-brackets in escaped form (&lt;script&gt;), rather
     // than re-emit them as a live tag. textContent reflects decoded visible
     // text, so we intentionally do NOT match against it here.
     expect(messageEl?.querySelector("script")).toBeNull();

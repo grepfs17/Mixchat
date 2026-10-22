@@ -163,7 +163,7 @@ describe("proxy failover", () => {
 
     it("selectProxy with videoId distributes across proxies", () => {
       const assigned = new Set<string>();
-      // Try many videoIds — with 3 proxies, hash distribution should hit all of them
+      // Try many videoIds, with 3 proxies, hash distribution should hit all of them
       for (let i = 0; i < 100; i++) {
         const videoId = `vid${i.toString().padStart(2, "0")}abcdefghij`;
         assigned.add(selectProxy(PROXIES, videoId)!);

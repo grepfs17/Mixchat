@@ -30,7 +30,7 @@ function parsePathCandidateFromUrl(channelUrlParam: string): string | null {
       candidate = candidate.split("/")[1] || candidate;
     if (candidate.startsWith("user/"))
       candidate = candidate.split("/")[1] || candidate;
-    // @handle format — strip the @ so downstream code recognises it as a handle
+    // Keep the @handle form so downstream code recognises it as a handle
     if (candidate.startsWith("@")) return candidate;
     return candidate || null;
   } catch {
@@ -343,7 +343,6 @@ export async function resolveChannelId(
   const trimmed = (channelParam || "").trim();
   if (!trimmed) return null;
 
-  // If it's already a canonical channel ID, return it immediately
   if (CHANNEL_ID_RE.test(trimmed)) return trimmed;
 
   const isFullUrl = YT_URL_RE.test(trimmed);
@@ -408,7 +407,6 @@ export async function findLiveForChannel(
   const paramKey = `param:${trimmedParam}`;
   const now = Date.now();
 
-  // Fast cache check by original param
   const cached = channelLiveCache.get(paramKey);
   if (cached && cached.expires > now) {
     return { videoId: cached.videoId, channelId: cached.channelId };
@@ -454,14 +452,14 @@ export async function findLiveForChannel(
     if (ytClient && (resolvedChannelId || trimmedParam)) {
       const targetId = resolvedChannelId || trimmedParam;
       try {
-        // @handle format — getChannel needs a URL, not a raw handle
+        // @handle format: getChannel needs a URL, not a raw handle
         const channelParam = targetId.startsWith("@")
           ? `https://www.youtube.com/${targetId}`
           : targetId;
         channel = await ytClient.getChannel(channelParam);
         if (debug)
           console.log(
-            `[YouTube Lookup] getChannel("${targetId}") OK — id=${channel?.basic_info?.id ?? "unknown"}`,
+            `[YouTube Lookup] getChannel("${targetId}") OK - id=${channel?.basic_info?.id ?? "unknown"}`,
           );
       } catch (chErr) {
         if (debug)
@@ -482,7 +480,7 @@ export async function findLiveForChannel(
         "";
     }
 
-    // Redirect fallback — fetch the /live page directly (not through Innertube)
+    // Redirect fallback: fetch the /live page directly (not through Innertube)
     // to extract the video ID from HTML/redirects.
     if (!videoId) {
       try {

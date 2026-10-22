@@ -99,7 +99,7 @@ describe("emotes hooks", () => {
     const renderCountBefore = seen.length;
     const referenceBefore = seen[seen.length - 1];
     act(() => {
-      // Fire a storage event for an unrelated key — the hook should NOT
+      // Fire a storage event for an unrelated key, the hook should NOT
       // re-read localStorage or trigger a re-render. We verify by checking
       // that no new snapshot was published and the returned set reference
       // is unchanged.

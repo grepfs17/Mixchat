@@ -23,7 +23,7 @@ export default function LiveNotification({
     onCloseRef.current = onClose;
   });
 
-  // Count down from 10s; when it hits zero, auto-dismiss. Reuses onClose,
+  // Count down from 10s. When it hits zero, auto-dismiss. Reuses onClose,
   // which marks the streamer as seen so the popup won't reappear.
   const [secondsLeft, setSecondsLeft] = useState(AUTO_DISMISS_SECONDS);
   useEffect(() => {

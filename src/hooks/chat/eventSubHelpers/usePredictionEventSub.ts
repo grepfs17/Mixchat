@@ -1,6 +1,4 @@
 /**
- * usePredictionEventSub
- *
  * Subscribes to `channel.prediction.begin`, `channel.prediction.progress`,
  * `channel.prediction.lock`, and `channel.prediction.end` v1 via the shared
  * EventSub connection.
@@ -13,7 +11,7 @@ import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
 
 /**
- * Rich, event-shaped prediction outcome — superset of the slim display
+ * Rich, event-shaped prediction outcome, superset of the slim display
  * variant in bannerTypes.PredictionOutcome. The transform from this shape to
  * the display shape happens in useLiveEvents, so this is intentionally NOT
  * exported under the same name as the banner type.

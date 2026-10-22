@@ -25,7 +25,7 @@ function baseProps(overrides: Partial<Props> = {}): Props {
   };
 }
 
-describe("useYouTubeSync — markYtMessageDeleted first-writer-wins", () => {
+describe("useYouTubeSync: markYtMessageDeleted first-writer-wins", () => {
   it("sets the label on first call and marks message deleted", () => {
     const { result } = renderHook(() => useYouTubeSync(baseProps()));
 
@@ -106,7 +106,7 @@ describe("useYouTubeSync — markYtMessageDeleted first-writer-wins", () => {
       );
     });
 
-    // Second: no label provided — defaults to "Message deleted by a moderator"
+    // Second: no label provided, defaults to "Message deleted by a moderator"
     // but the first-writer-wins guard should keep the existing (same) value.
     act(() => {
       result.current.markYtMessageDeleted("msg-1");
@@ -151,7 +151,7 @@ describe("useYouTubeSync — markYtMessageDeleted first-writer-wins", () => {
       result.current.setYtMessages([msg({ id: "msg-1" })]);
     });
 
-    // Step 1: removeYtMessage fires (old flow — just sets isDeleted:true).
+    // Step 1: removeYtMessage fires (old flow, just sets isDeleted:true).
     act(() => {
       result.current.removeYtMessage("msg-1");
     });

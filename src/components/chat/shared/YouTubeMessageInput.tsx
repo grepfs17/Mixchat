@@ -64,7 +64,6 @@ const YouTubeMessageInput = forwardRef<
   const mentionPosRef = useRef(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Emoji picker
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerRect, setPickerRect] = useState<DOMRect | null>(null);
@@ -80,14 +79,12 @@ const YouTubeMessageInput = forwardRef<
     return Array.from(authors);
   }, [chatMessages]);
 
-  // --- Insert at cursor helper ---
   const { insertAtPosition, insertMention } = useInsertAtCursor({
     message: ytMessage,
     setMessage: setYtMessage,
     inputRef,
   });
 
-  // --- Send ---
   const handleSend = useCallback(async () => {
     const text = ytMessage.trim();
     if (!text || !youtubeVideoId) return;
@@ -114,7 +111,6 @@ const YouTubeMessageInput = forwardRef<
     onOptimisticFailed,
   ]);
 
-  // --- Insert helpers ---
   const insertEmoji = useCallback(
     (entry: EmojiEntry) => {
       if (colonPosRef.current === -1) return;
@@ -156,7 +152,6 @@ const YouTubeMessageInput = forwardRef<
     [insertMention],
   );
 
-  // --- Autocomplete instances ---
   const emojiAC = useAutocomplete<EmojiEntry>({
     onSelect: (entry) => insertEmoji(entry),
     onSend: handleSend,
@@ -167,13 +162,11 @@ const YouTubeMessageInput = forwardRef<
     onSend: handleSend,
   });
 
-  // --- Autocomplete menu management ---
   const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
     inputRef,
     autocompleteInstances: [emojiAC, mentionAC],
   });
 
-  // --- Text change ---
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = e.target.value;
@@ -181,7 +174,6 @@ const YouTubeMessageInput = forwardRef<
       const cursor = e.target.selectionStart ?? val.length;
       const beforeCursor = val.substring(0, cursor);
 
-      // Emoji :shortcode:
       const lastColon = beforeCursor.lastIndexOf(":");
       if (lastColon !== -1) {
         const query = beforeCursor.substring(lastColon + 1);
@@ -196,7 +188,6 @@ const YouTubeMessageInput = forwardRef<
         }
       }
 
-      // @mention
       const lastAt = beforeCursor.lastIndexOf("@");
       if (lastAt !== -1 && (lastAt === 0 || beforeCursor[lastAt - 1] === " ")) {
         const query = beforeCursor.substring(lastAt + 1).toLowerCase();
@@ -221,7 +212,6 @@ const YouTubeMessageInput = forwardRef<
     [chatAuthors, emojiAC, mentionAC, closeAll],
   );
 
-  // --- Keyboard ---
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (emojiAC.isOpen) {
@@ -240,7 +230,6 @@ const YouTubeMessageInput = forwardRef<
     [emojiAC, mentionAC, handleSend],
   );
 
-  // --- Effects ---
   useEffect(() => {
     if (showPicker) {
       setPickerRect(pickerBtnRef.current?.getBoundingClientRect() ?? null);

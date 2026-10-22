@@ -226,7 +226,7 @@ StreamGrid stream cards list
     border-color: var(--color-border-medium);
 }
 
-/* Match .channel-item-info:focus-visible — clean box-shadow ring instead of
+/* Match .channel-item-info:focus-visible: clean box-shadow ring instead of
  * outline + offset so the indicator is consistent across both card types. */
 .stream-card-clickable:focus-visible {
     outline: none;
