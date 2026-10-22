@@ -231,6 +231,8 @@ export function useLazyChatHistory<T>({
       );
       const mapped = stored
         .map((message) => mapStoredRef.current(message))
+        // Never resurrect ephemeral items (e.g. AutoMod holds) from history.
+        .filter((item) => !isEphemeralRef.current?.(item))
         .filter((item) => !historyKeys.has(keyOfRef.current(item)));
       if (stored.length < pageSize) hasMoreRef.current = false;
       if (mapped.length === 0) {

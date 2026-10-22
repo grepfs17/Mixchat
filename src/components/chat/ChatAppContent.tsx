@@ -112,6 +112,7 @@ function UnifiedChatContent({
           <YouTubeChat
             videoId={youtubeVideoId}
             channel={selectedTwitchChannelName}
+            authUserId={youtubeSession?.userId}
             onMessages={handleYtMessages}
             onMessageDeleted={markYtMessageDeleted}
             onConnectionChange={onYtConnectionChange}

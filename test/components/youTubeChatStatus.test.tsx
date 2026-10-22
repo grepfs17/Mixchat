@@ -37,12 +37,15 @@ afterEach(() => {
 });
 
 async function mountChat(props: {
+  authUserId?: string;
+  showDeletedMessages?: boolean;
   onConnectionChange?: (state: {
     connected: boolean;
     loading: boolean;
     error: string | null;
     reconnecting: boolean;
   }) => void;
+  onMessages?: (messages: unknown[]) => void;
 }) {
   // Probe succeeds so the component proceeds to EventSource creation.
   vi.stubGlobal(
@@ -119,6 +122,157 @@ describe("YouTubeChat — reconnect status indicator", () => {
     expect(afterReconnect).toEqual(
       expect.objectContaining({ reconnecting: false }),
     );
+
+    result.unmount();
+  });
+
+  it("replaces an AutoMod message when an update event arrives", async () => {
+    const onMessages = vi.fn();
+    const { es, result } = await mountChat({ onMessages });
+
+    const base = {
+      id: "held-1",
+      author: "alice",
+      authorChannelId: "UC-alice",
+      parts: [{ type: "text", text: "held for review" }],
+      timestamp: new Date().toISOString(),
+      messageType: "automod",
+    };
+
+    act(() => {
+      es.emit("connected", {
+        messages: [
+          {
+            ...base,
+            automodButtons: [{ text: "Approve", is_disabled: false }],
+          },
+        ],
+        count: 1,
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // Another moderator resolved/claimed the hold — YouTube replaces the
+    // item with an updated one (here: buttons become disabled).
+    act(() => {
+      es.emit("update", {
+        message: {
+          ...base,
+          id: "held-2",
+          automodButtons: [{ text: "Approve", is_disabled: true }],
+        },
+        previousId: "held-1",
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    const calls = onMessages.mock.calls;
+    const last = calls[calls.length - 1]?.[0] as any[];
+    expect(last).toHaveLength(1);
+    expect(last[0].id).toBe("held-2");
+    expect(last[0].automodButtons).toEqual([
+      { text: "Approve", is_disabled: true },
+    ]);
+
+    result.unmount();
+  });
+
+  it("removes a resolved AutoMod hold even when deleted messages are shown", async () => {
+    const onMessages = vi.fn();
+    const { es, result } = await mountChat({
+      showDeletedMessages: true,
+      onMessages,
+    });
+
+    act(() => {
+      es.emit("connected", {
+        messages: [
+          {
+            id: "held-1",
+            author: "alice",
+            authorChannelId: "UC-alice",
+            parts: [{ type: "text", text: "held for review" }],
+            timestamp: new Date().toISOString(),
+            messageType: "automod",
+            automodButtons: [{ text: "Approve", is_disabled: false }],
+          },
+          {
+            id: "normal-1",
+            author: "bob",
+            authorChannelId: "UC-bob",
+            parts: [{ type: "text", text: "hello" }],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+        count: 2,
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    act(() => {
+      es.emit("delete", {
+        messageId: "held-1",
+        deletedByText: "Message removed",
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    const calls = onMessages.mock.calls;
+    const last = calls[calls.length - 1]?.[0] as any[];
+    expect(last.map((m) => m.id)).toEqual(["normal-1"]);
+
+    result.unmount();
+  });
+
+  it("clears messages when the YouTube auth identity changes", async () => {
+    const onMessages = vi.fn();
+    const { es, result } = await mountChat({ onMessages });
+
+    act(() => {
+      es.emit("connected", {
+        messages: [
+          {
+            id: "held-1",
+            author: "alice",
+            authorChannelId: "UC-alice",
+            parts: [{ type: "text", text: "held for review" }],
+            timestamp: new Date().toISOString(),
+            messageType: "automod",
+            automodButtons: [{ text: "Approve", is_disabled: false }],
+          },
+        ],
+        count: 1,
+      });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onMessages).toHaveBeenLastCalledWith(
+      expect.arrayContaining([expect.objectContaining({ id: "held-1" })]),
+    );
+
+    await act(async () => {
+      result.rerender(
+        <YouTubeChat
+          videoId="test-video-id"
+          authUserId="UC-new-viewer"
+          onMessages={onMessages}
+        />,
+      );
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    // The old session's AutoMod hold (and its buttons) must not survive the
+    // account switch.
+    expect(onMessages).toHaveBeenLastCalledWith([]);
 
     result.unmount();
   });

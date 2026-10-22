@@ -336,7 +336,7 @@ function YouTubeAutomodButtons({
   config: YTEventConfig;
   youtubeVideoId: string | null | undefined;
 }) {
-  if (!showModActions || !(msg as any).automodButtons) return null;
+  if (!showModActions || !msg.automodButtons) return null;
   return (
     <div
       style={{
@@ -346,9 +346,9 @@ function YouTubeAutomodButtons({
         flexWrap: "wrap" as const,
       }}
     >
-      {(msg as any).automodButtons
-        .filter((b: any) => !b.is_disabled)
-        .map((b: any, i: number) => (
+      {msg.automodButtons
+        .filter((b) => !b.is_disabled)
+        .map((b, i) => (
           <button
             key={i}
             type="button"
@@ -627,10 +627,10 @@ export function YouTubeMessageContent({
   const isUnmoderatable = isMod || isOwner || isCurrentUser;
   const isMobile = isMobileDevice();
   const showModActions = Boolean(
-    isYouTubeModerator &&
-      youtubeModModeActive &&
-      !msg.isDeleted &&
-      msg.authorChannelId,
+    !msg.isDeleted &&
+      // Receiving an AutoMod hold proves this viewer is a moderator.
+      (msg.messageType === "automod" ||
+        (isYouTubeModerator && youtubeModModeActive && msg.authorChannelId)),
   );
 
   if (config) {

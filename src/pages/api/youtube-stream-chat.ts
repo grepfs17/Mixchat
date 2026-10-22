@@ -1,9 +1,18 @@
 import type { APIRoute } from "astro";
 import { YTNodes } from "youtubei.js";
-import { getInnertube } from "../../lib/youtube";
+import {
+  createAuthenticatedInnertube,
+  getInnertube,
+  type YouTubeAuthTokens,
+} from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
 import { isPlayabilityError } from "./youtube-stream-chat.playability";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
+import {
+  getYouTubeAuthIdentity,
+  getYouTubeSessionKey,
+  type YouTubeAuthIdentity,
+} from "../../server/youtubeAuth";
 
 interface MessagePart {
   type: "text" | "emoji";
@@ -33,6 +42,8 @@ interface ChatMessage {
   /** Username of the target when this message is a synthetic system note
    *  about a moderator-driven removal (e.g. "X was removed from the chat"). */
   targetUsername?: string;
+  /** Approve/deny buttons shown for a moderator-only AutoMod hold. */
+  automodButtons?: { text: string; is_disabled: boolean }[];
   superchat?: {
     amount: string;
     color: string;
@@ -71,7 +82,7 @@ const TRANSIENT_BLOCK_BASE_MS = 30_000;
 const TRANSIENT_BLOCK_MAX_MS = 5 * 60_000;
 const TRANSIENT_BLOCK_MAX_ATTEMPTS = 8;
 
-/** videoId -> { until, attempt } backoff state for transient blocks. */
+/** sessionKey -> { until, attempt } backoff state for transient blocks. */
 const transientChatFailures = new Map<
   string,
   { until: number; attempt: number }
@@ -95,13 +106,97 @@ export function isTransientChatBlock(msg: string): boolean {
   );
 }
 
+/**
+ * Retry auth failures (incl. 401/403 or a blocked auth session) with the
+ * anonymous client so a rejected token never takes read-only chat down.
+ * Playability/transient blocks are not auth-specific, so they are excluded.
+ */
+export function shouldFallbackToAnonymous(msg: string): boolean {
+  if (msg.startsWith("PLAYABILITY: ")) return false;
+  if (isPlayabilityError(msg)) return false;
+  if (isTransientChatBlock(msg)) return false;
+  return true;
+}
+
+/** Maps a session setup failure to the appropriate HTTP response. */
+function chatSetupErrorResponse(err: unknown, videoId: string): Response {
+  const rawMsg = err instanceof Error ? err.message : String(err);
+  if (rawMsg === "BLOCKED") {
+    return new Response(
+      JSON.stringify({
+        error: "Live chat temporarily unavailable due to repeated failures",
+      }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (rawMsg.startsWith("PLAYABILITY: ")) {
+    const innerMsg = rawMsg.slice("PLAYABILITY: ".length);
+    return new Response(
+      JSON.stringify({
+        error: `Live chat is not available for this video (${innerMsg})`,
+        videoId,
+      }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (rawMsg.includes("status code 403") || rawMsg.includes("403")) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Live chat temporarily unavailable due to YouTube blocking (403)",
+      }),
+      { status: 503, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (isPlayabilityError(rawMsg)) {
+    // Fallback for the rare case where isPlayabilityError matches but we
+    // didn't pre-cache the entry (e.g. someone added a new pattern).
+    playabilityErrors.set(videoId, {
+      message: rawMsg,
+      until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
+    });
+    return new Response(
+      JSON.stringify({
+        error: `Live chat is not available for this video (${rawMsg})`,
+        videoId,
+      }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  if (isTransientChatBlock(rawMsg)) {
+    // Transient YouTube block (proxy 503 / bot check) during session
+    // setup — retryable; the client will back off and reconnect.
+    return new Response(
+      JSON.stringify({
+        error:
+          "Live chat temporarily unavailable (YouTube is blocking requests)",
+      }),
+      {
+        status: 503,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": "30",
+        },
+      },
+    );
+  }
+  console.error("[YouTube Chat] Error setting up chat for", videoId, rawMsg);
+  return new Response(
+    JSON.stringify({
+      error: "Failed to connect to YouTube chat",
+      ...(import.meta.env.MODE === "development" ? { details: rawMsg } : {}),
+    }),
+    { status: 500, headers: { "Content-Type": "application/json" } },
+  );
+}
+
 /** Cancel a pending transient-block reconnect for a session. */
-function clearChatRestart(session: ChatSession, videoId: string): void {
+function clearChatRestart(session: ChatSession, sessionKey: string): void {
   if (session.restartTimer) {
     clearTimeout(session.restartTimer);
     session.restartTimer = null;
   }
-  transientChatFailures.delete(videoId);
+  transientChatFailures.delete(sessionKey);
 }
 
 /**
@@ -139,11 +234,21 @@ interface SSEClient {
 
 const SESSION_GRACE_PERIOD_MS = 30_000;
 
-// Shared session for a videoId
+// A live-chat session scoped to a video AND a viewer identity.
 interface ChatSession {
+  /** Key in `activeLiveChats` (videoId + auth identity). */
+  key: string;
+  /** Opaque identity derived from the viewer's auth cookies ("anon" for guests). */
+  authKey: string;
+  /** Whether this session uses the viewer's own OAuth credentials. */
+  authenticated: boolean;
+  /** InnerTube client owned by this session (shared singleton for guests). */
+  yt: any;
   chat: any;
   messages: ChatMessage[];
   seenIds: Set<string>;
+  /** Server-only raw AutoMod items; never sent to clients. */
+  automodItems: Map<string, any>;
   /**
    * Reverse index channelId -> most recent display name observed for that
    * channel. Used to render "X was removed from the chat" system notes when
@@ -216,6 +321,12 @@ function broadcast(
   data: unknown,
   msgId?: string,
 ) {
+  if (event === "delete") {
+    const deletedId = (data as any)?.messageId;
+    if (typeof deletedId === "string") {
+      session.automodItems.delete(deletedId);
+    }
+  }
   const payload = JSON.stringify(data);
   const deadClients: string[] = [];
   for (const [clientId, client] of session.clients) {
@@ -512,7 +623,10 @@ export function getMembershipLabel(msg: any): string {
   return subtext || "Member";
 }
 
-function parseChatItem(item: any): ChatMessage | null {
+function parseChatItem(
+  item: any,
+  automodItems?: Map<string, any>,
+): ChatMessage | null {
   if (item.is(YTNodes.LiveChatTextMessage)) {
     return parseTextMessageBase(item);
   }
@@ -580,12 +694,15 @@ function parseChatItem(item: any): ChatMessage | null {
     return parseGiftRedemptionAnnouncement(item);
   }
   if (item.is(YTNodes.LiveChatAutoModMessage)) {
-    return parseAutoModMessage(item);
+    return parseAutoModMessage(item, automodItems);
   }
   return null;
 }
 
-function parseAutoModMessage(item: any): ChatMessage | null {
+export function parseAutoModMessage(
+  item: any,
+  automodItems?: Map<string, any>,
+): ChatMessage | null {
   // Parse the held message content from auto_moderated_item.
   // It can be any chat item type — try recursive parsing first.
   const heldItem = item.auto_moderated_item;
@@ -614,27 +731,22 @@ function parseAutoModMessage(item: any): ChatMessage | null {
         }))
       : [];
 
-  // Store the raw LiveChatAutoModMessage on the session for later
-  // moderation API access (approve/deny). The session's automodMap
-  // will be populated by the caller (in chat-update / start).
-  const msg: ChatMessage & { automodItem?: any; automodButtons?: typeof buttons } = {
+  // Keep raw items server-side; their endpoints must not reach clients.
+  automodItems?.set(item.id, item);
+
+  return {
     id: item.id,
     author: held?.author || "System",
     authorChannelId: held?.authorChannelId,
     authorAvatar: held?.authorAvatar,
     badges: {},
-    parts: held?.parts || [
-      { type: "text", text: headerText },
-    ],
+    parts: held?.parts || [{ type: "text", text: headerText }],
     timestamp: item.timestamp
       ? new Date(item.timestamp)
       : held?.timestamp || new Date(),
     messageType: "automod",
-    automodItem: item,
     automodButtons: buttons,
   };
-
-  return msg;
 }
 
 function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
@@ -788,17 +900,24 @@ export function parseHostHandoffBanner(
 
 // Session management
 
-/** Look up an auto-mod message by videoId + messageId for the moderation API. */
+/** Look up an AutoMod hold by session key + message id. */
 export function getAutomodItem(
-  videoId: string,
+  sessionKey: string,
   messageId: string,
 ): any | undefined {
-  const session = activeLiveChats.get(videoId);
+  return activeLiveChats.get(sessionKey)?.automodItems.get(messageId);
+}
+
+/** Returns the raw AutoMod item and its authenticated InnerTube client. */
+export function getAutomodTarget(
+  sessionKey: string,
+  messageId: string,
+): { item: any; yt: any } | undefined {
+  const session = activeLiveChats.get(sessionKey);
   if (!session) return undefined;
-  const msg = session.messages.find(
-    (m: any) => m.id === messageId && (m as any).automodItem,
-  );
-  return msg ? (msg as any).automodItem : undefined;
+  const item = session.automodItems.get(messageId);
+  if (!item) return undefined;
+  return { item, yt: session.yt };
 }
 
 function reapIdleSessions() {
@@ -820,20 +939,24 @@ function reapIdleSessions() {
   }
 }
 
-async function ensureChatSession(videoId: string): Promise<ChatSession> {
+async function ensureChatSession(
+  videoId: string,
+  sessionKey: string,
+  auth: YouTubeAuthIdentity,
+): Promise<ChatSession> {
   // Return existing session
-  let session = activeLiveChats.get(videoId);
+  let session = activeLiveChats.get(sessionKey);
   if (session) {
     session.lastUpdate = Date.now();
     return session;
   }
 
   // Check 403 cooldown
-  const blockedUntil = blockedChatFailures.get(videoId);
+  const blockedUntil = blockedChatFailures.get(sessionKey);
   if (blockedUntil && blockedUntil > Date.now()) {
     throw new Error("BLOCKED");
   }
-  if (blockedUntil) blockedChatFailures.delete(videoId);
+  if (blockedUntil) blockedChatFailures.delete(sessionKey);
 
   // Check playability-error cooldown (video unavailable, private, etc.)
   const playability = playabilityErrors.get(videoId);
@@ -885,7 +1008,58 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
    */
   const deletedIds = new Map<string, string>();
 
-  const parse = (item: any): ChatMessage | null => parseChatItem(item);
+  // Authenticated viewers get their own OAuth client; guests share the
+  // anonymous one.
+  let innertubeClient: any;
+  if (auth.authenticated) {
+    const tokens: YouTubeAuthTokens = {
+      accessToken: auth.accessToken || "",
+      refreshToken: auth.refreshToken,
+      expiresAt: Date.now() + 3600_000,
+    };
+    const { yt } = await createAuthenticatedInnertube(tokens, {
+      throttleNamespace: auth.authKey,
+    });
+    innertubeClient = yt;
+  } else {
+    innertubeClient = await getInnertube();
+  }
+
+  // Register before start() so replay events can record AutoMod holds.
+  session = {
+    key: sessionKey,
+    authKey: auth.authKey,
+    authenticated: auth.authenticated,
+    yt: innertubeClient,
+    chat: null,
+    messages,
+    seenIds,
+    authorByChannel,
+    recentRemovals,
+    recentHostHandoffs,
+    deletedIds,
+    automodItems: new Map<string, any>(),
+    clients: new Map<string, SSEClient>(),
+    lastUpdate: Date.now(),
+    destroyTimer: null,
+    restartTimer: null,
+    ready: Promise.resolve(),
+  };
+  const sessionRef = session;
+  activeLiveChats.set(sessionKey, sessionRef);
+
+  const parse = (item: any): ChatMessage | null => {
+    const msg = parseChatItem(
+      item,
+      sessionRef.authenticated ? sessionRef.automodItems : undefined,
+    );
+    // AutoMod holds are moderator-only; never surface them on anonymous sessions.
+    if (msg?.messageType === "automod" && !sessionRef.authenticated) {
+      sessionRef.automodItems.delete(msg.id);
+      return null;
+    }
+    return msg;
+  };
 
   // Build/extend the channelId -> display name index whenever a new message
   // is admitted. Called both from the initial-data replay and the live
@@ -895,6 +1069,55 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     if (msg.authorChannelId && msg.author) {
       authorByChannel.set(msg.authorChannelId, msg.author);
     }
+  };
+
+  /**
+   * Handles a replacement that is itself an AutoMod hold (e.g. after another
+   * moderator resolves/claims it). Returns true when handled.
+   */
+  const applyAutoModReplacement = (
+    targetId: string | undefined,
+    replacement: any,
+  ): boolean => {
+    if (!targetId || !replacement) return false;
+
+    const next = parse(replacement);
+    if (!next || next.messageType !== "automod") return false;
+
+    if (next.id !== targetId) {
+      sessionRef.automodItems.delete(targetId);
+      deletedIds.delete(targetId);
+      const oldIdx = messages.findIndex((m) => m.id === targetId);
+      if (oldIdx !== -1) {
+        messages.splice(oldIdx, 1);
+        seenIds.delete(targetId);
+      }
+    }
+
+    deletedIds.delete(next.id);
+    const idx = messages.findIndex((m) => m.id === next.id);
+    if (idx !== -1) {
+      messages[idx] = next;
+    } else {
+      seenIds.add(next.id);
+      messages.push(next);
+      if (messages.length > MAX_SESSION_MESSAGES) {
+        const removed = messages.shift()!;
+        seenIds.delete(removed.id);
+        sessionRef.automodItems.delete(removed.id);
+        deletedIds.delete(removed.id);
+      }
+    }
+
+    // Replace by id (and old id) instead of appending a duplicate.
+    broadcast(
+      sessionRef,
+      "update",
+      { message: next, previousId: targetId },
+      next.id,
+    );
+    indexAuthor(next);
+    return true;
   };
 
   /**
@@ -966,7 +1189,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   // place — the message buffer, dedupe sets, and SSE clients all survive by
   // reusing the same session state.
   const startChat = async (): Promise<{ chat: any; ready: Promise<void> }> => {
-    const yt = await getInnertube();
+    const yt = sessionRef.yt;
     let info;
     try {
       info = await yt.getInfo(videoId);
@@ -986,6 +1209,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     const ready = new Promise<void>((resolve) => {
       resolveReady = resolve;
     });
+    sessionRef.chat = chat;
+    sessionRef.ready = ready;
 
   chat.on("start", (initialData: any) => {
     console.log(
@@ -1086,6 +1311,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           const targetId = action.target_item_id;
           const replacement = action.replacement_item;
           if (!targetId || !replacement) continue;
+          if (applyAutoModReplacement(targetId, replacement)) continue;
           const text = detectDeletedReplacementText(replacement);
           if (text) {
             deletedIds.set(targetId, text);
@@ -1260,6 +1486,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const targetId = action.target_item_id;
         const replacement = action.replacement_item;
         if (!targetId || !replacement) return;
+        if (applyAutoModReplacement(targetId, replacement)) return;
         const text = detectDeletedReplacementText(replacement);
         if (text) {
           deletedIds.set(targetId, text);
@@ -1315,14 +1542,14 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     try {
       chat.stop();
     } catch {}
-    const s = activeLiveChats.get(videoId);
+    const s = activeLiveChats.get(sessionKey);
     // Ignore events from a LiveChat that was already replaced on reconnect.
     if (!s || s.chat !== chat) return;
     // A transient block surfaces as an error followed by a synthetic "end"
     // — the error handler is reconnecting this session in place, so the
     // teardown below must not run.
-    if (transientChatFailures.has(videoId)) return;
-    clearChatRestart(s, videoId);
+    if (transientChatFailures.has(sessionKey)) return;
+    clearChatRestart(s, sessionKey);
     if (s) {
       for (const c of s.clients.values()) {
         try {
@@ -1334,7 +1561,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           c.controller.close();
         } catch {}
       }
-      activeLiveChats.delete(videoId);
+      activeLiveChats.delete(sessionKey);
     }
   });
 
@@ -1342,18 +1569,18 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error("YouTube LiveChat error:", errMsg);
 
-    const s = activeLiveChats.get(videoId);
+    const s = activeLiveChats.get(sessionKey);
     // Ignore events from a LiveChat that was already replaced on reconnect.
     if (!s || s.chat !== chat) return;
 
     if (errMsg.includes("403")) {
-      blockedChatFailures.set(videoId, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
+      blockedChatFailures.set(sessionKey, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
       console.error(
         "[YouTube Chat] Blocked for",
         videoId,
         "— cleaning up session ( Innertube left intact for other videos )",
       );
-      clearChatRestart(s, videoId);
+      clearChatRestart(s, sessionKey);
       for (const c of s.clients.values()) {
         try {
           c.controller.enqueue(
@@ -1370,7 +1597,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       try {
         chat.stop();
       } catch {}
-      activeLiveChats.delete(videoId);
+      activeLiveChats.delete(sessionKey);
       return;
     }
 
@@ -1390,10 +1617,10 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     }
 
     // Non-403 error: wait 30s then clean up
-    clearChatRestart(s, videoId);
+    clearChatRestart(s, sessionKey);
     setTimeout(() => {
-      const current = activeLiveChats.get(videoId);
-      if (current?.chat === chat) {
+      const current = activeLiveChats.get(sessionKey);
+      if (current && current.chat === chat) {
         for (const c of current.clients.values()) {
           try {
             c.controller.enqueue(
@@ -1410,7 +1637,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         try {
           chat.stop();
         } catch {}
-        activeLiveChats.delete(videoId);
+        activeLiveChats.delete(sessionKey);
       }
     }, 30000);
   });
@@ -1432,17 +1659,17 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const armTransientReconnect = () => {
     const s = session;
     if (!s) return;
-    if (activeLiveChats.get(videoId) !== s) return;
+    if (activeLiveChats.get(sessionKey) !== s) return;
     // A reconnect is already scheduled for this episode — hold until it
     // runs (or fails there and escalates).
     if (s.restartTimer) return;
 
-    const attempt = (transientChatFailures.get(videoId)?.attempt ?? 0) + 1;
+    const attempt = (transientChatFailures.get(sessionKey)?.attempt ?? 0) + 1;
     if (attempt > TRANSIENT_BLOCK_MAX_ATTEMPTS) {
       console.error(
         `[YouTube Chat] Giving up on reconnecting ${videoId} after ${TRANSIENT_BLOCK_MAX_ATTEMPTS} attempts`,
       );
-      clearChatRestart(s, videoId);
+      clearChatRestart(s, sessionKey);
       for (const c of s.clients.values()) {
         try {
           c.controller.enqueue(
@@ -1461,7 +1688,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       try {
         s.chat?.stop();
       } catch {}
-      activeLiveChats.delete(videoId);
+      activeLiveChats.delete(sessionKey);
       return;
     }
 
@@ -1469,7 +1696,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       TRANSIENT_BLOCK_BASE_MS * 2 ** (attempt - 1),
       TRANSIENT_BLOCK_MAX_MS,
     );
-    transientChatFailures.set(videoId, {
+    transientChatFailures.set(sessionKey, {
       until: Date.now() + backoff,
       attempt,
     });
@@ -1480,10 +1707,10 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     s.restartTimer = setTimeout(() => {
       s.restartTimer = null;
       void (async () => {
-        if (activeLiveChats.get(videoId) !== s) return;
+        if (activeLiveChats.get(sessionKey) !== s) return;
         // No viewers left to serve — let the session idle out and be reaped.
         if (s.clients.size === 0) {
-          transientChatFailures.delete(videoId);
+          transientChatFailures.delete(sessionKey);
           return;
         }
         try {
@@ -1495,7 +1722,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           s.chat = nextChat;
           s.ready = nextReady;
           s.lastUpdate = Date.now();
-          transientChatFailures.delete(videoId);
+          transientChatFailures.delete(sessionKey);
           console.log(
             `[YouTube Chat] Reconnected live chat for video ${videoId}`,
           );
@@ -1509,7 +1736,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             console.warn(
               `[YouTube Chat] Stream ${videoId} ended during reconnect: ${msg2}`,
             );
-            clearChatRestart(s, videoId);
+            clearChatRestart(s, sessionKey);
             for (const c of s.clients.values()) {
               try {
                 c.controller.enqueue(
@@ -1523,8 +1750,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             try {
               s.chat?.stop();
             } catch {}
-            if (activeLiveChats.get(videoId) === s) {
-              activeLiveChats.delete(videoId);
+            if (activeLiveChats.get(sessionKey) === s) {
+              activeLiveChats.delete(sessionKey);
             }
             return;
           }
@@ -1535,28 +1762,21 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     }, backoff);
   };
 
-  const { chat, ready } = await startChat();
+  try {
+    await startChat();
+  } catch (err) {
+    try {
+      sessionRef.chat?.stop();
+    } catch {}
+    activeLiveChats.delete(sessionKey);
+    throw err;
+  }
 
-  session = {
-    chat,
-    messages,
-    seenIds,
-    authorByChannel,
-    recentRemovals,
-    recentHostHandoffs,
-    deletedIds,
-    clients: new Map(),
-    lastUpdate: Date.now(),
-    destroyTimer: null,
-    restartTimer: null,
-    ready,
-  };
-  activeLiveChats.set(videoId, session);
-  return session;
+  return sessionRef;
 }
 
 // SSE endpoint
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async ({ request, url, cookies }) => {
   if (IS_TWITCH_ONLY) return twitchOnlyResponse();
 
   const clientAddress =
@@ -1586,75 +1806,36 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   reapIdleSessions();
 
+  // The auth cookie selects this viewer's session (and its AutoMod holds).
+  const auth = getYouTubeAuthIdentity(cookies);
+  const sessionKey = getYouTubeSessionKey(videoId, auth.authKey);
+
   let session: ChatSession;
   try {
-    session = await ensureChatSession(videoId);
+    session = await ensureChatSession(videoId, sessionKey, auth);
   } catch (err: any) {
     const rawMsg = err instanceof Error ? err.message : String(err);
-    if (rawMsg === "BLOCKED") {
-      return new Response(
-        JSON.stringify({
-          error: "Live chat temporarily unavailable due to repeated failures",
-        }),
-        { status: 503, headers: { "Content-Type": "application/json" } },
+
+    // A rejected token shouldn't take read-only chat down; retry as anonymous.
+    if (auth.authenticated && shouldFallbackToAnonymous(rawMsg)) {
+      console.warn(
+        `[YouTube Chat] Authenticated setup failed for ${videoId}; falling back to the anonymous session:`,
+        rawMsg,
       );
-    }
-    if (rawMsg.startsWith("PLAYABILITY: ")) {
-      const innerMsg = rawMsg.slice("PLAYABILITY: ".length);
-      return new Response(
-        JSON.stringify({
-          error: `Live chat is not available for this video (${innerMsg})`,
+      try {
+        // Join the shared guest session under its own key so a cooldown on
+        // the authenticated session can't keep this viewer blocked.
+        session = await ensureChatSession(
           videoId,
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
-      );
+          getYouTubeSessionKey(videoId, "anon"),
+          { authKey: "anon", authenticated: false },
+        );
+      } catch (fallbackErr) {
+        return chatSetupErrorResponse(fallbackErr, videoId);
+      }
+    } else {
+      return chatSetupErrorResponse(err, videoId);
     }
-    if (rawMsg.includes("status code 403") || rawMsg.includes("403")) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Live chat temporarily unavailable due to YouTube blocking (403)",
-        }),
-        { status: 503, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    if (isPlayabilityError(rawMsg)) {
-      // Fallback for the rare case where isPlayabilityError matches but we
-      // didn't pre-cache the entry (e.g. someone added a new pattern).
-      playabilityErrors.set(videoId, {
-        message: rawMsg,
-        until: Date.now() + PLAYABILITY_ERROR_COOLDOWN_MS,
-      });
-      return new Response(
-        JSON.stringify({
-          error: `Live chat is not available for this video (${rawMsg})`,
-          videoId,
-        }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
-      );
-    }
-    if (isTransientChatBlock(rawMsg)) {
-      // Transient YouTube block (proxy 503 / bot check) during session
-      // setup — retryable; the client will back off and reconnect.
-      return new Response(
-        JSON.stringify({
-          error:
-            "Live chat temporarily unavailable (YouTube is blocking requests)",
-        }),
-        {
-          status: 503,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": "30",
-          },
-        },
-      );
-    }
-    console.error("[YouTube Chat] Error setting up chat for", videoId, rawMsg);
-    return new Response(
-      JSON.stringify({ error: "Failed to connect to YouTube chat" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
   }
 
   const clientId = `${videoId}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
@@ -1741,7 +1922,7 @@ export const GET: APIRoute = async ({ request, url }) => {
           `[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`,
         );
         session.destroyTimer = setTimeout(() => {
-          const s = activeLiveChats.get(videoId);
+          const s = activeLiveChats.get(session.key);
           if (s && s.clients.size === 0) {
             console.log(
               `[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`,
@@ -1749,7 +1930,7 @@ export const GET: APIRoute = async ({ request, url }) => {
             try {
               s.chat?.stop();
             } catch {}
-            activeLiveChats.delete(videoId);
+            activeLiveChats.delete(session.key);
           }
         }, SESSION_GRACE_PERIOD_MS);
       }

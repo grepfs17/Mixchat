@@ -81,6 +81,7 @@ mixchat/
 │   │   ├── wheelConfig.ts      # Wheel store base directory resolution
 │   │   ├── wheelApi.ts         # Wheel API route helpers (json, owner token, channel parsing)
 │   │   ├── wheelAuth.ts        # Server-verified channel ownership (Twitch/YouTube cookie identity)
+│   │   ├── youtubeAuth.ts      # Stable viewer identity/session keys for authenticated YouTube live chat
 │   │   └── providerTokens.ts   # Refresh provider access tokens from httpOnly refresh cookies
 │   ├── pages/               # Astro pages + API routes
 │   │   ├── index.astro      # Main app page
@@ -104,7 +105,7 @@ mixchat/
 
 - **Auth**: OAuth popup → callback page → postMessage → parent window stores session in localStorage
 - **Twitch Chat**: client-side `@twurple/chat` (anonymous read-only IRC) → `useTwitchChat` hook → `useChatMessages` → renders via ChatDisplay. Sending goes through `/api/twitch-proxy` (Helix Send Chat Message). Giphy GIF chat messages (GIF Keyboard) are parsed from the IRC `gifs` tag (`start-end|<gifID>|<gifURL>`) in `src/lib/twitchGifs.ts` and rendered inline as `<img class="chat-gif">` in `TwitchMessageContent`. `@mentions` are rendered in the mentioned user's chat colour (username → colour map built from loaded messages in `src/lib/chatColors.ts`), and reply previews colour the `@author` header and strip a repeated `@author` prefix from the quoted content (`src/lib/twitchReply.ts`).
-- **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component
+- **YouTube Chat**: Server-side polling via `youtubei.js` InnerTube → SSE or periodic fetch → `YouTubeChat` component. Guests share one anonymous session per video; viewers with a YouTube token get an isolated authenticated session (keyed by a hash of the httpOnly refresh token) so moderator-only AutoMod holds are never leaked to other viewers. Authenticated InnerTube clients refresh their own OAuth token and namespace the per-video poll throttle.
 - **Storage**: All user settings persisted to `localStorage` with versioned keys. Google Drive backup/restore available. Chat messages are additionally persisted to IndexedDB (`src/lib/chatHistoryStorage.ts`) for lazy-loading older history (see §11).
 - **Server State**: Song queue uses server-side in-memory store (`songQueueStore`) with live polling via API routes.
 
@@ -142,13 +143,14 @@ mixchat/
 ### 6. Moderation
 
 - **Twitch**: Uses Twitch Helix API (ban, timeout, unban, delete, clear, warn, announce, shoutout, automod) via `src/lib/twitch.ts` → proxied through `/api/twitch-proxy`.
-- **YouTube**: Uses YouTube Data API v3 (delete, timeout, ban) with quota tracking (50 units per ban, 10K daily default).
+- **YouTube**: Uses YouTube Data API v3 (delete, timeout, ban) with quota tracking (50 units per ban, 10K daily default). AutoMod approve/deny is executed through the viewer-specific authenticated InnerTube session that received the hold (`LiveChatAutoModMessage` endpoints are kept server-side only).
 - Moderation state (`ModerationContext`) shared across message rendering components.
 
 ### 7. YouTube Proxy System
 
 - All InnerTube API calls can be routed through a Vercel proxy farm (see `youtube.ts`).
 - Hash-based videoId distribution + failover + cooldown for failed proxies.
+- The proxy secret stays in `Authorization`; a viewer's OAuth token is forwarded separately as `X-YouTube-User-Authorization` so authenticated live-chat sessions work through the proxy.
 - Optional auto-generated PoToken (bot guard token) via `src/lib/potoken.ts`.
 
 ### 8. Song Queue

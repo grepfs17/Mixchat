@@ -134,22 +134,30 @@ function extractVideoId(body: string | undefined): string | null {
   return null;
 }
 
-function getThrottleKey(urlStr: string, body?: string): string | null {
+function getThrottleKey(
+  urlStr: string,
+  body?: string,
+  namespace?: string,
+): string | null {
+  let key: string | null = null;
   if (urlStr.includes("/live_chat/get_live_chat")) {
     const videoId = extractVideoId(body);
-    return videoId ? `live_chat:${videoId}` : "live_chat";
-  }
-  if (urlStr.includes("/updated_metadata")) {
+    key = videoId ? `live_chat:${videoId}` : "live_chat";
+  } else if (urlStr.includes("/updated_metadata")) {
     const videoId = extractVideoId(body);
-    return videoId ? `metadata:${videoId}` : "metadata";
+    key = videoId ? `metadata:${videoId}` : "metadata";
   }
-  return null;
+  if (!key) return null;
+  return namespace ? `${namespace}|${key}` : key;
 }
 
 function getThrottleBaseKey(compositeKey: string): string {
-  // "live_chat:abc123" → "live_chat"
-  const idx = compositeKey.indexOf(":");
-  return idx >= 0 ? compositeKey.slice(0, idx) : compositeKey;
+  // Authenticated sessions are namespaced per viewer so they poll independently.
+  const pipe = compositeKey.indexOf("|");
+  const unnamespaced =
+    pipe >= 0 ? compositeKey.slice(pipe + 1) : compositeKey;
+  const idx = unnamespaced.indexOf(":");
+  return idx >= 0 ? unnamespaced.slice(0, idx) : unnamespaced;
 }
 
 function getThrottleInterval(compositeKey: string): number {
@@ -164,6 +172,399 @@ setInterval(() => {
     if (now > expiresAt) throttleTimestamps.delete(key);
   }
 }, 60_000);
+
+export interface YouTubeAuthTokens {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt: number;
+}
+
+const AUTH_REFRESH_MARGIN_MS = 5 * 60_000;
+const AUTH_TOKEN_FAR_FUTURE = "2035-01-01T00:00:00.000Z";
+
+function getOAuthClientCredentials(): {
+  clientId?: string;
+  clientSecret?: string;
+} {
+  return {
+    clientId:
+      import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID ||
+      process.env.PUBLIC_YOUTUBE_CLIENT_ID,
+    clientSecret:
+      import.meta.env.YOUTUBE_CLIENT_SECRET ||
+      process.env.YOUTUBE_CLIENT_SECRET,
+  };
+}
+
+/**
+ * Refreshes a viewer's access token. Called lazily from the fetch wrapper so
+ * long-lived SSE chats outlive the one-hour token lifetime.
+ */
+async function refreshAuthTokens(auth: YouTubeAuthTokens): Promise<void> {
+  if (!auth.refreshToken) return;
+
+  const { clientId, clientSecret } = getOAuthClientCredentials();
+  if (!clientId) return;
+
+  const data = await refreshYoutubeToken(
+    auth.refreshToken,
+    clientId,
+    clientSecret,
+  );
+  if (!data?.access_token) return;
+
+  auth.accessToken = data.access_token;
+  const expiresIn = Number(data.expires_in) || 3600;
+  auth.expiresAt = Date.now() + expiresIn * 1000;
+}
+
+async function buildInnertubeOptions(): Promise<Record<string, any>> {
+  const innertubeOptions: Record<string, any> = {};
+  let clientType = (process.env.YT_CLIENT || "WEB").toUpperCase();
+
+  if (clientType === "TV") clientType = "TVHTML5";
+  if (clientType === "TVHTML5_TV")
+    clientType = "TVHTML5_SIMPLY_EMBEDDED_PLAYER";
+
+  innertubeOptions.client_type = clientType;
+
+  if (process.env.YT_USER_AGENT) {
+    innertubeOptions.user_agent = process.env.YT_USER_AGENT;
+  } else if (clientType === "WEB") {
+    innertubeOptions.user_agent = YT_USER_AGENT;
+  }
+
+  innertubeOptions.generate_session_locally =
+    process.env.YT_GENERATE_SESSION_LOCALLY === "false" ? false : true;
+
+  // Proxies handle PoToken and visitor data; otherwise generate or use env vars.
+  if (!YT_PROXIES.length) {
+    const envPoToken = process.env.YT_POTOKEN;
+    const envVisitorData = process.env.YT_VISITOR_DATA;
+
+    if (envPoToken) {
+      innertubeOptions.po_token = envPoToken;
+    }
+    if (envVisitorData) {
+      innertubeOptions.visitor_data = envVisitorData;
+    }
+
+    const autoPotoken =
+      !envPoToken &&
+      !envVisitorData &&
+      clientType === "WEB" &&
+      process.env.YT_POTOKEN !== "off";
+
+    if (autoPotoken) {
+      try {
+        const tokenData = await getPoToken();
+        innertubeOptions.po_token = tokenData.poToken;
+        innertubeOptions.visitor_data = tokenData.visitorData;
+      } catch (poErr) {
+        const msg = poErr instanceof Error ? poErr.message : String(poErr);
+        console.warn(
+          "[YouTube] Auto PoToken generation failed, continuing without it:",
+          msg,
+        );
+      }
+    }
+  }
+
+  if (process.env.YT_DEBUG === "1") {
+    console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, {
+      hasPoToken: !!innertubeOptions.po_token,
+      hasVisitorData: !!innertubeOptions.visitor_data,
+      useProxy: !!YT_PROXIES.length,
+    });
+  }
+
+  return innertubeOptions;
+}
+
+function normalizeHeaders(raw: any): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (!raw) return headers;
+
+  if (typeof raw.entries === "function") {
+    for (const [k, v] of raw.entries()) {
+      try {
+        headers[k.toLowerCase()] = String(v);
+      } catch {}
+    }
+  } else if (typeof raw.forEach === "function") {
+    try {
+      raw.forEach((v: any, k: string) => {
+        try {
+          headers[k.toLowerCase()] = String(v);
+        } catch {}
+      });
+    } catch {}
+  } else if (typeof raw === "object") {
+    for (const k of Object.keys(raw)) {
+      try {
+        headers[k.toLowerCase()] = String(raw[k]);
+      } catch {}
+    }
+  }
+
+  return headers;
+}
+
+interface InnertubeFetchOptions {
+  auth?: YouTubeAuthTokens;
+  /** Namespace throttling so authenticated viewers don't serialize each other. */
+  throttleNamespace?: string;
+  /** Don't poison the shared anonymous session on a viewer-specific 403. */
+  allowGlobalInvalidation: boolean;
+  getClient?: () => Innertube | null;
+  /** Matches the client's configured user agent (undefined for non-WEB). */
+  baseUserAgent?: string;
+}
+
+function createInnertubeFetch({
+  auth,
+  throttleNamespace,
+  allowGlobalInvalidation,
+  getClient,
+  baseUserAgent,
+}: InnertubeFetchOptions) {
+  const baseReferer = (process.env.ORIGIN || "https://www.youtube.com/").replace(
+    /\/?$/,
+    "/",
+  );
+
+  return async (input: any, init?: any): Promise<Response> => {
+    let urlStr = "";
+    try {
+      if (typeof input === "string") urlStr = input;
+      else if (input && typeof input === "object" && "url" in input)
+        urlStr = String((input as any).url);
+      else urlStr = String(input);
+    } catch {
+      urlStr = String(input);
+    }
+
+    if (auth) {
+      try {
+        if (Date.now() > auth.expiresAt - AUTH_REFRESH_MARGIN_MS) {
+          await refreshAuthTokens(auth);
+          const client = getClient?.();
+          if (client?.session?.oauth?.oauth2_tokens) {
+            client.session.oauth.oauth2_tokens.access_token = auth.accessToken;
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "[YouTube] OAuth token refresh failed:",
+          err instanceof Error ? err.message : String(err),
+        );
+      }
+    }
+
+    const body = typeof init?.body === "string" ? init.body : undefined;
+    const throttleKey = getThrottleKey(urlStr, body, throttleNamespace);
+    if (throttleKey) {
+      const interval = getThrottleInterval(throttleKey);
+      if (interval > 0) {
+        const now = Date.now();
+        const lastRun = throttleTimestamps.get(throttleKey) || 0;
+        const elapsed = Math.max(0, now - lastRun);
+        const wait = Math.max(0, interval - elapsed);
+        // Set expiry so the cleanup interval can evict stale entries
+        throttleTimestamps.set(throttleKey, now + wait + interval);
+        if (wait > 0 && Number.isFinite(wait))
+          await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+
+    const incomingHeaders = normalizeHeaders(init?.headers);
+    if (auth) {
+      // Never leak the token to non-InnerTube fetches (thumbnails/player JS).
+      const isInnertubeRequest = urlStr.includes("/youtubei/");
+      if (
+        isInnertubeRequest ||
+        incomingHeaders.authorization?.startsWith("Bearer ")
+      ) {
+        incomingHeaders.authorization = `Bearer ${auth.accessToken}`;
+      }
+    }
+
+    // Proxy InnerTube API calls; thumbnails and player assets stay direct.
+    if (YT_PROXIES.length) {
+      try {
+        const targetUrl = new URL(urlStr);
+        if (
+          targetUrl.hostname === "www.youtube.com" &&
+          targetUrl.pathname.startsWith("/youtubei/")
+        ) {
+          const proxyPath = targetUrl.pathname + targetUrl.search;
+
+          const proxyHeaders: Record<string, string> = {
+            "Content-Type":
+              incomingHeaders["content-type"] ||
+              (body ? "application/json" : "application/x-www-form-urlencoded"),
+          };
+          if (YT_PROXY_TOKEN) {
+            proxyHeaders["Authorization"] = `Bearer ${YT_PROXY_TOKEN}`;
+          }
+          // Keep the proxy secret in Authorization and forward the viewer
+          // token separately so the proxy can map it to YouTube's header.
+          const userAuthorization = incomingHeaders.authorization;
+          if (userAuthorization?.startsWith("Bearer ")) {
+            proxyHeaders["X-YouTube-User-Authorization"] = userAuthorization;
+          }
+
+          const method = init?.method || (body ? "POST" : "GET");
+
+          const requestVideoId = extractVideoId(body) ?? undefined;
+          const startIndex = YT_PROXIES.indexOf(
+            selectProxy(YT_PROXIES, requestVideoId)!,
+          );
+          const order =
+            startIndex >= 0
+              ? [
+                  ...YT_PROXIES.slice(startIndex),
+                  ...YT_PROXIES.slice(0, startIndex),
+                ]
+              : YT_PROXIES;
+
+          const now = Date.now();
+          const available = order.filter(
+            (p) => !proxyCooldownUntil[p] || now >= proxyCooldownUntil[p],
+          );
+          const tryOrder = available.length ? available : order;
+          let lastError: Error | null = null;
+          let lastStatus = 0;
+
+          for (const proxy of tryOrder) {
+            const proxyUrl = `${proxy}/api/youtube${proxyPath}`;
+
+            if (process.env.YT_DEBUG === "1") {
+              console.debug("[YouTube Proxy] Trying:", proxyUrl);
+            }
+
+            try {
+              const proxyRes = await fetch(proxyUrl, {
+                method,
+                headers: proxyHeaders,
+                body,
+              });
+
+              if (proxyRes.status === 503) {
+                const errBody = await proxyRes.text().catch(() => "");
+                let retryAfter: number | undefined;
+                try {
+                  const parsed = JSON.parse(errBody);
+                  if (parsed.retryAfter) {
+                    const ms = Number(parsed.retryAfter) * 1000;
+                    if (Number.isFinite(ms) && ms > 0) retryAfter = ms;
+                  }
+                } catch {}
+                console.error(
+                  `[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`,
+                  errBody.slice(0, 500),
+                );
+                markProxyFailed(proxy, retryAfter);
+                lastError = new Error(errBody || "503");
+                lastStatus = 503;
+                continue;
+              }
+
+              if (proxyRes.status >= 500) {
+                console.error(
+                  `[YouTube Proxy] ${proxy} server error ${proxyRes.status}`,
+                );
+                markProxyFailed(proxy);
+                lastError = new Error(`Server error ${proxyRes.status}`);
+                lastStatus = proxyRes.status;
+                continue;
+              }
+
+              if (proxyRes.status === 403) {
+                markProxyFailed(proxy);
+                lastError = new Error(`Forbidden (403)`);
+                lastStatus = 403;
+                continue;
+              }
+
+              markProxyOk(proxy);
+              return proxyRes;
+            } catch (fetchErr: any) {
+              console.error(
+                `[YouTube Proxy] ${proxy} request failed:`,
+                fetchErr instanceof Error ? fetchErr.message : String(fetchErr),
+              );
+              markProxyFailed(proxy);
+              lastError =
+                fetchErr instanceof Error
+                  ? fetchErr
+                  : new Error(String(fetchErr));
+              continue;
+            }
+          }
+
+          console.error("[YouTube Proxy] All proxies failed");
+          if (lastStatus === 403 && allowGlobalInvalidation) {
+            // Don't invalidate Innertube here — a 403 on one video
+            // doesn't mean the session is broken for other videos.
+            last403Time = Date.now();
+          }
+          return new Response(lastError?.message || "All proxies failed", {
+            status: lastStatus || 502,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      } catch (parseErr) {
+        if (process.env.YT_DEBUG === "1")
+          console.debug(
+            "[YouTube Proxy] URL parse failed, falling back to direct fetch",
+            parseErr,
+          );
+      }
+    }
+
+    // Direct fetch (no proxy, or non-YouTube URL like thumbnails)
+    if ("x-goog-visitor-id" in incomingHeaders) {
+      if (!incomingHeaders["x-goog-visitor-id"]?.trim())
+        delete incomingHeaders["x-goog-visitor-id"];
+    }
+
+    if (!incomingHeaders["user-agent"] && baseUserAgent)
+      incomingHeaders["user-agent"] = baseUserAgent;
+    if (!incomingHeaders["referer"]) incomingHeaders["referer"] = baseReferer;
+    if (!incomingHeaders["accept-language"])
+      incomingHeaders["accept-language"] = "en-US,en;q=0.9";
+
+    if (process.env.YT_DEBUG === "1") {
+      const keys = Object.keys(incomingHeaders);
+      console.debug(
+        "[YouTube] direct fetch:",
+        urlStr.slice(0, 100),
+        keys.join(", "),
+      );
+    }
+
+    const merged = { ...(init || {}), headers: incomingHeaders };
+    const res = await fetch(input, merged);
+
+    if (res.status === 403) {
+      if (allowGlobalInvalidation) {
+        last403Time = Date.now();
+        console.error("[YouTube] Direct fetch 403 — invalidating session.", {
+          url: urlStr,
+        });
+        invalidateInnertube();
+      }
+    } else if (res.status >= 400) {
+      console.error("[YouTube] Direct fetch non-OK", {
+        url: urlStr,
+        status: res.status,
+      });
+    }
+
+    return res;
+  };
+}
 
 export async function getInnertube() {
   if (yt) return yt;
@@ -182,301 +583,11 @@ export async function getInnertube() {
   isInitializing = true;
 
   try {
-    const innertubeOptions: Record<string, any> = {};
-    let clientType = (process.env.YT_CLIENT || "WEB").toUpperCase();
-
-    if (clientType === "TV") clientType = "TVHTML5";
-    if (clientType === "TVHTML5_TV")
-      clientType = "TVHTML5_SIMPLY_EMBEDDED_PLAYER";
-
-    innertubeOptions.client_type = clientType;
-
-    if (process.env.YT_USER_AGENT) {
-      innertubeOptions.user_agent = process.env.YT_USER_AGENT;
-    } else if (clientType === "WEB") {
-      innertubeOptions.user_agent = YT_USER_AGENT;
-    }
-
-    innertubeOptions.generate_session_locally =
-      process.env.YT_GENERATE_SESSION_LOCALLY === "false" ? false : true;
-
-    if (process.env.YT_COOKIE) {
-      innertubeOptions.cookie = process.env.YT_COOKIE;
-    }
-
-    // When using a proxy, PoToken and visitor data are handled by the proxy.
-    // Otherwise, auto-generate or use env vars.
-    if (YT_PROXIES.length) {
-      // PoToken handled by proxy — skip local generation
-    } else {
-      const envPoToken = process.env.YT_POTOKEN;
-      const envVisitorData = process.env.YT_VISITOR_DATA;
-
-      if (envPoToken) {
-        innertubeOptions.po_token = envPoToken;
-      }
-      if (envVisitorData) {
-        innertubeOptions.visitor_data = envVisitorData;
-      }
-
-      const autoPotoken =
-        !envPoToken &&
-        !envVisitorData &&
-        clientType === "WEB" &&
-        process.env.YT_POTOKEN !== "off";
-
-      if (autoPotoken) {
-        try {
-          const tokenData = await getPoToken();
-          innertubeOptions.po_token = tokenData.poToken;
-          innertubeOptions.visitor_data = tokenData.visitorData;
-        } catch (poErr) {
-          const msg = poErr instanceof Error ? poErr.message : String(poErr);
-          console.warn(
-            "[YouTube] Auto PoToken generation failed, continuing without it:",
-            msg,
-          );
-        }
-      }
-    }
-
-    if (process.env.YT_DEBUG === "1") {
-      console.debug(`[YouTube] Initializing Innertube (${clientType} client)`, {
-        hasPoToken: !!innertubeOptions.po_token,
-        hasCookie: !!innertubeOptions.cookie,
-        hasVisitorData: !!innertubeOptions.visitor_data,
-        useProxy: !!YT_PROXIES.length,
-      });
-    }
-
-    const baseUserAgent = innertubeOptions.user_agent;
-    const baseReferer = (
-      process.env.ORIGIN || "https://www.youtube.com/"
-    ).replace(/\/?$/, "/");
-
-    innertubeOptions.fetch = async (input: any, init?: any) => {
-      let urlStr = "";
-      try {
-        if (typeof input === "string") urlStr = input;
-        else if (input && typeof input === "object" && "url" in input)
-          urlStr = String((input as any).url);
-        else urlStr = String(input);
-      } catch {
-        urlStr = String(input);
-      }
-
-      const body = typeof init?.body === "string" ? init.body : undefined;
-      const throttleKey = getThrottleKey(urlStr, body);
-      if (throttleKey) {
-        const interval = getThrottleInterval(throttleKey);
-        if (interval > 0) {
-          const now = Date.now();
-          const lastRun = throttleTimestamps.get(throttleKey) || 0;
-          const elapsed = Math.max(0, now - lastRun);
-          const wait = Math.max(0, interval - elapsed);
-          // Set expiry so the cleanup interval can evict stale entries
-          throttleTimestamps.set(throttleKey, now + wait + interval);
-          if (wait > 0 && Number.isFinite(wait))
-            await new Promise((r) => setTimeout(r, wait));
-        }
-      }
-
-      // Route InnerTube API requests through the proxy when YT_PROXY is set.
-      // Other URLs (thumbnails, player assets) are fetched directly.
-      if (YT_PROXIES.length) {
-        try {
-          const targetUrl = new URL(urlStr);
-          if (
-            targetUrl.hostname === "www.youtube.com" &&
-            targetUrl.pathname.startsWith("/youtubei/")
-          ) {
-            const proxyPath = targetUrl.pathname + targetUrl.search;
-
-            const proxyHeaders: Record<string, string> = {
-              "Content-Type": init?.headers
-                ? "application/json"
-                : "application/x-www-form-urlencoded",
-            };
-            if (YT_PROXY_TOKEN) {
-              proxyHeaders["Authorization"] = `Bearer ${YT_PROXY_TOKEN}`;
-            }
-
-            const method = init?.method || (body ? "POST" : "GET");
-
-            const requestVideoId = extractVideoId(body) ?? undefined;
-            const startIndex = YT_PROXIES.indexOf(
-              selectProxy(YT_PROXIES, requestVideoId)!,
-            );
-            const order =
-              startIndex >= 0
-                ? [
-                    ...YT_PROXIES.slice(startIndex),
-                    ...YT_PROXIES.slice(0, startIndex),
-                  ]
-                : YT_PROXIES;
-
-            const now = Date.now();
-            const available = order.filter(
-              (p) => !proxyCooldownUntil[p] || now >= proxyCooldownUntil[p],
-            );
-            const tryOrder = available.length ? available : order;
-            let lastError: Error | null = null;
-            let lastStatus = 0;
-
-            for (const proxy of tryOrder) {
-              const proxyUrl = `${proxy}/api/youtube${proxyPath}`;
-
-              if (process.env.YT_DEBUG === "1") {
-                console.debug("[YouTube Proxy] Trying:", proxyUrl);
-              }
-
-              try {
-                const proxyRes = await fetch(proxyUrl, {
-                  method,
-                  headers: proxyHeaders,
-                  body,
-                });
-
-                if (proxyRes.status === 503) {
-                  const errBody = await proxyRes.text().catch(() => "");
-                  let retryAfter: number | undefined;
-                  try {
-                    const parsed = JSON.parse(errBody);
-                    if (parsed.retryAfter) {
-                      const ms = Number(parsed.retryAfter) * 1000;
-                      if (Number.isFinite(ms) && ms > 0) retryAfter = ms;
-                    }
-                  } catch {}
-                  console.error(
-                    `[YouTube Proxy] ${proxy} returned 503 (YouTube blocked):`,
-                    errBody.slice(0, 500),
-                  );
-                  markProxyFailed(proxy, retryAfter);
-                  lastError = new Error(errBody || "503");
-                  lastStatus = 503;
-                  continue;
-                }
-
-                if (proxyRes.status >= 500) {
-                  console.error(
-                    `[YouTube Proxy] ${proxy} server error ${proxyRes.status}`,
-                  );
-                  markProxyFailed(proxy);
-                  lastError = new Error(`Server error ${proxyRes.status}`);
-                  lastStatus = proxyRes.status;
-                  continue;
-                }
-
-                if (proxyRes.status === 403) {
-                  markProxyFailed(proxy);
-                  lastError = new Error(`Forbidden (403)`);
-                  lastStatus = 403;
-                  continue;
-                }
-
-                markProxyOk(proxy);
-                return proxyRes;
-              } catch (fetchErr: any) {
-                console.error(
-                  `[YouTube Proxy] ${proxy} request failed:`,
-                  fetchErr instanceof Error
-                    ? fetchErr.message
-                    : String(fetchErr),
-                );
-                markProxyFailed(proxy);
-                lastError =
-                  fetchErr instanceof Error
-                    ? fetchErr
-                    : new Error(String(fetchErr));
-                continue;
-              }
-            }
-
-            console.error("[YouTube Proxy] All proxies failed");
-            if (lastStatus === 403) {
-              // Don't invalidate Innertube here — a 403 on one video
-              // doesn't mean the session is broken for other videos.
-              last403Time = Date.now();
-            }
-            return new Response(lastError?.message || "All proxies failed", {
-              status: lastStatus || 502,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-        } catch (parseErr) {
-          if (process.env.YT_DEBUG === "1")
-            console.debug(
-              "[YouTube Proxy] URL parse failed, falling back to direct fetch",
-              parseErr,
-            );
-        }
-      }
-
-      // Direct fetch (no proxy, or non-YouTube URL like thumbnails)
-      const headers: Record<string, string> = {};
-      const orig = init?.headers;
-      if (orig) {
-        if (typeof (orig as any).entries === "function") {
-          for (const [k, v] of (orig as any).entries()) {
-            try {
-              headers[k.toLowerCase()] = String(v);
-            } catch {}
-          }
-        } else if (typeof (orig as any).forEach === "function") {
-          try {
-            (orig as any).forEach((v: any, k: string) => {
-              try {
-                headers[k.toLowerCase()] = String(v);
-              } catch {}
-            });
-          } catch {}
-        } else if (typeof orig === "object") {
-          for (const k of Object.keys(orig)) {
-            try {
-              headers[k.toLowerCase()] = String((orig as any)[k]);
-            } catch {}
-          }
-        }
-      }
-
-      if ("x-goog-visitor-id" in headers) {
-        if (!headers["x-goog-visitor-id"]?.trim())
-          delete headers["x-goog-visitor-id"];
-      }
-
-      if (!headers["user-agent"] && baseUserAgent)
-        headers["user-agent"] = baseUserAgent;
-      if (!headers["referer"]) headers["referer"] = baseReferer;
-      if (!headers["accept-language"])
-        headers["accept-language"] = "en-US,en;q=0.9";
-
-      if (process.env.YT_DEBUG === "1") {
-        const keys = Object.keys(headers);
-        console.debug(
-          "[YouTube] direct fetch:",
-          urlStr.slice(0, 100),
-          keys.join(", "),
-        );
-      }
-
-      const merged = { ...(init || {}), headers };
-      const res = await fetch(input, merged);
-
-      if (res.status === 403) {
-        last403Time = Date.now();
-        console.error("[YouTube] Direct fetch 403 — invalidating session.", {
-          url: urlStr,
-        });
-        invalidateInnertube();
-      } else if (res.status >= 400) {
-        console.error("[YouTube] Direct fetch non-OK", {
-          url: urlStr,
-          status: res.status,
-        });
-      }
-
-      return res;
-    };
+    const innertubeOptions = await buildInnertubeOptions();
+    innertubeOptions.fetch = createInnertubeFetch({
+      allowGlobalInvalidation: true,
+      baseUserAgent: innertubeOptions.user_agent,
+    });
 
     yt = await Innertube.create(innertubeOptions);
     return yt;
@@ -489,6 +600,53 @@ export async function getInnertube() {
   } finally {
     isInitializing = false;
   }
+}
+
+/**
+ * InnerTube client authenticated with a viewer's OAuth token, so moderator-only
+ * AutoMod events stay scoped to that viewer.
+ */
+export async function createAuthenticatedInnertube(
+  tokens: YouTubeAuthTokens,
+  options: { throttleNamespace?: string } = {},
+): Promise<{ yt: Innertube; auth: YouTubeAuthTokens }> {
+  const auth: YouTubeAuthTokens = { ...tokens };
+
+  // Refresh now so the long-lived session starts with a full token lifetime.
+  try {
+    await refreshAuthTokens(auth);
+  } catch (err) {
+    console.warn(
+      "[YouTube] OAuth token refresh failed; using current token:",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+
+  const innertubeOptions = await buildInnertubeOptions();
+  let client: Innertube | null = null;
+  innertubeOptions.fetch = createInnertubeFetch({
+    auth,
+    throttleNamespace: options.throttleNamespace,
+    allowGlobalInvalidation: false,
+    getClient: () => client,
+    baseUserAgent: innertubeOptions.user_agent,
+  });
+
+  client = await Innertube.create(innertubeOptions);
+  client.session.logged_in = true;
+  const { clientId, clientSecret } = getOAuthClientCredentials();
+  // The fetch wrapper owns token refresh, using the same OAuth client as the
+  // rest of the app and overriding Authorization on each request.
+  client.session.oauth.oauth2_tokens = {
+    access_token: auth.accessToken,
+    refresh_token: auth.refreshToken ?? "",
+    expiry_date: AUTH_TOKEN_FAR_FUTURE,
+    ...(clientId
+      ? { client: { client_id: clientId, client_secret: clientSecret ?? "" } }
+      : {}),
+  };
+
+  return { yt: client, auth };
 }
 
 export async function getYoutubeAccessToken(
