@@ -141,7 +141,7 @@ body {
     }
 }
 
-/* Optimistic YouTube message placeholder — dimmed until the server confirms
+/* Optimistic YouTube message placeholder, dimmed until the server confirms
 we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-optimistic {
     opacity: 0.55;

@@ -1,8 +1,6 @@
 /**
- * Client-side logic for the public song-queue page (`/s/[sessionId].astro`).
- *
- * Lives in its own module so the Astro page can stay declarative and so
- * the helpers can be unit-tested with JSDOM.
+ * Client-side logic for the public song-queue page (`/s/[sessionId].astro`),
+ * split out so it can be unit-tested with JSDOM.
  */
 
 export interface PublicListItem {
@@ -23,9 +21,8 @@ interface PublicViewLite {
 }
 
 /**
- * Shape of the YouTube IFrame Player API player instance we touch from
- * the public page. Loosely typed because the IFrame API injects
- * `window.YT` at runtime; we only need a couple of methods.
+ * Subset of the YouTube IFrame player we use. Loosely typed because the
+ * API injects `window.YT` at runtime.
  */
 export interface YTPlayerLite {
   playVideoAt(index: number): void;
@@ -34,9 +31,8 @@ export interface YTPlayerLite {
 }
 
 /**
- * Builds the queue list HTML. The caller fills text slots via
- * textContent (data-roles mark them) so server strings can't break
- * the markup.
+ * Builds the queue list HTML. Callers fill text slots via textContent
+ * (marked with data-roles) so server strings can't break the markup.
  */
 export function renderListHtml(
   items: PublicListItem[],
@@ -63,14 +59,13 @@ export function renderListHtml(
 }
 
 function escapeAttr(s: string): string {
-  // Defensive only — values are server-validated 11-char ids or
-  // https://i.ytimg.com URLs.
+  // Defensive only: values are server-validated ids or i.ytimg.com URLs.
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
 /**
- * Attach click handlers to the copy buttons. Idempotent via a
- * `data-bound` flag so re-renders don't pile up listeners.
+ * Attach copy handlers. Idempotent via `data-bound` so re-renders
+ * don't pile up listeners.
  */
 export function bindCopyHandlers(
   listEl: HTMLElement,
@@ -90,8 +85,8 @@ export function bindCopyHandlers(
 }
 
 /**
- * Buffers play() calls until the player is ready, and collapses rapid
- * clicks to the latest target. Only the most recent pending call wins.
+ * Buffers play() calls until the player is ready. Only the most recent
+ * pending call wins.
  */
 export interface PlayController {
   /** Request that the player jump to a specific item. */
@@ -113,7 +108,7 @@ export function createPlayController(): PlayController {
       player.loadVideoById(videoId);
       player.playVideo();
     } catch {
-      /* not ready yet — try again on the next setPlayer */
+      /* not ready yet. Try again on the next setPlayer */
     }
   };
 
@@ -129,10 +124,7 @@ export function createPlayController(): PlayController {
   };
 }
 
-/**
- * Wire the per-item ▶ Play buttons. A null controller (player never
- * loaded) makes the click a no-op.
- */
+/** Wire the per-item ▶ Play buttons. A null controller makes clicks no-ops. */
 export function bindPlayHandlers(
   listEl: HTMLElement,
   controller: PlayController | null,
@@ -158,7 +150,6 @@ export function bindPlayHandlers(
   });
 }
 
-/** Mark the <li> at `index` as the current item. */
 export function markCurrent(listEl: HTMLElement, index: number): void {
   const items = listEl.querySelectorAll<HTMLLIElement>("li");
   items.forEach((li, i) => {
@@ -199,7 +190,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   return ok;
 }
 
-/** Show a transient toast at the bottom of the screen. */
 export function showToast(message: string, ttlMs = 1700): () => void {
   if (typeof document === "undefined") return () => {};
   const existing = document.getElementById("song-queue-toast");

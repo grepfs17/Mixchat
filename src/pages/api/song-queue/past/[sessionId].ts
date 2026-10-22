@@ -17,9 +17,8 @@ import { checkRateLimit } from "../../../../lib/rateLimit";
 
 /**
  * Owner-token-authenticated read/delete/PATCH for past song-queue sessions.
- * The request must include an Authorization: Bearer <ownerToken> header.
- * The ownerToken is verified against the session's stored hash, which works
- * for both live and ended sessions.
+ * The `Authorization: Bearer <ownerToken>` token is checked against the
+ * session's stored hash and is valid for both live and ended sessions.
  */
 
 export const GET: APIRoute = async ({ request, params }) => {
@@ -33,7 +32,7 @@ export const GET: APIRoute = async ({ request, params }) => {
   if (result.kind === "no-auth")
     return json({ error: "Missing owner token" }, 401);
   if (result.kind === "missing") return json({ error: "Not found" }, 404);
-  // Accept both live and ended sessions — the owner token is valid for both.
+  // Accept both live and ended sessions. The owner token is valid for both.
   return json(publicView(result.session));
 };
 
@@ -87,7 +86,6 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   }
 
   const sessionId = params.sessionId || "";
-  // Verify the owner token is valid for this session.
   const result = await readSessionWithToken(
     getSongQueueStoreOptions(),
     sessionId,
@@ -105,8 +103,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     return json({ error: "Not found" }, 404);
   }
 
-  // Use the same channel-scoped store function for the actual update.
-  // readSessionWithToken already verified ownership — the channel check in
+  // Ownership was already verified. The channel check inside
   // setSessionPublicByChannel is an additional safety layer.
   const session = result.session;
   const res = await setSessionPublicByChannel(

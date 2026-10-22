@@ -8,7 +8,6 @@ import {
 import { checkRateLimit } from "../../lib/rateLimit";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 
-// Set debug mode when `YT_DEBUG=1` is present or running in dev mode.
 const DEBUG_YT =
   process.env.YT_DEBUG === "1" || import.meta.env?.MODE === "development";
 
@@ -60,7 +59,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       );
     }
 
-    // Validate the action against an allowlist.
     if (!ALLOWED_ACTIONS.has(action)) {
       return new Response(
         JSON.stringify({ error: `Unknown action: ${action}` }),
@@ -75,11 +73,9 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
     const accessToken = cookies.get("youtube_token")?.value;
     if (!accessToken) {
       console.debug(
-        "[YouTube Proxy] No youtube_token cookie present — proceeding unauthenticated",
+        "[YouTube Proxy] No youtube_token cookie present. Proceeding unauthenticated",
       );
     }
-    // Initialize Innertube client with request-scoped diagnostics so failures
-    // include the action and channel context in server logs.
     let yt: any;
     try {
       yt = await getInnertube();
@@ -102,7 +98,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       );
     }
 
-    // Route to appropriate handler
     if (action === "getLiveVideo") {
       return await handleGetLiveVideo(url, yt);
     } else if (action === "getChannelInfo") {
@@ -132,7 +127,6 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
   }
 };
 
-// Get the live video for a YouTube channel
 async function handleGetLiveVideo(url: URLSearchParams | URL, yt: any) {
   const channelUrlParam = getChannelParam(url);
   if (!channelUrlParam) {

@@ -18,8 +18,7 @@ setInterval(() => {
   for (const [key, entry] of liveVideoCache) {
     if (now > entry.expires) liveVideoCache.delete(key);
   }
-}, 120_000); // 5 minutes
-// Enable debug mode when `YT_DEBUG=1` or running in development
+}, 120_000);
 const DEBUG_YT =
   process.env.YT_DEBUG === "1" || import.meta.env?.MODE === "development";
 
@@ -76,7 +75,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
 
     const result = await findLiveForChannel(channelUrl, { debug: DEBUG_YT });
-    // Only cache successful lookups — null results should not block retries
+    // Only cache successful lookups. Null results should not block retries
     if (result.videoId) {
       liveVideoCache.set(channelUrl, {
         videoId: result.videoId,

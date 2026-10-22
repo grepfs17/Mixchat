@@ -1,6 +1,3 @@
-/**
- * Shared helpers for Wheel Spin API routes.
- */
 import { parseChannelKey } from "../lib/wheel/api";
 import type { WheelChannel } from "./wheelAuth";
 
@@ -23,10 +20,9 @@ export function ownerTokenFromRequest(request: Request): string | null {
 }
 
 /**
- * Resolves the channel trust target from a request. Prefers explicit
- * `channelName` + `channelPlatform` query params, falling back to a
- * `channelKey` of the form `platform:name`. The result is a claim only —
- * callers must verify it with `authorizeChannel`.
+ * Resolve the channel trust target: explicit `channelName` +
+ * `channelPlatform` params, else a `channelKey` of `platform:name`. The
+ * result is a claim only. Callers must verify it with `authorizeChannel`.
  */
 export function channelFromRequest(request: Request): WheelChannel | null {
   const url = new URL(request.url);

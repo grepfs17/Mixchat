@@ -2,11 +2,8 @@ import { join } from "path";
 import type { WheelStoreOptions } from "./wheelStore";
 
 /**
- * Resolve the on-disk base directory for Wheel Spin wheels.
- *
- * Resolution order:
- * 1. `process.env.MIXCHAT_WHEEL_DIR` if set.
- * 2. `<cwd>/data/wheels` otherwise.
+ * Resolve the on-disk base directory for Wheel Spin wheels:
+ * `MIXCHAT_WHEEL_DIR`, else `<cwd>/data/wheels`.
  */
 export function getWheelStoreOptions(override?: string): WheelStoreOptions {
   const baseDir =

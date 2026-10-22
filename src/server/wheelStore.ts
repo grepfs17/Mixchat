@@ -1,11 +1,9 @@
 /**
  * Server-side JSON store for Wheel Spin wheels.
  *
- * Persistence model (mirrors `songQueueStore.ts`):
- * - One file per wheel at `{baseDir}/{wheelId}.json`.
- * - Writes go through a temp file + atomic rename.
- * - In-process per-wheel mutex serialises mutations to prevent lost writes.
- * - Public reads return a projection that omits `ownerTokenHash`.
+ * Mirrors `songQueueStore.ts`: one file per wheel at
+ * `{baseDir}/{wheelId}.json`, temp file + atomic rename, and an in-process
+ * per-wheel mutex to prevent lost writes. Public reads omit `ownerTokenHash`.
  */
 
 import { promises as fs } from "node:fs";

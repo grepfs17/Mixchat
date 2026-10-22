@@ -1,5 +1,5 @@
 /* Dev-only chat styling gallery (/dev/chat-preview). Not shipped to
-   production — the route is blocked by middleware when not in dev. */
+   production. The route is blocked by middleware when not in dev. */
 
 .dev-preview {
     min-height: 100vh;

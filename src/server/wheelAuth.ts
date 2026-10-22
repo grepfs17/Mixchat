@@ -101,9 +101,8 @@ async function resolveYoutubeIdentity(token: string): Promise<Identity | null> {
 }
 
 /**
- * Attempts to obtain a fresh access token from the refresh-token cookie.
- * Returns null (without calling the provider) while a recent failure is still
- * within the cooldown window.
+ * Mint a fresh access token from the refresh-token cookie. Returns null
+ * without calling the provider while a recent failure is in cooldown.
  */
 async function tryRefreshToken(
   cookies: AstroCookies,

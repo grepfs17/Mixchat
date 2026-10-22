@@ -1,13 +1,10 @@
 /**
  * Server-side JSON store for Song Queue sessions.
  *
- * Persistence model:
- * - One file per session at `{baseDir}/{sessionId}.json`.
- * - Writes go through a temp file + atomic rename.
- * - In-process per-session mutex serialises mutations to prevent lost
- *   writes. Multi-process deployments would need a different strategy.
- * - Public reads return a stripped-down projection that omits `userId` and
- *   `ownerTokenHash`.
+ * One file per session at `{baseDir}/{sessionId}.json`, written via temp
+ * file + atomic rename. An in-process per-session mutex serialises
+ * mutations to prevent lost writes (multi-process deployments would need
+ * another strategy). Public reads omit `userId` and `ownerTokenHash`.
  *
  * Test mode: pass `baseDir` to point the store at a temp directory.
  */
@@ -71,8 +68,8 @@ async function withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   } finally {
     release();
     // Only remove the entry if no later caller has chained onto us.
-    // Comparing against the captured `chain` reference — not a fresh
-    // `prev.then(...)` — ensures the Map shrinks.
+    // Comparing against the captured `chain` reference, not a fresh
+    // `prev.then(...)`, ensures the Map shrinks.
     if (mutexes.get(key) === chain) {
       mutexes.delete(key);
     }
@@ -171,8 +168,8 @@ export async function getSession(
 }
 
 /**
- * Owner-only: verify the bearer token matches the stored hash, then update
- * `lastSeenAt` (heartbeat) and run the mutator. Returns the updated session.
+ * Owner-only: verify the bearer token, update `lastSeenAt` (heartbeat),
+ * then run the mutator and bump the version.
  */
 export async function mutateSession<T>(
   opts: SongQueueStoreOptions,
@@ -316,11 +313,8 @@ export async function listSessionsForChannel(
 }
 
 /**
- * Owner-only delete. Verifies the bearer token against the stored hash and
- * removes the session file. Returns one of:
- *   - "ok"     — file removed
- *   - "missing" — no such session
- *   - "auth"   — token didn't match
+ * Owner-only delete. Verifies the bearer token, then removes the session
+ * file. Returns "ok" | "missing" | "auth".
  */
 export async function deleteSession(
   opts: SongQueueStoreOptions,
@@ -389,9 +383,8 @@ export async function deleteSessionByChannel(
 }
 
 /**
- * Bulk channel-trust delete. Returns the count of files removed and the
- * count that were already missing. Each session is verified against the
- * channel identity before unlinking.
+ * Bulk channel-trust delete. Returns counts of removed and already-missing
+ * sessions. Each is verified against the channel identity.
  */
 export async function deleteSessionsByChannel(
   opts: SongQueueStoreOptions,
@@ -514,7 +507,7 @@ export async function gcSessions(
       await fs.unlink(sessionPath(opts.baseDir, sessionId));
       removed += 1;
     } catch {
-      // Best-effort; another process may have already removed it.
+      // Best-effort. Another process may have already removed it.
     }
   }
   return removed;

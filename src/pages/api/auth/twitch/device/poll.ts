@@ -14,10 +14,7 @@ const json = (body: unknown, status = 200) =>
     },
   });
 
-/**
- * Poll the Twitch Device Code Grant flow (desktop/public-client only).
- * On success sets the auth cookies and returns the session payload.
- */
+/** Poll the Twitch Device Code Grant flow (desktop/public-client only). */
 export const GET: APIRoute = async ({ cookies }) => {
   if (!IS_DESKTOP) return json({ error: "Not found" }, 404);
 
@@ -80,7 +77,7 @@ export const GET: APIRoute = async ({ cookies }) => {
     return json({ status: result.status });
   }
 
-  // expired | denied | error — consume the code so it can't be retried.
+  // expired | denied | error. Consume the code so it can't be retried.
   cookies.delete("twitch_device_code", { path: "/" });
   return json(
     {

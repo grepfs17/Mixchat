@@ -2,15 +2,10 @@ import { join } from "path";
 import type { SongQueueStoreOptions } from "./songQueueStore";
 
 /**
- * Resolve the on-disk base directory for song queue sessions.
- *
- * Resolution order:
- * 1. `process.env.MIXCHAT_SONG_QUEUE_DIR` if set.
- * 2. `<cwd>/data/song-queue/sessions` otherwise.
- *
- * In tests, callers should pass an explicit `baseDir` to keep each test
- * isolated. The env-var override exists so deployments can point the store
- * at a mounted volume without code changes.
+ * Resolve the on-disk base directory for song queue sessions:
+ * `MIXCHAT_SONG_QUEUE_DIR`, else `<cwd>/data/song-queue/sessions`.
+ * Tests pass an explicit `baseDir` for isolation. The env override lets
+ * deployments point the store at a mounted volume.
  */
 export function getSongQueueStoreOptions(
   override?: string,

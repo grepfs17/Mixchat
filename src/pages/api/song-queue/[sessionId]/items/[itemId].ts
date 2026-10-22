@@ -129,7 +129,7 @@ const removeItemHandler: APIRoute = async ({ request, params }) => {
 
 export const DELETE: APIRoute = removeItemHandler;
 
-/** POST fallback — accepts X-HTTP-Method-Override: DELETE for proxies that
+/** POST fallback: accepts X-HTTP-Method-Override: DELETE for proxies that
  *  block the DELETE verb (e.g. Cloudflare WAF). */
 export const POST: APIRoute = async (ctx) => {
   if (ctx.request.headers.get("x-http-method-override")?.toUpperCase() !== "DELETE") {

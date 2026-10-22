@@ -41,8 +41,8 @@
 }
 
 /* BannerShell applies `pinned-banner-header` to the banner wrapper via a
- * className template literal — NOT orphan. Compactness override:
- *   - margin-bottom: 4px (vs base 8px) — gentle tightening without fusing
+ * className template literal, NOT orphan. Compactness override:
+ *   - margin-bottom: 4px (vs base 8px): gentle tightening without fusing
  *     the title row with the message body on multi-line pinned text. */
 .pinned-banner-header {
     margin-bottom: 4px;

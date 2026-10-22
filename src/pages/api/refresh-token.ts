@@ -43,7 +43,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     let expiresIn: number | undefined;
 
     if (platform === "twitch") {
-      // Read the refresh token from the secure httpOnly cookie.
       const refreshToken = cookies.get("twitch_refresh_token")?.value;
       if (!refreshToken) {
         return new Response(
@@ -100,7 +99,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     } else if (platform === "youtube") {
       if (IS_TWITCH_ONLY) return twitchOnlyResponse();
 
-      // Read the refresh token from the secure httpOnly cookie.
       const refreshToken = cookies.get("youtube_refresh_token")?.value;
       if (!refreshToken) {
         // 401 is expected when user hasn't logged in with YouTube yet
@@ -169,7 +167,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(
       JSON.stringify({
         accessToken,
-        // refreshToken is intentionally omitted — it lives only in the
+        // refreshToken is intentionally omitted. It lives only in the
         // httpOnly cookie and must not be exposed to JavaScript.
         expiresIn,
       }),
@@ -189,7 +187,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       statusCode = 401;
     }
 
-    // Log full details server-side; return only a generic message to the client.
+    // Log full details server-side. Return only a generic message to the client.
     console.error("Token refresh failed:", {
       error: errorMessage,
       timestamp: new Date().toISOString(),

@@ -9,9 +9,9 @@ import { checkRateLimit } from "../../lib/rateLimit";
 const ALLOWED_PATH_PREFIXES = [
   "/helix/chat/emotes/global",
   "/helix/chat/emotes/user",
-  "/helix/chat/emotes", // covers /helix/chat/emotes?broadcaster_id=...
+  "/helix/chat/emotes",
   "/helix/chat/badges/global",
-  "/helix/chat/badges", // covers /helix/chat/badges?broadcaster_id=...
+  "/helix/chat/badges",
   "/helix/chat/settings", // used to check show_first_message_highlights
   "/helix/chat/announcements", // send chat announcements
   "/helix/chat/shoutouts", // send shoutouts
@@ -118,7 +118,6 @@ export const GET: APIRoute = async ({ url, cookies, request }) => {
       );
     }
 
-    // Validate the path against the allowlist
     if (!isPathAllowed(path)) {
       return new Response(
         JSON.stringify({ error: `Path not permitted: ${path}` }),
@@ -126,7 +125,7 @@ export const GET: APIRoute = async ({ url, cookies, request }) => {
       );
     }
 
-    // Read the access token from the httpOnly cookie — never from client input.
+    // Read the access token from the httpOnly cookie, never from client input.
     const accessToken = cookies.get("twitch_token")?.value;
     if (!accessToken) {
       return new Response(JSON.stringify({ error: "Not authenticated" }), {
@@ -143,10 +142,9 @@ export const GET: APIRoute = async ({ url, cookies, request }) => {
       );
     }
 
-    // Build the full Twitch API URL, forwarding any extra query params from the
-    // original request (e.g. broadcaster_id, user_id, after cursor).
+    // Forward extra query params (broadcaster_id, user_id, after cursor, ...).
     const forwardParams = new URLSearchParams(url.searchParams);
-    forwardParams.delete("path"); // "path" is our own param, not Twitch's
+    forwardParams.delete("path");
 
     const targetUrl = `${TWITCH_API_BASE}${path}${
       forwardParams.size > 0 ? `?${forwardParams}` : ""

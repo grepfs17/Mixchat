@@ -1,10 +1,10 @@
 import type { APIRoute } from "astro";
 
 export const GET: APIRoute = async ({ request }) => {
-  // 1. Explicit env var — highest priority.
-  // 2. Astro's built-in `site` config (astro.config.mjs → site: '…') — always
-  //    present in production builds, requires no extra configuration.
-  // 3. Host header — last resort for local/dev use only.
+  // 1. Explicit env var: highest priority.
+  // 2. Astro's built-in `site` config (astro.config.mjs → site: '…'). It is
+  //    always present in production builds and requires no extra configuration.
+  // 3. Host header: last resort for local/dev use only.
   const rawOrigin =
     import.meta.env.PUBLIC_SITE_URL || import.meta.env.SITE || null;
 
@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { "Content-Type": "application/json" },
       });
     } catch {
-      // Malformed URL — fall through to Host header
+      // Malformed URL, fall through to Host header
     }
   }
 

@@ -28,8 +28,8 @@ if (!sessionId) {
 
 // For ended-but-public sessions (made public after the fact via the
 // past-playlists UI) we still show the list and player. The Play button
-// only swaps the local IFrame, so it's safe on frozen sessions too —
-// the only thing we skip for ended sessions is the live poll.
+// only swaps the local IFrame, so it's safe on frozen sessions too.
+// The only thing we skip for ended sessions is the live poll.
 const showList = Boolean(initialView) && !notFound;
 
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
@@ -43,12 +43,12 @@ function formatPlaylistDate(iso: string): string {
 }
 const publicUrl = `${mainUrl}s/${sessionId ?? ""}`;
 const title = initialView?.title
-    ? `${initialView.title} — Mixchat Song Queue`
+    ? `${initialView.title} | Mixchat Song Queue`
     : notFound
-      ? "Song Queue — Mixchat"
+      ? "Song Queue | Mixchat"
       : ended
-        ? "Song Queue ended — Mixchat"
-        : "Song Queue — Mixchat";
+        ? "Song Queue ended | Mixchat"
+        : "Song Queue | Mixchat";
 const description = initialView
     ? `Listen along with ${initialView.items.length} queued YouTube song${initialView.items.length === 1 ? "" : "s"}.`
     : "A read-only song queue powered by Mixchat.";
@@ -333,7 +333,7 @@ const description = initialView
     {
         ended && (
             <p class="state state--ended">
-                <strong>Ended.</strong> This song queue is read-only — you can
+                <strong>Ended.</strong> This song queue is read-only. You can
                 still browse and copy the songs below.{" "}
                 <a href="/">Back to Mixchat</a>
             </p>
@@ -542,7 +542,7 @@ const description = initialView
             else showToast("Could not copy. Hold ⌘/Ctrl and press C.");
         });
         bindPlayHandlers(listEl, controller, () => {
-            // markCurrent already ran inside bindPlayHandlers; the next poll
+            // markCurrent already ran inside bindPlayHandlers. The next poll
             // will reconcile the real state from the server.
         });
     }
@@ -619,7 +619,7 @@ const description = initialView
             },
         }) as unknown as PublicPlayer;
 
-        // Live polling is only useful for open sessions; ended sessions
+        // Live polling is only useful for open sessions. Ended sessions
         // are a frozen snapshot with nothing to bump.
         if (isEnded) return;
 
@@ -684,7 +684,7 @@ const description = initialView
 
 <script>
     // Format the created-at timestamp in the viewer's local timezone.
-    // The server renders the raw ISO into the <time> element; we swap it
+    // The server renders the raw ISO into the <time> element. We swap it
     // out for a human-readable string on load. Re-run on every render so
     // Astro's view transitions also pick it up.
     function formatLocalTimes() {

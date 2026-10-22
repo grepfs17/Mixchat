@@ -146,7 +146,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
       }
 
-      // Find the approve or deny button on the automod item and execute it.
       const buttons: any[] = Array.isArray(automodItem.moderation_buttons)
         ? automodItem.moderation_buttons
         : [];
@@ -165,7 +164,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
       }
 
-      // Execute the button's endpoint through the Innertube session.
       try {
         const yt = await getInnertube();
         await yt.actions.execute(button.endpoint);

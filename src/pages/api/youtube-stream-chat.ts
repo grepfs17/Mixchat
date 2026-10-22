@@ -64,7 +64,7 @@ const blockedChatFailures = new Map<string, number>();
 
 /**
  * Transient YouTube blocks (proxy 503s / bot checks) are recoverable after
- * a short backoff — unlike hard 403s, the underlying session is still good,
+ * a short backoff. Unlike hard 403s, the underlying session is still good,
  * so we reconnect the LiveChat in place instead of tearing it down.
  */
 const TRANSIENT_BLOCK_BASE_MS = 30_000;
@@ -78,7 +78,7 @@ const transientChatFailures = new Map<
 >();
 
 /**
- * True when a LiveChat error is a *recoverable* YouTube block — typically a
+ * True when a LiveChat error is a *recoverable* YouTube block, typically a
  * proxy 503 ("YouTube temporarily blocked"), a bot-check response that
  * youtubei.js fails to parse as a chat continuation, or a transient rate
  * limit. Unlike 403s (which force a session cleanup), these clear up after
@@ -129,7 +129,6 @@ setInterval(() => {
   reapIdleSessions();
 }, 60_000);
 
-// SSE client waiting for messages
 interface SSEClient {
   id: string;
   controller: ReadableStreamDefaultController;
@@ -139,37 +138,26 @@ interface SSEClient {
 
 const SESSION_GRACE_PERIOD_MS = 30_000;
 
-// Shared session for a videoId
 interface ChatSession {
   chat: any;
   messages: ChatMessage[];
   seenIds: Set<string>;
   /**
-   * Reverse index channelId -> most recent display name observed for that
-   * channel. Used to render "X was removed from the chat" system notes when
-   * a moderator removes a user's messages — YouTube's stream action only
-   * carries the channel id, so we have to recover the author's display name
-   * from the messages we've already seen.
+   * channelId -> most recent display name, so removal actions (which only
+   * carry the channel id) can be rendered with a human-readable author.
    */
-  authorByChannel: Map<string, string>;/**
- * Cooldown so we only emit one system removal note per "(videoId, channelId)"
- * pair. InnerTube sometimes re-publishes the same moderator removal action
- * (e.g. on session reconnect or replay), which would otherwise spam the
- * chat with duplicates of the same system message. Dedupe is keyed on the
- * event identity (no TTL) — once a removal note has been emitted for a
- * `(actionKind, channelId)`, the same pair will not fire again for the
- * lifetime of the chat session.
- */
+  authorByChannel: Map<string, string>;
+  /**
+   * Dedupe set for removal notes, keyed by `(actionKind, channelId)` with no
+   * TTL. InnerTube can replay the same removal on reconnect.
+   */
   recentRemovals: Set<string>;
   /**
-   * Cooldown so duplicate host-handoff banners (which can fire repeatedly
-   * for the same event across reconnects and InnerTube polls) only
-   * translate to a single chat-list announcement per event pair. Like
-   * `recentRemovals`, dedupe is keyed on the event identity with no TTL
-   * for the lifetime of the chat session.
+   * Dedupe set for host-handoff banners, keyed by `(host, action_id)` with
+   * no TTL. InnerTube can replay the same banner across polls.
    */
   recentHostHandoffs: Set<string>;
-  /** Sticky map of message ids marked deleted; survives buffer shifts. */
+  /** Sticky map of message ids marked deleted, survives buffer shifts. */
   deletedIds: Map<string, string>;
   clients: Map<string, SSEClient>;
   lastUpdate: number;
@@ -194,7 +182,7 @@ function shutdownActiveSessions() {
     } catch {}
   }
   console.log(
-    `[YouTube Chat] Graceful shutdown — stopped ${activeLiveChats.size} sessions`,
+    `[YouTube Chat] Graceful shutdown: stopped ${activeLiveChats.size} sessions`,
   );
   activeLiveChats.clear();
 }
@@ -237,28 +225,8 @@ function ARGBtoHex(argb: number): string {
 }
 
 /**
- * Synthesize a system message announcing a moderator-driven user removal.
- * YouTube's InnerTube action stream surfaces `RemoveChatItemByAuthorAction`
- * and `MarkChatItemsByAuthorAsDeletedAction` for every moderator who removes
- * a user's messages — ourselves, an in-stream bot, or any other moderator
- * connected to the chat. The action doesn't distinguish ban vs. timeout so
- * we label it generically; the action is observable in the messageType.
- *
- * The server scrolls the existing `messages` buffer for the most recent
- * author display name tied to the affected channel id so the note has a
- * human-readable target ("tofumushu was removed from the chat").
- */
-/**
- * Session-scoped dedupe gate for synthetic system notes. Returns true the
- * FIRST time it's called for a given key within the chat session, and
- * false on every subsequent call — regardless of how much wall-clock time
- * has passed. This is what guarantees that an InnerTube re-poll, a
- * reconnect, or a delayed replay of the same moderator action ONLY
- * produces ONE chat-list announcement per session, instead of one per
- * poll cycle.
- *
- * Exported via the test bridge so unit tests can assert the gate is
- * reentrant but not re-emitting.
+ * Session-scoped dedupe gate: true the first time a key is seen, false
+ * afterwards, so re-polls and reconnects emit each system note only once.
  */
 export function shouldEmitSystemNote(
   dedupeSet: Set<string>,
@@ -269,6 +237,11 @@ export function shouldEmitSystemNote(
   return true;
 }
 
+/**
+ * Synthesize a system note for a moderator-driven removal. InnerTube's
+ * action only carries the channel id, so the display name is recovered
+ * from the recent-message buffer.
+ */
 export function createSystemRemovalMessage(
   authorName: string | undefined,
   channelId: string | undefined,
@@ -300,10 +273,8 @@ export function createSystemRemovalMessage(
 }
 
 /**
- * YouTube sometimes returns protocol-relative (`//host/...`) or `http://` image
- * URLs (avatars, badges, emoji, stickers). The app's CSP allows only https image
- * sources, and on a plain-http origin (e.g. http://localhost:3000) such URLs are
- * blocked, so force them to https.
+ * YouTube sometimes returns protocol-relative or `http://` image URLs.
+ * Force https because the app's CSP only allows https image sources.
  */
 function toHttpsUrl(url: string | undefined): string | undefined {
   if (!url) return undefined;
@@ -396,10 +367,8 @@ export function parseBadges(msg: any): Record<string, string> {
 }
 
 export function isAuthorModerator(msg: any): boolean {
-  // youtubei.js exposes Author.is_moderator and LiveChatAuthorBadge.icon_type
-  // for the authoritative moderator signal. Match the same rule used by
-  // isAuthorOwner (icon_type === "OWNER" only) to avoid false positives from
-  // community badges whose label happens to contain "moderator".
+  // Prefer the authoritative is_moderator / icon_type signal. Label text can
+  // false-positive on community badges.
   if (!msg.author) return false;
   if (msg.author.is_moderator) return true;
   if (!msg.author.badges) return false;
@@ -407,10 +376,8 @@ export function isAuthorModerator(msg: any): boolean {
 }
 
 export function isAuthorOwner(msg: any): boolean {
-  // NOTE: A *verified* author is NOT the broadcaster. The live-chat owner badge
-  // is identified by its icon type ("OWNER"); youtubei.js exposes no is_owner
-  // flag. Treating verified/verified-artist as owner caused non-mods (any
-  // verified channel) to be flagged as the broadcaster.
+  // A verified author is NOT the broadcaster: the owner badge is the
+  // icon_type "OWNER" (youtubei.js exposes no is_owner flag).
   if (!msg.author?.badges) return false;
   return msg.author.badges.some((b: any) => {
     if (b?.icon_type === "OWNER") return true;
@@ -419,10 +386,8 @@ export function isAuthorOwner(msg: any): boolean {
 }
 
 function isAuthorMember(msg: any): boolean {
-  // The YouTube member badge is identified by its icon_type ("MEMBER" for new
-  // streams, "SPONSOR" for legacy). Channel-level membership cannot be derived
-  // from regular chat events — only from the badges YouTube attaches to the
-  // author's row in the live chat panel.
+  // Member badge icon_type is "MEMBER" (new) or "SPONSOR" (legacy).
+  // Membership is only visible via these chat-row badges.
   if (!msg.author?.badges) return false;
   return msg.author.badges.some((b: any) => {
     if (!b) return false;
@@ -433,10 +398,8 @@ function isAuthorMember(msg: any): boolean {
 }
 
 /**
- * Extracts plain text from a youtubei.js `Text` node (used for
- * `deleted_state_message` on MarkChatItemAsDeletedAction and friends).
- * The Text node exposes `.toString()` for simple text and `.runs` for
- * styled segments; we concatenate both for a safe fallback.
+ * Extract plain text from a youtubei.js `Text` node, falling back to
+ * concatenating `.runs` for styled segments.
  */
 function extractDeletedByText(textNode: any): string | undefined {
   if (!textNode) return undefined;
@@ -457,11 +420,8 @@ function extractDeletedByText(textNode: any): string | undefined {
 }
 
 /**
- * Detects a "deleted" chat item delivered in the body of an
- * AddChatItemAction or ReplaceChatItemAction. InnerTube sometimes ships
- * a moderator-deleted message as a fresh LiveChatTextMessage whose
- * `message` text is the "deleted by" placeholder. When that pattern is
- * present we return the text; otherwise undefined.
+ * Detect a deleted message sent as a fresh LiveChatTextMessage whose text
+ * is the "deleted by" placeholder. Returns that text or undefined.
  */
 function detectDeletedReplacementText(item: any): string | undefined {
   if (!item) return undefined;
@@ -500,10 +460,8 @@ function parseTextMessageBase(item: any): ChatMessage {
 }
 
 /**
- * Builds the label shown for a membership event. Milestone announcements
- * carry the duration in `header_primary_text` (e.g. "Member (6 months)");
- * `header_subtext` only holds the welcome/tier text. New memberships have
- * no duration, so fall back to the subtext or a generic "Member".
+ * Membership label: milestones carry the duration in `header_primary_text`
+ * (e.g. "Member (6 months)"). Otherwise, fall back to `header_subtext`.
  */
 export function getMembershipLabel(msg: any): string {
   const primary = msg.header_primary_text?.toString?.().trim?.();
@@ -586,8 +544,7 @@ function parseChatItem(item: any): ChatMessage | null {
 }
 
 function parseAutoModMessage(item: any): ChatMessage | null {
-  // Parse the held message content from auto_moderated_item.
-  // It can be any chat item type — try recursive parsing first.
+  // The held item can be any chat item type. Try recursive parsing first.
   const heldItem = item.auto_moderated_item;
   let held: ChatMessage | null = null;
   if (heldItem) {
@@ -595,7 +552,6 @@ function parseAutoModMessage(item: any): ChatMessage | null {
       held = parseChatItem(heldItem);
     }
     if (!held && heldItem.author) {
-      // Fallback: parse basic fields directly from the held item
       held = parseTextMessageBase(heldItem);
     }
   }
@@ -603,9 +559,7 @@ function parseAutoModMessage(item: any): ChatMessage | null {
   const headerText =
     item.header_text?.toString() || "Held for review";
 
-  // Extract moderation button endpoints so the moderation API can
-  // invoke approve/deny later. Store them on the message for the
-  // per-session automod map.
+  // Keep button endpoints for the approve/deny API.
   const buttons: { text: string; is_disabled: boolean }[] =
     Array.isArray(item.moderation_buttons)
       ? item.moderation_buttons.map((b: any) => ({
@@ -614,9 +568,7 @@ function parseAutoModMessage(item: any): ChatMessage | null {
         }))
       : [];
 
-  // Store the raw LiveChatAutoModMessage on the session for later
-  // moderation API access (approve/deny). The session's automodMap
-  // will be populated by the caller (in chat-update / start).
+  // Keep the raw item for later approve/deny calls.
   const msg: ChatMessage & { automodItem?: any; automodButtons?: typeof buttons } = {
     id: item.id,
     author: held?.author || "System",
@@ -672,20 +624,10 @@ function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | nu
 }
 
 /**
- * Synthesize a single-line "Raid host joined: [X]" system note from a
- * host-handoff-style banner. Returns null if the banner is a plain
- * redirect NOTIFY (e.g. community rules) rather than an actual channel
- * hand-off — those should only land as a `redirect` chat-list entry.
- *
- * YouTube doesn't expose a single dedicated YTNode for cross-stream
- * "raid"-style hand-offs, so we detect by structural cues of a redirect
- * to another channel:
- *   - Action button present (redirects through a CTA)
- *   - Author photo present (typical of a channel-card banner)
- *   - Banner text mentions "host", "hosted", "redirect", "joined", or
- *     banner_type indicates a redirect
- * The first two cover every observed InnerTube hand-off banner in the
- * wild; the third is a fallback for localization variants.
+ * Synthesize a "Joining raid from [X]" note from a host-handoff banner,
+ * or null for a plain redirect NOTIFY (e.g. community rules). There is no
+ * dedicated YTNode for cross-stream hand-offs, so detection uses the
+ * action button, author photo, and host/redirect keywords.
  */
 export function parseHostHandoffBanner(
   banner: any,
@@ -699,9 +641,7 @@ export function parseHostHandoffBanner(
   const hasActionButton = Boolean(contents.inline_action_button);
   const bannerType =
     typeof banner.banner_type === "string" ? banner.banner_type.toLowerCase() : "";
-  // Build a lowercase view of the text for the keyword scan, then keep
-  // an original-cased view for the host-name extraction below so we
-  // preserve "SunBurst" rather than regressing to "sunburst".
+  // Keep original casing for host-name extraction. Lowercase only for the scan.
   const rawCombined = [
     headerText ?? "",
     contents.banner_message?.toString?.() ?? "",
@@ -718,12 +658,7 @@ export function parseHostHandoffBanner(
     (hasAuthorPhoto && hasActionButton) || bannerTypeMatch || keywordMatch;
   if (!looksLikeHandoff) return null;
 
-  // Resolve the host's display name.
-  // 1. inline_action_button.text often contains the host channel name on
-  //    YouTube's redirect banners ("Watch X's stream", "View X").
-  // 2. The action button's `accessibility_text` (tooltip) sometimes carries
-  //    the channel name verbatim.
-  // 3. Fall back to "another channel" so we always have a friendly label.
+  // Host name: URL handle, then button text/tooltip, then the banner copy.
   const actionText = contents.inline_action_button?.text?.toString?.() || "";
   const actionTooltip =
     contents.inline_action_button?.accessibility_text?.toString?.() || "";
@@ -731,7 +666,6 @@ export function parseHostHandoffBanner(
     typeof contents.inline_action_button?.url === "string"
       ? contents.inline_action_button.url
       : "";
-  // Try to pull a channel handle out of a /@handle/ route from the URL.
   let hostName = "";
   if (buttonUrl) {
     const m = buttonUrl.match(/@([\w.-]+)/);
@@ -745,9 +679,7 @@ export function parseHostHandoffBanner(
     hostName = actionTooltip.trim();
   }
   if (!hostName) {
-    // Match both "hosting X" and "hosted by X". Use a char class stop
-    // list so we trim after the first non-identifier char (apostrophes,
-    // spaces, punctuation).
+    // Match both "hosting X" and "hosted by X".
     const m1 = rawCombined.match(/hosting\s+([\w.-]+)/i);
     const m2 = m1
       ? null
@@ -821,28 +753,25 @@ function reapIdleSessions() {
 }
 
 async function ensureChatSession(videoId: string): Promise<ChatSession> {
-  // Return existing session
   let session = activeLiveChats.get(videoId);
   if (session) {
     session.lastUpdate = Date.now();
     return session;
   }
 
-  // Check 403 cooldown
   const blockedUntil = blockedChatFailures.get(videoId);
   if (blockedUntil && blockedUntil > Date.now()) {
     throw new Error("BLOCKED");
   }
   if (blockedUntil) blockedChatFailures.delete(videoId);
 
-  // Check playability-error cooldown (video unavailable, private, etc.)
+  // Skip retries for cached terminal errors (unavailable, private, ...).
   const playability = playabilityErrors.get(videoId);
   if (playability && playability.until > Date.now()) {
     throw new Error(`PLAYABILITY: ${playability.message}`);
   }
   if (playability) playabilityErrors.delete(videoId);
 
-  // Evict LRU if at capacity
   if (activeLiveChats.size >= MAX_ACTIVE_SESSIONS) {
     let oldestKey = "";
     let oldestTime = Infinity;
@@ -870,10 +799,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   const seenIds = new Set<string>();
   const authorByChannel = new Map<string, string>();
   /**
-   * Session-scoped dedupe sets. `Set<string>` is enough since membership
-   * is the only signal we need — once an event identity lands here, it
-   * never re-emits, regardless of how often InnerTube re-publishes the
-   * underlying action. The set is freed when the session is reaped.
+   * Session-scoped dedupe sets, freed when the session is reaped.
    */
   const recentRemovals = new Set<string>();
   const recentHostHandoffs = new Set<string>();
@@ -887,10 +813,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
 
   const parse = (item: any): ChatMessage | null => parseChatItem(item);
 
-  // Build/extend the channelId -> display name index whenever a new message
-  // is admitted. Called both from the initial-data replay and the live
-  // chat-update stream so the moderator-removal summary can recover a
-  // human-readable name.
+  // Track channelId -> display name so removal notes can name the author.
   const indexAuthor = (msg: ChatMessage) => {
     if (msg.authorChannelId && msg.author) {
       authorByChannel.set(msg.authorChannelId, msg.author);
@@ -898,13 +821,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   };
 
   /**
-   * Emit a synthetic "X was removed from the chat" system note through the
-   * SSE stream. This fires for every moderator-driven removal of an
-   * author's messages (ours or anyone else's). Dedupe is keyed on the
-   * `(actionKind, channelId)` event identity with no TTL — once a
-   * removal note has been emitted for a pair, it will not re-emit for
-   * the lifetime of the chat session, so re-polls / reconnects that
-   * replay the same action can't spam chat with duplicate notes.
+   * Emit a "X was removed from the chat" note for any moderator removal,
+   * deduped by `(actionKind, channelId)` so replays don't spam chat.
    */
   const emitRemovalSystemMessage = (
     channelId: string | undefined,
@@ -933,13 +851,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   };
 
   /**
-   * Emit a synthetic "Joining raid from [X]" system note through the SSE
-   * stream when a host/redirect banner is detected. Dedupe is keyed on
-   * `(targetUsername, banner.action_id)` with no TTL — once a handoff
-   * note has been emitted for a (host, banner) pair, it will not re-emit
-   * for the lifetime of the chat session, so subsequent polls of the
-   * InnerTube chat-update stream that replay the same banner can't spam
-   * chat with duplicate announcements.
+   * Emit a "Joining raid from [X]" note for host-handoff banners, deduped
+   * by `(targetUsername, action_id)` so replays don't spam chat.
    */
   const emitHostHandoffSystemMessage = (
     banner: any,
@@ -961,9 +874,9 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   };
 
   // ── startChat(): build, wire, and start the LiveChat for this video. ──
-  // The chat.on(...) handlers below belong to this closure; starting a chat
+  // The chat.on(...) handlers below belong to this closure. Starting a chat
   // is just calling it again. That lets a transient block reconnect in
-  // place — the message buffer, dedupe sets, and SSE clients all survive by
+  // place. The message buffer, dedupe sets, and SSE clients all survive by
   // reusing the same session state.
   const startChat = async (): Promise<{ chat: any; ready: Promise<void> }> => {
     const yt = await getInnertube();
@@ -1121,7 +1034,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       }
     }
     // On a session reconnect, the start replay carries messages posted
-    // while the connection was down — resync existing clients so the gap
+    // while the connection was down. Resync existing clients so the gap
     // isn't lost (the client merges + de-dupes by message id).
     if (session && session.clients.size > 0) {
       broadcast(session, "connected", {
@@ -1141,7 +1054,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         const msg = parse(item);
         if (!msg) return;
         if (deletedIds.has(msg.id)) {
-          // Re-published after a delete. Don't re-broadcast; if any client
+          // Re-published after a delete. Don't re-broadcast. If any client
           // missed the original delete, send one now so they stay in sync.
           broadcast(session!, "delete", {
             messageId: msg.id,
@@ -1172,20 +1085,15 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             const removed = messages.shift()!;
             seenIds.delete(removed.id);
             // The shifted message is still in deletedIds if it was
-            // marked deleted — leave the sticky entry in place.
+            // marked deleted. Leave the sticky entry in place.
           }
           broadcast(session!, "message", msg, msg.id);
         }
         return;
       }
       if (action.is(YTNodes.RemoveChatItemAction)) {
-        // User deleted their own message, YouTube auto-mod removed it, or a
-        // moderator deleted it via the Data API. There is no
-        // deleted_state_message — the item is simply removed. Use a neutral
-        // label since the source of the deletion is unknown. The check on
-        // deletedIds is forward-looking: if a future API path pre-populates
-        // a better label (e.g. the moderation endpoint marking the message
-        // before InnerTube delivers this action), we'll use it.
+        // No deleted_state_message here, so the deletion source is unknown.
+        // Prefer a label that the moderation endpoint already recorded.
         const targetId = action.target_item_id;
         if (!targetId) return;
         const text = "Message removed";
@@ -1236,12 +1144,8 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         return;
       }
       if (action.is(YTNodes.RemoveChatItemByAuthorAction)) {
-        // Silently removes all messages from an author (ban/timeout). No
-        // deleted_state_message — just wipe them. Use the same label as
-        // RemoveChatItemAction for consistency. In addition, synthesize a
-        // system "X was removed from the chat" note so every connected
-        // client (including viewers who can't see deletions directly)
-        // sees that a moderator action occurred.
+        // Ban/timeout: wipe all of the author's messages and announce it so
+        // viewers who can't see deletions directly still know it happened.
         const channelId = action.external_channel_id;
         if (!channelId) return;
         for (const m of messages) {
@@ -1286,11 +1190,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
           }
           broadcast(session!, "message", msg, msg.id);
         }
-        // Additionally, if the banner looks like a channel hand-off,
-        // emit a dedicated "RAID HOST" system note so the chat
-        // announces the joining group as one clear line. The note
-        // arrives in the SSE stream after the redirect banner line,
-        // giving connected viewers a clean handoff summary scroll.
+        // Emit a dedicated "RAID HOST" note after the redirect banner line.
         const hostHandoff = parseHostHandoffBanner(banner, headerText);
         if (hostHandoff) {
           emitHostHandoffSystemMessage(banner, hostHandoff);
@@ -1319,7 +1219,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
     // Ignore events from a LiveChat that was already replaced on reconnect.
     if (!s || s.chat !== chat) return;
     // A transient block surfaces as an error followed by a synthetic "end"
-    // — the error handler is reconnecting this session in place, so the
+    // the error handler is reconnecting this session in place, so the
     // teardown below must not run.
     if (transientChatFailures.has(videoId)) return;
     clearChatRestart(s, videoId);
@@ -1351,7 +1251,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       console.error(
         "[YouTube Chat] Blocked for",
         videoId,
-        "— cleaning up session ( Innertube left intact for other videos )",
+        "- cleaning up session (Innertube left intact for other videos)",
       );
       clearChatRestart(s, videoId);
       for (const c of s.clients.values()) {
@@ -1376,7 +1276,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
 
     // Transient block (proxy 503 / bot check): reconnect in place with
     // backoff instead of tearing the session down. The SSE stream stays
-    // open — tell connected clients so they can surface a status.
+    // open. Tell connected clients so they can surface a status.
     if (isTransientChatBlock(errMsg)) {
       for (const c of s.clients.values()) {
         try {
@@ -1423,17 +1323,15 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
   // ── end startChat() ─────────────────────────────────────────────────
 
   /**
-   * Reconnect planner for transient YouTube blocks (proxy 503 / bot
-   * checks). The block usually clears within seconds, so instead of
-   * tearing the session down (which disconnects every SSE client and
-   * loses buffered history), we back off and rebuild just the LiveChat,
-   * swapping it into the existing session.
+   * Reconnect planner for transient blocks (proxy 503 / bot checks). The
+   * block usually clears quickly, so back off and rebuild only the
+   * LiveChat, keeping SSE clients and buffered history intact.
    */
   const armTransientReconnect = () => {
     const s = session;
     if (!s) return;
     if (activeLiveChats.get(videoId) !== s) return;
-    // A reconnect is already scheduled for this episode — hold until it
+    // A reconnect is already scheduled for this episode. Hold until it
     // runs (or fails there and escalates).
     if (s.restartTimer) return;
 
@@ -1474,14 +1372,14 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
       attempt,
     });
     console.warn(
-      `[YouTube Chat] Transient block for ${videoId} — reconnecting in ${Math.round(backoff / 1000)}s (attempt ${attempt}/${TRANSIENT_BLOCK_MAX_ATTEMPTS})`,
+      `[YouTube Chat] Transient block for ${videoId}: reconnecting in ${Math.round(backoff / 1000)}s (attempt ${attempt}/${TRANSIENT_BLOCK_MAX_ATTEMPTS})`,
     );
 
     s.restartTimer = setTimeout(() => {
       s.restartTimer = null;
       void (async () => {
         if (activeLiveChats.get(videoId) !== s) return;
-        // No viewers left to serve — let the session idle out and be reaped.
+        // No viewers left to serve. Let the session idle out and be reaped.
         if (s.clients.size === 0) {
           transientChatFailures.delete(videoId);
           return;
@@ -1505,7 +1403,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
         } catch (err2) {
           const msg2 = err2 instanceof Error ? err2.message : String(err2);
           if (isPlayabilityError(msg2)) {
-            // The stream ended while we were retrying — real teardown.
+            // The stream ended while we were retrying, so this is a real teardown.
             console.warn(
               `[YouTube Chat] Stream ${videoId} ended during reconnect: ${msg2}`,
             );
@@ -1528,7 +1426,7 @@ async function ensureChatSession(videoId: string): Promise<ChatSession> {
             }
             return;
           }
-          // Still blocked — escalate to the next backoff step.
+          // Still blocked. Escalate to the next backoff step.
           armTransientReconnect();
         }
       })();
@@ -1635,7 +1533,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
     if (isTransientChatBlock(rawMsg)) {
       // Transient YouTube block (proxy 503 / bot check) during session
-      // setup — retryable; the client will back off and reconnect.
+      // setup: retryable. The client will back off and reconnect.
       return new Response(
         JSON.stringify({
           error:
@@ -1678,7 +1576,6 @@ export const GET: APIRoute = async ({ request, url }) => {
         session.destroyTimer = null;
       }
 
-      // Send initial batch after chat session is ready
       try {
         await Promise.race([
           session.ready,
@@ -1738,13 +1635,13 @@ export const GET: APIRoute = async ({ request, url }) => {
 
       if (session.clients.size === 0) {
         console.log(
-          `[YouTube Chat] No clients left for ${videoId} — grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`,
+          `[YouTube Chat] No clients left for ${videoId}: grace period ${SESSION_GRACE_PERIOD_MS / 1000}s`,
         );
         session.destroyTimer = setTimeout(() => {
           const s = activeLiveChats.get(videoId);
           if (s && s.clients.size === 0) {
             console.log(
-              `[YouTube Chat] Grace period expired for ${videoId} — stopping chat session`,
+              `[YouTube Chat] Grace period expired for ${videoId}: stopping chat session`,
             );
             try {
               s.chat?.stop();

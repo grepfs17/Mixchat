@@ -1,4 +1,4 @@
-/* Streamer Tools Modal — Streamer tools list + active tool container. */
+/* Streamer Tools Modal: Streamer tools list + active tool container. */
 .streamer-tools-modal {
     position: relative;
     background: var(--color-bg-secondary);
@@ -2038,7 +2038,7 @@
 /* Song Queue: minimized bar (replaces the old simple indicator).
    Sits inside the chat column between the messages and the chat input,
    so it never overlaps the message composer. The player lives inside
-   the bar; audio continues uninterrupted while the streamer chats. */
+   the bar. Audio continues uninterrupted while the streamer chats. */
 .song-queue-bar {
     display: flex;
     flex-direction: column;
@@ -2438,7 +2438,7 @@
     color: var(--color-indigo);
 }
 
-/* Music Player mini bar — streamer-only mini player live in the chat.
+/* Music Player mini bar: streamer-only mini player live in the chat.
    Mirrors the song-queue-bar layout but a different palette (purple) so
    the streamer can keep both tools open at once without confusion. */
 .music-player-bar {
@@ -2772,7 +2772,7 @@
     color: var(--color-text-white);
 }
 
-/* Time progress bar — sits directly below the player iframe in the
+/* Time progress bar: sits directly below the player iframe in the
    mini bar, mirroring the volume slider pattern. */
 .music-player-bar-time {
     display: flex;
@@ -2782,7 +2782,7 @@
     width: 100%;
 }
 
-/* Inline variant for the header row — shrinks to fit between
+/* Inline variant for the header row: shrinks to fit between
    the title button and controls. */
 .music-player-bar-time--inline {
     width: auto;
