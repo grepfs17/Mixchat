@@ -63,7 +63,6 @@ export function useTwitchChannels(
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [favoriteChannels, setFavoriteChannels] = useState<string[]>([]);
 
-  // Restore favorites from localStorage on mount.
   useEffect(() => {
     const saved = localStorage.getItem(FAVORITES_KEY);
     if (saved) {
@@ -75,14 +74,13 @@ export function useTwitchChannels(
     }
   }, []);
 
-  // Persist favorites on every change.
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteChannels));
   }, [favoriteChannels]);
 
-  // Fetch followed channels whenever the Twitch session changes; refresh on
-  // a 2-minute interval. A 401 here means the token-refresh cycle gave up —
-  // surface that to the auth hook so it can clear state.
+  // Fetch followed channels whenever the Twitch session changes. Refresh on
+  // a 2-minute interval. A 401 here means the token-refresh cycle gave up.
+  // Surface that to the auth hook so it can clear state.
   useEffect(() => {
     let cancelled = false;
 
@@ -161,7 +159,6 @@ export function useTwitchChannels(
         onStreamTransition?.(transitionInfo);
       }
 
-      // Update URL to /channel/<name>
       window.history.pushState({}, "", `/channel/${channelName}`);
     },
     [twitchChannels, allTwitchChannels, session, onStreamTransition],
@@ -170,7 +167,7 @@ export function useTwitchChannels(
   // Restore the channel from the /channel/<name> URL path. Waits for the
   // channel list to populate, and only treats the URL as authoritative (when
   // the channel isn't in the followed list) after the initial auth load has
-  // finished — otherwise a deep-link to an unfollowed channel would race the
+  // finished. Otherwise a deep-link to an unfollowed channel would race the
   // login-state fetch and could clobber a valid selection.
   useEffect(() => {
     const match = window.location.pathname.match(/^\/channel\/([^\/]+)$/);
@@ -189,7 +186,7 @@ export function useTwitchChannels(
         setHasLoadedChannel(true);
       }
     }
-  // Resolve channel data when channel changes — intentional
+  // Resolve channel data when channel changes. Intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   }, [
     twitchChannels,

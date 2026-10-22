@@ -366,7 +366,7 @@ export function useTwitchChatEventHandlers({
         const prefix = costNum
           ? `${rewardTitle} (${costNum} points)`
           : rewardTitle;
-        const content = userMessage ? `${prefix} — ${userMessage}` : prefix;
+        const content = userMessage ? `${prefix} - ${userMessage}` : prefix;
         const { badges: badgeImages, badgeDetails } = parseBadgeString(
           msg.tags.get("badges") || "",
         );

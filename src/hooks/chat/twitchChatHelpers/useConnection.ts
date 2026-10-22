@@ -38,7 +38,7 @@ export function useTwitchChatConnection({
 
     // Anonymous read-only connection. Without an `authProvider`, twurple
     // connects as a `justinfan` nick and never calls
-    // `id.twitch.tv/oauth2/validate` — which is CORS-blocked in the browser —
+    // `id.twitch.tv/oauth2/validate`, which is CORS-blocked in the browser,
     // so chat reads work from any origin. Sending is handled via Helix.
     const newClient = new ChatClient({
       channels: [channelName],

@@ -41,7 +41,7 @@ export type SongQueuePhase = "idle" | "open" | "ended";
 export interface UseSongQueueOptions {
   channelKey: string;
   owner: SongQueueOwner;
-  /** Master switch; mirrors the Streamer Tools toggle. */
+  /** Master switch. Mirrors the Streamer Tools toggle. */
   enabled?: boolean;
   /** Override the per-submitter limit at hook time. */
   perSubmitterLimit?: number;
@@ -66,10 +66,6 @@ export interface UseSongQueueOptions {
    * once per item, even if `version` ticks for unrelated reasons.
    */
   onAnnounceNowPlaying?: (item: SongQueueItem) => Promise<void>;
-  /**
-   * Optional chat feed. The hook does not subscribe to a chat source itself;
-   * callers feed it messages via `ingestMessage`.
-   */
 }
 
 export interface UseSongQueueResult {
@@ -171,7 +167,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     onSendChatRef.current = onSendChat;
   }, [onSendChat]);
 
-  // Same for the announce callback.
   const onAnnounceNowPlayingRef = useRef(onAnnounceNowPlaying);
   useEffect(() => {
     onAnnounceNowPlayingRef.current = onAnnounceNowPlaying;
@@ -233,7 +228,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         bootstrap.ownerToken,
       );
       setSession(server);
-      // The server is authoritative for the config; pull it in too so
+      // The server is authoritative for the config. Pull it in too so
       // changes made on another device (or before the IDB record was
       // written) survive a refresh.
       if (server.config) {
@@ -269,7 +264,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     }
   }, [bootstrap, channelKey, onError]);
 
-  // Refresh after bootstrap loads.
   useEffect(() => {
     if (bootstrap && phase === "open") {
       void refresh();
@@ -313,7 +307,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     async (next: Partial<SongQueueConfig>) => {
       setConfigState((prev) => ({ ...prev, ...next }));
       // Before a session exists (`idle`) or after it's been ended, the
-      // config is purely local — it gets sent to the server when the
+      // config is purely local. It gets sent to the server when the
       // user clicks "Start queue" via `start()`. Trying to PATCH in
       // those phases would 410 against the dead session and confuse
       // the user with a spurious error notification.
@@ -355,7 +349,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         // 410 means the session was ended (possibly on another device).
         // Flip the local phase to "ended" so the panel updates and stop
         // trying to PATCH until a new session is started. Don't show
-        // an error — the streamer can see the session is over.
+        // an error. The streamer can see the session is over.
         if (err instanceof SongQueueApiError && err.status === 410) {
           setPhase("ended");
           return;
@@ -363,7 +357,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         onError?.(
           err instanceof Error ? err.message : "Failed to save settings",
         );
-        // Revert the optimistic local update on failure.
         setConfigState((prev) => {
           const reverted: Partial<SongQueueConfig> = { ...prev };
           for (const key of Object.keys(next) as (keyof SongQueueConfig)[]) {
@@ -495,14 +488,14 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   }, [bootstrap, channelKey, config.title, onError, session]);
 
   // ---- Chat ingestion ----
-  // Debounced by animation frame so a burst of messages produces a single
-  // round of extraction per frame.
+  // Debounced on a zero-delay timeout so a burst of messages produces a single
+  // extraction pass.
   const ingestFrameRef = useRef<number | null>(null);
   const pendingMessagesRef = useRef<SongQueueMessage[]>([]);
   const seenMessageIdsRef = useRef<Set<string>>(new Set());
 
   // Reply in chat to the submitter telling them the song was too long.
-  // Failure to send is non-fatal — the queue keeps working.
+  // Failure to send is non-fatal. The queue keeps working.
   const notifyTooLong = useCallback(
     async (
       platform: SongQueuePlatform,
@@ -516,7 +509,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       try {
         await send(platform, message, replyToMessageId ?? "");
       } catch {
-        /* ignore — the streamer can see the rejection locally */
+        /* ignore. The streamer can see the rejection locally */
       }
     },
     [],
@@ -558,20 +551,15 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     );
     if (accepted.length === 0) return;
 
-    // Append server-side, one at a time so we surface per-item errors. Add to
-    // the optimistic pending list first so the UI updates instantly.
-    // Track the running item list locally so each IDB write reflects all
-    // optimistic + confirmed items from prior iterations — not the stale
-    // `session` snapshot captured at hook creation time.
+    // Append one at a time to surface per-item errors, updating optimistically
+    // first. Track the running list locally so IDB writes include prior
+    // optimistic/confirmed items, not the stale `session` snapshot.
     let runningItems: SongQueueItem[] = session ? [...session.items] : [];
     for (const submission of accepted) {
-      // Probe the video's duration *before* adding to the queue. The IFrame
-      // API is the only no-OAuth way to learn a YouTube video's length, and
-      // it requires loading metadata. If the song is over the cap, notify
-      // the submitter in chat (as a reply to their !songadd message) and
-      // skip the add. If the probe can't read the length (live stream,
-      // unavailable, timeout) we still add the song — the play-time check
-      // in SongQueueIndicator will catch it.
+      // Probe duration before adding (the IFrame API is the only no-OAuth way
+      // to learn it). Over-length songs are rejected with a chat reply. If the
+      // probe fails (live stream, unavailable, timeout) still add the song.
+      // SongQueueIndicator's play-time check is the fallback.
       const probedDuration = await probeVideoDuration(submission.videoId);
       if (
         typeof probedDuration === "number" &&
@@ -616,12 +604,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
             maxQueueLength: cfg.maxQueueLength,
           },
         );
-        // Replace the temp with the real item.
         runningItems = [...runningItems.filter((it) => it.id !== tempId), real];
         setSession((prev) =>
           prev ? { ...prev, items: [...runningItems] } : prev,
         );
-        // Persist the updated IDB record lazily.
         if (session) {
           await saveSongQueueSession(
             channelKey,
@@ -631,9 +617,9 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           );
         }
       } catch (err) {
-        // Duplicates (409) and full queues (409) are expected — don't
+        // Duplicates (409) and full queues (409) are expected. Don't
         // surface them as errors. The song is already there or there's
-        // no room; nothing the streamer needs to do.
+        // no room. Nothing the streamer needs to do.
         runningItems = runningItems.filter((it) => it.id !== tempId);
         if (err instanceof SongQueueApiError && err.status === 409) {
           setSession((prev) =>
@@ -644,7 +630,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
         const msg = err instanceof Error ? err.message : "Failed to add song";
         setError(msg);
         onError?.(msg);
-        // Drop the optimistic item.
         setSession((prev) =>
           prev ? { ...prev, items: [...runningItems] } : prev,
         );
@@ -813,7 +798,6 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   const reportDuration = useCallback(
     async (itemId: string, durationSec: number) => {
       if (!bootstrap) return;
-      // Optimistic local update first
       setSession((prev) =>
         prev
           ? {

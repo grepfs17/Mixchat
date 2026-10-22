@@ -1,6 +1,4 @@
 /**
- * useBitsPowerUpEventSub
- *
  * Subscribes to `channel.bits.use` v2 via the shared EventSub connection
  * to detect Celebration power-ups and show a banner overlay.
  *

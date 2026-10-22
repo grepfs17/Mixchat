@@ -25,7 +25,6 @@ interface YTMessageLike {
 }
 
 export interface UseChatInputCoreOptions {
-  /** Ref to the input element (textarea or input). Component owns this. */
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   /** Twitch chat messages for @mention authors. */
   chatMessages?: TwitchMessage[];
@@ -35,9 +34,9 @@ export interface UseChatInputCoreOptions {
   currentUsername?: string;
   /** Whether the current user is a moderator (enables /command autocomplete). */
   isModerator?: boolean;
-  /** Loading state — triggers refocus effect. */
+  /** Loading state. Triggers the refocus effect. */
   isLoading?: boolean;
-  /** Reply target id — triggers focus effect when set. */
+  /** Reply target id. Triggers the focus effect when set. */
   replyingToId?: string;
   /** Enable Twitch-specific autocomplete (emotes, commands). */
   enableTwitchFeatures?: boolean;
@@ -62,26 +61,18 @@ export type CommandACItem = {
 type UsernameACItem = string;
 
 export interface UseChatInputCoreResult {
-  /** Current message text. */
   message: string;
-  /** Set message text. */
   setMessage: React.Dispatch<React.SetStateAction<string>>;
 
-  /** Organised emotes for the emote picker. */
   emotesOrganized: ReturnType<typeof useEmotes>;
 
   /** Slow-mode cooldown remaining (seconds). */
   slowModeCooldown: number;
-  /** Start a slow-mode cooldown for the given duration. */
   startCooldown: (seconds: number) => void;
 
-  /** Autocomplete instance for Twitch emotes. */
   emoteAC: UseAutocompleteReturn<EmoteACItem>;
-  /** Autocomplete instance for YouTube emoji. */
   emojiAC: UseAutocompleteReturn<EmojiEntry>;
-  /** Autocomplete instance for @mentions. */
   usernameAC: UseAutocompleteReturn<UsernameACItem>;
-  /** Autocomplete instance for /commands. */
   commandAC: UseAutocompleteReturn<CommandACItem>;
 
   /** Bounding rect of the input for positioning menus. */
@@ -91,9 +82,7 @@ export interface UseChatInputCoreResult {
 
   /** Insert text at cursor with optional prefix (e.g. "@"). */
   insertWithPrefix: (name: string, prefix?: string) => void;
-  /** Insert text at a specific position. */
   insertAtPosition: (before: string, text: string, after?: string) => void;
-  /** Replace the word at the cursor. */
   replaceCurrentWord: (text: string) => void;
   /** Prepend an @mention for the given username to the message. */
   insertMention: (username: string) => void;
@@ -101,21 +90,17 @@ export interface UseChatInputCoreResult {
   /** Stable author names for @mention autocomplete. */
   allAuthors: string[];
 
-  /** Text change handler — wire to onChange of the input element. */
+  /** Text change handler. Wire to onChange of the input element. */
   handleChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
-  /** Keyboard handler — wire to onKeyDown of the input element. */
+  /** Keyboard handler. Wire to onKeyDown of the input element. */
   handleKeyDown: (e: React.KeyboardEvent) => void;
 }
 
 /**
- * Shared hook that provides the autocomplete, send, and keyboard
- * orchestration shared between MessageInput and UnifiedInput (~300 lines).
- *
- * Each component calls this hook with appropriate flags, then focuses
- * on rendering its unique UI (platform toggles, emote/emoji pickers,
- * reply indicators, warnings).
+ * Shared autocomplete, send, and keyboard orchestration for MessageInput and
+ * UnifiedInput. Each component adds its own platform toggles and pickers.
  */
 export function useChatInputCore(
   opts: UseChatInputCoreOptions,
@@ -232,7 +217,6 @@ export function useChatInputCore(
     autocompleteInstances: [emoteAC, emojiAC, usernameAC, commandAC],
   });
 
-  // Wire closeAll into the ref so handleSend can call it without a dep cycle.
   closeAllRef.current = closeAll;
 
   // ---- Text change handler ----
@@ -393,7 +377,6 @@ export function useChatInputCore(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
 
-  // Focus input when replying
   useEffect(() => {
     if (replyingToId && inputRef.current) inputRef.current.focus();
   }, [replyingToId, inputRef]);

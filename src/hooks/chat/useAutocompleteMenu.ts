@@ -38,7 +38,6 @@ export function useAutocompleteMenu({
     [autocompleteInstances],
   );
 
-  // Track input rect when any autocomplete opens
   useEffect(() => {
     const anyOpen = openStates.some(Boolean);
     if (!anyOpen || !inputRef.current) {
@@ -49,7 +48,6 @@ export function useAutocompleteMenu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, openStates);
 
-  // Scroll selected item into view
   useEffect(() => {
     for (const ac of autocompleteInstances) {
       if (ac.isOpen && menuRef.current && ac.selectedIndex >= 0) {
@@ -68,7 +66,6 @@ export function useAutocompleteMenu({
     autocompleteInstances.forEach((ac) => ac.hide());
   }, [autocompleteInstances]);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;

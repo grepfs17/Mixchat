@@ -6,7 +6,7 @@ const MARGIN = 8;
  * Returns a ref to attach to the menu element and a `pos` object with the
  * adjusted top/left coordinates that keep the menu inside the viewport.
  * The initial value matches the raw click coordinates so there is no flash
- * on the first paint; the corrected position is applied after the first layout.
+ * on the first paint. The corrected position is applied after the first layout.
  */
 export function useSmartMenuPosition(x: number, y: number) {
   const menuRef = useRef<HTMLDivElement>(null);

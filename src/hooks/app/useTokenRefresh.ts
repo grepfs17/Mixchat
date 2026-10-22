@@ -12,8 +12,8 @@ const DEFAULT_CHECK_INTERVAL = 60 * 1000; // 1 minute
 const DEFAULT_MAX_RETRIES = 3;
 
 /**
- * Custom hook for automatic Twitch token refresh with retry logic
- * Monitors token expiration and proactively refreshes before expiry
+ * Proactively refreshes the Twitch token before expiry, retrying transient
+ * failures and logging out on permanent auth failure.
  */
 export const useTokenRefresh = (
   session: PlatformSession | null,
@@ -49,7 +49,7 @@ export const useTokenRefresh = (
         // server-side refresh endpoint can read the refresh token.
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        // Only send the platform — the server reads the refresh token
+        // Only send the platform. The server reads the refresh token
         // from the httpOnly cookie, not from client-supplied data.
         body: JSON.stringify({
           platform: session.platform,
@@ -81,7 +81,7 @@ export const useTokenRefresh = (
       };
 
       onSessionUpdate(updatedSession);
-      retryCountRef.current = 0; // Reset retry count on success
+      retryCountRef.current = 0;
 
       console.log("✓ Token refreshed successfully", {
         expiresIn: newTokenData.expiresIn,
@@ -92,7 +92,7 @@ export const useTokenRefresh = (
       console.error("✗ Token refresh failed:", err.message);
 
       // A 401 from the refresh endpoint means the refresh token itself is
-      // invalid/expired — retrying will never succeed, so log out immediately.
+      // invalid/expired. Retrying will never succeed, so log out immediately.
       if (err.message.includes("401")) {
         console.error(
           "Refresh token invalid or expired. Logging out immediately.",
@@ -119,12 +119,12 @@ export const useTokenRefresh = (
   const checkAndRefresh = useCallback(() => {
     // Require at least an expiresAt to know we have a real session.
     // We do NOT require session.refreshToken here because the server reads it
-    // from the httpOnly cookie — the client-side refreshToken is optional.
+    // from the httpOnly cookie. The client-side refreshToken is optional.
     if (!session?.expiresAt) {
       return;
     }
 
-    // Respect 429 Retry-After backoff — don't attempt until the window has passed.
+    // Respect 429 Retry-After backoff. Don't attempt until the window has passed.
     if (Date.now() < retryAfterRef.current) {
       return;
     }
@@ -133,7 +133,7 @@ export const useTokenRefresh = (
     const timeUntilExpiry = session.expiresAt - now;
 
     // Also refresh immediately when the accessToken is absent (e.g. on page
-    // reload — we no longer persist it to localStorage so it starts undefined).
+    // reload. We no longer persist it to localStorage so it starts undefined).
     const tokenMissing = !session.accessToken;
 
     if (tokenMissing || timeUntilExpiry < warningThreshold) {
@@ -151,10 +151,9 @@ export const useTokenRefresh = (
   }, [session, warningThreshold, refreshToken]);
 
   useEffect(() => {
-    // We need at least a session with expiresAt to schedule refreshes.
-    // The actual refresh token lives in the httpOnly cookie on the server.
+    // The refresh token lives in the httpOnly cookie: expiresAt is enough to
+    // know a real session exists.
     if (!session?.expiresAt) {
-      // Clear interval if no session
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = undefined;
@@ -168,7 +167,6 @@ export const useTokenRefresh = (
       checkAndRefresh();
     }
 
-    // Set up periodic check
     intervalRef.current = setInterval(checkAndRefresh, checkInterval);
 
     return () => {
@@ -178,7 +176,6 @@ export const useTokenRefresh = (
     };
   }, [session, checkInterval, checkAndRefresh]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) {

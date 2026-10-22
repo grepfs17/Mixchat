@@ -1,6 +1,4 @@
 /**
- * useAutomodQueue
- *
  * Subscribes to `automod.message.hold` and `automod.message.update`
  * via the shared EventSub connection.
  *

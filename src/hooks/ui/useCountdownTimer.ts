@@ -1,23 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Returns a ticking seconds-based countdown to `endsAt`, with optional
- * auto-dismiss behaviour after the countdown reaches zero.
+ * Ticking seconds-based countdown to `endsAt`.
  *
- *   - `onExpire` fires once when the countdown reaches zero (the basic
- *     "hide when the timer ends" case used by Celebration/HypeTrain).
- *   - `autoDismissAfter` + `onAutoDismiss` cover the "linger after expiry"
- *     case used by Poll/Prediction: when the timer reaches zero the hook
- *     waits `autoDismissAfter` ms and then calls `onAutoDismiss`. If the
- *     parent re-renders with a new `endsAt` that pushes `timeLeft` above
- *     zero again, the pending auto-dismiss is cancelled by the effect
- *     cleanup.
+ * `onExpire` fires once at zero. For the "linger after expiry" case
+ * (Poll/Prediction), `autoDismissAfter` delays `onAutoDismiss`. Bumping
+ * `endsAt` above zero cancels the pending dismiss via effect cleanup.
  *
- * The latest `onExpire` / `onAutoDismiss` callbacks are captured via refs
- * so the effects don't need them in their dependency arrays — this means
- * the hook is safe to use with inline or freshly-allocated callbacks
- * (which is what most banner parents pass) without re-firing on every
- * parent re-render.
+ * Callbacks are read through refs so inline callbacks don't re-fire effects.
  */
 export interface UseCountdownTimerOptions {
   /** Fired once when the countdown reaches zero. */
@@ -50,9 +40,6 @@ export function useCountdownTimer(
 ): CountdownTimer {
   const { onExpire, autoDismissAfter, onAutoDismiss } = options;
 
-  // Capture the latest callbacks in refs so the effects can read them
-  // without putting them in dependency arrays (which would cause
-  // re-fires on every parent render).
   const onExpireRef = useRef(onExpire);
   const onAutoDismissRef = useRef(onAutoDismiss);
   useEffect(() => {

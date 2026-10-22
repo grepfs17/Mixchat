@@ -50,7 +50,7 @@ function isPopupClosed(popup: Window | null): boolean {
  * Fetch a CSRF state token from the server. The server sets an httpOnly
  * cookie that the callback validates before setting any auth cookies.
  * On failure (network error, etc.) falls back to a client-generated UUID
- * so the user can still attempt login — the server will reject the flow
+ * so the user can still attempt login. The server will reject the flow
  * if the cookie is missing, but the UX degrades gracefully.
  */
 async function fetchOAuthState(flow?: string): Promise<string> {
@@ -62,7 +62,7 @@ async function fetchOAuthState(flow?: string): Promise<string> {
     return body.state;
   } catch (err) {
     console.warn(
-      "Failed to fetch OAuth state from server — login may fail if server is unreachable",
+      "Failed to fetch OAuth state from server: login may fail if server is unreachable",
       err,
     );
     // Return a client-generated UUID as last resort. The server will reject
@@ -188,7 +188,6 @@ export function useAuthSessions(): UseAuthSessionsResult {
   // Track popup-poll intervals so they can be cleaned up on unmount.
   const popupPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Clean up any popup-poll interval on unmount.
   useEffect(() => {
     return () => {
       if (popupPollRef.current) {
@@ -199,7 +198,6 @@ export function useAuthSessions(): UseAuthSessionsResult {
     };
   }, []);
 
-  // Persist sessions to localStorage on every change after the initial mount.
   useEffect(() => {
     if (isFirstSaveRef.current) {
       isFirstSaveRef.current = false;
@@ -227,7 +225,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
         ...prev,
         youtube: {
           ...updatedSession,
-          // Preserve hasDriveScope across token refreshes — the refreshed
+          // Preserve hasDriveScope across token refreshes. The refreshed
           // session from the API doesn't include this client-side flag.
           hasDriveScope: prev.youtube?.hasDriveScope,
         },
@@ -275,7 +273,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
             "noopener,noreferrer",
           );
         } catch {
-          /* popup blocked — the modal offers a clickable activation link */
+          /* popup blocked, the modal offers a clickable activation link */
         }
       } catch {
         if (!deviceAbortRef.current) {
@@ -323,14 +321,14 @@ export function useAuthSessions(): UseAuthSessionsResult {
             return;
           } else {
             // Terminal states (denied / expired / error) are returned with a
-            // 4xx status; read the JSON payload deliberately to surface them.
+            // 4xx status. Read the JSON payload deliberately to surface them.
             const data = await res.json().catch(() => ({}));
             if (!deviceAbortRef.current) {
               const msg =
                 data.status === "denied"
                   ? "Authorization was denied."
                   : data.status === "expired"
-                    ? "The code expired — please try again."
+                    ? "The code expired, please try again."
                     : data.message || "Twitch sign-in failed.";
               setTwitchDevice((prev) =>
                 prev ? { ...prev, status: "error", error: msg } : prev,
@@ -340,7 +338,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
             return;
           }
         } catch {
-          /* transient network error — keep polling */
+          /* transient network error, keep polling */
         }
       }
     })();
@@ -380,7 +378,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           };
         }
         // In Twitch-only mode, discard any YouTube session persisted from a
-        // previous visit — YouTube integrations must not activate from stale
+        // previous visit. YouTube integrations must not activate from stale
         // browser state.
         if (IS_TWITCH_ONLY) {
           delete restored.youtube;
@@ -418,7 +416,6 @@ export function useAuthSessions(): UseAuthSessionsResult {
       return;
     }
 
-    // Fetch CSRF state from server, then proceed with the OAuth flow.
     void (async () => {
       const state = await fetchOAuthState();
       // Persist to sessionStorage for the inline-script client-side check.
@@ -449,7 +446,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
 
       const authUrl = `https://id.twitch.tv/oauth2/authorize?${params}`;
 
-      // On mobile, popups are not supported — navigate the current tab instead.
+      // On mobile, popups are not supported. Navigate the current tab instead.
       const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(
         navigator.userAgent,
       );
@@ -551,7 +548,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
       body: JSON.stringify({ platforms }),
       keepalive: true,
     }).catch(() => {
-      /* network unavailable — local state still clears */
+      /* network unavailable, local state still clears */
     });
   }, []);
 
@@ -719,7 +716,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     });
     // Drive tokens are tied to the same Google account as the YouTube
     // tokens, so signing out of YouTube must also clear the Drive
-    // cookies — otherwise a stale drive_token could be applied to a
+    // cookies. Otherwise a stale drive_token could be applied to a
     // future Drive request when the same browser signs in to a
     // *different* Google account on a later date.
     postLogout(["youtube", "drive"]);

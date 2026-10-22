@@ -53,10 +53,9 @@ export function useChatAutoScroll({
   // when the content actually grows (e.g. late image/emote loads).
   const lastScrollHeightRef = useRef(0);
 
-  // Auto-scroll when at bottom.
-  // Defer the scroll via rAF so the browser has completed layout for the
-  // new messages — otherwise scrollHeight can be stale for multi-line text
-  // and the view ends up above the true bottom.
+  // Defer the scroll via rAF so layout completes for the new messages,
+  // otherwise scrollHeight can be stale for multi-line text and the view
+  // ends up above the true bottom.
   useEffect(() => {
     if (!containerRef.current || !isAtBottom) return;
     const el = containerRef.current;
@@ -70,8 +69,8 @@ export function useChatAutoScroll({
       if (pendingScrollFrameRef.current === scrollFrameId) {
         pendingScrollFrameRef.current = null;
       }
-      // The frame may still run in a test environment or after cancellation;
-      // do not let an obsolete frame change the scroll position.
+      // The frame may still run in a test environment or after cancellation.
+      // Do not let an obsolete frame change the scroll position.
       if (autoScrollGenerationRef.current !== generation) return;
       el.scrollTop = el.scrollHeight;
       lastScrollHeightRef.current = el.scrollHeight;
@@ -119,7 +118,6 @@ export function useChatAutoScroll({
     };
   }, [containerRef]);
 
-  // Detect scroll position
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -142,7 +140,7 @@ export function useChatAutoScroll({
   }, [containerRef]);
 
   // ResizeObserver safety net: catches late layout changes after the
-  // primary rAF scroll — e.g. custom emote images loading in, font
+  // primary rAF scroll, e.g. custom emote images loading in, font
   // metrics updating, or async content expanding the message height.
   // Disconnected entirely when the user scrolls up.
   useEffect(() => {
@@ -210,8 +208,8 @@ export function useChatAutoScroll({
       // Find where the previous last item sits in the new array.
       // Everything after it is a new message.
       // When indexOf returns -1 (the previous last item was deleted or
-      // the array was reconstructed with new references), don't guess —
-      // reset the tracking ref so the next change is counted correctly.
+      // the array was reconstructed with new references), don't guess.
+      // Reset the tracking ref so the next change is counted correctly.
       const idx = messages.indexOf(prev);
       if (idx >= 0) {
         const diff = messages.length - 1 - idx;
@@ -256,7 +254,7 @@ export function useChatAutoScroll({
 
   // Late image decode safety net. The ResizeObserver above observes the
   // scroll container itself, whose own box does not change when its content
-  // grows — so it never fires for a GIF/emote/avatar finishing its load.
+  // grows, so it never fires for a GIF/emote/avatar finishing its load.
   // `load` does not bubble, but a capture-phase listener on the container
   // still receives it from descendant <img>s. Re-pin to the bottom only while
   // the user is already there.

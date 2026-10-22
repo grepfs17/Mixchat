@@ -3,7 +3,8 @@ import { useRef, useCallback } from "react";
 interface UseChatTouchGesturesOptions<T> {
   /** Called after a 500 ms long press. Only fires when provided. */
   onReply?: (msg: T) => void;
-  /** Called after a 500 ms long press to perform a custom long-press action (e.g. open actions menu). If provided, takes precedence over `onReply`. */
+  /** Custom long-press action (e.g. open actions menu). Takes precedence over
+   *  `onReply`. */
   onLongPress?: (msg: T) => void;
   /** Called after a successful double-tap copy. */
   onCopyMessage?: () => void;
@@ -70,7 +71,7 @@ export function useChatTouchGestures<T>({
       if (onLongPress) {
         longPressTimer.current = setTimeout(() => {
           longPressTimer.current = null;
-          // Only the app's long-press action should fire for a hold — drop
+          // Only the app's long-press action should fire for a hold. Drop
           // any native text selection the OS may have started.
           window.getSelection()?.removeAllRanges();
           onLongPress(msg);

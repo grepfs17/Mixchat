@@ -1,6 +1,4 @@
 /**
- * usePollEventSub
- *
  * Subscribes to `channel.poll.begin`, `channel.poll.progress`,
  * and `channel.poll.end` v1 via the shared EventSub connection.
  *
@@ -12,7 +10,7 @@ import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscribeFn } from "../useEventSub";
 
 /**
- * Rich, event-shaped Poll choice — superset of the slim display variant in
+ * Rich, event-shaped Poll choice, superset of the slim display variant in
  * bannerTypes.PollChoice. The transform from this shape to the display shape
  * happens in useLiveEvents, so this is intentionally NOT exported under the
  * same name as the banner type.

@@ -48,7 +48,7 @@ export interface UseLazyChatHistoryOptions<T> {
   maxHistory?: number;
   /**
    * Cap applied to `live` by the message hooks. Messages are only absorbed
-   * into history when the live window is actually full — a message leaving a
+   * into history when the live window is actually full. A message leaving a
    * not-yet-full window is a deletion, not a cap eviction, and must not be
    * resurrected from history.
    */
@@ -67,14 +67,10 @@ interface PrevLive<T> {
 }
 
 /**
- * Backs "loaded history" for a chat surface. The in-memory live window stays
- * capped by the message hooks; this hook keeps an additional, bounded window
- * of older messages fetched from IndexedDB and trends it contiguously with
- * the live window by absorbing messages that roll off the front of `live`.
- *
- * This guarantees the rendered timeline has no gaps even as new live messages
- * evict old ones, while keeping total DOM bounded by `maxHistory` + the live
- * cap. Loading older pages is anchored so the viewport does not jump.
+ * Keeps a bounded window of older messages loaded from IndexedDB, absorbing
+ * messages that roll off the front of `live` so the timeline stays contiguous.
+ * Total DOM stays bounded by `maxHistory` + the live cap, and page loads are
+ * scroll-anchored so the viewport does not jump.
  */
 export function useLazyChatHistory<T>({
   channel,
@@ -179,7 +175,7 @@ export function useLazyChatHistory<T>({
     if (prevItems.length < liveCap) return;
     // Evictions only happen while appending to a full window, so the window
     // stays full. If it shrank, items left because they were removed (message
-    // deletion, resolved automod hold) — absorbing them would resurrect them.
+    // deletion, resolved automod hold). Absorbing them would resurrect them.
     if (live.length < liveCap) return;
 
     const liveKeys = new Set(live.map((item) => keyOfRef.current(item)));
@@ -247,7 +243,6 @@ export function useLazyChatHistory<T>({
     }
   }, [containerRef, pageSize, oldestRenderedTimestamp, commitHistory]);
 
-  // Trigger older-page loads as the user scrolls near the top.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !enabled || !channel) return;

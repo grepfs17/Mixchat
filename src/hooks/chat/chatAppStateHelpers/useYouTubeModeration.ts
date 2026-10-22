@@ -80,18 +80,18 @@ export function useYouTubeModeration({
   }, [messages]);
 
   // Moderator detection is scoped to the *current* stream and is fully
-  // recomputed whenever the stream or its messages change — there is no
+  // recomputed whenever the stream or its messages change. There is no
   // permanent "once a mod, always a mod" latch that could leak across streams.
   //
   //  - Broadcaster: the signed-in channel id equals the stream owner's channel
-  //    id (authoritative, per-stream — sticky so it survives message churn).
+  //    id (authoritative, per-stream, sticky so it survives message churn).
   //  - Non-owner moderator: an authoritative moderator/owner badge appears on
   //    the signed-in user's OWN message in the current chat buffer.
   //
   // Anyone else (including verified channels and members) is NOT a moderator.
   const ownChannelId = youtubeSession?.userId;
   const ownerConfirmedVideoRef = useRef<string | null>(null);
-  // Reset YouTube mod state when video/channel changes — intentional
+  // Reset YouTube mod state when video/channel changes. Intentional
   // eslint-disable-next-line no-adjust-state-on-prop-change
   useEffect(() => {
     if (!youtubeVideoId || !ownChannelId) {
@@ -100,7 +100,7 @@ export function useYouTubeModeration({
       return;
     }
 
-    // Broadcaster of this exact stream — sticky for the stream's lifetime.
+    // Broadcaster of this exact stream, sticky for the stream's lifetime.
     if (ytChannelId && ownChannelId === ytChannelId) {
       ownerConfirmedVideoRef.current = youtubeVideoId;
       setIsYouTubeModerator(true);
@@ -193,7 +193,6 @@ export function useYouTubeModeration({
   const handleYtTimeout = useCallback(
     async (channelId: string, seconds: number, displayName?: string) => {
       if (!youtubeVideoId) return;
-      // Mark all messages from this user as deleted locally immediately.
       for (const m of messagesRef.current) {
         if (m.authorChannelId === channelId) {
           onLocalDeleteWithLabel?.(m.id, "Message deleted by a moderator");

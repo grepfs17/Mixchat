@@ -1,8 +1,6 @@
 /**
- * useEventSub
- *
  * Single shared Twitch EventSub WebSocket connection.
- * All hooks register subscriptions via `subscribe()` — the manager handles
+ * All hooks register subscriptions via `subscribe()`. The manager handles
  * the WS lifecycle (connect, keepalive, reconnect) and routes notifications.
  */
 
@@ -20,7 +18,7 @@ const SUBSCRIPTION_RETRY_MAX_MS = 30000;
 export type SubscriptionStatus = "pending" | "connected" | "error" | "scope_error";
 
 /** Module-level cache: subscription key → session ID they were registered with.
- *  Survives component remounts — prevents re-POSTing within the same session,
+ *  Survives component remounts, preventing re-POSTing within the same session,
  *  but re-registers when the WebSocket session changes. */
 const subscribedKeys = new Map<string, string>();
 
@@ -32,13 +30,8 @@ interface Subscription {
   onScopeError?: () => void;
 }
 
-/** Order-independent condition comparison. JSON.stringify depends on key
- *  insertion order, so two semantically equal conditions can produce
- *  different strings. We compare by sorted-key entries.
- *  The incoming condition may contain extra keys (e.g. Twitch sends both
- *  from_broadcaster_user_id and to_broadcaster_user_id even when only one
- *  was subscribed), so we match as long as every key in `a` is present in
- *  `b` with the same value. */
+/** Order-independent condition comparison (JSON key order varies). Incoming
+ *  conditions may carry extra keys, so `a` must be a subset of `b`. */
 function conditionsEqual(
   a: Record<string, string>,
   b: Record<string, string>,
@@ -194,7 +187,7 @@ export function useEventSub({
         () => {
           if (!active) return;
           if (activeSocketId !== socketId) return;
-          console.warn("[useEventSub] Keepalive timeout — reconnecting");
+          console.warn("[useEventSub] Keepalive timeout, reconnecting");
           ws?.close();
         },
         (fallback + KEEPALIVE_GRACE_S) * 1000,
@@ -308,7 +301,7 @@ export function useEventSub({
                 return next;
               });
             } else if (res.status === 401 || res.status === 403) {
-              // Permanent scope/auth failure — don't waste retries.
+              // Permanent scope/auth failure, don't waste retries.
               retryQueue.delete(key);
               retryBackoff.delete(key);
               setSubscriptionStatuses((prev) => {
@@ -398,7 +391,7 @@ export function useEventSub({
                 console.warn(
                   "[useEventSub] Ambiguous notification for",
                   subType,
-                  "— matching subscriptions have identical conditions; dropping event",
+                  "- matching subscriptions have identical conditions, dropping event",
                 );
               }
             }

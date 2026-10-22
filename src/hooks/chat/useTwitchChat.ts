@@ -92,7 +92,7 @@ export function useTwitchChat(
     accessTokenRef,
   });
 
-  // IRC onMessage (PRIVMSG) — the largest handler
+  // IRC PRIVMSG handler
   useTwitchChatMessageHandler({
     client,
     enabled,
@@ -125,10 +125,9 @@ export function useTwitchChat(
     onOwnBadgesLoadedRef,
   });
 
-  // 7TV emote window events
   useTwitchChat7TV({ enabled, onMessageRef });
 
-  // sendMessage callback — routed through Helix (the IRC client is read-only)
+  // sendMessage callback, routed through Helix (the IRC client is read-only)
   const sendMessage = useTwitchChatSend({
     userId,
     broadcasterId,

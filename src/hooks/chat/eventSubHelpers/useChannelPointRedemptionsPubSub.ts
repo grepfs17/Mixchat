@@ -1,21 +1,10 @@
 /**
- * useChannelPointRedemptionsPubSub
- *
- * Viewer-scoped channel point redemption feed via Twitch PubSub topic
+ * Viewer-scoped channel point redemption feed via PubSub topic
  * `community-points-channel-v1.<broadcasterId>`.
  *
- * Unlike the EventSub subscription
- * (`channel.channel_points_custom_reward_redemption.add`), which only
- * works when the logged-in user is the channel's broadcaster (it requires
- * the `channel:read:redemptions` scope on the broadcaster's token), the
- * PubSub topic accepts a LISTEN from ANY authenticated user for ANY
- * channel. This is how viewer-facing clients like Chatterino show
- * channel point redemptions while watching other streamers' channels.
- *
- * The emitted `TwitchMessage` shape matches the chat pipeline's existing
- * redemption handling; the shared `recentRedemptionsRef` dedup in
- * `useLiveEvents` / `useChatMessages` collapses duplicates between IRC
- * and PubSub.
+ * Unlike the broadcaster-only EventSub redemption subscription, PubSub accepts
+ * a LISTEN from any authenticated user for any channel. Emitted messages match
+ * the chat pipeline shape. `recentRedemptionsRef` dedupes IRC vs PubSub copies.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -23,9 +12,8 @@ import { resolveBroadcasterId } from "../useEventSub";
 import type { SubscriptionStatus } from "../useEventSub";
 import type { TwitchMessage } from "../../../lib/types";
 
-/** Connection state of the PubSub feed — reuses the EventSub status
- *  vocabulary (`SubscriptionStatus`) plus `"disconnected"` for "feed not
- *  active" so the chat header can render it like the subscription UI. */
+/** Reuses the EventSub status vocabulary plus `"disconnected"` when the feed
+ *  is not active, so the chat header can render it like the subscription UI. */
 export type PubSubConnectionStatus = SubscriptionStatus | "disconnected";
 
 const PUBSUB_URL = "wss://pubsub-edge.twitch.tv";
@@ -76,7 +64,7 @@ function toChatMessage(redemptionEvent: RedemptionEvent): TwitchMessage {
 /**
  * Parse the inner PubSub message payload (`reward-redeemed` /
  * `automatic-reward-redeemed`) into a `TwitchMessage`. Redemptions that
- * carry user input are skipped here — Twitch already surfaces those as
+ * carry user input are skipped here. Twitch already surfaces those as
  * regular chat messages (PRIVMSG tagged `custom-reward-id`), so posting
  * them again would duplicate them in the feed.
  */
@@ -211,7 +199,7 @@ export function useChannelPointRedemptionsPubSub({
 
         switch (msg?.type) {
           case "PING":
-            // Server keepalive — respond within 10 seconds or the socket
+            // Server keepalive: respond within 10 seconds or the socket
             // is dropped.
             try {
               socket.send(JSON.stringify({ type: "PONG" }));
@@ -220,7 +208,7 @@ export function useChannelPointRedemptionsPubSub({
             }
             return;
           case "RECONNECT":
-            // Server is going down; closing triggers the reconnect path.
+            // Server is going down. Closing triggers the reconnect path.
             socket.close(1000, "server requested reconnect");
             return;
           case "RESPONSE":
@@ -240,7 +228,7 @@ export function useChannelPointRedemptionsPubSub({
                 onRedemptionRef.current(message),
               );
             } catch {
-              /* malformed payload — ignore */
+              /* malformed payload, ignore */
             }
             return;
           default:

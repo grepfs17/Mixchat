@@ -10,7 +10,7 @@ const POLL_INTERVAL_MS = 60_000;
 
 interface UsePinnedChatHighlightResult {
   highlight: PinnedChatHighlightState | null;
-  /** User has closed this banner for the current pin; the underlying fetch
+  /** User has closed this banner for the current pin. The underlying fetch
    *  keeps polling so we re-render if the streamer pins a NEW message. The
    *  tuple `(messageId, pinnedAtIso)` covers the case where the streamer
    *  unpins and re-pins the same message id (Twitch is idempotent here). */
@@ -105,7 +105,7 @@ export function usePinnedChatHighlight(
       if (cancelled) return;
       timer = setTimeout(() => {
         if (document.hidden) {
-          // Skip a tick while hidden; re-arm with the same interval so we
+          // Skip a tick while hidden. Re-arm with the same interval so we
           // recover as soon as the tab regains focus.
           scheduleNext();
           return;

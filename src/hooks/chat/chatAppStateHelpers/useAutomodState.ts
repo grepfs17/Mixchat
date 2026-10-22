@@ -22,7 +22,6 @@ export function useAutomodState({
 
   const handleHeldMessage = useCallback((message: HeldMessage) => {
     setHeldMessages((prev) => {
-      // Deduplicate by message ID
       if (prev.some((m) => m.id === message.id)) return prev;
       return [...prev, message];
     });

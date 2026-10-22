@@ -130,7 +130,7 @@ export function useLiveEvents({
     ),
     onScopeError: useCallback(() => {
       console.info(
-        "[useLiveEvents] Automod EventSub subscription rejected — this is expected when not a moderator or missing moderator:manage:automod scope.",
+        "[useLiveEvents] Automod EventSub subscription rejected: this is expected when not a moderator or missing moderator:manage:automod scope.",
       );
     }, []),
   });
@@ -140,7 +140,7 @@ export function useLiveEvents({
     notificationIdRef.current += 1;
     setNotification({
       message:
-        "Raid detection unavailable — please re-login to refresh your Twitch session",
+        "Raid detection unavailable: please re-login to refresh your Twitch session",
       type: "info",
       id: notificationIdRef.current,
     });
@@ -189,7 +189,7 @@ export function useLiveEvents({
   const handleRedemptionEvent = useCallback(
     (message: TwitchMessage) => {
       // The same redemption arrives from IRC (USERNOTICE / PRIVMSG),
-      // PubSub and — on the broadcaster's own channel — EventSub. Keep
+      // PubSub and, on the broadcaster's own channel, EventSub. Keep
       // only the first copy within the dedup window.
       if (
         message.rewardId &&
@@ -216,7 +216,7 @@ export function useLiveEvents({
 
   // Channel point redemptions arrive via the PubSub feed
   // (`community-points-channel-v1`), which works for ANY authenticated
-  // user watching ANY channel — unlike the broadcaster-only EventSub
+  // user watching ANY channel. Unlike the broadcaster-only EventSub
   // subscriptions topic. Deduped against IRC via the shared
   // recentRedemptionsRef.
   const redemptionPubSubStatus = useChannelPointRedemptionsPubSub({
@@ -229,7 +229,7 @@ export function useLiveEvents({
   // --- Hype Train ---
   const onHypeTrainScopeError = useCallback(() => {
     console.info(
-      "[useLiveEvents] EventSub hype train subscription rejected — this is expected when viewing another broadcaster's channel.",
+      "[useLiveEvents] EventSub hype train subscription rejected: this is expected when viewing another broadcaster's channel.",
     );
   }, []);
 
@@ -290,7 +290,7 @@ export function useLiveEvents({
   // --- Polls ---
   const onPollScopeError = useCallback(() => {
     console.info(
-      "[useLiveEvents] EventSub poll subscription rejected — this is expected when missing channel:read:polls scope.",
+      "[useLiveEvents] EventSub poll subscription rejected: this is expected when missing channel:read:polls scope.",
     );
   }, []);
 
@@ -367,7 +367,7 @@ export function useLiveEvents({
   // --- Predictions ---
   const onPredictionScopeError = useCallback(() => {
     console.info(
-      "[useLiveEvents] EventSub prediction subscription rejected — this is expected when missing channel:read:predictions scope.",
+      "[useLiveEvents] EventSub prediction subscription rejected: this is expected when missing channel:read:predictions scope.",
     );
   }, []);
 
@@ -506,7 +506,7 @@ export function useLiveEvents({
   // --- Celebration (Bits Power-Up) ---
   const onCelebrationScopeError = useCallback(() => {
     console.info(
-      "[useLiveEvents] EventSub bits power-up subscription rejected — this is expected when missing bits:read scope.",
+      "[useLiveEvents] EventSub bits power-up subscription rejected: this is expected when missing bits:read scope.",
     );
   }, []);
 
