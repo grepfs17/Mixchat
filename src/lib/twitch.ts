@@ -102,7 +102,7 @@ export const getTwitchAccessToken = async (
 };
 
 /**
- * Start the OAuth Device Code Grant flow (public client — no secret).
+ * Start the OAuth Device Code Grant flow (public client, no secret).
  * Returns the user-facing code and the URL the user must visit.
  * Twitch docs: https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow
  */
@@ -343,9 +343,6 @@ export const removeBan = async (
   }
 };
 
-/**
- * Moderation helper: Clear all messages from the chat.
- */
 export const clearChat = async (broadcasterId: string, moderatorId: string) => {
   try {
     const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
@@ -629,9 +626,6 @@ export const manageHeldAutomodMessage = async (
   }
 };
 
-/**
- * Start a raid to another channel.
- */
 export const startRaid = async (
   fromBroadcasterId: string,
   toBroadcasterId: string,
@@ -663,9 +657,6 @@ export const startRaid = async (
   }
 };
 
-/**
- * Cancel a pending raid.
- */
 export const cancelRaid = async (broadcasterId: string) => {
   try {
     const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
@@ -952,7 +943,7 @@ export const getAllFollowedChannels = async (
       const bIsOnline = streamDataMap.has(b.id) ? 1 : 0;
 
       if (aIsOnline !== bIsOnline) {
-        return bIsOnline - aIsOnline; // Online channels first
+        return bIsOnline - aIsOnline;
       }
 
       const nameA = (a?.displayName || a?.name || "").toLowerCase();
@@ -1006,7 +997,7 @@ export const isFollowingChannel = async (
     // Treat 410 as "not following" instead of failing the flow.
     if (res.status === 410) {
       console.info(
-        "[isFollowingChannel] Twitch API returned 410 (Gone) for follow check; treating as not following.",
+        "[isFollowingChannel] Twitch API returned 410 (Gone) for follow check. Treating as not following.",
       );
       return false;
     }
@@ -1067,11 +1058,7 @@ export const getStreamStatus = async (
   }
 };
 
-/**
- * Batch query stream status for multiple users (optimized for rate limiting)
- * Instead of making N individual requests, batches into groups of up to 100
- * user_ids per request (Twitch API maximum).
- */
+/** Checks whether `userId` is a moderator in `broadcasterId`'s channel. */
 export const checkUserModStatus = async (
   accessToken: string,
   clientId: string,
@@ -1142,7 +1129,6 @@ export const getStreamStatuses = async (
       }
     > = {};
 
-    // Initialize all user IDs as offline
     userIds.forEach((id) => {
       result[id] = { isLive: false };
     });
@@ -1162,7 +1148,6 @@ export const getStreamStatuses = async (
             throw new Error(`Twitch API error: ${response.status}`);
           }
           const data = await response.json();
-          // Update with actual live streams
           data.data?.forEach((stream: any) => {
             result[stream.user_id] = {
               isLive: true,
@@ -1219,7 +1204,6 @@ export const getRecentMessages = async (
           const loginName = userMatch[1];
           const rawContent = contentMatch[1];
 
-          // Parse tags
           let tags: Record<string, string> = {};
           if (tagsMatch && tagsMatch[1]) {
             const tagPairs = tagsMatch[1].split(";");

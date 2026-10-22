@@ -48,7 +48,7 @@ export interface TwitchPinnedHighlightRaw {
 /**
  * Issue a `GetPinnedChat` query against `gql.twitch.tv/gql` for the given
  * channel login. Returns `null` rather than throwing when the channel is
- * offline, no message is pinned, or Twitch rejects the query — the caller
+ * offline, no message is pinned, or Twitch rejects the query, the caller
  * treats "not pinned" identically to a soft failure.
  */
 export async function fetchPinnedChatHighlight(

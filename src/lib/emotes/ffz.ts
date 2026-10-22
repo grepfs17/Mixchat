@@ -5,9 +5,6 @@ import { EMOTE_SIZE, fetchWithTimeout } from "./utils";
 /** Accumulated author data for FFZ emotes, populated during fetch. */
 export const authorsFfz: Record<string, string> = {};
 
-/**
- * Fetch FFZ global emotes
- */
 export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_ffz_global_v2";
   const cached = await getCachedEmotes(cacheKey);
@@ -47,9 +44,6 @@ export async function fetchFFZGlobalEmotes(): Promise<EmoteMap> {
   }
 }
 
-/**
- * Fetch FFZ emotes for a given channel
- */
 export async function fetchFFZEmotes(channelName: string): Promise<EmoteMap> {
   const cacheKey = `emotes_ffz_v2_${channelName}`;
   const cached = await getCachedEmotes(cacheKey);

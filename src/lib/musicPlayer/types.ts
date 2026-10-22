@@ -1,19 +1,12 @@
 /**
  * Music Player streamer tool.
  *
- * Architecture:
- * - Streamer-only: no chat ingestion, no public share page, no submitter.
- * - Persistence via IndexedDB. Two stores:
- *     - "musicPlaylists" — one row per MusicPlaylist, keyed by playlist id.
- *     - "musicPlayerSettings" — a single record holding global scalar
- *       preferences (active playlist id, current index, volume, loop).
- *   Putting prefs in their own store avoids re-writing every playlist when
- *   the streamer just nudges the volume slider.
- * - YouTube metadata is fetched the same way Song Queue does it: the
- *   public `youtube.com/oembed` endpoint, which requires no OAuth scope
- *   (see `songQueue/oembed.ts`). We deliberately reuse `parseYouTubeId`
- *   from `songQueue/types.ts` so the YouTube URL grammar stays in one
- *   place.
+ * Streamer-only: no chat ingestion, public share page, or submitter.
+ * Persisted in IndexedDB with two stores: `musicPlaylists` (one row per
+ * playlist) and `musicPlayerSettings` (global scalars: active playlist,
+ * index, volume, loop), so volume changes don't rewrite playlists.
+ * YouTube metadata uses the public `youtube.com/oembed` endpoint with no
+ * OAuth scope, reusing `parseYouTubeId` from `songQueue/types.ts`.
  */
 
 export interface MusicPlayerItem {
@@ -36,9 +29,8 @@ export interface MusicPlaylist {
   items: MusicPlayerItem[];
   createdAt: string;
   updatedAt: string;
-  /** Twitch category (game) id — auto-selects this playlist when the stream matches. */
+  /** Twitch category (game) id. Auto-selects this playlist when the stream matches. */
   categoryId: string | null;
-  /** Human-readable category name for display. */
   categoryName: string;
 }
 
@@ -67,7 +59,7 @@ export const DEFAULT_MUSIC_PLAYER_SETTINGS: MusicPlayerSettings = {
   miniBarHidden: false,
 };
 
-/** Hard ceilings — keep the IDB blob bounded. */
+/** Hard ceilings: keep the IDB blob bounded. */
 export const MAX_PLAYLISTS = 20;
 export const MAX_TRACKS_PER_PLAYLIST = 200;
 
@@ -78,7 +70,6 @@ export const MAX_TRACKS_PER_PLAYLIST = 200;
  */
 const MUSIC_PLAYER_SETTINGS_RECORD_ID = "current";
 
-/** Stable identifier of the active settings record. */
 export function settingsRecordId(): string {
   return MUSIC_PLAYER_SETTINGS_RECORD_ID;
 }

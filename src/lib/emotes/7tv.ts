@@ -21,9 +21,6 @@ export const authors7tv: Record<string, string> = {};
 const RECONNECT_7TV_MIN = 5000;
 const RECONNECT_7TV_MAX = 300_000;
 
-/**
- * Fetch 7TV global emotes
- */
 export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_7tv_global_v2";
   const cached = await getCachedEmotes(cacheKey);
@@ -66,9 +63,6 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   }
 }
 
-/**
- * Fetch 7TV emotes for a given channel
- */
 export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
   const cacheKey = `emotes_7tv_v2_${channelId}`;
   const cached = await getCachedEmotes(cacheKey);
@@ -100,7 +94,7 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
     let emoteSet = data.emote_set;
     let emoteSetIdToFetch = data.emote_set_id;
 
-    // Deep Fallback: if root fields are null, check user.emote_sets array
+    // Deep fallback: if root fields are null, check user.emote_sets array
     if (!emoteSet && !emoteSetIdToFetch && data.user?.emote_sets?.[0]) {
       emoteSetIdToFetch = data.user.emote_sets[0].id;
       console.log(
@@ -108,7 +102,7 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
       );
     }
 
-    // Fallback Fetch: if emote_set is not embedded (null), but we have the ID, fetch it separately
+    // Fallback: if emote_set is not embedded, fetch it by id separately
     if (!emoteSet && emoteSetIdToFetch) {
       console.log(
         `[7TV] Emote set not embedded for ${channelId}, fetching set ${emoteSetIdToFetch} separately`,
@@ -164,10 +158,9 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
 
 // Subscribe to real-time 7TV emote updates for the active channel.
 //
-// This is the internal implementation that opens the EventSource, manages
-// reconnect-on-error, and exposes the cleanup handler. The public API
-// (src/lib/emotes/index.ts) wraps this with a fixed two-argument signature
-// that injects `initializeEmotes` as the reinitialize callback.
+// Internal implementation that opens the EventSource, reconnects on error, and
+// returns a cleanup handler. The public API in `index.ts` wraps it with a
+// two-argument signature that injects `initializeEmotes` as the callback.
 export function subscribeTo7TVChannelUpdates(
   channelId: string,
   channelName: string,
@@ -203,7 +196,7 @@ export function subscribeTo7TVChannelUpdates(
 
   es.addEventListener("hello", () => {
     console.log("[7TV] EventAPI: Handshake successful (hello received)");
-    // Only reset backoff delay on initial connect; on reconnection the delay
+    // Only reset backoff delay on initial connect. On reconnection the delay
     // was already increased by the error handler and must be preserved so
     // exponential backoff actually works.
     if (!_isReconnect) {
@@ -212,7 +205,7 @@ export function subscribeTo7TVChannelUpdates(
   });
 
   es.addEventListener("heartbeat", () => {
-    // console.log('[7TV] EventAPI: Heartbeat received');
+    // Heartbeat: no-op, kept to document the EventAPI handshake.
   });
 
   es.addEventListener("dispatch", async (event: any) => {
@@ -254,7 +247,6 @@ export function subscribeTo7TVChannelUpdates(
             );
           });
 
-          // Clear cache and re-initialize
           await deleteEmoteCache(`emotes_7tv_v2_${channelId}`);
           await reinitialize(channelId, channelName);
         }

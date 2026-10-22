@@ -5,9 +5,6 @@ import { EMOTE_SIZE, fetchWithTimeout } from "./utils";
 /** Accumulated author data for BTTV emotes, populated during fetch. */
 export const authorsBttv: Record<string, string> = {};
 
-/**
- * Fetch BTTV global emotes
- */
 export async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_bttv_global";
   const cached = await getCachedEmotes(cacheKey);
@@ -37,9 +34,6 @@ export async function fetchBTTVGlobalEmotes(): Promise<EmoteMap> {
   }
 }
 
-/**
- * Fetch BTTV emotes for a given channel
- */
 export async function fetchBTTVEmotes(channelId: string): Promise<EmoteMap> {
   const cacheKey = `emotes_bttv_${channelId}`;
   const cached = await getCachedEmotes(cacheKey);

@@ -42,8 +42,8 @@ export async function fetchWithTimeout(
 
 function replaceSize(url: string): string {
   const parts = url.split("/");
-  // Replace the first number in the last part with '4'
-  // This works for: 1x.webp -> 4x.webp, 1.0 -> 4.0, 2 -> 4, etc.
+  // Swap the first number in the filename for the higher-res variant:
+  // 1x.webp → 4x.webp, 1.0 → 4.0, 2 → 4 (BTTV uses 3x).
 
   if (url.includes("betterttv")) {
     parts[parts.length - 1] = parts[parts.length - 1].replace(/\d+/, "3");
@@ -62,9 +62,6 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
-/**
- * Check if a word is a URL and convert to clickable link
- */
 export function linkifyUrl(word: string): string {
   const href = parseUrlWord(word);
   if (!href) return "";
@@ -74,9 +71,8 @@ export function linkifyUrl(word: string): string {
 
 /**
  * Returns the clickable href for `word` when it is a whole-word http(s) or
- * www-prefixed URL (www. is normalised to https://), or `null` when it is
- * not a link. Shared by the HTML linkifyUrl renderer and the React-based
- * YouTube message renderer so both chats linkify URLs identically.
+ * www-prefixed URL (www. is normalised to https://), or `null` otherwise.
+ * Shared by the HTML and React renderers so both chats linkify identically.
  */
 export function parseUrlWord(word: string): string | null {
   // Only match http(s) or www-prefixed URLs as a whole word
@@ -97,19 +93,17 @@ export function parseUrlWord(word: string): string | null {
     if (scheme !== "https:" && scheme !== "http:") return null;
     return url;
   } catch {
-    return null; // invalid URL — treat as plain text
+    return null; // invalid URL, treat as plain text
   }
 }
 
 /**
  * Replace Unicode emoji characters (e.g. \uD83C\uDDE8\uD83C\uDDE6 for 🇨🇦)
- * with Twemoji `<img>` tags so they render consistently across all platforms.
+ * with Twemoji `<img>` tags so they render consistently across platforms.
  *
- * - When called with a **string**, returns the processed HTML (call AFTER
- *   `escapeHtml`; existing `<img>` tags are left untouched because Twemoji
- *   only matches Unicode emoji code-points).
- * - When called with an **HTMLElement**, mutates the element's text nodes
- *   in-place (used by React components via useEffect/useLayoutEffect).
+ * - String input returns processed HTML (call AFTER `escapeHtml`: existing
+ *   `<img>` tags are untouched because Twemoji only matches code-points).
+ * - HTMLElement input mutates its text nodes in-place (used by React hooks).
  */
 export function renderUnicodeEmojis(target: string): string;
 export function renderUnicodeEmojis(target: HTMLElement): void;
@@ -122,9 +116,6 @@ export function renderUnicodeEmojis(target: string | HTMLElement) {
   });
 }
 
-/**
- * Create an optimized emote image HTML tag
- */
 export function createEmoteImg(
   emoteUrl: string,
   emoteName: string,
@@ -143,7 +134,7 @@ export function createEmoteImg(
     highQualityUrl = replaceSize(emoteUrl);
   }
   // For the Gigantify power-up, render the highest-resolution source so the
-  // emote stays sharp at 7em; otherwise the 2x URL would look pixelated.
+  // emote stays sharp at 7em. Otherwise the 2x URL would look pixelated.
   const src = gigantified ? highQualityUrl : emoteUrl;
   const className = gigantified
     ? "chat-emote chat-emote--gigantified"
@@ -153,8 +144,8 @@ export function createEmoteImg(
 }
 
 /**
- * Create an overlay (zero-width) emote wrapped in a positioning span.
- * The span is absolutely centred over the base emote by CSS.
+ * Create an overlay (zero-width) emote wrapped in a positioning span that CSS
+ * centres absolutely over the base emote.
  */
 export function createZeroWidthEmoteImg(
   emoteUrl: string,
@@ -176,12 +167,11 @@ export function createZeroWidthEmoteImg(
 }
 
 /**
- * Apply BTTV / FFZ emote modifier effects to an already-built emote HTML
- * fragment (a single `<img>` or an overlay `<span>`). Geometry effects are
- * merged into the image's inline `style`; filter/motion effects wrap the
- * fragment in a `.emote-mod` span so CSS animations cannot clobber the inline
- * transform. The `slide` effect renders the emote as a repeating background on
- * the wrapper (the image is hidden but kept for tooltips/hover).
+ * Apply BTTV / FFZ effects to a built emote fragment (a single `<img>` or an
+ * overlay `<span>`). Geometry effects merge into the image's inline `style`.
+ * Filter/motion effects wrap the fragment in a `.emote-mod` span so animations
+ * can't clobber the inline transform. `slide` renders the emote as a repeating
+ * background on the wrapper (image hidden but kept for tooltips/hover).
  *
  * Returns the input unchanged when there are no renderable effects.
  */

@@ -54,7 +54,6 @@ export function optionIndexAtPointer(
   return Math.floor(canvasAngle / anglePerOption) % optionCount;
 }
 
-/** Draws one wheel slice label, rotated along the slice. */
 function drawLabel(
   ctx: CanvasRenderingContext2D,
   option: string,
@@ -145,7 +144,6 @@ export function drawWheel(
     );
   });
 
-  // Hub cap.
   ctx.beginPath();
   ctx.arc(centerX, centerY, size * 0.07, 0, 2 * Math.PI);
   ctx.fillStyle = "#141417";

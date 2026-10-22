@@ -10,11 +10,8 @@ import {
 import { getEmoteUrl } from "./utils";
 
 /**
- * Search for emotes matching a query.
- *
- * When `allowEmptyQuery` is true, an empty query returns the top emotes
- * (used by the "require the : prefix" emote autocomplete mode, where typing
- * ":" alone surfaces suggestions).
+ * Search emotes matching a query. When `allowEmptyQuery` is true, an empty
+ * query returns the top emotes (used by the ":" prefix autocomplete mode).
  */
 export function searchEmotes(
   query: string,
@@ -32,16 +29,14 @@ export function searchEmotes(
     return Boolean(alias?.toLowerCase().includes(lowerQuery));
   };
 
-  // Search Twitch global emotes
   Object.entries(emotesTwitchGlobal).forEach(([name, url]) => {
     if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "Twitch" });
     }
   });
 
-  // Search user's subscription emotes (only emotes they can actually use).
-  // Channels disabled in bulk are skipped entirely, matching the individual
-  // per-emote disable behaviour above.
+  // Only subscription emotes the user can use. Bulk-disabled channels are
+  // skipped entirely, matching per-emote disable behaviour.
   emotesTwitchByChannel.forEach((group) => {
     if (isEmoteChannelDisabled(group.channelId)) return;
     Object.entries(group.emotes).forEach(([name, url]) => {
@@ -51,28 +46,24 @@ export function searchEmotes(
     });
   });
 
-  // Search 7TV emotes
   Object.entries(emotes7tv).forEach(([name, url]) => {
     if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url: getEmoteUrl(url), source: "7TV" });
     }
   });
 
-  // Search BTTV emotes
   Object.entries(emotesBttv).forEach(([name, url]) => {
     if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "BTTV" });
     }
   });
 
-  // Search FFZ emotes
   Object.entries(emotesFfz).forEach(([name, url]) => {
     if (matchesQuery(name) && !isEmoteDisabled(name)) {
       results.push({ name, url, source: "FFZ" });
     }
   });
 
-  // Sort by relevance (exact match first, then starts with, then contains)
   results.sort((a, b) => {
     const aLower = a.name.toLowerCase();
     const bLower = b.name.toLowerCase();
@@ -141,7 +132,7 @@ export function toggleDisableEmote(name: string): void {
     else set.add(name);
     localStorage.setItem(DISABLED_EMOTES_KEY, JSON.stringify(Array.from(set)));
 
-    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    // Reuse emotes-reloaded so the UI refreshes emote lists and autocomplete.
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to toggle emote disabled state", e);
@@ -158,7 +149,7 @@ export function toggleDisableEmoteChannel(channelId: string): void {
       JSON.stringify(Array.from(set)),
     );
 
-    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    // Reuse emotes-reloaded so the UI refreshes emote lists and autocomplete.
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to toggle emote channel disabled state", e);
@@ -167,7 +158,7 @@ export function toggleDisableEmoteChannel(channelId: string): void {
 
 /**
  * Emote aliases (stored in localStorage as `{ emoteName: alias }`).
- * Each emote has at most one alias; adding a new alias replaces the old one.
+ * Each emote has at most one alias. Adding a new alias replaces the old one.
  * The alias lets an emote surface in autocomplete when the user types the
  * alias instead of the emote's canonical name.
  */
@@ -206,7 +197,7 @@ export function addEmoteAlias(name: string, alias: string): void {
     aliases[name] = trimmed;
     localStorage.setItem(EMOTE_ALIASES_KEY, JSON.stringify(aliases));
 
-    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    // Reuse emotes-reloaded so the UI refreshes emote lists and autocomplete.
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to add emote alias", e);
@@ -219,16 +210,13 @@ export function removeEmoteAlias(name: string): void {
     delete aliases[name];
     localStorage.setItem(EMOTE_ALIASES_KEY, JSON.stringify(aliases));
 
-    // Notify listeners (reuse emotes-reloaded so UI refreshes emote lists and autocomplete)
+    // Reuse emotes-reloaded so the UI refreshes emote lists and autocomplete.
     notifyEmotesReloaded();
   } catch (e) {
     console.warn("Failed to remove emote alias", e);
   }
 }
 
-/**
- * Get all emotes organized by source
- */
 export function getAllEmotesOrganized(): EmotesBySource {
   const organized: EmotesBySource = {
     twitchGlobal: Object.entries(emotesTwitchGlobal)

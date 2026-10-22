@@ -23,7 +23,7 @@ export let emotesTwitch: EmoteMap = {};
 export let emotesTwitchGlobal: EmoteMap = {};
 export let emotesTwitchByChannel: ChannelEmoteGroup[] = [];
 
-/** Emote author map — emote name → author display name. */
+/** Emote author map: emote name → author display name. */
 export let emoteAuthors: Record<string, string> = {};
 
 /** Last Twitch user ID used to fetch subscribed channel emotes. */
@@ -32,7 +32,7 @@ export let lastUserId: string | undefined;
 /**
  * Monotonic counter bumped every time one of the module-level emote maps is
  * reassigned. It is mixed into the parseCache key so stale entries become
- * unreachable as soon as a new source applies — no manual cache.clear() and
+ * unreachable as soon as a new source applies. No manual cache.clear() and
  * no forced re-render are needed.
  */
 export let emoteMapVersion = 0;
@@ -116,7 +116,7 @@ export async function getCachedEmotes(
 
     const isExpired = Date.now() - cacheData.timestamp > CACHE_DURATION;
     if (isExpired) {
-      // expired — will be cleaned up on next write; no need to await delete
+      // expired, will be cleaned up on next write. No need to await delete
       return null;
     }
 

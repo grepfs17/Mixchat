@@ -1,22 +1,16 @@
 /**
  * Twitch GIF (Giphy) chat helpers, shared by the Twitch chat renderers.
  *
- * Twitch delivers GIF chat messages (the Giphy-powered GIF Keyboard) over
- * IRC through a `gifs` PRIVMSG tag. Each entry has the form
+ * Twitch delivers GIF messages over IRC through a `gifs` tag. Each
+ * comma-separated entry is `<start>-<end>|<gifID>|<gifURL>`, where positions
+ * are zero-based indices into the caption text (e.g.
+ * `[Y A Y Yes GIF by Djemilah Birnie]`). The URL must be used as-is.
  *
- *   <start position>-<end position>|<gifID>|<gifURL>
+ * EventSub exposes the same data as a `gif` fragment with `gif_id` and `url`.
+ * `TwitchGif` mirrors those plus the character range so the renderer can
+ * splice the image into the text.
  *
- * and entries are comma-separated. Position indices are zero-based within
- * the message text, which holds the GIF's caption/alt text (e.g.
- * `[Y A Y Yes GIF by Djemilah Birnie]`). Applications rendering the GIF
- * must use the full URL provided; it must not be modified.
- *
- * EventSub exposes the same data as a `gif` message fragment with `gif_id`
- * and `url` fields; the `TwitchGif` shape mirrors those two plus the
- * character range so the renderer can splice the image into the text.
- *
- * Pure functions (no React / DOM dependencies) so they're trivial to
- * unit-test in Node.
+ * Pure functions (no React / DOM dependencies) for easy Node unit-testing.
  */
 
 export interface TwitchGif {
@@ -30,7 +24,6 @@ export interface TwitchGif {
   end: number;
 }
 
-/** Parse the IRC `gifs` tag into structured GIF entries. */
 export function parseGifsTag(tag: string | undefined | null): TwitchGif[] {
   if (!tag) return [];
   const gifs: TwitchGif[] = [];
@@ -48,7 +41,7 @@ export function parseGifsTag(tag: string | undefined | null): TwitchGif[] {
 
 export interface GifTextSegment {
   type: "text";
-  /** Plain text slice between GIF ranges; safe for HTML innerText use. */
+  /** Plain text slice between GIF ranges, safe for HTML innerText use. */
   text: string;
   /** Start offset of this segment within the original input (inclusive). */
   start: number;
@@ -71,14 +64,11 @@ export interface GifImageSegment {
 export type GifSplitSegment = GifTextSegment | GifImageSegment;
 
 /**
- * Walk `text` linearly and split it into alternating text/GIF segments
- * wherever a GIF range is declared. Used by the chat renderers to mount an
- * `<img>` inline where the GIF caption text would otherwise render.
+ * Splits `text` into alternating text/GIF segments at each declared GIF range,
+ * so chat renderers can mount an `<img>` where the caption text would be.
  *
- * GIFs are sorted by start offset; out-of-order or overlapping ranges are
- * handled defensively (later ranges that start before the cursor are
- * clamped). Always emits at least one segment so callers don't need a
- * special case.
+ * Out-of-order or overlapping ranges are handled defensively. Always emits at
+ * least one segment so callers don't need a special case.
  */
 export function splitMessageByGifs(
   text: string,
@@ -126,7 +116,7 @@ export function splitMessageByGifs(
   // Twitch's `gifs` tag ranges run from the opening bracket through the
   // end of the caption but stop one character short of the closing `]`
   // (e.g. `gifs=0-36` for a 37-char `[Dance Party Disco GIF by X]`).
-  // Those brackets are caption formatting, not user text — Twitch's own
+  // Those brackets are caption formatting, not user text. Twitch's own
   // chat renders such messages as just the GIF, so drop bracket-only
   // segments that directly flank a GIF here.
   const first = segments[0];

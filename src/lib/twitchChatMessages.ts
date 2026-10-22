@@ -2,7 +2,6 @@ import { getBadgeDetail } from "./badges";
 import type { TwitchMessage, MessageType } from "./types";
 import { getCachedAvatar } from "./twitchChatCache";
 
-/** Extract badge images and details from a Twurple user info object. */
 export function extractBadges(userInfo: { badges: Map<string, string> }): {
   badges: Record<string, string>;
   badgeDetails: Record<string, { url: string; title: string }>;
@@ -19,7 +18,6 @@ export function extractBadges(userInfo: { badges: Map<string, string> }): {
   return { badges, badgeDetails };
 }
 
-/** Parse badges from a raw IRC badges tag string. */
 export function parseBadgeString(badgesStr: string): {
   badges: Record<string, string>;
   badgeDetails: Record<string, { url: string; title: string }>;

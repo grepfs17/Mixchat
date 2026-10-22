@@ -1,7 +1,6 @@
 /**
- * Settings backup/restore utility.
- * Exports user settings as a JSON file and imports them back.
- * No server-side storage — the user owns their data.
+ * Settings backup/restore utility: exports user settings as a JSON file and
+ * imports them back. No server-side storage. The user owns their data.
  */
 
 import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
@@ -85,8 +84,8 @@ const BACKUP_KEY_COMPAT_MAP: Record<string, string> = {
 };
 
 /**
- * Resolve a backup key to its current canonical name.
- * Falls back to the key itself when no mapping exists.
+ * Resolve a backup key to its current canonical name, falling back to the key
+ * itself when no mapping exists.
  */
 export function resolveBackupKey(key: string): string {
   return BACKUP_KEY_COMPAT_MAP[key] ?? key;
@@ -105,8 +104,8 @@ function writeSettings(settings: Record<string, string>): number {
 }
 
 /**
- * Export all user settings to a downloadable JSON file.
- * Event sounds are read from IndexedDB and included in the backup.
+ * Exports all user settings to a downloadable JSON file. Event sounds are read
+ * from IndexedDB and included in the backup.
  */
 export async function exportSettings(): Promise<void> {
   const settings = readSettings();
@@ -136,8 +135,7 @@ export async function exportSettings(): Promise<void> {
 }
 
 /**
- * Import settings from a JSON file.
- * Returns the number of settings restored, or -1 on error.
+ * Imports settings from a JSON file and resolves with the number restored.
  * Event sounds are written to IndexedDB.
  */
 export function importSettings(file: File): Promise<number> {

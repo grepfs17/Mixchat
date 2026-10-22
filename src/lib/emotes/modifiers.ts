@@ -1,18 +1,11 @@
 /**
  * Emote modifier vocabulary shared by BTTV and FrankerFaceZ.
  *
- * BTTV applies effects with a prefix token written *before* the emote, either
- * attached (`w!KEKW`) or bare (`w! KEKW`), and modifiers can be chained
- * (`w!h!KEKW`). Both the official `X!` form and the commonly-typed `!X` form
- * are accepted.
- *
- * FFZ applies effects with a "modifier emote" word written *immediately after*
- * the target emote (`KEKW ffzX`). Those modifier emotes carry FFZ's Hidden
- * flag, so they are filtered out of the emote map in `ffz.ts` and only exist
- * here as effect words.
- *
- * The effects intentionally share one vocabulary so a single render path can
- * apply them regardless of which provider produced the code.
+ * BTTV writes effect prefixes *before* the emote, attached (`w!KEKW`) or bare
+ * (`w! KEKW`), and chains them (`w!h!KEKW`). Both `X!` and `!X` forms are
+ * accepted. FFZ writes a modifier word *after* the emote (`KEKW ffzX`). Those
+ * words carry FFZ's Hidden flag, so `ffz.ts` filters them out of the emote map
+ * and they exist here only as effects. One vocabulary keeps rendering uniform.
  */
 export type EmoteEffect =
   | "rotateL"
@@ -59,7 +52,6 @@ export const FFZ_EFFECTS: Record<string, EmoteEffect> = {
   ffzSpin: "spin",
 };
 
-/** True when `word` is an FFZ effect modifier word (e.g. `ffzW`). */
 export function isFfzEffectWord(word: string): boolean {
   return Object.prototype.hasOwnProperty.call(FFZ_EFFECTS, word);
 }
@@ -86,7 +78,6 @@ const EFFECT_ORDER: EmoteEffect[] = [
   "spin",
 ];
 
-/** Deduplicates effects and sorts them into the canonical application order. */
 export function normalizeEffects(effects: EmoteEffect[]): EmoteEffect[] {
   if (effects.length === 0) return effects;
   const seen = new Set(effects);
@@ -159,8 +150,8 @@ export interface EffectRenderInfo {
 /**
  * Per-effect CSS, ported from FrankerFaceZ's `EFFECT_STYLES`
  * (`src/modules/chat/emotes.js`). `animationFilter` is used instead of
- * `animation` when a static filter is also present, so the rainbow hue-rotate
- * keyframes preserve the composed filter.
+ * `animation` when a static filter is present, so rainbow hue-rotate keyframes
+ * preserve the composed filter.
  */
 interface EffectStyleMeta {
   transform?: string;
@@ -203,7 +194,7 @@ const EFFECT_STYLES: Record<EmoteEffect, EffectStyleMeta> = {
 
 /**
  * Translate a set of effects into the CSS needed to render them. Geometry
- * effects become a composed `transform`/`width` for the `<img>`; filter and
+ * effects become a composed `transform`/`width` for the `<img>`. Filter and
  * motion effects target a wrapper element so CSS animations cannot clobber the
  * image's inline transform.
  */

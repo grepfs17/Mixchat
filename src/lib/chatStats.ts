@@ -237,7 +237,7 @@ export function accumulateChatStats(
 
 /**
  * Clears a repeated-message group so its count starts over. The group is
- * dropped entirely; already-seen messages stay in `seen` (so they are not
+ * dropped entirely. Already-seen messages stay in `seen` (so they are not
  * re-counted) and only newly arriving duplicates begin accumulating again.
  */
 export function resetChatStatEntry(store: ChatStatsStore, key: string): void {
@@ -258,7 +258,7 @@ export function resetChatStatEntries(store: ChatStatsStore): void {
 
 /**
  * Builds the ranked result for a time window. `notBefore` is an optional floor
- * (epoch ms) that bounds the whole result — chat stats pass the current stream
+ * (epoch ms) that bounds the whole result. Chat stats pass the current stream
  * start so ranking, totals, chatters and mods never reach into past streams.
  */
 export function buildChatStats(

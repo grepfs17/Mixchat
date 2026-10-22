@@ -95,7 +95,7 @@ function toEntry(item: GiveawayMessage): GiveawayEntry | null {
  *
  * Rules:
  * - Exact word match (case-insensitive, NFKC-normalized).
- * - First match per (platform, user) wins; duplicates are ignored.
+ * - First match per (platform, user) wins. Duplicates are ignored.
  * - Eligibility and scope filters applied after dedup.
  * - Pre-loaded / optimistic / deleted / non-chat messages are ignored.
  */

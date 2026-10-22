@@ -1,6 +1,6 @@
 /**
  * YouTube channel linking helpers.
- * Stores a mapping of Twitch channel ID -> YouTube channel URL in localStorage.
+ * Stores a Twitch channel ID -> YouTube channel URL mapping in localStorage.
  */
 
 const STORAGE_KEY = "mixchat_youtube_links:v1";
@@ -30,7 +30,6 @@ export function getYoutubeLinks(): YouTubeLink[] {
 
 export function addYoutubeLink(link: YouTubeLink): void {
   const links = getYoutubeLinks();
-  // Replace if already exists for this twitch channel
   const idx = links.findIndex(
     (l) => l.twitchChannelId === link.twitchChannelId,
   );

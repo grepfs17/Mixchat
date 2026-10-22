@@ -51,7 +51,7 @@ function writeStorage(entries: GiveawayHistoryEntry[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   } catch {
-    // Storage may be full or disabled; ignore so the rest of the app keeps working.
+    // Storage may be full or disabled. Ignore so the rest of the app keeps working.
   }
 }
 

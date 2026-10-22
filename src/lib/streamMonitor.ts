@@ -14,10 +14,7 @@ export interface LiveStreamer extends StreamerToWatch {
   viewerCount?: number;
 }
 
-/**
- * Check which streamers from a list are currently live
- * Uses batch API endpoint to check all streamers in a single request
- */
+/** Returns the subset of streamers currently live, in one batched API call. */
 export async function checkLiveStreamers(
   streamersToWatch: StreamerToWatch[],
   accessToken: string,
@@ -28,7 +25,6 @@ export async function checkLiveStreamers(
   try {
     const streamerIds = streamersToWatch.map((s) => s.id);
 
-    // Use batch endpoint to check all streamers in one API call
     const statuses = await getStreamStatuses(
       accessToken,
       clientId,
@@ -55,9 +51,6 @@ export async function checkLiveStreamers(
   }
 }
 
-/**
- * Get watched streamers from localStorage
- */
 export function getWatchedStreamers(): StreamerToWatch[] {
   const saved = localStorage.getItem("mixchat_watched_streamers:v1");
   if (!saved) return [];
@@ -69,16 +62,10 @@ export function getWatchedStreamers(): StreamerToWatch[] {
   }
 }
 
-/**
- * Save watched streamers to localStorage
- */
 function saveWatchedStreamers(streamers: StreamerToWatch[]): void {
   localStorage.setItem("mixchat_watched_streamers:v1", JSON.stringify(streamers));
 }
 
-/**
- * Add a streamer to watch list
- */
 export function addWatchedStreamer(streamer: StreamerToWatch): void {
   const current = getWatchedStreamers();
   if (!current.find((s) => s.id === streamer.id)) {
@@ -86,17 +73,11 @@ export function addWatchedStreamer(streamer: StreamerToWatch): void {
   }
 }
 
-/**
- * Remove a streamer from watch list
- */
 export function removeWatchedStreamer(streamerId: string): void {
   const current = getWatchedStreamers();
   saveWatchedStreamers(current.filter((s) => s.id !== streamerId));
 }
 
-/**
- * Check which streamers have already been notified for
- */
 export function getNotifiedStreamers(): Set<string> {
   const saved = localStorage.getItem("mixchat_notified_streamers:v1");
   if (!saved) return new Set();
@@ -108,9 +89,6 @@ export function getNotifiedStreamers(): Set<string> {
   }
 }
 
-/**
- * Mark a streamer as notified
- */
 export function markStreamerNotified(streamerId: string): void {
   const notified = getNotifiedStreamers();
   notified.add(streamerId);
@@ -120,9 +98,6 @@ export function markStreamerNotified(streamerId: string): void {
   );
 }
 
-/**
- * Mark a streamer as not notified (when they go offline)
- */
 export function markStreamerOffline(streamerId: string): void {
   const notified = getNotifiedStreamers();
   notified.delete(streamerId);
@@ -132,9 +107,6 @@ export function markStreamerOffline(streamerId: string): void {
   );
 }
 
-/**
- * Get whether system (browser) notifications are enabled
- */
 export function getSystemNotificationsEnabled(): boolean {
   try {
     return localStorage.getItem("mixchat_system_notifications") !== "false";
@@ -143,9 +115,6 @@ export function getSystemNotificationsEnabled(): boolean {
   }
 }
 
-/**
- * Set whether system (browser) notifications are enabled
- */
 export function setSystemNotificationsEnabled(enabled: boolean): void {
   localStorage.setItem("mixchat_system_notifications", String(enabled));
 }

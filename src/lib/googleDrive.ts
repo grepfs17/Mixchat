@@ -19,19 +19,13 @@ interface DriveLoadResult {
   version: number;
 }
 
-/**
- * Save settings JSON to Google Drive.
- * If a mixchat-settings.json file already exists (by appProperties), update it.
- * Otherwise, create a new one.
- */
+/** Saves settings to Drive, updating the existing file when present. */
 export async function saveSettingsToDrive(
   settingsJson: string,
 ): Promise<DriveSaveResult> {
-  // Check if we already have a file
   const existing = await findSettingsFile();
 
   if (existing) {
-    // Update existing file
     const res = await fetch("/api/gdrive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,7 +49,6 @@ export async function saveSettingsToDrive(
     };
   }
 
-  // Create new file
   const res = await fetch("/api/gdrive", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -79,10 +72,6 @@ export async function saveSettingsToDrive(
   };
 }
 
-/**
- * Load settings JSON from Google Drive.
- * Looks for the mixchat-settings.json file and returns its contents.
- */
 export async function loadSettingsFromDrive(): Promise<DriveLoadResult> {
   const fileId = await findSettingsFile();
 
@@ -117,10 +106,7 @@ export async function loadSettingsFromDrive(): Promise<DriveLoadResult> {
   };
 }
 
-/**
- * Find the ID of the existing mixchat-settings.json file in Drive.
- * Returns null if no file found.
- */
+/** Returns the existing settings file ID, or null if none exists. */
 async function findSettingsFile(): Promise<string | null> {
   const res = await fetch("/api/gdrive", {
     method: "POST",
@@ -136,10 +122,7 @@ async function findSettingsFile(): Promise<string | null> {
   return data.fileId || null;
 }
 
-/**
- * Check if the user has Google Drive access (i.e., has a YouTube/Google session
- * with the drive.file scope).
- */
+/** Checks for a YouTube/Google session with the drive.file scope. */
 async function checkDriveAccess(): Promise<boolean> {
   try {
     const res = await fetch("/api/gdrive", {

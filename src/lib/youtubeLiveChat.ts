@@ -83,7 +83,7 @@ export async function resolveActiveLiveChatId(
 
 /**
  * A single message as returned by the official Data API `liveChatMessages.list`.
- * `id` here is the *official* Data API id — the one accepted by
+ * `id` here is the *official* Data API id, the one accepted by
  * `liveChatMessages.delete`.
  */
 interface ListedLiveChatMessage {
@@ -186,7 +186,7 @@ export async function resolveLiveChatMessageId(
     const textMatches = messages.filter(
       (m) => normalizeMessageText(m.text) === want,
     );
-    // Only narrow to text matches when we actually found some; otherwise keep
+    // Only narrow to text matches when we actually found some. Otherwise keep
     // the channel-filtered set (e.g. stickers/superchats have no text).
     if (textMatches.length) messages = textMatches;
   }

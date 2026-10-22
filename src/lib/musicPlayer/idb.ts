@@ -2,16 +2,13 @@
  * IndexedDB persistence for the Music Player streamer tool.
  *
  * Schema (v1):
- *   - Object store `musicPlaylists`: keyed by `MusicPlaylist.id`. One row
- *     per playlist, so per-playlist reads/writes are atomic and don't
- *     touch unrelated playlists.
- *   - Object store `musicPlayerSettings`: key-less. We `put` a single
- *     record at primary key = MUSIC_PLAYER_SETTINGS_RECORD_ID to hold
- *     the global scalar state (activePlaylistId, currentIndex, volume,
- *     loop). Volume / index changes do not rewrite playlist rows.
+ *   - `musicPlaylists`: keyed by `MusicPlaylist.id`, one row per playlist, so
+ *     per-playlist reads/writes are atomic.
+ *   - `musicPlayerSettings`: key-less single record at
+ *     MUSIC_PLAYER_SETTINGS_RECORD_ID for global scalars (activePlaylistId,
+ *     currentIndex, volume, loop). Volume changes don't rewrite playlists.
  *
- * Mirrors the style of `lib/songQueue/idb.ts`: tiny wrapper around
- * `indexedDB.open`, no third-party deps. Tests use `fake-indexeddb`.
+ * Mirrors `lib/songQueue/idb.ts`: a tiny wrapper with no third-party deps.
  */
 
 import {
@@ -38,7 +35,7 @@ function isIDBAvailable(): boolean {
  *
  * Race-friendly: concurrent callers share a single in-flight `openDB`
  * promise so we don't blow through the IDB lock. The promise is also
- * cached after success so subsequent calls reuse the same connection —
+ * cached after success so subsequent calls reuse the same connection,
  * opening a new IDB connection on every write is measurable overhead.
  *
  * Tests that swap `globalThis.indexedDB` for a fresh `fake-indexeddb`
@@ -70,20 +67,15 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
- * Test-only helper. Drops the cached `openPromise` so the next call
- * reopens against whatever `globalThis.indexedDB` currently points at.
- * Tests that swap the global IDB factory between cases (as
- * `fake-indexeddb` consumers do) MUST call this in beforeEach; without
- * it the cached connection from a prior test would target a factory
- * that's been replaced, causing reads/writes to leak to the wrong DB.
+ * Test-only helper. Drops the cached `openPromise` so the next call reopens
+ * against whatever `globalThis.indexedDB` currently points at. Tests that swap
+ * the IDB factory between cases MUST call this in beforeEach, or the cached
+ * connection leaks reads/writes to the wrong DB.
  */
 export function _resetForTests(): void {
   openPromise = null;
 }
 
-/**
- * Wrap an `IDBRequest` in a promise so we can use async/await.
- */
 function reqAsPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -150,7 +142,7 @@ export async function deletePlaylistFromIDB(id: string): Promise<void> {
 
 /**
  * Read the single global settings record. Returns the defaults if either
- * the store is empty or the row is malformed — picking defaults over
+ * the store is empty or the row is malformed. Picking defaults over
  * throwing keeps the UI usable even after a botched migration.
  */
 export async function loadSettings(): Promise<MusicPlayerSettings> {
