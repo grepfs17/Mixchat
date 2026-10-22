@@ -20,7 +20,7 @@ function renderLoginPanel(overrides: Partial<Parameters<typeof LoginPanel>[0]> =
   );
 }
 
-describe("LoginPanel — YouTube UI gated by IS_TWITCH_ONLY", () => {
+describe("LoginPanel: YouTube UI gated by IS_TWITCH_ONLY", () => {
   beforeEach(() => {
     localStorage.clear();
     noop.mockClear();

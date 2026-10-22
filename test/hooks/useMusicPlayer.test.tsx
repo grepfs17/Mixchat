@@ -521,7 +521,7 @@ describe("MusicPlayerPanel auto-select", () => {
       );
     });
 
-    // Create second playlist — becomes the active one.
+    // Create second playlist, becomes the active one.
     act(() => {
       result.current.createPlaylist("Hype");
     });

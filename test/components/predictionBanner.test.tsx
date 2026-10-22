@@ -148,14 +148,14 @@ describe("PredictionBanner", () => {
     expect(screen.getByText(/Ends in \d+m \d+s/)).toBeInTheDocument();
   });
 
-  it("shows Locked — waiting for result for locked prediction", () => {
+  it("shows Locked: waiting for result for locked prediction", () => {
     const locked: PredictionState = {
       ...basePrediction,
       status: "locked",
     };
     render(<PredictionBanner prediction={locked} onDismiss={vi.fn()} />);
 
-    expect(screen.getByText("Locked — waiting for result")).toBeInTheDocument();
+    expect(screen.getByText("Locked: waiting for result")).toBeInTheDocument();
   });
 
   it("shows Final result for resolved prediction", () => {

@@ -5,7 +5,7 @@ import { parseHostHandoffBanner } from "../../../src/pages/api/youtube-stream-ch
  * Lightweight fake of youtubei.js's `LiveChatBannerRedirect` class. The
  * real `.is()` predicate checks `instanceof YTNodes.LiveChatBannerRedirect`,
  * which we can't replicate without pulling Innertube. Instead our fake's
- * `.is()` matches any class whose `name === "LiveChatBannerRedirect"` —
+ * `.is()` matches any class whose `name === "LiveChatBannerRedirect"`,
  * the class name that youtubei.js actually exports.
  */
 function makeBannerRedirect({ authorPhotoUrl, actionText, actionTooltip, actionUrl, bannerMessage, hasInlineAction }: {

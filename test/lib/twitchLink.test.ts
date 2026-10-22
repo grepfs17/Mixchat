@@ -124,7 +124,7 @@ describe("isTwitchUrl", () => {
 
 describe("TWITCH_URL_REGEX", () => {
   it("is case-insensitive", () => {
-    // /g-enabled regexes have stateful .test(); use .match() with a fresh
+    // /g-enabled regexes have stateful .test(). Use .match() with a fresh
     // regex compiled from the source.
     const re = new RegExp(TWITCH_URL_REGEX.source, TWITCH_URL_REGEX.flags);
     expect("HTTPS://WWW.TWITCH.TV/lunateac".match(re)).not.toBeNull();
@@ -254,7 +254,7 @@ describe("rebaseEmotesForSegment", () => {
   });
 
   it("keeps emotes that exactly end at segEnd-1", () => {
-    // positions are inclusive; segment ends just past the last char
+    // positions are inclusive, segment ends just past the last char
     const emotes = { kappa: ["5-9"] };
     const out = rebaseEmotesForSegment(emotes, 5, 10);
     expect(out).toEqual({ kappa: ["0-4"] });

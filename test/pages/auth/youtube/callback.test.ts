@@ -130,7 +130,7 @@ describe("YouTube callback route", () => {
       expect.anything(),
     );
 
-    // getYoutubeUser is YouTube-flow only — the drive branch short-circuits
+    // getYoutubeUser is YouTube-flow only, the drive branch short-circuits
     // before any userinfo call.
     expect(mockGetYoutubeUser).not.toHaveBeenCalled();
   });

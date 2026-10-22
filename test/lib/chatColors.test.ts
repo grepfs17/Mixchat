@@ -25,7 +25,7 @@ describe("getReadableUsernameColor", () => {
   });
 
   it("switches hard-to-read dark colours like #0000ff to white", () => {
-    // Pure blue is ~2.3:1 on the dark background — unreadable even though
+    // Pure blue is ~2.3:1 on the dark background, unreadable even though
     // it is far from the background in RGB space.
     expect(getReadableUsernameColor("#0000ff")).toBe("#ffffff");
   });

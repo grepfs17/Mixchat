@@ -101,7 +101,7 @@ describe("driveSync", () => {
     });
 
     it("does not read from old unversioned keys", async () => {
-      // Data only at old key — app should not find it
+      // Data only at old key, app should not find it
       localStorage.setItem(
         "mixchat_favorite_channels",
         JSON.stringify(["old"]),
@@ -325,7 +325,7 @@ describe("driveSync", () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        // event sounds parse failure skips it; font_size still restored
+        // event sounds parse failure skips it, font_size still restored
         expect(result.count).toBe(1);
       }
       expect(mockSaveSounds).not.toHaveBeenCalled();
@@ -388,7 +388,7 @@ describe("driveSync", () => {
       if (result.ok) {
         expect(result.count).toBe(2);
       }
-      // The :v1 key is written twice — first from the old key mapping,
+      // The :v1 key is written twice, first from the old key mapping,
       // then overwritten by the :v1 key itself. Final value is "from_new".
       expect(localStorage.getItem("mixchat_favorite_channels:v1")).toBe(
         JSON.stringify(["from_new"]),

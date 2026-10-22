@@ -80,7 +80,7 @@ beforeEach(() => {
     .querySelectorAll("#youtube-iframe-api-script")
     .forEach((el) => el.remove());
   if (!("YT" in window)) {
-    // Don't define a fake YT here — the player test does its own setup.
+    // Don't define a fake YT here, the player test does its own setup.
   }
 });
 
@@ -128,7 +128,7 @@ describe("SongQueueMinimizedBar", () => {
     // Chevron says "Expand queue bar" because it starts collapsed
     const expandBtn = screen.getByLabelText("Expand queue bar");
     fireEvent.click(expandBtn);
-    // Now expanded — full queue list is visible
+    // Now expanded, full queue list is visible
     const playButtons = screen.getAllByTitle("Play now");
     expect(playButtons).toHaveLength(3);
     fireEvent.click(playButtons[0]);

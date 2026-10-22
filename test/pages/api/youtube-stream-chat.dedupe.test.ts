@@ -35,10 +35,10 @@ describe("shouldEmitSystemNote", () => {
       try {
         const set = new Set<string>();
         shouldEmitSystemNote(set, "removed:UC1");
-        // Advance clock by 5 minutes — would have flipped the old 30s TTL.
+        // Advance clock by 5 minutes, would have flipped the old 30s TTL.
         vi.advanceTimersByTime(5 * 60_000);
         expect(shouldEmitSystemNote(set, "removed:UC1")).toBe(false);
-        // Advance clock by hours — still no re-emit.
+        // Advance clock by hours, still no re-emit.
         vi.advanceTimersByTime(24 * 60 * 60_000);
         expect(shouldEmitSystemNote(set, "removed:UC1")).toBe(false);
       } finally {
@@ -134,7 +134,7 @@ describe("createSystemRemovalMessage + shouldEmitSystemNote integration", () => 
 
       expect(emit("UC1", "alice", "removed")).not.toBeNull();
       vi.advanceTimersByTime(60 * 60_000);
-      // The TTL is gone — second call is still null because the gate
+      // The TTL is gone, second call is still null because the gate
       // is now session-scoped, not time-scoped.
       expect(emit("UC1", "alice", "removed")).toBeNull();
     } finally {

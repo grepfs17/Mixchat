@@ -85,7 +85,7 @@ function renderHookWithSocket(
       onRedemption,
     }),
   );
-  // This RTL version returns { result: { current }, rerender, unmount } —
+  // This RTL version returns { result: { current }, rerender, unmount },
   // expose the inner `result` so tests can read `result.current` directly.
   return { onRedemption, result: renderResult.result };
 }
@@ -258,7 +258,7 @@ describe("useChannelPointRedemptionsPubSub", () => {
   it("stays connecting (pending) when no WebSocket is available", () => {
     delete (globalThis as any).WebSocket;
     const { result } = renderHookWithSocket();
-    // Non-browser environments can't open a socket; status is left as
+    // Non-browser environments can't open a socket. Status is left as
     // the initial "disconnected" rather than a fake "connected".
     expect(result.current).toBe("disconnected");
   });
@@ -270,7 +270,7 @@ describe("useChannelPointRedemptionsPubSub", () => {
 
     act(() => socket.close(1006));
 
-    // Not yet — reconnect is scheduled with a 1s backoff.
+    // Not yet, reconnect is scheduled with a 1s backoff.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     });

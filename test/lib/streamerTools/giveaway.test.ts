@@ -101,7 +101,7 @@ describe("messageMatchesKeyword", () => {
   });
 });
 
-describe("extractEntries — basic matching & dedup", () => {
+describe("extractEntries: basic matching & dedup", () => {
   it("returns entries for matching messages, dedupes per user", () => {
     const messages: GiveawayMessage[] = [
       twitch("u1", "Alice", "KEY"),
@@ -151,7 +151,7 @@ describe("extractEntries — basic matching & dedup", () => {
   });
 });
 
-describe("extractEntries — scope", () => {
+describe("extractEntries: scope", () => {
   it("twitch scope ignores YouTube messages", () => {
     const messages: GiveawayMessage[] = [
       twitch("u1", "Alice", "KEY"),
@@ -203,7 +203,7 @@ describe("extractEntries — scope", () => {
   });
 });
 
-describe("extractEntries — eligibility", () => {
+describe("extractEntries: eligibility", () => {
   it("subscribers filter keeps Twitch subs and YouTube members", () => {
     const messages: GiveawayMessage[] = [
       twitch("u1", "Alice", "KEY", {
@@ -279,7 +279,7 @@ describe("formatWinnerAnnouncement", () => {
   });
 });
 
-describe("extractEntries — owner exclusion", () => {
+describe("extractEntries: owner exclusion", () => {
   it("excludes the Twitch broadcaster by id", () => {
     const messages: GiveawayMessage[] = [
       twitch("broadcaster-1", "Streamer", "KEY"),

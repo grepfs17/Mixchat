@@ -64,7 +64,7 @@ async function mountChat(props: {
   return { result, es };
 }
 
-describe("YouTubeChat — reconnect status indicator", () => {
+describe("YouTubeChat: reconnect status indicator", () => {
   it("shows a banner while reconnecting and clears it after reconnecting", async () => {
     const { es, result } = await mountChat({});
 
@@ -73,13 +73,13 @@ describe("YouTubeChat — reconnect status indicator", () => {
     });
     expect(screen.queryByText(/reconnecting/i)).toBeNull();
 
-    // Server detects a transient block — notice event says reconnecting.
+    // Server detects a transient block: notice event says reconnecting.
     act(() => {
       es.emit("notice", { status: "reconnecting" });
     });
     expect(screen.getByText(/YouTube chat reconnecting/i)).toBeDefined();
 
-    // Reconnect succeeded — brief "reconnected" flash.
+    // Reconnect succeeded: brief "reconnected" flash.
     act(() => {
       es.emit("notice", { status: "reconnected" });
     });

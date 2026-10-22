@@ -169,7 +169,7 @@ describe("useChatAutoScroll", () => {
     // scrollTop should NOT be set yet (deferred to rAF)
     expect(container.el.scrollTop).toBe(0);
 
-    // Flush the rAF — now scrollTop should equal scrollHeight
+    // Flush the rAF: now scrollTop should equal scrollHeight
     flushRAF();
     expect(container.el.scrollTop).toBe(800);
   });
@@ -301,7 +301,7 @@ describe("useChatAutoScroll", () => {
     });
     expect(result.current.isAtBottom).toBe(false);
 
-    // New messages arrive — reuse existing references so indexOf finds them
+    // New messages arrive: reuse existing references so indexOf finds them
     rerender({
       messages: [msgA, msgB, msgC, msgD],
     });
@@ -326,7 +326,7 @@ describe("useChatAutoScroll", () => {
     act(() => handler(new Event("scroll")));
     expect(result.current.isAtBottom).toBe(false);
 
-    // Messages arrive while scrolled up — reuse references
+    // Messages arrive while scrolled up: reuse references
     rerender({
       messages: [msgA, msgB, msgC],
     });
@@ -403,7 +403,7 @@ describe("useChatAutoScroll", () => {
   // ---------------------------------------------------------------------------
   // rAF deferral: multi-line messages
   // ---------------------------------------------------------------------------
-  it("reads scrollHeight after layout (rAF) — multi-line message case", () => {
+  it("reads scrollHeight after layout (rAF): multi-line message case", () => {
     container.el.scrollHeight = 500;
     container.el.scrollTop = 500 - 400;
     container.el.clientHeight = 400;
@@ -412,7 +412,7 @@ describe("useChatAutoScroll", () => {
       { id: "a", text: "first" },
     ]);
 
-    // Add a message — the browser hasn't laid it out yet so scrollHeight is "stale"
+    // Add a message: the browser hasn't laid it out yet so scrollHeight is "stale"
     // but our mock will update it. Simulate multi-line by setting scrollHeight
     // to a value that represents the post-layout height only inside rAF.
     const rAFScrollHeights: number[] = [];
@@ -517,7 +517,7 @@ describe("useChatAutoScroll", () => {
 
     expect(result.current.isAtBottom).toBe(false);
 
-    // Now slice off front and add one new — like MAX_DISPLAYED_MESSAGES would
+    // Now slice off front and add one new: like MAX_DISPLAYED_MESSAGES would
     const sliced = oldMessages.slice(-149);
     sliced.push({ id: "new1" });
 
@@ -563,7 +563,7 @@ describe("useChatAutoScroll", () => {
     act(() => handler(new Event("scroll")));
     expect(result.current.isAtBottom).toBe(false);
 
-    // Now simulate a resize while scrolled up — should NOT scroll
+    // Now simulate a resize while scrolled up: should NOT scroll
     container.el.scrollHeight = 700;
     flushResizeObservers();
 
@@ -614,7 +614,7 @@ describe("useChatAutoScroll", () => {
     container.el.scrollHeight = 700;
     flushResizeObservers();
 
-    // The observer should have been suppressed; scrollTop stays unchanged
+    // The observer should have been suppressed, scrollTop stays unchanged
     // until the rAF clears the flag and scrolls.
     flushAllRAF();
     expect(container.el.scrollTop).toBe(700);
@@ -654,7 +654,7 @@ describe("useChatAutoScroll", () => {
     const { result } = renderAutoScroll(container.el, [{ id: "a" }]);
     flushAllRAF();
 
-    // The initial rAF scrolled to the bottom; move back up to simulate the
+    // The initial rAF scrolled to the bottom. Move back up to simulate the
     // user having scrolled away before the image loads.
     container.el.scrollTop = 0;
     const handler = [...container.listeners.get("scroll")!][0] as EventListener;

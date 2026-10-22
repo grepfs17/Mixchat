@@ -44,7 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("useChatMessages — redemption dedup", () => {
+describe("useChatMessages: redemption dedup", () => {
   it("drops a redemption that another source already surfaced", () => {
     const { result } = renderMessages();
 
@@ -112,7 +112,7 @@ describe("useChatMessages — redemption dedup", () => {
       );
     });
 
-    // Simulate the window elapsing (10s) — the map is exposed for tests.
+    // Simulate the window elapsing (10s), the map is exposed for tests.
     act(() => {
       result.current.recentRedemptionsRef.current.set(
         "rw-1-u-1",

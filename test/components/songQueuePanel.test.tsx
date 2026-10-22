@@ -130,7 +130,7 @@ describe("SongQueuePanel (open phase)", () => {
     expect(
       container.querySelector(".song-queue-now-playing-title"),
     ).toHaveTextContent("Never Gonna Give You Up");
-    // The embedded player must NOT be in the modal — it lives in the
+    // The embedded player must NOT be in the modal, it lives in the
     // minimized bar so closing the modal does not destroy the iframe.
     expect(container.querySelector(".song-queue-player-iframe")).toBeNull();
   });

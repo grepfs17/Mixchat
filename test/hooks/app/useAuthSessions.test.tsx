@@ -35,14 +35,14 @@ function seedYoutubeSession(hasDriveScope = false) {
  * Dispatch a `message` event synchronously via `window.dispatchEvent` rather
  * than `window.postMessage`. Same-origin `postMessage` queues the dispatch
  * via an async microtask in jsdom, so `act()` returns before the listener
- * fires — making the test timing-dependent. Dispatching a real MessageEvent
+ * fires, making the test timing-dependent. Dispatching a real MessageEvent
  * synchronously invokes the listener inside `act()`.
  */
 function dispatchMessageEvent(data: unknown, origin = window.location.origin) {
   window.dispatchEvent(new MessageEvent("message", { data, origin }));
 }
 
-describe("useAuthSessions — mixchat_drive_granted listener", () => {
+describe("useAuthSessions: mixchat_drive_granted listener", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -120,7 +120,7 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
 
     act(() => {
       // `storageArea` is omitted because jsdom's StorageEvent rejects the
-      // mock localStorage; the hook only reads `key` and `newValue`.
+      // mock localStorage. The hook only reads `key` and `newValue`.
       const evt = new StorageEvent("storage", {
         key: "mixchat_drive_granted",
         newValue: JSON.stringify({ ts: Date.now() }),
@@ -236,7 +236,7 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
     });
 
     // Extract the handleYoutubeSessionUpdate callback from the second
-    // useTokenRefresh call (index 1 = YouTube; index 0 = Twitch).
+    // useTokenRefresh call (index 1 = YouTube, index 0 = Twitch).
     const calls = vi.mocked(useTokenRefresh).mock.calls;
     const youtubeCall = calls.find(
       ([, , , opts]) => opts?.checkInterval === 120_000,
@@ -257,13 +257,13 @@ describe("useAuthSessions — mixchat_drive_granted listener", () => {
 
     expect(result.current.sessions.youtube?.hasDriveScope).toBe(true);
     // accessToken is never persisted to localStorage, so after the save
-    // effect runs it's stripped from the serialised copy — but hasDriveScope
+    // effect runs it's stripped from the serialised copy, but hasDriveScope
     // is a client-side flag that survives the strip + refresh cycle.
     expect(result.current.sessions.youtube?.accessToken).toBeUndefined();
   });
 });
 
-describe("useAuthSessions — YouTube session restore gated by IS_TWITCH_ONLY", () => {
+describe("useAuthSessions: YouTube session restore gated by IS_TWITCH_ONLY", () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();

@@ -12,9 +12,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("YouTubeChat — effect cleanup", () => {
+describe("YouTubeChat: effect cleanup", () => {
   it("aborts the SSE probe fetch on unmount", () => {
-    // Hang forever — keeps the effect suspended at the probe fetch boundary
+    // Hang forever: keeps the effect suspended at the probe fetch boundary
     // so we never reach EventSource creation or message handling.
     const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
     vi.stubGlobal("fetch", fetchMock);
@@ -56,7 +56,7 @@ describe("YouTubeChat — effect cleanup", () => {
     const firstSignal = firstCall![1].signal as AbortSignal;
     expect(firstSignal.aborted).toBe(false);
 
-    // Switch video — cleanup should abort the old probe
+    // Switch video: cleanup should abort the old probe
     rerender(<YouTubeChat videoId="video-b" />);
 
     expect(firstSignal.aborted).toBe(true);
@@ -104,7 +104,7 @@ describe("YouTubeChat — effect cleanup", () => {
     // The cleanup should have cleared the reconnect timer
     expect(clearTimeoutSpy).toHaveBeenCalled();
 
-    // Advancing timers after unmount should not throw — the reconnect
+    // Advancing timers after unmount should not throw: the reconnect
     // callback was cleared and should never fire
     act(() => {
       vi.advanceTimersByTime(60000);

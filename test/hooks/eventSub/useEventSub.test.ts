@@ -341,14 +341,14 @@ describe("useEventSub", () => {
     act(() => ws.simulateOpen());
     act(() => ws.simulateMessage(sessionWelcome("sess-1")));
 
-    // Advance partway — keepalive should not fire yet
+    // Advance partway, keepalive should not fire yet
     act(() => vi.advanceTimersByTime(12_000));
     expect(ws.close).not.toHaveBeenCalled();
 
     // Send keepalive to reset the timer
     act(() => ws.simulateMessage(sessionKeepalive(10)));
 
-    // Advance another 12s — still under the new window (10 + 5 grace = 15s)
+    // Advance another 12s, still under the new window (10 + 5 grace = 15s)
     act(() => vi.advanceTimersByTime(12_000));
     expect(ws.close).not.toHaveBeenCalled();
   });
@@ -570,7 +570,7 @@ describe("useEventSub", () => {
 
     const fetchCountBefore = mockFetch.mock.calls.length;
 
-    // Register 3 subscriptions synchronously — mimics useAutomodQueue
+    // Register 3 subscriptions synchronously, mimics useAutomodQueue
     // calling subscribe() for hold + update back-to-back, plus another
     // hook subscribing simultaneously.
     act(() => {
@@ -646,7 +646,7 @@ describe("useEventSub", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    // Subscribe — should go through fetch and become connected
+    // Subscribe, should go through fetch and become connected
     let unsubscribe: () => void;
     act(() => {
       unsubscribe = result.current.subscribe(
@@ -681,7 +681,7 @@ describe("useEventSub", () => {
     // Re-subscribe with the same key (effect re-runs and calls subscribe again).
     // Without the fix, subscribedKeys.has(key) === true and
     // subscribedKeys.get(key) === currentSid, so "pending" is never set
-    // and triggerResubscribeRef is never called — subscription gets stuck.
+    // and triggerResubscribeRef is never called, subscription gets stuck.
     act(() => {
       result.current.subscribe(
         "automod.message.hold",

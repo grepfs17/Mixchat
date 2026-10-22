@@ -98,7 +98,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("useTwitchChatEventHandlers — subscription duration", () => {
+describe("useTwitchChatEventHandlers: subscription duration", () => {
   it("shows cumulative months and tier on a plain resub", () => {
     const { lastMessage } = renderHandlers();
 

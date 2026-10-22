@@ -169,7 +169,7 @@ describe("useYouTubeModeration - moderator detection", () => {
     // New stream, but the buffer momentarily still holds the old message.
     rerender(baseProps({ youtubeVideoId: "vid-2", messages: [staleModMsg] }));
     // Still derived from a message whose author is the signed-in user, so it
-    // stays true here — but once the buffer clears it must drop.
+    // stays true here, but once the buffer clears it must drop.
     rerender(baseProps({ youtubeVideoId: "vid-2", messages: [] }));
     expect(result.current.isYouTubeModerator).toBe(false);
   });
@@ -221,7 +221,7 @@ describe("useYouTubeModeration - moderator detection", () => {
   });
 });
 
-describe("useYouTubeModeration — ban/timeout local message marking", () => {
+describe("useYouTubeModeration: ban/timeout local message marking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

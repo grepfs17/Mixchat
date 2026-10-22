@@ -704,7 +704,7 @@ describe("TwitchTimeoutDialog", () => {
 });
 
 //  ChatDisplay Integration (Split Chat)
-describe("ChatDisplay Integration — Actions", () => {
+describe("ChatDisplay Integration: Actions", () => {
   const defaultProps = {
     messages: [] as TwitchMessage[],
     isLoading: false,
@@ -884,7 +884,7 @@ describe("ChatDisplay Integration — Actions", () => {
 });
 
 //  UnifiedChat Integration
-describe("UnifiedChat Integration — Actions", () => {
+describe("UnifiedChat Integration: Actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

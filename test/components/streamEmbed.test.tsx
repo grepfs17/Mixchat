@@ -18,9 +18,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("StreamEmbed — effect cleanup", () => {
+describe("StreamEmbed: effect cleanup", () => {
   it("aborts the stream-playlist fetch on unmount", () => {
-    // Hang forever — keeps the effect suspended at the fetch boundary
+    // Hang forever: keeps the effect suspended at the fetch boundary
     // so we never reach HLS.js, EventSource, or other complex deps.
     const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}));
     vi.stubGlobal("fetch", fetchMock);
@@ -64,7 +64,7 @@ describe("StreamEmbed — effect cleanup", () => {
     const firstSignal = firstCall![1].signal as AbortSignal;
     expect(firstSignal.aborted).toBe(false);
 
-    // Switch channels — the effect cleanup should abort the old signal
+    // Switch channels: the effect cleanup should abort the old signal
     rerender(<StreamEmbed channelName="channel-b" playerType="m3u8" />);
 
     expect(firstSignal.aborted).toBe(true);
@@ -104,7 +104,7 @@ describe("StreamEmbed — effect cleanup", () => {
     // Verify the fetch was called
     expect(fetchMock).toHaveBeenCalled();
 
-    // Now unmount — this aborts the AbortController, and the hanging fetch
+    // Now unmount: this aborts the AbortController, and the hanging fetch
     // will reject with AbortError (just like in a real browser)
     unmount();
 
@@ -117,7 +117,7 @@ describe("StreamEmbed — effect cleanup", () => {
       // abortController.signal.aborted is true after unmount
     });
 
-    // "Failed to load stream" should NOT appear — the abort was expected
+    // "Failed to load stream" should NOT appear: the abort was expected
     const errorCalls = consoleSpy.mock.calls.filter(
       (call) =>
         typeof call[0] === "string" &&

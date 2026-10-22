@@ -72,7 +72,7 @@ function installFakeYT() {
 }
 
 beforeEach(() => {
-  // jsdom doesn't ship window.YT; install the fake.
+  // jsdom doesn't ship window.YT. Install the fake.
   delete (window as any).YT;
   // Avoid actually loading the IFrame script during the test.
   document
@@ -116,7 +116,7 @@ describe("SongQueuePlayer", () => {
     rerender(<SongQueuePlayer items={items} currentIndex={1} />);
     await vi.waitFor(() => {
       // A fresh player is created with the new videoId because initialVideoId
-      // changed — the mount effect depends on it.
+      // changed, the mount effect depends on it.
       expect(created).toHaveLength(2);
     });
   });
