@@ -3,8 +3,8 @@ import type { AstroCookies } from "astro";
 
 /**
  * Identity for a viewer's YouTube session. Authenticated viewers get isolated
- * sessions so AutoMod events only reach the moderator who received them;
- * guests share one session per video.
+ * sessions so AutoMod events only reach the moderator who received them.
+ * Guests share one session per video.
  *
  * Derive the key from a secret credential (httpOnly refresh token, else the
  * access token), never from client-controlled ids, and hash it so tokens

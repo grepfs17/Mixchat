@@ -20,7 +20,7 @@ type ChatMessage = Omit<UnifiedYTMessage, "parts"> & {
 interface YouTubeChatProps {
   videoId: string;
   channel?: string;
-  /** Signed-in viewer id; changing it reconnects the viewer-specific session. */
+  /** Signed-in viewer id. Changing it reconnects the viewer-specific session. */
   authUserId?: string;
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
@@ -355,8 +355,8 @@ export default function YouTubeChat({
 
     let isMounted = true;
     const probeAbort = new AbortController();
-    // A different video or viewer means a different server-side session;
-    // don't carry over messages (or AutoMod holds) from the old one.
+    // A different video or viewer means a different server-side session.
+    // Don't carry over messages (or AutoMod holds) from the old one.
     const sessionChanged =
       prevVideoIdRef.current !== videoId ||
       prevAuthUserIdRef.current !== authUserId;

@@ -154,7 +154,7 @@ describe("YouTubeChat: reconnect status indicator", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    // Another moderator resolved/claimed the hold — YouTube replaces the
+    // Another moderator resolved/claimed the hold. YouTube replaces the
     // item with an updated one (here: buttons become disabled).
     act(() => {
       es.emit("update", {
