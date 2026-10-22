@@ -14,8 +14,8 @@
     "doctor": "pnpx react-doctor@latest --no-lint"
   },
   "dependencies": {
-    "@twurple/auth": "^8.1.4",
-    "@twurple/chat": "^8.1.4",
+    "@twurple/auth": "^8.2.0",
+    "@twurple/chat": "^8.2.0",
     "astro": "^7.3.1",
     "bgutils-js": "^3.2.0",
     "dompurify": "^3.4.12",
@@ -24,7 +24,7 @@
     "react-dom": "19.2.7",
     "react-icons": "^5.7.0",
     "twemoji": "^14.0.2",
-    "youtubei.js": "^17.2.0"
+    "youtubei.js": "^18.1.0"
   },
   "devDependencies": {
     "@astrojs/node": "^11.0.2",
