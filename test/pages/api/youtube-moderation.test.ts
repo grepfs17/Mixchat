@@ -260,15 +260,17 @@ describe("POST /api/youtube-moderation", () => {
   });
 
   it("executes the AutoMod button on the viewer's session", async () => {
-    const execute = vi.fn().mockResolvedValue(undefined);
+    const actions = { execute: vi.fn() };
+    const call = vi.fn().mockResolvedValue(undefined);
+    const denyEndpoint = { call };
     mockedAutomodTarget.mockReturnValueOnce({
       item: {
         moderation_buttons: [
-          { text: "Approve", endpoint: { command: "approve" } },
-          { text: "Deny", endpoint: { command: "deny" } },
+          { text: "Approve", endpoint: { call: vi.fn() } },
+          { text: "Deny", endpoint: denyEndpoint },
         ],
       },
-      yt: { actions: { execute } },
+      yt: { actions },
     });
 
     const res = await POST(
@@ -281,6 +283,6 @@ describe("POST /api/youtube-moderation", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(execute).toHaveBeenCalledWith({ command: "deny" });
+    expect(call).toHaveBeenCalledWith(actions, { parse: true });
   });
 });

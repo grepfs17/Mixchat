@@ -174,7 +174,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       try {
-        await target.yt.actions.execute(button.endpoint);
+        // NavigationEndpoint.call resolves the button's command and executes it
+        // through the viewer's live-chat session. Passing the endpoint object
+        // to actions.execute() would build an invalid request URL.
+        await button.endpoint.call(target.yt.actions, { parse: true });
         return jsonResponse({ success: true });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

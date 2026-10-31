@@ -983,6 +983,9 @@ async function ensureChatSession(
     );
     // AutoMod holds are moderator-only. Never surface them on anonymous sessions.
     if (msg?.messageType === "automod" && !sessionRef.authenticated) {
+      console.debug(
+        "[YouTube Chat] Dropping AutoMod hold on an unauthenticated session",
+      );
       sessionRef.automodItems.delete(msg.id);
       return null;
     }
@@ -1131,6 +1134,13 @@ async function ensureChatSession(
     console.log(
       `[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || "Guest"}`,
     );
+    // AutoMod holds are only delivered when the live chat itself is authenticated.
+    // A viewer-token session that starts as Guest cannot see them.
+    if (sessionRef.authenticated && !initialData?.viewer_name) {
+      console.warn(
+        "[YouTube Chat] Viewer token did not authenticate the live chat. AutoMod holds require a valid moderator sign-in.",
+      );
+    }
     if (initialData?.actions) {
       for (const action of initialData.actions) {
         if (!action?.is) continue;

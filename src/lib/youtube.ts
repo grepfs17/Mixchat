@@ -180,7 +180,19 @@ export interface YouTubeAuthTokens {
 }
 
 const AUTH_REFRESH_MARGIN_MS = 5 * 60_000;
-const AUTH_TOKEN_FAR_FUTURE = "2035-01-01T00:00:00.000Z";
+
+/**
+ * InnerTube accepts a viewer's OAuth token on the live-chat endpoints, but not
+ * on player/next/browse. Sending it there makes the whole session fall back to
+ * guest, which silently hides moderator-only AutoMod holds. Only these
+ * endpoints carry the token.
+ */
+export function isAuthenticatedChatRequest(url: string): boolean {
+  return (
+    url.includes("/youtubei/v1/live_chat/") ||
+    url.includes("/youtubei/v1/updated_metadata")
+  );
+}
 
 function getOAuthClientCredentials(): {
   clientId?: string;
@@ -316,16 +328,14 @@ interface InnertubeFetchOptions {
   throttleNamespace?: string;
   /** Don't poison the shared anonymous session on a viewer-specific 403. */
   allowGlobalInvalidation: boolean;
-  getClient?: () => Innertube | null;
   /** Matches the client's configured user agent (undefined for non-WEB). */
   baseUserAgent?: string;
 }
 
-function createInnertubeFetch({
+export function createInnertubeFetch({
   auth,
   throttleNamespace,
   allowGlobalInvalidation,
-  getClient,
   baseUserAgent,
 }: InnertubeFetchOptions) {
   const baseReferer = (process.env.ORIGIN || "https://www.youtube.com/").replace(
@@ -348,10 +358,6 @@ function createInnertubeFetch({
       try {
         if (Date.now() > auth.expiresAt - AUTH_REFRESH_MARGIN_MS) {
           await refreshAuthTokens(auth);
-          const client = getClient?.();
-          if (client?.session?.oauth?.oauth2_tokens) {
-            client.session.oauth.oauth2_tokens.access_token = auth.accessToken;
-          }
         }
       } catch (err) {
         console.warn(
@@ -380,12 +386,12 @@ function createInnertubeFetch({
     const incomingHeaders = normalizeHeaders(init?.headers);
     if (auth) {
       // Never leak the token to non-InnerTube fetches (thumbnails/player JS).
-      const isInnertubeRequest = urlStr.includes("/youtubei/");
-      if (
-        isInnertubeRequest ||
-        incomingHeaders.authorization?.startsWith("Bearer ")
-      ) {
+      // Player/next must stay anonymous: a rejected token there drops the
+      // whole session to guest and hides moderator-only chat items.
+      if (isAuthenticatedChatRequest(urlStr)) {
         incomingHeaders.authorization = `Bearer ${auth.accessToken}`;
+      } else {
+        delete incomingHeaders.authorization;
       }
     }
 
@@ -603,8 +609,9 @@ export async function getInnertube() {
 }
 
 /**
- * InnerTube client authenticated with a viewer's OAuth token, so moderator-only
- * AutoMod events stay scoped to that viewer.
+ * InnerTube client whose live-chat requests carry a viewer's OAuth token, so
+ * moderator-only AutoMod events stay scoped to that viewer. The session itself
+ * stays signed out: the fetch wrapper owns auth and refreshes the token.
  */
 export async function createAuthenticatedInnertube(
   tokens: YouTubeAuthTokens,
@@ -623,28 +630,14 @@ export async function createAuthenticatedInnertube(
   }
 
   const innertubeOptions = await buildInnertubeOptions();
-  let client: Innertube | null = null;
   innertubeOptions.fetch = createInnertubeFetch({
     auth,
     throttleNamespace: options.throttleNamespace,
     allowGlobalInvalidation: false,
-    getClient: () => client,
     baseUserAgent: innertubeOptions.user_agent,
   });
 
-  client = await Innertube.create(innertubeOptions);
-  client.session.logged_in = true;
-  const { clientId, clientSecret } = getOAuthClientCredentials();
-  // The fetch wrapper owns token refresh, using the same OAuth client as the
-  // rest of the app and overriding Authorization on each request.
-  client.session.oauth.oauth2_tokens = {
-    access_token: auth.accessToken,
-    refresh_token: auth.refreshToken ?? "",
-    expiry_date: AUTH_TOKEN_FAR_FUTURE,
-    ...(clientId
-      ? { client: { client_id: clientId, client_secret: clientSecret ?? "" } }
-      : {}),
-  };
+  const client = await Innertube.create(innertubeOptions);
 
   return { yt: client, auth };
 }
