@@ -106,6 +106,44 @@ export function isTransientChatBlock(msg: string): boolean {
   );
 }
 
+/** HTTP status from a youtubei.js request failure message, if present. */
+export function extractHttpStatus(msg: string): number | undefined {
+  const match = /status code (\d{3})/.exec(msg);
+  return match ? Number(match[1]) : undefined;
+}
+
+/**
+ * Client-facing text for a dropped chat. Carries only the HTTP status, never
+ * the request URL, which points at the internal proxy.
+ */
+export function chatLostMessage(msg: string): string {
+  const status = extractHttpStatus(msg);
+  return status
+    ? `Chat connection lost (YouTube HTTP ${status})`
+    : "Chat connection lost";
+}
+
+/**
+ * A non-transient chat error on an authenticated session should rebuild the
+ * chat on the guest client rather than end it. Guest sessions are unaffected.
+ */
+export function shouldDegradeToAnonymous(
+  authenticated: boolean,
+  msg: string,
+): boolean {
+  if (!authenticated) return false;
+  if (isTransientChatBlock(msg)) return false;
+  if (isPlayabilityError(msg)) return false;
+  return true;
+}
+
+/** Response body attached by youtubei.js to a failed request, trimmed for logs. */
+export function errorBodySnippet(err: unknown): string | undefined {
+  const info = (err as { info?: unknown } | null)?.info;
+  if (typeof info !== "string" || !info) return undefined;
+  return info.replace(/\s+/g, " ").slice(0, 300);
+}
+
 /**
  * Retry auth failures (incl. 401/403 or a blocked auth session) with the
  * anonymous client so a rejected token never takes read-only chat down.
@@ -196,6 +234,10 @@ function clearChatRestart(session: ChatSession, sessionKey: string): void {
     clearTimeout(session.restartTimer);
     session.restartTimer = null;
   }
+  if (session.teardownTimer) {
+    clearTimeout(session.teardownTimer);
+    session.teardownTimer = null;
+  }
   transientChatFailures.delete(sessionKey);
 }
 
@@ -269,6 +311,10 @@ interface ChatSession {
   destroyTimer: ReturnType<typeof setTimeout> | null;
   /** Pending timer for an in-place reconnect after a transient block. */
   restartTimer: ReturnType<typeof setTimeout> | null;
+  /** Pending 30s teardown after a non-transient chat error. */
+  teardownTimer: ReturnType<typeof setTimeout> | null;
+  /** True while an authenticated chat is being rebuilt as a guest. */
+  degrading: boolean;
   ready: Promise<void>;
 }
 
@@ -971,6 +1017,8 @@ async function ensureChatSession(
     lastUpdate: Date.now(),
     destroyTimer: null,
     restartTimer: null,
+    teardownTimer: null,
+    degrading: false,
     ready: Promise.resolve(),
   };
   const sessionRef = session;
@@ -1457,6 +1505,8 @@ async function ensureChatSession(
     const s = activeLiveChats.get(sessionKey);
     // Ignore events from a LiveChat that was already replaced on reconnect.
     if (!s || s.chat !== chat) return;
+    // Ending the chat during a guest rebuild is not a stream end.
+    if (s.degrading) return;
     // A transient block surfaces as an error followed by a synthetic "end"
     // the error handler is reconnecting this session in place, so the
     // teardown below must not run.
@@ -1480,10 +1530,14 @@ async function ensureChatSession(
   chat.on("error", (err: any) => {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error("YouTube LiveChat error:", errMsg);
+    const body = errorBodySnippet(err);
+    if (body) console.error("[YouTube Chat] Response body:", body);
 
     const s = activeLiveChats.get(sessionKey);
     // Ignore events from a LiveChat that was already replaced on reconnect.
     if (!s || s.chat !== chat) return;
+    // Errors from the chat being torn down for a guest rebuild are expected.
+    if (s.degrading) return;
 
     if (errMsg.includes("403")) {
       blockedChatFailures.set(sessionKey, Date.now() + CHAT_FAILURE_COOLDOWN_MS);
@@ -1528,30 +1582,44 @@ async function ensureChatSession(
       return;
     }
 
-    // Non-403 error: wait 30s then clean up
-    clearChatRestart(s, sessionKey);
-    setTimeout(() => {
-      const current = activeLiveChats.get(sessionKey);
-      if (current && current.chat === chat) {
-        for (const c of current.clients.values()) {
+    // Non-transient error. An authenticated chat is rebuilt as a guest so a
+    // rejected viewer token doesn't end the stream. Otherwise wait 30s, then
+    // clean up. A later transient error cancels that wait (see
+    // armTransientReconnect).
+    const scheduleTeardown = () => {
+      clearChatRestart(s, sessionKey);
+      s.teardownTimer = setTimeout(() => {
+        s.teardownTimer = null;
+        const current = activeLiveChats.get(sessionKey);
+        if (current && current.chat === chat) {
+          for (const c of current.clients.values()) {
+            try {
+              c.controller.enqueue(
+                sseEvent(
+                  JSON.stringify({ error: chatLostMessage(errMsg) }),
+                  "error",
+                ),
+              );
+            } catch {}
+            try {
+              c.controller.close();
+            } catch {}
+          }
           try {
-            c.controller.enqueue(
-              sseEvent(
-                JSON.stringify({ error: "Chat connection lost" }),
-                "error",
-              ),
-            );
+            chat.stop();
           } catch {}
-          try {
-            c.controller.close();
-          } catch {}
+          activeLiveChats.delete(sessionKey);
         }
-        try {
-          chat.stop();
-        } catch {}
-        activeLiveChats.delete(sessionKey);
-      }
-    }, 30000);
+      }, 30000);
+    };
+
+    if (shouldDegradeToAnonymous(s.authenticated, errMsg)) {
+      void degradeToAnonymous(s, sessionKey, videoId, errMsg).then((ok) => {
+        if (!ok) scheduleTeardown();
+      });
+      return;
+    }
+    scheduleTeardown();
   });
 
     console.log(`[YouTube Chat] Starting live chat for video ${videoId}`);
@@ -1570,6 +1638,12 @@ async function ensureChatSession(
     const s = session;
     if (!s) return;
     if (activeLiveChats.get(sessionKey) !== s) return;
+    // The stream is recoverable, so a teardown queued by an earlier error
+    // must not fire during the backoff.
+    if (s.teardownTimer) {
+      clearTimeout(s.teardownTimer);
+      s.teardownTimer = null;
+    }
     // A reconnect is already scheduled for this episode. Hold until it
     // runs (or fails there and escalates).
     if (s.restartTimer) return;
@@ -1670,6 +1744,50 @@ async function ensureChatSession(
         }
       })();
     }, backoff);
+  };
+
+  /**
+   * Rebuilds an authenticated chat on the guest client after a non-transient
+   * error, keeping the SSE clients and message buffer. Returns false if the
+   * guest client or the new chat can't start, so the caller tears down.
+   */
+  const degradeToAnonymous = async (
+    s: ChatSession,
+    key: string,
+    vid: string,
+    reason: string,
+  ): Promise<boolean> => {
+    if (!s.authenticated || s.degrading) return false;
+    if (activeLiveChats.get(key) !== s) return false;
+    s.degrading = true;
+    try {
+      const guestYt = await getInnertube();
+      clearChatRestart(s, key);
+      try {
+        s.chat?.stop();
+      } catch {}
+      // Holds from the viewer's session can't be approved through the guest
+      // client, so drop them rather than offer buttons that will fail.
+      s.automodItems.clear();
+      s.yt = guestYt;
+      s.authenticated = false;
+      await startChat();
+      s.lastUpdate = Date.now();
+      console.warn(
+        `[YouTube Chat] Authenticated chat for ${vid} failed (${chatLostMessage(reason)}); continuing as a guest`,
+      );
+      broadcast(s, "notice", { status: "reconnected" });
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[YouTube Chat] Guest fallback failed for ${vid}:`,
+        msg,
+      );
+      return false;
+    } finally {
+      s.degrading = false;
+    }
   };
 
   try {
