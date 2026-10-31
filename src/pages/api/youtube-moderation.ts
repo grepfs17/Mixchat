@@ -6,6 +6,7 @@ import {
   resolveLiveChatMessageId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
+import { runAsModerationAction } from "../../lib/youtube";
 import { getAutomodTarget } from "./youtube-stream-chat";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
 import {
@@ -177,7 +178,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         // NavigationEndpoint.call resolves the button's command and executes it
         // through the viewer's live-chat session. Passing the endpoint object
         // to actions.execute() would build an invalid request URL.
-        await button.endpoint.call(target.yt.actions, { parse: true });
+        await runAsModerationAction(() =>
+          button.endpoint.call(target.yt.actions, { parse: true }),
+        );
         return jsonResponse({ success: true });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

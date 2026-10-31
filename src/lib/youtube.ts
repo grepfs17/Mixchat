@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Innertube, Parser } from "youtubei.js";
 import { googleFetch } from "./google";
 import { getPoToken, invalidatePoToken } from "./potoken";
@@ -5,6 +6,17 @@ import { YT_USER_AGENT } from "./constants";
 
 let yt: Innertube | null = null;
 let isInitializing = false;
+
+const moderationScope = new AsyncLocalStorage<true>();
+
+/**
+ * Marks requests made inside `fn` as viewer moderation actions. A 403 there
+ * means the moderator lacks permission, not that the proxy is blocked, so it
+ * must not count against proxy health.
+ */
+export function runAsModerationAction<T>(fn: () => Promise<T>): Promise<T> {
+  return moderationScope.run(true, fn);
+}
 
 Parser.setParserErrorHandler(({ error_type }) => {
   if (error_type === "class_not_found") return;
@@ -344,6 +356,7 @@ export function createInnertubeFetch({
   );
 
   return async (input: any, init?: any): Promise<Response> => {
+    const isModerationAction = moderationScope.getStore() === true;
     let urlStr = "";
     try {
       if (typeof input === "string") urlStr = input;
@@ -487,6 +500,10 @@ export function createInnertubeFetch({
               }
 
               if (proxyRes.status === 403) {
+                // A moderator action is rejected by YouTube for permission
+                // reasons. Another proxy would get the same answer, so return
+                // it without penalizing this proxy.
+                if (isModerationAction) return proxyRes;
                 markProxyFailed(proxy);
                 lastError = new Error(`Forbidden (403)`);
                 lastStatus = 403;

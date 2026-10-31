@@ -149,7 +149,7 @@ mixchat/
 ### 7. YouTube Proxy System
 
 - All InnerTube API calls can be routed through a Vercel proxy farm (see `youtube.ts`).
-- Hash-based videoId distribution + failover + cooldown for failed proxies.
+- Hash-based videoId distribution + failover + cooldown for failed proxies. A 403 on a viewer's AutoMod approve/deny action is returned as-is and does not mark the proxy failed.
 - The proxy secret stays in `Authorization`; a viewer's OAuth token is forwarded separately as `X-YouTube-User-Authorization` so authenticated live-chat sessions work through the proxy.
 - Optional auto-generated PoToken (bot guard token) via `src/lib/potoken.ts`.
 
