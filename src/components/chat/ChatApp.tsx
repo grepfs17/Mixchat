@@ -20,6 +20,7 @@ import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { SongQueueItem } from "../../lib/songQueue/types";
 import { sendHelixMessage } from "../../lib/twitch";
 import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
+import { IS_DESKTOP } from "../../lib/constants";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 export default function ChatApp(props: ChatAppStateProps) {
@@ -368,7 +369,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       twitchBroadcasterId: selectedTwitchChannel,
       youtubeChannelId: youtubeSession?.userId,
     },
-    enabled: showModTools && Boolean(songChannelKey),
+    enabled: !IS_DESKTOP && showModTools && Boolean(songChannelKey),
     onError: onSongError,
     onSendChat: onSongSendChat,
     onAnnounceNowPlaying: onSongAnnounce,

@@ -5,6 +5,7 @@ import {
   FaUpload,
 } from "react-icons/fa";
 import type { SettingsItemDef } from "./types";
+import { IS_DESKTOP } from "../../lib/constants";
 
 
 export interface StreamerSettingsProps {
@@ -54,8 +55,15 @@ function StreamerToolsSetting({
         When enabled, a <strong>Streamer tools</strong> button appears in the
         chat header while you are viewing your own channel. It currently
         contains a <strong>Giveaway</strong> tool and a
-        <strong> Song Queue</strong> tool that lets chatters submit YouTube
-        links in chat and follow along on a shareable public page.
+        <strong> Music Player</strong> tool.
+        {!IS_DESKTOP && (
+          <>
+            {" "}
+            It also includes a <strong>Song Queue</strong> tool that lets
+            chatters submit YouTube links in chat and follow along on a
+            shareable public page.
+          </>
+        )}
       </p>
     </div>
   );

@@ -17,7 +17,7 @@ import {
   FONT_FAMILY_MAP,
   THEME_OPTIONS,
 } from "../lib/types";
-import { IS_TWITCH_ONLY } from "../lib/constants";
+import { IS_DESKTOP, IS_TWITCH_ONLY } from "../lib/constants";
 import { useSettingsContext } from "../contexts/SettingsContext";
 import "../styles/OnboardingWizard.css";
 
@@ -104,8 +104,9 @@ const BASE_SETTINGS: SettingDef[] = [
   {
     key: "streamerToolsEnabled",
     label: "Streamer tools",
-    description:
-      "Shows a Streamer tools button in the chat header on your own channel with giveaways, song queue, and other utilities.",
+    description: IS_DESKTOP
+      ? "Shows a Streamer tools button in the chat header on your own channel with giveaways, music player, and other utilities."
+      : "Shows a Streamer tools button in the chat header on your own channel with giveaways, song queue, and other utilities.",
     choosableFor: [],
     icon: <FaBroadcastTower size={13} />,
   },

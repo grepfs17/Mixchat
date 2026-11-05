@@ -14,6 +14,7 @@ import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
+import { IS_DESKTOP } from "../../lib/constants";
 
 type StreamerToolId = "giveaway" | "song-queue" | "music-player" | null;
 type AnnounceWinnerHandler = NonNullable<
@@ -114,7 +115,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
         />
       )}
 
-      {showModTools && songQueue.phase === "open" && (
+      {!IS_DESKTOP && showModTools && songQueue.phase === "open" && (
         <SongQueueMinimizedBar
           queue={songQueue}
           hidden={streamerToolsOpen}

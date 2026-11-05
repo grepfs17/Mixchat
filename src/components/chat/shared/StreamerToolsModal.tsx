@@ -28,6 +28,7 @@ import {
 } from "../../../hooks/chat/usePastPlaylists";
 import type { PastPlaylistEntry } from "../../../lib/streamerTools/pastPlaylists";
 import type { SongQueuePublicView } from "../../../lib/songQueue/types";
+import { IS_DESKTOP } from "../../../lib/constants";
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
@@ -62,6 +63,12 @@ interface ToolDescriptor {
   description: string;
 }
 
+const WEB_ONLY_TOOLS = new Set<ToolId>(["song-queue", "wheel"]);
+
+function isToolAvailable(id: ToolId): boolean {
+  return !IS_DESKTOP || !WEB_ONLY_TOOLS.has(id);
+}
+
 const TOOLS: ToolDescriptor[] = [
   {
     id: "music-player",
@@ -86,6 +93,8 @@ const TOOLS: ToolDescriptor[] = [
       "Spin a wheel to pick a winner. Opens in a new tab. Save and share wheels.",
   },
 ];
+
+const AVAILABLE_TOOLS = TOOLS.filter((tool) => isToolAvailable(tool.id));
 
 function formatDate(iso: string): string {
   try {
@@ -731,7 +740,9 @@ export default function StreamerToolsModal({
   streamGameName = "",
   onSearchCategories,
 }: StreamerToolsModalProps) {
-  const [activeTool, setActiveTool] = useState<ToolId | null>(initialTool);
+  const [activeTool, setActiveTool] = useState<ToolId | null>(
+    initialTool && isToolAvailable(initialTool) ? initialTool : null,
+  );
   const [announcing, setAnnouncing] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -760,7 +771,7 @@ export default function StreamerToolsModal({
     : "Nothing to minimize in this state";
 
   const tool = useMemo(
-    () => TOOLS.find((t) => t.id === activeTool) ?? null,
+    () => AVAILABLE_TOOLS.find((t) => t.id === activeTool) ?? null,
     [activeTool],
   );
 
@@ -819,7 +830,7 @@ export default function StreamerToolsModal({
           {!tool ? (
             <>
               <ul className="streamer-tools-list">
-                {TOOLS.map((t) => (
+                {AVAILABLE_TOOLS.map((t) => (
                   <li key={t.id} className="streamer-tools-list-item">
                     <div className="streamer-tools-list-meta">
                       <span className="streamer-tools-list-label">
@@ -845,10 +856,12 @@ export default function StreamerToolsModal({
                 ))}
               </ul>
               <HistorySection onChanged={() => {}} />
-              <PastPlaylistsSection
-                channelKey={channelKey}
-                publicOrigin={publicOrigin}
-              />
+              {!IS_DESKTOP && (
+                <PastPlaylistsSection
+                  channelKey={channelKey}
+                  publicOrigin={publicOrigin}
+                />
+              )}
             </>
           ) : (
             <div className="streamer-tools-active">
