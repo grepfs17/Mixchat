@@ -3,6 +3,9 @@ import {
   FaTimes,
   FaChevronLeft,
   FaChevronRight,
+  FaTwitch,
+  FaYoutube,
+  FaPlayCircle,
 } from "react-icons/fa";
 import ChatApp from "../chat/ChatApp";
 import StreamEmbed from "../StreamEmbed";
@@ -337,16 +340,18 @@ function EmbedHeader({
             onClick={() => setPlayerType("embed")}
             className={`player-type-btn${playerType === "embed" ? " active-twitch" : ""}`}
             title="Twitch embed player"
+            aria-label="Twitch embed player"
           >
-            Twitch
+            <FaTwitch size={15} />
           </button>
           <button
             type="button"
             onClick={() => setPlayerType("m3u8")}
             className={`player-type-btn${playerType === "m3u8" ? " active-m3u8" : ""}`}
             title="M3U8 HLS player"
+            aria-label="M3U8 HLS player"
           >
-            M3U8 (experimental)
+            <FaPlayCircle size={15} />
           </button>
           {linkedYoutubeUrl && (
             <button
@@ -354,8 +359,9 @@ function EmbedHeader({
               onClick={() => setPlayerType("youtube")}
               className={`player-type-btn${playerType === "youtube" ? " active-youtube" : ""}`}
               title="YouTube live stream"
+              aria-label="YouTube live stream"
             >
-              YouTube
+              <FaYoutube size={15} />
             </button>
           )}
         </div>
