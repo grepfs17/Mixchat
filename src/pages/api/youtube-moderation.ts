@@ -6,11 +6,13 @@ import {
   resolveLiveChatMessageId,
   invalidateLiveChatId,
 } from "../../lib/youtubeLiveChat";
-import {
-  getAutomodItem,
-} from "./youtube-stream-chat";
-import { getInnertube } from "../../lib/youtube";
+import { runAsModerationAction } from "../../lib/youtube";
+import { getAutomodTarget } from "./youtube-stream-chat";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
+import {
+  getYouTubeAuthIdentity,
+  getYouTubeSessionKey,
+} from "../../server/youtubeAuth";
 
 interface ModerationBody {
   action?: "delete" | "ban" | "timeout" | "automod";
@@ -138,13 +140,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         );
       }
 
-      const automodItem = getAutomodItem(videoId, messageId);
-      if (!automodItem) {
+      // Resolve the same viewer-scoped session that received the hold.
+      const auth = getYouTubeAuthIdentity(cookies);
+      const sessionKey = getYouTubeSessionKey(videoId, auth.authKey);
+      const target = getAutomodTarget(sessionKey, messageId);
+      if (!target) {
         return jsonResponse(
-          { error: "Auto-mod message not found. It may have already been handled." },
+          {
+            error:
+              "Auto-mod message not found. It may have already been handled, or the chat session is not connected.",
+          },
           404,
         );
       }
+
+      const automodItem = target.item;
 
       const buttons: any[] = Array.isArray(automodItem.moderation_buttons)
         ? automodItem.moderation_buttons
@@ -165,8 +175,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       try {
-        const yt = await getInnertube();
-        await yt.actions.execute(button.endpoint);
+        // NavigationEndpoint.call resolves the button's command and executes it
+        // through the viewer's live-chat session. Passing the endpoint object
+        // to actions.execute() would build an invalid request URL.
+        await runAsModerationAction(() =>
+          button.endpoint.call(target.yt.actions, { parse: true }),
+        );
         return jsonResponse({ success: true });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

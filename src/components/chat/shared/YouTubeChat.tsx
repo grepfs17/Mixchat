@@ -20,6 +20,8 @@ type ChatMessage = Omit<UnifiedYTMessage, "parts"> & {
 interface YouTubeChatProps {
   videoId: string;
   channel?: string;
+  /** Signed-in viewer id. Changing it reconnects the viewer-specific session. */
+  authUserId?: string;
   /** Called whenever the message list updates (for unified chat mode) */
   onMessages?: (messages: ChatMessage[]) => void;
   /** Optimistic messages injected by the parent (shown immediately after send) */
@@ -236,6 +238,7 @@ function YouTubeChatMessageList({
 export default function YouTubeChat({
   videoId,
   channel,
+  authUserId,
   onMessages,
   optimisticMessages,
   fontSize,
@@ -344,6 +347,7 @@ export default function YouTubeChat({
   }, [olderMessages, mergedMessages]);
 
   const prevVideoIdRef = useRef<string | null>(null);
+  const prevAuthUserIdRef = useRef<string | undefined>(undefined);
 
   // Connect to SSE stream
   useEffect(() => {
@@ -351,15 +355,20 @@ export default function YouTubeChat({
 
     let isMounted = true;
     const probeAbort = new AbortController();
-    const isInitialConnect = prevVideoIdRef.current !== videoId;
+    // A different video or viewer means a different server-side session.
+    // Don't carry over messages (or AutoMod holds) from the old one.
+    const sessionChanged =
+      prevVideoIdRef.current !== videoId ||
+      prevAuthUserIdRef.current !== authUserId;
     prevVideoIdRef.current = videoId;
+    prevAuthUserIdRef.current = authUserId;
     retryCountRef.current = 0;
     errorRef.current = null;
     setIsLoading(true);
     setIsConnected(false);
     setError(null);
     setReconnectStatus("idle");
-    if (isInitialConnect) setMessages([]);
+    if (sessionChanged) setMessages([]);
 
     const connect = async () => {
       if (!isMounted) return;
@@ -425,6 +434,7 @@ export default function YouTubeChat({
           isDeleted: msg.isDeleted,
           deletedByText: msg.deletedByText,
           targetUsername: msg.targetUsername,
+          automodButtons: msg.automodButtons,
           authorIsModerator: msg.authorIsModerator,
           authorIsOwner: msg.authorIsOwner,
           authorIsMember: msg.authorIsMember,
@@ -432,6 +442,8 @@ export default function YouTubeChat({
 
         if (channel !== undefined) {
           for (const m of fetchedMessages) {
+            // Never persist moderator-only, ephemeral AutoMod holds.
+            if (m.messageType === "automod") continue;
             saveMessage(
               {
                 id: m.id,
@@ -491,12 +503,13 @@ export default function YouTubeChat({
           isDeleted: msg.isDeleted,
           deletedByText: msg.deletedByText,
           targetUsername: msg.targetUsername,
+          automodButtons: msg.automodButtons,
           authorIsModerator: msg.authorIsModerator,
           authorIsOwner: msg.authorIsOwner,
           authorIsMember: msg.authorIsMember,
         };
 
-        if (channel !== undefined) {
+        if (channel !== undefined && newMsg.messageType !== "automod") {
           saveMessage(
             {
               id: newMsg.id,
@@ -525,6 +538,36 @@ export default function YouTubeChat({
         });
       });
 
+      es.addEventListener("update", (e: Event) => {
+        if (!isMounted) return;
+        const payload = JSON.parse((e as MessageEvent).data) as
+          | ChatMessage
+          | { message: ChatMessage; previousId?: string };
+        const msg = "message" in payload ? payload.message : payload;
+        const previousId =
+          "previousId" in payload ? payload.previousId : undefined;
+        const nextMsg: ChatMessage = {
+          ...msg,
+          parts: (msg.parts || []) as MessagePart[],
+          timestamp: new Date(msg.timestamp),
+        };
+        setMessages((prev) => {
+          const filtered =
+            previousId && previousId !== nextMsg.id
+              ? prev.filter((m) => m.id !== previousId)
+              : prev;
+          const idx = filtered.findIndex((m) => m.id === nextMsg.id);
+          if (idx === -1) {
+            const next = [...filtered, nextMsg];
+            const max = getMaxDisplayedMessages();
+            return next.length > max ? next.slice(-max) : next;
+          }
+          const next = [...filtered];
+          next[idx] = nextMsg;
+          return next;
+        });
+      });
+
       es.addEventListener("delete", (e: Event) => {
         if (!isMounted) return;
         const data = JSON.parse((e as MessageEvent).data) as SSEDeleteEvent;
@@ -533,15 +576,20 @@ export default function YouTubeChat({
         }
         setMessages((prev) => {
           if (showDeletedMessages) {
-            return prev.map((m) =>
-              m.id === data.messageId
-                ? {
-                    ...m,
-                    isDeleted: true,
-                    deletedByText: data.deletedByText ?? m.deletedByText,
-                  }
-                : m,
-            );
+            // Resolved AutoMod holds disappear instead of lingering as tombstones.
+            return prev
+              .filter(
+                (m) => !(m.id === data.messageId && m.messageType === "automod"),
+              )
+              .map((m) =>
+                m.id === data.messageId
+                  ? {
+                      ...m,
+                      isDeleted: true,
+                      deletedByText: data.deletedByText ?? m.deletedByText,
+                    }
+                  : m,
+              );
           }
           return prev.filter((m) => m.id !== data.messageId);
         });
@@ -651,7 +699,7 @@ export default function YouTubeChat({
         reconnectTimerRef.current = null;
       }
     };    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [videoId, reloadKey]);
+    }, [videoId, reloadKey, authUserId]);
 
   // Track whether the view is pinned to the bottom so auto-scroll does not
   // fight the user reading older history.

@@ -152,6 +152,33 @@ describe("useLazyChatHistory", () => {
     expect(result.current.history).toHaveLength(0);
   });
 
+  it("does not load ephemeral messages from IndexedDB history", async () => {
+    const now = Date.now();
+    const live = [makeMessage("live0", now - 1000)];
+
+    await saveMessage(
+      { ...makeMessage("held", now - 2000), messageType: "automod" },
+      "testchannel",
+    );
+    await saveMessage(makeMessage("old", now - 3000), "testchannel");
+
+    const { result } = renderHook(() =>
+      useLazyChatHistory<TwitchMessage>({
+        ...baseOptions(),
+        live,
+        liveCap: 3,
+        isEphemeral: (m) => m.messageType === "automod",
+      }),
+    );
+
+    act(() => {
+      container.dispatchEvent(new Event("scroll"));
+    });
+
+    await waitFor(() => expect(result.current.history.length).toBeGreaterThan(0));
+    expect(result.current.history.map((m) => m.id)).toEqual(["old"]);
+  });
+
   it("does not absorb ephemeral messages (e.g. AutoMod holds) evicted from a full window", async () => {
     const now = Date.now();
     const a: TwitchMessage = {

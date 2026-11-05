@@ -144,7 +144,9 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 );
                 backdrop-filter: blur(14px) saturate(140%);
                 -webkit-backdrop-filter: blur(14px) saturate(140%);
-                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.22);
+                /* No upward box-shadow: it paints over the stream embed and
+                   Chromium reports the player as obscured, which makes Twitch
+                   disable autoplay ("style visibility"). */
             }
 
             .app-footer__inner {

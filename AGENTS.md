@@ -33,7 +33,6 @@
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `YT_PROXY` | Comma-separated YouTube proxy URLs |
 | `YT_PROXY_TOKEN` | Auth token for YouTube proxies |
-| `YT_COOKIE` | YouTube cookie for authenticated sessions |
 | `YT_POTOKEN` | PoToken (bot guard) for YouTube API |
 | `YT_VISITOR_DATA` | Visitor data for YouTube API |
 | `YT_CLIENT` | YouTube client type (WEB, TVHTML5, etc.) |

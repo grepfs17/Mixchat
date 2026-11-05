@@ -121,6 +121,7 @@ export default function YouTubePanel({
               <YouTubeChat
                 videoId={youtubeVideoId}
                 channel={channel}
+                authUserId={youtubeSession?.userId}
                 onMessages={onYtMessages}
                 optimisticMessages={ytOptimisticMessages}
                 fontSize={fontSize}

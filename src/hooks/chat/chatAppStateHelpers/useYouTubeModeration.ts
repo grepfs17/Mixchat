@@ -108,14 +108,17 @@ export function useYouTubeModeration({
     }
     if (ownerConfirmedVideoRef.current === youtubeVideoId) return;
 
-    // Non-owner moderator: re-derived from the current buffer so stale messages
-    // from a previously-viewed stream can never keep mod mode enabled here.
+    // Re-derived per stream. An AutoMod hold is moderator-only, so its
+    // presence also proves mod status (even before the mod has chatted).
     const hasOwnModMessage = (messages ?? []).some(
       (m) =>
         m.authorChannelId === ownChannelId &&
         (m.authorIsModerator || m.authorIsOwner),
     );
-    setIsYouTubeModerator(hasOwnModMessage);
+    const hasAutomodHold = (messages ?? []).some(
+      (m) => m.messageType === "automod",
+    );
+    setIsYouTubeModerator(hasOwnModMessage || hasAutomodHold);
   }, [youtubeVideoId, ytChannelId, ownChannelId, messages]);
 
   const notify = useCallback(

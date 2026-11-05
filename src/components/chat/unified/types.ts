@@ -28,6 +28,8 @@ export interface YTMessage {
   authorIsMember?: boolean;
   /** Username of the target when this message is a system note (e.g. "X was removed from the chat"). */
   targetUsername?: string;
+  /** Approve/deny buttons for a moderator-only AutoMod hold. */
+  automodButtons?: { text: string; is_disabled: boolean }[];
   superchat?: {
     amount: string;
     color: string;

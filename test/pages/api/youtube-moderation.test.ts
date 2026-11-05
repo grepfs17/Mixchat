@@ -17,6 +17,14 @@ vi.mock("../../../src/lib/rateLimit", () => ({
   checkRateLimit: vi.fn(() => true),
 }));
 
+const { mockedAutomodTarget } = vi.hoisted(() => ({
+  mockedAutomodTarget: vi.fn(),
+}));
+
+vi.mock("../../../src/pages/api/youtube-stream-chat", () => ({
+  getAutomodTarget: mockedAutomodTarget,
+}));
+
 import { googleFetch } from "../../../src/lib/google";
 import {
   resolveActiveLiveChatId,
@@ -56,6 +64,7 @@ describe("POST /api/youtube-moderation", () => {
     mockedFetch.mockReset();
     mockedResolve.mockReset();
     mockedInvalidate.mockReset();
+    mockedAutomodTarget.mockReset();
     (process.env as any).NODE_ENV = "test";
   });
 
@@ -235,5 +244,45 @@ describe("POST /api/youtube-moderation", () => {
     expect(res.status).toBe(403);
     const data = await res.json();
     expect(data.error).toMatch(/can't remove a moderator or the owner/i);
+  });
+
+  it("returns 404 when the AutoMod hold is not in the viewer session", async () => {
+    mockedAutomodTarget.mockReturnValueOnce(undefined);
+    const res = await POST(
+      makeRequest({
+        action: "automod",
+        videoId: "v1",
+        messageId: "held-1",
+        decision: "approve",
+      }),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("executes the AutoMod button on the viewer's session", async () => {
+    const actions = { execute: vi.fn() };
+    const call = vi.fn().mockResolvedValue(undefined);
+    const denyEndpoint = { call };
+    mockedAutomodTarget.mockReturnValueOnce({
+      item: {
+        moderation_buttons: [
+          { text: "Approve", endpoint: { call: vi.fn() } },
+          { text: "Deny", endpoint: denyEndpoint },
+        ],
+      },
+      yt: { actions },
+    });
+
+    const res = await POST(
+      makeRequest({
+        action: "automod",
+        videoId: "v1",
+        messageId: "held-1",
+        decision: "deny",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(call).toHaveBeenCalledWith(actions, { parse: true });
   });
 });
