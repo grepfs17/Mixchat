@@ -19,10 +19,12 @@ import {
 import { checkRateLimit } from "../../../lib/rateLimit";
 import { authorizeChannel } from "../../../server/wheelAuth";
 import {
+  MAX_WHEEL_HISTORY,
   MAX_WHEEL_NAME_LENGTH,
   MAX_WHEEL_OPTIONS,
   MAX_WHEEL_OPTION_LENGTH,
   sanitizeWheelOptions,
+  type WheelHistoryEntry,
   type WheelPublicView,
   type WheelRecord,
 } from "../../../lib/wheel/types";
@@ -31,6 +33,22 @@ interface WheelPatch {
   name?: string;
   options?: string[];
   isPublic?: boolean;
+  addHistory?: WheelHistoryEntry;
+  clearHistory?: boolean;
+}
+
+const MAX_HISTORY_NAME_LENGTH = 200;
+const MAX_HISTORY_TIME_LENGTH = 40;
+
+function parseHistoryEntry(value: unknown): WheelHistoryEntry | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.name !== "string" || !v.name.trim()) return null;
+  if (typeof v.time !== "string") return null;
+  return {
+    name: v.name.trim().slice(0, MAX_HISTORY_NAME_LENGTH),
+    time: v.time.slice(0, MAX_HISTORY_TIME_LENGTH),
+  };
 }
 
 function parsePatch(value: unknown): WheelPatch | null {
@@ -58,6 +76,15 @@ function parsePatch(value: unknown): WheelPatch | null {
     if (typeof v.isPublic !== "boolean") return null;
     patch.isPublic = v.isPublic;
   }
+  if (v.addHistory !== undefined) {
+    const entry = parseHistoryEntry(v.addHistory);
+    if (!entry) return null;
+    patch.addHistory = entry;
+  }
+  if (v.clearHistory !== undefined) {
+    if (typeof v.clearHistory !== "boolean") return null;
+    patch.clearHistory = v.clearHistory;
+  }
   if (Object.keys(patch).length === 0) return null;
   return patch;
 }
@@ -67,6 +94,14 @@ function applyPatch(wheel: WheelRecord, patch: WheelPatch): WheelRecord {
   if (patch.name !== undefined) next.name = patch.name || "Untitled wheel";
   if (patch.options !== undefined) next.options = patch.options;
   if (patch.isPublic !== undefined) next.isPublic = patch.isPublic;
+
+  if (patch.clearHistory) {
+    next.history = [];
+  }
+  if (patch.addHistory) {
+    const base = Array.isArray(next.history) ? next.history : [];
+    next.history = [patch.addHistory, ...base].slice(0, MAX_WHEEL_HISTORY);
+  }
   return next;
 }
 

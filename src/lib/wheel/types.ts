@@ -6,6 +6,11 @@
  * `src/server/wheelStore.ts`) and can be shared publicly by id.
  */
 
+export interface WheelHistoryEntry {
+  name: string;
+  time: string;
+}
+
 export interface WheelRecord {
   id: string;
   name: string;
@@ -18,6 +23,8 @@ export interface WheelRecord {
   lastSeenAt: string;
   isPublic: boolean;
   version: number;
+  /** Newest-first winners. Absent only on records written before it existed. */
+  history?: WheelHistoryEntry[];
 }
 
 /** Safe projection returned to any reader (owner or public share link). */
@@ -31,6 +38,7 @@ export interface WheelPublicView {
   createdAt: string;
   updatedAt: string;
   version: number;
+  history?: WheelHistoryEntry[];
 }
 
 /** Lightweight list entry for the wheel sidebar. */
@@ -53,6 +61,9 @@ export const WHEEL_ID_LENGTH = 24;
 export const MAX_WHEEL_NAME_LENGTH = 60;
 export const MAX_WHEEL_OPTIONS = 100;
 export const MAX_WHEEL_OPTION_LENGTH = 80;
+
+/** Winners retained per wheel. Oldest entries are dropped past this. */
+export const MAX_WHEEL_HISTORY = 100;
 
 export const DEFAULT_WHEEL_OPTIONS = [
   "Yes",

@@ -122,7 +122,7 @@ async function writeWheel(baseDir: string, wheel: WheelRecord): Promise<void> {
 }
 
 export function publicWheelView(wheel: WheelRecord): WheelPublicView {
-  return {
+  const view: WheelPublicView = {
     id: wheel.id,
     name: wheel.name,
     options: wheel.options,
@@ -133,6 +133,10 @@ export function publicWheelView(wheel: WheelRecord): WheelPublicView {
     updatedAt: wheel.updatedAt,
     version: wheel.version ?? 0,
   };
+  // Keep `undefined` (rather than `[]`) for legacy wheels so clients can tell
+  // "never had server history" apart from "history was cleared".
+  if (wheel.history) view.history = wheel.history;
+  return view;
 }
 
 function summarize(wheel: WheelRecord): WheelSummary {
@@ -178,6 +182,7 @@ export async function createWheel(
     lastSeenAt: now,
     isPublic: Boolean(input.isPublic),
     version: 0,
+    history: [],
   };
   await withLock(id, () => writeWheel(opts.baseDir, wheel));
   return { id, ownerToken, wheel: publicWheelView(wheel) };

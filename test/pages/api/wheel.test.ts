@@ -310,4 +310,74 @@ describe("wheel API", () => {
     );
     expect(res.status).toBe(200);
   });
+  describe("winner history", () => {
+    async function createHistoryWheel(): Promise<string> {
+      const res = await createWheel(
+        makeContext(
+          jsonRequest("POST", "http://localhost/api/wheel", {
+            channelKey: "twitch:alice",
+            name: "History wheel",
+            options: ["A", "B"],
+          }),
+        ),
+      );
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { id: string }).id;
+    }
+
+    async function patch(id: string, body: unknown): Promise<Response> {
+      return await patchWheelRoute(
+        makeContext(
+          jsonRequest(
+            "PATCH",
+            `http://localhost/api/wheel/${id}?channelKey=twitch:alice`,
+            body,
+          ),
+          { wheelId: id },
+        ),
+      );
+    }
+
+    async function readHistory(id: string): Promise<unknown> {
+      const res = await getWheelRoute(
+        makeContext(
+          new Request(
+            `http://localhost/api/wheel/${id}?channelKey=twitch:alice`,
+          ),
+          { wheelId: id },
+        ),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        wheel: { history?: unknown };
+      };
+      return body.wheel.history;
+    }
+
+    it("keeps winners newest-first and clears them", async () => {
+      const id = await createHistoryWheel();
+
+      const first = await patch(id, {
+        addHistory: { name: "Red", time: "10:00:00 01/01" },
+      });
+      expect(first.status).toBe(200);
+      await patch(id, { addHistory: { name: "Blue", time: "10:01:00 01/01" } });
+
+      expect(await readHistory(id)).toEqual([
+        { name: "Blue", time: "10:01:00 01/01" },
+        { name: "Red", time: "10:00:00 01/01" },
+      ]);
+
+      const cleared = await patch(id, { clearHistory: true });
+      expect(cleared.status).toBe(200);
+      expect(await readHistory(id)).toEqual([]);
+    });
+
+    it("rejects a malformed winner entry", async () => {
+      const id = await createHistoryWheel();
+      const res = await patch(id, { addHistory: { name: "   " } });
+      expect(res.status).toBe(400);
+      expect(await readHistory(id)).toEqual([]);
+    });
+  });
 });

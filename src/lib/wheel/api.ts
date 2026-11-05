@@ -3,6 +3,7 @@
  * in `./tokenStore`.
  */
 import type {
+  WheelHistoryEntry,
   WheelOwnerBootstrap,
   WheelPublicView,
   WheelSummary,
@@ -76,9 +77,19 @@ export async function fetchWheel(
   return body.wheel;
 }
 
+export interface WheelPatch {
+  name?: string;
+  options?: string[];
+  isPublic?: boolean;
+  /** Prepend a winner to the wheel's server-side history. */
+  addHistory?: WheelHistoryEntry;
+  /** Drop every stored winner. */
+  clearHistory?: boolean;
+}
+
 export async function updateWheel(
   wheelId: string,
-  patch: { name?: string; options?: string[]; isPublic?: boolean },
+  patch: WheelPatch,
   auth: { ownerToken?: string | null; channelKey?: string | null },
 ): Promise<WheelPublicView> {
   const params = new URLSearchParams();

@@ -3,10 +3,7 @@ import {
   FaCheck,
   FaCopy,
   FaEye,
-  FaEyeSlash,
-  FaLink,
   FaPlus,
-  FaShareSquare,
   FaSpinner,
   FaTimes,
   FaTrash,
@@ -28,10 +25,7 @@ import {
   setWheelToken,
 } from "../../lib/wheel/tokenStore";
 import {
-  addWheelHistory,
-  clearWheelHistory,
   formatHistoryTime,
-  getWheelHistory,
   type WheelHistoryEntry,
 } from "../../lib/wheel/history";
 import {
@@ -88,6 +82,21 @@ function WheelParticles({ particles }: { particles: WheelParticle[] }) {
         />
       ))}
     </div>
+  );
+}
+
+/** True when two wheel lists are identical (avoids a needless re-render). */
+function sameWheelList(a: WheelSummary[], b: WheelSummary[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (w, i) =>
+        w.id === b[i].id &&
+        w.name === b[i].name &&
+        w.optionCount === b[i].optionCount &&
+        w.isPublic === b[i].isPublic &&
+        w.updatedAt === b[i].updatedAt,
+    )
   );
 }
 
@@ -191,12 +200,7 @@ interface WheelMainHeaderProps {
   spinning: boolean;
   dirty: boolean;
   saving: boolean;
-  busy: boolean;
-  isPublic: boolean;
-  copiedLink: boolean;
   onSave: () => void;
-  onTogglePublic: () => void;
-  onCopyLink: () => void;
 }
 
 function WheelMainHeader({
@@ -207,12 +211,7 @@ function WheelMainHeader({
   spinning,
   dirty,
   saving,
-  busy,
-  isPublic,
-  copiedLink,
   onSave,
-  onTogglePublic,
-  onCopyLink,
 }: WheelMainHeaderProps) {
   return (
     <div className="wheel-main-head">
@@ -243,31 +242,6 @@ function WheelMainHeader({
               <FaCheck size={12} />
             )}
             <span>Save changes</span>
-          </button>
-        )}
-        {editable && (
-          <button
-            type="button"
-            className="wheel-btn"
-            onClick={() => void onTogglePublic()}
-            disabled={busy || spinning}
-          >
-            {isPublic ? (
-              <FaEyeSlash size={12} />
-            ) : (
-              <FaShareSquare size={12} />
-            )}
-            <span>{isPublic ? "Make private" : "Share"}</span>
-          </button>
-        )}
-        {isPublic && (
-          <button
-            type="button"
-            className="wheel-btn"
-            onClick={() => void onCopyLink()}
-          >
-            {copiedLink ? <FaCheck size={12} /> : <FaLink size={12} />}
-            <span>{copiedLink ? "Copied" : "Copy link"}</span>
           </button>
         )}
       </div>
@@ -523,6 +497,7 @@ function WheelWinnerOverlay({
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
+  const wheelsRef = useRef<WheelSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<WheelPublicView | null>(null);
   const [ownerToken, setOwnerToken] = useState<string | null>(null);
@@ -542,9 +517,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const [winner, setWinner] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const [history, setHistory] = useState<WheelHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(true);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [copiedOptions, setCopiedOptions] = useState(false);
 
   const toastTimerRef = useRef<number | null>(null);
@@ -578,9 +551,9 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       setActiveId(id);
       setOwnerToken(token);
       setActive(wheel);
+      activeRef.current = wheel;
       setDraftName(wheel.name);
       setDraftOptions(wheel.options);
-      setHistory(getWheelHistory(id));
       setBulkText("");
       setNewOption("");
       if (typeof window !== "undefined" && /\/wheel\/?$/.test(window.location.pathname)) {
@@ -642,6 +615,82 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     ? draftName !== active.name ||
       JSON.stringify(draftOptions) !== JSON.stringify(active.options)
     : false;
+  const history = active?.history ?? [];
+
+  // Mirrored into refs so the sync interval does not restart on every edit.
+  const activeRef = useRef<WheelPublicView | null>(active);
+  const dirtyRef = useRef(dirty);
+  const spinningRef = useRef(spinning);
+  useEffect(() => {
+    activeRef.current = active;
+    dirtyRef.current = dirty;
+    spinningRef.current = spinning;
+    wheelsRef.current = wheels;
+  });
+
+  // Live sync: reflect saves, renames, and deletions made by the streamer or
+  // a moderator on another device without a reload. Local unsaved edits and an
+  // in-progress spin always win over the remote copy.
+  useEffect(() => {
+    if (!activeId && !channelKey) return;
+    let cancelled = false;
+    let running = false;
+
+    const tick = async () => {
+      if (
+        running ||
+        (typeof document !== "undefined" && document.hidden)
+      ) {
+        return;
+      }
+      running = true;
+      try {
+        if (activeId) {
+          const token = ownerToken ?? (await getWheelToken(activeId));
+          const wheel = await fetchWheel(activeId, token, channelKey);
+          if (cancelled) return;
+
+          const changed = activeRef.current?.version !== wheel.version;
+          if (changed) {
+            activeRef.current = wheel;
+            setActive(wheel);
+            if (!spinningRef.current && !dirtyRef.current) {
+              setDraftName(wheel.name);
+              setDraftOptions(wheel.options);
+            }
+          }
+        }
+
+        if (channelKey) {
+          const list = await listWheels(channelKey);
+          if (cancelled) return;
+          if (!sameWheelList(wheelsRef.current, list)) {
+            wheelsRef.current = list;
+            setWheels(list);
+            // A wheel appeared while nothing is selected (the other side just
+            // created one). Only do this when the list actually changed so a
+            // failed load is not retried on every tick.
+            if (!activeId && list[0] && !spinningRef.current) {
+              await selectWheel(list[0].id);
+            }
+          }
+        }
+      } catch {
+        // Keep the last known state; the next tick retries.
+      } finally {
+        running = false;
+      }
+    };
+
+    void tick();
+    const timer = window.setInterval(() => void tick(), 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // selectWheel is stable (empty deps) and wheelsRef tracks the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, channelKey, ownerToken, selectWheel]);
 
   const particles = useMemo(
     () =>
@@ -733,30 +782,6 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     showToast,
   ]);
 
-  const handleTogglePublic = useCallback(async () => {
-    if (!activeId || !active) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await updateWheel(
-        activeId,
-        { isPublic: !active.isPublic },
-        { ownerToken, channelKey },
-      );
-      setActive(updated);
-      setWheels((prev) =>
-        prev.map((w) =>
-          w.id === updated.id ? { ...w, isPublic: updated.isPublic } : w,
-        ),
-      );
-      showToast(updated.isPublic ? "Wheel is now public" : "Wheel is now private");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update sharing");
-    } finally {
-      setBusy(false);
-    }
-  }, [active, activeId, channelKey, ownerToken, showToast]);
-
   const handleDelete = useCallback(
     async (id: string) => {
       if (
@@ -791,18 +816,6 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     },
     [activeId, channelKey, selectWheel, showToast, wheels],
   );
-
-  const copyShareLink = useCallback(async () => {
-    if (!activeId) return;
-    const url = `${window.location.origin}/wheel/${activeId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedLink(true);
-      window.setTimeout(() => setCopiedLink(false), 1500);
-    } catch {
-      setError("Could not copy link");
-    }
-  }, [activeId]);
 
   const copyAllOptions = useCallback(async () => {
     if (draftOptions.length === 0) return;
@@ -864,16 +877,22 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const handleWinner = useCallback(
     (option: string) => {
       setWinner(option);
-      if (activeId) {
-        setHistory(
-          addWheelHistory(activeId, {
-            name: option,
-            time: formatHistoryTime(new Date()),
-          }),
-        );
-      }
+      // A read-only viewer (legacy share link) has neither credential, so
+      // there is nowhere to persist the winner. Show it locally only.
+      if (!activeId || (!ownerToken && !channelKey)) return;
+      const entry = { name: option, time: formatHistoryTime(new Date()) };
+      void updateWheel(
+        activeId,
+        { addHistory: entry },
+        { ownerToken, channelKey },
+      )
+        .then((updated) => {
+          activeRef.current = updated;
+          setActive(updated);
+        })
+        .catch(() => setError("Could not save winner"));
     },
-    [activeId],
+    [activeId, channelKey, ownerToken],
   );
 
   const copyHistory = useCallback(async () => {
@@ -889,15 +908,25 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const handleClearHistory = useCallback(() => {
     if (history.length === 0) return;
+    if (!activeId || (!ownerToken && !channelKey)) return;
     if (
       typeof window !== "undefined" &&
       !window.confirm("Clear the winners history for this wheel?")
     ) {
       return;
     }
-    if (activeId) clearWheelHistory(activeId);
-    setHistory([]);
-  }, [activeId, history.length]);
+    if (!activeId) return;
+    void updateWheel(
+      activeId,
+      { clearHistory: true },
+      { ownerToken, channelKey },
+    )
+      .then((updated) => {
+        activeRef.current = updated;
+        setActive(updated);
+      })
+      .catch(() => setError("Could not clear winners"));
+  }, [activeId, channelKey, ownerToken, history.length]);
 
   return (
     <div className="wheel-page">
@@ -963,12 +992,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
                 spinning={spinning}
                 dirty={dirty}
                 saving={saving}
-                busy={busy}
-                isPublic={active.isPublic}
-                copiedLink={copiedLink}
                 onSave={handleSave}
-                onTogglePublic={handleTogglePublic}
-                onCopyLink={copyShareLink}
               />
 
               <WheelStage

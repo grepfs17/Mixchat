@@ -4,12 +4,7 @@ import {
   optionIndexAtPointer,
 } from "../../src/lib/wheel/draw";
 import { sanitizeWheelOptions } from "../../src/lib/wheel/types";
-import {
-  addWheelHistory,
-  clearWheelHistory,
-  formatHistoryTime,
-  getWheelHistory,
-} from "../../src/lib/wheel/history";
+import { formatHistoryTime } from "../../src/lib/wheel/history";
 
 describe("optionIndexAtPointer", () => {
   it("maps rotations to the four quadrant slices", () => {
@@ -76,17 +71,6 @@ describe("sanitizeWheelOptions", () => {
 });
 
 describe("wheel history", () => {
-  it("stores, appends newest-first, and clears per wheel", () => {
-    const id = "w1";
-    clearWheelHistory(id);
-    addWheelHistory(id, { name: "First", time: "10:00:00 01/01" });
-    addWheelHistory(id, { name: "Second", time: "10:01:00 01/01" });
-    const entries = getWheelHistory(id);
-    expect(entries.map((e) => e.name)).toEqual(["Second", "First"]);
-    clearWheelHistory(id);
-    expect(getWheelHistory(id)).toEqual([]);
-  });
-
   it("formats a timestamp as HH:MM:SS DD/MM", () => {
     const formatted = formatHistoryTime(new Date(2026, 0, 2, 3, 4, 5));
     expect(formatted).toBe("03:04:05 02/01");
