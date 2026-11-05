@@ -1144,10 +1144,10 @@ function DesktopHeaderActions({
         <button type="button"
           onClick={onOpenModTools}
           className="header-button mod-tools-trigger"
-          title="Streamer tools (giveaway, etc.)"
+          title="Stream tools (giveaway, etc.)"
         >
           <MdBuild size={14} className="mod-icon" />
-          <span className="header-button-label">Streamer tools</span>
+          <span className="header-button-label">Stream tools</span>
         </button>
       )}
     </div>
@@ -1286,7 +1286,7 @@ function MobileHeaderMenu({
                 }}
               >
                 <MdBuild size={14} />
-                <span>Streamer tools</span>
+                <span>Stream tools</span>
               </button>
             </>
           )}

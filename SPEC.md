@@ -64,6 +64,7 @@ mixchat/
 │   │   ├── songQueue/       # Song queue system (server+client: types, IDB, API, extraction)
 │   │   ├── musicPlayer/     # Music player (client-side IndexedDB)
 │   │   ├── streamerTools/   # Giveaways, history, chat helpers, past playlists
+│   │   ├── streamTools/     # Shared stream-tools state types + client API
 │   │   ├── wheel/           # Wheel Spin (types, client API, canvas draw, IDB owner tokens)
 │   │   ├── settings/        # Settings types
 │   │   ├── themes.ts        # Chat themes (CSS variable definitions)
@@ -80,18 +81,21 @@ mixchat/
 │   │   ├── wheelStore.ts       # Wheel Spin JSON file store (create/update/delete/public read)
 │   │   ├── wheelConfig.ts      # Wheel store base directory resolution
 │   │   ├── wheelApi.ts         # Wheel API route helpers (json, owner token, channel parsing)
-│   │   ├── wheelAuth.ts        # Server-verified channel ownership (Twitch/YouTube cookie identity)
+│   │   ├── wheelAuth.ts        # Server-verified channel ownership + Twitch moderator access
+│   │   ├── streamToolsConfig.ts  # Stream tools data directory resolution
+│   │   ├── streamToolsSettings.ts # Per-channel Stream tools access settings (enabled, allowMods)
+│   │   ├── streamToolsState.ts    # Shared Giveaway + Music Player state (versioned, atomic)
 │   │   ├── youtubeAuth.ts      # Stable viewer identity/session keys for authenticated YouTube live chat
 │   │   └── providerTokens.ts   # Refresh provider access tokens from httpOnly refresh cookies
 │   ├── pages/               # Astro pages + API routes
 │   │   ├── index.astro      # Main app page
 │   │   ├── channel/[name].astro  # Direct channel link page
 │   │   ├── s/[sessionId].astro   # Embed page (stripped-down chat)
-│   │   ├── wheel/index.astro     # Wheel Spin manager (opens from streamer tools in a new tab)
+│   │   ├── wheel/index.astro     # Wheel Spin manager (opens from Stream tools in a new tab)
 │   │   ├── wheel/[wheelId].astro # Shared/public wheel page
 │   │   ├── dev/chat-preview.astro # Dev-only chat styling gallery (blocked in prod by middleware)
 │   │   ├── auth/            # OAuth callback pages (twitch, youtube)
-│   │   └── api/             # API endpoints (song-queue, wheel, youtube-proxy, moderation, etc.)
+│   │   └── api/             # API endpoints (song-queue, wheel, stream-tools, youtube-proxy, moderation, etc.)
 │   ├── styles/              # CSS stylesheets (theme system, component styles)
 │   ├── contexts/            # React contexts (ModerationContext)
 │   └── client/              # Client-side entry points (songQueuePublic)
@@ -192,14 +196,25 @@ mixchat/
 
 ### 13. Wheel Spin (streamer tool)
 
-- **Entry point**: The "Wheel Spin" item in the streamer tools list (`src/components/chat/shared/StreamerToolsModal.tsx`). Unlike the in-modal tools it opens in a **new browser tab** at `/wheel?channel=<channelKey>`. The tool only appears on the streamer's own channel (`showModTools`).
+- **Entry point**: The "Wheel Spin" item in the Stream tools list (`src/components/chat/shared/StreamerToolsModal.tsx`). Unlike the in-modal tools it opens in a **new browser tab** at `/wheel?channel=<channelKey>`. The tool appears for the streamer and for Twitch moderators when the streamer allowed moderator access (`showStreamTools`).
 - **Page**: `src/pages/wheel/index.astro` (manager) and `src/pages/wheel/[wheelId].astro` (shared/public view) both render `src/components/wheel/WheelApp.tsx` (`client:only="react"`). Styles live in `src/styles/wheel.css` and use the app theme tokens (`vars.css` / `themes.css`). The stored chat theme is applied on mount.
 - **Canvas wheel**: `src/lib/wheel/draw.ts` (pure) renders the slices with the app accent palette. `src/components/wheel/WheelStage.tsx` owns rotation, the 8s CSS spin transition, the spin/win sounds (`public/wheel/wheel-effect.mp3`, `public/wheel/win-effect.mp3`), and derives the winner from the final angle. The option list is snapshotted at spin start (and editing controls are disabled while spinning) so the drawn slices always agree with the announced winner.
 - **Data model**: `WheelRecord` (id, name, options[], channelName/channelPlatform, `ownerTokenHash`, timestamps, `isPublic`, `version`) in `src/lib/wheel/types.ts`. Options are sanitized (trim, dedupe case-insensitively, capped at `MAX_WHEEL_OPTIONS`).
 - **Persistence**: One JSON file per wheel at `{baseDir}/{wheelId}.json` via `src/server/wheelStore.ts` (atomic temp-file + rename, per-wheel in-process mutex). Base dir resolves from `MIXCHAT_WHEEL_DIR`, else `<cwd>/data/wheels` (`src/server/wheelConfig.ts`). Public reads strip `ownerTokenHash`.
 - **API**: `GET/POST /api/wheel` (list by channel / create) and `GET/PATCH/DELETE /api/wheel/[wheelId]` (public-or-owner read: owner-token **or** channel-trust mutations). `POST` with `X-HTTP-Method-Override: DELETE` is supported for proxies. Helpers in `src/server/wheelApi.ts`. Rate-limited via `src/lib/rateLimit.ts`.
 - **Authorization**: A `channelKey` is only a claim. The channel-trust path (list, create, channel read, channel mutate/delete) additionally requires a server-verified identity from the httpOnly provider cookie: `src/server/wheelAuth.ts` resolves the Twitch login (`/helix/users`) or YouTube channel id (`channels.list?mine=true`) and compares it to the claimed channel. When the access-token cookie is missing or rejected, it mints a new one from the refresh-token cookie via `src/server/providerTokens.ts` (the same refresh used by `/api/refresh-token`) and retries, so the standalone `/wheel` page self-heals expired sessions. Verified identities are cached briefly. Failed refreshes are cooled down. Owner tokens (IndexedDB, `src/lib/wheel/tokenStore.ts`) bypass the provider check but never grant access to another channel's wheel. Provider lookup failures fail closed (401/403).
-- **CRUD & sharing**: The manager can create, rename, edit options, delete and toggle `isPublic`. Sharing copies `${origin}/wheel/<id>`. Anyone can open a public wheel to spin it, while editing requires the owner token or a verified matching channel identity. Winner history is per-wheel in localStorage (`src/lib/wheel/history.ts`).
+- **CRUD & sharing**: The manager can create, rename, edit options, delete and toggle `isPublic`. Sharing copies `${origin}/wheel/<id>`. Anyone can open a public wheel to spin it, while editing requires the owner token, a verified matching channel identity, or moderator access. Winner history is per-wheel in localStorage (`src/lib/wheel/history.ts`).
+
+### 14. Stream tools (streamer + moderator control)
+
+- **Naming**: the UI label is **Stream tools** (the internal settings key `streamerToolsEnabled` is unchanged to avoid a settings migration).
+- **Access model**: the streamer's local `streamerToolsEnabled` switch is the master switch and is mirrored to a server-side per-channel setting (`enabled`). A second flag, `allowMods`, is toggled from the Stream tools modal and is only writable by the broadcaster. Public read: `GET /api/stream-tools/settings?channelKey=...`; owner-only write: `PUT /api/stream-tools/settings` (`src/server/streamToolsSettings.ts`, base dir `MIXCHAT_STREAM_TOOLS_DIR` else `<cwd>/data/stream-tools`).
+- **Moderator verification**: `src/server/wheelAuth.ts` accepts `{ allowModerators: true }`. When the claimed identity does not match the channel, and the channel is Twitch, and `enabled && allowMods`, it resolves the caller id + the broadcaster id (`getTwitchUserByLogin`) and checks `GET /helix/moderation/channels?user_id=...` with the caller's own token (scope `user:read:moderated_channels`). Moderator status is cached for 60s; settings are read fresh so revoking access takes effect immediately. **YouTube moderators are never granted access.** Owner tokens and matching identities still work as before.
+- **UI gating**: `ChatApp` computes `showStreamTools = enabled && (isOnOwnChannel || (isTwitchModerator && allowMods))` via `useStreamToolsSettings` (5s polling). `useModeration` now clears `isModerator` on channel change so a mod of the previous channel cannot keep the button. Desktop builds only ever show tools to the broadcaster.
+- **Shared Giveaway**: `useGiveaway` takes an optional `channelKey`; when set, config/phase/timer/entries/winner live in `src/server/streamToolsState.ts` and are polled every 2s (`/api/stream-tools/giveaway`). Every authorized client posts matching chat entries (`action: ingest`, deduped by `platform:userId` server-side), the server auto-reveals once `endsAt` passes, and `action: claimAnnounce` makes exactly one client post the winner message. Without a `channelKey` (desktop, tests) the original local behaviour is kept.
+- **Shared Music Player**: `useMusicPlayer` takes `{ channelKey, isHost }`. Playlists + settings + `isPlaying` are stored in the same channel state and pushed with a 250ms debounce using optimistic concurrency (`PUT /api/stream-tools/music` returns 409 + the current state when the version moved). Only the broadcaster's client is the **audio host**: it renders the YouTube player and follows `isPlaying`/`volume`/`currentIndex`; moderator clients render a "Playing on the broadcaster's device" placeholder and can still edit playlists, seek state, and play/pause. Existing local IndexedDB playlists are migrated to the server once, and only for the host.
+- **Song Queue**: `loadSessionForChannel` / `mutateSessionWithAccess` in `src/server/songQueueApi.ts` add a channel-trust fallback to every owner-token route (read, patch, close, append, item patch/delete, play, past read/patch/delete, bulk delete). `GET /api/song-queue/active` lets an authorized moderator adopt the channel's current open queue without the owner token, and `useSongQueue` polls it every 3s so streamer and moderators stay in sync.
+- **Desktop**: `IS_DESKTOP` hides Wheel Spin and Song Queue from the tool list, disables the song-queue hook, and never grants moderator access (the desktop server is local, so a remote moderator cannot reach it).
 
 ## Project Conventions
 

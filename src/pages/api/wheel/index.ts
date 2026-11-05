@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   }
   const channel = channelFromRequest(request);
   if (!channel) return json({ error: "Missing channel" }, 400);
-  const auth = await authorizeChannel(cookies, channel);
+  const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
   if (auth !== "ok") {
     return json(
       { error: auth === "unauthenticated" ? "Not authenticated" : "Forbidden" },
@@ -95,7 +95,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }
       : (parseChannelKey(body.channelKey ?? null) ?? channelFromRequest(request));
   if (!channel) return json({ error: "Missing channel" }, 400);
-  const auth = await authorizeChannel(cookies, channel);
+  const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
   if (auth !== "ok") {
     return json(
       { error: auth === "unauthenticated" ? "Not authenticated" : "Forbidden" },

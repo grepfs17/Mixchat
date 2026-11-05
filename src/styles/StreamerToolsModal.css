@@ -1,4 +1,4 @@
-/* Streamer Tools Modal: Streamer tools list + active tool container. */
+/* Stream tools modal: tool list + active tool container. */
 .streamer-tools-modal {
     position: relative;
     background: var(--color-bg-secondary);
@@ -2822,3 +2822,39 @@
     height: 10px;
 }
 
+
+.stream-tools-access-banner {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-indigo) 14%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.stream-tools-access-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.stream-tools-access-toggle input {
+    accent-color: var(--color-indigo);
+}
+
+.music-player-bar-remote {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 12px;
+}

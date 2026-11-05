@@ -17,6 +17,7 @@ import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
+import { useStreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import type { SongQueueItem } from "../../lib/songQueue/types";
 import { sendHelixMessage } from "../../lib/twitch";
 import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
@@ -164,7 +165,41 @@ export default function ChatApp(props: ChatAppStateProps) {
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
     "giveaway" | "song-queue" | "music-player" | null
   >(null);
-  const showModTools = streamerToolsEnabled && isOnOwnChannel;
+
+  const streamToolsChannelKey = selectedTwitchChannelName
+    ? `twitch:${selectedTwitchChannelName.toLowerCase()}`
+    : null;
+  const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
+  const isTwitchModerator = !!chatState.isModerator && !isOnOwnChannel;
+  const showStreamTools = IS_DESKTOP
+    ? streamerToolsEnabled && isOnOwnChannel
+    : isOnOwnChannel
+      ? streamerToolsEnabled
+      : isTwitchModerator &&
+        streamToolsSettings.settings.enabled &&
+        streamToolsSettings.settings.allowMods;
+  const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
+    ? "owner"
+    : "moderator";
+
+  // Keep the server-side master switch in sync with the streamer's local
+  // preference so moderators see the same enabled/disabled state.
+  useEffect(() => {
+    if (!isOnOwnChannel || !streamToolsSettings.loaded) return;
+    if (streamToolsSettings.settings.enabled === streamerToolsEnabled) return;
+    void streamToolsSettings
+      .update({ enabled: streamerToolsEnabled })
+      .catch(() => {});
+  }, [
+    isOnOwnChannel,
+    streamToolsSettings.loaded,
+    streamToolsSettings.settings.enabled,
+    streamerToolsEnabled,
+  ]);
+
+  useEffect(() => {
+    if (!showStreamTools && streamerToolsOpen) setStreamerToolsOpen(false);
+  }, [showStreamTools, streamerToolsOpen]);
 
   const openStreamerTools = useCallback(
     (
@@ -229,7 +264,8 @@ export default function ChatApp(props: ChatAppStateProps) {
       twitchBroadcasterId: selectedTwitchChannel,
       youtubeChannelId: youtubeSession?.userId,
     },
-    enabled: showModTools,
+    enabled: showStreamTools,
+    channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
   });
 
   // Feed the giveaway's own buffer one message at a time. The chat window
@@ -369,7 +405,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       twitchBroadcasterId: selectedTwitchChannel,
       youtubeChannelId: youtubeSession?.userId,
     },
-    enabled: !IS_DESKTOP && showModTools && Boolean(songChannelKey),
+    enabled: !IS_DESKTOP && showStreamTools && Boolean(songChannelKey),
     onError: onSongError,
     onSendChat: onSongSendChat,
     onAnnounceNowPlaying: onSongAnnounce,
@@ -377,8 +413,11 @@ export default function ChatApp(props: ChatAppStateProps) {
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
 
   // Client-side (IndexedDB) hook always runs. Visual components render only
-  // on the user's own channel with streamer tools enabled.
-  const musicPlayer = useMusicPlayer();
+  // when Stream tools are available for this viewer.
+  const musicPlayer = useMusicPlayer({
+    channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
+    isHost: isOnOwnChannel,
+  });
   const musicHasItems =
     !!musicPlayer.activePlaylist &&
     musicPlayer.activePlaylist.items.length > 0;
@@ -461,7 +500,10 @@ export default function ChatApp(props: ChatAppStateProps) {
           giveaway={giveaway}
           songQueue={songQueue}
           musicPlayer={musicPlayer}
-          showModTools={showModTools}
+          showStreamTools={showStreamTools}
+          streamToolsRole={streamToolsRole}
+          streamToolsSettings={streamToolsSettings.settings}
+          onUpdateStreamToolsSettings={streamToolsSettings.update}
           showMusicBar={showMusicBar}
           streamerToolsOpen={streamerToolsOpen}
           streamerToolsInitialTool={streamerToolsInitialTool}
@@ -487,7 +529,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           onMentionUser={handleMentionUser}
           onOpenModTools={openStreamerTools}
           onNotification={showNotification}
-          showModTools={showModTools}
+          showModTools={showStreamTools}
         />
 
         <MobileTouchHintModal twitchConnected={props.twitchConnected} />

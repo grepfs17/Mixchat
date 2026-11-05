@@ -1,10 +1,8 @@
 import type { APIRoute } from "astro";
-import { mutateSession } from "../../../../../server/songQueueStore";
-import { getSongQueueStoreOptions } from "../../../../../server/songQueueConfig";
 import {
   clientAddress,
   json,
-  ownerTokenFromRequest,
+  mutateSessionWithAccess,
 } from "../../../../../server/songQueueApi";
 import { checkRateLimit } from "../../../../../lib/rateLimit";
 import type { SongQueueItem, SongQueueItemStatus } from "../../../../../lib/songQueue/types";
@@ -45,11 +43,9 @@ type PatchResult =
 
 type DeleteResult = { kind: "ok" } | { kind: "missing" };
 
-export const PATCH: APIRoute = async ({ request, params }) => {
+export const PATCH: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
   const itemId = params.itemId || "";
-  const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   if (!checkRateLimit(`${clientAddress(request)}:song-queue-item`, 60, 60_000)) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
@@ -61,10 +57,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   }
   if (!isUpdateBody(body)) return json({ error: "Invalid body" }, 400);
 
-  const res = await mutateSession<PatchResult>(
-    getSongQueueStoreOptions(),
+  const res = await mutateSessionWithAccess<PatchResult>(
+    request,
+    cookies,
     sessionId,
-    token,
     (s) => {
       const idx = s.items.findIndex((it) => it.id === itemId);
       if (idx === -1) return { session: s, result: { kind: "missing" } };
@@ -82,7 +78,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   );
   if (!res.ok) {
     if (res.reason === "missing") return json({ error: "Not found" }, 404);
-    if (res.reason === "auth") return json({ error: "Forbidden" }, 403);
+    if (res.reason === "unauthenticated")
+      return json({ error: "Not authenticated" }, 401);
+    if (res.reason === "auth" || res.reason === "forbidden")
+      return json({ error: "Forbidden" }, 403);
     return json({ error: "Session already ended" }, 410);
   }
   if (res.result.kind === "missing") {
@@ -91,18 +90,16 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   return json({ item: res.result.item });
 };
 
-const removeItemHandler: APIRoute = async ({ request, params }) => {
+const removeItemHandler: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
   const itemId = params.itemId || "";
-  const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   if (!checkRateLimit(`${clientAddress(request)}:song-queue-item`, 60, 60_000)) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  const res = await mutateSession<DeleteResult>(
-    getSongQueueStoreOptions(),
+  const res = await mutateSessionWithAccess<DeleteResult>(
+    request,
+    cookies,
     sessionId,
-    token,
     (s) => {
       const next = s.items.filter((it) => it.id !== itemId);
       if (next.length === s.items.length) {
@@ -120,7 +117,10 @@ const removeItemHandler: APIRoute = async ({ request, params }) => {
   );
   if (!res.ok) {
     if (res.reason === "missing") return json({ error: "Not found" }, 404);
-    if (res.reason === "auth") return json({ error: "Forbidden" }, 403);
+    if (res.reason === "unauthenticated")
+      return json({ error: "Not authenticated" }, 401);
+    if (res.reason === "auth" || res.reason === "forbidden")
+      return json({ error: "Forbidden" }, 403);
     return json({ error: "Session already ended" }, 410);
   }
   if (res.result.kind === "missing") return json({ error: "Item not found" }, 404);

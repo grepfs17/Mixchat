@@ -3,7 +3,16 @@ import type { AstroCookies } from "astro";
 
 vi.mock("../../src/lib/twitch", () => ({
   getTwitchUser: vi.fn(),
+  getTwitchUserByLogin: vi.fn(),
   refreshTwitchAccessToken: vi.fn(),
+}));
+
+const { streamSettings } = vi.hoisted(() => ({
+  streamSettings: { enabled: true, allowMods: false },
+}));
+
+vi.mock("../../src/server/streamToolsSettings", () => ({
+  getStreamToolsSettings: vi.fn(async () => ({ ...streamSettings })),
 }));
 vi.mock("../../src/lib/youtube", () => ({
   getYoutubeUser: vi.fn(),
@@ -12,12 +21,16 @@ vi.mock("../../src/lib/youtube", () => ({
 
 import {
   getTwitchUser,
+  getTwitchUserByLogin,
   refreshTwitchAccessToken,
 } from "../../src/lib/twitch";
 import { getYoutubeUser } from "../../src/lib/youtube";
 import { authorizeChannel } from "../../src/server/wheelAuth";
 
 const mockTwitch = getTwitchUser as unknown as ReturnType<typeof vi.fn>;
+const mockTwitchByLogin = getTwitchUserByLogin as unknown as ReturnType<
+  typeof vi.fn
+>;
 const mockYoutube = getYoutubeUser as unknown as ReturnType<typeof vi.fn>;
 const mockRefreshTwitch = refreshTwitchAccessToken as unknown as ReturnType<
   typeof vi.fn
@@ -41,11 +54,14 @@ function asCookies(cookies: FakeCookies): AstroCookies {
 }
 
 beforeEach(() => {
+  streamSettings.enabled = true;
+  streamSettings.allowMods = false;
   vi.stubEnv("PUBLIC_TWITCH_CLIENT_ID", "client-id");
   vi.stubEnv("TWITCH_CLIENT_SECRET", "client-secret");
   vi.stubEnv("PUBLIC_YOUTUBE_CLIENT_ID", "yt-client-id");
   vi.stubEnv("YOUTUBE_CLIENT_SECRET", "yt-client-secret");
   mockTwitch.mockReset();
+  mockTwitchByLogin.mockReset();
   mockYoutube.mockReset();
   mockRefreshTwitch.mockReset();
 });
@@ -153,5 +169,100 @@ describe("authorizeChannel", () => {
       { channelName: "alice", channelPlatform: "kick" },
     );
     expect(res).toBe("forbidden");
+  });
+
+  describe("Twitch moderator access", () => {
+    it("rejects a moderator when the streamer has not allowed it", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = false;
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+      mockTwitchByLogin.mockResolvedValue({
+        userId: "u-alice",
+        login: "alice",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ broadcaster_id: "u-alice" }] }),
+      }) as any;
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("forbidden");
+      expect(mockTwitchByLogin).not.toHaveBeenCalled();
+    });
+
+    it("authorizes a Twitch moderator when allowed", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+      mockTwitchByLogin.mockResolvedValue({
+        userId: "u-alice",
+        login: "alice",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ broadcaster_id: "u-alice" }] }),
+      }) as any;
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-2" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("ok");
+      expect(mockTwitchByLogin).toHaveBeenCalledWith(
+        "tok-mod-2",
+        "client-id",
+        "alice",
+      );
+    });
+
+    it("rejects a Twitch user who is not a moderator of the channel", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+      mockTwitchByLogin.mockResolvedValue({
+        userId: "u-alice",
+        login: "alice",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [] }),
+      }) as any;
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-3" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("forbidden");
+    });
+
+    it("does not use moderator access without allowModerators", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-4" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+      );
+      expect(res).toBe("forbidden");
+      expect(mockTwitchByLogin).not.toHaveBeenCalled();
+    });
+
+    it("never grants moderator access on YouTube channels", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      mockYoutube.mockResolvedValue({ userId: "UC-mallory" });
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ youtube_token: "yt-mod" })),
+        { channelName: "UC-alice", channelPlatform: "youtube" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("forbidden");
+    });
   });
 });

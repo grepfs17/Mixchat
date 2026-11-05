@@ -14,6 +14,7 @@ import { useGiveaway } from "../../hooks/chat/useGiveaway";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
+import type { StreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import { IS_DESKTOP } from "../../lib/constants";
 
 type StreamerToolId = "giveaway" | "song-queue" | "music-player" | null;
@@ -27,7 +28,12 @@ interface ChatAppChromeProps {
   giveaway: ReturnType<typeof useGiveaway>;
   songQueue: ReturnType<typeof useSongQueue>;
   musicPlayer: ReturnType<typeof useMusicPlayer>;
-  showModTools: boolean;
+  showStreamTools: boolean;
+  streamToolsRole: "owner" | "moderator";
+  streamToolsSettings: StreamToolsSettings;
+  onUpdateStreamToolsSettings: (
+    patch: Partial<StreamToolsSettings>,
+  ) => Promise<void>;
   showMusicBar: boolean;
   streamerToolsOpen: boolean;
   streamerToolsInitialTool: StreamerToolId;
@@ -93,7 +99,10 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
     giveaway,
     songQueue,
     musicPlayer,
-    showModTools,
+    showStreamTools,
+    streamToolsRole,
+    streamToolsSettings,
+    onUpdateStreamToolsSettings,
     showMusicBar,
     streamerToolsOpen,
     streamerToolsInitialTool,
@@ -107,7 +116,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
 
   return (
     <>
-      {showModTools && showMusicBar && (
+      {showStreamTools && showMusicBar && (
         <MusicPlayerMinimizedBar
           player={musicPlayer}
           hidden={streamerToolsOpen}
@@ -115,7 +124,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
         />
       )}
 
-      {!IS_DESKTOP && showModTools && songQueue.phase === "open" && (
+      {!IS_DESKTOP && showStreamTools && songQueue.phase === "open" && (
         <SongQueueMinimizedBar
           queue={songQueue}
           hidden={streamerToolsOpen}
@@ -126,7 +135,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
         />
       )}
 
-      {showModTools && !streamerToolsOpen && giveaway.phase !== "config" && (
+      {showStreamTools && !streamerToolsOpen && giveaway.phase !== "config" && (
         <GiveawayIndicator
           giveaway={giveaway}
           onOpen={() => onOpenStreamerTools("giveaway")}
@@ -148,6 +157,9 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
           streamGameId={appProps.isOnOwnChannel ? props.state.streamGameId : ""}
           streamGameName={props.state.streamGameName}
           onSearchCategories={props.state.handleSearchCategories}
+          role={streamToolsRole}
+          settings={streamToolsSettings}
+          onUpdateSettings={onUpdateStreamToolsSettings}
         />
       )}
     </>

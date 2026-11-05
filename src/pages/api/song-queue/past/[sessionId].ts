@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import {
   deleteSession,
+  deleteSessionByChannel,
   getSession,
   publicView,
   readSessionWithToken,
@@ -10,6 +11,7 @@ import { getSongQueueStoreOptions } from "../../../../server/songQueueConfig";
 import {
   clientAddress,
   json,
+  loadSessionForChannel,
   loadSessionForOwner,
   ownerTokenFromRequest,
 } from "../../../../server/songQueueApi";
@@ -21,7 +23,7 @@ import { checkRateLimit } from "../../../../lib/rateLimit";
  * session's stored hash and is valid for both live and ended sessions.
  */
 
-export const GET: APIRoute = async ({ request, params }) => {
+export const GET: APIRoute = async ({ request, params, cookies }) => {
   if (
     !checkRateLimit(`${clientAddress(request)}:song-queue-past-get`, 60, 60_000)
   ) {
@@ -29,14 +31,20 @@ export const GET: APIRoute = async ({ request, params }) => {
   }
   const sessionId = params.sessionId || "";
   const result = await loadSessionForOwner(request, sessionId);
-  if (result.kind === "no-auth")
-    return json({ error: "Missing owner token" }, 401);
-  if (result.kind === "missing") return json({ error: "Not found" }, 404);
-  // Accept both live and ended sessions. The owner token is valid for both.
-  return json(publicView(result.session));
+  if (result.kind !== "no-auth") {
+    if (result.kind === "missing") return json({ error: "Not found" }, 404);
+    // Accept both live and ended sessions. The owner token is valid for both.
+    return json(publicView(result.session));
+  }
+  const auth = await loadSessionForChannel(cookies, sessionId);
+  if (auth.kind === "unauthenticated")
+    return json({ error: "Not authenticated" }, 401);
+  if (auth.kind === "forbidden") return json({ error: "Forbidden" }, 403);
+  if (auth.kind === "missing") return json({ error: "Not found" }, 404);
+  return json(publicView(auth.session));
 };
 
-export const DELETE: APIRoute = async ({ request, params }) => {
+export const DELETE: APIRoute = async ({ request, params, cookies }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-past-delete`,
@@ -47,18 +55,33 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
   const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   const sessionId = params.sessionId || "";
-  const res = await deleteSession(getSongQueueStoreOptions(), sessionId, token);
-  if (res === "ok") return json({ ok: true });
-  if (res === "auth") return json({ error: "Forbidden" }, 403);
-  return json({ error: "Not found" }, 404);
+  if (token) {
+    const res = await deleteSession(getSongQueueStoreOptions(), sessionId, token);
+    if (res === "ok") return json({ ok: true });
+    if (res === "auth") return json({ error: "Forbidden" }, 403);
+    return json({ error: "Not found" }, 404);
+  }
+  const auth = await loadSessionForChannel(cookies, sessionId);
+  if (auth.kind === "unauthenticated")
+    return json({ error: "Not authenticated" }, 401);
+  if (auth.kind === "forbidden") return json({ error: "Forbidden" }, 403);
+  if (auth.kind === "missing") return json({ error: "Not found" }, 404);
+  const res = await deleteSessionByChannel(
+    getSongQueueStoreOptions(),
+    sessionId,
+    {
+      channelName: auth.session.channelName,
+      channelPlatform: auth.session.channelPlatform,
+    },
+  );
+  return res === "ok" ? json({ ok: true }) : json({ error: "Not found" }, 404);
 };
 
 /** POST fallback for proxies that block the DELETE verb (e.g. Cloudflare WAF). */
 export const POST: APIRoute = DELETE;
 
-export const PATCH: APIRoute = async ({ request, params }) => {
+export const PATCH: APIRoute = async ({ request, params, cookies }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-past-patch`,
@@ -69,7 +92,6 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
   const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
 
   let body: unknown;
   try {
@@ -86,26 +108,33 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   }
 
   const sessionId = params.sessionId || "";
-  const result = await readSessionWithToken(
-    getSongQueueStoreOptions(),
-    sessionId,
-    token,
-  );
-  // readSessionWithToken returns "missing" for both non-existent sessions
-  // and token mismatches. Distinguish the two so attackers can't probe
-  // for valid session IDs via this endpoint.
-  if (result.kind === "missing") {
-    const exists = await getSession(
+  let session;
+  if (token) {
+    const result = await readSessionWithToken(
       getSongQueueStoreOptions(),
       sessionId,
+      token,
     );
-    if (exists) return json({ error: "Forbidden" }, 403);
-    return json({ error: "Not found" }, 404);
+    // readSessionWithToken returns "missing" for both non-existent sessions
+    // and token mismatches. Distinguish the two so attackers can't probe
+    // for valid session IDs via this endpoint.
+    if (result.kind === "missing") {
+      const exists = await getSession(getSongQueueStoreOptions(), sessionId);
+      if (exists) return json({ error: "Forbidden" }, 403);
+      return json({ error: "Not found" }, 404);
+    }
+    session = result.session;
+  } else {
+    const auth = await loadSessionForChannel(cookies, sessionId);
+    if (auth.kind === "unauthenticated")
+      return json({ error: "Not authenticated" }, 401);
+    if (auth.kind === "forbidden") return json({ error: "Forbidden" }, 403);
+    if (auth.kind === "missing") return json({ error: "Not found" }, 404);
+    session = auth.session;
   }
 
   // Ownership was already verified. The channel check inside
   // setSessionPublicByChannel is an additional safety layer.
-  const session = result.session;
   const res = await setSessionPublicByChannel(
     getSongQueueStoreOptions(),
     sessionId,

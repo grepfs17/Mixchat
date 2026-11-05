@@ -85,7 +85,7 @@ export const GET: APIRoute = async ({ request, params, cookies }) => {
 
   // Channel trust requires a server-verified identity that matches the channel.
   if (channel) {
-    const auth = await authorizeChannel(cookies, channel);
+    const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
     if (auth === "ok") {
       const byChannel = await readWheelByChannel(opts, wheelId, channel);
       if (byChannel) return json({ wheel: byChannel });
@@ -129,7 +129,7 @@ export const PATCH: APIRoute = async ({ request, params, cookies }) => {
     }
   }
 
-  const auth = await authorizeChannel(cookies, channel!);
+  const auth = await authorizeChannel(cookies, channel!, { allowModerators: true });
   if (auth === "unauthenticated")
     return json({ error: "Not authenticated" }, 401);
   if (auth !== "ok") return json({ error: "Forbidden" }, 403);
@@ -160,7 +160,7 @@ const deleteHandler: APIRoute = async ({ request, params, cookies }) => {
     }
   }
 
-  const auth = await authorizeChannel(cookies, channel!);
+  const auth = await authorizeChannel(cookies, channel!, { allowModerators: true });
   if (auth === "unauthenticated")
     return json({ error: "Not authenticated" }, 401);
   if (auth !== "ok") return json({ error: "Forbidden" }, 403);

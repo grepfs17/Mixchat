@@ -29,6 +29,8 @@ import {
 import type { PastPlaylistEntry } from "../../../lib/streamerTools/pastPlaylists";
 import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 import { IS_DESKTOP } from "../../../lib/constants";
+import type { StreamToolsSettings } from "../../../hooks/chat/useStreamToolsSettings";
+import { giveawayAction } from "../../../lib/streamTools/api";
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
@@ -53,6 +55,13 @@ interface StreamerToolsModalProps {
   onSearchCategories?: (
     query: string,
   ) => Promise<Array<{ id: string; name: string }>>;
+  /** Whether the viewer is the broadcaster or a moderator. */
+  role?: "owner" | "moderator";
+  /** Server-backed access settings. The owner can edit `allowMods`. */
+  settings?: StreamToolsSettings;
+  onUpdateSettings?: (
+    patch: Partial<StreamToolsSettings>,
+  ) => Promise<void>;
 }
 
 type ToolId = "music-player" | "giveaway" | "song-queue" | "wheel";
@@ -739,11 +748,15 @@ export default function StreamerToolsModal({
   streamGameId = "",
   streamGameName = "",
   onSearchCategories,
+  role = "owner",
+  settings,
+  onUpdateSettings,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(
     initialTool && isToolAvailable(initialTool) ? initialTool : null,
   );
   const [announcing, setAnnouncing] = useState(false);
+  const [savingAccess, setSavingAccess] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -798,12 +811,12 @@ export default function StreamerToolsModal({
         className="streamer-tools-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Streamer tools"
+        aria-label="Stream tools"
       >
         <div className="streamer-tools-header">
           <h2 className="streamer-tools-title">
             <FaWrench size={18} />{" "}
-            {tool ? `Streamer tools - ${tool.label}` : "Streamer tools"}
+            {tool ? `Stream tools - ${tool.label}` : "Stream tools"}
           </h2>
           <div className="streamer-tools-header-actions">
             <button type="button"
@@ -829,6 +842,31 @@ export default function StreamerToolsModal({
         <div className="streamer-tools-body">
           {!tool ? (
             <>
+              {role === "moderator" && (
+                <div className="stream-tools-access-banner">
+                  You are controlling Stream tools as a moderator.
+                </div>
+              )}
+              {role === "owner" && settings && onUpdateSettings && (
+                <label className="stream-tools-access-toggle">
+                  <input
+                    type="checkbox"
+                    checked={settings.allowMods}
+                    disabled={savingAccess}
+                    onChange={async (e) => {
+                      setSavingAccess(true);
+                      try {
+                        await onUpdateSettings({
+                          allowMods: e.target.checked,
+                        });
+                      } finally {
+                        setSavingAccess(false);
+                      }
+                    }}
+                  />
+                  <span>Allow moderators to use Stream tools</span>
+                </label>
+              )}
               <ul className="streamer-tools-list">
                 {AVAILABLE_TOOLS.map((t) => (
                   <li key={t.id} className="streamer-tools-list-item">
@@ -850,7 +888,7 @@ export default function StreamerToolsModal({
                         setActiveTool(t.id);
                       }}
                     >
-                      {t.id === "wheel" ? "Open in new tab" : "Open"}
+                      Open
                     </button>
                   </li>
                 ))}
@@ -879,6 +917,20 @@ export default function StreamerToolsModal({
                   youtubeConnected={youtubeConnected}
                   onAnnounce={async (winner, text) => {
                     if (announcing) return;
+                    // Shared giveaways: exactly one client may post the
+                    // winner message. Claim it first and bail if another
+                    // client already did.
+                    if (!IS_DESKTOP && channelKey) {
+                      try {
+                        const res = await giveawayAction(
+                          channelKey,
+                          "claimAnnounce",
+                        );
+                        if (!res.claimedWinner) return;
+                      } catch {
+                        return;
+                      }
+                    }
                     setAnnouncing(true);
                     try {
                       await onAnnounce(winner, text);

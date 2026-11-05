@@ -28,6 +28,8 @@ import {
   savePlaylist,
   saveSettings,
 } from "../../lib/musicPlayer/idb";
+import { getSharedMusic, putSharedMusic } from "../../lib/streamTools/api";
+import type { SharedMusicState } from "../../lib/streamTools/state";
 
 /**
  * Streamer-only Music Player hook, persisted via IndexedDB.
@@ -89,6 +91,18 @@ export interface UseMusicPlayerResult {
   /** Dismiss the mini bar. Persisted. Survives reload. */
   hideMiniBar: () => void;
   showMiniBar: () => void;
+
+  /** Shared playback state. Only the audio host actually renders sound. */
+  isPlaying: boolean;
+  isAudioHost: boolean;
+  setPlaying: (playing: boolean) => void;
+}
+
+export interface UseMusicPlayerOptions {
+  /** When set, playlists and playback are shared server-side per channel. */
+  channelKey?: string | null;
+  /** True for the broadcaster's client, which is the audio host. */
+  isHost?: boolean;
 }
 
 function nextIndexIn(active: MusicPlaylist, idx: number): number {
@@ -103,7 +117,12 @@ function previousIndexIn(active: MusicPlaylist, idx: number): number {
   return idx - 1;
 }
 
-export function useMusicPlayer(): UseMusicPlayerResult {
+export function useMusicPlayer(
+  options: UseMusicPlayerOptions = {},
+): UseMusicPlayerResult {
+  const sharedChannel = options.channelKey ?? null;
+  const isAudioHost = !sharedChannel || options.isHost !== false;
+  const [isPlaying, setIsPlaying] = useState(false);
   const [playlists, setPlaylists] = useState<MusicPlaylist[]>([]);
   const [settings, setSettings] = useState<MusicPlayerSettings>({
     ...DEFAULT_MUSIC_PLAYER_SETTINGS,
@@ -111,6 +130,17 @@ export function useMusicPlayer(): UseMusicPlayerResult {
   const [hydrated, setHydrated] = useState(false);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sharedVersionRef = useRef(-1);
+  const sharedLoadedRef = useRef(false);
+  const skipPushRef = useRef(false);
+  const pushingRef = useRef(false);
+
+  const applySharedMusic = useCallback((music: SharedMusicState) => {
+    skipPushRef.current = true;
+    setPlaylists(music.playlists);
+    setSettings(music.settings);
+    setIsPlaying(Boolean(music.isPlaying));
+  }, []);
 
   // ---- IDB hydration (mount only) ----
   useEffect(() => {
@@ -122,8 +152,38 @@ export function useMusicPlayer(): UseMusicPlayerResult {
           loadSettings(),
         ]);
         if (cancelled) return;
-        setPlaylists(loadedPlaylists);
-        setSettings(loadedSettings);
+
+        if (!sharedChannel) {
+          setPlaylists(loadedPlaylists);
+          setSettings(loadedSettings);
+          setHydrated(true);
+          return;
+        }
+
+        try {
+          const shared = await getSharedMusic(sharedChannel);
+          if (cancelled) return;
+          sharedVersionRef.current = shared.version;
+          sharedLoadedRef.current = true;
+          const hasServerData =
+            shared.music.playlists.length > 0 ||
+            shared.music.settings.activePlaylistId !== null;
+          if (
+            hasServerData ||
+            loadedPlaylists.length === 0 ||
+            !isAudioHost
+          ) {
+            applySharedMusic(shared.music);
+          } else {
+            // One-time migration: the broadcaster already had local playlists
+            // before shared state existed. Upload them on first load.
+            setPlaylists(loadedPlaylists);
+            setSettings(loadedSettings);
+          }
+        } catch {
+          setPlaylists(loadedPlaylists);
+          setSettings(loadedSettings);
+        }
       } finally {
         if (!cancelled) setHydrated(true);
       }
@@ -131,7 +191,61 @@ export function useMusicPlayer(): UseMusicPlayerResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sharedChannel, applySharedMusic, isAudioHost]);
+
+  // ---- Shared-state polling ----
+  useEffect(() => {
+    if (!sharedChannel) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (
+        pushingRef.current ||
+        (typeof document !== "undefined" && document.hidden)
+      ) {
+        return;
+      }
+      try {
+        const next = await getSharedMusic(sharedChannel);
+        if (cancelled || next.version <= sharedVersionRef.current) return;
+        sharedVersionRef.current = next.version;
+        applySharedMusic(next.music);
+      } catch {
+        // Retry on the next tick.
+      }
+    };
+    const timer = window.setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [sharedChannel, applySharedMusic]);
+
+  // ---- Push local changes to the shared store ----
+  useEffect(() => {
+    if (!sharedChannel || !hydrated || !sharedLoadedRef.current) return;
+    if (skipPushRef.current) {
+      skipPushRef.current = false;
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      if (pushingRef.current) return;
+      pushingRef.current = true;
+      try {
+        const res = await putSharedMusic(sharedChannel, sharedVersionRef.current, {
+          playlists,
+          settings,
+          isPlaying,
+        });
+        sharedVersionRef.current = res.version;
+        if (!res.ok) applySharedMusic(res.music);
+      } catch {
+        // Keep editing locally; the next change retries.
+      } finally {
+        pushingRef.current = false;
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [sharedChannel, hydrated, playlists, settings, isPlaying, applySharedMusic]);
 
   const activePlaylist = useMemo<MusicPlaylist | null>(() => {
     if (!settings.activePlaylistId) return null;
@@ -445,6 +559,10 @@ export function useMusicPlayer(): UseMusicPlayerResult {
     commitSettings({ miniBarHidden: false });
   }, [commitSettings]);
 
+  const setPlaying = useCallback((playing: boolean) => {
+    setIsPlaying(Boolean(playing));
+  }, []);
+
   const setPlaylistCategory = useCallback(
     (playlistId: string, categoryId: string | null, categoryName: string) => {
       const target = playlistsRef.current.find((p) => p.id === playlistId);
@@ -507,5 +625,8 @@ export function useMusicPlayer(): UseMusicPlayerResult {
     hideMiniBar,
     showMiniBar,
     setPlaylistCategory,
+    isPlaying,
+    isAudioHost,
+    setPlaying,
   };
 }

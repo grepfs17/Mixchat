@@ -22,6 +22,7 @@ import {
   appendSongQueueItem,
   closeSongQueue,
   createSongQueue,
+  getActiveSongQueue,
   getSongQueue,
   patchSongQueue,
   removeSongQueueItem,
@@ -41,7 +42,7 @@ export type SongQueuePhase = "idle" | "open" | "ended";
 export interface UseSongQueueOptions {
   channelKey: string;
   owner: SongQueueOwner;
-  /** Master switch. Mirrors the Streamer Tools toggle. */
+  /** Master switch. Mirrors the Stream tools toggle. */
   enabled?: boolean;
   /** Override the per-submitter limit at hook time. */
   perSubmitterLimit?: number;
@@ -182,36 +183,70 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     let cancelled = false;
     (async () => {
       const stored = await loadSongQueueSession(channelKey);
-      if (cancelled || !stored) return;
-      setBootstrap({
-        sessionId: stored.sessionId,
-        ownerToken: stored.ownerToken,
-        isPublic: stored.session.isPublic,
-        publicUrl: `/s/${stored.sessionId}`,
-        title: stored.session.title,
-        channelName: stored.session.channelName || "",
-        channelPlatform: stored.session.channelPlatform || "",
-        createdAt: stored.session.createdAt,
-      });
-      setSession(stored.session);
-      // Restore the full config from the session. Older sessions created
-      // before `config` was persisted fall back to defaults merged with
-      // the legacy `title` / `isPublic` fields.
-      const storedConfig = stored.session.config;
-      setConfigState(
-        storedConfig
-          ? {
-              ...storedConfig,
-              title: stored.session.title,
-              isPublic: stored.session.isPublic,
-            }
-          : {
-              ...DEFAULT_SONG_QUEUE_CONFIG,
-              title: stored.session.title,
-              isPublic: stored.session.isPublic,
-            },
-      );
-      setPhase(stored.session.ended ? "ended" : "open");
+      if (cancelled) return;
+
+      if (stored) {
+        setBootstrap({
+          sessionId: stored.sessionId,
+          ownerToken: stored.ownerToken,
+          isPublic: stored.session.isPublic,
+          publicUrl: `/s/${stored.sessionId}`,
+          title: stored.session.title,
+          channelName: stored.session.channelName || "",
+          channelPlatform: stored.session.channelPlatform || "",
+          createdAt: stored.session.createdAt,
+        });
+        setSession(stored.session);
+        // Restore the full config from the session. Older sessions created
+        // before `config` was persisted fall back to defaults merged with
+        // the legacy `title` / `isPublic` fields.
+        const storedConfig = stored.session.config;
+        setConfigState(
+          storedConfig
+            ? {
+                ...storedConfig,
+                title: stored.session.title,
+                isPublic: stored.session.isPublic,
+              }
+            : {
+                ...DEFAULT_SONG_QUEUE_CONFIG,
+                title: stored.session.title,
+                isPublic: stored.session.isPublic,
+              },
+        );
+        setPhase(stored.session.ended ? "ended" : "open");
+        return;
+      }
+
+      // No local owner session. Adopt the channel's current open queue when
+      // this client is the broadcaster or an approved Twitch moderator.
+      try {
+        const active = await getActiveSongQueue(channelKey);
+        if (cancelled || !active) return;
+        setBootstrap({
+          sessionId: active.sessionId,
+          ownerToken: "",
+          isPublic: active.isPublic,
+          publicUrl: `/s/${active.sessionId}`,
+          title: active.title,
+          channelName: active.channelName || "",
+          channelPlatform: active.channelPlatform || "",
+          createdAt: active.createdAt,
+        });
+        setSession(active);
+        setConfigState(
+          active.config
+            ? { ...active.config, title: active.title, isPublic: active.isPublic }
+            : {
+                ...DEFAULT_SONG_QUEUE_CONFIG,
+                title: active.title,
+                isPublic: active.isPublic,
+              },
+        );
+        setPhase(active.ended ? "ended" : "open");
+      } catch {
+        // No authorization or no active queue. The panel stays idle.
+      }
     })();
     return () => {
       cancelled = true;
@@ -271,6 +306,44 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     // We intentionally do not depend on `refresh` to avoid loops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bootstrap?.sessionId, phase]);
+
+  // Shared-state polling: streamer and moderators must see each other's
+  // changes. Silent so it never flashes the loading state.
+  useEffect(() => {
+    if (!bootstrap || phase !== "open") return;
+    let cancelled = false;
+    let running = false;
+    const tick = async () => {
+      if (running || (typeof document !== "undefined" && document.hidden)) return;
+      running = true;
+      try {
+        const server = await getSongQueue(
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+        );
+        if (cancelled) return;
+        setSession(server);
+        if (server.config) {
+          setConfigState((prev) => ({
+            ...prev,
+            ...server.config,
+            title: server.title,
+            isPublic: server.isPublic,
+          }));
+        }
+        if (server.ended) setPhase("ended");
+      } catch {
+        // Keep the last known state. The next tick or explicit action retries.
+      } finally {
+        running = false;
+      }
+    };
+    const timer = window.setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [bootstrap?.sessionId, bootstrap?.ownerToken, phase]);
 
   // ---- Advance callback (announce) ----
   useEffect(() => {

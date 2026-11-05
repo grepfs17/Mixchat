@@ -482,7 +482,7 @@ function WheelEmpty({ canManage }: { canManage: boolean }) {
       <p>
         {canManage
           ? "Create a wheel or pick one from the list to get started."
-          : "No wheel selected. Open Wheel Spin from the streamer tools."}
+          : "No wheel selected. Open Wheel Spin from the Stream tools."}
       </p>
     </div>
   );
