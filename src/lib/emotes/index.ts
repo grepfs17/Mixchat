@@ -35,8 +35,11 @@ export type { YoutubeEmoteToken } from "./parser";
 export { describeEffects, normalizeEffects, isFfzEffectWord } from "./modifiers";
 export type { EmoteEffect } from "./modifiers";
 
+export { getEmoteUsage } from "./usage";
+
 export {
   searchEmotes,
+  recordEmoteUsageFromText,
   getDisabledEmotes,
   getDisabledEmoteChannels,
   isEmoteChannelDisabled,

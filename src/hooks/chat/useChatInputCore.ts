@@ -7,7 +7,7 @@ import {
   type RefObject,
 } from "react";
 import type { TwitchMessage, EmoteAutocompleteMode } from "../../lib/types";
-import { searchEmotes } from "../../lib/emotes";
+import { searchEmotes, recordEmoteUsageFromText } from "../../lib/emotes";
 import { searchEmojis, type EmojiEntry } from "../../lib/emojiShortcodes";
 import { MOD_COMMANDS } from "../../lib/constants";
 import { isMobileDevice } from "../../lib/device";
@@ -169,6 +169,7 @@ export function useChatInputCore(
     try {
       if (!isMobileDevice()) shouldRefocusRef.current = true;
       await onSend(text);
+      if (enableTwitchFeatures) recordEmoteUsageFromText(text);
       setMessage("");
       closeAllRef.current?.();
       if (slowModeWaitTime && slowModeWaitTime > 0) {
@@ -178,7 +179,13 @@ export function useChatInputCore(
       console.error("Chat send failed:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message, onSend, slowModeWaitTime, startCooldown]);
+  }, [
+    message,
+    onSend,
+    slowModeWaitTime,
+    startCooldown,
+    enableTwitchFeatures,
+  ]);
 
   // ---- Autocomplete instances ----
   const emoteAC = useAutocomplete<EmoteACItem>({

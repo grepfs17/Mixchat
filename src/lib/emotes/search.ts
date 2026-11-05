@@ -8,6 +8,7 @@ import {
   notifyEmotesReloaded,
 } from "./state";
 import { getEmoteUrl } from "./utils";
+import { getEmoteUsage, recordEmoteUsages } from "./usage";
 
 /**
  * Search emotes matching a query. When `allowEmptyQuery` is true, an empty
@@ -64,12 +65,19 @@ export function searchEmotes(
     }
   });
 
+  const usage = getEmoteUsage();
+
   results.sort((a, b) => {
     const aLower = a.name.toLowerCase();
     const bLower = b.name.toLowerCase();
 
     if (aLower === lowerQuery) return -1;
     if (bLower === lowerQuery) return 1;
+
+    // Frequently used emotes rise above other matches.
+    const usageDiff = (usage[b.name] ?? 0) - (usage[a.name] ?? 0);
+    if (usageDiff !== 0) return usageDiff;
+
     if (aLower.startsWith(lowerQuery) && !bLower.startsWith(lowerQuery))
       return -1;
     if (bLower.startsWith(lowerQuery) && !aLower.startsWith(lowerQuery))
@@ -81,6 +89,24 @@ export function searchEmotes(
   const finalResults = results.slice(0, limit);
 
   return finalResults;
+}
+
+/** True when the name exists in any loaded emote provider. */
+function isKnownEmote(name: string): boolean {
+  const has = (map: Record<string, string>) =>
+    Object.prototype.hasOwnProperty.call(map, name);
+  if (has(emotesTwitchGlobal) || has(emotes7tv)) return true;
+  if (has(emotesBttv) || has(emotesFfz)) return true;
+  return emotesTwitchByChannel.some((group) => has(group.emotes));
+}
+
+/**
+ * Count every known emote name in a sent message so autocomplete can rank
+ * suggestions by how often the user actually uses them.
+ */
+export function recordEmoteUsageFromText(text: string): void {
+  const used = text.split(/\s+/).filter(isKnownEmote);
+  recordEmoteUsages(used);
 }
 
 /**
