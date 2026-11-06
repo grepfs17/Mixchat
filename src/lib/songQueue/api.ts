@@ -192,6 +192,26 @@ export async function setSongQueueIndex(
   if (!res.ok) await handle(res);
 }
 
+/**
+ * Atomically claim the current item's "now playing" announcement. Returns the
+ * item only to the client that won the claim, or null when another client
+ * already announced it.
+ */
+export async function claimSongQueueAnnouncement(
+  sessionId: string,
+  ownerToken: string,
+): Promise<SongQueueItem | null> {
+  const res = await fetch(
+    `/api/song-queue/${encodeURIComponent(sessionId)}/announce`,
+    {
+      method: "POST",
+      headers: baseHeaders(ownerToken),
+    },
+  );
+  const body = await handle<{ item: SongQueueItem | null }>(res);
+  return body.item;
+}
+
 export async function getPublicSongQueue(
   sessionId: string,
 ): Promise<SongQueuePublicView> {

@@ -535,9 +535,9 @@ function WheelWinnerOverlay({
 
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
-  // Assume broadcaster until the access check answers, so a failed request
-  // never locks the streamer out of their own wheel.
-  const [viewerRole, setViewerRole] = useState<StreamToolsRole>("owner");
+  // Fail closed: spinning is owner-only, so an unresolved or failed access
+  // lookup must not be treated as the broadcaster.
+  const [viewerRole, setViewerRole] = useState<StreamToolsRole>("none");
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
   const wheelsRef = useRef<WheelSummary[]>([]);
   /** Ids removed in this session, so a stale list response cannot revive them. */
@@ -586,6 +586,9 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const selectWheel = useCallback(async (id: string) => {
     setLoadingWheel(true);
     setError(null);
+    // Update the ref immediately so an in-flight response for the previous
+    // wheel cannot overwrite the newly selected one.
+    activeIdRef.current = id;
     try {
       const token = await getWheelToken(id);
       const channelParam =
@@ -611,6 +614,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       setError(err instanceof Error ? err.message : "Failed to load wheel");
       setActive(null);
       setActiveId(null);
+      activeIdRef.current = null;
+      activeRef.current = null;
     } finally {
       setLoadingWheel(false);
     }
@@ -634,7 +639,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         try {
           setViewerRole(await fetchStreamToolsAccess(ch));
         } catch {
-          // Keep the optimistic default; the wheel stays usable.
+          // Fail closed: an unresolved role must not unlock spinning.
+          setViewerRole("none");
         }
       }
 
@@ -664,7 +670,11 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const canManage = Boolean(channelKey);
   const editable = canManage || Boolean(ownerToken);
+  const isOwner = viewerRole === "owner";
   const isModerator = viewerRole === "moderator";
+  // Channel access is the only proof for a channel-bound wheel. Until it
+  // resolves to owner (or an owner token is present) spinning stays locked.
+  const spinDisabled = Boolean(channelKey) && !isOwner && !ownerToken;
   const dirty = active
     ? draftName !== active.name ||
       JSON.stringify(draftOptions) !== JSON.stringify(active.options) ||
@@ -1029,17 +1039,25 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       // A read-only viewer (legacy share link) has neither credential, so
       // there is nowhere to persist the winner. Show it locally only.
       if (!activeId || (!ownerToken && !channelKey)) return;
+      const wheelId = activeId;
       const entry = { name: option, time: formatHistoryTime(new Date()) };
       void updateWheel(
-        activeId,
+        wheelId,
         { addHistory: entry },
         { ownerToken, channelKey },
       )
         .then((updated) => {
+          // The viewer may have selected another wheel while this was in
+          // flight. Never let the old response replace the new selection.
+          if (activeIdRef.current !== wheelId) return;
           activeRef.current = updated;
           setActive(updated);
         })
-        .catch(() => setError("Could not save winner"));
+        .catch(() => {
+          if (activeIdRef.current === wheelId) {
+            setError("Could not save winner");
+          }
+        });
     },
     [activeId, channelKey, ownerToken],
   );
@@ -1065,16 +1083,22 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       return;
     }
     if (!activeId) return;
+    const wheelId = activeId;
     void updateWheel(
-      activeId,
+      wheelId,
       { clearHistory: true },
       { ownerToken, channelKey },
     )
       .then((updated) => {
+        if (activeIdRef.current !== wheelId) return;
         activeRef.current = updated;
         setActive(updated);
       })
-      .catch(() => setError("Could not clear winners"));
+      .catch(() => {
+        if (activeIdRef.current === wheelId) {
+          setError("Could not clear winners");
+        }
+      });
   }, [activeId, channelKey, ownerToken, history.length]);
 
   return (
@@ -1153,7 +1177,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
               <WheelStage
                 options={draftOptions}
-                disabled={isModerator}
+                disabled={spinDisabled}
                 onWinner={handleWinner}
                 onSpinStateChange={setSpinning}
               />

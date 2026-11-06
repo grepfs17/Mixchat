@@ -20,6 +20,7 @@ import {
 import {
   SongQueueApiError,
   appendSongQueueItem,
+  claimSongQueueAnnouncement,
   closeSongQueue,
   createSongQueue,
   getActiveSongQueue,
@@ -114,6 +115,7 @@ function buildInitialSession(
     lastSeenAt: created.createdAt,
     isPublic: created.isPublic,
     currentIndex: 0,
+    announcedItemId: null,
     version: 0,
     ended: false,
     items: [],
@@ -176,6 +178,53 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   // Track the last item we announced so we don't double-post when
   // `version` ticks for unrelated reasons (item added, removed, etc.).
   const lastAnnouncedItemIdRef = useRef<string | null>(null);
+  // The item whose claim request is currently in flight. Prevents a re-run
+  // of the announce effect from claiming twice.
+  const announcingItemIdRef = useRef<string | null>(null);
+  const bootstrapRef = useRef(bootstrap);
+  bootstrapRef.current = bootstrap;
+
+  const applyActiveSession = useCallback((active: SongQueueSession | null) => {
+    if (!active) {
+      setBootstrap(null);
+      setSession(null);
+      setPhase("idle");
+      return;
+    }
+    setBootstrap({
+      sessionId: active.sessionId,
+      ownerToken: "",
+      isPublic: active.isPublic,
+      publicUrl: `/s/${active.sessionId}`,
+      title: active.title,
+      channelName: active.channelName || "",
+      channelPlatform: active.channelPlatform || "",
+      createdAt: active.createdAt,
+    });
+    setSession(active);
+    setConfigState(
+      active.config
+        ? { ...active.config, title: active.title, isPublic: active.isPublic }
+        : {
+            ...DEFAULT_SONG_QUEUE_CONFIG,
+            title: active.title,
+            isPublic: active.isPublic,
+          },
+    );
+    setPhase(active.ended ? "ended" : "open");
+  }, []);
+
+  // Adopt the channel's current open queue when this client is the
+  // broadcaster or an approved Twitch moderator.
+  const adoptActive = useCallback(async () => {
+    try {
+      const active = await getActiveSongQueue(channelKey);
+      applyActiveSession(active);
+    } catch {
+      // No authorization or no active queue. The panel stays idle.
+      applyActiveSession(null);
+    }
+  }, [channelKey, applyActiveSession]);
 
   // ---- IDB hydration on mount (does not require a network call) ----
   useEffect(() => {
@@ -185,7 +234,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       const stored = await loadSongQueueSession(channelKey);
       if (cancelled) return;
 
-      if (stored) {
+      if (stored && !stored.session.ended) {
         setBootstrap({
           sessionId: stored.sessionId,
           ownerToken: stored.ownerToken,
@@ -214,54 +263,40 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
                 isPublic: stored.session.isPublic,
               },
         );
-        setPhase(stored.session.ended ? "ended" : "open");
+        setPhase("open");
         return;
       }
 
-      // No local owner session. Adopt the channel's current open queue when
-      // this client is the broadcaster or an approved Twitch moderator.
-      try {
-        const active = await getActiveSongQueue(channelKey);
-        if (cancelled || !active) return;
-        setBootstrap({
-          sessionId: active.sessionId,
-          ownerToken: "",
-          isPublic: active.isPublic,
-          publicUrl: `/s/${active.sessionId}`,
-          title: active.title,
-          channelName: active.channelName || "",
-          channelPlatform: active.channelPlatform || "",
-          createdAt: active.createdAt,
-        });
-        setSession(active);
-        setConfigState(
-          active.config
-            ? { ...active.config, title: active.title, isPublic: active.isPublic }
-            : {
-                ...DEFAULT_SONG_QUEUE_CONFIG,
-                title: active.title,
-                isPublic: active.isPublic,
-              },
-        );
-        setPhase(active.ended ? "ended" : "open");
-      } catch {
-        // No authorization or no active queue. The panel stays idle.
+      // A stored ended session must not block adopting a newer active queue.
+      if (stored) {
+        await clearSongQueueSession(channelKey);
+        if (cancelled) return;
       }
+
+      await adoptActive();
     })();
     return () => {
       cancelled = true;
     };
-  }, [channelKey, enabled]);
+  }, [channelKey, enabled, adoptActive]);
 
   // ---- Network reconciliation: pull the server record and merge ----
   const refresh = useCallback(async () => {
     if (!bootstrap) return;
+    const sessionId = bootstrap.sessionId;
     setLoading(true);
     try {
-      const server = await getSongQueue(
-        bootstrap.sessionId,
-        bootstrap.ownerToken,
-      );
+      const server = await getSongQueue(sessionId, bootstrap.ownerToken);
+      // A channel switch may have replaced the session while this was in
+      // flight. Never apply the old channel's queue to the new one.
+      if (bootstrapRef.current?.sessionId !== sessionId) return;
+      // An adopted (tokenless) session that ended must not linger in IDB or
+      // hide a newer queue the channel may have started meanwhile.
+      if (server.ended && !bootstrap.ownerToken) {
+        await clearSongQueueSession(channelKey);
+        await adoptActive();
+        return;
+      }
       setSession(server);
       // The server is authoritative for the config. Pull it in too so
       // changes made on another device (or before the IDB record was
@@ -282,13 +317,17 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       );
       if (server.ended) setPhase("ended");
     } catch (err) {
+      if (bootstrapRef.current?.sessionId !== sessionId) return;
       if (err instanceof SongQueueApiError && err.status === 410) {
+        if (!bootstrap.ownerToken) {
+          await clearSongQueueSession(channelKey);
+          await adoptActive();
+          return;
+        }
         setPhase("ended");
       } else if (err instanceof SongQueueApiError && err.status === 404) {
         await clearSongQueueSession(channelKey);
-        setBootstrap(null);
-        setSession(null);
-        setPhase("idle");
+        await adoptActive();
       } else {
         const msg = err instanceof Error ? err.message : "Failed to load queue";
         setError(msg);
@@ -297,7 +336,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     } finally {
       setLoading(false);
     }
-  }, [bootstrap, channelKey, onError]);
+  }, [bootstrap, channelKey, onError, adoptActive]);
 
   useEffect(() => {
     if (bootstrap && phase === "open") {
@@ -322,6 +361,12 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           bootstrap.ownerToken,
         );
         if (cancelled) return;
+        if (server.ended && !bootstrap.ownerToken) {
+          await clearSongQueueSession(channelKey);
+          if (cancelled) return;
+          await adoptActive();
+          return;
+        }
         setSession(server);
         if (server.config) {
           setConfigState((prev) => ({
@@ -343,7 +388,13 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [bootstrap?.sessionId, bootstrap?.ownerToken, phase]);
+  }, [
+    bootstrap?.sessionId,
+    bootstrap?.ownerToken,
+    phase,
+    channelKey,
+    adoptActive,
+  ]);
 
   // ---- Advance callback (announce) ----
   useEffect(() => {
@@ -357,14 +408,34 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     if (
       config.announceOnPlay &&
       item &&
-      item.id !== lastAnnouncedItemIdRef.current
+      item.id !== lastAnnouncedItemIdRef.current &&
+      item.id !== announcingItemIdRef.current
     ) {
-      lastAnnouncedItemIdRef.current = item.id;
       const announce = onAnnounceNowPlayingRef.current;
-      if (announce) {
-        void announce(item).catch((err) => {
-          console.warn("[song-queue] announce failed", err);
-        });
+      const boot = bootstrapRef.current;
+      if (announce && boot) {
+        const sessionId = boot.sessionId;
+        announcingItemIdRef.current = item.id;
+        // Only one open client may post the message. The server claim makes
+        // streamer and moderator clients mutually exclusive.
+        void claimSongQueueAnnouncement(sessionId, boot.ownerToken)
+          .then(async (claimed) => {
+            if (bootstrapRef.current?.sessionId !== sessionId) return;
+            lastAnnouncedItemIdRef.current = item.id;
+            if (claimed && claimed.id === item.id) {
+              await announce(item);
+            }
+          })
+          .catch((err) => {
+            console.warn("[song-queue] announce failed", err);
+          })
+          .finally(() => {
+            if (announcingItemIdRef.current === item.id) {
+              announcingItemIdRef.current = null;
+            }
+          });
+      } else if (!announce) {
+        lastAnnouncedItemIdRef.current = item.id;
       }
     }
     // Reset the tracker if the item at this index disappears (e.g. the
@@ -373,7 +444,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
       lastAnnouncedItemIdRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.currentIndex, session?.version]);
+  }, [session?.currentIndex, session?.version, config.announceOnPlay]);
 
   // ---- Public actions ----
   const setConfig = useCallback(

@@ -72,6 +72,11 @@ export interface SongQueueSession {
    */
   config?: SongQueueConfig;
   currentIndex: number;
+  /**
+   * Id of the item most recently claimed for the "now playing" chat
+   * announcement. Server-side so only one open client posts it.
+   */
+  announcedItemId?: string | null;
   /** Monotonic counter incremented on every mutation. Used by the public
    * page's polling loop to detect changes. */
   version: number;

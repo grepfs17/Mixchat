@@ -198,6 +198,14 @@ export async function getStreamToolsState(
   });
 }
 
+function snapshot(state: StoredState): StreamToolsState {
+  return {
+    version: state.version,
+    giveaway: state.giveaway,
+    music: state.music,
+  };
+}
+
 export async function mutateStreamToolsState<T>(
   opts: StreamToolsStoreOptions,
   channelKey: string,
@@ -212,6 +220,43 @@ export async function mutateStreamToolsState<T>(
     state.updatedAt = new Date().toISOString();
     await writeStored(opts, state);
     return result;
+  });
+}
+
+export type StreamToolsVersionedMutation<T> =
+  | { ok: true; result: T; state: StreamToolsState }
+  | { ok: false; state: StreamToolsState };
+
+/**
+ * Mutate only when the stored version still matches `expectedVersion`.
+ * The check and the write share the channel lock, so two callers with the
+ * same expected version cannot both pass and overwrite each other.
+ */
+export async function mutateStreamToolsStateIfVersion<T>(
+  opts: StreamToolsStoreOptions,
+  channelKey: string,
+  expectedVersion: number,
+  fn: (state: StoredState) => T | Promise<T>,
+): Promise<StreamToolsVersionedMutation<T>> {
+  const key = normalizeChannelKey(channelKey);
+  return withLock(key, async () => {
+    const state = await readStored(opts, key);
+    const revealed = resolveGiveaway(state);
+    if (state.version !== expectedVersion) {
+      // Persist an auto-reveal even though the caller lost the race, so a
+      // conflict response cannot silently drop it.
+      if (revealed) {
+        state.version += 1;
+        state.updatedAt = new Date().toISOString();
+        await writeStored(opts, state);
+      }
+      return { ok: false, state: snapshot(state) };
+    }
+    const result = await fn(state);
+    state.version += 1;
+    state.updatedAt = new Date().toISOString();
+    await writeStored(opts, state);
+    return { ok: true, result, state: snapshot(state) };
   });
 }
 

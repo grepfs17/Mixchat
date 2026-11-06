@@ -45,6 +45,7 @@ import {
   POST as closeRoute,
 } from "../../../src/pages/api/song-queue/[sessionId]";
 import { POST as playRoute } from "../../../src/pages/api/song-queue/[sessionId]/play";
+import { POST as announceRoute } from "../../../src/pages/api/song-queue/[sessionId]/announce";
 
 function ctx(
   request: Request,
@@ -97,6 +98,21 @@ afterEach(async () => {
 });
 
 describe("song queue channel-trust access (streamer / Twitch moderator)", () => {
+  it("rejects channel-bound creation when the channel claim is not verified", async () => {
+    authorizeChannel.mockResolvedValue("forbidden");
+    const res = await createSession(
+      ctx(
+        jsonReq("http://localhost/api/song-queue", {
+          title: "Poisoned",
+          channelName: "alice",
+          channelPlatform: "twitch",
+        }),
+        { twitch_token: "not-alice" },
+      ),
+    );
+    expect(res.status).toBe(403);
+  });
+
   it("lets a channel-authorized caller read the queue without the owner token", async () => {
     const { sessionId } = await createOpenQueue();
 
@@ -131,6 +147,7 @@ describe("song queue channel-trust access (streamer / Twitch moderator)", () => 
 
   it("returns 401 when no provider credentials are present", async () => {
     const { sessionId } = await createOpenQueue();
+    authorizeChannel.mockClear();
     authorizeChannel.mockResolvedValue("forbidden");
 
     const res = await getSessionRoute(
@@ -176,6 +193,44 @@ describe("song queue channel-trust access (streamer / Twitch moderator)", () => 
     expect((await play.json()).currentIndex).toBe(0);
   });
 
+  it("lets only one client claim the current announcement", async () => {
+    const { sessionId } = await createOpenQueue();
+    await appendItem(
+      ctx(
+        jsonReq(`http://localhost/api/song-queue/${sessionId}/items`, {
+          videoId: "abc123",
+          submitter: {
+            userId: "u1",
+            author: "Viewer",
+            platform: "twitch",
+          },
+        }),
+        { twitch_token: "mod-token" },
+        { sessionId },
+      ),
+    );
+
+    const claim = () =>
+      announceRoute(
+        ctx(
+          new Request(
+            `http://localhost/api/song-queue/${sessionId}/announce`,
+            { method: "POST" },
+          ),
+          { twitch_token: "mod-token" },
+          { sessionId },
+        ),
+      );
+
+    const first = await claim();
+    expect(first.status).toBe(200);
+    expect((await first.json()).item.videoId).toBe("abc123");
+
+    const second = await claim();
+    expect(second.status).toBe(200);
+    expect((await second.json()).item).toBeNull();
+  });
+
   it("lets a channel-authorized caller close the queue", async () => {
     const { sessionId } = await createOpenQueue();
 
@@ -199,6 +254,7 @@ describe("song queue channel-trust access (streamer / Twitch moderator)", () => 
 
   it("still accepts the owner token", async () => {
     const { sessionId, ownerToken } = await createOpenQueue();
+    authorizeChannel.mockClear();
 
     const res = await getSessionRoute(
       ctx(

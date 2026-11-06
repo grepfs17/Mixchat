@@ -26,6 +26,10 @@ import {
   GET as giveawayGet,
   POST as giveawayPost,
 } from "../../../src/pages/api/stream-tools/giveaway";
+import {
+  GET as musicGet,
+  PUT as musicPut,
+} from "../../../src/pages/api/stream-tools/music";
 
 function makeContext(request: Request): any {
   return {
@@ -111,6 +115,121 @@ describe("GET/PUT /api/stream-tools/settings", () => {
       makeContext(jsonResponse("http://localhost/api/stream-tools/settings", {}, "PUT")),
     );
     expect(put.status).toBe(400);
+  });
+});
+
+describe("/api/stream-tools/music", () => {
+  const channel = "twitch:alice";
+
+  function musicState(overrides: Record<string, unknown> = {}) {
+    return {
+      playlists: [
+        {
+          id: "p1",
+          name: "P",
+          items: [
+            {
+              id: "t1",
+              videoId: "v1",
+              title: "title",
+              channelTitle: "channel",
+              thumbnail: "thumb",
+              durationSec: 60,
+            },
+          ],
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          categoryId: null,
+          categoryName: "",
+        },
+      ],
+      settings: {
+        activePlaylistId: "p1",
+        currentIndex: 0,
+        volume: 100,
+        loop: true,
+        miniBarHidden: false,
+      },
+      isPlaying: false,
+      ...overrides,
+    };
+  }
+
+  it("truncates oversized track fields and drops unknown properties", async () => {
+    const put = await musicPut(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/music",
+          {
+            channelKey: channel,
+            version: 0,
+            music: musicState({
+              playlists: [
+                {
+                  id: "p".repeat(200),
+                  name: "P",
+                  items: [
+                    {
+                      id: "t1",
+                      videoId: "v1",
+                      title: "x".repeat(300),
+                      channelTitle: "y".repeat(300),
+                      thumbnail: "z".repeat(600),
+                      durationSec: 1e9,
+                      evil: "extra",
+                    },
+                  ],
+                  createdAt: "2026-01-01T00:00:00.000Z",
+                  updatedAt: "2026-01-01T00:00:00.000Z",
+                  categoryId: null,
+                  categoryName: "",
+                },
+              ],
+            }),
+          },
+          "PUT",
+        ),
+      ),
+    );
+    expect(put.status).toBe(200);
+
+    const get = await musicGet(
+      makeContext(
+        jsonResponse(
+          `http://localhost/api/stream-tools/music?channelKey=${channel}`,
+        ),
+      ),
+    );
+    const body = await get.json();
+    const playlist = body.music.playlists[0];
+    const item = playlist.items[0];
+    expect(playlist.id).toHaveLength(64);
+    expect(item.title).toHaveLength(200);
+    expect(item.channelTitle).toHaveLength(200);
+    expect(item.thumbnail).toHaveLength(500);
+    expect(item.durationSec).toBe(24 * 60 * 60);
+    expect(item.evil).toBeUndefined();
+  });
+
+  it("accepts only one of two concurrent writes with the same version", async () => {
+    const body = {
+      channelKey: channel,
+      version: 0,
+      music: musicState(),
+    };
+    const [first, second] = await Promise.all([
+      musicPut(
+        makeContext(
+          jsonResponse("http://localhost/api/stream-tools/music", body, "PUT"),
+        ),
+      ),
+      musicPut(
+        makeContext(
+          jsonResponse("http://localhost/api/stream-tools/music", body, "PUT"),
+        ),
+      ),
+    ]);
+    expect([first.status, second.status].sort()).toEqual([200, 409]);
   });
 });
 
@@ -206,6 +325,91 @@ describe("/api/stream-tools/giveaway", () => {
     );
     const body = await res.json();
     expect(body.giveaway.entries).toHaveLength(1);
+  });
+
+  it("rejects oversized entry fields", async () => {
+    await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "start",
+            keyword: "join",
+            duration: 0,
+            scope: "both",
+            eligibility: "everyone",
+          },
+          "POST",
+        ),
+      ),
+    );
+    const res = await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "ingest",
+            entry: {
+              platform: "twitch",
+              userId: "u1",
+              author: "A".repeat(200),
+            },
+          },
+          "POST",
+        ),
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("reconstructs entries without unknown properties", async () => {
+    await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "start",
+            keyword: "join",
+            duration: 0,
+            scope: "both",
+            eligibility: "everyone",
+          },
+          "POST",
+        ),
+      ),
+    );
+    await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "ingest",
+            entry: {
+              platform: "twitch",
+              userId: "  u1  ",
+              author: "  Alice  ",
+              evil: "extra",
+            },
+          },
+          "POST",
+        ),
+      ),
+    );
+    const get = await giveawayGet(
+      makeContext(
+        jsonResponse(
+          `http://localhost/api/stream-tools/giveaway?channelKey=${channel}`,
+        ),
+      ),
+    );
+    const body = await get.json();
+    expect(body.giveaway.entries).toEqual([
+      { platform: "twitch", userId: "u1", author: "Alice" },
+    ]);
   });
 
   it("reveals a winner and refuses a second announcement claim", async () => {

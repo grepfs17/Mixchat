@@ -167,6 +167,7 @@ export function useGiveaway({
   const [entriesVersion, setEntriesVersion] = useState(0);
   const [sharedEntries, setSharedEntries] = useState<GiveawayEntry[]>([]);
   const sharedInitializedRef = useRef(false);
+  const sharedVersionRef = useRef(-1);
   const sharedStartedAtRef = useRef<number | null>(null);
   const tickRef = useRef<number | null>(null);
   const recordedRef = useRef<boolean>(false);
@@ -205,8 +206,21 @@ export function useGiveaway({
     }
   }, []);
 
+  // Ignore responses older than the newest state we already applied. A poll
+  // started before start/cancel/reveal can otherwise land afterwards and
+  // revert the UI.
+  const applySharedResponse = useCallback(
+    (next: { version: number; giveaway: SharedGiveawayState }) => {
+      if (next.version <= sharedVersionRef.current) return;
+      sharedVersionRef.current = next.version;
+      applySharedGiveaway(next.giveaway);
+    },
+    [applySharedGiveaway],
+  );
+
   useEffect(() => {
     if (!sharedChannel || !enabled) return;
+    sharedVersionRef.current = -1;
     let cancelled = false;
     let running = false;
     const poll = async () => {
@@ -214,7 +228,7 @@ export function useGiveaway({
       running = true;
       try {
         const next = await getSharedGiveaway(sharedChannel);
-        if (!cancelled) applySharedGiveaway(next.giveaway);
+        if (!cancelled) applySharedResponse(next);
       } catch {
         // Keep the last known state, retry on the next tick.
       } finally {
@@ -227,7 +241,7 @@ export function useGiveaway({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [sharedChannel, enabled, applySharedGiveaway]);
+  }, [sharedChannel, enabled, applySharedResponse]);
 
   const resetBuffer = useCallback(() => {
     bufferRef.current = new Map();
@@ -331,7 +345,7 @@ export function useGiveaway({
         scope,
         eligibility,
       })
-        .then((res) => applySharedGiveaway(res.giveaway))
+        .then(applySharedResponse)
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to start giveaway"),
         );
@@ -354,13 +368,13 @@ export function useGiveaway({
     eligibility,
     resetBuffer,
     sharedChannel,
-    applySharedGiveaway,
+    applySharedResponse,
   ]);
 
   const cancel = useCallback(() => {
     if (sharedChannel) {
       void giveawayAction(sharedChannel, "cancel")
-        .then((res) => applySharedGiveaway(res.giveaway))
+        .then(applySharedResponse)
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to cancel giveaway"),
         );
@@ -376,12 +390,12 @@ export function useGiveaway({
     resetBuffer();
     setPhase("config");
     recordedRef.current = false;
-  }, [resetBuffer, sharedChannel, applySharedGiveaway]);
+  }, [resetBuffer, sharedChannel, applySharedResponse]);
 
   const startNew = useCallback(() => {
     if (sharedChannel) {
       void giveawayAction(sharedChannel, "cancel")
-        .then((res) => applySharedGiveaway(res.giveaway))
+        .then(applySharedResponse)
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to reset giveaway"),
         );
@@ -393,13 +407,13 @@ export function useGiveaway({
     resetBuffer();
     setPhase("config");
     recordedRef.current = false;
-  }, [resetBuffer, sharedChannel, applySharedGiveaway]);
+  }, [resetBuffer, sharedChannel, applySharedResponse]);
 
   const reveal = useCallback(() => {
     if (phase !== "running") return;
     if (sharedChannel) {
       void giveawayAction(sharedChannel, "reveal")
-        .then((res) => applySharedGiveaway(res.giveaway))
+        .then(applySharedResponse)
         .catch((err) =>
           setError(err instanceof Error ? err.message : "Failed to reveal winner"),
         );
@@ -407,7 +421,7 @@ export function useGiveaway({
     }
     setWinner(pickWinner(Array.from(bufferRef.current.values())));
     setPhase("revealed");
-  }, [phase, sharedChannel, applySharedGiveaway]);
+  }, [phase, sharedChannel, applySharedResponse]);
 
   return {
     phase,

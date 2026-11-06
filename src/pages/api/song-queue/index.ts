@@ -19,6 +19,7 @@ import {
   MAX_SONG_DURATION_CEILING_SEC,
   type SongQueueConfig,
 } from "../../../lib/songQueue/types";
+import { authorizeChannel } from "../../../server/wheelAuth";
 
 interface CreateBody {
   title?: string;
@@ -72,7 +73,7 @@ function clampConfig(input: SongQueueConfig): SongQueueConfig {
   };
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-create`,
@@ -98,14 +99,33 @@ export const POST: APIRoute = async ({ request }) => {
   if (title.length > 200) {
     return json({ error: "Title too long" }, 400);
   }
+  const channelName = body.channelName?.trim() || "";
+  const channelPlatform = body.channelPlatform?.trim() || "";
+  // A channel is a claim, not proof. Only verified broadcasters or allowed
+  // moderators may create a channel-bound session, otherwise an anonymous
+  // caller could poison the queue that /api/song-queue/active hands out.
+  if (channelName || channelPlatform) {
+    if (!channelName || !channelPlatform) {
+      return json({ error: "Missing channel" }, 400);
+    }
+    const auth = await authorizeChannel(
+      cookies,
+      { channelName, channelPlatform },
+      { allowModerators: true },
+    );
+    if (auth === "unauthenticated") {
+      return json({ error: "Not authenticated" }, 401);
+    }
+    if (auth !== "ok") return json({ error: "Forbidden" }, 403);
+  }
   const config = body.config
     ? clampConfig({ ...DEFAULT_SONG_QUEUE_CONFIG, ...body.config, title })
     : undefined;
   const bootstrap = await createSession(getSongQueueStoreOptions(), {
     title: title || undefined,
     isPublic: Boolean(body.isPublic),
-    channelName: body.channelName?.trim() || undefined,
-    channelPlatform: body.channelPlatform?.trim() || undefined,
+    channelName: channelName || undefined,
+    channelPlatform: channelPlatform || undefined,
     config,
   });
   return json(bootstrap, 201);

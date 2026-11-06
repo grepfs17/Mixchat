@@ -134,6 +134,8 @@ export function useMusicPlayer(
   const sharedLoadedRef = useRef(false);
   const skipPushRef = useRef(false);
   const pushingRef = useRef(false);
+  const sharedChannelRef = useRef(sharedChannel);
+  sharedChannelRef.current = sharedChannel;
 
   const applySharedMusic = useCallback((music: SharedMusicState) => {
     skipPushRef.current = true;
@@ -142,9 +144,22 @@ export function useMusicPlayer(
     setIsPlaying(Boolean(music.isPlaying));
   }, []);
 
-  // ---- IDB hydration (mount only) ----
+  // ---- IDB hydration / shared-state load ----
   useEffect(() => {
     let cancelled = false;
+    // Reset per-channel bookkeeping before any async work. Without this a
+    // channel switch could push the previous channel's playlists into the
+    // new channel (and a matching version would let the server accept it).
+    sharedVersionRef.current = -1;
+    sharedLoadedRef.current = false;
+    skipPushRef.current = false;
+    pushingRef.current = false;
+    setHydrated(false);
+    if (sharedChannel) {
+      setPlaylists([]);
+      setSettings({ ...DEFAULT_MUSIC_PLAYER_SETTINGS });
+      setIsPlaying(false);
+    }
     (async () => {
       try {
         const [loadedPlaylists, loadedSettings] = await Promise.all([
@@ -227,15 +242,19 @@ export function useMusicPlayer(
       skipPushRef.current = false;
       return;
     }
+    const channel = sharedChannel;
     const timer = window.setTimeout(async () => {
       if (pushingRef.current) return;
       pushingRef.current = true;
       try {
-        const res = await putSharedMusic(sharedChannel, sharedVersionRef.current, {
+        const res = await putSharedMusic(channel, sharedVersionRef.current, {
           playlists,
           settings,
           isPlaying,
         });
+        // A channel switch may have happened while this request was in
+        // flight. Never let the old channel's response update the new one.
+        if (sharedChannelRef.current !== channel) return;
         sharedVersionRef.current = res.version;
         if (!res.ok) applySharedMusic(res.music);
       } catch {

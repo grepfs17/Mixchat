@@ -16,10 +16,15 @@ import {
   getStreamToolsState,
   mutateStreamToolsState,
 } from "../../../server/streamToolsState";
+import { readJsonBody } from "../../../server/jsonBody";
 
 const MIN_DURATION = 5;
 const MAX_DURATION = 2 * 60 * 60;
 const MAX_ENTRIES = 5000;
+const MAX_GIVEAWAY_BODY_BYTES = 64 * 1024;
+const MAX_ENTRY_USER_ID_LENGTH = 128;
+const MAX_ENTRY_AUTHOR_LENGTH = 100;
+const MAX_ENTRY_AVATAR_LENGTH = 500;
 
 interface GiveawayBody {
   channelKey?: string;
@@ -74,17 +79,24 @@ function validEntry(value: unknown): GiveawayEntry | null {
   if (entry.platform !== "twitch" && entry.platform !== "youtube") return null;
   if (typeof entry.userId !== "string" || !entry.userId.trim()) return null;
   if (typeof entry.author !== "string" || !entry.author.trim()) return null;
+  if (entry.userId.trim().length > MAX_ENTRY_USER_ID_LENGTH) return null;
+  if (entry.author.trim().length > MAX_ENTRY_AUTHOR_LENGTH) return null;
   if (
     entry.authorAvatar !== undefined &&
-    typeof entry.authorAvatar !== "string"
+    (typeof entry.authorAvatar !== "string" ||
+      entry.authorAvatar.length > MAX_ENTRY_AVATAR_LENGTH)
   ) {
     return null;
   }
+  // Rebuild the entry from validated fields so unknown properties cannot be
+  // persisted alongside it.
   return {
     platform: entry.platform,
-    userId: entry.userId,
-    author: entry.author,
-    authorAvatar: entry.authorAvatar,
+    userId: entry.userId.trim(),
+    author: entry.author.trim(),
+    ...(entry.authorAvatar !== undefined
+      ? { authorAvatar: entry.authorAvatar }
+      : {}),
   };
 }
 
@@ -134,13 +146,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return json({ error: "Invalid JSON" }, 400);
+  const parsed = await readJsonBody(request, MAX_GIVEAWAY_BODY_BYTES);
+  if (!parsed.ok) {
+    return json({ error: parsed.error }, parsed.status);
   }
-  const body = parseBody(raw);
+  const body = parseBody(parsed.value);
   if (!body || typeof body.action !== "string") {
     return json({ error: "Invalid body" }, 400);
   }

@@ -181,7 +181,11 @@ export const PATCH: APIRoute = async ({ request, params, cookies }) => {
     }
   }
 
-  const auth = await authorizeChannel(cookies, channel!, { allowModerators: true });
+  // Recording a winner is owner-only. Channel-trust moderators may edit the
+  // wheel, but must not be able to forge history entries.
+  const auth = await authorizeChannel(cookies, channel!, {
+    allowModerators: patch.addHistory === undefined,
+  });
   if (auth === "unauthenticated")
     return json({ error: "Not authenticated" }, 401);
   if (auth !== "ok") return json({ error: "Forbidden" }, 403);

@@ -6,6 +6,7 @@ import {
   MAX_PLAYLISTS,
   MAX_TRACKS_PER_PLAYLIST,
   type MusicPlaylist,
+  type MusicPlayerItem,
   type MusicPlayerSettings,
 } from "../../../lib/musicPlayer/types";
 import type { SharedMusicState } from "../../../lib/streamTools/state";
@@ -14,8 +15,16 @@ import { authorizeChannel } from "../../../server/wheelAuth";
 import { getStreamToolsStoreOptions } from "../../../server/streamToolsConfig";
 import {
   getStreamToolsState,
-  mutateStreamToolsState,
+  mutateStreamToolsStateIfVersion,
 } from "../../../server/streamToolsState";
+import { readJsonBody } from "../../../server/jsonBody";
+
+const MAX_MUSIC_BODY_BYTES = 5 * 1024 * 1024;
+const MAX_MUSIC_ID_LENGTH = 64;
+const MAX_TRACK_TITLE_LENGTH = 200;
+const MAX_TRACK_CHANNEL_TITLE_LENGTH = 200;
+const MAX_TRACK_THUMBNAIL_LENGTH = 500;
+const MAX_TRACK_DURATION_SEC = 24 * 60 * 60;
 
 interface MusicBody {
   channelKey?: string;
@@ -53,22 +62,48 @@ function sanitizeMusic(value: unknown): SharedMusicState | null {
     const p = raw as Partial<MusicPlaylist>;
     if (
       typeof p.id !== "string" ||
+      !p.id ||
       typeof p.name !== "string" ||
       !Array.isArray(p.items)
     ) {
       return null;
     }
-    const items = p.items.slice(0, MAX_TRACKS_PER_PLAYLIST).filter((it) => {
-      return (
-        it &&
-        typeof it === "object" &&
-        typeof it.id === "string" &&
-        typeof it.videoId === "string" &&
-        typeof it.title === "string"
-      );
-    });
+    const items: MusicPlayerItem[] = [];
+    for (const raw of p.items.slice(0, MAX_TRACKS_PER_PLAYLIST)) {
+      if (!raw || typeof raw !== "object") continue;
+      const it = raw as Partial<MusicPlayerItem>;
+      if (
+        typeof it.id !== "string" ||
+        !it.id ||
+        typeof it.videoId !== "string" ||
+        typeof it.title !== "string"
+      ) {
+        continue;
+      }
+      items.push({
+        id: it.id.slice(0, MAX_MUSIC_ID_LENGTH),
+        videoId: it.videoId.slice(0, MAX_MUSIC_ID_LENGTH),
+        title: it.title.slice(0, MAX_TRACK_TITLE_LENGTH),
+        channelTitle:
+          typeof it.channelTitle === "string"
+            ? it.channelTitle.slice(0, MAX_TRACK_CHANNEL_TITLE_LENGTH)
+            : "",
+        thumbnail:
+          typeof it.thumbnail === "string"
+            ? it.thumbnail.slice(0, MAX_TRACK_THUMBNAIL_LENGTH)
+            : "",
+        durationSec:
+          typeof it.durationSec === "number" &&
+          Number.isFinite(it.durationSec)
+            ? Math.min(
+                Math.max(0, Math.floor(it.durationSec)),
+                MAX_TRACK_DURATION_SEC,
+              )
+            : 0,
+      });
+    }
     playlists.push({
-      id: p.id,
+      id: p.id.slice(0, MAX_MUSIC_ID_LENGTH),
       name: p.name.slice(0, 80),
       items,
       createdAt:
@@ -91,14 +126,18 @@ function sanitizeMusic(value: unknown): SharedMusicState | null {
       : {};
   const settings: MusicPlayerSettings = {
     activePlaylistId:
-      typeof rawSettings.activePlaylistId === "string" ||
-      rawSettings.activePlaylistId === null
-        ? rawSettings.activePlaylistId
-        : DEFAULT_MUSIC_PLAYER_SETTINGS.activePlaylistId,
+      typeof rawSettings.activePlaylistId === "string"
+        ? rawSettings.activePlaylistId.slice(0, MAX_MUSIC_ID_LENGTH)
+        : rawSettings.activePlaylistId === null
+          ? null
+          : DEFAULT_MUSIC_PLAYER_SETTINGS.activePlaylistId,
     currentIndex:
       typeof rawSettings.currentIndex === "number" &&
       Number.isFinite(rawSettings.currentIndex)
-        ? Math.max(0, Math.floor(rawSettings.currentIndex))
+        ? Math.min(
+            Math.max(0, Math.floor(rawSettings.currentIndex)),
+            MAX_TRACKS_PER_PLAYLIST - 1,
+          )
         : 0,
     volume:
       typeof rawSettings.volume === "number" && Number.isFinite(rawSettings.volume)
@@ -148,12 +187,11 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  let body: MusicBody;
-  try {
-    body = (await request.json()) as MusicBody;
-  } catch {
-    return json({ error: "Invalid JSON" }, 400);
+  const parsed = await readJsonBody(request, MAX_MUSIC_BODY_BYTES);
+  if (!parsed.ok) {
+    return json({ error: parsed.error }, parsed.status);
   }
+  const body = parsed.value as MusicBody;
   if (!body || typeof body !== "object") {
     return json({ error: "Invalid body" }, 400);
   }
@@ -162,16 +200,35 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
   const music = sanitizeMusic(body.music);
   if (!music) return json({ error: "Invalid music state" }, 400);
   const opts = getStreamToolsStoreOptions();
-  const current = await getStreamToolsState(opts, access.key);
-  if (typeof body.version !== "number" || body.version !== current.version) {
+  if (typeof body.version !== "number" || !Number.isFinite(body.version)) {
+    const current = await getStreamToolsState(opts, access.key);
     return json(
       { error: "State changed", version: current.version, music: current.music },
       409,
     );
   }
-  await mutateStreamToolsState(opts, access.key, (state) => {
-    state.music = music;
+  // Check and write under the same channel lock so two writers with the
+  // same expected version cannot both pass and clobber each other.
+  const mutation = await mutateStreamToolsStateIfVersion(
+    opts,
+    access.key,
+    body.version,
+    (state) => {
+      state.music = music;
+    },
+  );
+  if (!mutation.ok) {
+    return json(
+      {
+        error: "State changed",
+        version: mutation.state.version,
+        music: mutation.state.music,
+      },
+      409,
+    );
+  }
+  return json({
+    version: mutation.state.version,
+    music: mutation.state.music,
   });
-  const next = await getStreamToolsState(opts, access.key);
-  return json({ version: next.version, music: next.music });
 };

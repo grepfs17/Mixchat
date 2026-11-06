@@ -32,6 +32,7 @@ vi.mock("../../../src/server/wheelAuth", () => ({
 }));
 
 import { MAX_WHEEL_OPTIONS } from "../../../src/lib/wheel/types";
+import { authorizeChannel } from "../../../src/server/wheelAuth";
 import {
   GET as listWheels,
   POST as createWheel,
@@ -395,6 +396,23 @@ describe("wheel API", () => {
       const id = await createHistoryWheel();
       const res = await patch(id, { addHistory: { name: "   " } });
       expect(res.status).toBe(400);
+      expect(await readHistory(id)).toEqual([]);
+    });
+
+    it("rejects winner recording from a channel moderator", async () => {
+      const id = await createHistoryWheel();
+      const authMock = authorizeChannel as unknown as ReturnType<typeof vi.fn>;
+      authMock.mockResolvedValueOnce("forbidden");
+
+      const res = await patch(id, {
+        addHistory: { name: "Forged", time: "10:00:00 01/01" },
+      });
+      expect(res.status).toBe(403);
+      expect(authMock).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ channelName: "alice" }),
+        { allowModerators: false },
+      );
       expect(await readHistory(id)).toEqual([]);
     });
   });
