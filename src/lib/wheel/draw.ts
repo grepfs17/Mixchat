@@ -27,38 +27,39 @@ export function wheelGeometry(size: number): WheelGeometry {
 }
 
 /**
- * Largest bold font size (px) at which `text` fits within `maxWidth`.
+ * Clearance kept between a label and whatever it could collide with: the
+ * slice stroke, the label's own drop shadow, and the centre hub.
  */
-export function computeMaxFontSize(
+const LABEL_GUTTER = 6;
+
+/** Share of the em box a label can occupy across the wedge. */
+const GLYPH_HALF_EM = 0.5;
+
+/** Width of `text` when drawn at `fontPx`, measured with the context. */
+function textWidthAt(
   ctx: CanvasRenderingContext2D,
   text: string,
-  maxWidth: number,
-  fontFace = "Arial",
+  fontPx: number,
+  fontFace: string,
 ): number {
-  let low = 6;
-  // Scale the ceiling with the room available so a large wheel is allowed to
-  // use large type, while a short label never balloons past a quarter of it.
-  let high = Math.max(50, Math.round(maxWidth / 4));
-  let size = low;
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    ctx.font = `bold ${mid}px ${fontFace}`;
-    if (ctx.measureText(text).width <= maxWidth) {
-      size = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-  return Math.max(size, 8);
+  ctx.font = `bold ${fontPx}px ${fontFace}`;
+  return ctx.measureText(text).width;
 }
 
 /**
- * Font size for the whole wheel.
+ * Largest font size at which a label still fits its slice.
  *
- * Labels run along the slice, so their length is bounded hub-to-rim while
- * their height must fit inside the wedge. The second constraint is what makes
- * crowded wheels unreadable, so it replaces the old count-based guessing.
+ * Two constraints, both evaluated with the text's real width:
+ *
+ * - **Radial**: the label runs along the slice, so it must clear the hub and
+ *   the rim.
+ * - **Across the wedge**: the slice narrows towards the hub, so the binding
+ *   point is the label's *innermost* end, not its midpoint. Measuring the
+ *   wedge at the midpoint (as this used to) lets long text on ~16 slices
+ *   spill into its neighbours.
+ *
+ * Both shrink as the font grows, so a binary search finds the largest size
+ * that satisfies them together.
  */
 export function computeWheelFontSize(
   ctx: CanvasRenderingContext2D,
@@ -68,18 +69,34 @@ export function computeWheelFontSize(
   fontFace = "Arial",
 ): number {
   const { radius, hubRadius, labelRadius } = wheelGeometry(size);
-  const radial = 2 * Math.min(labelRadius - hubRadius, radius - labelRadius);
-  const tangential =
-    optionCount <= 1
-      ? Number.POSITIVE_INFINITY
-      : 2 * labelRadius * Math.sin(Math.PI / optionCount);
-  return Math.max(
-    8,
-    Math.min(
-      computeMaxFontSize(ctx, text, radial, fontFace),
-      tangential * 0.9,
-    ),
-  );
+  const radialRun =
+    2 * (Math.min(labelRadius - hubRadius, radius - labelRadius) - LABEL_GUTTER);
+  const sinHalf =
+    optionCount <= 1 ? null : Math.sin(Math.PI / optionCount);
+
+  const fits = (fontPx: number): boolean => {
+    const width = textWidthAt(ctx, text, fontPx, fontFace);
+    if (width > radialRun) return false;
+    if (sinHalf === null) return true;
+    // Narrowest half-width available to the glyphs, at the inner end.
+    const inner = labelRadius - width / 2;
+    if (inner <= hubRadius) return false;
+    return GLYPH_HALF_EM * fontPx + LABEL_GUTTER <= inner * sinHalf;
+  };
+
+  let low = 6;
+  let high = Math.max(50, Math.round(labelRadius));
+  let best = low;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    if (fits(mid)) {
+      best = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return Math.max(best, 8);
 }
 
 /**

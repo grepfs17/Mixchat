@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  computeMaxFontSize,
   computeWheelFontSize,
   optionIndexAtPointer,
   wheelGeometry,
@@ -27,34 +26,6 @@ describe("optionIndexAtPointer", () => {
 
   it("returns -1 for an empty wheel", () => {
     expect(optionIndexAtPointer(0, 0)).toBe(-1);
-  });
-});
-
-describe("computeMaxFontSize", () => {
-  function makeCtx(): CanvasRenderingContext2D {
-    const ctx: { font: string; measureText: (text: string) => TextMetrics } = {
-      font: "bold 10px Arial",
-      measureText(text: string) {
-        const match = /(\d+(?:\.\d+)?)px/.exec(ctx.font);
-        const size = match ? parseFloat(match[1]) : 10;
-        return { width: text.length * size * 0.6 } as TextMetrics;
-      },
-    };
-    return ctx as unknown as CanvasRenderingContext2D;
-  }
-
-  it("shrinks the font as the text gets longer", () => {
-    const ctx = makeCtx();
-    const short = computeMaxFontSize(ctx, "Hi", 200);
-    const long = computeMaxFontSize(ctx, "a".repeat(30), 200);
-    expect(short).toBeGreaterThan(long);
-    expect(long).toBeGreaterThanOrEqual(8);
-  });
-
-  it("never returns below the minimum readable size", () => {
-    const ctx = makeCtx();
-    const size = computeMaxFontSize(ctx, "b".repeat(200), 200);
-    expect(size).toBeGreaterThanOrEqual(8);
   });
 });
 
@@ -106,6 +77,44 @@ describe("computeWheelFontSize", () => {
     const ctx = makeCtx();
     expect(computeWheelFontSize(ctx, "Winner", 800, 1)).toBeGreaterThanOrEqual(
       8,
+    );
+  });
+
+  it("shrinks the font as the text gets longer", () => {
+    const ctx = makeCtx();
+    const short = computeWheelFontSize(ctx, "Hi", 800, 16);
+    const long = computeWheelFontSize(ctx, "a".repeat(30), 800, 16);
+    expect(short).toBeGreaterThan(long);
+    expect(long).toBeGreaterThanOrEqual(8);
+  });
+
+  it("never returns below the minimum readable size", () => {
+    const ctx = makeCtx();
+    expect(
+      computeWheelFontSize(ctx, "b".repeat(200), 800, 16),
+    ).toBeGreaterThanOrEqual(8);
+  });
+
+  it("keeps a 16-slice label inside its own wedge", () => {
+    const ctx = makeCtx();
+    const size = 800;
+    const optionCount = 16;
+    const text = "Winner";
+
+    const fontPx = computeWheelFontSize(ctx, text, size, optionCount);
+    const { hubRadius, labelRadius } = wheelGeometry(size);
+
+    ctx.font = `bold ${fontPx}px Arial`;
+    const width = ctx.measureText(text).width;
+    const inner = labelRadius - width / 2;
+
+    // Radial: the label clears the hub.
+    expect(inner).toBeGreaterThan(hubRadius);
+    // Across the wedge: glyphs must fit at the label's innermost end, where
+    // the slice is narrowest. Measuring at the midpoint instead let this
+    // overflow into the neighbouring slices.
+    expect(0.5 * fontPx).toBeLessThanOrEqual(
+      inner * Math.sin(Math.PI / optionCount),
     );
   });
 });
