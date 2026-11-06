@@ -518,6 +518,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
   const wheelsRef = useRef<WheelSummary[]>([]);
+  /** Ids removed in this session, so a stale list response cannot revive them. */
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<WheelPublicView | null>(null);
   const [ownerToken, setOwnerToken] = useState<string | null>(null);
@@ -658,6 +660,35 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     if (pause !== null) pauseUntilRef.current = Date.now() + pause;
   }, []);
 
+  /**
+   * Forget a wheel that no longer exists: hide it from the sidebar and, when
+   * it was the one on screen, move on to the next wheel (or the empty state).
+   * Used by both the local delete action and a 404 from the poll, so a wheel
+   * deleted on another device disappears here too.
+   */
+  const forgetWheel = useCallback(
+    (id: string) => {
+      deletedIdsRef.current.add(id);
+      const remaining = wheelsRef.current.filter((w) => w.id !== id);
+      wheelsRef.current = remaining;
+      setWheels(remaining);
+
+      if (activeIdRef.current !== id) return;
+      activeRef.current = null;
+      activeIdRef.current = null;
+      setActiveId(null);
+      setActive(null);
+      setOwnerToken(null);
+      setDraftName("");
+      setDraftOptions([]);
+      setBulkText("");
+      setNewOption("");
+      showToast("That wheel was deleted");
+      if (remaining[0]) void selectWheel(remaining[0].id);
+    },
+    [selectWheel, showToast],
+  );
+
   // Active wheel: name, options, and winners. Local unsaved edits and an
   // in-progress spin always win over the remote copy.
   useEffect(() => {
@@ -690,6 +721,12 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
           }
         }
       } catch (err) {
+        const status = (err as { status?: number } | null)?.status;
+        if (status === 404 && !cancelled) {
+          // Deleted on another device: drop it instead of polling forever.
+          forgetWheel(activeId);
+          return;
+        }
         // Keep the last known state and back off instead of hammering the
         // rate limiter; the next tick retries once the pause expires.
         throttle(err);
@@ -703,7 +740,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [activeId, channelKey, ownerToken, paused, throttle]);
+  }, [activeId, channelKey, ownerToken, paused, throttle, forgetWheel]);
 
   // Sidebar list: wheels created, deleted, or renamed elsewhere. The startup
   // list already came from the boot sequence, so this only needs the interval.
@@ -724,14 +761,18 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       running = true;
       try {
         const list = await listWheels(channelKey);
-        if (cancelled || sameWheelList(wheelsRef.current, list)) return;
-        wheelsRef.current = list;
-        setWheels(list);
+        if (cancelled) return;
+        // A response that was already in flight when a wheel was deleted can
+        // still contain it; never let it come back.
+        const visible = list.filter((w) => !deletedIdsRef.current.has(w.id));
+        if (sameWheelList(wheelsRef.current, visible)) return;
+        wheelsRef.current = visible;
+        setWheels(visible);
         // A wheel appeared while nothing is selected (the other side just
         // created one). Only when the list actually changed, so a failed load
         // is not retried on every tick.
-        if (!activeIdRef.current && list[0] && !spinningRef.current) {
-          await selectWheel(list[0].id);
+        if (!activeIdRef.current && visible[0] && !spinningRef.current) {
+          await selectWheel(visible[0].id);
         }
       } catch (err) {
         throttle(err);
@@ -853,7 +894,9 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         const token = await getWheelToken(id);
         await deleteWheel(id, { ownerToken: token, channelKey });
         await removeWheelToken(id);
+        deletedIdsRef.current.add(id);
         const nextWheels = wheels.filter((w) => w.id !== id);
+        wheelsRef.current = nextWheels;
         setWheels(nextWheels);
         if (activeId === id) {
           if (nextWheels[0]) {

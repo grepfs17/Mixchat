@@ -220,6 +220,63 @@ describe("WheelApp", () => {
     expect(fetchWheelMock.mock.calls.length).toBeGreaterThan(2);
   });
 
+  it("drops a wheel that was deleted on another device", async () => {
+    listWheelsMock.mockResolvedValue([
+      summary(),
+      summary({ id: "w2", name: "Other" }),
+    ]);
+    fetchWheelMock
+      .mockResolvedValueOnce(wheel())
+      .mockImplementation((id: string) =>
+        id === "w1"
+          ? Promise.reject(
+              Object.assign(new Error("Wheel not found"), { status: 404 }),
+            )
+          : Promise.resolve(wheel({ id: "w2", name: "Other" })),
+      );
+
+    render(<WheelApp />);
+    await flush();
+    expect(screen.getByDisplayValue("First")).toBeTruthy();
+
+    await advance(2_000);
+
+    // The selection moves on to the remaining wheel instead of sticking on a
+    // wheel that no longer exists.
+    expect(screen.queryByDisplayValue("First")).toBeNull();
+    expect(screen.getByDisplayValue("Other")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^First/ })).toBeNull();
+  });
+
+  it("does not resurrect a locally deleted wheel from a stale list", async () => {
+    listWheelsMock.mockResolvedValue([
+      summary(),
+      summary({ id: "w2", name: "Other" }),
+    ]);
+    fetchWheelMock.mockImplementation((id: string) =>
+      Promise.resolve(
+        id === "w2" ? wheel({ id: "w2", name: "Other" }) : wheel(),
+      ),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<WheelApp />);
+    await flush();
+    expect(screen.getByDisplayValue("First")).toBeTruthy();
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Delete wheel" })[0],
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByDisplayValue("Other")).toBeTruthy();
+
+    // A list response that predates the delete still contains the old wheel.
+    await advance(10_000);
+    expect(screen.queryByRole("button", { name: /^First/ })).toBeNull();
+  });
+
   it("clears winners through the server", async () => {
     fetchWheelMock.mockResolvedValue(
       wheel({ history: [{ name: "Champion", time: "10:00:00 01/01" }] }),
