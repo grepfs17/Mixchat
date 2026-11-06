@@ -4,6 +4,7 @@ dist/
 astro/
 *vercel*
 .env
+.env.desktop
 !.env.example
 *.log
 .DS_Store

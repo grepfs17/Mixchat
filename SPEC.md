@@ -20,6 +20,7 @@
 | `youtubei.js` | YouTube InnerTube API (chat, metadata, player) |
 | `hls.js` | HLS video player for M3U8 streams |
 | `bgutils-js` | Bot guard utilities (PoToken generation for YouTube) |
+| `jsdom` | DOM environment for BotGuard PoToken generation in Node |
 | `twemoji` | Emoji rendering fallback |
 
 ## Project Structure
@@ -72,6 +73,7 @@ mixchat/
 │   │   ├── constants.ts     # App constants (mod commands, YT user agent)
 │   │   ├── version.ts       # Display version + the git branch baked in at build time
 │   │   ├── oauthSession.ts  # OAuth popup + postMessage listener
+│   │   ├── desktopShell.ts  # Runtime shell detection + system-browser opener
 │   │   ├── google.ts        # Google API fetch wrapper (rate limiting, quota tracking)
 │   │   ├── googleDrive.ts   # Google Drive backup/restore for settings
 │   │   └── ...              # Badges, chat history, chat colors, potoken, emojiShortcodes, etc.
@@ -87,6 +89,7 @@ mixchat/
 │   │   ├── streamToolsSettings.ts # Per-channel Stream tools access settings (enabled, allowMods)
 │   │   ├── streamToolsState.ts    # Shared Giveaway + Music Player state (versioned, atomic)
 │   │   ├── youtubeAuth.ts      # Stable viewer identity/session keys for authenticated YouTube live chat
+│   │   ├── googleHandoff.ts    # Short-lived Tauri Google OAuth handoff store (PKCE, single use)
 │   │   └── providerTokens.ts   # Refresh provider access tokens from httpOnly refresh cookies
 │   ├── pages/               # Astro pages + API routes
 │   │   ├── index.astro      # Main app page
@@ -96,7 +99,10 @@ mixchat/
 │   │   ├── wheel/[wheelId].astro # Shared/public wheel page
 │   │   ├── dev/chat-preview.astro # Dev-only chat styling gallery (blocked in prod by middleware)
 │   │   ├── auth/            # OAuth callback pages (twitch, youtube)
+│   │   ├── desktop/         # Desktop-only pages (twitch-activate redirect)
 │   │   └── api/             # API endpoints (song-queue, wheel, stream-tools, youtube-proxy, moderation, etc.)
+│   │       ├── auth/google/desktop/  # Tauri Google OAuth handoff start + poll
+│   │       └── desktop/open.ts       # Desktop-only system-browser opener
 │   ├── styles/              # CSS stylesheets (theme system, component styles)
 │   ├── contexts/            # React contexts (ModerationContext)
 │   └── client/              # Client-side entry points (songQueuePublic)
@@ -268,8 +274,15 @@ mixchat/
 **Desktop (public-client OAuth, built with `PUBLIC_APP_PLATFORM=desktop`):**
 - `src/lib/constants.ts` exposes `IS_DESKTOP` (from `PUBLIC_APP_PLATFORM`) and the shared `TWITCH_SCOPES`.
 - Twitch uses the OAuth **Device Code Grant** via `/api/auth/twitch/device/start` (returns the user code) and `/api/auth/twitch/device/poll` (sets the auth cookies on approval). A Public Twitch app is used, so no client secret. UI: `src/components/TwitchDeviceLoginModal.tsx`.
-- Google/YouTube uses **PKCE** with a Google "Desktop app" OAuth client: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie. `src/pages/auth/youtube/callback.ts` exchanges the code with `code_verifier` **and** the client secret (Google rejects secretless PKCE for its token endpoint, even for desktop clients).
+- Google/YouTube uses **PKCE** with a Google "Desktop app" OAuth client. The desktop build has two delivery modes:
+  - **Tauri (`?mixchat-shell=tauri` or `window.__MIXCHAT_SHELL__ === "tauri"`)**: `POST /api/auth/google/desktop/start` creates a pending handoff (`src/server/googleHandoff.ts`) and returns the Google URL. The app opens it with `POST /api/desktop/open`, which spawns the system browser from the local server. The callback recognizes the handoff state, exchanges the code with the stored PKCE verifier, and stores the result in the handoff. The app polls `POST /api/auth/google/desktop/poll`, which sets the httpOnly auth cookies in the app's own cookie jar and returns the session. This avoids the embedded-webview block, the missing `window.opener`, and the page reload caused by navigating the WebView2 window.
+  - **Legacy popup**: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie, and the popup callback posts the session through `window.opener`.
+- Handoff records live for 10 minutes, are capped at 20, and are single use. Drive-only grants use the same flow with `flow: "drive"`.
+- `astro.config.mjs` sets `ssr.noExternal: true` and keeps `jsdom` external in desktop builds. `jsdom` reads a stylesheet relative to `__dirname`, which breaks when bundled into ESM, so the Tauri prepare step installs only `jsdom` next to the server bundle. Everything else is bundled and needs no `node_modules`.
+- The embedded Twitch player authenticates with Twitch's own web session, not the API access token. The app opens `/desktop/twitch-activate?url=...` (`src/pages/desktop/twitch-activate.ts`) instead of `twitch.tv` directly, so the shell can promote it to a child webview (`twitch-activate`) that shares the WebView2 profile, and that one login also stores Twitch cookies for the player. The handler only redirects to `https://*.twitch.tv` URLs, so when the shell does not intercept it the flow still works. The device poll then creates the API session. **Account > Log in to Twitch player** remains as a fallback that opens `https://www.twitch.tv/login` and reloads the main window on close.
 - Twitch token refresh (`/api/refresh-token`, `src/server/providerTokens.ts`) omits the client secret for desktop builds (Public app). Google refresh (`refresh-token`, `providerTokens`, `gdrive.ts`) still sends its desktop client secret.
+- Desktop builds resolve `/api/parent-domain` from the loopback request host instead of the baked `site`, so the Twitch embed's `parent` matches the app origin.
+- Desktop builds bind the server to `127.0.0.1` (`astro.config.mjs` `server.host`), because `@astrojs/node` standalone otherwise resolves the default `host: true` to `0.0.0.0` and would expose `/api/desktop/open` and the OAuth handoff endpoints to the LAN. A runtime `HOST` env var still overrides this.
 - The confidential web flows are unchanged. `src/pages/auth/twitch/callback.ts` returns 404 in desktop mode.
 
 ## Common Tasks Guide

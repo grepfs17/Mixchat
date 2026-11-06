@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import type { TwitchDeviceState } from "../hooks/app/useAuthSessions";
+import { openTwitchActivation } from "../lib/desktopShell";
 
 interface Props {
   device: TwitchDeviceState | null;
@@ -14,9 +15,8 @@ export default function TwitchDeviceLoginModal({ device, onCancel }: Props) {
   if (!device) return null;
 
   const waiting = device.status === "waiting";
-  const activateUrl = device.verificationUri
-    ? `${device.verificationUri}?device-code=${encodeURIComponent(device.userCode)}`
-    : "https://www.twitch.tv/activate";
+  const activateUrl =
+    device.verificationUri || "https://www.twitch.tv/activate";
 
   const copyCode = () => {
     try {
@@ -101,14 +101,13 @@ export default function TwitchDeviceLoginModal({ device, onCancel }: Props) {
               <button type="button" onClick={copyCode} style={secondaryBtn}>
                 Copy code
               </button>
-              <a
-                href={activateUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{ ...primaryBtn, textDecoration: "none" }}
+              <button
+                type="button"
+                onClick={() => openTwitchActivation(activateUrl)}
+                style={primaryBtn}
               >
                 Open twitch.tv/activate
-              </a>
+              </button>
             </div>
             <p
               style={{
