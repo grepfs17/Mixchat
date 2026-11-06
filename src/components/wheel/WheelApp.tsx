@@ -85,6 +85,26 @@ function WheelParticles({ particles }: { particles: WheelParticle[] }) {
   );
 }
 
+/**
+ * Sync cadence. The active wheel changes on save (name, options, winners) so
+ * it polls quickly; the sidebar list only changes when a wheel appears or
+ * disappears elsewhere, so it polls slowly.
+ */
+const WHEEL_SYNC_MS = 2_000;
+const LIST_SYNC_MS = 10_000;
+
+/**
+ * Milliseconds to pause polling after a 429, honouring `Retry-After` when the
+ * server sends one. Returns null for errors that are not rate limiting.
+ */
+function rateLimitPauseMs(err: unknown): number | null {
+  const status = (err as { status?: number } | null)?.status;
+  if (status !== 429) return null;
+  const retry = (err as { retryAfterSec?: number | null } | null)
+    ?.retryAfterSec;
+  return retry && retry > 0 ? retry * 1000 : 60_000;
+}
+
 /** True when two wheel lists are identical (avoids a needless re-render). */
 function sameWheelList(a: WheelSummary[], b: WheelSummary[]): boolean {
   return (
@@ -619,78 +639,115 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   // Mirrored into refs so the sync interval does not restart on every edit.
   const activeRef = useRef<WheelPublicView | null>(active);
+  const activeIdRef = useRef<string | null>(activeId);
   const dirtyRef = useRef(dirty);
   const spinningRef = useRef(spinning);
+  // Shared pause so a 429 on either endpoint stops both pollers.
+  const pauseUntilRef = useRef(0);
   useEffect(() => {
     activeRef.current = active;
+    activeIdRef.current = activeId;
     dirtyRef.current = dirty;
     spinningRef.current = spinning;
     wheelsRef.current = wheels;
   });
 
-  // Live sync: reflect saves, renames, and deletions made by the streamer or
-  // a moderator on another device without a reload. Local unsaved edits and an
+  const paused = useCallback(() => Date.now() < pauseUntilRef.current, []);
+  const throttle = useCallback((err: unknown) => {
+    const pause = rateLimitPauseMs(err);
+    if (pause !== null) pauseUntilRef.current = Date.now() + pause;
+  }, []);
+
+  // Active wheel: name, options, and winners. Local unsaved edits and an
   // in-progress spin always win over the remote copy.
   useEffect(() => {
-    if (!activeId && !channelKey) return;
+    if (!activeId) return;
     let cancelled = false;
     let running = false;
 
     const tick = async () => {
       if (
+        cancelled ||
         running ||
+        paused() ||
         (typeof document !== "undefined" && document.hidden)
       ) {
         return;
       }
       running = true;
       try {
-        if (activeId) {
-          const token = ownerToken ?? (await getWheelToken(activeId));
-          const wheel = await fetchWheel(activeId, token, channelKey);
-          if (cancelled) return;
+        const token = ownerToken ?? (await getWheelToken(activeId));
+        const wheel = await fetchWheel(activeId, token, channelKey);
+        if (cancelled) return;
 
-          const changed = activeRef.current?.version !== wheel.version;
-          if (changed) {
-            activeRef.current = wheel;
-            setActive(wheel);
-            if (!spinningRef.current && !dirtyRef.current) {
-              setDraftName(wheel.name);
-              setDraftOptions(wheel.options);
-            }
+        const changed = activeRef.current?.version !== wheel.version;
+        if (changed) {
+          activeRef.current = wheel;
+          setActive(wheel);
+          if (!spinningRef.current && !dirtyRef.current) {
+            setDraftName(wheel.name);
+            setDraftOptions(wheel.options);
           }
         }
-
-        if (channelKey) {
-          const list = await listWheels(channelKey);
-          if (cancelled) return;
-          if (!sameWheelList(wheelsRef.current, list)) {
-            wheelsRef.current = list;
-            setWheels(list);
-            // A wheel appeared while nothing is selected (the other side just
-            // created one). Only do this when the list actually changed so a
-            // failed load is not retried on every tick.
-            if (!activeId && list[0] && !spinningRef.current) {
-              await selectWheel(list[0].id);
-            }
-          }
-        }
-      } catch {
-        // Keep the last known state; the next tick retries.
+      } catch (err) {
+        // Keep the last known state and back off instead of hammering the
+        // rate limiter; the next tick retries once the pause expires.
+        throttle(err);
       } finally {
         running = false;
       }
     };
 
-    void tick();
-    const timer = window.setInterval(() => void tick(), 2000);
+    const timer = window.setInterval(() => void tick(), WHEEL_SYNC_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-    // selectWheel is stable (empty deps) and wheelsRef tracks the list.
+  }, [activeId, channelKey, ownerToken, paused, throttle]);
+
+  // Sidebar list: wheels created, deleted, or renamed elsewhere. The startup
+  // list already came from the boot sequence, so this only needs the interval.
+  useEffect(() => {
+    if (!channelKey) return;
+    let cancelled = false;
+    let running = false;
+
+    const tick = async () => {
+      if (
+        cancelled ||
+        running ||
+        paused() ||
+        (typeof document !== "undefined" && document.hidden)
+      ) {
+        return;
+      }
+      running = true;
+      try {
+        const list = await listWheels(channelKey);
+        if (cancelled || sameWheelList(wheelsRef.current, list)) return;
+        wheelsRef.current = list;
+        setWheels(list);
+        // A wheel appeared while nothing is selected (the other side just
+        // created one). Only when the list actually changed, so a failed load
+        // is not retried on every tick.
+        if (!activeIdRef.current && list[0] && !spinningRef.current) {
+          await selectWheel(list[0].id);
+        }
+      } catch (err) {
+        throttle(err);
+      } finally {
+        running = false;
+      }
+    };
+
+    const timer = window.setInterval(() => void tick(), LIST_SYNC_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // selectWheel is stable (empty deps); activeId reaches us through a ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, channelKey, ownerToken, selectWheel]);
+  }, [channelKey, paused, throttle, selectWheel]);
 
   const particles = useMemo(
     () =>

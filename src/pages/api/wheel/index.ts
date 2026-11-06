@@ -40,7 +40,7 @@ function isCreateBody(value: unknown): value is CreateBody {
 
 /** List the wheels owned by a channel (requires verified channel ownership). */
 export const GET: APIRoute = async ({ request, cookies }) => {
-  if (!checkRateLimit(`${clientAddress(request)}:wheel-list`, 60, 60_000)) {
+  if (!checkRateLimit(`${clientAddress(request)}:wheel-list`, 120, 60_000)) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
   const channel = channelFromRequest(request);

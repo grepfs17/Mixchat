@@ -36,10 +36,45 @@ async function parseError(res: Response, fallback: string): Promise<string> {
   }
 }
 
+/**
+ * Carries the HTTP status (and `Retry-After`, when the server sends it) so
+ * callers can react to throttling instead of retrying on a fixed cadence.
+ */
+export class WheelApiError extends Error {
+  readonly status: number;
+  readonly retryAfterSec: number | null;
+
+  constructor(
+    message: string,
+    status: number,
+    retryAfterSec: number | null = null,
+  ) {
+    super(message);
+    this.name = "WheelApiError";
+    this.status = status;
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+function readRetryAfter(res: Response): number | null {
+  const raw = res.headers.get("Retry-After");
+  if (!raw) return null;
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+async function apiError(res: Response, fallback: string): Promise<WheelApiError> {
+  return new WheelApiError(
+    await parseError(res, fallback),
+    res.status,
+    readRetryAfter(res),
+  );
+}
+
 export async function listWheels(channelKey: string): Promise<WheelSummary[]> {
   const params = new URLSearchParams({ channelKey });
   const res = await fetch(`/api/wheel?${params.toString()}`);
-  if (!res.ok) throw new Error(await parseError(res, "Failed to load wheels"));
+  if (!res.ok) throw await apiError(res, "Failed to load wheels");
   const body = (await res.json()) as { wheels?: WheelSummary[] };
   return Array.isArray(body.wheels) ? body.wheels : [];
 }
@@ -54,7 +89,7 @@ export async function createWheel(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(await parseError(res, "Failed to create wheel"));
+  if (!res.ok) throw await apiError(res, "Failed to create wheel");
   return (await res.json()) as WheelOwnerBootstrap;
 }
 
@@ -71,8 +106,8 @@ export async function fetchWheel(
     `/api/wheel/${encodeURIComponent(wheelId)}?${params.toString()}`,
     { headers },
   );
-  if (res.status === 404) throw new Error("Wheel not found");
-  if (!res.ok) throw new Error(await parseError(res, "Failed to load wheel"));
+  if (res.status === 404) throw new WheelApiError("Wheel not found", 404);
+  if (!res.ok) throw await apiError(res, "Failed to load wheel");
   const body = (await res.json()) as { wheel: WheelPublicView };
   return body.wheel;
 }
@@ -100,7 +135,7 @@ export async function updateWheel(
     `/api/wheel/${encodeURIComponent(wheelId)}?${params.toString()}`,
     { method: "PATCH", headers, body: JSON.stringify(patch) },
   );
-  if (!res.ok) throw new Error(await parseError(res, "Failed to update wheel"));
+  if (!res.ok) throw await apiError(res, "Failed to update wheel");
   const body = (await res.json()) as { wheel: WheelPublicView };
   return body.wheel;
 }
@@ -121,5 +156,5 @@ export async function deleteWheel(
     `/api/wheel/${encodeURIComponent(wheelId)}?${params.toString()}`,
     { method: "POST", headers },
   );
-  if (!res.ok) throw new Error(await parseError(res, "Failed to delete wheel"));
+  if (!res.ok) throw await apiError(res, "Failed to delete wheel");
 }

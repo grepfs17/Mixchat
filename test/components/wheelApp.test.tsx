@@ -171,7 +171,7 @@ describe("WheelApp", () => {
     expect(screen.getByText(/create a wheel or pick one/i)).toBeTruthy();
 
     listWheelsMock.mockResolvedValue([summary()]);
-    await advance(2000);
+    await advance(10_000);
 
     expect(screen.getByDisplayValue("First")).toBeTruthy();
   });
@@ -192,6 +192,32 @@ describe("WheelApp", () => {
 
     expect(screen.getByText("Champion")).toBeTruthy();
     expect(screen.getByText("10:00:00 01/01")).toBeTruthy();
+  });
+
+  it("pauses syncing after a 429 instead of hammering the rate limiter", async () => {
+    render(<WheelApp />);
+    await flush();
+    expect(fetchWheelMock).toHaveBeenCalledTimes(1);
+
+    const throttled = Object.assign(new Error("Too many requests"), {
+      status: 429,
+      retryAfterSec: 60,
+    });
+    fetchWheelMock.mockRejectedValue(throttled);
+    listWheelsMock.mockRejectedValue(throttled);
+
+    // First poll is throttled.
+    await advance(2_000);
+    expect(fetchWheelMock).toHaveBeenCalledTimes(2);
+
+    // Well inside the Retry-After window neither endpoint is touched.
+    await advance(20_000);
+    expect(fetchWheelMock).toHaveBeenCalledTimes(2);
+    expect(listWheelsMock).toHaveBeenCalledTimes(1);
+
+    // Once the pause expires syncing resumes.
+    await advance(45_000);
+    expect(fetchWheelMock.mock.calls.length).toBeGreaterThan(2);
   });
 
   it("clears winners through the server", async () => {
