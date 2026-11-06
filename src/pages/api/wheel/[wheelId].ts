@@ -33,6 +33,7 @@ interface WheelPatch {
   name?: string;
   options?: string[];
   isPublic?: boolean;
+  allowDuplicates?: boolean;
   addHistory?: WheelHistoryEntry;
   clearHistory?: boolean;
 }
@@ -70,7 +71,13 @@ function parsePatch(value: unknown): WheelPatch | null {
     ) {
       return null;
     }
-    patch.options = sanitizeWheelOptions(v.options);
+    // Kept raw here: the effective duplicate policy is only known once the
+    // stored wheel is loaded, so sanitizing happens in `applyPatch`.
+    patch.options = v.options as string[];
+  }
+  if (v.allowDuplicates !== undefined) {
+    if (typeof v.allowDuplicates !== "boolean") return null;
+    patch.allowDuplicates = v.allowDuplicates;
   }
   if (v.isPublic !== undefined) {
     if (typeof v.isPublic !== "boolean") return null;
@@ -92,8 +99,18 @@ function parsePatch(value: unknown): WheelPatch | null {
 function applyPatch(wheel: WheelRecord, patch: WheelPatch): WheelRecord {
   const next: WheelRecord = { ...wheel };
   if (patch.name !== undefined) next.name = patch.name || "Untitled wheel";
-  if (patch.options !== undefined) next.options = patch.options;
   if (patch.isPublic !== undefined) next.isPublic = patch.isPublic;
+  if (patch.allowDuplicates !== undefined) {
+    next.allowDuplicates = patch.allowDuplicates;
+  }
+  if (patch.options !== undefined) {
+    // A patch that also flips the flag applies the new policy; otherwise the
+    // stored one decides whether repeated entries survive.
+    next.options = sanitizeWheelOptions(
+      patch.options,
+      patch.allowDuplicates ?? wheel.allowDuplicates ?? false,
+    );
+  }
 
   if (patch.clearHistory) {
     next.history = [];

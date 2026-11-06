@@ -15,7 +15,6 @@ import { authorizeChannel } from "../../../server/wheelAuth";
 import {
   MAX_WHEEL_OPTIONS,
   MAX_WHEEL_OPTION_LENGTH,
-  sanitizeWheelOptions,
 } from "../../../lib/wheel/types";
 
 interface CreateBody {
@@ -24,6 +23,7 @@ interface CreateBody {
   channelKey?: string;
   channelName?: string;
   channelPlatform?: string;
+  allowDuplicates?: boolean;
 }
 
 function isCreateBody(value: unknown): value is CreateBody {
@@ -34,6 +34,8 @@ function isCreateBody(value: unknown): value is CreateBody {
   if (v.channelKey !== undefined && typeof v.channelKey !== "string") return false;
   if (v.channelName !== undefined && typeof v.channelName !== "string") return false;
   if (v.channelPlatform !== undefined && typeof v.channelPlatform !== "string")
+    return false;
+  if (v.allowDuplicates !== undefined && typeof v.allowDuplicates !== "boolean")
     return false;
   return true;
 }
@@ -105,7 +107,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const bootstrap = await createWheel(getWheelStoreOptions(), {
     name: body.name,
-    options: sanitizeWheelOptions(body.options),
+    options: body.options,
+    allowDuplicates: Boolean(body.allowDuplicates),
     channelName: channel.channelName,
     channelPlatform: channel.channelPlatform,
   });

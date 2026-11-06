@@ -259,6 +259,13 @@ interface WheelOptionsPanelProps {
   onBulkTextChange: (value: string) => void;
   onAddBulk: () => void;
   onRemoveAllOptions: () => void;
+  allowDuplicates: boolean;
+  onAllowDuplicatesChange: (checked: boolean) => void;
+}
+
+/** True once the wheel holds as many options as it is allowed to. */
+function atOptionLimit(count: number): boolean {
+  return count >= MAX_WHEEL_OPTIONS;
 }
 
 function WheelOptionsPanel({
@@ -275,25 +282,48 @@ function WheelOptionsPanel({
   onBulkTextChange,
   onAddBulk,
   onRemoveAllOptions,
+  allowDuplicates,
+  onAllowDuplicatesChange,
 }: WheelOptionsPanelProps) {
   return (
     <section className="wheel-panel">
       <header className="wheel-panel-head">
         <h3>
           Options
-          <span className="wheel-panel-count">{options.length}</span>
-        </h3>
-        {editable && options.length > 0 && (
-          <button
-            type="button"
-            className="wheel-icon-btn"
-            onClick={() => void onCopyAllOptions()}
-            title="Copy all options"
-            aria-label="Copy all options"
+          <span
+            className="wheel-panel-count"
+            title={`Maximum ${MAX_WHEEL_OPTIONS} options`}
           >
-            {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
-          </button>
-        )}
+            {options.length}
+          </span>
+        </h3>
+        <div className="wheel-panel-actions">
+          {editable && (
+            <label
+              className="wheel-dup-toggle"
+              title="Let the same option take more than one slice, so it is more likely to win"
+            >
+              <input
+                type="checkbox"
+                checked={allowDuplicates}
+                disabled={spinning}
+                onChange={(e) => onAllowDuplicatesChange(e.target.checked)}
+              />
+              <span>Allow duplicates</span>
+            </label>
+          )}
+          {editable && options.length > 0 && (
+            <button
+              type="button"
+              className="wheel-icon-btn"
+              onClick={() => void onCopyAllOptions()}
+              title="Copy all options"
+              aria-label="Copy all options"
+            >
+              {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
+            </button>
+          )}
+        </div>
       </header>
 
       {editable && (
@@ -304,7 +334,7 @@ function WheelOptionsPanel({
             placeholder="Enter a new option"
             maxLength={MAX_WHEEL_OPTION_LENGTH}
             aria-label="New option"
-            disabled={spinning}
+            disabled={spinning || atOptionLimit(options.length)}
             onChange={(e) => onNewOptionChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") onAddOption();
@@ -314,12 +344,19 @@ function WheelOptionsPanel({
             type="button"
             className="wheel-btn wheel-btn--primary"
             onClick={onAddOption}
-            disabled={spinning}
+            disabled={spinning || atOptionLimit(options.length)}
           >
             <FaPlus size={11} />
             <span>Add</span>
           </button>
         </div>
+      )}
+
+      {editable && atOptionLimit(options.length) && (
+        <p className="wheel-limit-hint" role="status">
+          Maximum of {MAX_WHEEL_OPTIONS} options reached. Remove one to add
+          another.
+        </p>
       )}
 
       <ul className="wheel-options-list">
@@ -333,7 +370,7 @@ function WheelOptionsPanel({
                 onClick={() => onRemoveOption(index)}
                 disabled={spinning}
                 title="Delete option"
-                aria-label={`Delete option ${option}`}
+                aria-label={`Delete option ${index + 1}: ${option}`}
               >
                 <FaTimes size={11} />
               </button>
@@ -351,7 +388,7 @@ function WheelOptionsPanel({
             className="wheel-bulk"
             rows={3}
             value={bulkText}
-            placeholder={"Or paste many options here\none line = one option"}
+            placeholder={`Or paste many options here\none line = one option (max ${MAX_WHEEL_OPTIONS})`}
             aria-label="Bulk options, one per line"
             disabled={spinning}
             onChange={(e) => onBulkTextChange(e.target.value)}
@@ -361,7 +398,9 @@ function WheelOptionsPanel({
               type="button"
               className="wheel-btn"
               onClick={onAddBulk}
-              disabled={!bulkText.trim() || spinning}
+              disabled={
+                !bulkText.trim() || spinning || atOptionLimit(options.length)
+              }
             >
               Add all lines
             </button>
@@ -506,6 +545,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [ownerToken, setOwnerToken] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const [draftAllowDuplicates, setDraftAllowDuplicates] = useState(false);
 
   const [booting, setBooting] = useState(true);
   const [loadingWheel, setLoadingWheel] = useState(false);
@@ -557,6 +597,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       activeRef.current = wheel;
       setDraftName(wheel.name);
       setDraftOptions(wheel.options);
+      setDraftAllowDuplicates(Boolean(wheel.allowDuplicates));
       setBulkText("");
       setNewOption("");
       if (typeof window !== "undefined" && /\/wheel\/?$/.test(window.location.pathname)) {
@@ -624,7 +665,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const isModerator = viewerRole === "moderator";
   const dirty = active
     ? draftName !== active.name ||
-      JSON.stringify(draftOptions) !== JSON.stringify(active.options)
+      JSON.stringify(draftOptions) !== JSON.stringify(active.options) ||
+      draftAllowDuplicates !== Boolean(active.allowDuplicates)
     : false;
   const history = active?.history ?? [];
 
@@ -670,6 +712,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       setOwnerToken(null);
       setDraftName("");
       setDraftOptions([]);
+      setDraftAllowDuplicates(false);
       setBulkText("");
       setNewOption("");
       showToast("That wheel was deleted");
@@ -707,6 +750,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
           if (!spinningRef.current && !dirtyRef.current) {
             setDraftName(wheel.name);
             setDraftOptions(wheel.options);
+            setDraftAllowDuplicates(Boolean(wheel.allowDuplicates));
           }
         }
       } catch (err) {
@@ -818,12 +862,17 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     try {
       const updated = await updateWheel(
         activeId,
-        { name: draftName.trim() || "Untitled wheel", options: draftOptions },
+        {
+          name: draftName.trim() || "Untitled wheel",
+          options: draftOptions,
+          allowDuplicates: draftAllowDuplicates,
+        },
         { ownerToken, channelKey },
       );
       setActive(updated);
       setDraftName(updated.name);
       setDraftOptions(updated.options);
+      setDraftAllowDuplicates(updated.allowDuplicates);
       setWheels((prev) =>
         prev.map((w) =>
           w.id === updated.id
@@ -848,6 +897,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     channelKey,
     draftName,
     draftOptions,
+    draftAllowDuplicates,
     ownerToken,
     showToast,
   ]);
@@ -904,12 +954,33 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     const value = newOption.trim().slice(0, MAX_WHEEL_OPTION_LENGTH);
     if (!value) return;
     setDraftOptions((prev) => {
-      if (prev.some((o) => o.toLowerCase() === value.toLowerCase())) return prev;
+      if (
+        !draftAllowDuplicates &&
+        prev.some((o) => o.toLowerCase() === value.toLowerCase())
+      ) {
+        return prev;
+      }
       if (prev.length >= MAX_WHEEL_OPTIONS) return prev;
       return [...prev, value];
     });
     setNewOption("");
-  }, [newOption]);
+  }, [newOption, draftAllowDuplicates]);
+
+  const handleAllowDuplicates = useCallback((checked: boolean) => {
+    setDraftAllowDuplicates(checked);
+    if (!checked) {
+      // Turning the option off tidies the draft straight away.
+      setDraftOptions((prev) => {
+        const seen = new Set<string>();
+        return prev.filter((o) => {
+          const key = o.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      });
+    }
+  }, []);
 
   const removeOption = useCallback((index: number) => {
     setDraftOptions((prev) => prev.filter((_, i) => i !== index));
@@ -932,19 +1003,23 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       .filter(Boolean);
     if (lines.length === 0) return;
     setDraftOptions((prev) => {
-      const seen = new Set(prev.map((o) => o.toLowerCase()));
+      const seen = draftAllowDuplicates
+        ? null
+        : new Set(prev.map((o) => o.toLowerCase()));
       const next = [...prev];
       for (const line of lines) {
-        const key = line.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (seen) {
+          const key = line.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+        }
         next.push(line);
         if (next.length >= MAX_WHEEL_OPTIONS) break;
       }
       return next;
     });
     setBulkText("");
-  }, [bulkText]);
+  }, [bulkText, draftAllowDuplicates]);
 
   const handleWinner = useCallback(
     (option: string) => {
@@ -1095,6 +1170,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
                 onBulkTextChange={setBulkText}
                 onAddBulk={addBulk}
                 onRemoveAllOptions={removeAllOptions}
+                allowDuplicates={draftAllowDuplicates}
+                onAllowDuplicatesChange={handleAllowDuplicates}
               />
 
               <WheelHistoryPanel

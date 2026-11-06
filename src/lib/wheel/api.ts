@@ -83,6 +83,7 @@ export async function createWheel(input: {
   channelKey: string;
   name?: string;
   options?: string[];
+  allowDuplicates?: boolean;
 }): Promise<WheelOwnerBootstrap> {
   const res = await fetch("/api/wheel", {
     method: "POST",
@@ -116,6 +117,8 @@ export interface WheelPatch {
   name?: string;
   options?: string[];
   isPublic?: boolean;
+  /** Repeated options may occupy several slices instead of being dropped. */
+  allowDuplicates?: boolean;
   /** Prepend a winner to the wheel's server-side history. */
   addHistory?: WheelHistoryEntry;
   /** Drop every stored winner. */

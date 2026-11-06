@@ -37,6 +37,7 @@ vi.mock("../../src/lib/streamTools/api", () => ({
 }));
 
 import WheelApp from "../../src/components/wheel/WheelApp";
+import { MAX_WHEEL_OPTIONS } from "../../src/lib/wheel/types";
 import type { WheelPublicView, WheelSummary } from "../../src/lib/wheel/types";
 
 function summary(overrides: Partial<WheelSummary> = {}): WheelSummary {
@@ -62,6 +63,7 @@ function wheel(overrides: Partial<WheelPublicView> = {}): WheelPublicView {
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     version: 0,
+    allowDuplicates: false,
     ...overrides,
   };
 }
@@ -222,6 +224,64 @@ describe("WheelApp", () => {
     expect(screen.getByRole("button", { name: "Spin!" })).toBeDisabled();
     // Editing stays available to moderators.
     expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+  });
+
+  it("lets one option occupy several slices when duplicates are allowed", async () => {
+    render(<WheelApp />);
+    await flush();
+
+    const toggle = screen.getByRole("checkbox") as HTMLInputElement;
+    expect(toggle).not.toBeChecked();
+
+    const entry = screen.getByLabelText("New option") as HTMLInputElement;
+    const add = screen.getByRole("button", { name: "Add" });
+    fireEvent.change(entry, { target: { value: "Red" } });
+    fireEvent.click(add);
+    fireEvent.change(entry, { target: { value: "Red" } });
+    fireEvent.click(add);
+    // The repeat was dropped: Blue plus a single Red.
+    expect(
+      screen.getAllByRole("button", { name: /^Delete option/ }),
+    ).toHaveLength(2);
+
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+
+    fireEvent.change(entry, { target: { value: "Red" } });
+    fireEvent.click(add);
+    expect(
+      screen.getAllByRole("button", { name: /^Delete option/ }),
+    ).toHaveLength(3);
+
+    // Turning duplicates off tidies the draft straight away.
+    fireEvent.click(toggle);
+    expect(
+      screen.getAllByRole("button", { name: /^Delete option/ }),
+    ).toHaveLength(2);
+  });
+
+  it("warns and blocks further adds once the option limit is reached", async () => {
+    fetchWheelMock.mockResolvedValue(
+      wheel({
+        options: Array.from(
+          { length: MAX_WHEEL_OPTIONS },
+          (_, i) => `Option ${i + 1}`,
+        ),
+      }),
+    );
+    render(<WheelApp />);
+    await flush();
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /maximum of 200 options reached/i,
+    );
+    expect(screen.getByLabelText("New option")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add all lines" })).toBeDisabled();
+    // Removing is always possible, which is how you get room back.
+    expect(
+      screen.getAllByRole("button", { name: /^Delete option/ }),
+    ).toHaveLength(MAX_WHEEL_OPTIONS);
   });
 
   it("pauses syncing after a 429 instead of hammering the rate limiter", async () => {

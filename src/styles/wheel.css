@@ -548,6 +548,35 @@
     margin-bottom: 12px;
 }
 
+.wheel-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wheel-dup-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.wheel-dup-toggle:hover {
+    color: var(--color-text-secondary);
+}
+
+.wheel-dup-toggle input {
+    accent-color: var(--color-indigo);
+    cursor: pointer;
+}
+
+.wheel-dup-toggle input:disabled {
+    cursor: default;
+}
+
 .wheel-panel-head h3 {
     display: flex;
     align-items: center;
@@ -650,6 +679,16 @@
 .wheel-bulk-actions {
     display: flex;
     gap: 8px;
+}
+
+.wheel-limit-hint {
+    margin: 0 0 10px;
+    padding: 7px 10px;
+    border: 1px solid var(--color-warning-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    font-size: 12px;
 }
 
 /* ---- History ---- */

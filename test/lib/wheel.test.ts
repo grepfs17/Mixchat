@@ -5,7 +5,10 @@ import {
   optionIndexAtPointer,
   wheelGeometry,
 } from "../../src/lib/wheel/draw";
-import { sanitizeWheelOptions } from "../../src/lib/wheel/types";
+import {
+  MAX_WHEEL_OPTIONS,
+  sanitizeWheelOptions,
+} from "../../src/lib/wheel/types";
 import { formatHistoryTime } from "../../src/lib/wheel/history";
 
 describe("optionIndexAtPointer", () => {
@@ -121,6 +124,28 @@ describe("sanitizeWheelOptions", () => {
 
   it("returns an empty array for non-array input", () => {
     expect(sanitizeWheelOptions("nope")).toEqual([]);
+  });
+
+  it("keeps every repeat when duplicates are allowed", () => {
+    expect(
+      sanitizeWheelOptions([" Yes ", "yes", "No", "No", "No"], true),
+    ).toEqual(["Yes", "yes", "No", "No", "No"]);
+  });
+
+  it("still trims and drops empties with duplicates allowed", () => {
+    expect(sanitizeWheelOptions([" A ", "", "  ", "B"], true)).toEqual([
+      "A",
+      "B",
+    ]);
+  });
+
+  it("caps the list at MAX_WHEEL_OPTIONS", () => {
+    const many = Array.from(
+      { length: MAX_WHEEL_OPTIONS + 25 },
+      (_, i) => `Option ${i + 1}`,
+    );
+    expect(sanitizeWheelOptions(many)).toHaveLength(MAX_WHEEL_OPTIONS);
+    expect(sanitizeWheelOptions(many, true)).toHaveLength(MAX_WHEEL_OPTIONS);
   });
 });
 
