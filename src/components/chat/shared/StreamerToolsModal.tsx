@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowLeft,
   FaCopy,
+  FaInfoCircle,
   FaShareSquare,
   FaTimes,
   FaTrash,
@@ -29,6 +30,8 @@ import {
 import type { PastPlaylistEntry } from "../../../lib/streamerTools/pastPlaylists";
 import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 import { IS_DESKTOP } from "../../../lib/constants";
+import type { StreamToolsSettings } from "../../../hooks/chat/useStreamToolsSettings";
+import { giveawayAction } from "../../../lib/streamTools/api";
 
 interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
@@ -53,6 +56,13 @@ interface StreamerToolsModalProps {
   onSearchCategories?: (
     query: string,
   ) => Promise<Array<{ id: string; name: string }>>;
+  /** Whether the viewer is the broadcaster or a moderator. */
+  role?: "owner" | "moderator";
+  /** Server-backed access settings. The owner can edit `allowMods`. */
+  settings?: StreamToolsSettings;
+  onUpdateSettings?: (
+    patch: Partial<StreamToolsSettings>,
+  ) => Promise<void>;
 }
 
 type ToolId = "music-player" | "giveaway" | "song-queue" | "wheel";
@@ -739,20 +749,31 @@ export default function StreamerToolsModal({
   streamGameId = "",
   streamGameName = "",
   onSearchCategories,
+  role = "owner",
+  settings,
+  onUpdateSettings,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(
     initialTool && isToolAvailable(initialTool) ? initialTool : null,
   );
   const [announcing, setAnnouncing] = useState(false);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const [accessInfoOpen, setAccessInfoOpen] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // Unwind the innermost layer first.
+      if (accessInfoOpen) {
+        setAccessInfoOpen(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [onClose, accessInfoOpen]);
 
   // Minimize is allowed whenever the active tool has something to keep
   // running. The giveaway is minimizable while running or revealed. The
@@ -798,12 +819,12 @@ export default function StreamerToolsModal({
         className="streamer-tools-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Streamer tools"
+        aria-label="Stream tools"
       >
         <div className="streamer-tools-header">
           <h2 className="streamer-tools-title">
             <FaWrench size={18} />{" "}
-            {tool ? `Streamer tools - ${tool.label}` : "Streamer tools"}
+            {tool ? `Stream tools - ${tool.label}` : "Stream tools"}
           </h2>
           <div className="streamer-tools-header-actions">
             <button type="button"
@@ -829,6 +850,113 @@ export default function StreamerToolsModal({
         <div className="streamer-tools-body">
           {!tool ? (
             <>
+              {role === "moderator" && (
+                <div className="stream-tools-access-banner">
+                  You are controlling Stream tools as a moderator.
+                </div>
+              )}
+              {role === "owner" && settings && onUpdateSettings && !IS_DESKTOP && (
+                <div className="stream-tools-access">
+                  <div className="stream-tools-access-row">
+                    <label className="stream-tools-access-toggle">
+                      <input
+                        type="checkbox"
+                        checked={settings.allowMods}
+                        disabled={savingAccess}
+                        onChange={async (e) => {
+                          setSavingAccess(true);
+                          try {
+                            await onUpdateSettings({
+                              allowMods: e.target.checked,
+                            });
+                          } finally {
+                            setSavingAccess(false);
+                          }
+                        }}
+                      />
+                      <span>Allow moderators to use Stream tools</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="stream-tools-access-info"
+                      onClick={() => setAccessInfoOpen(true)}
+                      title="What can moderators do?"
+                      aria-label="What can moderators do?"
+                    >
+                      <FaInfoCircle size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {accessInfoOpen && (
+                <div
+                  className="stream-tools-access-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="stream-tools-access-title"
+                  onClick={() => setAccessInfoOpen(false)}
+                >
+                  <div
+                    className="stream-tools-access-modal-box"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="stream-tools-access-modal-head">
+                      <h3 id="stream-tools-access-title">
+                        <FaInfoCircle size={15} />
+                        What moderators can do
+                      </h3>
+                      <button
+                        type="button"
+                        className="stream-tools-access-modal-close"
+                        onClick={() => setAccessInfoOpen(false)}
+                        title="Close"
+                        aria-label="Close"
+                      >
+                        <FaTimes size={14} />
+                      </button>
+                    </div>
+
+                    <p className="stream-tools-access-modal-intro">
+                      When this is on, Twitch moderators of your channel get
+                      the same Stream tools you have.
+                    </p>
+
+                    <div className="stream-tools-access-modal-cols">
+                      <div className="stream-tools-access-modal-col">
+                        <h4>They can</h4>
+                        <ul>
+                          <li>Run a giveaway: start, cancel, reveal, announce</li>
+                          <li>Use the music player: playlists, tracks, play/pause</li>
+                          <li>Manage the song queue: start, end, add, skip, remove</li>
+                          <li>Create and edit wheels: rename, options, delete</li>
+                        </ul>
+                      </div>
+                      <div className="stream-tools-access-modal-col">
+                        <h4>They can&apos;t</h4>
+                        <ul>
+                          <li>Spin the wheel</li>
+                          <li>Change this setting</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <p className="stream-tools-access-modal-note">
+                      Only Twitch moderators are included.
+                    </p>
+
+                    <div className="stream-tools-access-modal-actions">
+                      <button
+                        type="button"
+                        className="stream-tools-access-modal-ok"
+                        onClick={() => setAccessInfoOpen(false)}
+                      >
+                        Got it
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               <ul className="streamer-tools-list">
                 {AVAILABLE_TOOLS.map((t) => (
                   <li key={t.id} className="streamer-tools-list-item">
@@ -850,7 +978,7 @@ export default function StreamerToolsModal({
                         setActiveTool(t.id);
                       }}
                     >
-                      {t.id === "wheel" ? "Open in new tab" : "Open"}
+                      Open
                     </button>
                   </li>
                 ))}
@@ -879,6 +1007,20 @@ export default function StreamerToolsModal({
                   youtubeConnected={youtubeConnected}
                   onAnnounce={async (winner, text) => {
                     if (announcing) return;
+                    // Shared giveaways: exactly one client may post the
+                    // winner message. Claim it first and bail if another
+                    // client already did.
+                    if (!IS_DESKTOP && channelKey) {
+                      try {
+                        const res = await giveawayAction(
+                          channelKey,
+                          "claimAnnounce",
+                        );
+                        if (!res.claimedWinner) return;
+                      } catch {
+                        return;
+                      }
+                    }
                     setAnnouncing(true);
                     try {
                       await onAnnounce(winner, text);

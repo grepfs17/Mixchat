@@ -758,6 +758,38 @@ export const getTwitchUser = async (accessToken: string, clientId: string) => {
   }
 };
 
+export const getTwitchUserByLogin = async (
+  accessToken: string,
+  clientId: string,
+  login: string,
+) => {
+  if (!login || !login.trim()) return null;
+  if (!clientId) return null;
+
+  try {
+    const response = await fetch(
+      `${TWITCH_API_BASE}/users?login=${encodeURIComponent(login.trim())}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    const user = data?.data?.[0];
+    if (!user) return null;
+    return {
+      userId: user.id as string,
+      displayName: user.display_name as string,
+      login: user.login as string,
+    };
+  } catch {
+    return null;
+  }
+};
+
 export const getTwitchUserById = async (
   accessToken: string,
   clientId: string,

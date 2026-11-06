@@ -3,40 +3,100 @@
  * be unit-tested without a DOM canvas implementation.
  */
 
+/** Radii of the drawn wheel, derived from the square canvas size. */
+export interface WheelGeometry {
+  /** Outer edge of the slices. */
+  radius: number;
+  /** Centre hub. */
+  hubRadius: number;
+  /** Where a label's midpoint sits along the slice. */
+  labelRadius: number;
+}
+
 /**
- * Largest bold font size (px) at which `text` fits within `maxWidth`, then
- * reduced a little based on how crowded the wheel is. Mirrors the original
- * spinthewheel sizing heuristics.
+ * The wheel is drawn to fill the canvas: slices reach `0.49` of the size so
+ * only the stroke is left over at the edge.
  */
-export function computeMaxFontSize(
+export function wheelGeometry(size: number): WheelGeometry {
+  const radius = size * 0.49;
+  return {
+    radius,
+    hubRadius: size * 0.07,
+    labelRadius: radius * 0.57,
+  };
+}
+
+/**
+ * Clearance kept between a label and whatever it could collide with: the
+ * slice stroke, the label's own drop shadow, and the centre hub.
+ */
+const LABEL_GUTTER = 6;
+
+/** Share of the em box a label can occupy across the wedge. */
+const GLYPH_HALF_EM = 0.5;
+
+/** Width of `text` when drawn at `fontPx`, measured with the context. */
+function textWidthAt(
   ctx: CanvasRenderingContext2D,
   text: string,
+  fontPx: number,
+  fontFace: string,
+): number {
+  ctx.font = `bold ${fontPx}px ${fontFace}`;
+  return ctx.measureText(text).width;
+}
+
+/**
+ * Largest font size at which a label still fits its slice.
+ *
+ * Two constraints, both evaluated with the text's real width:
+ *
+ * - **Radial**: the label runs along the slice, so it must clear the hub and
+ *   the rim.
+ * - **Across the wedge**: the slice narrows towards the hub, so the binding
+ *   point is the label's *innermost* end, not its midpoint. Measuring the
+ *   wedge at the midpoint (as this used to) lets long text on ~16 slices
+ *   spill into its neighbours.
+ *
+ * Both shrink as the font grows, so a binary search finds the largest size
+ * that satisfies them together.
+ */
+export function computeWheelFontSize(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  size: number,
   optionCount: number,
-  maxWidth: number,
   fontFace = "Arial",
 ): number {
+  const { radius, hubRadius, labelRadius } = wheelGeometry(size);
+  const radialRun =
+    2 * (Math.min(labelRadius - hubRadius, radius - labelRadius) - LABEL_GUTTER);
+  const sinHalf =
+    optionCount <= 1 ? null : Math.sin(Math.PI / optionCount);
+
+  const fits = (fontPx: number): boolean => {
+    const width = textWidthAt(ctx, text, fontPx, fontFace);
+    if (width > radialRun) return false;
+    if (sinHalf === null) return true;
+    // Narrowest half-width available to the glyphs, at the inner end.
+    const inner = labelRadius - width / 2;
+    if (inner <= hubRadius) return false;
+    return GLYPH_HALF_EM * fontPx + LABEL_GUTTER <= inner * sinHalf;
+  };
+
   let low = 6;
-  let high = 50;
-  let size = low;
+  let high = Math.max(50, Math.round(labelRadius));
+  let best = low;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
-    ctx.font = `bold ${mid}px ${fontFace}`;
-    if (ctx.measureText(text).width <= maxWidth) {
-      size = mid;
+    if (fits(mid)) {
+      best = mid;
       low = mid + 1;
     } else {
       high = mid - 1;
     }
   }
-  size -= optionCount * 0.45;
-  if (optionCount >= 11 && optionCount <= 15) {
-    size *= 0.9;
-  } else if (optionCount >= 16 && optionCount <= 20) {
-    size *= 0.75;
-  } else if (optionCount > 20) {
-    size *= Math.max(0.6 - optionCount * 0.01, 0.4);
-  }
-  return Math.max(size, 8);
+  return Math.max(best, 8);
 }
 
 /**
@@ -76,7 +136,7 @@ function drawLabel(
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
   ctx.textBaseline = "middle";
-  ctx.fillText(option, radius * 0.55, 0);
+  ctx.fillText(option, radius, 0);
   ctx.restore();
 }
 
@@ -93,17 +153,17 @@ export function drawWheel(
   const fontFace = "Arial";
   const centerX = size / 2;
   const centerY = size / 2;
-  const radius = size * 0.45;
+  const { radius, hubRadius, labelRadius } = wheelGeometry(size);
   ctx.clearRect(0, 0, size, size);
   if (options.length === 0) return;
 
   const anglePerOption = (2 * Math.PI) / options.length;
   const longest = options.reduce((a, b) => (a.length > b.length ? a : b), "");
-  const fontSize = computeMaxFontSize(
+  const fontSize = computeWheelFontSize(
     ctx,
     longest,
+    size,
     options.length,
-    size * 0.44,
     fontFace,
   );
 
@@ -136,7 +196,7 @@ export function drawWheel(
       option,
       centerX,
       centerY,
-      radius,
+      labelRadius,
       startAngle,
       anglePerOption,
       fontSize,
@@ -145,7 +205,7 @@ export function drawWheel(
   });
 
   ctx.beginPath();
-  ctx.arc(centerX, centerY, size * 0.07, 0, 2 * Math.PI);
+  ctx.arc(centerX, centerY, hubRadius, 0, 2 * Math.PI);
   ctx.fillStyle = "#141417";
   ctx.fill();
 }

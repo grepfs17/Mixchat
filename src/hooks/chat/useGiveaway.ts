@@ -18,6 +18,12 @@ import {
   stableUserId,
 } from "../../lib/streamerTools/chatHelpers";
 import { appendGiveawayHistory } from "../../lib/streamerTools/history";
+import {
+  getSharedGiveaway,
+  giveawayAction,
+  ingestSharedGiveawayEntry,
+} from "../../lib/streamTools/api";
+import type { SharedGiveawayState } from "../../lib/streamTools/state";
 
 const DEFAULT_DURATION = 180;
 const MIN_DURATION = 5;
@@ -47,6 +53,11 @@ export interface UseGiveawayOptions {
   owner: GiveawayOwner;
   /** When false, internal ticking and ingestion are suspended. */
   enabled?: boolean;
+  /**
+   * When provided, giveaway state is shared server-side for this channel so
+   * the streamer and moderators operate the same live giveaway.
+   */
+  channelKey?: string | null;
 }
 
 export interface UseGiveawayResult {
@@ -139,7 +150,9 @@ function toEntry(item: GiveawayMessage): GiveawayEntry | null {
 export function useGiveaway({
   owner,
   enabled = true,
+  channelKey,
 }: UseGiveawayOptions): UseGiveawayResult {
+  const sharedChannel = channelKey ?? null;
   const [phase, setPhase] = useState<GiveawayPhase>("config");
   const [keyword, setKeyword] = useState("");
   const [duration, setDuration] = useState<number>(DEFAULT_DURATION);
@@ -152,6 +165,10 @@ export function useGiveaway({
   const [error, setError] = useState<string | null>(null);
   /** Bumped on every buffer mutation so consumers re-render. */
   const [entriesVersion, setEntriesVersion] = useState(0);
+  const [sharedEntries, setSharedEntries] = useState<GiveawayEntry[]>([]);
+  const sharedInitializedRef = useRef(false);
+  const sharedVersionRef = useRef(-1);
+  const sharedStartedAtRef = useRef<number | null>(null);
   const tickRef = useRef<number | null>(null);
   const recordedRef = useRef<boolean>(false);
   const bufferRef = useRef<Map<string, GiveawayEntry>>(new Map());
@@ -160,11 +177,71 @@ export function useGiveaway({
   const config: GiveawayConfig = { keyword, durationSeconds: duration, scope, eligibility };
 
   const liveEntries = useMemo<GiveawayEntry[]>(() => {
+    if (sharedChannel) return sharedEntries;
     if (phase !== "running" && phase !== "revealed") return [];
     return Array.from(bufferRef.current.values());
     // entriesVersion is the trigger: bufferRef is a stable ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, entriesVersion]);
+  }, [phase, entriesVersion, sharedChannel, sharedEntries]);
+
+  const applySharedGiveaway = useCallback((next: SharedGiveawayState) => {
+    setPhase(next.phase);
+    setStartedAt(next.startedAt);
+    setEndsAt(next.endsAt);
+    setWinner(next.winner);
+    setSharedEntries(next.entries);
+    // A new giveaway re-arms the local history recorder.
+    if (next.startedAt !== sharedStartedAtRef.current) {
+      sharedStartedAtRef.current = next.startedAt;
+      recordedRef.current = false;
+    }
+    // While the form is open the local draft wins; otherwise the server is
+    // authoritative so the history entry records the right keyword/config.
+    if (!sharedInitializedRef.current || next.phase !== "config") {
+      sharedInitializedRef.current = true;
+      setKeyword(next.keyword);
+      setDuration(next.duration);
+      setScope(next.scope);
+      setEligibility(next.eligibility);
+    }
+  }, []);
+
+  // Ignore responses older than the newest state we already applied. A poll
+  // started before start/cancel/reveal can otherwise land afterwards and
+  // revert the UI.
+  const applySharedResponse = useCallback(
+    (next: { version: number; giveaway: SharedGiveawayState }) => {
+      if (next.version <= sharedVersionRef.current) return;
+      sharedVersionRef.current = next.version;
+      applySharedGiveaway(next.giveaway);
+    },
+    [applySharedGiveaway],
+  );
+
+  useEffect(() => {
+    if (!sharedChannel || !enabled) return;
+    sharedVersionRef.current = -1;
+    let cancelled = false;
+    let running = false;
+    const poll = async () => {
+      if (running || (typeof document !== "undefined" && document.hidden)) return;
+      running = true;
+      try {
+        const next = await getSharedGiveaway(sharedChannel);
+        if (!cancelled) applySharedResponse(next);
+      } catch {
+        // Keep the last known state, retry on the next tick.
+      } finally {
+        running = false;
+      }
+    };
+    void poll();
+    const timer = window.setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [sharedChannel, enabled, applySharedResponse]);
 
   const resetBuffer = useCallback(() => {
     bufferRef.current = new Map();
@@ -175,6 +252,7 @@ export function useGiveaway({
   // Auto-reveal when the countdown reaches zero. Uses a single setTimeout
   // instead of a polling interval so ChatApp never re-renders for the tick.
   useEffect(() => {
+    if (sharedChannel) return;
     if (phase !== "running" || !enabled) return;
     if (endsAt === null || endsAt === Number.POSITIVE_INFINITY) return;
     const delay = Math.max(0, endsAt - Date.now());
@@ -188,7 +266,7 @@ export function useGiveaway({
         tickRef.current = null;
       }
     };
-  }, [phase, endsAt, enabled]);
+  }, [phase, endsAt, enabled, sharedChannel]);
 
   // Record the result once when entering the revealed phase with a winner.
   useEffect(() => {
@@ -227,12 +305,16 @@ export function useGiveaway({
       if (!isEligibleItem(item, eligibility)) return;
       const entry = toEntry(item);
       if (!entry) return;
+      if (sharedChannel) {
+        void ingestSharedGiveawayEntry(sharedChannel, entry).catch(() => {});
+        return;
+      }
       const key = `${entry.platform}:${entry.userId}`;
       if (bufferRef.current.has(key)) return;
       bufferRef.current.set(key, entry);
       setEntriesVersion((v) => v + 1);
     },
-    [phase, enabled, scope, owner, keyword, eligibility],
+    [phase, enabled, scope, owner, keyword, eligibility, sharedChannel],
   );
 
   const start = useCallback(() => {
@@ -256,6 +338,19 @@ export function useGiveaway({
       return;
     }
     setWinner(null);
+    if (sharedChannel) {
+      void giveawayAction(sharedChannel, "start", {
+        keyword: trimmed,
+        duration,
+        scope,
+        eligibility,
+      })
+        .then(applySharedResponse)
+        .catch((err) =>
+          setError(err instanceof Error ? err.message : "Failed to start giveaway"),
+        );
+      return;
+    }
     const startMs = Date.now();
     setStartedAt(startMs);
     setEndsAt(
@@ -266,9 +361,25 @@ export function useGiveaway({
     resetBuffer();
     setPhase("running");
     recordedRef.current = false;
-  }, [keyword, duration, resetBuffer]);
+  }, [
+    keyword,
+    duration,
+    scope,
+    eligibility,
+    resetBuffer,
+    sharedChannel,
+    applySharedResponse,
+  ]);
 
   const cancel = useCallback(() => {
+    if (sharedChannel) {
+      void giveawayAction(sharedChannel, "cancel")
+        .then(applySharedResponse)
+        .catch((err) =>
+          setError(err instanceof Error ? err.message : "Failed to cancel giveaway"),
+        );
+      return;
+    }
     if (tickRef.current !== null) {
       window.clearTimeout(tickRef.current);
       tickRef.current = null;
@@ -279,22 +390,38 @@ export function useGiveaway({
     resetBuffer();
     setPhase("config");
     recordedRef.current = false;
-  }, [resetBuffer]);
+  }, [resetBuffer, sharedChannel, applySharedResponse]);
 
   const startNew = useCallback(() => {
+    if (sharedChannel) {
+      void giveawayAction(sharedChannel, "cancel")
+        .then(applySharedResponse)
+        .catch((err) =>
+          setError(err instanceof Error ? err.message : "Failed to reset giveaway"),
+        );
+      return;
+    }
     setWinner(null);
     setEndsAt(null);
     setStartedAt(null);
     resetBuffer();
     setPhase("config");
     recordedRef.current = false;
-  }, [resetBuffer]);
+  }, [resetBuffer, sharedChannel, applySharedResponse]);
 
   const reveal = useCallback(() => {
     if (phase !== "running") return;
+    if (sharedChannel) {
+      void giveawayAction(sharedChannel, "reveal")
+        .then(applySharedResponse)
+        .catch((err) =>
+          setError(err instanceof Error ? err.message : "Failed to reveal winner"),
+        );
+      return;
+    }
     setWinner(pickWinner(Array.from(bufferRef.current.values())));
     setPhase("revealed");
-  }, [phase]);
+  }, [phase, sharedChannel, applySharedResponse]);
 
   return {
     phase,

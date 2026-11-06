@@ -76,12 +76,33 @@ export default function MusicPlayerMinimizedBar({
   }, []);
 
   const handlePlay = useCallback(() => {
+    if (!player.isAudioHost) {
+      player.setPlaying(!player.isPlaying);
+      return;
+    }
     if (playerState === "playing") {
       playerRef.current?.pause();
     } else {
       playerRef.current?.play();
     }
-  }, [playerState]);
+  }, [playerState, player]);
+
+  // The broadcaster's client is the audio host. Follow play/pause changes
+  // made by moderators through the shared state.
+  useEffect(() => {
+    if (!player.isAudioHost || !playerRef.current) return;
+    if (player.isPlaying && playerState !== "playing") {
+      playerRef.current.play();
+    } else if (!player.isPlaying && playerState === "playing") {
+      playerRef.current.pause();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.isPlaying, player.isAudioHost]);
+
+  useEffect(() => {
+    if (!player.isAudioHost) return;
+    playerRef.current?.setVolume(player.volume);
+  }, [player.volume, player.isAudioHost]);
 
   const handleVolume = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
@@ -98,7 +119,10 @@ export default function MusicPlayerMinimizedBar({
   const playlistItems = player.activePlaylist?.items ?? [];
   const hasItems = playlistItems.length > 0;
   const current = player.currentItem;
-  const isPlaying = playerState === "playing";
+  const durationFallback = current?.durationSec ?? 0;
+  const isPlaying = player.isAudioHost
+    ? playerState === "playing"
+    : player.isPlaying;
 
   if (!hasItems) return null;
 
@@ -123,7 +147,7 @@ export default function MusicPlayerMinimizedBar({
           type="button"
           className="music-player-bar-title"
           onClick={onOpen}
-          title="Open Music Player in Streamer tools"
+          title="Open Music Player in Stream tools"
         >
           <TrackTitle
             current={current}
@@ -134,9 +158,10 @@ export default function MusicPlayerMinimizedBar({
 
         <TimeProgress
           currentTime={currentTime}
-          duration={duration}
+          duration={duration || durationFallback}
           onSeek={handleSeek}
           onSeekEnd={handleSeekEnd}
+          disabled={!player.isAudioHost}
         />
 
         <PlaybackControls
@@ -153,20 +178,29 @@ export default function MusicPlayerMinimizedBar({
       </div>
       <div className="music-player-bar-body">
         <div className="music-player-bar-player-wrap">
-          <SongQueuePlayer
-            ref={playerRef}
-            items={playlistItems.map((it) => ({
-              id: it.id,
-              videoId: it.videoId,
-            }))}
-            currentIndex={player.currentIndex}
-            onAdvance={() => player.next()}
-            onStateChange={setPlayerState}
-            onDurationKnown={(_id, dur) => {
-              setDuration(dur);
-            }}
-            className="music-player-bar-player"
-          />
+          {player.isAudioHost ? (
+            <SongQueuePlayer
+              ref={playerRef}
+              items={playlistItems.map((it) => ({
+                id: it.id,
+                videoId: it.videoId,
+              }))}
+              currentIndex={player.currentIndex}
+              onAdvance={() => player.next()}
+              onStateChange={(state) => {
+                setPlayerState(state);
+                player.setPlaying(state === "playing");
+              }}
+              onDurationKnown={(_id, dur) => {
+                setDuration(dur);
+              }}
+              className="music-player-bar-player"
+            />
+          ) : (
+            <div className="music-player-bar-player music-player-bar-remote">
+              Playing on the broadcaster&apos;s device
+            </div>
+          )}
         </div>
         <div className="music-player-bar-list-wrap">
           <NowPlayingInfo current={current} />
@@ -223,6 +257,8 @@ interface TimeProgressProps {
   duration: number;
   onSeek: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSeekEnd: () => void;
+  /** Remote viewers can see progress but the host owns seeking. */
+  disabled?: boolean;
 }
 
 function TimeProgress({
@@ -230,6 +266,7 @@ function TimeProgress({
   duration,
   onSeek,
   onSeekEnd,
+  disabled = false,
 }: TimeProgressProps) {
   return (
     <div className="music-player-bar-time music-player-bar-time--inline">
@@ -245,6 +282,7 @@ function TimeProgress({
         onMouseUp={onSeekEnd}
         onKeyUp={onSeekEnd}
         onTouchEnd={onSeekEnd}
+        disabled={disabled}
         className="music-player-bar-time-slider"
         aria-label="Seek"
         title={`Seek: ${formatTime(currentTime)} / ${formatTime(duration)}`}

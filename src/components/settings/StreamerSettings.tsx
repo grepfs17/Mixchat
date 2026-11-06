@@ -49,10 +49,10 @@ function StreamerToolsSetting({
           checked={streamerToolsEnabled}
           onChange={(e) => onStreamerToolsEnabledChange(e.target.checked)}
         />
-        <span>Streamer tools</span>
+        <span>Stream tools</span>
       </label>
       <p className="embed-config-description embed-config-description--indented">
-        When enabled, a <strong>Streamer tools</strong> button appears in the
+        When enabled, a <strong>Stream tools</strong> button appears in the
         chat header while you are viewing your own channel. It currently
         contains a <strong>Giveaway</strong> tool and a
         <strong> Music Player</strong> tool.
@@ -62,6 +62,13 @@ function StreamerToolsSetting({
             It also includes a <strong>Song Queue</strong> tool that lets
             chatters submit YouTube links in chat and follow along on a
             shareable public page.
+          </>
+        )}
+        {!IS_DESKTOP && (
+          <>
+            {" "}
+            From the Stream tools modal you can let Twitch moderators use the
+            same tools.
           </>
         )}
       </p>
@@ -370,9 +377,9 @@ export function getStreamerSettings(
     {
       id: "streamer-tools",
       group: "streamer",
-      label: "Streamer tools",
+      label: "Stream tools",
       description:
-        "Show a Streamer tools button on your own channel with moderation helpers like giveaways",
+        "Show Stream tools on your own channel, with optional access for Twitch moderators",
       render: () => (
         <StreamerToolsSetting
           streamerToolsEnabled={props.streamerToolsEnabled}

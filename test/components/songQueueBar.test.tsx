@@ -98,7 +98,7 @@ describe("SongQueueMinimizedBar", () => {
   it("calls onOpen when the title is clicked", () => {
     const onOpen = vi.fn();
     render(<SongQueueMinimizedBar queue={makeQueue()} onOpen={onOpen} onEnd={vi.fn()} />);
-    fireEvent.click(screen.getByTitle("Open song queue in Streamer tools"));
+    fireEvent.click(screen.getByTitle("Open song queue in Stream tools"));
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 

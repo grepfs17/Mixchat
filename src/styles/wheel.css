@@ -9,53 +9,11 @@
     overflow-x: hidden;
 }
 
-/* ---- Ambient particles ---- */
-.wheel-particles {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-    z-index: 0;
-}
-
-.wheel-particle {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    opacity: 0;
-    animation: wheel-drift linear infinite;
-}
-
-.wheel-particle--big {
-    width: 7px;
-    height: 7px;
-    background: var(--color-indigo);
-}
-
-@keyframes wheel-drift {
-    0% {
-        transform: translate(0, 0) scale(1);
-        opacity: 0;
-    }
-    10% {
-        opacity: 0.8;
-    }
-    90% {
-        opacity: 0.8;
-    }
-    100% {
-        transform: translate(40px, -120px) scale(0);
-        opacity: 0;
-    }
-}
-
 /* ---- Header ---- */
 .wheel-header {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    max-width: 1360px;
     margin: 0 auto 20px;
     display: flex;
     align-items: center;
@@ -108,7 +66,7 @@
 .wheel-banner {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    max-width: 1360px;
     margin: 0 auto 16px;
     display: flex;
     align-items: center;
@@ -123,6 +81,12 @@
     background: rgba(239, 68, 68, 0.12);
     border: 1px solid var(--color-notification-error-border);
     color: #fca5a5;
+}
+
+.wheel-banner--warn {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+    color: var(--color-warning-text);
 }
 
 .wheel-toast {
@@ -153,26 +117,29 @@
 }
 
 /* ---- Layout ---- */
+/* One column. The sidebar lives outside this box, so everything inside is
+   free to centre on the layout without a reserved gutter. */
 .wheel-layout {
     position: relative;
     z-index: 1;
-    max-width: 1100px;
+    max-width: 1360px;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    gap: 20px;
-    align-items: start;
+    display: block;
 }
 
 .wheel-layout--solo {
-    grid-template-columns: minmax(0, 1fr);
-    max-width: 760px;
+    max-width: 900px;
 }
 
 /* ---- Sidebar ---- */
+/* Parked outside the layout box (in the page's left margin) so it never
+   offsets the wheel. Below 1920px there is no margin to spare, so it drops
+   back into the flow above the main column instead. */
 .wheel-sidebar {
-    position: sticky;
-    top: 20px;
+    position: absolute;
+    right: calc(100% + 24px);
+    top: 0;
+    width: 250px;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-dark);
     border-radius: var(--radius-xl);
@@ -484,9 +451,11 @@
     gap: 16px;
 }
 
+/* Square, and never taller than the viewport minus the chrome around it. */
 .wheel-stage {
     position: relative;
-    width: min(520px, 100%);
+    width: min(100%, calc(100vh - 250px));
+    width: min(100%, calc(100dvh - 250px));
     aspect-ratio: 1 / 1;
     margin: 0 auto;
     padding: 18px;
@@ -577,6 +546,35 @@
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
+}
+
+.wheel-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wheel-dup-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.wheel-dup-toggle:hover {
+    color: var(--color-text-secondary);
+}
+
+.wheel-dup-toggle input {
+    accent-color: var(--color-indigo);
+    cursor: pointer;
+}
+
+.wheel-dup-toggle input:disabled {
+    cursor: default;
 }
 
 .wheel-panel-head h3 {
@@ -683,6 +681,16 @@
     gap: 8px;
 }
 
+.wheel-limit-hint {
+    margin: 0 0 10px;
+    padding: 7px 10px;
+    border: 1px solid var(--color-warning-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    font-size: 12px;
+}
+
 /* ---- History ---- */
 .wheel-history-toggle {
     display: inline-flex;
@@ -764,6 +772,9 @@
 }
 
 .wheel-winner-box {
+    /* Sits above the confetti layer so the name stays readable. */
+    position: relative;
+    z-index: 1;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--radius-2xl);
@@ -809,17 +820,66 @@
     font-size: 15px;
 }
 
-/* ---- Responsive ---- */
-@media (max-width: 780px) {
-    .wheel-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
+/* ---- Confetti ---- */
+.wheel-confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
 
+.wheel-confetti__piece {
+    position: absolute;
+    top: -20px;
+    border-radius: 2px;
+    opacity: 0;
+    will-change: transform, opacity;
+    animation-name: wheel-confetti-fall;
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+    animation-fill-mode: forwards;
+}
+
+.wheel-confetti__piece--round {
+    border-radius: 50%;
+}
+
+@keyframes wheel-confetti-fall {
+    0% {
+        transform: translate3d(0, -10vh, 0) rotate(0deg);
+        opacity: 0;
+    }
+    12% {
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        transform:
+            translate3d(var(--confetti-drift, 0px), 110vh, 0)
+            rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel-confetti__piece {
+        animation: none;
+    }
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1919px) {
     .wheel-sidebar {
         position: static;
+        width: auto;
         max-height: none;
+        margin-bottom: 18px;
     }
+}
 
+@media (max-width: 780px) {
     .wheel-main-head {
         flex-direction: column;
         align-items: stretch;

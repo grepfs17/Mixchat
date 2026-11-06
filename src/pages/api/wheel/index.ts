@@ -15,7 +15,6 @@ import { authorizeChannel } from "../../../server/wheelAuth";
 import {
   MAX_WHEEL_OPTIONS,
   MAX_WHEEL_OPTION_LENGTH,
-  sanitizeWheelOptions,
 } from "../../../lib/wheel/types";
 
 interface CreateBody {
@@ -24,6 +23,7 @@ interface CreateBody {
   channelKey?: string;
   channelName?: string;
   channelPlatform?: string;
+  allowDuplicates?: boolean;
 }
 
 function isCreateBody(value: unknown): value is CreateBody {
@@ -35,17 +35,19 @@ function isCreateBody(value: unknown): value is CreateBody {
   if (v.channelName !== undefined && typeof v.channelName !== "string") return false;
   if (v.channelPlatform !== undefined && typeof v.channelPlatform !== "string")
     return false;
+  if (v.allowDuplicates !== undefined && typeof v.allowDuplicates !== "boolean")
+    return false;
   return true;
 }
 
 /** List the wheels owned by a channel (requires verified channel ownership). */
 export const GET: APIRoute = async ({ request, cookies }) => {
-  if (!checkRateLimit(`${clientAddress(request)}:wheel-list`, 60, 60_000)) {
+  if (!checkRateLimit(`${clientAddress(request)}:wheel-list`, 120, 60_000)) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
   const channel = channelFromRequest(request);
   if (!channel) return json({ error: "Missing channel" }, 400);
-  const auth = await authorizeChannel(cookies, channel);
+  const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
   if (auth !== "ok") {
     return json(
       { error: auth === "unauthenticated" ? "Not authenticated" : "Forbidden" },
@@ -95,7 +97,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }
       : (parseChannelKey(body.channelKey ?? null) ?? channelFromRequest(request));
   if (!channel) return json({ error: "Missing channel" }, 400);
-  const auth = await authorizeChannel(cookies, channel);
+  const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
   if (auth !== "ok") {
     return json(
       { error: auth === "unauthenticated" ? "Not authenticated" : "Forbidden" },
@@ -105,7 +107,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const bootstrap = await createWheel(getWheelStoreOptions(), {
     name: body.name,
-    options: sanitizeWheelOptions(body.options),
+    options: body.options,
+    allowDuplicates: Boolean(body.allowDuplicates),
     channelName: channel.channelName,
     channelPlatform: channel.channelPlatform,
   });

@@ -1,7 +1,7 @@
 ---
 import AppContainer from "../components/AppContainer";
 import { IS_TWITCH_ONLY } from "../lib/constants";
-import { DISPLAY_VERSION } from "../lib/version";
+import { DISPLAY_VERSION, GIT_BRANCH } from "../lib/version";
 import "../styles/global.css";
 import "../styles/themes.css";
 import "../styles/AppContainer.css";
@@ -242,7 +242,8 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 );
             }
 
-            .app-footer__version {
+            .app-footer__version,
+            .app-footer__branch {
                 padding: 2px 5px;
                 border-radius: var(--radius-sm);
                 background: var(--color-bg-tertiary);
@@ -250,6 +251,10 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 font-size: 9.5px;
                 font-variant-numeric: tabular-nums;
                 letter-spacing: 0.04em;
+            }
+
+            .app-footer__branch {
+                font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             }
 
             /* Only the look lives here. The position/inset/z-index are set inline on
@@ -288,7 +293,8 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                 }
 
                 .app-footer__brand,
-                .app-footer__version {
+                .app-footer__version,
+                .app-footer__branch {
                     display: none;
                 }
 
@@ -365,6 +371,14 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
                         Clip Explorer
                     </a>
                     <span class="app-footer__version">{DISPLAY_VERSION}</span>
+                    {GIT_BRANCH && (
+                        <span
+                            class="app-footer__branch"
+                            title="Git branch this build came from"
+                        >
+                            Branch: {GIT_BRANCH}
+                        </span>
+                    )}
                 </div>
             </div>
         </footer>

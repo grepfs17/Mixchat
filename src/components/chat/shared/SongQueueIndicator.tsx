@@ -204,7 +204,7 @@ function SongQueueBarTitleButton({
       type="button"
       className="song-queue-bar-title"
       onClick={onOpen}
-      title="Open song queue in Streamer tools"
+      title="Open song queue in Stream tools"
     >
       <span className="song-queue-bar-icon" aria-hidden="true">
         ♪

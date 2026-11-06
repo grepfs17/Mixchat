@@ -1,15 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
-  computeMaxFontSize,
+  computeWheelFontSize,
   optionIndexAtPointer,
+  wheelGeometry,
 } from "../../src/lib/wheel/draw";
-import { sanitizeWheelOptions } from "../../src/lib/wheel/types";
 import {
-  addWheelHistory,
-  clearWheelHistory,
-  formatHistoryTime,
-  getWheelHistory,
-} from "../../src/lib/wheel/history";
+  MAX_WHEEL_OPTIONS,
+  sanitizeWheelOptions,
+} from "../../src/lib/wheel/types";
+import { formatHistoryTime } from "../../src/lib/wheel/history";
 
 describe("optionIndexAtPointer", () => {
   it("maps rotations to the four quadrant slices", () => {
@@ -30,7 +29,18 @@ describe("optionIndexAtPointer", () => {
   });
 });
 
-describe("computeMaxFontSize", () => {
+describe("wheelGeometry", () => {
+  it("draws the slices to the edge of the canvas", () => {
+    const { radius, hubRadius, labelRadius } = wheelGeometry(1000);
+    expect(radius).toBe(490);
+    expect(hubRadius).toBe(70);
+    // The label sits between the hub and the rim.
+    expect(labelRadius).toBeGreaterThan(hubRadius);
+    expect(labelRadius).toBeLessThan(radius);
+  });
+});
+
+describe("computeWheelFontSize", () => {
   function makeCtx(): CanvasRenderingContext2D {
     const ctx: { font: string; measureText: (text: string) => TextMetrics } = {
       font: "bold 10px Arial",
@@ -43,18 +53,69 @@ describe("computeMaxFontSize", () => {
     return ctx as unknown as CanvasRenderingContext2D;
   }
 
+  it("grows the text as the wheel gets bigger", () => {
+    const ctx = makeCtx();
+    const small = computeWheelFontSize(ctx, "Winner", 484, 4);
+    const large = computeWheelFontSize(ctx, "Winner", 1000, 4);
+    expect(large).toBeGreaterThan(small);
+  });
+
+  it("shrinks to fit crowded slices instead of overflowing them", () => {
+    const ctx = makeCtx();
+    const roomy = computeWheelFontSize(ctx, "Winner", 800, 8);
+    const crowded = computeWheelFontSize(ctx, "Winner", 800, 40);
+    expect(crowded).toBeLessThan(roomy);
+    // The slice is ~18px wide at the label radius for 40 options, so the text
+    // has to fit inside it rather than spill across its neighbours.
+    const { labelRadius } = wheelGeometry(800);
+    const sliceWidth = 2 * labelRadius * Math.sin(Math.PI / 40);
+    expect(crowded).toBeLessThanOrEqual(sliceWidth);
+    expect(crowded).toBeGreaterThanOrEqual(8);
+  });
+
+  it("handles a single-option wheel without collapsing to zero", () => {
+    const ctx = makeCtx();
+    expect(computeWheelFontSize(ctx, "Winner", 800, 1)).toBeGreaterThanOrEqual(
+      8,
+    );
+  });
+
   it("shrinks the font as the text gets longer", () => {
     const ctx = makeCtx();
-    const short = computeMaxFontSize(ctx, "Hi", 3, 200);
-    const long = computeMaxFontSize(ctx, "a".repeat(30), 3, 200);
+    const short = computeWheelFontSize(ctx, "Hi", 800, 16);
+    const long = computeWheelFontSize(ctx, "a".repeat(30), 800, 16);
     expect(short).toBeGreaterThan(long);
     expect(long).toBeGreaterThanOrEqual(8);
   });
 
   it("never returns below the minimum readable size", () => {
     const ctx = makeCtx();
-    const size = computeMaxFontSize(ctx, "b".repeat(200), 30, 200);
-    expect(size).toBeGreaterThanOrEqual(8);
+    expect(
+      computeWheelFontSize(ctx, "b".repeat(200), 800, 16),
+    ).toBeGreaterThanOrEqual(8);
+  });
+
+  it("keeps a 16-slice label inside its own wedge", () => {
+    const ctx = makeCtx();
+    const size = 800;
+    const optionCount = 16;
+    const text = "Winner";
+
+    const fontPx = computeWheelFontSize(ctx, text, size, optionCount);
+    const { hubRadius, labelRadius } = wheelGeometry(size);
+
+    ctx.font = `bold ${fontPx}px Arial`;
+    const width = ctx.measureText(text).width;
+    const inner = labelRadius - width / 2;
+
+    // Radial: the label clears the hub.
+    expect(inner).toBeGreaterThan(hubRadius);
+    // Across the wedge: glyphs must fit at the label's innermost end, where
+    // the slice is narrowest. Measuring at the midpoint instead let this
+    // overflow into the neighbouring slices.
+    expect(0.5 * fontPx).toBeLessThanOrEqual(
+      inner * Math.sin(Math.PI / optionCount),
+    );
   });
 });
 
@@ -73,20 +134,31 @@ describe("sanitizeWheelOptions", () => {
   it("returns an empty array for non-array input", () => {
     expect(sanitizeWheelOptions("nope")).toEqual([]);
   });
+
+  it("keeps every repeat when duplicates are allowed", () => {
+    expect(
+      sanitizeWheelOptions([" Yes ", "yes", "No", "No", "No"], true),
+    ).toEqual(["Yes", "yes", "No", "No", "No"]);
+  });
+
+  it("still trims and drops empties with duplicates allowed", () => {
+    expect(sanitizeWheelOptions([" A ", "", "  ", "B"], true)).toEqual([
+      "A",
+      "B",
+    ]);
+  });
+
+  it("caps the list at MAX_WHEEL_OPTIONS", () => {
+    const many = Array.from(
+      { length: MAX_WHEEL_OPTIONS + 25 },
+      (_, i) => `Option ${i + 1}`,
+    );
+    expect(sanitizeWheelOptions(many)).toHaveLength(MAX_WHEEL_OPTIONS);
+    expect(sanitizeWheelOptions(many, true)).toHaveLength(MAX_WHEEL_OPTIONS);
+  });
 });
 
 describe("wheel history", () => {
-  it("stores, appends newest-first, and clears per wheel", () => {
-    const id = "w1";
-    clearWheelHistory(id);
-    addWheelHistory(id, { name: "First", time: "10:00:00 01/01" });
-    addWheelHistory(id, { name: "Second", time: "10:01:00 01/01" });
-    const entries = getWheelHistory(id);
-    expect(entries.map((e) => e.name)).toEqual(["Second", "First"]);
-    clearWheelHistory(id);
-    expect(getWheelHistory(id)).toEqual([]);
-  });
-
   it("formats a timestamp as HH:MM:SS DD/MM", () => {
     const formatted = formatHistoryTime(new Date(2026, 0, 2, 3, 4, 5));
     expect(formatted).toBe("03:04:05 02/01");

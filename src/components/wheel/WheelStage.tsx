@@ -37,6 +37,7 @@ export default function WheelStage({
   const spinAudioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
   const fadeRafRef = useRef<number | null>(null);
+  const spinTimeoutRef = useRef<number | null>(null);
 
   const displayOptions = spinning ? frozenOptions : options;
 
@@ -44,7 +45,9 @@ export default function WheelStage({
     const canvas = canvasRef.current;
     const stage = stageRef.current;
     if (!canvas || !stage) return;
-    const size = stage.clientWidth;
+    // Measure the canvas itself: the stage is padded so its clientWidth is
+    // larger than the box the wheel is actually drawn into.
+    const size = canvas.clientWidth || stage.clientWidth;
     if (size <= 0) return;
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     canvas.width = Math.round(size * dpr);
@@ -70,6 +73,10 @@ export default function WheelStage({
   useEffect(() => {
     return () => {
       if (fadeRafRef.current !== null) cancelAnimationFrame(fadeRafRef.current);
+      if (spinTimeoutRef.current !== null) {
+        window.clearTimeout(spinTimeoutRef.current);
+        spinTimeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -133,7 +140,8 @@ export default function WheelStage({
     rotationRef.current = target;
     setRotation(target);
 
-    window.setTimeout(() => {
+    spinTimeoutRef.current = window.setTimeout(() => {
+      spinTimeoutRef.current = null;
       setSpinning(false);
       onSpinStateChange?.(false);
       const audio = spinAudioRef.current;

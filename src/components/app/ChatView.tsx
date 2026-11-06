@@ -342,7 +342,7 @@ function EmbedHeader({
             title="Twitch embed player"
             aria-label="Twitch embed player"
           >
-            <FaTwitch size={15} />
+            <FaTwitch size={13} />
           </button>
           <button
             type="button"
@@ -351,7 +351,7 @@ function EmbedHeader({
             title="M3U8 HLS player"
             aria-label="M3U8 HLS player"
           >
-            <FaPlayCircle size={15} />
+            <FaPlayCircle size={13} />
           </button>
           {linkedYoutubeUrl && (
             <button
@@ -361,7 +361,7 @@ function EmbedHeader({
               title="YouTube live stream"
               aria-label="YouTube live stream"
             >
-              <FaYoutube size={15} />
+              <FaYoutube size={13} />
             </button>
           )}
         </div>

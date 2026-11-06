@@ -14,6 +14,10 @@ vi.mock("../../../src/server/songQueueConfig", () => ({
   getSongQueueStoreOptions: () => ({ baseDir }),
 }));
 
+vi.mock("../../../src/server/wheelAuth", () => ({
+  authorizeChannel: vi.fn(async () => "ok"),
+}));
+
 vi.mock("../../../src/lib/songQueue/oembed", async () => {
   const actual =
     await vi.importActual<typeof import("../../../src/lib/songQueue/oembed")>(

@@ -1,11 +1,9 @@
 import type { APIRoute } from "astro";
-import { mutateSession } from "../../../../server/songQueueStore";
-import { getSongQueueStoreOptions } from "../../../../server/songQueueConfig";
 import {
   clientAddress,
   json,
-  loadSessionForOwner,
-  ownerTokenFromRequest,
+  mutateSessionWithAccess,
+  readSessionWithAccess,
 } from "../../../../server/songQueueApi";
 import { checkRateLimit } from "../../../../lib/rateLimit";
 import {
@@ -75,20 +73,20 @@ function clampConfig(
   };
 }
 
-export const GET: APIRoute = async ({ request, params }) => {
+export const GET: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
-  const result = await loadSessionForOwner(request, sessionId);
-  if (result.kind === "no-auth")
-    return json({ error: "Missing owner token" }, 401);
+  const result = await readSessionWithAccess(request, cookies, sessionId);
+  if (result.kind === "unauthenticated")
+    return json({ error: "Not authenticated" }, 401);
+  if (result.kind === "forbidden")
+    return json({ error: "Forbidden" }, 403);
   if (result.kind === "missing") return json({ error: "Not found" }, 404);
   if (result.kind === "ended") return json({ error: "Session ended" }, 410);
   return json(result.session);
 };
 
-export const PATCH: APIRoute = async ({ request, params }) => {
+export const PATCH: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
-  const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   if (
     !checkRateLimit(`${clientAddress(request)}:song-queue-patch`, 30, 60_000)
   ) {
@@ -116,10 +114,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   if (b.isPublic === undefined && !configPatch) {
     return json({ error: "Nothing to update" }, 400);
   }
-  const res = await mutateSession(
-    getSongQueueStoreOptions(),
+  const res = await mutateSessionWithAccess(
+    request,
+    cookies,
     sessionId,
-    token,
     (s) => {
       const base = s.config ?? {
         ...DEFAULT_SONG_QUEUE_CONFIG,
@@ -144,23 +142,24 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   );
   if (res.ok) return json(res.result);
   if (res.reason === "missing") return json({ error: "Not found" }, 404);
-  if (res.reason === "auth") return json({ error: "Forbidden" }, 403);
+  if (res.reason === "unauthenticated")
+    return json({ error: "Not authenticated" }, 401);
+  if (res.reason === "auth" || res.reason === "forbidden")
+    return json({ error: "Forbidden" }, 403);
   return json({ error: "Session already ended" }, 410);
 };
 
-const closeHandler: APIRoute = async ({ request, params }) => {
+const closeHandler: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
-  const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   if (
     !checkRateLimit(`${clientAddress(request)}:song-queue-close`, 30, 60_000)
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  const res = await mutateSession(
-    getSongQueueStoreOptions(),
+  const res = await mutateSessionWithAccess(
+    request,
+    cookies,
     sessionId,
-    token,
     (s) => {
       // Final pass over item statuses: anything still "playing" is either
       // the item the streamer stopped on (→ "played") or a stale entry
@@ -180,7 +179,10 @@ const closeHandler: APIRoute = async ({ request, params }) => {
   );
   if (res.ok) return json({ ok: true });
   if (res.reason === "missing") return json({ error: "Not found" }, 404);
-  if (res.reason === "auth") return json({ error: "Forbidden" }, 403);
+  if (res.reason === "unauthenticated")
+    return json({ error: "Not authenticated" }, 401);
+  if (res.reason === "auth" || res.reason === "forbidden")
+    return json({ error: "Forbidden" }, 403);
   return json({ error: "Session already ended" }, 410);
 };
 

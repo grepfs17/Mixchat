@@ -278,6 +278,12 @@ export function useModeration({
 }: UseModerationOptions): UseModerationReturn {
   const [isModerator, setIsModerator] = useState(false);
 
+  // Moderator status is channel-scoped. Clear the previous channel's result
+  // before the name/API/badge checks run again for the new channel.
+  useEffect(() => {
+    setIsModerator(false);
+  }, [twitchSession?.userId, selectedTwitchChannel, selectedTwitchChannelName]);
+
   const modModeActive =
     isModerator && (modModeTarget === "twitch" || modModeTarget === "both");
 

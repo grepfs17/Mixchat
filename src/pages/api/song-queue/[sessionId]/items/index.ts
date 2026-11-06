@@ -1,14 +1,12 @@
 import type { APIRoute } from "astro";
 import {
   makeItem,
-  mutateSession,
   newItemId,
 } from "../../../../../server/songQueueStore";
-import { getSongQueueStoreOptions } from "../../../../../server/songQueueConfig";
 import {
   clientAddress,
   json,
-  ownerTokenFromRequest,
+  mutateSessionWithAccess,
 } from "../../../../../server/songQueueApi";
 import { checkRateLimit } from "../../../../../lib/rateLimit";
 import {
@@ -45,10 +43,8 @@ type AppendResult =
   | { kind: "queue-full" }
   | { kind: "duplicate" };
 
-export const POST: APIRoute = async ({ request, params }) => {
+export const POST: APIRoute = async ({ request, params, cookies }) => {
   const sessionId = params.sessionId || "";
-  const token = ownerTokenFromRequest(request);
-  if (!token) return json({ error: "Missing owner token" }, 401);
   if (!checkRateLimit(`${clientAddress(request)}:song-queue-append`, 60, 60_000)) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
@@ -84,10 +80,10 @@ export const POST: APIRoute = async ({ request, params }) => {
     submittedAt: new Date().toISOString(),
   });
 
-  const res = await mutateSession<AppendResult>(
-    getSongQueueStoreOptions(),
+  const res = await mutateSessionWithAccess<AppendResult>(
+    request,
+    cookies,
     sessionId,
-    token,
     (s) => {
       if (s.items.length >= maxLen) {
         return { session: s, result: { kind: "queue-full" } };
@@ -108,7 +104,10 @@ export const POST: APIRoute = async ({ request, params }) => {
   );
   if (!res.ok) {
     if (res.reason === "missing") return json({ error: "Not found" }, 404);
-    if (res.reason === "auth") return json({ error: "Forbidden" }, 403);
+    if (res.reason === "unauthenticated")
+      return json({ error: "Not authenticated" }, 401);
+    if (res.reason === "auth" || res.reason === "forbidden")
+      return json({ error: "Forbidden" }, 403);
     return json({ error: "Session already ended" }, 410);
   }
   if (res.result.kind === "queue-full") return json({ error: "Queue is full" }, 409);

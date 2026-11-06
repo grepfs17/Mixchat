@@ -69,6 +69,16 @@ export async function createSongQueue(
   return handle<SongQueueOwnerBootstrap>(res);
 }
 
+/** Adopt the channel's current open queue without the owner token. */
+export async function getActiveSongQueue(
+  channelKey: string,
+): Promise<SongQueueSession | null> {
+  const params = new URLSearchParams({ channelKey });
+  const res = await fetch(`/api/song-queue/active?${params.toString()}`);
+  const body = await handle<{ session: SongQueueSession | null }>(res);
+  return body.session;
+}
+
 export async function getSongQueue(
   sessionId: string,
   ownerToken: string,
@@ -182,6 +192,26 @@ export async function setSongQueueIndex(
   if (!res.ok) await handle(res);
 }
 
+/**
+ * Atomically claim the current item's "now playing" announcement. Returns the
+ * item only to the client that won the claim, or null when another client
+ * already announced it.
+ */
+export async function claimSongQueueAnnouncement(
+  sessionId: string,
+  ownerToken: string,
+): Promise<SongQueueItem | null> {
+  const res = await fetch(
+    `/api/song-queue/${encodeURIComponent(sessionId)}/announce`,
+    {
+      method: "POST",
+      headers: baseHeaders(ownerToken),
+    },
+  );
+  const body = await handle<{ item: SongQueueItem | null }>(res);
+  return body.item;
+}
+
 export async function getPublicSongQueue(
   sessionId: string,
 ): Promise<SongQueuePublicView> {
@@ -222,7 +252,8 @@ export async function listPastSongQueues(input: {
 /** Fetch the public projection of a past session (no submitter `userId`). */
 export async function getPastSongQueue(input: {
   sessionId: string;
-  ownerToken: string;
+  ownerToken?: string;
+  channelKey?: string | null;
 }): Promise<SongQueuePublicView> {
   const res = await fetch(
     `/api/song-queue/past/${encodeURIComponent(input.sessionId)}`,
@@ -236,7 +267,7 @@ export async function getPastSongQueue(input: {
 /** Delete a past session file on the server. */
 export async function deletePastSongQueue(input: {
   sessionId: string;
-  ownerToken: string;
+  ownerToken?: string;
 }): Promise<void> {
   const res = await fetch(
     `/api/song-queue/past/${encodeURIComponent(input.sessionId)}`,
@@ -250,12 +281,18 @@ export async function deletePastSongQueue(input: {
 
 /** Bulk-delete past session files on the server. */
 export async function deletePastSongQueues(input: {
-  sessions: Array<{ sessionId: string; ownerToken: string }>;
+  sessions?: Array<{ sessionId: string; ownerToken: string }>;
+  channelKey?: string | null;
+  sessionIds?: string[];
 }): Promise<{ deleted: number; missing: number }> {
   const res = await fetch("/api/song-queue/past/delete", {
     method: "POST",
     headers: baseHeaders(),
-    body: JSON.stringify({ sessions: input.sessions }),
+    body: JSON.stringify({
+      sessions: input.sessions,
+      channelKey: input.channelKey ?? undefined,
+      sessionIds: input.sessionIds,
+    }),
   });
   return handle<{ deleted: number; missing: number }>(res);
 }
@@ -266,7 +303,7 @@ export async function deletePastSongQueues(input: {
  */
 export async function setPastSongQueuePublic(input: {
   sessionId: string;
-  ownerToken: string;
+  ownerToken?: string;
   isPublic: boolean;
 }): Promise<SongQueuePublicView> {
   const res = await fetch(

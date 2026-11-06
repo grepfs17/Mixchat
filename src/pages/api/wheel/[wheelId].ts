@@ -19,10 +19,12 @@ import {
 import { checkRateLimit } from "../../../lib/rateLimit";
 import { authorizeChannel } from "../../../server/wheelAuth";
 import {
+  MAX_WHEEL_HISTORY,
   MAX_WHEEL_NAME_LENGTH,
   MAX_WHEEL_OPTIONS,
   MAX_WHEEL_OPTION_LENGTH,
   sanitizeWheelOptions,
+  type WheelHistoryEntry,
   type WheelPublicView,
   type WheelRecord,
 } from "../../../lib/wheel/types";
@@ -31,6 +33,23 @@ interface WheelPatch {
   name?: string;
   options?: string[];
   isPublic?: boolean;
+  allowDuplicates?: boolean;
+  addHistory?: WheelHistoryEntry;
+  clearHistory?: boolean;
+}
+
+const MAX_HISTORY_NAME_LENGTH = 200;
+const MAX_HISTORY_TIME_LENGTH = 40;
+
+function parseHistoryEntry(value: unknown): WheelHistoryEntry | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.name !== "string" || !v.name.trim()) return null;
+  if (typeof v.time !== "string") return null;
+  return {
+    name: v.name.trim().slice(0, MAX_HISTORY_NAME_LENGTH),
+    time: v.time.slice(0, MAX_HISTORY_TIME_LENGTH),
+  };
 }
 
 function parsePatch(value: unknown): WheelPatch | null {
@@ -52,11 +71,26 @@ function parsePatch(value: unknown): WheelPatch | null {
     ) {
       return null;
     }
-    patch.options = sanitizeWheelOptions(v.options);
+    // Kept raw here: the effective duplicate policy is only known once the
+    // stored wheel is loaded, so sanitizing happens in `applyPatch`.
+    patch.options = v.options as string[];
+  }
+  if (v.allowDuplicates !== undefined) {
+    if (typeof v.allowDuplicates !== "boolean") return null;
+    patch.allowDuplicates = v.allowDuplicates;
   }
   if (v.isPublic !== undefined) {
     if (typeof v.isPublic !== "boolean") return null;
     patch.isPublic = v.isPublic;
+  }
+  if (v.addHistory !== undefined) {
+    const entry = parseHistoryEntry(v.addHistory);
+    if (!entry) return null;
+    patch.addHistory = entry;
+  }
+  if (v.clearHistory !== undefined) {
+    if (typeof v.clearHistory !== "boolean") return null;
+    patch.clearHistory = v.clearHistory;
   }
   if (Object.keys(patch).length === 0) return null;
   return patch;
@@ -65,8 +99,26 @@ function parsePatch(value: unknown): WheelPatch | null {
 function applyPatch(wheel: WheelRecord, patch: WheelPatch): WheelRecord {
   const next: WheelRecord = { ...wheel };
   if (patch.name !== undefined) next.name = patch.name || "Untitled wheel";
-  if (patch.options !== undefined) next.options = patch.options;
   if (patch.isPublic !== undefined) next.isPublic = patch.isPublic;
+  if (patch.allowDuplicates !== undefined) {
+    next.allowDuplicates = patch.allowDuplicates;
+  }
+  if (patch.options !== undefined) {
+    // A patch that also flips the flag applies the new policy; otherwise the
+    // stored one decides whether repeated entries survive.
+    next.options = sanitizeWheelOptions(
+      patch.options,
+      patch.allowDuplicates ?? wheel.allowDuplicates ?? false,
+    );
+  }
+
+  if (patch.clearHistory) {
+    next.history = [];
+  }
+  if (patch.addHistory) {
+    const base = Array.isArray(next.history) ? next.history : [];
+    next.history = [patch.addHistory, ...base].slice(0, MAX_WHEEL_HISTORY);
+  }
   return next;
 }
 
@@ -85,7 +137,7 @@ export const GET: APIRoute = async ({ request, params, cookies }) => {
 
   // Channel trust requires a server-verified identity that matches the channel.
   if (channel) {
-    const auth = await authorizeChannel(cookies, channel);
+    const auth = await authorizeChannel(cookies, channel, { allowModerators: true });
     if (auth === "ok") {
       const byChannel = await readWheelByChannel(opts, wheelId, channel);
       if (byChannel) return json({ wheel: byChannel });
@@ -129,7 +181,11 @@ export const PATCH: APIRoute = async ({ request, params, cookies }) => {
     }
   }
 
-  const auth = await authorizeChannel(cookies, channel!);
+  // Recording a winner is owner-only. Channel-trust moderators may edit the
+  // wheel, but must not be able to forge history entries.
+  const auth = await authorizeChannel(cookies, channel!, {
+    allowModerators: patch.addHistory === undefined,
+  });
   if (auth === "unauthenticated")
     return json({ error: "Not authenticated" }, 401);
   if (auth !== "ok") return json({ error: "Forbidden" }, 403);
@@ -160,7 +216,7 @@ const deleteHandler: APIRoute = async ({ request, params, cookies }) => {
     }
   }
 
-  const auth = await authorizeChannel(cookies, channel!);
+  const auth = await authorizeChannel(cookies, channel!, { allowModerators: true });
   if (auth === "unauthenticated")
     return json({ error: "Not authenticated" }, 401);
   if (auth !== "ok") return json({ error: "Forbidden" }, 403);

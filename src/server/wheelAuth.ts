@@ -19,9 +19,11 @@
 import { createHash } from "node:crypto";
 import type { AstroCookies } from "astro";
 import { IS_TWITCH_ONLY } from "../lib/constants";
-import { getTwitchUser } from "../lib/twitch";
+import { getTwitchUser, getTwitchUserByLogin } from "../lib/twitch";
 import { getYoutubeUser } from "../lib/youtube";
 import { refreshProviderAccessToken } from "./providerTokens";
+import { getStreamToolsStoreOptions } from "./streamToolsConfig";
+import { getStreamToolsSettings } from "./streamToolsSettings";
 
 export interface WheelChannel {
   channelName: string;
@@ -33,6 +35,21 @@ export type ChannelAuthResult = "ok" | "unauthenticated" | "forbidden";
 interface Identity {
   /** Twitch login (lowercased) or YouTube channel id. */
   key: string;
+  /** Provider user id (Twitch user id or YouTube channel id). */
+  id?: string;
+}
+
+interface ResolvedIdentity {
+  identity: Identity;
+  token: string;
+}
+
+export interface ChannelAuthOptions {
+  /**
+   * Allow verified Twitch moderators when the streamer enabled it for the
+   * channel. YouTube moderators are never accepted.
+   */
+  allowModerators?: boolean;
 }
 
 interface CacheEntry {
@@ -44,6 +61,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 const REFRESH_COOLDOWN_MS = 60 * 1000;
 const identityCache = new Map<string, CacheEntry>();
 const refreshCooldown = new Map<string, number>();
+const modCache = new Map<string, { expiresAt: number; isMod: boolean }>();
+const MOD_CACHE_TTL_MS = 60 * 1000;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -79,7 +98,10 @@ async function resolveTwitchIdentity(
   if (cached) return cached;
   try {
     const user = await getTwitchUser(token, clientId);
-    const identity: Identity = { key: user.login.trim().toLowerCase() };
+    const identity: Identity = {
+      key: user.login.trim().toLowerCase(),
+      id: user.userId,
+    };
     writeCached("twitch", token, identity);
     return identity;
   } catch {
@@ -92,7 +114,10 @@ async function resolveYoutubeIdentity(token: string): Promise<Identity | null> {
   if (cached) return cached;
   try {
     const user = await getYoutubeUser(token);
-    const identity: Identity = { key: user.userId.trim().toLowerCase() };
+    const identity: Identity = {
+      key: user.userId.trim().toLowerCase(),
+      id: user.userId.trim().toLowerCase(),
+    };
     writeCached("youtube", token, identity);
     return identity;
   } catch {
@@ -134,7 +159,7 @@ async function resolveWithRefresh(
   cookies: AstroCookies,
   platform: "twitch" | "youtube",
   resolve: (token: string) => Promise<Identity | null>,
-): Promise<Identity | null> {
+): Promise<ResolvedIdentity | null> {
   const accessCookie = platform === "twitch" ? "twitch_token" : "youtube_token";
   let token = cookies.get(accessCookie)?.value ?? null;
   // The access-token cookie is deleted by the browser once the provider token
@@ -147,15 +172,61 @@ async function resolveWithRefresh(
     // Cookie present but rejected (revoked / expired ahead of maxAge).
     const refreshed = await tryRefreshToken(cookies, platform);
     if (refreshed && refreshed !== token) {
+      token = refreshed;
       identity = await resolve(refreshed);
     }
   }
-  return identity;
+  return identity ? { identity, token } : null;
+}
+
+async function isTwitchModeratorOf(
+  accessToken: string,
+  clientId: string,
+  userId: string,
+  broadcasterId: string,
+): Promise<boolean> {
+  if (userId === broadcasterId) return true;
+  const cacheKey = `${hashToken(accessToken)}:${broadcasterId}`;
+  const cached = modCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.isMod;
+
+  try {
+    const res = await fetch(
+      `https://api.twitch.tv/helix/moderation/channels?user_id=${encodeURIComponent(userId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      },
+    );
+    if (!res.ok) {
+      modCache.set(cacheKey, {
+        isMod: false,
+        expiresAt: Date.now() + MOD_CACHE_TTL_MS,
+      });
+      return false;
+    }
+    const data = (await res.json()) as {
+      data?: Array<{ broadcaster_id?: string }>;
+    };
+    const isMod = (data.data ?? []).some(
+      (entry) => entry.broadcaster_id === broadcasterId,
+    );
+    modCache.set(cacheKey, {
+      isMod,
+      expiresAt: Date.now() + MOD_CACHE_TTL_MS,
+    });
+    return isMod;
+  } catch {
+    return false;
+  }
 }
 
 export async function authorizeChannel(
   cookies: AstroCookies,
   channel: WheelChannel,
+  options: ChannelAuthOptions = {},
 ): Promise<ChannelAuthResult> {
   const platform = channel.channelPlatform.trim().toLowerCase();
   const name = channel.channelName.trim().toLowerCase();
@@ -164,20 +235,38 @@ export async function authorizeChannel(
   if (platform === "twitch") {
     const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
     if (!clientId) return "forbidden";
-    const identity = await resolveWithRefresh(cookies, "twitch", (token) =>
+    const resolved = await resolveWithRefresh(cookies, "twitch", (token) =>
       resolveTwitchIdentity(token, clientId),
     );
-    if (!identity) return "unauthenticated";
-    return identity.key === name ? "ok" : "forbidden";
+    if (!resolved) return "unauthenticated";
+    const { identity, token } = resolved;
+    if (identity.key === name) return "ok";
+    if (!options.allowModerators || !identity.id) return "forbidden";
+
+    const settings = await getStreamToolsSettings(
+      getStreamToolsStoreOptions(),
+      `twitch:${name}`,
+    );
+    if (!settings.enabled || !settings.allowMods) return "forbidden";
+
+    const broadcaster = await getTwitchUserByLogin(token, clientId, name);
+    if (!broadcaster) return "forbidden";
+    const isMod = await isTwitchModeratorOf(
+      token,
+      clientId,
+      identity.id,
+      broadcaster.userId,
+    );
+    return isMod ? "ok" : "forbidden";
   }
 
   if (platform === "youtube") {
     if (IS_TWITCH_ONLY) return "forbidden";
-    const identity = await resolveWithRefresh(cookies, "youtube", (token) =>
+    const resolved = await resolveWithRefresh(cookies, "youtube", (token) =>
       resolveYoutubeIdentity(token),
     );
-    if (!identity) return "unauthenticated";
-    return identity.key === name ? "ok" : "forbidden";
+    if (!resolved) return "unauthenticated";
+    return resolved.identity.key === name ? "ok" : "forbidden";
   }
 
   return "forbidden";
@@ -191,5 +280,8 @@ setInterval(() => {
   }
   for (const [key, expiresAt] of refreshCooldown) {
     if (expiresAt < now) refreshCooldown.delete(key);
+  }
+  for (const [key, entry] of modCache) {
+    if (entry.expiresAt < now) modCache.delete(key);
   }
 }, CACHE_TTL_MS);

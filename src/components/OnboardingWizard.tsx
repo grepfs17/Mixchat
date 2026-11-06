@@ -103,10 +103,10 @@ const USER_TYPES: {
 const BASE_SETTINGS: SettingDef[] = [
   {
     key: "streamerToolsEnabled",
-    label: "Streamer tools",
+    label: "Stream tools",
     description: IS_DESKTOP
-      ? "Shows a Streamer tools button in the chat header on your own channel with giveaways, music player, and other utilities."
-      : "Shows a Streamer tools button in the chat header on your own channel with giveaways, song queue, and other utilities.",
+      ? "Shows a Stream tools button in the chat header on your own channel with giveaways, music player, and other utilities."
+      : "Shows a Stream tools button in the chat header on your own channel with giveaways, song queue, and other utilities. Twitch moderators can be granted access.",
     choosableFor: [],
     icon: <FaBroadcastTower size={13} />,
   },

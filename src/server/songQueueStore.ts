@@ -201,6 +201,52 @@ export async function mutateSession<T>(
   });
 }
 
+function sessionMatchesChannel(
+  session: SongQueueSession,
+  channel: { channelName: string; channelPlatform: string },
+): boolean {
+  return (
+    (session.channelName || "").trim().toLowerCase() ===
+      channel.channelName.trim().toLowerCase() &&
+    (session.channelPlatform || "").trim().toLowerCase() ===
+      channel.channelPlatform.trim().toLowerCase()
+  );
+}
+
+/**
+ * Channel-authorized mutation. Callers must verify the requester with
+ * `authorizeChannel(..., { allowModerators: true })` before calling this.
+ * The session must belong to the same channel.
+ */
+export async function mutateSessionByChannel<T>(
+  opts: SongQueueStoreOptions,
+  sessionId: string,
+  channel: { channelName: string; channelPlatform: string },
+  fn: (
+    session: SongQueueSession,
+  ) =>
+    | { session: SongQueueSession; result: T }
+    | Promise<{ session: SongQueueSession; result: T }>,
+): Promise<
+  | { ok: true; result: T; session: SongQueueSession }
+  | { ok: false; reason: "missing" | "ended" }
+> {
+  return withLock(sessionId, async () => {
+    const session = await readSession(opts.baseDir, sessionId);
+    if (!session || !sessionMatchesChannel(session, channel)) {
+      return { ok: false, reason: "missing" };
+    }
+    if (session.ended) return { ok: false, reason: "ended" };
+    const next = await fn({
+      ...session,
+      lastSeenAt: new Date().toISOString(),
+    });
+    next.session.version = (session.version ?? 0) + 1;
+    await writeSession(opts.baseDir, next.session);
+    return { ok: true, result: next.result, session: next.session };
+  });
+}
+
 export async function readSessionWithToken(
   opts: SongQueueStoreOptions,
   sessionId: string,

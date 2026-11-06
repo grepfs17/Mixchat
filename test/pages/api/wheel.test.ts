@@ -31,6 +31,8 @@ vi.mock("../../../src/server/wheelAuth", () => ({
   ),
 }));
 
+import { MAX_WHEEL_OPTIONS } from "../../../src/lib/wheel/types";
+import { authorizeChannel } from "../../../src/server/wheelAuth";
 import {
   GET as listWheels,
   POST as createWheel,
@@ -256,6 +258,23 @@ describe("wheel API", () => {
     expect(deleteNoOverride.status).toBe(400);
   });
 
+  it("rejects more options than the wheel allows", async () => {
+    const options = Array.from(
+      { length: MAX_WHEEL_OPTIONS + 1 },
+      (_, i) => `Option ${i + 1}`,
+    );
+    const res = await createWheel(
+      makeContext(
+        jsonRequest("POST", "http://localhost/api/wheel", {
+          channelKey: "twitch:alice",
+          name: "Too big",
+          options,
+        }),
+      ),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("rejects an invalid create body", async () => {
     const res = await createWheel(
       makeContext(jsonRequest("POST", "http://localhost/api/wheel", {})),
@@ -309,5 +328,168 @@ describe("wheel API", () => {
       ),
     );
     expect(res.status).toBe(200);
+  });
+  describe("winner history", () => {
+    async function createHistoryWheel(): Promise<string> {
+      const res = await createWheel(
+        makeContext(
+          jsonRequest("POST", "http://localhost/api/wheel", {
+            channelKey: "twitch:alice",
+            name: "History wheel",
+            options: ["A", "B"],
+          }),
+        ),
+      );
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { id: string }).id;
+    }
+
+    async function patch(id: string, body: unknown): Promise<Response> {
+      return await patchWheelRoute(
+        makeContext(
+          jsonRequest(
+            "PATCH",
+            `http://localhost/api/wheel/${id}?channelKey=twitch:alice`,
+            body,
+          ),
+          { wheelId: id },
+        ),
+      );
+    }
+
+    async function readHistory(id: string): Promise<unknown> {
+      const res = await getWheelRoute(
+        makeContext(
+          new Request(
+            `http://localhost/api/wheel/${id}?channelKey=twitch:alice`,
+          ),
+          { wheelId: id },
+        ),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        wheel: { history?: unknown };
+      };
+      return body.wheel.history;
+    }
+
+    it("keeps winners newest-first and clears them", async () => {
+      const id = await createHistoryWheel();
+
+      const first = await patch(id, {
+        addHistory: { name: "Red", time: "10:00:00 01/01" },
+      });
+      expect(first.status).toBe(200);
+      await patch(id, { addHistory: { name: "Blue", time: "10:01:00 01/01" } });
+
+      expect(await readHistory(id)).toEqual([
+        { name: "Blue", time: "10:01:00 01/01" },
+        { name: "Red", time: "10:00:00 01/01" },
+      ]);
+
+      const cleared = await patch(id, { clearHistory: true });
+      expect(cleared.status).toBe(200);
+      expect(await readHistory(id)).toEqual([]);
+    });
+
+    it("rejects a malformed winner entry", async () => {
+      const id = await createHistoryWheel();
+      const res = await patch(id, { addHistory: { name: "   " } });
+      expect(res.status).toBe(400);
+      expect(await readHistory(id)).toEqual([]);
+    });
+
+    it("rejects winner recording from a channel moderator", async () => {
+      const id = await createHistoryWheel();
+      const authMock = authorizeChannel as unknown as ReturnType<typeof vi.fn>;
+      authMock.mockResolvedValueOnce("forbidden");
+
+      const res = await patch(id, {
+        addHistory: { name: "Forged", time: "10:00:00 01/01" },
+      });
+      expect(res.status).toBe(403);
+      expect(authMock).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({ channelName: "alice" }),
+        { allowModerators: false },
+      );
+      expect(await readHistory(id)).toEqual([]);
+    });
+  });
+  describe("duplicate options", () => {
+    async function create(options: string[], allowDuplicates?: boolean) {
+      const res = await createWheel(
+        makeContext(
+          jsonRequest("POST", "http://localhost/api/wheel", {
+            channelKey: "twitch:alice",
+            name: "Dups",
+            options,
+            ...(allowDuplicates === undefined ? {} : { allowDuplicates }),
+          }),
+        ),
+      );
+      expect(res.status).toBe(201);
+      return (await res.json()) as {
+        id: string;
+        wheel: { options: string[]; allowDuplicates: boolean };
+      };
+    }
+
+    async function patch(id: string, body: unknown): Promise<Response> {
+      return await patchWheelRoute(
+        makeContext(
+          jsonRequest(
+            "PATCH",
+            `http://localhost/api/wheel/${id}?channelKey=twitch:alice`,
+            body,
+          ),
+          { wheelId: id },
+        ),
+      );
+    }
+
+    it("drops repeats on create unless duplicates are allowed", async () => {
+      const strict = await create(["A", "A", "B"]);
+      expect(strict.wheel.options).toEqual(["A", "B"]);
+      expect(strict.wheel.allowDuplicates).toBe(false);
+
+      const loose = await create(["A", "A", "B"], true);
+      expect(loose.wheel.options).toEqual(["A", "A", "B"]);
+      expect(loose.wheel.allowDuplicates).toBe(true);
+    });
+
+    it("applies the stored policy when only options are patched", async () => {
+      const { id } = await create(["A", "B"], true);
+
+      const res = await patch(id, { options: ["X", "X", "Y"] });
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { wheel: { options: string[] } }).wheel.options).toEqual([
+        "X",
+        "X",
+        "Y",
+      ]);
+    });
+
+    it("re-saves with the new policy when the flag changes", async () => {
+      const { id } = await create(["A", "B"]);
+
+      const on = await patch(id, { options: ["X", "X", "Y"], allowDuplicates: true });
+      expect(on.status).toBe(200);
+      expect(
+        ((await on.json()) as { wheel: { options: string[]; allowDuplicates: boolean } }).wheel,
+      ).toMatchObject({ options: ["X", "X", "Y"], allowDuplicates: true });
+
+      const off = await patch(id, { options: ["X", "X", "Y"], allowDuplicates: false });
+      expect(off.status).toBe(200);
+      expect(
+        ((await off.json()) as { wheel: { options: string[]; allowDuplicates: boolean } }).wheel,
+      ).toMatchObject({ options: ["X", "Y"], allowDuplicates: false });
+    });
+
+    it("rejects a non-boolean flag", async () => {
+      const { id } = await create(["A"]);
+      const res = await patch(id, { allowDuplicates: "yes" });
+      expect(res.status).toBe(400);
+    });
   });
 });

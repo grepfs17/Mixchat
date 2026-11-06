@@ -1,18 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FaCheck,
   FaCopy,
   FaEye,
-  FaEyeSlash,
-  FaLink,
   FaPlus,
-  FaShareSquare,
   FaSpinner,
   FaTimes,
   FaTrash,
   FaTrophy,
 } from "react-icons/fa";
 import WheelStage from "./WheelStage";
+import WheelConfetti from "./WheelConfetti";
 import { applyTheme } from "../../lib/themes";
 import type { ChatTheme } from "../../lib/types";
 import {
@@ -23,15 +21,16 @@ import {
   updateWheel,
 } from "../../lib/wheel/api";
 import {
+  fetchStreamToolsAccess,
+  type StreamToolsRole,
+} from "../../lib/streamTools/api";
+import {
   getWheelToken,
   removeWheelToken,
   setWheelToken,
 } from "../../lib/wheel/tokenStore";
 import {
-  addWheelHistory,
-  clearWheelHistory,
   formatHistoryTime,
-  getWheelHistory,
   type WheelHistoryEntry,
 } from "../../lib/wheel/history";
 import {
@@ -63,31 +62,38 @@ function readStoredTheme(): ChatTheme | null {
   }
 }
 
-interface WheelParticle {
-  id: number;
-  big: boolean;
-  left: string;
-  top: string;
-  duration: string;
-  delay: string;
+/**
+ * Sync cadence. The active wheel changes on save (name, options, winners) so
+ * it polls quickly; the sidebar list only changes when a wheel appears or
+ * disappears elsewhere, so it polls slowly.
+ */
+const WHEEL_SYNC_MS = 2_000;
+const LIST_SYNC_MS = 10_000;
+
+/**
+ * Milliseconds to pause polling after a 429, honouring `Retry-After` when the
+ * server sends one. Returns null for errors that are not rate limiting.
+ */
+function rateLimitPauseMs(err: unknown): number | null {
+  const status = (err as { status?: number } | null)?.status;
+  if (status !== 429) return null;
+  const retry = (err as { retryAfterSec?: number | null } | null)
+    ?.retryAfterSec;
+  return retry && retry > 0 ? retry * 1000 : 60_000;
 }
 
-function WheelParticles({ particles }: { particles: WheelParticle[] }) {
+/** True when two wheel lists are identical (avoids a needless re-render). */
+function sameWheelList(a: WheelSummary[], b: WheelSummary[]): boolean {
   return (
-    <div className="wheel-particles" aria-hidden="true">
-      {particles.map((p) => (
-        <span
-          key={p.id}
-          className={p.big ? "wheel-particle wheel-particle--big" : "wheel-particle"}
-          style={{
-            left: p.left,
-            top: p.top,
-            animationDuration: p.duration,
-            animationDelay: p.delay,
-          }}
-        />
-      ))}
-    </div>
+    a.length === b.length &&
+    a.every(
+      (w, i) =>
+        w.id === b[i].id &&
+        w.name === b[i].name &&
+        w.optionCount === b[i].optionCount &&
+        w.isPublic === b[i].isPublic &&
+        w.updatedAt === b[i].updatedAt,
+    )
   );
 }
 
@@ -191,12 +197,7 @@ interface WheelMainHeaderProps {
   spinning: boolean;
   dirty: boolean;
   saving: boolean;
-  busy: boolean;
-  isPublic: boolean;
-  copiedLink: boolean;
   onSave: () => void;
-  onTogglePublic: () => void;
-  onCopyLink: () => void;
 }
 
 function WheelMainHeader({
@@ -207,12 +208,7 @@ function WheelMainHeader({
   spinning,
   dirty,
   saving,
-  busy,
-  isPublic,
-  copiedLink,
   onSave,
-  onTogglePublic,
-  onCopyLink,
 }: WheelMainHeaderProps) {
   return (
     <div className="wheel-main-head">
@@ -245,31 +241,6 @@ function WheelMainHeader({
             <span>Save changes</span>
           </button>
         )}
-        {editable && (
-          <button
-            type="button"
-            className="wheel-btn"
-            onClick={() => void onTogglePublic()}
-            disabled={busy || spinning}
-          >
-            {isPublic ? (
-              <FaEyeSlash size={12} />
-            ) : (
-              <FaShareSquare size={12} />
-            )}
-            <span>{isPublic ? "Make private" : "Share"}</span>
-          </button>
-        )}
-        {isPublic && (
-          <button
-            type="button"
-            className="wheel-btn"
-            onClick={() => void onCopyLink()}
-          >
-            {copiedLink ? <FaCheck size={12} /> : <FaLink size={12} />}
-            <span>{copiedLink ? "Copied" : "Copy link"}</span>
-          </button>
-        )}
       </div>
     </div>
   );
@@ -289,6 +260,13 @@ interface WheelOptionsPanelProps {
   onBulkTextChange: (value: string) => void;
   onAddBulk: () => void;
   onRemoveAllOptions: () => void;
+  allowDuplicates: boolean;
+  onAllowDuplicatesChange: (checked: boolean) => void;
+}
+
+/** True once the wheel holds as many options as it is allowed to. */
+function atOptionLimit(count: number): boolean {
+  return count >= MAX_WHEEL_OPTIONS;
 }
 
 function WheelOptionsPanel({
@@ -305,25 +283,48 @@ function WheelOptionsPanel({
   onBulkTextChange,
   onAddBulk,
   onRemoveAllOptions,
+  allowDuplicates,
+  onAllowDuplicatesChange,
 }: WheelOptionsPanelProps) {
   return (
     <section className="wheel-panel">
       <header className="wheel-panel-head">
         <h3>
           Options
-          <span className="wheel-panel-count">{options.length}</span>
-        </h3>
-        {editable && options.length > 0 && (
-          <button
-            type="button"
-            className="wheel-icon-btn"
-            onClick={() => void onCopyAllOptions()}
-            title="Copy all options"
-            aria-label="Copy all options"
+          <span
+            className="wheel-panel-count"
+            title={`Maximum ${MAX_WHEEL_OPTIONS} options`}
           >
-            {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
-          </button>
-        )}
+            {options.length}
+          </span>
+        </h3>
+        <div className="wheel-panel-actions">
+          {editable && (
+            <label
+              className="wheel-dup-toggle"
+              title="Let the same option take more than one slice, so it is more likely to win"
+            >
+              <input
+                type="checkbox"
+                checked={allowDuplicates}
+                disabled={spinning}
+                onChange={(e) => onAllowDuplicatesChange(e.target.checked)}
+              />
+              <span>Allow duplicates</span>
+            </label>
+          )}
+          {editable && options.length > 0 && (
+            <button
+              type="button"
+              className="wheel-icon-btn"
+              onClick={() => void onCopyAllOptions()}
+              title="Copy all options"
+              aria-label="Copy all options"
+            >
+              {copiedOptions ? <FaCheck size={12} /> : <FaCopy size={12} />}
+            </button>
+          )}
+        </div>
       </header>
 
       {editable && (
@@ -334,7 +335,7 @@ function WheelOptionsPanel({
             placeholder="Enter a new option"
             maxLength={MAX_WHEEL_OPTION_LENGTH}
             aria-label="New option"
-            disabled={spinning}
+            disabled={spinning || atOptionLimit(options.length)}
             onChange={(e) => onNewOptionChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") onAddOption();
@@ -344,12 +345,19 @@ function WheelOptionsPanel({
             type="button"
             className="wheel-btn wheel-btn--primary"
             onClick={onAddOption}
-            disabled={spinning}
+            disabled={spinning || atOptionLimit(options.length)}
           >
             <FaPlus size={11} />
             <span>Add</span>
           </button>
         </div>
+      )}
+
+      {editable && atOptionLimit(options.length) && (
+        <p className="wheel-limit-hint" role="status">
+          Maximum of {MAX_WHEEL_OPTIONS} options reached. Remove one to add
+          another.
+        </p>
       )}
 
       <ul className="wheel-options-list">
@@ -363,7 +371,7 @@ function WheelOptionsPanel({
                 onClick={() => onRemoveOption(index)}
                 disabled={spinning}
                 title="Delete option"
-                aria-label={`Delete option ${option}`}
+                aria-label={`Delete option ${index + 1}: ${option}`}
               >
                 <FaTimes size={11} />
               </button>
@@ -381,7 +389,7 @@ function WheelOptionsPanel({
             className="wheel-bulk"
             rows={3}
             value={bulkText}
-            placeholder={"Or paste many options here\none line = one option"}
+            placeholder={`Or paste many options here\none line = one option (max ${MAX_WHEEL_OPTIONS})`}
             aria-label="Bulk options, one per line"
             disabled={spinning}
             onChange={(e) => onBulkTextChange(e.target.value)}
@@ -391,7 +399,9 @@ function WheelOptionsPanel({
               type="button"
               className="wheel-btn"
               onClick={onAddBulk}
-              disabled={!bulkText.trim() || spinning}
+              disabled={
+                !bulkText.trim() || spinning || atOptionLimit(options.length)
+              }
             >
               Add all lines
             </button>
@@ -413,6 +423,7 @@ function WheelOptionsPanel({
 interface WheelHistoryPanelProps {
   history: WheelHistoryEntry[];
   historyOpen: boolean;
+  spinning: boolean;
   onToggle: () => void;
   onCopy: () => void;
   onClear: () => void;
@@ -421,6 +432,7 @@ interface WheelHistoryPanelProps {
 function WheelHistoryPanel({
   history,
   historyOpen,
+  spinning,
   onToggle,
   onCopy,
   onClear,
@@ -450,7 +462,7 @@ function WheelHistoryPanel({
             type="button"
             className="wheel-btn wheel-btn--small"
             onClick={onClear}
-            disabled={history.length === 0}
+            disabled={history.length === 0 || spinning}
           >
             Clear
           </button>
@@ -482,7 +494,7 @@ function WheelEmpty({ canManage }: { canManage: boolean }) {
       <p>
         {canManage
           ? "Create a wheel or pick one from the list to get started."
-          : "No wheel selected. Open Wheel Spin from the streamer tools."}
+          : "No wheel selected. Open Wheel Spin from the Stream tools."}
       </p>
     </div>
   );
@@ -503,6 +515,7 @@ function WheelWinnerOverlay({
       aria-label="Winner"
       onClick={onClose}
     >
+      <WheelConfetti />
       <div className="wheel-winner-box" onClick={(e) => e.stopPropagation()}>
         <h2>
           <FaTrophy size={22} /> Winner <FaTrophy size={22} />
@@ -522,12 +535,19 @@ function WheelWinnerOverlay({
 
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
+  // Fail closed: spinning is owner-only, so an unresolved or failed access
+  // lookup must not be treated as the broadcaster.
+  const [viewerRole, setViewerRole] = useState<StreamToolsRole>("none");
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
+  const wheelsRef = useRef<WheelSummary[]>([]);
+  /** Ids removed in this session, so a stale list response cannot revive them. */
+  const deletedIdsRef = useRef<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [active, setActive] = useState<WheelPublicView | null>(null);
   const [ownerToken, setOwnerToken] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const [draftAllowDuplicates, setDraftAllowDuplicates] = useState(false);
 
   const [booting, setBooting] = useState(true);
   const [loadingWheel, setLoadingWheel] = useState(false);
@@ -542,9 +562,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const [winner, setWinner] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
-  const [history, setHistory] = useState<WheelHistoryEntry[]>([]);
   const [historyOpen, setHistoryOpen] = useState(true);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [copiedOptions, setCopiedOptions] = useState(false);
 
   const toastTimerRef = useRef<number | null>(null);
@@ -568,6 +586,9 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const selectWheel = useCallback(async (id: string) => {
     setLoadingWheel(true);
     setError(null);
+    // Update the ref immediately so an in-flight response for the previous
+    // wheel cannot overwrite the newly selected one.
+    activeIdRef.current = id;
     try {
       const token = await getWheelToken(id);
       const channelParam =
@@ -578,9 +599,10 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       setActiveId(id);
       setOwnerToken(token);
       setActive(wheel);
+      activeRef.current = wheel;
       setDraftName(wheel.name);
       setDraftOptions(wheel.options);
-      setHistory(getWheelHistory(id));
+      setDraftAllowDuplicates(Boolean(wheel.allowDuplicates));
       setBulkText("");
       setNewOption("");
       if (typeof window !== "undefined" && /\/wheel\/?$/.test(window.location.pathname)) {
@@ -592,6 +614,8 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       setError(err instanceof Error ? err.message : "Failed to load wheel");
       setActive(null);
       setActiveId(null);
+      activeIdRef.current = null;
+      activeRef.current = null;
     } finally {
       setLoadingWheel(false);
     }
@@ -611,6 +635,14 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       const params = new URLSearchParams(window.location.search);
       const ch = params.get("channel");
       setChannelKey(ch);
+      if (ch) {
+        try {
+          setViewerRole(await fetchStreamToolsAccess(ch));
+        } catch {
+          // Fail closed: an unresolved role must not unlock spinning.
+          setViewerRole("none");
+        }
+      }
 
       let list: WheelSummary[] = [];
       if (ch) {
@@ -638,27 +670,170 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const canManage = Boolean(channelKey);
   const editable = canManage || Boolean(ownerToken);
+  const isOwner = viewerRole === "owner";
+  const isModerator = viewerRole === "moderator";
+  // Channel access is the only proof for a channel-bound wheel. Until it
+  // resolves to owner (or an owner token is present) spinning stays locked.
+  const spinDisabled = Boolean(channelKey) && !isOwner && !ownerToken;
   const dirty = active
     ? draftName !== active.name ||
-      JSON.stringify(draftOptions) !== JSON.stringify(active.options)
+      JSON.stringify(draftOptions) !== JSON.stringify(active.options) ||
+      draftAllowDuplicates !== Boolean(active.allowDuplicates)
     : false;
+  const history = active?.history ?? [];
 
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 26 }, (_, i) => {
-        const big = Math.random() > 0.75;
-        const duration = Math.random() * 8 + 12;
-        return {
-          id: i,
-          big,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          duration: `${duration}s`,
-          delay: `${Math.random() * -duration}s`,
-        };
-      }),
-    [],
+  // Mirrored into refs so the sync interval does not restart on every edit.
+  const activeRef = useRef<WheelPublicView | null>(active);
+  const activeIdRef = useRef<string | null>(activeId);
+  const dirtyRef = useRef(dirty);
+  const spinningRef = useRef(spinning);
+  // Shared pause so a 429 on either endpoint stops both pollers.
+  const pauseUntilRef = useRef(0);
+  useEffect(() => {
+    activeRef.current = active;
+    activeIdRef.current = activeId;
+    dirtyRef.current = dirty;
+    spinningRef.current = spinning;
+    wheelsRef.current = wheels;
+  });
+
+  const paused = useCallback(() => Date.now() < pauseUntilRef.current, []);
+  const throttle = useCallback((err: unknown) => {
+    const pause = rateLimitPauseMs(err);
+    if (pause !== null) pauseUntilRef.current = Date.now() + pause;
+  }, []);
+
+  /**
+   * Forget a wheel that no longer exists: hide it from the sidebar and, when
+   * it was the one on screen, move on to the next wheel (or the empty state).
+   * Used by both the local delete action and a 404 from the poll, so a wheel
+   * deleted on another device disappears here too.
+   */
+  const forgetWheel = useCallback(
+    (id: string) => {
+      deletedIdsRef.current.add(id);
+      const remaining = wheelsRef.current.filter((w) => w.id !== id);
+      wheelsRef.current = remaining;
+      setWheels(remaining);
+
+      if (activeIdRef.current !== id) return;
+      activeRef.current = null;
+      activeIdRef.current = null;
+      setActiveId(null);
+      setActive(null);
+      setOwnerToken(null);
+      setDraftName("");
+      setDraftOptions([]);
+      setDraftAllowDuplicates(false);
+      setBulkText("");
+      setNewOption("");
+      showToast("That wheel was deleted");
+      if (remaining[0]) void selectWheel(remaining[0].id);
+    },
+    [selectWheel, showToast],
   );
+
+  // Active wheel: name, options, and winners. Local unsaved edits and an
+  // in-progress spin always win over the remote copy.
+  useEffect(() => {
+    if (!activeId) return;
+    let cancelled = false;
+    let running = false;
+
+    const tick = async () => {
+      if (
+        cancelled ||
+        running ||
+        paused() ||
+        (typeof document !== "undefined" && document.hidden)
+      ) {
+        return;
+      }
+      running = true;
+      try {
+        const token = ownerToken ?? (await getWheelToken(activeId));
+        const wheel = await fetchWheel(activeId, token, channelKey);
+        if (cancelled) return;
+
+        const changed = activeRef.current?.version !== wheel.version;
+        if (changed) {
+          activeRef.current = wheel;
+          setActive(wheel);
+          if (!spinningRef.current && !dirtyRef.current) {
+            setDraftName(wheel.name);
+            setDraftOptions(wheel.options);
+            setDraftAllowDuplicates(Boolean(wheel.allowDuplicates));
+          }
+        }
+      } catch (err) {
+        const status = (err as { status?: number } | null)?.status;
+        if (status === 404 && !cancelled) {
+          // Deleted on another device: drop it instead of polling forever.
+          forgetWheel(activeId);
+          return;
+        }
+        // Keep the last known state and back off instead of hammering the
+        // rate limiter; the next tick retries once the pause expires.
+        throttle(err);
+      } finally {
+        running = false;
+      }
+    };
+
+    const timer = window.setInterval(() => void tick(), WHEEL_SYNC_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeId, channelKey, ownerToken, paused, throttle, forgetWheel]);
+
+  // Sidebar list: wheels created, deleted, or renamed elsewhere. The startup
+  // list already came from the boot sequence, so this only needs the interval.
+  useEffect(() => {
+    if (!channelKey) return;
+    let cancelled = false;
+    let running = false;
+
+    const tick = async () => {
+      if (
+        cancelled ||
+        running ||
+        paused() ||
+        (typeof document !== "undefined" && document.hidden)
+      ) {
+        return;
+      }
+      running = true;
+      try {
+        const list = await listWheels(channelKey);
+        if (cancelled) return;
+        // A response that was already in flight when a wheel was deleted can
+        // still contain it; never let it come back.
+        const visible = list.filter((w) => !deletedIdsRef.current.has(w.id));
+        if (sameWheelList(wheelsRef.current, visible)) return;
+        wheelsRef.current = visible;
+        setWheels(visible);
+        // A wheel appeared while nothing is selected (the other side just
+        // created one). Only when the list actually changed, so a failed load
+        // is not retried on every tick.
+        if (!activeIdRef.current && visible[0] && !spinningRef.current) {
+          await selectWheel(visible[0].id);
+        }
+      } catch (err) {
+        throttle(err);
+      } finally {
+        running = false;
+      }
+    };
+
+    const timer = window.setInterval(() => void tick(), LIST_SYNC_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+    // selectWheel is stable (empty deps); activeId reaches us through a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelKey, paused, throttle, selectWheel]);
 
   const handleCreate = useCallback(async () => {
     if (!channelKey) return;
@@ -699,12 +874,17 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     try {
       const updated = await updateWheel(
         activeId,
-        { name: draftName.trim() || "Untitled wheel", options: draftOptions },
+        {
+          name: draftName.trim() || "Untitled wheel",
+          options: draftOptions,
+          allowDuplicates: draftAllowDuplicates,
+        },
         { ownerToken, channelKey },
       );
       setActive(updated);
       setDraftName(updated.name);
       setDraftOptions(updated.options);
+      setDraftAllowDuplicates(updated.allowDuplicates);
       setWheels((prev) =>
         prev.map((w) =>
           w.id === updated.id
@@ -729,33 +909,10 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     channelKey,
     draftName,
     draftOptions,
+    draftAllowDuplicates,
     ownerToken,
     showToast,
   ]);
-
-  const handleTogglePublic = useCallback(async () => {
-    if (!activeId || !active) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const updated = await updateWheel(
-        activeId,
-        { isPublic: !active.isPublic },
-        { ownerToken, channelKey },
-      );
-      setActive(updated);
-      setWheels((prev) =>
-        prev.map((w) =>
-          w.id === updated.id ? { ...w, isPublic: updated.isPublic } : w,
-        ),
-      );
-      showToast(updated.isPublic ? "Wheel is now public" : "Wheel is now private");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update sharing");
-    } finally {
-      setBusy(false);
-    }
-  }, [active, activeId, channelKey, ownerToken, showToast]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -771,7 +928,9 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         const token = await getWheelToken(id);
         await deleteWheel(id, { ownerToken: token, channelKey });
         await removeWheelToken(id);
+        deletedIdsRef.current.add(id);
         const nextWheels = wheels.filter((w) => w.id !== id);
+        wheelsRef.current = nextWheels;
         setWheels(nextWheels);
         if (activeId === id) {
           if (nextWheels[0]) {
@@ -792,18 +951,6 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     [activeId, channelKey, selectWheel, showToast, wheels],
   );
 
-  const copyShareLink = useCallback(async () => {
-    if (!activeId) return;
-    const url = `${window.location.origin}/wheel/${activeId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedLink(true);
-      window.setTimeout(() => setCopiedLink(false), 1500);
-    } catch {
-      setError("Could not copy link");
-    }
-  }, [activeId]);
-
   const copyAllOptions = useCallback(async () => {
     if (draftOptions.length === 0) return;
     try {
@@ -819,12 +966,33 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     const value = newOption.trim().slice(0, MAX_WHEEL_OPTION_LENGTH);
     if (!value) return;
     setDraftOptions((prev) => {
-      if (prev.some((o) => o.toLowerCase() === value.toLowerCase())) return prev;
+      if (
+        !draftAllowDuplicates &&
+        prev.some((o) => o.toLowerCase() === value.toLowerCase())
+      ) {
+        return prev;
+      }
       if (prev.length >= MAX_WHEEL_OPTIONS) return prev;
       return [...prev, value];
     });
     setNewOption("");
-  }, [newOption]);
+  }, [newOption, draftAllowDuplicates]);
+
+  const handleAllowDuplicates = useCallback((checked: boolean) => {
+    setDraftAllowDuplicates(checked);
+    if (!checked) {
+      // Turning the option off tidies the draft straight away.
+      setDraftOptions((prev) => {
+        const seen = new Set<string>();
+        return prev.filter((o) => {
+          const key = o.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      });
+    }
+  }, []);
 
   const removeOption = useCallback((index: number) => {
     setDraftOptions((prev) => prev.filter((_, i) => i !== index));
@@ -847,33 +1015,51 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       .filter(Boolean);
     if (lines.length === 0) return;
     setDraftOptions((prev) => {
-      const seen = new Set(prev.map((o) => o.toLowerCase()));
+      const seen = draftAllowDuplicates
+        ? null
+        : new Set(prev.map((o) => o.toLowerCase()));
       const next = [...prev];
       for (const line of lines) {
-        const key = line.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
+        if (seen) {
+          const key = line.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+        }
         next.push(line);
         if (next.length >= MAX_WHEEL_OPTIONS) break;
       }
       return next;
     });
     setBulkText("");
-  }, [bulkText]);
+  }, [bulkText, draftAllowDuplicates]);
 
   const handleWinner = useCallback(
     (option: string) => {
       setWinner(option);
-      if (activeId) {
-        setHistory(
-          addWheelHistory(activeId, {
-            name: option,
-            time: formatHistoryTime(new Date()),
-          }),
-        );
-      }
+      // A read-only viewer (legacy share link) has neither credential, so
+      // there is nowhere to persist the winner. Show it locally only.
+      if (!activeId || (!ownerToken && !channelKey)) return;
+      const wheelId = activeId;
+      const entry = { name: option, time: formatHistoryTime(new Date()) };
+      void updateWheel(
+        wheelId,
+        { addHistory: entry },
+        { ownerToken, channelKey },
+      )
+        .then((updated) => {
+          // The viewer may have selected another wheel while this was in
+          // flight. Never let the old response replace the new selection.
+          if (activeIdRef.current !== wheelId) return;
+          activeRef.current = updated;
+          setActive(updated);
+        })
+        .catch(() => {
+          if (activeIdRef.current === wheelId) {
+            setError("Could not save winner");
+          }
+        });
     },
-    [activeId],
+    [activeId, channelKey, ownerToken],
   );
 
   const copyHistory = useCallback(async () => {
@@ -889,20 +1075,34 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const handleClearHistory = useCallback(() => {
     if (history.length === 0) return;
+    if (!activeId || (!ownerToken && !channelKey)) return;
     if (
       typeof window !== "undefined" &&
       !window.confirm("Clear the winners history for this wheel?")
     ) {
       return;
     }
-    if (activeId) clearWheelHistory(activeId);
-    setHistory([]);
-  }, [activeId, history.length]);
+    if (!activeId) return;
+    const wheelId = activeId;
+    void updateWheel(
+      wheelId,
+      { clearHistory: true },
+      { ownerToken, channelKey },
+    )
+      .then((updated) => {
+        if (activeIdRef.current !== wheelId) return;
+        activeRef.current = updated;
+        setActive(updated);
+      })
+      .catch(() => {
+        if (activeIdRef.current === wheelId) {
+          setError("Could not clear winners");
+        }
+      });
+  }, [activeId, channelKey, ownerToken, history.length]);
 
   return (
     <div className="wheel-page">
-      <WheelParticles particles={particles} />
-
       <header className="wheel-header">
         <div className="wheel-header-brand">
           <span className="wheel-header-logo" aria-hidden="true">
@@ -915,6 +1115,15 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         </div>
         {channelKey && <span className="wheel-header-channel">{channelKey}</span>}
       </header>
+
+      {isModerator && !error && (
+        <div className="wheel-banner wheel-banner--warn" role="status">
+          <span>
+            You are viewing as a moderator: only the streamer can spin the
+            wheel. Editing the options is still available.
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="wheel-banner wheel-banner--error" role="alert">
@@ -963,16 +1172,12 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
                 spinning={spinning}
                 dirty={dirty}
                 saving={saving}
-                busy={busy}
-                isPublic={active.isPublic}
-                copiedLink={copiedLink}
                 onSave={handleSave}
-                onTogglePublic={handleTogglePublic}
-                onCopyLink={copyShareLink}
               />
 
               <WheelStage
                 options={draftOptions}
+                disabled={spinDisabled}
                 onWinner={handleWinner}
                 onSpinStateChange={setSpinning}
               />
@@ -991,11 +1196,14 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
                 onBulkTextChange={setBulkText}
                 onAddBulk={addBulk}
                 onRemoveAllOptions={removeAllOptions}
+                allowDuplicates={draftAllowDuplicates}
+                onAllowDuplicatesChange={handleAllowDuplicates}
               />
 
               <WheelHistoryPanel
                 history={history}
                 historyOpen={historyOpen}
+                spinning={spinning}
                 onToggle={() => setHistoryOpen((o) => !o)}
                 onCopy={copyHistory}
                 onClear={handleClearHistory}

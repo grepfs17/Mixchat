@@ -1,7 +1,9 @@
 import type { APIRoute } from "astro";
-import { deleteSession } from "../../../../server/songQueueStore";
+import { deleteSession, deleteSessionsByChannel } from "../../../../server/songQueueStore";
 import { getSongQueueStoreOptions } from "../../../../server/songQueueConfig";
 import { clientAddress, json } from "../../../../server/songQueueApi";
+import { authorizeChannel } from "../../../../server/wheelAuth";
+import { parseChannelKey } from "../../../../lib/wheel/api";
 import { checkRateLimit } from "../../../../lib/rateLimit";
 
 /**
@@ -9,7 +11,7 @@ import { checkRateLimit } from "../../../../lib/rateLimit";
  * Body: { sessions: Array<{ sessionId: string; ownerToken: string }> }
  */
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   if (
     !checkRateLimit(
       `${clientAddress(request)}:song-queue-past-bulk-delete`,
@@ -30,6 +32,27 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: "Invalid body" }, 400);
   }
   const b = body as Record<string, unknown>;
+
+  const channel = parseChannelKey(
+    typeof b.channelKey === "string" ? b.channelKey : null,
+  );
+  if (channel && Array.isArray(b.sessionIds)) {
+    const auth = await authorizeChannel(cookies, channel, {
+      allowModerators: true,
+    });
+    if (auth === "unauthenticated")
+      return json({ error: "Not authenticated" }, 401);
+    if (auth !== "ok") return json({ error: "Forbidden" }, 403);
+    const sessionIds = b.sessionIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+    const result = await deleteSessionsByChannel(
+      getSongQueueStoreOptions(),
+      sessionIds,
+      channel,
+    );
+    return json({ ok: true, ...result });
+  }
 
   if (!Array.isArray(b.sessions) || b.sessions.length === 0) {
     return json(

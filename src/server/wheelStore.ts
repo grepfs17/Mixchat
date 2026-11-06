@@ -122,7 +122,7 @@ async function writeWheel(baseDir: string, wheel: WheelRecord): Promise<void> {
 }
 
 export function publicWheelView(wheel: WheelRecord): WheelPublicView {
-  return {
+  const view: WheelPublicView = {
     id: wheel.id,
     name: wheel.name,
     options: wheel.options,
@@ -132,7 +132,12 @@ export function publicWheelView(wheel: WheelRecord): WheelPublicView {
     createdAt: wheel.createdAt,
     updatedAt: wheel.updatedAt,
     version: wheel.version ?? 0,
+    allowDuplicates: Boolean(wheel.allowDuplicates),
   };
+  // Keep `undefined` (rather than `[]`) for legacy wheels so clients can tell
+  // "never had server history" apart from "history was cleared".
+  if (wheel.history) view.history = wheel.history;
+  return view;
 }
 
 function summarize(wheel: WheelRecord): WheelSummary {
@@ -159,13 +164,15 @@ export async function createWheel(
     channelName?: string;
     channelPlatform?: string;
     isPublic?: boolean;
+    allowDuplicates?: boolean;
   } = {},
 ): Promise<WheelOwnerBootstrap> {
   await ensureDir(opts.baseDir);
   const id = genId(WHEEL_ID_LENGTH, ID_ALPHABET);
   const ownerToken = genId(OWNER_TOKEN_BYTES * 2, ID_ALPHABET);
   const now = new Date().toISOString();
-  const options = sanitizeWheelOptions(input.options);
+  const allowDuplicates = Boolean(input.allowDuplicates);
+  const options = sanitizeWheelOptions(input.options, allowDuplicates);
   const wheel: WheelRecord = {
     id,
     name: sanitizeName(input.name) || "Untitled wheel",
@@ -177,7 +184,9 @@ export async function createWheel(
     updatedAt: now,
     lastSeenAt: now,
     isPublic: Boolean(input.isPublic),
+    allowDuplicates,
     version: 0,
+    history: [],
   };
   await withLock(id, () => writeWheel(opts.baseDir, wheel));
   return { id, ownerToken, wheel: publicWheelView(wheel) };
