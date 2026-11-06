@@ -70,6 +70,7 @@ mixchat/
 │   │   ├── themes.ts        # Chat themes (CSS variable definitions)
 │   │   ├── types.ts         # Core types (TwitchMessage, PlatformSession, ChatTheme, etc.)
 │   │   ├── constants.ts     # App constants (mod commands, YT user agent)
+│   │   ├── version.ts       # Display version + the git branch baked in at build time
 │   │   ├── oauthSession.ts  # OAuth popup + postMessage listener
 │   │   ├── google.ts        # Google API fetch wrapper (rate limiting, quota tracking)
 │   │   ├── googleDrive.ts   # Google Drive backup/restore for settings
@@ -283,6 +284,13 @@ mixchat/
 2. Wire subscription in `useEventSub.ts` (add to `subscriptionConfigs`).
 3. Connect to `useChatAppState` via `chatAppStateHelpers`.
 4. Create banner/notification component in `src/components/chat/shared/`.
+
+### Showing build metadata (version / git branch)
+
+- `src/lib/version.ts` exports `DISPLAY_VERSION` (from `package.json`, prerelease suffix stripped) and `GIT_BRANCH`.
+- The branch is **not** read at runtime: `astro.config.mjs` runs `git rev-parse --abbrev-ref HEAD` (falling back to a short SHA when detached, `""` when git is unavailable) and injects it through Vite's `define` as `__GIT_BRANCH__`, so both the SSR template and the client bundle get a plain string.
+- `version.ts` guards with `typeof __GIT_BRANCH__ === "string"`, so a context without the define (Vitest) degrades to `""` instead of throwing on an undeclared identifier.
+- The footer (`src/layouts/MainLayout.astro`) renders `Branch: <name>` in a chip next to `DISPLAY_VERSION`, and omits it when empty; both chips are hidden below 900px.
 
 ### Adding a new emote provider
 1. Create provider module in `src/lib/emotes/` (e.g., `newProvider.ts`).
