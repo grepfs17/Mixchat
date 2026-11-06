@@ -3,20 +3,42 @@
  * be unit-tested without a DOM canvas implementation.
  */
 
+/** Radii of the drawn wheel, derived from the square canvas size. */
+export interface WheelGeometry {
+  /** Outer edge of the slices. */
+  radius: number;
+  /** Centre hub. */
+  hubRadius: number;
+  /** Where a label's midpoint sits along the slice. */
+  labelRadius: number;
+}
+
 /**
- * Largest bold font size (px) at which `text` fits within `maxWidth`, then
- * reduced a little based on how crowded the wheel is. Mirrors the original
- * spinthewheel sizing heuristics.
+ * The wheel is drawn to fill the canvas: slices reach `0.49` of the size so
+ * only the stroke is left over at the edge.
+ */
+export function wheelGeometry(size: number): WheelGeometry {
+  const radius = size * 0.49;
+  return {
+    radius,
+    hubRadius: size * 0.07,
+    labelRadius: radius * 0.57,
+  };
+}
+
+/**
+ * Largest bold font size (px) at which `text` fits within `maxWidth`.
  */
 export function computeMaxFontSize(
   ctx: CanvasRenderingContext2D,
   text: string,
-  optionCount: number,
   maxWidth: number,
   fontFace = "Arial",
 ): number {
   let low = 6;
-  let high = 50;
+  // Scale the ceiling with the room available so a large wheel is allowed to
+  // use large type, while a short label never balloons past a quarter of it.
+  let high = Math.max(50, Math.round(maxWidth / 4));
   let size = low;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
@@ -28,15 +50,36 @@ export function computeMaxFontSize(
       high = mid - 1;
     }
   }
-  size -= optionCount * 0.45;
-  if (optionCount >= 11 && optionCount <= 15) {
-    size *= 0.9;
-  } else if (optionCount >= 16 && optionCount <= 20) {
-    size *= 0.75;
-  } else if (optionCount > 20) {
-    size *= Math.max(0.6 - optionCount * 0.01, 0.4);
-  }
   return Math.max(size, 8);
+}
+
+/**
+ * Font size for the whole wheel.
+ *
+ * Labels run along the slice, so their length is bounded hub-to-rim while
+ * their height must fit inside the wedge. The second constraint is what makes
+ * crowded wheels unreadable, so it replaces the old count-based guessing.
+ */
+export function computeWheelFontSize(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  size: number,
+  optionCount: number,
+  fontFace = "Arial",
+): number {
+  const { radius, hubRadius, labelRadius } = wheelGeometry(size);
+  const radial = 2 * Math.min(labelRadius - hubRadius, radius - labelRadius);
+  const tangential =
+    optionCount <= 1
+      ? Number.POSITIVE_INFINITY
+      : 2 * labelRadius * Math.sin(Math.PI / optionCount);
+  return Math.max(
+    8,
+    Math.min(
+      computeMaxFontSize(ctx, text, radial, fontFace),
+      tangential * 0.9,
+    ),
+  );
 }
 
 /**
@@ -76,7 +119,7 @@ function drawLabel(
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 2;
   ctx.textBaseline = "middle";
-  ctx.fillText(option, radius * 0.55, 0);
+  ctx.fillText(option, radius, 0);
   ctx.restore();
 }
 
@@ -93,17 +136,17 @@ export function drawWheel(
   const fontFace = "Arial";
   const centerX = size / 2;
   const centerY = size / 2;
-  const radius = size * 0.45;
+  const { radius, hubRadius, labelRadius } = wheelGeometry(size);
   ctx.clearRect(0, 0, size, size);
   if (options.length === 0) return;
 
   const anglePerOption = (2 * Math.PI) / options.length;
   const longest = options.reduce((a, b) => (a.length > b.length ? a : b), "");
-  const fontSize = computeMaxFontSize(
+  const fontSize = computeWheelFontSize(
     ctx,
     longest,
+    size,
     options.length,
-    size * 0.44,
     fontFace,
   );
 
@@ -136,7 +179,7 @@ export function drawWheel(
       option,
       centerX,
       centerY,
-      radius,
+      labelRadius,
       startAngle,
       anglePerOption,
       fontSize,
@@ -145,7 +188,7 @@ export function drawWheel(
   });
 
   ctx.beginPath();
-  ctx.arc(centerX, centerY, size * 0.07, 0, 2 * Math.PI);
+  ctx.arc(centerX, centerY, hubRadius, 0, 2 * Math.PI);
   ctx.fillStyle = "#141417";
   ctx.fill();
 }

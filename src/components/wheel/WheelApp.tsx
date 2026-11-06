@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FaCheck,
   FaCopy,
@@ -19,6 +19,10 @@ import {
   listWheels,
   updateWheel,
 } from "../../lib/wheel/api";
+import {
+  fetchStreamToolsAccess,
+  type StreamToolsRole,
+} from "../../lib/streamTools/api";
 import {
   getWheelToken,
   removeWheelToken,
@@ -55,34 +59,6 @@ function readStoredTheme(): ChatTheme | null {
   } catch {
     return null;
   }
-}
-
-interface WheelParticle {
-  id: number;
-  big: boolean;
-  left: string;
-  top: string;
-  duration: string;
-  delay: string;
-}
-
-function WheelParticles({ particles }: { particles: WheelParticle[] }) {
-  return (
-    <div className="wheel-particles" aria-hidden="true">
-      {particles.map((p) => (
-        <span
-          key={p.id}
-          className={p.big ? "wheel-particle wheel-particle--big" : "wheel-particle"}
-          style={{
-            left: p.left,
-            top: p.top,
-            animationDuration: p.duration,
-            animationDelay: p.delay,
-          }}
-        />
-      ))}
-    </div>
-  );
 }
 
 /**
@@ -407,6 +383,7 @@ function WheelOptionsPanel({
 interface WheelHistoryPanelProps {
   history: WheelHistoryEntry[];
   historyOpen: boolean;
+  spinning: boolean;
   onToggle: () => void;
   onCopy: () => void;
   onClear: () => void;
@@ -415,6 +392,7 @@ interface WheelHistoryPanelProps {
 function WheelHistoryPanel({
   history,
   historyOpen,
+  spinning,
   onToggle,
   onCopy,
   onClear,
@@ -444,7 +422,7 @@ function WheelHistoryPanel({
             type="button"
             className="wheel-btn wheel-btn--small"
             onClick={onClear}
-            disabled={history.length === 0}
+            disabled={history.length === 0 || spinning}
           >
             Clear
           </button>
@@ -516,6 +494,9 @@ function WheelWinnerOverlay({
 
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
+  // Assume broadcaster until the access check answers, so a failed request
+  // never locks the streamer out of their own wheel.
+  const [viewerRole, setViewerRole] = useState<StreamToolsRole>("owner");
   const [wheels, setWheels] = useState<WheelSummary[]>([]);
   const wheelsRef = useRef<WheelSummary[]>([]);
   /** Ids removed in this session, so a stale list response cannot revive them. */
@@ -606,6 +587,13 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       const params = new URLSearchParams(window.location.search);
       const ch = params.get("channel");
       setChannelKey(ch);
+      if (ch) {
+        try {
+          setViewerRole(await fetchStreamToolsAccess(ch));
+        } catch {
+          // Keep the optimistic default; the wheel stays usable.
+        }
+      }
 
       let list: WheelSummary[] = [];
       if (ch) {
@@ -633,6 +621,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   const canManage = Boolean(channelKey);
   const editable = canManage || Boolean(ownerToken);
+  const isModerator = viewerRole === "moderator";
   const dirty = active
     ? draftName !== active.name ||
       JSON.stringify(draftOptions) !== JSON.stringify(active.options)
@@ -789,23 +778,6 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
     // selectWheel is stable (empty deps); activeId reaches us through a ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelKey, paused, throttle, selectWheel]);
-
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 26 }, (_, i) => {
-        const big = Math.random() > 0.75;
-        const duration = Math.random() * 8 + 12;
-        return {
-          id: i,
-          big,
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-          duration: `${duration}s`,
-          delay: `${Math.random() * -duration}s`,
-        };
-      }),
-    [],
-  );
 
   const handleCreate = useCallback(async () => {
     if (!channelKey) return;
@@ -1030,8 +1002,6 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
   return (
     <div className="wheel-page">
-      <WheelParticles particles={particles} />
-
       <header className="wheel-header">
         <div className="wheel-header-brand">
           <span className="wheel-header-logo" aria-hidden="true">
@@ -1044,6 +1014,15 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         </div>
         {channelKey && <span className="wheel-header-channel">{channelKey}</span>}
       </header>
+
+      {isModerator && !error && (
+        <div className="wheel-banner wheel-banner--warn" role="status">
+          <span>
+            You are viewing as a moderator: only the streamer can spin the
+            wheel. Editing the options is still available.
+          </span>
+        </div>
+      )}
 
       {error && (
         <div className="wheel-banner wheel-banner--error" role="alert">
@@ -1097,6 +1076,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
 
               <WheelStage
                 options={draftOptions}
+                disabled={isModerator}
                 onWinner={handleWinner}
                 onSpinStateChange={setSpinning}
               />
@@ -1120,6 +1100,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
               <WheelHistoryPanel
                 history={history}
                 historyOpen={historyOpen}
+                spinning={spinning}
                 onToggle={() => setHistoryOpen((o) => !o)}
                 onCopy={copyHistory}
                 onClear={handleClearHistory}

@@ -89,3 +89,20 @@ export async function putSharedMusic(
   };
   return { ok: true, version: body.version, music: body.music };
 }
+
+export type StreamToolsRole = "owner" | "moderator" | "none";
+
+/**
+ * Who the current visitor is for a channel: the broadcaster, a moderator the
+ * broadcaster allowed, or neither. Tool pages use this to gate actions that
+ * only the streamer may perform.
+ */
+export async function fetchStreamToolsAccess(
+  channelKey: string,
+): Promise<StreamToolsRole> {
+  const params = new URLSearchParams({ channelKey });
+  const res = await fetch(`/api/stream-tools/access?${params.toString()}`);
+  if (!res.ok) throw new Error(await parseError(res, "Failed to check access"));
+  const body = (await res.json()) as { role?: StreamToolsRole };
+  return body.role ?? "none";
+}

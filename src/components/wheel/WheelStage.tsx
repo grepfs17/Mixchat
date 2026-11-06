@@ -44,7 +44,9 @@ export default function WheelStage({
     const canvas = canvasRef.current;
     const stage = stageRef.current;
     if (!canvas || !stage) return;
-    const size = stage.clientWidth;
+    // Measure the canvas itself: the stage is padded so its clientWidth is
+    // larger than the box the wheel is actually drawn into.
+    const size = canvas.clientWidth || stage.clientWidth;
     if (size <= 0) return;
     const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
     canvas.width = Math.round(size * dpr);

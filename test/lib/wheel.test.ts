@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   computeMaxFontSize,
+  computeWheelFontSize,
   optionIndexAtPointer,
+  wheelGeometry,
 } from "../../src/lib/wheel/draw";
 import { sanitizeWheelOptions } from "../../src/lib/wheel/types";
 import { formatHistoryTime } from "../../src/lib/wheel/history";
@@ -40,16 +42,68 @@ describe("computeMaxFontSize", () => {
 
   it("shrinks the font as the text gets longer", () => {
     const ctx = makeCtx();
-    const short = computeMaxFontSize(ctx, "Hi", 3, 200);
-    const long = computeMaxFontSize(ctx, "a".repeat(30), 3, 200);
+    const short = computeMaxFontSize(ctx, "Hi", 200);
+    const long = computeMaxFontSize(ctx, "a".repeat(30), 200);
     expect(short).toBeGreaterThan(long);
     expect(long).toBeGreaterThanOrEqual(8);
   });
 
   it("never returns below the minimum readable size", () => {
     const ctx = makeCtx();
-    const size = computeMaxFontSize(ctx, "b".repeat(200), 30, 200);
+    const size = computeMaxFontSize(ctx, "b".repeat(200), 200);
     expect(size).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe("wheelGeometry", () => {
+  it("draws the slices to the edge of the canvas", () => {
+    const { radius, hubRadius, labelRadius } = wheelGeometry(1000);
+    expect(radius).toBe(490);
+    expect(hubRadius).toBe(70);
+    // The label sits between the hub and the rim.
+    expect(labelRadius).toBeGreaterThan(hubRadius);
+    expect(labelRadius).toBeLessThan(radius);
+  });
+});
+
+describe("computeWheelFontSize", () => {
+  function makeCtx(): CanvasRenderingContext2D {
+    const ctx: { font: string; measureText: (text: string) => TextMetrics } = {
+      font: "bold 10px Arial",
+      measureText(text: string) {
+        const match = /(\d+(?:\.\d+)?)px/.exec(ctx.font);
+        const size = match ? parseFloat(match[1]) : 10;
+        return { width: text.length * size * 0.6 } as TextMetrics;
+      },
+    };
+    return ctx as unknown as CanvasRenderingContext2D;
+  }
+
+  it("grows the text as the wheel gets bigger", () => {
+    const ctx = makeCtx();
+    const small = computeWheelFontSize(ctx, "Winner", 484, 4);
+    const large = computeWheelFontSize(ctx, "Winner", 1000, 4);
+    expect(large).toBeGreaterThan(small);
+  });
+
+  it("shrinks to fit crowded slices instead of overflowing them", () => {
+    const ctx = makeCtx();
+    const roomy = computeWheelFontSize(ctx, "Winner", 800, 8);
+    const crowded = computeWheelFontSize(ctx, "Winner", 800, 40);
+    expect(crowded).toBeLessThan(roomy);
+    // The slice is ~18px wide at the label radius for 40 options, so the text
+    // has to fit inside it rather than spill across its neighbours.
+    const { labelRadius } = wheelGeometry(800);
+    const sliceWidth = 2 * labelRadius * Math.sin(Math.PI / 40);
+    expect(crowded).toBeLessThanOrEqual(sliceWidth);
+    expect(crowded).toBeGreaterThanOrEqual(8);
+  });
+
+  it("handles a single-option wheel without collapsing to zero", () => {
+    const ctx = makeCtx();
+    expect(computeWheelFontSize(ctx, "Winner", 800, 1)).toBeGreaterThanOrEqual(
+      8,
+    );
   });
 });
 

@@ -28,6 +28,14 @@ vi.mock("../../src/lib/themes", () => ({
   applyTheme: vi.fn(),
 }));
 
+const { fetchAccessMock } = vi.hoisted(() => ({
+  fetchAccessMock: vi.fn(),
+}));
+
+vi.mock("../../src/lib/streamTools/api", () => ({
+  fetchStreamToolsAccess: fetchAccessMock,
+}));
+
 import WheelApp from "../../src/components/wheel/WheelApp";
 import type { WheelPublicView, WheelSummary } from "../../src/lib/wheel/types";
 
@@ -81,6 +89,7 @@ beforeEach(() => {
   createWheelMock.mockReset();
   listWheelsMock.mockResolvedValue([summary()]);
   fetchWheelMock.mockResolvedValue(wheel());
+  fetchAccessMock.mockResolvedValue("owner");
 });
 
 afterEach(() => {
@@ -192,6 +201,27 @@ describe("WheelApp", () => {
 
     expect(screen.getByText("Champion")).toBeTruthy();
     expect(screen.getByText("10:00:00 01/01")).toBeTruthy();
+  });
+
+  it("lets the streamer spin", async () => {
+    fetchAccessMock.mockResolvedValue("owner");
+    render(<WheelApp />);
+    await flush();
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Spin!" })).toBeEnabled();
+  });
+
+  it("disables spinning for moderators and explains why", async () => {
+    fetchAccessMock.mockResolvedValue("moderator");
+    render(<WheelApp />);
+    await flush();
+
+    const warning = screen.getByRole("status");
+    expect(warning).toHaveTextContent(/only the streamer can spin/i);
+    expect(screen.getByRole("button", { name: "Spin!" })).toBeDisabled();
+    // Editing stays available to moderators.
+    expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
   });
 
   it("pauses syncing after a 429 instead of hammering the rate limiter", async () => {
