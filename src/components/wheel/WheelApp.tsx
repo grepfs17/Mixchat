@@ -10,6 +10,7 @@ import {
   FaTrophy,
 } from "react-icons/fa";
 import WheelStage from "./WheelStage";
+import WheelConfetti from "./WheelConfetti";
 import { applyTheme } from "../../lib/themes";
 import type { ChatTheme } from "../../lib/types";
 import {
@@ -514,6 +515,7 @@ function WheelWinnerOverlay({
       aria-label="Winner"
       onClick={onClose}
     >
+      <WheelConfetti />
       <div className="wheel-winner-box" onClick={(e) => e.stopPropagation()}>
         <h2>
           <FaTrophy size={22} /> Winner <FaTrophy size={22} />

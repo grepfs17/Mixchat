@@ -772,6 +772,9 @@
 }
 
 .wheel-winner-box {
+    /* Sits above the confetti layer so the name stays readable. */
+    position: relative;
+    z-index: 1;
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--radius-2xl);
@@ -815,6 +818,55 @@
 .wheel-winner-box .wheel-btn {
     padding: 10px 34px;
     font-size: 15px;
+}
+
+/* ---- Confetti ---- */
+.wheel-confetti {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.wheel-confetti__piece {
+    position: absolute;
+    top: -20px;
+    border-radius: 2px;
+    opacity: 0;
+    will-change: transform, opacity;
+    animation-name: wheel-confetti-fall;
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.4, 1);
+    animation-fill-mode: forwards;
+}
+
+.wheel-confetti__piece--round {
+    border-radius: 50%;
+}
+
+@keyframes wheel-confetti-fall {
+    0% {
+        transform: translate3d(0, -10vh, 0) rotate(0deg);
+        opacity: 0;
+    }
+    12% {
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        transform:
+            translate3d(var(--confetti-drift, 0px), 110vh, 0)
+            rotate(720deg);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel-confetti__piece {
+        animation: none;
+    }
 }
 
 /* ---- Responsive ---- */
