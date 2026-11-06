@@ -1,12 +1,17 @@
 import type { APIRoute } from "astro";
+import { IS_DESKTOP } from "../../lib/constants";
 
 export const GET: APIRoute = async ({ request }) => {
   // 1. Explicit env var: highest priority.
   // 2. Astro's built-in `site` config (astro.config.mjs → site: '…'). It is
   //    always present in production builds and requires no extra configuration.
   // 3. Host header: last resort for local/dev use only.
-  const rawOrigin =
-    import.meta.env.PUBLIC_SITE_URL || import.meta.env.SITE || null;
+  //
+  // Desktop builds load a loopback origin, so the Twitch embed needs `localhost`
+  // as its parent, not the hosted site's domain. Skip the baked `site` there.
+  const rawOrigin = IS_DESKTOP
+    ? null
+    : import.meta.env.PUBLIC_SITE_URL || import.meta.env.SITE || null;
 
   if (rawOrigin) {
     try {

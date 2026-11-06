@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
+import {
+  isTauriShell,
+  openExternalUrl,
+  openTwitchActivation,
+} from "../../lib/desktopShell";
 import { useTokenRefresh } from "./useTokenRefresh";
 import {
   IS_DESKTOP,
@@ -189,6 +194,8 @@ export function useAuthSessions(): UseAuthSessionsResult {
   const isFirstSaveRef = useRef(true);
   // Track popup-poll intervals so they can be cleaned up on unmount.
   const popupPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Cancels an in-flight Tauri Google handoff poll.
+  const googleHandoffRequestRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -197,6 +204,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
         popupPollRef.current = null;
       }
       deviceAbortRef.current = true;
+      googleHandoffRequestRef.current += 1;
     };
   }, []);
 
@@ -268,15 +276,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           verificationUri: data.verificationUri,
           status: "waiting",
         });
-        try {
-          window.open(
-            `${data.verificationUri}?device-code=${encodeURIComponent(data.userCode)}`,
-            "twitch_activate",
-            "noopener,noreferrer",
-          );
-        } catch {
-          /* popup blocked, the modal offers a clickable activation link */
-        }
+        openTwitchActivation(data.verificationUri);
       } catch {
         if (!deviceAbortRef.current) {
           setTwitchDevice({
@@ -565,11 +565,117 @@ export function useAuthSessions(): UseAuthSessionsResult {
   }, [postLogout]);
 
   /**
+   * Google OAuth in the Tauri shell. Google blocks embedded webviews, so the
+   * sign-in page opens in the system browser and the app polls the server for
+   * the completed handoff. The poll response sets the auth cookies in the
+   * app's own cookie jar.
+   */
+  const startTauriGoogleLogin = useCallback((flow: "youtube" | "drive") => {
+    void (async () => {
+      const requestId = googleHandoffRequestRef.current + 1;
+      googleHandoffRequestRef.current = requestId;
+      setIsLoggingIn(true);
+
+      try {
+        const startRes = await fetch("/api/auth/google/desktop/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ flow }),
+        });
+        if (!startRes.ok) {
+          throw new Error(`Server returned ${startRes.status}`);
+        }
+        const start = (await startRes.json()) as {
+          handoffId?: string;
+          authUrl?: string;
+          error?: string;
+        };
+        if (!start.handoffId || !start.authUrl) {
+          throw new Error(start.error || "Invalid Google login response");
+        }
+
+        // Open the system browser without navigating the webview. The old
+        // location.href approach made WebView2 reload the app page.
+        const opened = await openExternalUrl(start.authUrl);
+        if (!opened) {
+          // Older shells without the command still intercept window.open.
+          window.open(start.authUrl, "_blank", "noopener,noreferrer");
+        }
+
+        const deadline = Date.now() + 3 * 60 * 1000;
+        while (Date.now() < deadline) {
+          if (googleHandoffRequestRef.current !== requestId) return;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          if (googleHandoffRequestRef.current !== requestId) return;
+
+          const pollRes = await fetch("/api/auth/google/desktop/poll", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ handoffId: start.handoffId }),
+          });
+          // A 4xx will not fix itself, so fail now instead of polling until
+          // the deadline. 5xx and network hiccups are worth retrying.
+          if (pollRes.status >= 400 && pollRes.status < 500) {
+            throw new Error(`Google sign-in failed (HTTP ${pollRes.status}).`);
+          }
+          if (!pollRes.ok) continue;
+
+          const result = (await pollRes.json()) as {
+            status?: string;
+            flow?: string;
+            session?: PlatformSession;
+            message?: string;
+          };
+
+          if (result.status === "pending") continue;
+          if (result.status === "expired") {
+            throw new Error("Google sign-in expired. Please try again.");
+          }
+          if (result.status === "error") {
+            throw new Error(result.message || "Google sign-in failed.");
+          }
+          if (result.status === "complete") {
+            if (result.flow === "drive") {
+              setSessions((prev) =>
+                prev.youtube
+                  ? {
+                      ...prev,
+                      youtube: { ...prev.youtube, hasDriveScope: true },
+                    }
+                  : prev,
+              );
+            } else if (result.session) {
+              const session = result.session;
+              setSessions((prev) => ({ ...prev, youtube: session }));
+            }
+            setIsLoggingIn(false);
+            return;
+          }
+        }
+
+        throw new Error("Timed out waiting for Google sign-in.");
+      } catch (error) {
+        if (googleHandoffRequestRef.current !== requestId) return;
+        console.error("Google desktop login failed", error);
+        setIsLoggingIn(false);
+        alert(
+          error instanceof Error ? error.message : "Google sign-in failed.",
+        );
+      }
+    })();
+  }, []);
+
+  /**
    * Open the YouTube OAuth popup. Fetches a CSRF state token from the
    * server so the callback can validate it before setting auth cookies.
    * Falls back to a full-page redirect when the popup is blocked.
    */
   const openYoutubeOAuth = useCallback(() => {
+    if (isTauriShell()) {
+      startTauriGoogleLogin("youtube");
+      return;
+    }
+
     if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
       alert("YouTube Client ID not configured");
       return;
@@ -615,7 +721,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
       }, 500);
       popupPollRef.current = pollClosed;
     })();
-  }, []);
+  }, [startTauriGoogleLogin]);
 
   /**
    * Open the Drive-only OAuth popup. Fetches a CSRF state token from the
@@ -623,6 +729,11 @@ export function useAuthSessions(): UseAuthSessionsResult {
    * Falls back to a full-page redirect when the popup is blocked.
    */
   const openDriveOAuth = useCallback(() => {
+    if (isTauriShell()) {
+      startTauriGoogleLogin("drive");
+      return;
+    }
+
     if (!import.meta.env.PUBLIC_YOUTUBE_CLIENT_ID) {
       alert("YouTube Client ID not configured");
       return;
@@ -656,7 +767,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
       }, 500);
       popupPollRef.current = pollClosed;
     })();
-  }, []);
+  }, [startTauriGoogleLogin]);
 
   const youtubeLogin = useCallback(
     () => openYoutubeOAuth(),

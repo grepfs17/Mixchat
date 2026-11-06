@@ -29,7 +29,11 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   output: "server",
   server: {
-    host: true,
+    // The desktop build runs as a Tauri sidecar. It must listen on loopback
+    // only, otherwise /api/desktop/open and the OAuth handoff endpoints are
+    // reachable from the whole LAN. HOST still overrides at runtime.
+    host:
+      process.env.PUBLIC_APP_PLATFORM === "desktop" ? "127.0.0.1" : true,
     port: 3000,
     allowedHosts: ["mixchat.local"],
   },
@@ -38,10 +42,22 @@ export default defineConfig({
       __GIT_BRANCH__: JSON.stringify(gitBranch()),
     },
     ssr: {
-      noExternal: ["fs", "path", "url", "util"],
+      // The desktop server bundle must be self-contained so the Tauri sidecar
+      // does not need the project's node_modules at runtime. jsdom stays
+      // external because it reads its stylesheet relative to __dirname, which
+      // breaks when bundled into ESM. The Tauri prepare step installs jsdom
+      // next to the server bundle.
+      noExternal:
+        process.env.PUBLIC_APP_PLATFORM === "desktop"
+          ? true
+          : ["fs", "path", "url", "util"],
+      external:
+        process.env.PUBLIC_APP_PLATFORM === "desktop" ? ["jsdom"] : [],
     },
     server: {
-      host: "0.0.0.0",
+      host: process.env.PUBLIC_APP_PLATFORM === "desktop"
+        ? "127.0.0.1"
+        : "0.0.0.0",
       allowedHosts: ["localhost", "127.0.0.1", "mixchat.local"],
     },
     build: {

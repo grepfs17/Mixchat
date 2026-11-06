@@ -1,6 +1,12 @@
 import type { APIRoute } from "astro";
 import { getYoutubeAccessToken, getYoutubeUser } from "../../../lib/youtube";
 import { IS_DESKTOP, IS_TWITCH_ONLY } from "../../../lib/constants";
+import {
+  completeHandoff,
+  failHandoff,
+  findByState,
+  type GoogleHandoffSession,
+} from "../../../server/googleHandoff";
 
 export const GET: APIRoute = async ({ url, cookies, locals }) => {
   if (IS_TWITCH_ONLY) {
@@ -29,15 +35,21 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     return new Response("Missing state parameter", { status: 400 });
   }
 
-  // Server-side CSRF validation: the state must match the httpOnly cookie
-  // that was set when the OAuth flow started. This prevents login CSRF
-  // attacks where an attacker tricks a victim into completing OAuth with
-  // the attacker's identity.
-  const expectedState = cookies.get("oauth_state")?.value;
-  if (!expectedState || expectedState !== returnedState) {
-    cookies.delete("oauth_state", { path: "/" });
-    return new Response(
-      `<!DOCTYPE html>
+  // Desktop handoff flows run in the system browser, so the oauth_state
+  // cookie from the app window is not available. The pending handoff record
+  // is the CSRF anchor for those flows.
+  const handoff = findByState(returnedState);
+
+  if (!handoff) {
+    // Server-side CSRF validation: the state must match the httpOnly cookie
+    // that was set when the OAuth flow started. This prevents login CSRF
+    // attacks where an attacker tricks a victim into completing OAuth with
+    // the attacker's identity.
+    const expectedState = cookies.get("oauth_state")?.value;
+    if (!expectedState || expectedState !== returnedState) {
+      cookies.delete("oauth_state", { path: "/" });
+      return new Response(
+        `<!DOCTYPE html>
 <html>
 <head><title>Auth Error</title></head>
 <body>
@@ -46,11 +58,12 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
 <a href="/">Back to home</a>
 </body>
 </html>`,
-      { status: 403, headers: { "Content-Type": "text/html" } },
-    );
+        { status: 403, headers: { "Content-Type": "text/html" } },
+      );
+    }
+    // State is valid. Consume it now so it can't be replayed.
+    cookies.delete("oauth_state", { path: "/" });
   }
-  // State is valid. Consume it now so it can't be replayed.
-  cookies.delete("oauth_state", { path: "/" });
 
   try {
     const isDev = import.meta.env.MODE === "development";
@@ -61,15 +74,65 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
     const clientSecret = import.meta.env.YOUTUBE_CLIENT_SECRET || undefined;
     const redirectUri = import.meta.env.PUBLIC_YOUTUBE_REDIRECT_URI;
 
-    const codeVerifier = IS_DESKTOP
-      ? cookies.get("google_code_verifier")?.value
-      : undefined;
-    if (IS_DESKTOP) cookies.delete("google_code_verifier", { path: "/" });
+    const codeVerifier = handoff
+      ? handoff.codeVerifier
+      : IS_DESKTOP
+        ? cookies.get("google_code_verifier")?.value
+        : undefined;
+    if (!handoff && IS_DESKTOP) {
+      cookies.delete("google_code_verifier", { path: "/" });
+    }
 
     const tokenData = await getYoutubeAccessToken(code, clientId, redirectUri, {
       clientSecret,
       codeVerifier,
     });
+
+    // Desktop handoff: keep the tokens server-side until the app polls for
+    // them. The system browser must not receive the auth cookies.
+    if (handoff) {
+      if (handoff.flow === "drive") {
+        completeHandoff(handoff.id, {
+          flow: "drive",
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          expiresIn: tokenData.expires_in,
+        });
+      } else {
+        const user = await getYoutubeUser(tokenData.access_token);
+        const session: GoogleHandoffSession = {
+          platform: "youtube",
+          userId: user.userId,
+          displayName: user.displayName,
+          profileImageUrl: user.profileImageUrl,
+          accessToken: tokenData.access_token,
+          ...(tokenData.refresh_token
+            ? { refreshToken: tokenData.refresh_token }
+            : {}),
+          expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000,
+          timestamp: Date.now(),
+        };
+        completeHandoff(handoff.id, {
+          flow: "youtube",
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          expiresIn: tokenData.expires_in,
+          session,
+        });
+      }
+
+      return new Response(
+        `<!DOCTYPE html>
+<html>
+<head><title>Mixchat</title></head>
+<body>
+<h1>Mixchat is connected</h1>
+<p>You can close this tab and return to the Mixchat app.</p>
+</body>
+</html>`,
+        { status: 200, headers: { "Content-Type": "text/html" } },
+      );
+    }
 
     // Detect which OAuth flow this callback belongs to. The flow type is
     // encoded in the state parameter as "<uuid>:drive" or "<uuid>" (YouTube).
@@ -288,6 +351,15 @@ export const GET: APIRoute = async ({ url, cookies, locals }) => {
       },
     );
   } catch (error: any) {
+    if (handoff) {
+      failHandoff(
+        handoff.id,
+        error?.name === "NoChannelError"
+          ? "Your Google account is not associated with a YouTube channel."
+          : "Google sign-in failed. Please try again.",
+      );
+    }
+
     if (error?.name === "NoChannelError") {
       return new Response(
         `<!DOCTYPE html>
