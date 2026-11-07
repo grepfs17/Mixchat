@@ -672,9 +672,12 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const editable = canManage || Boolean(ownerToken);
   const isOwner = viewerRole === "owner";
   const isModerator = viewerRole === "moderator";
-  // Channel access is the only proof for a channel-bound wheel. Until it
-  // resolves to owner (or an owner token is present) spinning stays locked.
-  const spinDisabled = Boolean(channelKey) && !isOwner && !ownerToken;
+  // A moderator may create a wheel and receive its owner token, but only the
+  // broadcaster may spin it. A moderator stays locked out even when a token is
+  // present. Otherwise, until access resolves to owner (or an owner token is
+  // present) spinning stays locked.
+  const spinDisabled =
+    isModerator || (Boolean(channelKey) && !isOwner && !ownerToken);
   const dirty = active
     ? draftName !== active.name ||
       JSON.stringify(draftOptions) !== JSON.stringify(active.options) ||

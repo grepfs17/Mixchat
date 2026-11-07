@@ -1,14 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-const { fetchWheelMock, listWheelsMock, updateWheelMock, deleteWheelMock, createWheelMock } =
-  vi.hoisted(() => ({
-    fetchWheelMock: vi.fn(),
-    listWheelsMock: vi.fn(),
-    updateWheelMock: vi.fn(),
-    deleteWheelMock: vi.fn(),
-    createWheelMock: vi.fn(),
-  }));
+const {
+  fetchWheelMock,
+  listWheelsMock,
+  updateWheelMock,
+  deleteWheelMock,
+  createWheelMock,
+  getWheelTokenMock,
+} = vi.hoisted(() => ({
+  fetchWheelMock: vi.fn(),
+  listWheelsMock: vi.fn(),
+  updateWheelMock: vi.fn(),
+  deleteWheelMock: vi.fn(),
+  createWheelMock: vi.fn(),
+  getWheelTokenMock: vi.fn(),
+}));
 
 vi.mock("../../src/lib/wheel/api", () => ({
   fetchWheel: fetchWheelMock,
@@ -19,7 +26,7 @@ vi.mock("../../src/lib/wheel/api", () => ({
 }));
 
 vi.mock("../../src/lib/wheel/tokenStore", () => ({
-  getWheelToken: vi.fn(async () => null),
+  getWheelToken: getWheelTokenMock,
   setWheelToken: vi.fn(async () => undefined),
   removeWheelToken: vi.fn(async () => undefined),
 }));
@@ -89,6 +96,8 @@ beforeEach(() => {
   updateWheelMock.mockReset();
   deleteWheelMock.mockReset();
   createWheelMock.mockReset();
+  getWheelTokenMock.mockReset();
+  getWheelTokenMock.mockResolvedValue(null);
   listWheelsMock.mockResolvedValue([summary()]);
   fetchWheelMock.mockResolvedValue(wheel());
   fetchAccessMock.mockResolvedValue("owner");
@@ -224,6 +233,17 @@ describe("WheelApp", () => {
     expect(screen.getByRole("button", { name: "Spin!" })).toBeDisabled();
     // Editing stays available to moderators.
     expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+  });
+
+  it("keeps spinning locked for a moderator who owns the wheel token", async () => {
+    // Creating a wheel through the channel gives the creator an owner token.
+    // A moderator who did so must still not be able to spin it.
+    fetchAccessMock.mockResolvedValue("moderator");
+    getWheelTokenMock.mockResolvedValue("owner-token");
+    render(<WheelApp />);
+    await flush();
+
+    expect(screen.getByRole("button", { name: "Spin!" })).toBeDisabled();
   });
 
   it("lets one option occupy several slices when duplicates are allowed", async () => {
