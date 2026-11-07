@@ -58,7 +58,7 @@ The production server uses the Astro Node adapter.
 
 ## YouTube Proxy
 
-YouTube can block server IPs with 403 errors. MixChat optionally routes all InnerTube API calls through a separate Vercel proxy that has its own IP and session management. Set `YT_PROXY` and `YT_PROXY_TOKEN` in your `.env` to enable. See [mixchat-yt-proxy](https://github.com/grepfs17/mixchat-yt-proxy) for setup.
+YouTube can block server IPs with 403 errors. MixChat optionally routes all InnerTube API calls through a separate proxy that has its own IP and session management. Set `YT_PROXY` and `YT_PROXY_TOKEN` in your `.env` to enable. Two implementations are available: [mixchat-yt-proxy (Vercel)](https://github.com/grepfs17/mixchat-yt-proxy) and [mixchat-yt-proxy-workers (Cloudflare Workers)](https://github.com/grepfs17/mixchat-yt-proxy-workers). See the respective repositories for setup.
 
 ## YouTube Live Chat Moderation
 
