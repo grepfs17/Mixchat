@@ -17,7 +17,12 @@ import {
   messageContent as messageContentShared,
   stableUserId,
 } from "../../lib/streamerTools/chatHelpers";
-import { appendGiveawayHistory } from "../../lib/streamerTools/history";
+import {
+  appendGiveawayHistory,
+  clearGiveawayHistory,
+  getGiveawayHistory,
+  type GiveawayHistoryEntry,
+} from "../../lib/streamerTools/history";
 import {
   getSharedGiveaway,
   giveawayAction,
@@ -70,6 +75,8 @@ export interface UseGiveawayResult {
   startedAt: number | null;
   winner: GiveawayEntry | null;
   liveEntries: GiveawayEntry[];
+  /** Winners of past giveaways, newest first. Server-synced when `channelKey` is set. */
+  history: GiveawayHistoryEntry[];
   error: string | null;
   setKeyword: (v: string) => void;
   setDuration: (v: number) => void;
@@ -80,6 +87,7 @@ export interface UseGiveawayResult {
   cancel: () => void;
   startNew: () => void;
   reveal: () => void;
+  clearHistory: () => void;
   /**
    * Add a single message to the running giveaway's entry buffer. No-op
    * unless the giveaway is in the `running` phase. Caller is expected to
@@ -163,16 +171,25 @@ export function useGiveaway({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [winner, setWinner] = useState<GiveawayEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<GiveawayHistoryEntry[]>(() =>
+    channelKey ? [] : getGiveawayHistory(),
+  );
   /** Bumped on every buffer mutation so consumers re-render. */
   const [entriesVersion, setEntriesVersion] = useState(0);
   const [sharedEntries, setSharedEntries] = useState<GiveawayEntry[]>([]);
   const sharedInitializedRef = useRef(false);
   const sharedVersionRef = useRef(-1);
-  const sharedStartedAtRef = useRef<number | null>(null);
   const tickRef = useRef<number | null>(null);
   const recordedRef = useRef<boolean>(false);
   const bufferRef = useRef<Map<string, GiveawayEntry>>(new Map());
   const ingestedIdsRef = useRef<Set<string>>(new Set());
+
+  // Shared history comes from the server poll. Clear the previous channel's
+  // winners when the channel changes, and fall back to local storage in
+  // desktop/local mode.
+  useEffect(() => {
+    setHistory(sharedChannel ? [] : getGiveawayHistory());
+  }, [sharedChannel]);
 
   const config: GiveawayConfig = { keyword, durationSeconds: duration, scope, eligibility };
 
@@ -190,11 +207,6 @@ export function useGiveaway({
     setEndsAt(next.endsAt);
     setWinner(next.winner);
     setSharedEntries(next.entries);
-    // A new giveaway re-arms the local history recorder.
-    if (next.startedAt !== sharedStartedAtRef.current) {
-      sharedStartedAtRef.current = next.startedAt;
-      recordedRef.current = false;
-    }
     // While the form is open the local draft wins; otherwise the server is
     // authoritative so the history entry records the right keyword/config.
     if (!sharedInitializedRef.current || next.phase !== "config") {
@@ -210,10 +222,15 @@ export function useGiveaway({
   // started before start/cancel/reveal can otherwise land afterwards and
   // revert the UI.
   const applySharedResponse = useCallback(
-    (next: { version: number; giveaway: SharedGiveawayState }) => {
+    (next: {
+      version: number;
+      giveaway: SharedGiveawayState;
+      history?: GiveawayHistoryEntry[];
+    }) => {
       if (next.version <= sharedVersionRef.current) return;
       sharedVersionRef.current = next.version;
       applySharedGiveaway(next.giveaway);
+      if (next.history) setHistory(next.history);
     },
     [applySharedGiveaway],
   );
@@ -269,7 +286,10 @@ export function useGiveaway({
   }, [phase, endsAt, enabled, sharedChannel]);
 
   // Record the result once when entering the revealed phase with a winner.
+  // Shared giveaways record on the server instead, so every client sees the
+  // same history.
   useEffect(() => {
+    if (sharedChannel) return;
     if (phase !== "revealed" || !winner || recordedRef.current) return;
     appendGiveawayHistory({
       keyword: keyword.trim(),
@@ -279,6 +299,7 @@ export function useGiveaway({
       scope,
       eligibility,
     });
+    setHistory(getGiveawayHistory());
     recordedRef.current = true;
   }, [
     phase,
@@ -288,6 +309,7 @@ export function useGiveaway({
     duration,
     scope,
     eligibility,
+    sharedChannel,
   ]);
 
   const ingestMessage = useCallback(
@@ -423,6 +445,21 @@ export function useGiveaway({
     setPhase("revealed");
   }, [phase, sharedChannel, applySharedResponse]);
 
+  const clearHistory = useCallback(() => {
+    if (sharedChannel) {
+      void giveawayAction(sharedChannel, "clearHistory")
+        .then(applySharedResponse)
+        .catch((err) =>
+          setError(
+            err instanceof Error ? err.message : "Failed to clear history",
+          ),
+        );
+      return;
+    }
+    clearGiveawayHistory();
+    setHistory([]);
+  }, [sharedChannel, applySharedResponse]);
+
   return {
     phase,
     keyword,
@@ -433,6 +470,7 @@ export function useGiveaway({
     startedAt,
     winner,
     liveEntries,
+    history,
     error,
     setKeyword,
     setDuration,
@@ -443,6 +481,7 @@ export function useGiveaway({
     cancel,
     startNew,
     reveal,
+    clearHistory,
     ingestMessage,
   };
 }

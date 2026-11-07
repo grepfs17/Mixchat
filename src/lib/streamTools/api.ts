@@ -1,4 +1,5 @@
 import type { GiveawayEntry } from "../streamerTools/giveaway";
+import type { GiveawayHistoryEntry } from "../streamerTools/history";
 import type { SharedGiveawayState } from "./state";
 
 async function parseError(res: Response, fallback: string): Promise<string> {
@@ -10,36 +11,38 @@ async function parseError(res: Response, fallback: string): Promise<string> {
   }
 }
 
+export interface SharedGiveawayResponse {
+  version: number;
+  giveaway: SharedGiveawayState;
+  history?: GiveawayHistoryEntry[];
+}
+
 export async function getSharedGiveaway(
   channelKey: string,
-): Promise<{ version: number; giveaway: SharedGiveawayState }> {
+): Promise<SharedGiveawayResponse> {
   const params = new URLSearchParams({ channelKey });
   const res = await fetch(`/api/stream-tools/giveaway?${params.toString()}`);
   if (!res.ok) throw new Error(await parseError(res, "Failed to load giveaway"));
-  return (await res.json()) as {
-    version: number;
-    giveaway: SharedGiveawayState;
-  };
+  return (await res.json()) as SharedGiveawayResponse;
 }
 
 export async function giveawayAction<T = unknown>(
   channelKey: string,
   action: string,
   payload: Record<string, unknown> = {},
-): Promise<{
-  version: number;
-  giveaway: SharedGiveawayState;
-  claimedWinner?: GiveawayEntry | null;
-}> {
+): Promise<
+  SharedGiveawayResponse & {
+    claimedWinner?: GiveawayEntry | null;
+  }
+> {
   const res = await fetch("/api/stream-tools/giveaway", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ channelKey, action, ...payload }),
   });
   if (!res.ok) throw new Error(await parseError(res, "Giveaway action failed"));
-  return (await res.json()) as {
-    version: number;
-    giveaway: SharedGiveawayState;
+  return (await res.json()) as SharedGiveawayResponse & {
+    claimedWinner?: GiveawayEntry | null;
   } & T;
 }
 

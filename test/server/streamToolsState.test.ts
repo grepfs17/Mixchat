@@ -38,6 +38,7 @@ describe("shared stream tools state", () => {
     expect(state.version).toBe(0);
     expect(state.giveaway.phase).toBe("config");
     expect(state.giveaway.entries).toEqual([]);
+    expect(state.giveawayHistory).toEqual([]);
     expect(state.music.playlists).toEqual([]);
     expect(state.music.isPlaying).toBe(false);
   });
@@ -100,6 +101,38 @@ describe("shared stream tools state", () => {
     expect(["u1", "u2"]).toContain(state.giveaway.winner?.userId);
     // 1 from the setup mutation, 1 from the auto-reveal on read.
     expect(state.version).toBe(2);
+  });
+
+  it("records the auto-revealed winner in giveaway history exactly once", async () => {
+    const startedAt = Date.now() - 60_000;
+    await mutateStreamToolsState({ baseDir }, KEY, (state) => {
+      state.giveaway = {
+        phase: "running",
+        keyword: "join",
+        duration: 5,
+        scope: "both",
+        eligibility: "everyone",
+        startedAt,
+        endsAt: startedAt + 5_000,
+        winner: null,
+        entries: [entry("u1"), entry("u2")],
+        announcedAt: null,
+      };
+    });
+
+    const first = await getStreamToolsState({ baseDir }, KEY);
+    expect(first.giveawayHistory).toHaveLength(1);
+    const record = first.giveawayHistory[0];
+    expect(record.keyword).toBe("join");
+    expect(record.entryCount).toBe(2);
+    expect(record.durationSeconds).toBe(5);
+    expect(["u1", "u2"]).toContain(record.winner.userId);
+
+    // Later reads see the same history, they never record again.
+    await getStreamToolsState({ baseDir }, KEY);
+    const second = await getStreamToolsState({ baseDir }, KEY);
+    expect(second.giveawayHistory).toHaveLength(1);
+    expect(second.giveawayHistory[0].id).toBe(record.id);
   });
 
   it("keeps an unlimited giveaway running until revealed", async () => {

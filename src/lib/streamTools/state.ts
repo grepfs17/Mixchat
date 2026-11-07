@@ -3,6 +3,7 @@ import type {
   GiveawayEntry,
   GiveawayScope,
 } from "../streamerTools/giveaway";
+import type { GiveawayHistoryEntry } from "../streamerTools/history";
 import type {
   MusicPlaylist,
   MusicPlayerSettings,
@@ -32,5 +33,7 @@ export interface SharedMusicState {
 export interface StreamToolsState {
   version: number;
   giveaway: SharedGiveawayState;
+  /** Winners of past giveaways, newest first, shared with every authorized client. */
+  giveawayHistory: GiveawayHistoryEntry[];
   music: SharedMusicState;
 }

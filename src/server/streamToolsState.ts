@@ -9,6 +9,7 @@ import path from "node:path";
 import { createHash, randomBytes } from "node:crypto";
 import { DEFAULT_MUSIC_PLAYER_SETTINGS } from "../lib/musicPlayer/types";
 import { pickWinner } from "../lib/streamerTools/giveaway";
+import type { GiveawayHistoryEntry } from "../lib/streamerTools/history";
 import type {
   SharedGiveawayState,
   SharedMusicState,
@@ -23,6 +24,8 @@ interface StoredState extends StreamToolsState {
 }
 
 const FILE_VERSION = 1;
+/** Same cap the local (desktop) history uses. */
+const MAX_HISTORY_ENTRIES = 50;
 const mutexes = new Map<string, Promise<unknown>>();
 
 function normalizeChannelKey(channelKey: string): string {
@@ -87,8 +90,21 @@ function freshState(channelKey: string): StoredState {
     version: 0,
     updatedAt: new Date(0).toISOString(),
     giveaway: defaultGiveawayState(),
+    giveawayHistory: [],
     music: defaultMusicState(),
   };
+}
+
+function validHistoryEntry(value: unknown): value is GiveawayHistoryEntry {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<GiveawayHistoryEntry>;
+  return (
+    typeof entry.id === "string" &&
+    typeof entry.revealedAt === "string" &&
+    typeof entry.keyword === "string" &&
+    !!entry.winner &&
+    typeof entry.winner.userId === "string"
+  );
 }
 
 function normalizeLoaded(
@@ -110,6 +126,9 @@ function normalizeLoaded(
         ? raw.giveaway.entries
         : [],
     },
+    giveawayHistory: Array.isArray(raw.giveawayHistory)
+      ? raw.giveawayHistory.filter(validHistoryEntry)
+      : [],
     music: {
       ...base.music,
       ...(raw.music && typeof raw.music === "object" ? raw.music : {}),
@@ -157,6 +176,30 @@ async function writeStored(
   await fs.rename(tmp, target);
 }
 
+/**
+ * Append the current giveaway's winner to the shared history. Call it exactly
+ * when a giveaway transitions to `revealed`; the phase guard in `resolveGiveaway`
+ * and in the `reveal` action keeps each giveaway recorded once.
+ */
+export function recordGiveawayWinner(state: StoredState): void {
+  const giveaway = state.giveaway;
+  if (!giveaway.winner) return;
+  const entry: GiveawayHistoryEntry = {
+    id: `${Date.now()}-${randomBytes(4).toString("hex")}`,
+    revealedAt: new Date().toISOString(),
+    keyword: giveaway.keyword,
+    winner: giveaway.winner,
+    entryCount: giveaway.entries.length,
+    durationSeconds: giveaway.duration,
+    scope: giveaway.scope,
+    eligibility: giveaway.eligibility,
+  };
+  state.giveawayHistory = [entry, ...state.giveawayHistory].slice(
+    0,
+    MAX_HISTORY_ENTRIES,
+  );
+}
+
 function resolveGiveaway(state: StoredState): boolean {
   const giveaway = state.giveaway;
   if (giveaway.phase !== "running") return false;
@@ -169,6 +212,7 @@ function resolveGiveaway(state: StoredState): boolean {
       phase: "revealed",
       winner: giveaway.winner ?? pickWinner(giveaway.entries),
     };
+    recordGiveawayWinner(state);
     return true;
   }
   return false;
@@ -193,6 +237,7 @@ export async function getStreamToolsState(
     return {
       version: state.version,
       giveaway: state.giveaway,
+      giveawayHistory: state.giveawayHistory,
       music: state.music,
     };
   });
@@ -202,6 +247,7 @@ function snapshot(state: StoredState): StreamToolsState {
   return {
     version: state.version,
     giveaway: state.giveaway,
+    giveawayHistory: state.giveawayHistory,
     music: state.music,
   };
 }

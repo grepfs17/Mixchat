@@ -19,8 +19,6 @@ import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
 import type { UseSongQueueResult } from "../../../hooks/chat/useSongQueue";
 import type { UseMusicPlayerResult } from "../../../hooks/chat/useMusicPlayer";
 import {
-  clearGiveawayHistory,
-  getGiveawayHistory,
   type GiveawayHistoryEntry,
 } from "../../../lib/streamerTools/history";
 import {
@@ -121,23 +119,13 @@ function formatDate(iso: string): string {
   }
 }
 
-function HistorySection({ onChanged }: { onChanged: () => void }) {
-  const [history, setHistory] = useState<GiveawayHistoryEntry[]>(() =>
-    getGiveawayHistory(),
-  );
-
-  const refresh = useCallback(() => {
-    setHistory(getGiveawayHistory());
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    if (onChanged) onChanged();
-  }, [history, onChanged]);
-
+function HistorySection({
+  history,
+  onClear,
+}: {
+  history: GiveawayHistoryEntry[];
+  onClear: () => void;
+}) {
   const handleClear = () => {
     if (
       typeof window !== "undefined" &&
@@ -145,8 +133,7 @@ function HistorySection({ onChanged }: { onChanged: () => void }) {
     ) {
       return;
     }
-    clearGiveawayHistory();
-    refresh();
+    onClear();
   };
 
   if (history.length === 0) {
@@ -983,7 +970,10 @@ export default function StreamerToolsModal({
                   </li>
                 ))}
               </ul>
-              <HistorySection onChanged={() => {}} />
+              <HistorySection
+                history={giveaway.history}
+                onClear={giveaway.clearHistory}
+              />
               {!IS_DESKTOP && (
                 <PastPlaylistsSection
                   channelKey={channelKey}

@@ -15,6 +15,7 @@ import {
   entryKey,
   getStreamToolsState,
   mutateStreamToolsState,
+  recordGiveawayWinner,
 } from "../../../server/streamToolsState";
 import { readJsonBody } from "../../../server/jsonBody";
 
@@ -133,7 +134,11 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   const access = await authorize(request, cookies, channelKey);
   if ("error" in access) return access.error;
   const state = await getStreamToolsState(getStreamToolsStoreOptions(), access.key);
-  return json({ version: state.version, giveaway: state.giveaway });
+  return json({
+    version: state.version,
+    giveaway: state.giveaway,
+    history: state.giveawayHistory,
+  });
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -219,6 +224,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         phase: "revealed",
         winner: pickWinner(state.giveaway.entries),
       };
+      recordGiveawayWinner(state);
+    });
+  } else if (action === "clearHistory") {
+    await mutateStreamToolsState(opts, access.key, (state) => {
+      state.giveawayHistory = [];
     });
   } else if (action === "claimAnnounce") {
     const claimed = await mutateStreamToolsState(opts, access.key, (state) => {
@@ -236,6 +246,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({
       version: state.version,
       giveaway: state.giveaway,
+      history: state.giveawayHistory,
       claimedWinner: claimed,
     });
   } else {
@@ -243,5 +254,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const state = await getStreamToolsState(opts, access.key);
-  return json({ version: state.version, giveaway: state.giveaway });
+  return json({
+    version: state.version,
+    giveaway: state.giveaway,
+    history: state.giveawayHistory,
+  });
 };

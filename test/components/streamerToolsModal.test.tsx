@@ -33,7 +33,11 @@ import type { UseMusicPlayerResult } from "../../src/hooks/chat/useMusicPlayer";
 
 function renderModal(overrides: Record<string, unknown> = {}) {
   const props = {
-    giveaway: { phase: "config" } as unknown as UseGiveawayResult,
+    giveaway: {
+      phase: "config",
+      history: [],
+      clearHistory: () => {},
+    } as unknown as UseGiveawayResult,
     songQueue: { phase: "idle" } as unknown as UseSongQueueResult,
     musicPlayer: { activePlaylist: null } as unknown as UseMusicPlayerResult,
     onAnnounce: vi.fn(async () => {}),

@@ -480,6 +480,94 @@ describe("/api/stream-tools/giveaway", () => {
     expect(claim2Body.claimedWinner).toBeNull();
   });
 
+  it("shares revealed winners through history and clears them for everyone", async () => {
+    await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "start",
+            keyword: "join",
+            duration: 0,
+            scope: "both",
+            eligibility: "everyone",
+          },
+          "POST",
+        ),
+      ),
+    );
+    await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          {
+            channelKey: channel,
+            action: "ingest",
+            entry: { platform: "twitch", userId: "u1", author: "Alice" },
+          },
+          "POST",
+        ),
+      ),
+    );
+    const reveal = await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          { channelKey: channel, action: "reveal" },
+          "POST",
+        ),
+      ),
+    );
+    const revealBody = await reveal.json();
+    expect(revealBody.history).toHaveLength(1);
+    expect(revealBody.history[0].winner.userId).toBe("u1");
+    expect(revealBody.history[0].keyword).toBe("join");
+    expect(revealBody.history[0].entryCount).toBe(1);
+
+    // Revealing again must not append a duplicate entry.
+    const repeat = await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          { channelKey: channel, action: "reveal" },
+          "POST",
+        ),
+      ),
+    );
+    expect((await repeat.json()).history).toHaveLength(1);
+
+    // Any authorized client reads the same history through GET.
+    const beforeClear = await giveawayGet(
+      makeContext(
+        jsonResponse(
+          `http://localhost/api/stream-tools/giveaway?channelKey=${channel}`,
+        ),
+      ),
+    );
+    expect((await beforeClear.json()).history).toHaveLength(1);
+
+    const clear = await giveawayPost(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/giveaway",
+          { channelKey: channel, action: "clearHistory" },
+          "POST",
+        ),
+      ),
+    );
+    expect((await clear.json()).history).toEqual([]);
+
+    const afterClear = await giveawayGet(
+      makeContext(
+        jsonResponse(
+          `http://localhost/api/stream-tools/giveaway?channelKey=${channel}`,
+        ),
+      ),
+    );
+    expect((await afterClear.json()).history).toEqual([]);
+  });
+
   it("refuses writes when authorization fails", async () => {
     access.result = "forbidden";
     const res = await giveawayPost(
