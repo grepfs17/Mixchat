@@ -23,9 +23,11 @@ const relays = new Map<string, PollRelayState>();
 /** Pending/claimed requests older than this are considered failed. */
 const COMMAND_TTL_MS = 2 * 60 * 1000;
 /** A claimed request can be retried after this if the owner never acked. */
-const CLAIM_TTL_MS = 15 * 1000;
+const CLAIM_TTL_MS = 60 * 1000;
 /** Completed requests stay visible briefly so the requester can read them. */
 const RESULT_TTL_MS = 30 * 1000;
+/** Fully empty channels are evicted after this idle period. */
+const EMPTY_STATE_TTL_MS = 5 * 60 * 1000;
 
 function normalizeKey(channelKey: string): string {
   return channelKey.trim().toLowerCase();
@@ -100,6 +102,10 @@ export function enqueuePollCommand(
 /**
  * Atomically claim a pending command for the broadcaster client. Returns null
  * when another client already claimed it or it is no longer pending.
+ *
+ * The claim lease is longer than worst-case Twitch latency so a create/end
+ * cannot execute twice: re-claiming mid-execution would make a second owner
+ * client repeat the request while the first one is still running.
  */
 export function claimPollCommand(
   channelKey: string,
@@ -113,7 +119,12 @@ export function claimPollCommand(
     command.status === "claimed" &&
     command.claimedAt !== undefined &&
     Date.now() - command.claimedAt > CLAIM_TTL_MS;
-  if (command.status !== "pending" && !claimExpired) return null;
+  if (
+    !claimExpired &&
+    (command.status !== "pending" || Date.now() - command.requestedAt > CLAIM_TTL_MS)
+  ) {
+    return null;
+  }
 
   command.status = "claimed";
   command.claimedAt = Date.now();
@@ -150,3 +161,18 @@ export function syncPollState(
 export function __resetPollRelayForTests(): void {
   relays.clear();
 }
+
+/** Delete channels whose relay state is empty and past the idle window. */
+export function purgeIdleRelays(
+  relaysMap: Map<string, PollRelayState> = relays,
+): void {
+  const now = Date.now();
+  for (const [key, state] of relaysMap) {
+    const stale = now - state.updatedAt > EMPTY_STATE_TTL_MS;
+    if (stale && state.poll === null && state.command === null) {
+      relaysMap.delete(key);
+    }
+  }
+}
+
+setInterval(purgeIdleRelays, EMPTY_STATE_TTL_MS);

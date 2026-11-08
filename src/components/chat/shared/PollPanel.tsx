@@ -220,7 +220,7 @@ export default function PollPanel({
                 <input
                   type="number"
                   className="poll-input poll-input--number"
-                  min={0}
+                  min={POLL_LIMITS.minBitsPerVote}
                   max={POLL_LIMITS.maxBitsPerVote}
                   value={config.bitsPerVote}
                   aria-label="Bits per vote"

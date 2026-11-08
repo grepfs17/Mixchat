@@ -5,6 +5,7 @@ import {
   claimPollCommand,
   enqueuePollCommand,
   getPollRelay,
+  purgeIdleRelays,
   syncPollState,
 } from "../../src/server/streamToolPollRelay";
 import type { PollState } from "../../src/components/chat/shared/bannerTypes";
@@ -63,6 +64,39 @@ describe("poll relay store", () => {
     const claimed = claimPollCommand(KEY, command.id);
     expect(claimed?.status).toBe("claimed");
     expect(claimPollCommand(KEY, command.id)).toBeNull();
+  });
+
+  it("stops claimable requests before the pending deadline", () => {
+    vi.useFakeTimers();
+    const command = enqueuePollCommand(KEY, "create", config(), "Mod");
+
+    vi.advanceTimersByTime(61 * 1000);
+    expect(claimPollCommand(KEY, command.id)).toBeNull();
+  });
+
+  it("allows retrying a claim whose lease expired", () => {
+    vi.useFakeTimers();
+    const command = enqueuePollCommand(KEY, "create", config(), "Mod");
+    claimPollCommand(KEY, command.id);
+
+    vi.advanceTimersByTime(61 * 1000);
+
+    const retried = claimPollCommand(KEY, command.id);
+    expect(retried?.status).toBe("claimed");
+  });
+
+  it("evicts idle channels with no shared poll state", () => {
+    vi.useFakeTimers();
+    const kept = getPollRelay(KEY);
+    syncPollState(KEY, poll);
+    const evicted = getPollRelay("twitch:empty");
+
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    purgeIdleRelays();
+
+    expect(getPollRelay(KEY)).toBe(kept);
+    expect(kept.poll?.id).toBe("poll-1");
+    expect(getPollRelay("twitch:empty")).not.toBe(evicted);
   });
 
   it("acks a command and stores the resulting poll", () => {

@@ -9,6 +9,7 @@ export const POLL_LIMITS = {
   maxDuration: 1800,
   minChannelPointsPerVote: 1,
   maxChannelPointsPerVote: 10000,
+  minBitsPerVote: 1,
   maxBitsPerVote: 10000,
 } as const;
 
@@ -108,10 +109,10 @@ export function validatePollConfig(config: PollConfig): string | null {
   if (config.bitsVoting) {
     if (
       !isInteger(config.bitsPerVote) ||
-      config.bitsPerVote < 0 ||
+      config.bitsPerVote < POLL_LIMITS.minBitsPerVote ||
       config.bitsPerVote > POLL_LIMITS.maxBitsPerVote
     ) {
-      return `Bits per vote must be between 0 and ${POLL_LIMITS.maxBitsPerVote}.`;
+      return `Bits per vote must be between ${POLL_LIMITS.minBitsPerVote} and ${POLL_LIMITS.maxBitsPerVote}.`;
     }
   }
 

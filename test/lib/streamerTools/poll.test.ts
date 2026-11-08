@@ -81,6 +81,11 @@ describe("validatePollConfig", () => {
     ).toMatch(/Bits per vote/);
     expect(
       validatePollConfig(
+        validConfig({ bitsVoting: true, bitsPerVote: 0 }),
+      ),
+    ).toMatch(/Bits per vote/);
+    expect(
+      validatePollConfig(
         validConfig({
           channelPointsVoting: false,
           channelPointsPerVote: 0,

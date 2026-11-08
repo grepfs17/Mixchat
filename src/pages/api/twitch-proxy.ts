@@ -216,7 +216,6 @@ export const POST: APIRoute = async ({ request, url, cookies }) => {
     if (body) {
       try {
         parsedBody = JSON.parse(body);
-        console.log("[twitch-proxy POST]", path, "body:", JSON.stringify(parsedBody));
       } catch {
         return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
           status: 400,
