@@ -3421,3 +3421,402 @@
     font-size: 11px;
     color: var(--color-text-muted);
 }
+
+/* Prediction panel */
+.prediction-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.prediction-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.prediction-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.prediction-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.prediction-field-hint {
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+.prediction-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.prediction-hint--warn {
+    color: var(--color-notification-error);
+    background: color-mix(
+        in srgb,
+        var(--color-notification-error) 8%,
+        transparent
+    );
+    border: 1px solid
+        color-mix(in srgb, var(--color-notification-error) 30%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+}
+
+.prediction-input {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-size: 14px;
+    padding: 8px 10px;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+}
+
+.prediction-input:focus {
+    outline: none;
+    border-color: var(--color-indigo);
+}
+
+.prediction-outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prediction-outcome-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prediction-outcome-row .prediction-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.prediction-outcome-remove,
+.prediction-add-outcome {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--color-border-medium);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.prediction-outcome-remove {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.prediction-add-outcome {
+    align-self: flex-start;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.prediction-outcome-remove:hover:not(:disabled),
+.prediction-add-outcome:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
+    color: var(--color-text-primary);
+}
+
+.prediction-outcome-remove:disabled,
+.prediction-add-outcome:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.prediction-window-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.prediction-input-suffix {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.prediction-input-suffix .prediction-input--with-suffix {
+    flex: 1;
+    min-width: 0;
+    padding-right: 44px;
+}
+
+.prediction-input-suffix-label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    background: var(--color-bg-tertiary);
+    border-left: 1px solid var(--color-border-medium);
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    pointer-events: none;
+}
+
+.prediction-window-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.prediction-preset {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-medium);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+}
+
+.prediction-preset:hover {
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
+    border-color: color-mix(in srgb, var(--color-indigo) 40%, transparent);
+    color: var(--color-text-primary);
+}
+
+.prediction-preset--active,
+.prediction-preset--active:hover {
+    background: color-mix(in srgb, var(--color-indigo) 20%, transparent);
+    border-color: var(--color-indigo);
+    color: var(--color-text-white);
+}
+
+.prediction-error {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-notification-error);
+    background: color-mix(
+        in srgb,
+        var(--color-notification-error) 8%,
+        transparent
+    );
+    border: 1px solid
+        color-mix(in srgb, var(--color-notification-error) 30%, transparent);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+}
+
+.prediction-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.prediction-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        opacity 0.15s;
+}
+
+.prediction-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.prediction-btn--primary {
+    background: var(--color-indigo);
+    color: var(--color-text-white);
+}
+
+.prediction-btn--primary:hover:not(:disabled) {
+    background: var(--color-indigo-hover);
+}
+
+.prediction-btn--secondary {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
+}
+
+.prediction-btn--secondary:hover:not(:disabled) {
+    background: var(--color-bg-tertiary);
+}
+
+.prediction-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.prediction-results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.prediction-results-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    min-width: 0;
+}
+
+.prediction-results-status,
+.prediction-results-timer {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.prediction-results-status--locked {
+    color: var(--color-indigo);
+}
+
+.prediction-results-timer {
+    font-family: "Inter", "Roboto Mono", monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    letter-spacing: 0.04em;
+}
+
+.prediction-outcome-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prediction-outcome {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border-dark);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.prediction-outcome--winner {
+    border-color: var(--color-green);
+}
+
+.prediction-outcome-bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    opacity: 0.28;
+    pointer-events: none;
+}
+
+.prediction-outcome-title,
+.prediction-outcome-meta,
+.prediction-outcome-badge {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+}
+
+.prediction-outcome-title {
+    flex: 1;
+    color: var(--color-text-primary);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prediction-outcome-meta {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.prediction-outcome-badge {
+    color: var(--color-green);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.prediction-winner-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prediction-winner-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.prediction-winner-option input {
+    accent-color: var(--color-indigo);
+}
+
+.prediction-results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--color-text-muted);
+}

@@ -6,6 +6,11 @@ import {
   type PollConfig,
   type TwitchPollResponse,
 } from "./streamerTools/poll.js";
+import {
+  mapTwitchPrediction,
+  type PredictionConfig,
+  type TwitchPredictionResponse,
+} from "./streamerTools/prediction.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
@@ -1548,6 +1553,103 @@ export const endTwitchPoll = async (
     return poll ? mapTwitchPoll(poll) : null;
   } catch (error) {
     console.error("endTwitchPoll failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a Channel Points prediction on the broadcaster's channel.
+ * Requires channel:manage:predictions, Channel Points enabled, and a
+ * broadcaster token.
+ */
+export const createTwitchPrediction = async (
+  broadcasterId: string,
+  config: PredictionConfig,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/predictions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        broadcaster_id: resolvedBroadcasterId,
+        title: config.title.trim(),
+        outcomes: config.outcomes.map((title) => ({ title: title.trim() })),
+        prediction_window: config.windowSeconds,
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant prediction permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to create prediction: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const prediction = data?.data?.[0] as TwitchPredictionResponse | undefined;
+    if (!prediction) {
+      throw new Error("Failed to create prediction: no prediction returned");
+    }
+    return mapTwitchPrediction(prediction);
+  } catch (error) {
+    console.error("createTwitchPrediction failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update a prediction's status. `RESOLVED` requires the winning outcome id.
+ * Requires channel:manage:predictions and a broadcaster token.
+ */
+export const updateTwitchPrediction = async (
+  broadcasterId: string,
+  predictionId: string,
+  status: "LOCKED" | "RESOLVED" | "CANCELED",
+  winningOutcomeId?: string,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const body: Record<string, unknown> = {
+      broadcaster_id: resolvedBroadcasterId,
+      id: predictionId,
+      status,
+    };
+    if (status === "RESOLVED") {
+      if (!winningOutcomeId) {
+        throw new Error("A winning outcome is required to resolve a prediction.");
+      }
+      body.winning_outcome_id = winningOutcomeId;
+    }
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/predictions`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant prediction permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to update prediction: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const prediction = data?.data?.[0] as TwitchPredictionResponse | undefined;
+    return prediction ? mapTwitchPrediction(prediction) : null;
+  } catch (error) {
+    console.error("updateTwitchPrediction failed:", error);
     throw error;
   }
 };

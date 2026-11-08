@@ -25,6 +25,7 @@ const ALLOWED_PATH_PREFIXES = [
   "/helix/raids", // raid start/cancel endpoints
   "/helix/hypetrain/status", // used to check active hype trains (replaces deprecated /events)
   "/helix/polls", // create and end polls
+  "/helix/predictions", // create, lock, resolve, and cancel predictions
 ] as const;
 
 const TWITCH_API_BASE = "https://api.twitch.tv";

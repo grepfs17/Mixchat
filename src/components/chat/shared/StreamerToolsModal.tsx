@@ -15,10 +15,12 @@ import GiveawayPanel from "./GiveawayPanel";
 import SongQueuePanel from "./SongQueuePanel";
 import MusicPlayerPanel from "./MusicPlayerPanel";
 import PollPanel from "./PollPanel";
-import type { PollState } from "./bannerTypes";
+import PredictionPanel from "./PredictionPanel";
+import type { PollState, PredictionState } from "./bannerTypes";
 import type { GiveawayEntry } from "../../../lib/streamerTools/giveaway";
 import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
 import type { UsePollCreatorResult } from "../../../hooks/chat/usePollCreator";
+import type { UsePredictionCreatorResult } from "../../../hooks/chat/usePredictionCreator";
 import type { UseSongQueueResult } from "../../../hooks/chat/useSongQueue";
 import type { UseMusicPlayerResult } from "../../../hooks/chat/useMusicPlayer";
 import {
@@ -38,6 +40,8 @@ interface StreamerToolsModalProps {
   giveaway: UseGiveawayResult;
   poll: UsePollCreatorResult;
   livePoll: PollState | null;
+  prediction: UsePredictionCreatorResult;
+  livePrediction: PredictionState | null;
   songQueue: UseSongQueueResult;
   musicPlayer: UseMusicPlayerResult;
   onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
@@ -68,7 +72,13 @@ interface StreamerToolsModalProps {
   ) => Promise<void>;
 }
 
-type ToolId = "music-player" | "giveaway" | "poll" | "song-queue" | "wheel";
+type ToolId =
+  | "music-player"
+  | "giveaway"
+  | "poll"
+  | "prediction"
+  | "song-queue"
+  | "wheel";
 
 interface ToolDescriptor {
   id: ToolId;
@@ -98,6 +108,11 @@ const TOOLS: ToolDescriptor[] = [
     id: "poll",
     label: "Poll",
     description: "Ask chat to vote with a Twitch poll.",
+  },
+  {
+    id: "prediction",
+    label: "Prediction",
+    description: "Let viewers bet Channel Points on an outcome.",
   },
   {
     id: "song-queue",
@@ -736,6 +751,8 @@ export default function StreamerToolsModal({
   giveaway,
   poll,
   livePoll,
+  prediction,
+  livePrediction,
   songQueue,
   musicPlayer,
   onAnnounce,
@@ -926,7 +943,6 @@ export default function StreamerToolsModal({
                         <h4>They can</h4>
                         <ul>
                           <li>Run a giveaway: start, cancel, reveal, announce</li>
-                          <li>Create and end Twitch polls</li>
                           <li>Use the music player: playlists, tracks, play/pause</li>
                           <li>Manage the song queue: start, end, add, skip, remove</li>
                           <li>Create and edit wheels: rename, options, delete</li>
@@ -936,6 +952,7 @@ export default function StreamerToolsModal({
                         <h4>They can&apos;t</h4>
                         <ul>
                           <li>Spin the wheel</li>
+                          <li>Create, end, or manage Twitch polls and predictions</li>
                           <li>Change this setting</li>
                         </ul>
                       </div>
@@ -1038,6 +1055,13 @@ export default function StreamerToolsModal({
                 <PollPanel
                   poll={poll}
                   livePoll={livePoll}
+                  role={role}
+                />
+              )}
+              {tool.id === "prediction" && (
+                <PredictionPanel
+                  prediction={prediction}
+                  livePrediction={livePrediction}
                   role={role}
                 />
               )}

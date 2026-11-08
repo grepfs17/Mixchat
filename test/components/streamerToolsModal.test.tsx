@@ -29,6 +29,7 @@ vi.mock("../../src/hooks/chat/usePastPlaylists", () => ({
 import StreamerToolsModal from "../../src/components/chat/shared/StreamerToolsModal";
 import type { UseGiveawayResult } from "../../src/hooks/chat/useGiveaway";
 import type { UsePollCreatorResult } from "../../src/hooks/chat/usePollCreator";
+import type { UsePredictionCreatorResult } from "../../src/hooks/chat/usePredictionCreator";
 import type { UseSongQueueResult } from "../../src/hooks/chat/useSongQueue";
 import type { UseMusicPlayerResult } from "../../src/hooks/chat/useMusicPlayer";
 
@@ -54,6 +55,23 @@ function renderModal(overrides: Record<string, unknown> = {}) {
       startNew: () => {},
     } as unknown as UsePollCreatorResult,
     livePoll: null,
+    prediction: {
+      phase: "config",
+      config: { title: "", outcomes: ["", ""], windowSeconds: 120 },
+      error: null,
+      starting: false,
+      acting: false,
+      setField: () => {},
+      setOutcome: () => {},
+      addOutcome: () => {},
+      removeOutcome: () => {},
+      start: async () => {},
+      lock: async () => {},
+      resolve: async () => {},
+      cancel: async () => {},
+      startNew: () => {},
+    } as unknown as UsePredictionCreatorResult,
+    livePrediction: null,
     songQueue: { phase: "idle" } as unknown as UseSongQueueResult,
     musicPlayer: { activePlaylist: null } as unknown as UseMusicPlayerResult,
     onAnnounce: vi.fn(async () => {}),

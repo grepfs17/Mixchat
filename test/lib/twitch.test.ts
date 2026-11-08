@@ -7,6 +7,8 @@ import {
   getPinnedTwitchMessageId,
   createTwitchPoll,
   endTwitchPoll,
+  createTwitchPrediction,
+  updateTwitchPrediction,
 } from "../../src/lib/twitch";
 
 describe("twitch lib mocked HTTP tests", () => {
@@ -301,5 +303,112 @@ describe("twitch poll API", () => {
       id: "poll-1",
       status: "TERMINATED",
     });
+  });
+});
+
+describe("twitch prediction API", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function predictionResponse(status: string, extra: Record<string, unknown> = {}) {
+    return {
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: "pred-1",
+            title: "Will we win?",
+            status,
+            created_at: "2026-01-01T00:00:00Z",
+            prediction_window: 120,
+            outcomes: [
+              { id: "a", title: "Yes", color: "blue", users: 1, channel_points: 10 },
+              { id: "b", title: "No", color: "pink", users: 0, channel_points: 0 },
+            ],
+            ...extra,
+          },
+        ],
+      }),
+    };
+  }
+
+  it("createTwitchPrediction posts the config to the proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(predictionResponse("ACTIVE"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const prediction = await createTwitchPrediction("123", {
+      title: " Will we win? ",
+      outcomes: [" Yes ", " No "],
+      windowSeconds: 120,
+    });
+
+    expect(prediction.id).toBe("pred-1");
+    expect(prediction.totalPoints).toBe(10);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/twitch-proxy?path=/helix/predictions");
+    expect(opts.method).toBe("POST");
+    expect(JSON.parse(opts.body)).toEqual({
+      broadcaster_id: "123",
+      title: "Will we win?",
+      outcomes: [{ title: "Yes" }, { title: "No" }],
+      prediction_window: 120,
+    });
+  });
+
+  it("updateTwitchPrediction locks a prediction", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(predictionResponse("LOCKED"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const prediction = await updateTwitchPrediction("123", "pred-1", "LOCKED");
+
+    expect(prediction?.status).toBe("locked");
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/twitch-proxy?path=/helix/predictions");
+    expect(opts.method).toBe("PATCH");
+    expect(JSON.parse(opts.body)).toEqual({
+      broadcaster_id: "123",
+      id: "pred-1",
+      status: "LOCKED",
+    });
+  });
+
+  it("updateTwitchPrediction resolves with a winning outcome", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        predictionResponse("RESOLVED", { winning_outcome_id: "a" }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const prediction = await updateTwitchPrediction(
+      "123",
+      "pred-1",
+      "RESOLVED",
+      "a",
+    );
+
+    expect(prediction?.status).toBe("resolved");
+    expect(prediction?.winningOutcomeId).toBe("a");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      broadcaster_id: "123",
+      id: "pred-1",
+      status: "RESOLVED",
+      winning_outcome_id: "a",
+    });
+  });
+
+  it("updateTwitchPrediction requires a winner to resolve", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      updateTwitchPrediction("123", "pred-1", "RESOLVED"),
+    ).rejects.toThrow(/winning outcome is required/i);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

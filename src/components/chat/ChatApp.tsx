@@ -19,9 +19,14 @@ import {
   usePollCreator,
   type PollCreatorPhase,
 } from "../../hooks/chat/usePollCreator";
+import {
+  usePredictionCreator,
+  type PredictionCreatorPhase,
+} from "../../hooks/chat/usePredictionCreator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import { parsePollCommand } from "../../lib/streamerTools/poll";
+import { parsePredictionCommand } from "../../lib/streamerTools/prediction";
 import { useStreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import type { SongQueueItem } from "../../lib/songQueue/types";
 import { sendHelixMessage } from "../../lib/twitch";
@@ -65,6 +70,54 @@ async function handlePollChatCommand(
     return true;
   }
   await deps.endPoll();
+  return true;
+}
+
+interface PredictionChatCommandDeps {
+  isOnOwnChannel: boolean;
+  showStreamTools: boolean;
+  phase: PredictionCreatorPhase;
+  openPredictionPanel: () => void;
+  lock: () => Promise<void>;
+  cancel: () => Promise<void>;
+  notify: (message: string, type: "success" | "error" | "info") => void;
+}
+
+/** Handle local prediction commands. Returns true when consumed. */
+async function handlePredictionChatCommand(
+  message: string,
+  deps: PredictionChatCommandDeps,
+): Promise<boolean> {
+  const command = parsePredictionCommand(message);
+  if (!command) return false;
+  if (!deps.isOnOwnChannel) {
+    deps.notify(
+      "Only the broadcaster can manage Twitch predictions.",
+      "error",
+    );
+    return true;
+  }
+  if (command === "createprediction") {
+    if (!deps.showStreamTools) {
+      deps.notify("Turn on Stream tools to create predictions.", "info");
+      return true;
+    }
+    deps.openPredictionPanel();
+    return true;
+  }
+  if (command === "lockprediction") {
+    if (deps.phase !== "active") {
+      deps.notify("There is no active prediction to lock.", "info");
+      return true;
+    }
+    await deps.lock();
+    return true;
+  }
+  if (deps.phase !== "active" && deps.phase !== "locked") {
+    deps.notify("There is no active prediction to cancel.", "info");
+    return true;
+  }
+  await deps.cancel();
   return true;
 }
 
@@ -204,6 +257,14 @@ export default function ChatApp(props: ChatAppStateProps) {
     onNotify: showNotification,
   });
 
+  const predictionCreator = usePredictionCreator({
+    broadcasterId: selectedTwitchChannel || "",
+    canManage: isOnOwnChannel,
+    livePrediction: prediction,
+    setPrediction,
+    onNotify: showNotification,
+  });
+
   const handleSetModMode = useCallback(
     (target: ModModeTarget) => {
       if (props.setModModeTargetForChannel && selectedTwitchChannel) {
@@ -215,7 +276,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
-    "giveaway" | "poll" | "song-queue" | "music-player" | null
+    "giveaway" | "poll" | "prediction" | "song-queue" | "music-player" | null
   >(null);
 
   const streamToolsChannelKey = selectedTwitchChannelName
@@ -258,6 +319,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       initialTool:
         | "giveaway"
         | "poll"
+        | "prediction"
         | "song-queue"
         | "music-player"
         | null = null,
@@ -283,6 +345,16 @@ export default function ChatApp(props: ChatAppStateProps) {
         notify: showNotification,
       });
       if (handled) return;
+      const predictionHandled = await handlePredictionChatCommand(message, {
+        isOnOwnChannel,
+        showStreamTools,
+        phase: predictionCreator.phase,
+        openPredictionPanel: () => openStreamerTools("prediction"),
+        lock: predictionCreator.lock,
+        cancel: predictionCreator.cancel,
+        notify: showNotification,
+      });
+      if (predictionHandled) return;
       await handleSendMessage(message, platforms, replyToId);
     },
     [
@@ -291,6 +363,9 @@ export default function ChatApp(props: ChatAppStateProps) {
       openStreamerTools,
       pollCreator.end,
       pollCreator.phase,
+      predictionCreator.cancel,
+      predictionCreator.lock,
+      predictionCreator.phase,
       showNotification,
       showStreamTools,
     ],
@@ -581,6 +656,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           appProps={props}
           giveaway={giveaway}
           poll={pollCreator}
+          prediction={predictionCreator}
           songQueue={songQueue}
           musicPlayer={musicPlayer}
           showStreamTools={showStreamTools}
