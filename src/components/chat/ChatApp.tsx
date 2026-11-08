@@ -15,14 +15,58 @@ import type { ChatTheme, Platform, TwitchMessage } from "../../lib/types";
 import type { YTMessage } from "./unified/types";
 import type { GiveawayEntry } from "../../lib/streamerTools/giveaway";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
+import {
+  usePollCreator,
+  type PollCreatorPhase,
+} from "../../hooks/chat/usePollCreator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
+import { parsePollCommand } from "../../lib/streamerTools/poll";
 import { useStreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import type { SongQueueItem } from "../../lib/songQueue/types";
 import { sendHelixMessage } from "../../lib/twitch";
 import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
 import { IS_DESKTOP } from "../../lib/constants";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+
+interface PollChatCommandDeps {
+  isOnOwnChannel: boolean;
+  showStreamTools: boolean;
+  phase: PollCreatorPhase;
+  openPollPanel: () => void;
+  endPoll: () => Promise<void>;
+  notify: (message: string, type: "success" | "error" | "info") => void;
+}
+
+/** Handle local poll commands. Returns true when the message was consumed. */
+async function handlePollChatCommand(
+  message: string,
+  deps: PollChatCommandDeps,
+): Promise<boolean> {
+  const command = parsePollCommand(message);
+  if (!command) return false;
+  if (!deps.isOnOwnChannel) {
+    deps.notify(
+      "Only the broadcaster can create or end Twitch polls.",
+      "error",
+    );
+    return true;
+  }
+  if (command === "createpoll") {
+    if (!deps.showStreamTools) {
+      deps.notify("Turn on Stream tools to create polls.", "info");
+      return true;
+    }
+    deps.openPollPanel();
+    return true;
+  }
+  if (deps.phase !== "active") {
+    deps.notify("No active poll.", "info");
+    return true;
+  }
+  await deps.endPoll();
+  return true;
+}
 
 export default function ChatApp(props: ChatAppStateProps) {
   const currentModModeTarget: ModModeTarget =
@@ -152,6 +196,14 @@ export default function ChatApp(props: ChatAppStateProps) {
     [],
   );
 
+  const pollCreator = usePollCreator({
+    broadcasterId: selectedTwitchChannel || "",
+    canManage: isOnOwnChannel,
+    livePoll: poll,
+    setPoll,
+    onNotify: showNotification,
+  });
+
   const handleSetModMode = useCallback(
     (target: ModModeTarget) => {
       if (props.setModModeTargetForChannel && selectedTwitchChannel) {
@@ -163,7 +215,7 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
-    "giveaway" | "song-queue" | "music-player" | null
+    "giveaway" | "poll" | "song-queue" | "music-player" | null
   >(null);
 
   const streamToolsChannelKey = selectedTwitchChannelName
@@ -205,6 +257,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     (
       initialTool:
         | "giveaway"
+        | "poll"
         | "song-queue"
         | "music-player"
         | null = null,
@@ -218,6 +271,35 @@ export default function ChatApp(props: ChatAppStateProps) {
     setStreamerToolsOpen(false);
     setStreamerToolsInitialTool(null);
   }, []);
+
+  const handleSendFromInput = useCallback(
+    async (message: string, platforms: Platform[], replyToId?: string) => {
+      const handled = await handlePollChatCommand(message, {
+        isOnOwnChannel,
+        showStreamTools,
+        phase: pollCreator.phase,
+        openPollPanel: () => openStreamerTools("poll"),
+        endPoll: pollCreator.end,
+        notify: showNotification,
+      });
+      if (handled) return;
+      await handleSendMessage(message, platforms, replyToId);
+    },
+    [
+      handleSendMessage,
+      isOnOwnChannel,
+      openStreamerTools,
+      pollCreator.end,
+      pollCreator.phase,
+      showNotification,
+      showStreamTools,
+    ],
+  );
+
+  const contentState = useMemo(
+    () => ({ ...chatState, handleSendMessage: handleSendFromInput }),
+    [chatState, handleSendFromInput],
+  );
 
   const handleAnnounceWinner = useCallback(
     async (winner: GiveawayEntry, message: string) => {
@@ -498,6 +580,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           state={chatState}
           appProps={props}
           giveaway={giveaway}
+          poll={pollCreator}
           songQueue={songQueue}
           musicPlayer={musicPlayer}
           showStreamTools={showStreamTools}
@@ -520,7 +603,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         />
 
         <ChatAppContent
-          state={chatState}
+          state={contentState}
           appProps={props}
           ytConnectionState={ytConnectionState}
           onYtConnectionChange={handleYtConnectionChange}

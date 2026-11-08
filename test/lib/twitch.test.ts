@@ -5,6 +5,8 @@ import {
   pinTwitchMessage,
   unpinTwitchMessage,
   getPinnedTwitchMessageId,
+  createTwitchPoll,
+  endTwitchPoll,
 } from "../../src/lib/twitch";
 
 describe("twitch lib mocked HTTP tests", () => {
@@ -181,5 +183,123 @@ describe("twitch lib mocked HTTP tests", () => {
       "/api/twitch-proxy?path=/helix/chat/pins&broadcaster_id=123&moderator_id=456&message_id=msg-1",
     );
     expect(opts.method).toBe("DELETE");
+  });
+});
+
+describe("twitch poll API", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("createTwitchPoll posts the poll config to the proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: "poll-1",
+            title: "Pick one",
+            status: "ACTIVE",
+            started_at: "2026-01-01T00:00:00Z",
+            ends_at: "2026-01-01T00:05:00Z",
+            choices: [
+              { id: "a", title: "A", votes: 0 },
+              { id: "b", title: "B", votes: 0 },
+            ],
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const poll = await createTwitchPoll("123", {
+      title: " Pick one ",
+      choices: [" A ", " B "],
+      duration: 300,
+      channelPointsVoting: false,
+      channelPointsPerVote: 100,
+      bitsVoting: false,
+      bitsPerVote: 100,
+    });
+
+    expect(poll.id).toBe("poll-1");
+    expect(poll.totalVotes).toBe(0);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/twitch-proxy?path=/helix/polls");
+    expect(opts.method).toBe("POST");
+    expect(JSON.parse(opts.body)).toEqual({
+      broadcaster_id: "123",
+      title: "Pick one",
+      choices: [{ title: "A" }, { title: "B" }],
+      duration: 300,
+      channel_points_voting_enabled: false,
+      bits_voting_enabled: false,
+    });
+  });
+
+  it("createTwitchPoll includes voting costs only when enabled", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: "poll-1",
+            title: "Pick one",
+            status: "ACTIVE",
+            started_at: "2026-01-01T00:00:00Z",
+            choices: [{ id: "a", title: "A" }],
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await createTwitchPoll("123", {
+      title: "Pick one",
+      choices: ["A", "B"],
+      duration: 60,
+      channelPointsVoting: true,
+      channelPointsPerVote: 500,
+      bitsVoting: true,
+      bitsPerVote: 10,
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.channel_points_per_vote).toBe(500);
+    expect(body.bits_per_vote).toBe(10);
+  });
+
+  it("endTwitchPoll patches the poll status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            id: "poll-1",
+            title: "Pick one",
+            status: "TERMINATED",
+            started_at: "2026-01-01T00:00:00Z",
+            choices: [{ id: "a", title: "A", votes: 1 }],
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const poll = await endTwitchPoll("123", "poll-1");
+
+    expect(poll?.status).toBe("terminated");
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/twitch-proxy?path=/helix/polls");
+    expect(opts.method).toBe("PATCH");
+    expect(JSON.parse(opts.body)).toEqual({
+      broadcaster_id: "123",
+      id: "poll-1",
+      status: "TERMINATED",
+    });
   });
 });

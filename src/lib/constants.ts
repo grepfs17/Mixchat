@@ -15,7 +15,7 @@ export const IS_DESKTOP = import.meta.env.PUBLIC_APP_PLATFORM === "desktop";
 
 /** Twitch OAuth scopes requested by both the web and desktop login flows. */
 export const TWITCH_SCOPES =
-  "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers";
+  "chat:read chat:edit user:read:email user:read:follows user:read:emotes user:read:subscriptions channel:read:redemptions channel:read:hype_train channel:read:polls channel:manage:polls channel:read:predictions bits:read moderator:manage:chat_messages moderator:manage:banned_users moderator:manage:announcements moderator:manage:shoutouts moderator:manage:warnings moderator:manage:automod user:read:moderated_channels user:write:chat channel:manage:broadcast channel:manage:raids moderator:read:followers";
 
 /** Returns a 403 Response for disabled YouTube API endpoints. */
 export function twitchOnlyResponse(): Response {
@@ -76,4 +76,14 @@ export const MOD_COMMANDS = [
     usage: "/raid <username>",
   },
   { name: "/unraid", description: "Cancel the current raid", usage: "/unraid" },
+  {
+    name: "/createpoll",
+    description: "Create a Twitch poll from the stream tools menu",
+    usage: "/createpoll",
+  },
+  {
+    name: "/endpoll",
+    description: "End the active Twitch poll",
+    usage: "/endpoll",
+  },
 ];

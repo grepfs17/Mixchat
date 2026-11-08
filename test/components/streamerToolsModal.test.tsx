@@ -28,6 +28,7 @@ vi.mock("../../src/hooks/chat/usePastPlaylists", () => ({
 
 import StreamerToolsModal from "../../src/components/chat/shared/StreamerToolsModal";
 import type { UseGiveawayResult } from "../../src/hooks/chat/useGiveaway";
+import type { UsePollCreatorResult } from "../../src/hooks/chat/usePollCreator";
 import type { UseSongQueueResult } from "../../src/hooks/chat/useSongQueue";
 import type { UseMusicPlayerResult } from "../../src/hooks/chat/useMusicPlayer";
 
@@ -38,6 +39,21 @@ function renderModal(overrides: Record<string, unknown> = {}) {
       history: [],
       clearHistory: () => {},
     } as unknown as UseGiveawayResult,
+    poll: {
+      phase: "config",
+      config: { title: "", choices: ["", ""], duration: 300 },
+      error: null,
+      starting: false,
+      ending: false,
+      setField: () => {},
+      setChoice: () => {},
+      addChoice: () => {},
+      removeChoice: () => {},
+      start: async () => {},
+      end: async () => {},
+      startNew: () => {},
+    } as unknown as UsePollCreatorResult,
+    livePoll: null,
     songQueue: { phase: "idle" } as unknown as UseSongQueueResult,
     musicPlayer: { activePlaylist: null } as unknown as UseMusicPlayerResult,
     onAnnounce: vi.fn(async () => {}),

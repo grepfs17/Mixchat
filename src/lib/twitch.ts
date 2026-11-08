@@ -1,6 +1,11 @@
 import type { TwitchMessage } from "./types.js";
 import { getBadgeDetail } from "./badges.js";
 import { parseGifsTag, type TwitchGif } from "./twitchGifs.js";
+import {
+  mapTwitchPoll,
+  type PollConfig,
+  type TwitchPollResponse,
+} from "./streamerTools/poll.js";
 
 const TWITCH_API_BASE = "https://api.twitch.tv/helix";
 const TWITCH_AUTH_BASE = "https://id.twitch.tv/oauth2";
@@ -1448,6 +1453,102 @@ export const updateChannelInfo = async (
   } catch (error) {
     console.error("Failed to update channel info:", error);
     return false;
+  }
+};
+
+/**
+ * Create a poll on the broadcaster's channel.
+ * Requires channel:manage:polls and a broadcaster token.
+ */
+export const createTwitchPoll = async (
+  broadcasterId: string,
+  config: PollConfig,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const body: Record<string, unknown> = {
+      broadcaster_id: resolvedBroadcasterId,
+      title: config.title.trim(),
+      choices: config.choices.map((title) => ({ title: title.trim() })),
+      duration: config.duration,
+      channel_points_voting_enabled: config.channelPointsVoting,
+      bits_voting_enabled: config.bitsVoting,
+    };
+    if (config.channelPointsVoting) {
+      body.channel_points_per_vote = config.channelPointsPerVote;
+    }
+    if (config.bitsVoting) {
+      body.bits_per_vote = config.bitsPerVote;
+    }
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/polls`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant poll permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to create poll: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const poll = data?.data?.[0] as TwitchPollResponse | undefined;
+    if (!poll) throw new Error("Failed to create poll: no poll returned");
+    return mapTwitchPoll(poll);
+  } catch (error) {
+    console.error("createTwitchPoll failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * End the broadcaster's active poll. `TERMINATED` closes it early,
+ * `ARCHIVED` closes and archives it.
+ * Requires channel:manage:polls and a broadcaster token.
+ */
+export const endTwitchPoll = async (
+  broadcasterId: string,
+  pollId: string,
+  status: "TERMINATED" | "ARCHIVED" = "TERMINATED",
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/polls`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        broadcaster_id: resolvedBroadcasterId,
+        id: pollId,
+        status,
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant poll permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to end poll: ${res.status} ${text}`);
+    }
+
+    const data = await res.json();
+    const poll = data?.data?.[0] as TwitchPollResponse | undefined;
+    return poll ? mapTwitchPoll(poll) : null;
+  } catch (error) {
+    console.error("endTwitchPoll failed:", error);
+    throw error;
   }
 };
 

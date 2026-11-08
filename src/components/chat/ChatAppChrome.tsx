@@ -11,13 +11,14 @@ import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
 import MusicPlayerMinimizedBar from "./shared/MusicPlayerIndicator";
 import type { ChatAppState, ChatAppStateProps } from "../../hooks/chat/useChatAppState";
 import { useGiveaway } from "../../hooks/chat/useGiveaway";
+import type { UsePollCreatorResult } from "../../hooks/chat/usePollCreator";
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
 import type { StreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import { IS_DESKTOP } from "../../lib/constants";
 
-type StreamerToolId = "giveaway" | "song-queue" | "music-player" | null;
+type StreamerToolId = "giveaway" | "poll" | "song-queue" | "music-player" | null;
 type AnnounceWinnerHandler = NonNullable<
   Parameters<typeof StreamerToolsModal>[0]["onAnnounce"]
 >;
@@ -26,6 +27,7 @@ interface ChatAppChromeProps {
   state: ChatAppState;
   appProps: ChatAppStateProps;
   giveaway: ReturnType<typeof useGiveaway>;
+  poll: UsePollCreatorResult;
   songQueue: ReturnType<typeof useSongQueue>;
   musicPlayer: ReturnType<typeof useMusicPlayer>;
   showStreamTools: boolean;
@@ -97,6 +99,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
   const {
     appProps,
     giveaway,
+    poll,
     songQueue,
     musicPlayer,
     showStreamTools,
@@ -145,6 +148,8 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
       {streamerToolsOpen && (
         <StreamerToolsModal
           giveaway={giveaway}
+          poll={poll}
+          livePoll={props.state.poll}
           songQueue={songQueue}
           musicPlayer={musicPlayer}
           onAnnounce={onAnnounceWinner}
