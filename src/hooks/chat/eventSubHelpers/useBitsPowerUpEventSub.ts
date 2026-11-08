@@ -1,5 +1,5 @@
 /**
- * Subscribes to `channel.bits.use` v2 via the shared EventSub connection
+ * Subscribes to `channel.bits.use` v1 via the shared EventSub connection
  * to detect Celebration power-ups and show a banner overlay.
  *
  * Required scope: bits:read
@@ -106,7 +106,7 @@ export function useBitsPowerUpEventSub({
 
       const unsub = subscribeRef.current(
         "channel.bits.use",
-        "2",
+        "1",
         condition,
         (ev: any) => {
           const parsed = parseBitsUseEvent(ev);

@@ -50,9 +50,9 @@ async function handlePollChatCommand(
 ): Promise<boolean> {
   const command = parsePollCommand(message);
   if (!command) return false;
-  if (!deps.isOnOwnChannel) {
+  if (!deps.isOnOwnChannel && !deps.showStreamTools) {
     deps.notify(
-      "Only the broadcaster can create or end Twitch polls.",
+      "Only the broadcaster or an approved moderator can manage Twitch polls.",
       "error",
     );
     return true;
@@ -249,12 +249,34 @@ export default function ChatApp(props: ChatAppStateProps) {
     [],
   );
 
+  const streamToolsChannelKey = selectedTwitchChannelName
+    ? `twitch:${selectedTwitchChannelName.toLowerCase()}`
+    : null;
+  const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
+  const isTwitchModerator = !!chatState.isModerator && !isOnOwnChannel;
+  const showStreamTools = IS_DESKTOP
+    ? streamerToolsEnabled && isOnOwnChannel
+    : isOnOwnChannel
+      ? streamerToolsEnabled
+      : isTwitchModerator &&
+        streamToolsSettings.settings.enabled &&
+        streamToolsSettings.settings.allowMods;
+  const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
+    ? "owner"
+    : "moderator";
+  const broadcasterType = twitchSession?.broadcasterType;
+  const affiliateEligible =
+    broadcasterType === "affiliate" || broadcasterType === "partner";
+
   const pollCreator = usePollCreator({
     broadcasterId: selectedTwitchChannel || "",
     canManage: isOnOwnChannel,
+    affiliateEligible,
     livePoll: poll,
     setPoll,
     onNotify: showNotification,
+    relayChannelKey: showStreamTools ? streamToolsChannelKey : null,
+    relayRole: streamToolsRole,
   });
 
   const predictionCreator = usePredictionCreator({
@@ -278,22 +300,6 @@ export default function ChatApp(props: ChatAppStateProps) {
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
     "giveaway" | "poll" | "prediction" | "song-queue" | "music-player" | null
   >(null);
-
-  const streamToolsChannelKey = selectedTwitchChannelName
-    ? `twitch:${selectedTwitchChannelName.toLowerCase()}`
-    : null;
-  const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
-  const isTwitchModerator = !!chatState.isModerator && !isOnOwnChannel;
-  const showStreamTools = IS_DESKTOP
-    ? streamerToolsEnabled && isOnOwnChannel
-    : isOnOwnChannel
-      ? streamerToolsEnabled
-      : isTwitchModerator &&
-        streamToolsSettings.settings.enabled &&
-        streamToolsSettings.settings.allowMods;
-  const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
-    ? "owner"
-    : "moderator";
 
   // Keep the server-side master switch in sync with the streamer's local
   // preference so moderators see the same enabled/disabled state.
@@ -661,6 +667,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           musicPlayer={musicPlayer}
           showStreamTools={showStreamTools}
           streamToolsRole={streamToolsRole}
+          affiliateEligible={affiliateEligible}
           streamToolsSettings={streamToolsSettings.settings}
           onUpdateStreamToolsSettings={streamToolsSettings.update}
           showMusicBar={showMusicBar}

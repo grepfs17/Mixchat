@@ -1,5 +1,10 @@
+import type { PollState } from "../../components/chat/shared/bannerTypes";
 import type { GiveawayEntry } from "../streamerTools/giveaway";
 import type { GiveawayHistoryEntry } from "../streamerTools/history";
+import type {
+  PollRelayCommand,
+  PollRelayState,
+} from "./pollRelay";
 import type { SharedGiveawayState } from "./state";
 
 async function parseError(res: Response, fallback: string): Promise<string> {
@@ -15,6 +20,73 @@ export interface SharedGiveawayResponse {
   version: number;
   giveaway: SharedGiveawayState;
   history?: GiveawayHistoryEntry[];
+}
+
+export interface PollRelayResponse extends PollRelayState {
+  claimed?: PollRelayCommand | null;
+}
+
+function parsePollState(value: unknown): PollState | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Partial<PollState>;
+  if (typeof raw.id !== "string" || typeof raw.title !== "string") return null;
+  if (!Array.isArray(raw.choices)) return null;
+  const endsAt = new Date(raw.endsAt as string | number | Date);
+  if (Number.isNaN(endsAt.getTime())) return null;
+  return {
+    id: raw.id,
+    title: raw.title,
+    choices: raw.choices.map((choice) => ({
+      id: String(choice.id),
+      title: String(choice.title),
+      votes: Number(choice.votes) || 0,
+    })),
+    totalVotes: Number(raw.totalVotes) || 0,
+    endsAt,
+    ...(typeof raw.status === "string" ? { status: raw.status } : {}),
+  };
+}
+
+function parsePollRelay(value: unknown): PollRelayResponse {
+  if (!value || typeof value !== "object") {
+    return { poll: null, command: null, updatedAt: 0 };
+  }
+  const raw = value as Partial<PollRelayState> & {
+    claimed?: PollRelayCommand | null;
+  };
+  return {
+    poll: parsePollState(raw.poll),
+    command: raw.command ?? null,
+    updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
+    ...(raw.claimed !== undefined ? { claimed: raw.claimed } : {}),
+  };
+}
+
+export async function getPollRelay(
+  channelKey: string,
+): Promise<PollRelayResponse> {
+  const params = new URLSearchParams({ channelKey });
+  const res = await fetch(`/api/stream-tools/poll?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error(await parseError(res, "Failed to load poll relay"));
+  }
+  return parsePollRelay(await res.json());
+}
+
+export async function pollRelayAction(
+  channelKey: string,
+  action: string,
+  payload: Record<string, unknown> = {},
+): Promise<PollRelayResponse> {
+  const res = await fetch("/api/stream-tools/poll", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ channelKey, action, ...payload }),
+  });
+  if (!res.ok) {
+    throw new Error(await parseError(res, "Poll relay action failed"));
+  }
+  return parsePollRelay(await res.json());
 }
 
 export async function getSharedGiveaway(

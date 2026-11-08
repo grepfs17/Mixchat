@@ -12,6 +12,7 @@ interface PollPanelProps {
   poll: UsePollCreatorResult;
   livePoll: PollState | null;
   role?: "owner" | "moderator";
+  affiliateEligible?: boolean;
 }
 
 function parseNumberInput(raw: string): number {
@@ -43,14 +44,17 @@ export default function PollPanel({
   poll,
   livePoll,
   role = "owner",
+  affiliateEligible = true,
 }: PollPanelProps) {
   const isOwner = role === "owner";
+  const canCreate = isOwner ? affiliateEligible : true;
   const {
     phase,
     config,
     error,
     starting,
     ending,
+    relayCommand,
     setField,
     setChoice,
     addChoice,
@@ -59,15 +63,26 @@ export default function PollPanel({
     end,
     startNew,
   } = poll;
+  const relayPending =
+    relayCommand?.status === "pending" || relayCommand?.status === "claimed";
 
   return (
     <div className="poll-panel">
       {phase === "config" && (
         <div className="poll-form">
           {!isOwner && (
-            <p className="poll-hint poll-hint--warn">
-              Only the broadcaster can create Twitch polls.
+            <p className="poll-hint">
+              Poll requests run as the streamer. Mixchat must be open on
+              their channel.
             </p>
+          )}
+          {isOwner && !affiliateEligible && (
+            <p className="poll-hint poll-hint--warn">
+              Twitch polls are available to Affiliates and Partners only.
+            </p>
+          )}
+          {relayPending && (
+            <p className="poll-hint">Waiting for the streamer...</p>
           )}
 
           <label className="poll-field">
@@ -225,7 +240,7 @@ export default function PollPanel({
               type="button"
               className="poll-btn poll-btn--primary"
               onClick={() => void start()}
-              disabled={starting || !isOwner}
+              disabled={starting || !canCreate || relayPending}
             >
               {starting ? "Starting..." : "Start poll"}
             </button>
@@ -236,7 +251,8 @@ export default function PollPanel({
       {phase === "active" && livePoll && (
         <PollResults
           poll={livePoll}
-          isOwner={isOwner}
+          canEnd
+          relayPending={relayPending}
           ending={ending}
           error={error}
           onEnd={() => void end()}
@@ -261,7 +277,6 @@ export default function PollPanel({
               type="button"
               className="poll-btn poll-btn--primary"
               onClick={startNew}
-              disabled={!isOwner}
             >
               New poll
             </button>
@@ -274,7 +289,8 @@ export default function PollPanel({
 
 interface PollResultsProps {
   poll: PollState;
-  isOwner: boolean;
+  canEnd: boolean;
+  relayPending: boolean;
   ending: boolean;
   error: string | null;
   onEnd: () => void;
@@ -282,7 +298,8 @@ interface PollResultsProps {
 
 function PollResults({
   poll,
-  isOwner,
+  canEnd,
+  relayPending,
   ending,
   error,
   onEnd,
@@ -308,6 +325,9 @@ function PollResults({
         <span>Live from Twitch</span>
       </div>
 
+      {relayPending && (
+        <p className="poll-hint">Waiting for the streamer...</p>
+      )}
       {error && <p className="poll-error">{error}</p>}
 
       <div className="poll-actions">
@@ -315,7 +335,7 @@ function PollResults({
           type="button"
           className="poll-btn poll-btn--danger"
           onClick={onEnd}
-          disabled={ending || !isOwner}
+          disabled={ending || !canEnd || relayPending}
         >
           {ending ? "Ending..." : "End poll"}
         </button>

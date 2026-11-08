@@ -310,6 +310,34 @@ export function useEventSub({
                 return next;
               });
               sub.onScopeError?.();
+            } else if (res.status === 400) {
+              const message =
+                typeof (res.body as { message?: unknown } | undefined)
+                  ?.message === "string"
+                  ? ((res.body as { message: string }).message ?? "")
+                  : "";
+              console.warn(
+                `[useEventSub] Subscription rejected for ${sub.type}:`,
+                message || res.body,
+              );
+              if (
+                /session (does not exist|has already disconnected)|invalid session/i.test(
+                  message,
+                )
+              ) {
+                // The WebSocket session is gone. Reconnect so the new
+                // session's welcome triggers a fresh subscription pass.
+                ws?.close(4001, "stale eventsub session");
+                return;
+              }
+              // A 400 for a static payload will not fix itself.
+              retryQueue.delete(key);
+              retryBackoff.delete(key);
+              setSubscriptionStatuses((prev) => {
+                const next = new Map(prev);
+                next.set(key, "error");
+                return next;
+              });
             } else {
               // Retriable (5xx, 429 after internal cooldown, etc.)
               queueRetry(key);

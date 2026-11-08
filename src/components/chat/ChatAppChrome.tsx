@@ -40,6 +40,7 @@ interface ChatAppChromeProps {
   musicPlayer: ReturnType<typeof useMusicPlayer>;
   showStreamTools: boolean;
   streamToolsRole: "owner" | "moderator";
+  affiliateEligible: boolean;
   streamToolsSettings: StreamToolsSettings;
   onUpdateStreamToolsSettings: (
     patch: Partial<StreamToolsSettings>,
@@ -113,6 +114,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
     musicPlayer,
     showStreamTools,
     streamToolsRole,
+    affiliateEligible,
     streamToolsSettings,
     onUpdateStreamToolsSettings,
     showMusicBar,
@@ -158,7 +160,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
         <StreamerToolsModal
           giveaway={giveaway}
           poll={poll}
-          livePoll={props.state.poll}
+          livePoll={poll.effectivePoll}
           prediction={prediction}
           livePrediction={props.state.prediction}
           songQueue={songQueue}
@@ -174,6 +176,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
           streamGameName={props.state.streamGameName}
           onSearchCategories={props.state.handleSearchCategories}
           role={streamToolsRole}
+          affiliateEligible={affiliateEligible}
           settings={streamToolsSettings}
           onUpdateSettings={onUpdateStreamToolsSettings}
         />

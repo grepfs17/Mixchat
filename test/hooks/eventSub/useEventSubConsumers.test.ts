@@ -1033,15 +1033,15 @@ describe("usePredictionEventSub", () => {
 });
 
 describe("useBitsPowerUpEventSub", () => {
-  it("subscribes to channel.bits.use v2", async () => {
-    const subscribeCalls: Array<{
-      type: string;
-      condition: Record<string, string>;
-    }> = [];
+  it("subscribes to channel.bits.use v1", async () => {
+    const subscribeCalls: Array<{ type: string; version: string }> = [];
 
     renderHook(() =>
       useBitsPowerUpEventSub({
-        subscribe: makeSubscribe(subscribeCalls),
+        subscribe: (type, version) => {
+          subscribeCalls.push({ type, version });
+          return vi.fn();
+        },
         channelId: "12345",
         enabled: true,
         onCelebration: vi.fn(),
@@ -1054,9 +1054,9 @@ describe("useBitsPowerUpEventSub", () => {
       });
     });
 
-    expect(subscribeCalls.some((c) => c.type === "channel.bits.use")).toBe(
-      true,
-    );
+    expect(
+      subscribeCalls.find((c) => c.type === "channel.bits.use")?.version,
+    ).toBe("1");
   });
 
   it("does not subscribe when disabled", () => {

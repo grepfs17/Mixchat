@@ -1142,7 +1142,7 @@ function DesktopHeaderActions({
       )}
       {showModTools && onOpenModTools && (
         <button type="button"
-          onClick={onOpenModTools}
+          onClick={() => onOpenModTools()}
           className="header-button mod-tools-trigger"
           title="Stream tools (giveaway, etc.)"
         >

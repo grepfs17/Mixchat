@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import ChatHeader from "../../src/components/chat/display/ChatHeader";
 
 function openStatusDropdown() {
@@ -7,6 +7,25 @@ function openStatusDropdown() {
     screen.getByTitle("Event connection status"),
   );
 }
+
+describe("ChatHeader: stream tools", () => {
+  it("opens stream tools without passing the click event", () => {
+    const onOpenModTools = vi.fn();
+
+    render(
+      <ChatHeader
+        subscriptionStatuses={new Map()}
+        showModTools
+        onOpenModTools={onOpenModTools}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Stream tools (giveaway, etc.)"));
+
+    expect(onOpenModTools).toHaveBeenCalledTimes(1);
+    expect(onOpenModTools).toHaveBeenCalledWith();
+  });
+});
 
 describe("ChatHeader: redemption PubSub status", () => {
   it("shows the PubSub feed status as connected in the dropdown", () => {

@@ -74,20 +74,26 @@ async function forwardRequest(
     const response = await fetch(targetUrl, opts);
     const contentType =
       response.headers.get("content-type") || "application/json";
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+    // Preserve upstream backoff so clients can pause instead of hammering.
+    const retryAfter = response.headers.get("retry-after");
+    if (retryAfter) responseHeaders["Retry-After"] = retryAfter;
 
     // 204/205 responses must not include a body. Return an empty Response
     // with the same status for those codes to avoid invalid Response errors.
     if (response.status === 204 || response.status === 205) {
       return new Response(null, {
         status: response.status,
-        headers: { "Content-Type": contentType },
+        headers: responseHeaders,
       });
     }
 
     const text = await response.text();
     return new Response(text, {
       status: response.status,
-      headers: { "Content-Type": contentType },
+      headers: responseHeaders,
     });
   } catch (err: any) {
     console.error("Error forwarding request to Twitch:", err);

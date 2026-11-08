@@ -65,6 +65,8 @@ interface StreamerToolsModalProps {
   ) => Promise<Array<{ id: string; name: string }>>;
   /** Whether the viewer is the broadcaster or a moderator. */
   role?: "owner" | "moderator";
+  /** Whether the broadcaster can run native polls and predictions. */
+  affiliateEligible?: boolean;
   /** Server-backed access settings. The owner can edit `allowMods`. */
   settings?: StreamToolsSettings;
   onUpdateSettings?: (
@@ -766,16 +768,27 @@ export default function StreamerToolsModal({
   streamGameName = "",
   onSearchCategories,
   role = "owner",
+  affiliateEligible = true,
   settings,
   onUpdateSettings,
 }: StreamerToolsModalProps) {
   const [activeTool, setActiveTool] = useState<ToolId | null>(
-    initialTool && isToolAvailable(initialTool) ? initialTool : null,
+    initialTool && AVAILABLE_TOOLS.some((tool) => tool.id === initialTool)
+      ? initialTool
+      : null,
   );
   const [announcing, setAnnouncing] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
   const [accessInfoOpen, setAccessInfoOpen] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Switch panels when a caller requests a tool while the modal is already
+  // open (for example `/createpoll`).
+  useEffect(() => {
+    if (initialTool && AVAILABLE_TOOLS.some((tool) => tool.id === initialTool)) {
+      setActiveTool(initialTool);
+    }
+  }, [initialTool]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -946,13 +959,14 @@ export default function StreamerToolsModal({
                           <li>Use the music player: playlists, tracks, play/pause</li>
                           <li>Manage the song queue: start, end, add, skip, remove</li>
                           <li>Create and edit wheels: rename, options, delete</li>
+                          <li>Request Twitch polls, run by the streamer</li>
                         </ul>
                       </div>
                       <div className="stream-tools-access-modal-col">
                         <h4>They can&apos;t</h4>
                         <ul>
                           <li>Spin the wheel</li>
-                          <li>Create, end, or manage Twitch polls and predictions</li>
+                          <li>Create or manage Twitch predictions</li>
                           <li>Change this setting</li>
                         </ul>
                       </div>
@@ -1056,6 +1070,7 @@ export default function StreamerToolsModal({
                   poll={poll}
                   livePoll={livePoll}
                   role={role}
+                  affiliateEligible={affiliateEligible}
                 />
               )}
               {tool.id === "prediction" && (
@@ -1063,6 +1078,7 @@ export default function StreamerToolsModal({
                   prediction={prediction}
                   livePrediction={livePrediction}
                   role={role}
+                  affiliateEligible={affiliateEligible}
                 />
               )}
               {tool.id === "music-player" && (

@@ -21,6 +21,8 @@ function makeCreator(
     error: null,
     starting: false,
     ending: false,
+    effectivePoll: null,
+    relayCommand: null,
     setField: vi.fn(),
     setChoice: vi.fn(),
     addChoice: vi.fn(),
@@ -83,12 +85,49 @@ describe("PollPanel", () => {
     expect(creator.removeChoice).toHaveBeenCalledWith(0);
   });
 
-  it("disables creation for moderators", () => {
-    render(<PollPanel poll={makeCreator()} livePoll={null} role="moderator" />);
+  it("disables creation for non-affiliates", () => {
+    render(
+      <PollPanel
+        poll={makeCreator()}
+        livePoll={null}
+        affiliateEligible={false}
+      />,
+    );
 
     expect(
-      screen.getByText("Only the broadcaster can create Twitch polls."),
+      screen.getByText(
+        "Twitch polls are available to Affiliates and Partners only.",
+      ),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start poll" })).toBeDisabled();
+  });
+
+  it("lets moderators request a poll from the streamer", () => {
+    const creator = makeCreator();
+    render(<PollPanel poll={creator} livePoll={null} role="moderator" />);
+
+    expect(
+      screen.getByText(/Poll requests run as the streamer/i),
+    ).toBeInTheDocument();
+    const start = screen.getByRole("button", { name: "Start poll" });
+    expect(start).not.toBeDisabled();
+
+    fireEvent.click(start);
+    expect(creator.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the relay pending state", () => {
+    const creator = makeCreator({
+      relayCommand: {
+        id: "cmd-1",
+        action: "create",
+        requestedAt: Date.now(),
+        status: "pending",
+      },
+    });
+    render(<PollPanel poll={creator} livePoll={null} role="moderator" />);
+
+    expect(screen.getByText("Waiting for the streamer...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start poll" })).toBeDisabled();
   });
 

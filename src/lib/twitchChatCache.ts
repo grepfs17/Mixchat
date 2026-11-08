@@ -41,6 +41,7 @@ export async function getUserInfo(
   userId: string,
   accessToken: string,
 ): Promise<{ displayName: string; profileImageUrl: string | null } | null> {
+  if (!/^\d+$/.test(userId)) return null;
   if (userInfoCache.has(userId)) {
     return userInfoCache.get(userId)!;
   }

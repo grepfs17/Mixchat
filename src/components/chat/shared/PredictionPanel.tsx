@@ -12,6 +12,7 @@ interface PredictionPanelProps {
   prediction: UsePredictionCreatorResult;
   livePrediction: PredictionState | null;
   role?: "owner" | "moderator";
+  affiliateEligible?: boolean;
 }
 
 function parseNumberInput(raw: string): number {
@@ -35,8 +36,10 @@ export default function PredictionPanel({
   prediction,
   livePrediction,
   role = "owner",
+  affiliateEligible = true,
 }: PredictionPanelProps) {
   const isOwner = role === "owner";
+  const canCreate = isOwner && affiliateEligible;
   const {
     phase,
     config,
@@ -68,6 +71,12 @@ export default function PredictionPanel({
           {!isOwner && (
             <p className="prediction-hint prediction-hint--warn">
               Only the broadcaster can create Twitch predictions.
+            </p>
+          )}
+          {isOwner && !affiliateEligible && (
+            <p className="prediction-hint prediction-hint--warn">
+              Twitch predictions are available to Affiliates and Partners
+              only. Channel Points must be enabled.
             </p>
           )}
 
@@ -177,7 +186,7 @@ export default function PredictionPanel({
               type="button"
               className="prediction-btn prediction-btn--primary"
               onClick={() => void start()}
-              disabled={starting || !isOwner}
+              disabled={starting || !canCreate}
             >
               {starting ? "Starting..." : "Start prediction"}
             </button>

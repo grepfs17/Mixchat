@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 
 vi.mock("../../src/hooks/chat/usePastPlaylists", () => ({
   usePastPlaylists: () => ({
@@ -33,8 +33,8 @@ import type { UsePredictionCreatorResult } from "../../src/hooks/chat/usePredict
 import type { UseSongQueueResult } from "../../src/hooks/chat/useSongQueue";
 import type { UseMusicPlayerResult } from "../../src/hooks/chat/useMusicPlayer";
 
-function renderModal(overrides: Record<string, unknown> = {}) {
-  const props = {
+function makeModalProps(overrides: Record<string, unknown> = {}) {
+  return {
     giveaway: {
       phase: "config",
       history: [],
@@ -83,12 +83,40 @@ function renderModal(overrides: Record<string, unknown> = {}) {
     onUpdateSettings: vi.fn(async () => {}),
     ...overrides,
   };
+}
+
+function renderModal(overrides: Record<string, unknown> = {}) {
+  const props = makeModalProps(overrides);
   render(<StreamerToolsModal {...props} />);
   return props;
 }
 
 beforeEach(() => {
   localStorage.clear();
+});
+
+describe("Stream tools navigation", () => {
+  it("opens a tool panel when Open is clicked", () => {
+    renderModal();
+
+    const row = screen.getByText("Poll").closest("li");
+    expect(row).toBeTruthy();
+    fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Open" }));
+
+    expect(screen.getByText("Question")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Start poll" }),
+    ).toBeTruthy();
+  });
+
+  it("switches panels when a new tool is requested while open", () => {
+    const props = makeModalProps();
+    const { rerender } = render(<StreamerToolsModal {...props} />);
+
+    rerender(<StreamerToolsModal {...props} initialTool="poll" />);
+
+    expect(screen.getByText("Question")).toBeTruthy();
+  });
 });
 
 describe("Stream tools moderator access", () => {

@@ -97,6 +97,25 @@ describe("PredictionPanel", () => {
     expect(creator.removeOutcome).toHaveBeenCalledWith(0);
   });
 
+  it("disables creation for non-affiliates", () => {
+    render(
+      <PredictionPanel
+        prediction={makeCreator()}
+        livePrediction={null}
+        affiliateEligible={false}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Twitch predictions are available to Affiliates and Partners/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Start prediction" }),
+    ).toBeDisabled();
+  });
+
   it("disables creation for moderators", () => {
     render(
       <PredictionPanel
