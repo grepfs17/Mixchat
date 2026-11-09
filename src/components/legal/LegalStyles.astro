@@ -1,0 +1,46 @@
+---
+/**
+ * Shared styles for the legal pages (privacy, terms).
+ * Rendered into ContentLayout's head slot.
+ */
+---
+
+<style is:global>
+    body {
+        font-family:
+            -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+            Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #0a0a0a;
+        color: #e0e0e0;
+    }
+    h1 {
+        color: #fff;
+        margin-bottom: 10px;
+    }
+    h2 {
+        color: var(--color-accent);
+        margin-top: 30px;
+    }
+    .meta {
+        color: #999;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+    a {
+        color: var(--color-accent);
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+    code {
+        background: #1a1a1a;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: "Courier New", monospace;
+    }
+</style>

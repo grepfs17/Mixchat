@@ -1,0 +1,73 @@
+---
+import { IS_TWITCH_ONLY } from "../../lib/constants";
+---
+
+<h2>1. Disclaimer</h2>
+<p>
+    Mixchat is an unofficial app with no connection to Twitch
+    {IS_TWITCH_ONLY ? "" : " or YouTube"}.
+</p>
+<p>
+    The app is provided "as is." If it breaks, or if platforms change their
+    APIs, Mixchat is not liable for service interruptions or account impacts.
+</p>
+<p>
+    The desktop app runs entirely on your machine (a local server on{" "}
+    <code>127.0.0.1</code>). You are responsible for securing local files,
+    portable installs, and any data you copy off your device.
+</p>
+
+<h2>2. User Guidelines</h2>
+<p>By using Mixchat, you're promising to:</p>
+<ul>
+    <li>
+        Follow the official{" "}
+        <a
+            href="https://www.twitch.tv/legal/terms-of-service"
+            target="_blank"
+        >
+            Twitch Terms
+        </a>{" "}
+        and{" "}
+        <a
+            href="https://www.twitch.tv/legal/community-guidelines"
+            target="_blank"
+        >
+            Community Guidelines
+        </a>
+        .
+    </li>
+    <li>Don't use the app to spam, harass, or crawl data unfairly.</li>
+    <li>Don't try to break the app or its API endpoints.</li>
+    {!IS_TWITCH_ONLY && (
+        <li>
+            If you link your YouTube, follow{" "}
+            <a href="https://www.youtube.com/t/terms" target="_blank">
+                Google's rules
+            </a>{" "}
+            too.
+        </li>
+    )}
+</ul>
+
+<h2>3. Limited Liability</h2>
+<p>
+    If data, followers, or other account assets are lost due to bugs or
+    downtime, Mixchat is not responsible. The project is maintained by the
+    community.
+</p>
+
+<h2>4. Open Source & License</h2>
+<p>
+    Mixchat is open source and licensed under the AGPL-3.0 License. Feel free
+    to peek at the code. Just respect the trademarks of Twitch,
+    {IS_TWITCH_ONLY ? "" : "Google, "}7TV, etc.
+</p>
+
+<h2>5. Termination</h2>
+<p>
+    Mixchat may stop operating the hosted website or stop distributing desktop
+    builds, and may change the application, if usage violates these terms.
+    Copies of the desktop app already on your machine are not remotely
+    blocked; uninstall them if you no longer wish to use them.
+</p>

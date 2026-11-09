@@ -1,0 +1,184 @@
+---
+import { IS_TWITCH_ONLY } from "../../lib/constants";
+---
+
+<h2>1. Overview</h2>
+<p>
+    Mixchat is designed to function without a Mixchat-operated database for
+    chat data. Account credentials live in <code>httpOnly</code> cookies, not
+    in a server account store. Chat history is cached on your device. Logging
+    out removes auth cookies and the UI session; local caches described below
+    may remain until you delete them.
+</p>
+<p>
+    A few opt-in streamer tools write small JSON files under the local app
+    data directory (Song Queue, Wheel Spin, and Stream tools
+    settings/state). None of these store chat transcripts or login
+    credentials. YouTube live chat is also relayed through the local server
+    process in memory while you watch. See sections 2.2, 3.1, and 4 below.
+</p>
+
+<h2>2. Data Collection</h2>
+
+<h3>
+    2.1 Logging In{IS_TWITCH_ONLY ? " (Twitch)" : " (Twitch & YouTube)"}
+</h3>
+<p>
+    When connecting a Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"} account, the
+    app gets "keys" (OAuth tokens) from{" "}
+    {IS_TWITCH_ONLY ? "the service" : "those services"}.
+</p>
+<ul>
+    <li>
+        <strong>Secure Storage:</strong> Key tokens are stored as{" "}
+        <code>httpOnly</code> cookies. This helps block outside scripts from
+        seeing them.
+    </li>
+    <li>
+        <strong>UI Session:</strong> A little bit of info (like your username
+        and profile picture) is saved in <code>localStorage</code> so the app
+        remembers who you are on refresh. The access token is stripped before
+        saving; a provider refresh token may remain in that stored session.
+    </li>
+</ul>
+<p>
+    In the desktop app those cookies and local storage live in the app webview
+    profile on your machine (see section 3.1). Sign-in flows differ from the
+    website:
+</p>
+<ul>
+    <li>
+        <strong>Twitch:</strong> Device Code Grant. The activation page may
+        open in an in-app webview that shares the same profile, so Twitch
+        cookies used by the embedded player stay on your device.
+    </li>
+    {!IS_TWITCH_ONLY && (
+        <li>
+            <strong>YouTube/Google:</strong> Sign-in opens in your system
+            browser. A short-lived local handoff record (up to 10 minutes,
+            single use) returns the result to the app. The system browser never
+            receives Mixchat auth cookies.
+        </li>
+    )}
+</ul>
+
+<h3>2.2 Your Messages</h3>
+<p>
+    Twitch chat reaches the app over Twitch's own connections and is rendered
+    from memory (with an optional local scrollback cache). YouTube live chat
+    is proxied through the local Mixchat server process, which holds a
+    short-lived in-memory copy (up to about 300 messages per open session,
+    reaped after idle time). Recent messages may also be cached on your device
+    in IndexedDB for up to 5 days so you can scroll back; that cache is
+    pruned automatically and is not uploaded.
+</p>
+
+{!IS_TWITCH_ONLY && (
+    <>
+        <h3>2.3 YouTube Integration</h3>
+        <p>
+            By linking a YouTube channel, Mixchat uses YouTube APIs with your
+            sign-in to show live status and stream metadata, read and send
+            live chat messages, and carry out moderation actions you trigger
+            (delete a message, ban a viewer). Live chat delivery uses
+            YouTube's internal (Innertube) endpoints in addition to the
+            official Data API.
+        </p>
+    </>
+)}
+
+<h2>3. Third-Party Services</h2>
+<p>To make everything work smoothly, Mixchat talks to a few core services:</p>
+<ul>
+    <li>
+        <strong>Twitch{IS_TWITCH_ONLY ? "" : " & YouTube"}:</strong> For the
+        chat and video feeds.
+    </li>
+    <li>
+        <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those
+        custom emotes everyone loves. These services might see which channel
+        you're watching so they can serve the right emote pack.
+    </li>
+    {!IS_TWITCH_ONLY && (
+        <li>
+            <strong>Google Drive (optional):</strong> If you enable settings
+            backup, a JSON file of your settings can be saved to and restored
+            from your own Google Drive. This is user-initiated and separate
+            from chat. The backup can include stream-tool history keys such as
+            past playlists (which may hold Song Queue owner tokens) and
+            giveaway winner history.
+        </li>
+    )}
+</ul>
+<p>
+    Other third parties the app may contact when you use it: a Twitch recent-
+    message history relay (<code>recent-messages.robotty.de</code>), Google
+    Fonts, Twemoji/Giphy CDNs, and embedded Twitch/YouTube players.
+</p>
+<p>Mixchat does not include analytics or telemetry.</p>
+
+<h2>3.1 Desktop App Data</h2>
+<p>
+    The desktop app runs Mixchat as a local Node process bound only to{" "}
+    <code>127.0.0.1</code>. There is no Mixchat cloud database for chat. What
+    stays on your machine:
+</p>
+<ul>
+    <li>
+        <strong>Login cookies and webview profile</strong> (including any
+        IndexedDB caches): Windows{" "}
+        <code>%LOCALAPPDATA%\xyz.grepfs.mixchat</code>; Linux under the XDG
+        data directory for <code>xyz.grepfs.mixchat</code>.
+    </li>
+    <li>
+        <strong>Settings and local tool data:</strong> installed builds use
+        the OS app data directory; portable builds use the{" "}
+        <code>app-data</code> folder next to the executable (cookies still
+        live in the profile path above).
+    </li>
+    <li>
+        <strong>Logs:</strong> sidecar output is written locally with secrets
+        redacted. Logs are not uploaded.
+    </li>
+</ul>
+<p>
+    Deleting those folders removes local Mixchat data. Uninstalling the app
+    alone may leave them in place (on Windows, tick "Delete app data" in the
+    uninstaller if offered). Platform providers (Twitch, YouTube, emote CDNs)
+    still receive the usual requests when the app is online.
+</p>
+
+<h2>4. Stateless and Database-Free</h2>
+<p>
+    Mixchat's server/API is "stateless" for chat and OAuth data. This means it
+    doesn't remember sessions from one second to the next without the client
+    sending its security key. There is no Mixchat backend database for
+    messages, accounts, or emote data.
+</p>
+<p>
+    The local desktop server only holds short-lived state such as the Google
+    sign-in handoff described in section 2.1, plus opt-in local tool files
+    under the app data directory (Song Queue, Wheel, Stream tools). Ephemeral
+    in-memory state also exists while open (for example YouTube chat fan-out
+    and poll command relay).
+</p>
+
+<h2>5. Data Retention and Deletion</h2>
+<p>
+    <strong>Logout</strong> clears auth cookies and the UI session on this
+    device. It does not by itself delete IndexedDB caches (such as the 5-day
+    chat history) or other local settings.
+</p>
+<p>
+    For a full local wipe in the desktop app, quit the app and delete the app
+    data directory and webview profile listed in section 3.1 (portable: also
+    remove the <code>app-data</code> folder next to the executable).
+</p>
+
+<h2>6. Security</h2>
+<p>
+    Login tokens are managed using secure HTTP-only cookies. Desktop builds
+    use public OAuth clients (no hosted-site secrets in the binary). It is
+    recommended to use strong passwords and two-factor authentication (2FA)
+    on Twitch{IS_TWITCH_ONLY ? "" : " and YouTube"} accounts.
+</p>

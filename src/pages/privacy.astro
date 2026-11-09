@@ -1,54 +1,19 @@
 ---
 import ContentLayout from "../layouts/ContentLayout.astro";
-import { IS_TWITCH_ONLY } from "../lib/constants";
+import LegalStyles from "../components/legal/LegalStyles.astro";
+import PrivacyWeb from "../components/legal/PrivacyWeb.astro";
+import PrivacyDesktop from "../components/legal/PrivacyDesktop.astro";
+import { IS_DESKTOP, IS_TWITCH_ONLY } from "../lib/constants";
 
 const mainUrl = Astro.site?.toString() ?? "https://mixchat.grepfs.xyz/";
 const title = "Privacy Policy - Mixchat";
 const description =
-    "Mixchat Privacy Policy: no server-side database, no message storage, OAuth tokens stored in secure httpOnly cookies only.";
+    "Mixchat Privacy Policy: no Mixchat chat database, recent chat history cached on your device for up to 5 days, OAuth tokens in secure httpOnly cookies.";
 ---
 
 <ContentLayout {title} {description} ogUrl={`${mainUrl}privacy`}>
     <Fragment slot="head">
-        <style>
-            body {
-                font-family:
-                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-                    Oxygen, Ubuntu, Cantarell, sans-serif;
-                line-height: 1.6;
-                max-width: 900px;
-                margin: 0 auto;
-                padding: 20px;
-                background: #0a0a0a;
-                color: #e0e0e0;
-            }
-            h1 {
-                color: #fff;
-                margin-bottom: 10px;
-            }
-            h2 {
-                color: var(--color-accent);
-                margin-top: 30px;
-            }
-            .meta {
-                color: #999;
-                font-size: 14px;
-                margin-bottom: 30px;
-            }
-            a {
-                color: var(--color-accent);
-                text-decoration: none;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-            code {
-                background: #1a1a1a;
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-family: "Courier New", monospace;
-            }
-        </style>
+        <LegalStyles />
     </Fragment>
     <div style="text-align: center; margin-bottom: 30px;">
         <img
@@ -60,135 +25,9 @@ const description =
         />
     </div>
     <h1>Privacy Policy</h1>
-    <p class="meta">Last updated: March 29, 2026</p>
+    <p class="meta">Last updated: November 9, 2026</p>
 
-    <h2>1. Overview</h2>
-    <p>
-        Mixchat is designed to function without a server-side database for chat
-        data. No messages, emails, or account credentials are stored on any
-        server. Data processing occurs locally in the visitor's browser. Once
-        the user logs out or clears their cache, session data is removed.
-    </p>
-    <p>
-        The one exception is the optional <strong>Song Queue</strong> streamer
-        tool, which creates a small server-side session record so the streamer
-        can share a read-only listening page with chatters. See section 3.1
-        below for the full details.
-    </p>
-
-    <h2>2. Data Collection</h2>
-
-    <h3>
-        2.1 Logging In{IS_TWITCH_ONLY ? " (Twitch)" : " (Twitch & YouTube)"}
-    </h3>
-    <p>
-        When connecting a Twitch{IS_TWITCH_ONLY ? "" : " or YouTube"} account,
-        the browser gets "keys" (OAuth tokens) from{" "}
-        {IS_TWITCH_ONLY ? "the service" : "those services"}.
-    </p>
-    <ul>
-        <li>
-            <strong>Secure Storage:</strong> Key tokens are stored as{" "}
-            <code>httpOnly</code> cookies. This helps block outside scripts from
-            seeing them.
-        </li>
-        <li>
-            <strong>UI Session:</strong> A little bit of info (like your
-            username and profile picture) is saved in <code>localStorage</code>{" "}
-            so the app remembers who you are on refresh.
-        </li>
-    </ul>
-
-    <h3>2.2 Your Messages</h3>
-    <p>
-        Mixchat is a real-time client. Chat messages flow from Twitch
-        {IS_TWITCH_ONLY ? "" : " or YouTube"}
-        directly to the screen. They are kept in the browser's memory during a
-        session and are not archived.
-    </p>
-
-    {!IS_TWITCH_ONLY && (
-        <>
-            <h3>2.3 YouTube Integration</h3>
-            <p>
-                By linking a YouTube channel, Mixchat uses the official YouTube
-                Data API. It only requests public info to show live status and
-                stream metadata properly.
-            </p>
-        </>
-    )}
-
-    <h2>3. Third-Party Services</h2>
-    <p>
-        To make everything work smoothly, Mixchat talks to a few core services:
-    </p>
-    <ul>
-        <li>
-            <strong>Twitch{IS_TWITCH_ONLY ? "" : " & YouTube"}:</strong> For the
-            chat and video feeds.
-        </li>
-        <li>
-            <strong>Emote Providers (7TV, BTTV, FFZ):</strong> To render those
-            custom emotes everyone loves. These services might see which channel
-            you're watching so they can serve the right emote pack.
-        </li>
-    </ul>
-
-    <h2>3.1 Song Queue Sessions</h2>
-    <p>
-        When a streamer enables the Song Queue tool inside Stream tools,
-        Mixchat creates a small server-side session record (a JSON file) that
-        contains:
-    </p>
-    <ul>
-        <li>The session title and a unique 24-character session id.</li>
-        <li>
-            The list of queued YouTube videos, including the submitter's display
-            name (Twitch username or YouTube channel name) and avatar URL.
-        </li>
-        <li>
-            A SHA-256 hash of the streamer's owner token. The owner token itself
-            is returned to the streamer once and never stored on our servers.
-        </li>
-    </ul>
-    <p>
-        If the streamer toggles <strong>Public link</strong> on, anyone with the
-        link can read a stripped-down view of the queue (video ids, titles,
-        submitter display names) at <code>/s/&lt;id&gt;</code>. Public viewers
-        cannot see submitter user ids or the streamer's account.
-    </p>
-    <p>
-        No OAuth tokens, email addresses, or passwords are stored in the song
-        queue record. Ending the queue deletes it immediately.
-    </p>
-
-    <h2>4. Stateless and Database-Free (with One Exception)</h2>
-    <p>
-        Mixchat's server/API is "stateless" for chat and OAuth data. This means
-        it doesn't remember sessions from one second to the next without the
-        browser sending its security key. There is no backend database for
-        messages, accounts, or emote data.
-    </p>
-    <p>
-        The Song Queue feature (see section 3.1) is the one piece of stateful
-        server-side storage. It is opt-in and scoped to the streamer's own
-        channel.
-    </p>
-
-    <h2>5. Data Retention and Deletion</h2>
-    <p>
-        Since no data is stored, "deleting an account" is straightforward.
-        Clicking <strong>Logout</strong> wipes the cookies and session info from
-        the browser. Closing the tab clears the memory usage. For total
-        assurance, clear the site data in the browser settings.
-    </p>
-
-    <h2>6. Security</h2>
-    <p>
-        Login tokens are managed using secure HTTP-only cookies. It is
-        recommended to use strong passwords and two-factor authentication (2FA)
-        on Twitch{IS_TWITCH_ONLY ? "" : " and YouTube"} accounts.
-    </p>
+    {IS_DESKTOP ? <PrivacyDesktop /> : <PrivacyWeb />}
 
     <h2>7. Changes</h2>
     <p>
