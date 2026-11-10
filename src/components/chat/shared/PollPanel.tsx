@@ -69,183 +69,20 @@ export default function PollPanel({
   return (
     <div className="poll-panel">
       {phase === "config" && (
-        <div className="poll-form">
-          {!isOwner && (
-            <p className="poll-hint">
-              Poll requests run as the streamer. Mixchat must be open on
-              their channel.
-            </p>
-          )}
-          {isOwner && !affiliateEligible && (
-            <p className="poll-hint poll-hint--warn">
-              Twitch polls are available to Affiliates and Partners only.
-            </p>
-          )}
-          {relayPending && (
-            <p className="poll-hint">Waiting for the streamer...</p>
-          )}
-
-          <label className="poll-field">
-            <span className="poll-field-label">Question</span>
-            <input
-              type="text"
-              className="poll-input"
-              placeholder="e.g. What should we play next?"
-              value={config.title}
-              onChange={(e) => setField("title", e.target.value)}
-              maxLength={POLL_LIMITS.maxTitleLength}
-              autoFocus
-            />
-          </label>
-
-          <fieldset className="poll-field">
-            <legend className="poll-field-label">Choices</legend>
-            <div className="poll-choices">
-              {config.choices.map((choice, index) => (
-                <div className="poll-choice-row" key={index}>
-                  <input
-                    type="text"
-                    className="poll-input"
-                    placeholder={`Choice ${index + 1}`}
-                    value={choice}
-                    onChange={(e) => setChoice(index, e.target.value)}
-                    maxLength={POLL_LIMITS.maxChoiceLength}
-                    aria-label={`Choice ${index + 1}`}
-                  />
-                  <button
-                    type="button"
-                    className="poll-choice-remove"
-                    onClick={() => removeChoice(index)}
-                    disabled={config.choices.length <= POLL_LIMITS.minChoices}
-                    title="Remove choice"
-                    aria-label={`Remove choice ${index + 1}`}
-                  >
-                    <FaTimes size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="poll-add-choice"
-              onClick={addChoice}
-              disabled={config.choices.length >= POLL_LIMITS.maxChoices}
-            >
-              <FaPlus size={11} />
-              Add choice
-            </button>
-            <span className="poll-field-hint">
-              {POLL_LIMITS.minChoices}-{POLL_LIMITS.maxChoices} choices, up to{" "}
-              {POLL_LIMITS.maxChoiceLength} characters each.
-            </span>
-          </fieldset>
-
-          <div className="poll-field">
-            <span className="poll-field-label">Duration (seconds)</span>
-            <div className="poll-duration-row">
-              <div className="poll-input-suffix">
-                <input
-                  type="text"
-                  className="poll-input poll-input--with-suffix"
-                  inputMode="numeric"
-                  value={String(config.duration)}
-                  aria-label="Duration in seconds"
-                  onChange={(e) =>
-                    setField("duration", parseDurationInput(e.target.value))
-                  }
-                />
-                <span className="poll-input-suffix-label">sec</span>
-              </div>
-            </div>
-            <div className="poll-duration-presets">
-              {POLL_DURATION_PRESETS.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  className={`poll-preset${config.duration === preset.value ? " poll-preset--active" : ""}`}
-                  onClick={() => setField("duration", preset.value)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <span className="poll-field-hint">
-              Twitch allows {POLL_LIMITS.minDuration}-
-              {POLL_LIMITS.maxDuration} seconds.
-            </span>
-          </div>
-
-          <fieldset className="poll-field">
-            <legend className="poll-field-label">Voting</legend>
-            <label className="poll-toggle">
-              <input
-                type="checkbox"
-                checked={config.channelPointsVoting}
-                onChange={(e) =>
-                  setField("channelPointsVoting", e.target.checked)
-                }
-              />
-              <span>Channel Points voting</span>
-            </label>
-            {config.channelPointsVoting && (
-              <div className="poll-toggle-detail">
-                <input
-                  type="number"
-                  className="poll-input poll-input--number"
-                  min={POLL_LIMITS.minChannelPointsPerVote}
-                  max={POLL_LIMITS.maxChannelPointsPerVote}
-                  value={config.channelPointsPerVote}
-                  aria-label="Channel Points per vote"
-                  onChange={(e) =>
-                    setField(
-                      "channelPointsPerVote",
-                      parseNumberInput(e.target.value),
-                    )
-                  }
-                />
-                <span>points per vote</span>
-              </div>
-            )}
-
-            <label className="poll-toggle">
-              <input
-                type="checkbox"
-                checked={config.bitsVoting}
-                onChange={(e) => setField("bitsVoting", e.target.checked)}
-              />
-              <span>Bits voting</span>
-            </label>
-            {config.bitsVoting && (
-              <div className="poll-toggle-detail">
-                <input
-                  type="number"
-                  className="poll-input poll-input--number"
-                  min={POLL_LIMITS.minBitsPerVote}
-                  max={POLL_LIMITS.maxBitsPerVote}
-                  value={config.bitsPerVote}
-                  aria-label="Bits per vote"
-                  onChange={(e) =>
-                    setField("bitsPerVote", parseNumberInput(e.target.value))
-                  }
-                />
-                <span>bits per vote</span>
-              </div>
-            )}
-          </fieldset>
-
-          {error && <p className="poll-error">{error}</p>}
-
-          <div className="poll-actions">
-            <button
-              type="button"
-              className="poll-btn poll-btn--primary"
-              onClick={() => void start()}
-              disabled={starting || !canCreate || relayPending}
-            >
-              {starting ? "Starting..." : "Start poll"}
-            </button>
-          </div>
-        </div>
+        <PollConfigForm
+          config={config}
+          error={error}
+          starting={starting}
+          relayPending={relayPending}
+          isOwner={isOwner}
+          canCreate={canCreate}
+          affiliateEligible={affiliateEligible}
+          setField={setField}
+          setChoice={setChoice}
+          addChoice={addChoice}
+          removeChoice={removeChoice}
+          start={start}
+        />
       )}
 
       {phase === "active" && livePoll && (
@@ -283,6 +120,215 @@ export default function PollPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PollConfigFormProps {
+  config: UsePollCreatorResult["config"];
+  error: string | null;
+  starting: boolean;
+  relayPending: boolean;
+  isOwner: boolean;
+  canCreate: boolean;
+  affiliateEligible: boolean;
+  setField: UsePollCreatorResult["setField"];
+  setChoice: UsePollCreatorResult["setChoice"];
+  addChoice: UsePollCreatorResult["addChoice"];
+  removeChoice: UsePollCreatorResult["removeChoice"];
+  start: UsePollCreatorResult["start"];
+}
+
+function PollConfigForm({
+  config,
+  error,
+  starting,
+  relayPending,
+  isOwner,
+  canCreate,
+  affiliateEligible,
+  setField,
+  setChoice,
+  addChoice,
+  removeChoice,
+  start,
+}: PollConfigFormProps) {
+  return (
+    <div className="poll-form">
+      {!isOwner && (
+        <p className="poll-hint">
+          Poll requests run as the streamer. Mixchat must be open on
+          their channel.
+        </p>
+      )}
+      {isOwner && !affiliateEligible && (
+        <p className="poll-hint poll-hint--warn">
+          Twitch polls are available to Affiliates and Partners only.
+        </p>
+      )}
+      {relayPending && (
+        <p className="poll-hint">Waiting for the streamer...</p>
+      )}
+
+      <label className="poll-field">
+        <span className="poll-field-label">Question</span>
+        <input
+          type="text"
+          className="poll-input"
+          placeholder="e.g. What should we play next?"
+          value={config.title}
+          onChange={(e) => setField("title", e.target.value)}
+          maxLength={POLL_LIMITS.maxTitleLength}
+        />
+      </label>
+
+      <fieldset className="poll-field">
+        <legend className="poll-field-label">Choices</legend>
+        <div className="poll-choices">
+          {config.choices.map((choice, index) => (
+            <div className="poll-choice-row" key={index}>
+              <input
+                type="text"
+                className="poll-input"
+                placeholder={`Choice ${index + 1}`}
+                value={choice}
+                onChange={(e) => setChoice(index, e.target.value)}
+                maxLength={POLL_LIMITS.maxChoiceLength}
+                aria-label={`Choice ${index + 1}`}
+              />
+              <button
+                type="button"
+                className="poll-choice-remove"
+                onClick={() => removeChoice(index)}
+                disabled={config.choices.length <= POLL_LIMITS.minChoices}
+                title="Remove choice"
+                aria-label={`Remove choice ${index + 1}`}
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="poll-add-choice"
+          onClick={addChoice}
+          disabled={config.choices.length >= POLL_LIMITS.maxChoices}
+        >
+          <FaPlus size={11} />
+          Add choice
+        </button>
+        <span className="poll-field-hint">
+          {POLL_LIMITS.minChoices}-{POLL_LIMITS.maxChoices} choices, up to{" "}
+          {POLL_LIMITS.maxChoiceLength} characters each.
+        </span>
+      </fieldset>
+
+      <div className="poll-field">
+        <span className="poll-field-label">Duration (seconds)</span>
+        <div className="poll-duration-row">
+          <div className="poll-input-suffix">
+            <input
+              type="text"
+              className="poll-input poll-input--with-suffix"
+              inputMode="numeric"
+              value={String(config.duration)}
+              aria-label="Duration in seconds"
+              onChange={(e) =>
+                setField("duration", parseDurationInput(e.target.value))
+              }
+            />
+            <span className="poll-input-suffix-label">sec</span>
+          </div>
+        </div>
+        <div className="poll-duration-presets">
+          {POLL_DURATION_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              className={`poll-preset${config.duration === preset.value ? " poll-preset--active" : ""}`}
+              onClick={() => setField("duration", preset.value)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <span className="poll-field-hint">
+          Twitch allows {POLL_LIMITS.minDuration}-
+          {POLL_LIMITS.maxDuration} seconds.
+        </span>
+      </div>
+
+      <fieldset className="poll-field">
+        <legend className="poll-field-label">Voting</legend>
+        <label className="poll-toggle">
+          <input
+            type="checkbox"
+            checked={config.channelPointsVoting}
+            onChange={(e) =>
+              setField("channelPointsVoting", e.target.checked)
+            }
+          />
+          <span>Channel Points voting</span>
+        </label>
+        {config.channelPointsVoting && (
+          <div className="poll-toggle-detail">
+            <input
+              type="number"
+              className="poll-input poll-input--number"
+              min={POLL_LIMITS.minChannelPointsPerVote}
+              max={POLL_LIMITS.maxChannelPointsPerVote}
+              value={config.channelPointsPerVote}
+              aria-label="Channel Points per vote"
+              onChange={(e) =>
+                setField(
+                  "channelPointsPerVote",
+                  parseNumberInput(e.target.value),
+                )
+              }
+            />
+            <span>points per vote</span>
+          </div>
+        )}
+
+        <label className="poll-toggle">
+          <input
+            type="checkbox"
+            checked={config.bitsVoting}
+            onChange={(e) => setField("bitsVoting", e.target.checked)}
+          />
+          <span>Bits voting</span>
+        </label>
+        {config.bitsVoting && (
+          <div className="poll-toggle-detail">
+            <input
+              type="number"
+              className="poll-input poll-input--number"
+              min={POLL_LIMITS.minBitsPerVote}
+              max={POLL_LIMITS.maxBitsPerVote}
+              value={config.bitsPerVote}
+              aria-label="Bits per vote"
+              onChange={(e) =>
+                setField("bitsPerVote", parseNumberInput(e.target.value))
+              }
+            />
+            <span>bits per vote</span>
+          </div>
+        )}
+      </fieldset>
+
+      {error && <p className="poll-error">{error}</p>}
+
+      <div className="poll-actions">
+        <button
+          type="button"
+          className="poll-btn poll-btn--primary"
+          onClick={() => void start()}
+          disabled={starting || !canCreate || relayPending}
+        >
+          {starting ? "Starting..." : "Start poll"}
+        </button>
+      </div>
     </div>
   );
 }

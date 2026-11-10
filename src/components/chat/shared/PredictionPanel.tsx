@@ -67,131 +67,19 @@ export default function PredictionPanel({
   return (
     <div className="prediction-panel">
       {phase === "config" && (
-        <div className="prediction-form">
-          {!isOwner && (
-            <p className="prediction-hint prediction-hint--warn">
-              Only the broadcaster can create Twitch predictions.
-            </p>
-          )}
-          {isOwner && !affiliateEligible && (
-            <p className="prediction-hint prediction-hint--warn">
-              Twitch predictions are available to Affiliates and Partners
-              only. Channel Points must be enabled.
-            </p>
-          )}
-
-          <label className="prediction-field">
-            <span className="prediction-field-label">Title</span>
-            <input
-              type="text"
-              className="prediction-input"
-              placeholder="e.g. Will we win this match?"
-              value={config.title}
-              onChange={(e) => setField("title", e.target.value)}
-              maxLength={PREDICTION_LIMITS.maxTitleLength}
-              autoFocus
-            />
-          </label>
-
-          <fieldset className="prediction-field">
-            <legend className="prediction-field-label">Outcomes</legend>
-            <div className="prediction-outcomes">
-              {config.outcomes.map((outcome, index) => (
-                <div className="prediction-outcome-row" key={index}>
-                  <input
-                    type="text"
-                    className="prediction-input"
-                    placeholder={`Outcome ${index + 1}`}
-                    value={outcome}
-                    onChange={(e) => setOutcome(index, e.target.value)}
-                    maxLength={PREDICTION_LIMITS.maxOutcomeLength}
-                    aria-label={`Outcome ${index + 1}`}
-                  />
-                  <button
-                    type="button"
-                    className="prediction-outcome-remove"
-                    onClick={() => removeOutcome(index)}
-                    disabled={
-                      config.outcomes.length <= PREDICTION_LIMITS.minOutcomes
-                    }
-                    title="Remove outcome"
-                    aria-label={`Remove outcome ${index + 1}`}
-                  >
-                    <FaTimes size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="prediction-add-outcome"
-              onClick={addOutcome}
-              disabled={
-                config.outcomes.length >= PREDICTION_LIMITS.maxOutcomes
-              }
-            >
-              <FaPlus size={11} />
-              Add outcome
-            </button>
-            <span className="prediction-field-hint">
-              {PREDICTION_LIMITS.minOutcomes}-
-              {PREDICTION_LIMITS.maxOutcomes} outcomes, up to{" "}
-              {PREDICTION_LIMITS.maxOutcomeLength} characters each.
-            </span>
-          </fieldset>
-
-          <div className="prediction-field">
-            <span className="prediction-field-label">Prediction window</span>
-            <div className="prediction-window-row">
-              <div className="prediction-input-suffix">
-                <input
-                  type="text"
-                  className="prediction-input prediction-input--with-suffix"
-                  inputMode="numeric"
-                  value={String(config.windowSeconds)}
-                  aria-label="Prediction window in seconds"
-                  onChange={(e) =>
-                    setField(
-                      "windowSeconds",
-                      parseWindowInput(e.target.value),
-                    )
-                  }
-                />
-                <span className="prediction-input-suffix-label">sec</span>
-              </div>
-            </div>
-            <div className="prediction-window-presets">
-              {PREDICTION_WINDOW_PRESETS.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  className={`prediction-preset${config.windowSeconds === preset.value ? " prediction-preset--active" : ""}`}
-                  onClick={() => setField("windowSeconds", preset.value)}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <span className="prediction-field-hint">
-              Time viewers have to place points. Twitch allows{" "}
-              {PREDICTION_LIMITS.minWindow}-{PREDICTION_LIMITS.maxWindow}{" "}
-              seconds. Channel Points must be enabled on the channel.
-            </span>
-          </div>
-
-          {error && <p className="prediction-error">{error}</p>}
-
-          <div className="prediction-actions">
-            <button
-              type="button"
-              className="prediction-btn prediction-btn--primary"
-              onClick={() => void start()}
-              disabled={starting || !canCreate}
-            >
-              {starting ? "Starting..." : "Start prediction"}
-            </button>
-          </div>
-        </div>
+        <PredictionConfigForm
+          config={config}
+          error={error}
+          starting={starting}
+          isOwner={isOwner}
+          canCreate={canCreate}
+          affiliateEligible={affiliateEligible}
+          setField={setField}
+          setOutcome={setOutcome}
+          addOutcome={addOutcome}
+          removeOutcome={removeOutcome}
+          start={start}
+        />
       )}
 
       {phase === "active" && livePrediction && (
@@ -248,6 +136,161 @@ export default function PredictionPanel({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PredictionConfigFormProps {
+  config: UsePredictionCreatorResult["config"];
+  error: string | null;
+  starting: boolean;
+  isOwner: boolean;
+  canCreate: boolean;
+  affiliateEligible: boolean;
+  setField: UsePredictionCreatorResult["setField"];
+  setOutcome: UsePredictionCreatorResult["setOutcome"];
+  addOutcome: UsePredictionCreatorResult["addOutcome"];
+  removeOutcome: UsePredictionCreatorResult["removeOutcome"];
+  start: UsePredictionCreatorResult["start"];
+}
+
+function PredictionConfigForm({
+  config,
+  error,
+  starting,
+  isOwner,
+  canCreate,
+  affiliateEligible,
+  setField,
+  setOutcome,
+  addOutcome,
+  removeOutcome,
+  start,
+}: PredictionConfigFormProps) {
+  return (
+    <div className="prediction-form">
+      {!isOwner && (
+        <p className="prediction-hint prediction-hint--warn">
+          Only the broadcaster can create Twitch predictions.
+        </p>
+      )}
+      {isOwner && !affiliateEligible && (
+        <p className="prediction-hint prediction-hint--warn">
+          Twitch predictions are available to Affiliates and Partners
+          only. Channel Points must be enabled.
+        </p>
+      )}
+
+      <label className="prediction-field">
+        <span className="prediction-field-label">Title</span>
+        <input
+          type="text"
+          className="prediction-input"
+          placeholder="e.g. Will we win this match?"
+          value={config.title}
+          onChange={(e) => setField("title", e.target.value)}
+          maxLength={PREDICTION_LIMITS.maxTitleLength}
+        />
+      </label>
+
+      <fieldset className="prediction-field">
+        <legend className="prediction-field-label">Outcomes</legend>
+        <div className="prediction-outcomes">
+          {config.outcomes.map((outcome, index) => (
+            <div className="prediction-outcome-row" key={index}>
+              <input
+                type="text"
+                className="prediction-input"
+                placeholder={`Outcome ${index + 1}`}
+                value={outcome}
+                onChange={(e) => setOutcome(index, e.target.value)}
+                maxLength={PREDICTION_LIMITS.maxOutcomeLength}
+                aria-label={`Outcome ${index + 1}`}
+              />
+              <button
+                type="button"
+                className="prediction-outcome-remove"
+                onClick={() => removeOutcome(index)}
+                disabled={
+                  config.outcomes.length <= PREDICTION_LIMITS.minOutcomes
+                }
+                title="Remove outcome"
+                aria-label={`Remove outcome ${index + 1}`}
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="prediction-add-outcome"
+          onClick={addOutcome}
+          disabled={
+            config.outcomes.length >= PREDICTION_LIMITS.maxOutcomes
+          }
+        >
+          <FaPlus size={11} />
+          Add outcome
+        </button>
+        <span className="prediction-field-hint">
+          {PREDICTION_LIMITS.minOutcomes}-
+          {PREDICTION_LIMITS.maxOutcomes} outcomes, up to{" "}
+          {PREDICTION_LIMITS.maxOutcomeLength} characters each.
+        </span>
+      </fieldset>
+
+      <div className="prediction-field">
+        <span className="prediction-field-label">Prediction window</span>
+        <div className="prediction-window-row">
+          <div className="prediction-input-suffix">
+            <input
+              type="text"
+              className="prediction-input prediction-input--with-suffix"
+              inputMode="numeric"
+              value={String(config.windowSeconds)}
+              aria-label="Prediction window in seconds"
+              onChange={(e) =>
+                setField(
+                  "windowSeconds",
+                  parseWindowInput(e.target.value),
+                )
+              }
+            />
+            <span className="prediction-input-suffix-label">sec</span>
+          </div>
+        </div>
+        <div className="prediction-window-presets">
+          {PREDICTION_WINDOW_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              className={`prediction-preset${config.windowSeconds === preset.value ? " prediction-preset--active" : ""}`}
+              onClick={() => setField("windowSeconds", preset.value)}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <span className="prediction-field-hint">
+          Time viewers have to place points. Twitch allows{" "}
+          {PREDICTION_LIMITS.minWindow}-{PREDICTION_LIMITS.maxWindow}{" "}
+          seconds. Channel Points must be enabled on the channel.
+        </span>
+      </div>
+
+      {error && <p className="prediction-error">{error}</p>}
+
+      <div className="prediction-actions">
+        <button
+          type="button"
+          className="prediction-btn prediction-btn--primary"
+          onClick={() => void start()}
+          disabled={starting || !canCreate}
+        >
+          {starting ? "Starting..." : "Start prediction"}
+        </button>
+      </div>
     </div>
   );
 }

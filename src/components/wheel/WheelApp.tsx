@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaCheck,
   FaCopy,
@@ -533,6 +533,166 @@ function WheelWinnerOverlay({
   );
 }
 
+function WheelBanners({
+  isModerator,
+  error,
+  onDismissError,
+}: {
+  isModerator: boolean;
+  error: string | null;
+  onDismissError: () => void;
+}) {
+  return (
+    <>
+      {isModerator && !error && (
+        <div className="wheel-banner wheel-banner--warn" role="status">
+          <span>
+            You are viewing as a moderator: only the streamer can spin the
+            wheel. Editing the options is still available.
+          </span>
+        </div>
+      )}
+      {error && (
+        <div className="wheel-banner wheel-banner--error" role="alert">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="wheel-icon-btn"
+            onClick={onDismissError}
+            aria-label="Dismiss error"
+          >
+            <FaTimes size={12} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function WheelMainContent({
+  booting,
+  loadingWheel,
+  canManage,
+  active,
+  editable,
+  draftName,
+  spinning,
+  dirty,
+  saving,
+  spinDisabled,
+  draftOptions,
+  newOption,
+  bulkText,
+  copiedOptions,
+  allowDuplicates,
+  history,
+  historyOpen,
+  onSave,
+  onWinner,
+  onSpinStateChange,
+  onDraftNameChange,
+  onNewOptionChange,
+  onAddOption,
+  onRemoveOption,
+  onCopyAllOptions,
+  onBulkTextChange,
+  onAddBulk,
+  onRemoveAllOptions,
+  onAllowDuplicatesChange,
+  onHistoryToggle,
+  onHistoryCopy,
+  onHistoryClear,
+}: {
+  booting: boolean;
+  loadingWheel: boolean;
+  canManage: boolean;
+  active: WheelPublicView | null;
+  editable: boolean;
+  draftName: string;
+  spinning: boolean;
+  dirty: boolean;
+  saving: boolean;
+  spinDisabled: boolean;
+  draftOptions: string[];
+  newOption: string;
+  bulkText: string;
+  copiedOptions: boolean;
+  allowDuplicates: boolean;
+  history: WheelHistoryEntry[];
+  historyOpen: boolean;
+  onSave: () => void;
+  onWinner: (option: string) => void;
+  onSpinStateChange: (spinning: boolean) => void;
+  onDraftNameChange: (value: string) => void;
+  onNewOptionChange: (value: string) => void;
+  onAddOption: () => void;
+  onRemoveOption: (index: number) => void;
+  onCopyAllOptions: () => void;
+  onBulkTextChange: (value: string) => void;
+  onAddBulk: () => void;
+  onRemoveAllOptions: () => void;
+  onAllowDuplicatesChange: (checked: boolean) => void;
+  onHistoryToggle: () => void;
+  onHistoryCopy: () => void;
+  onHistoryClear: () => void;
+}) {
+  if (booting || loadingWheel) {
+    return (
+      <div className="wheel-loading">
+        <FaSpinner className="wheel-spinner" size={20} />
+        <span>Loading…</span>
+      </div>
+    );
+  }
+  if (!active) return <WheelEmpty canManage={canManage} />;
+
+  return (
+    <>
+      <WheelMainHeader
+        editable={editable}
+        activeName={active.name}
+        draftName={draftName}
+        onDraftNameChange={onDraftNameChange}
+        spinning={spinning}
+        dirty={dirty}
+        saving={saving}
+        onSave={onSave}
+      />
+      <WheelStage
+        options={draftOptions}
+        disabled={spinDisabled}
+        onWinner={onWinner}
+        onSpinStateChange={onSpinStateChange}
+      />
+      <WheelOptionsPanel
+        editable={editable}
+        options={draftOptions}
+        spinning={spinning}
+        newOption={newOption}
+        onNewOptionChange={onNewOptionChange}
+        onAddOption={onAddOption}
+        onRemoveOption={onRemoveOption}
+        copiedOptions={copiedOptions}
+        onCopyAllOptions={onCopyAllOptions}
+        bulkText={bulkText}
+        onBulkTextChange={onBulkTextChange}
+        onAddBulk={onAddBulk}
+        onRemoveAllOptions={onRemoveAllOptions}
+        allowDuplicates={allowDuplicates}
+        onAllowDuplicatesChange={onAllowDuplicatesChange}
+      />
+      <WheelHistoryPanel
+        history={history}
+        historyOpen={historyOpen}
+        spinning={spinning}
+        onToggle={onHistoryToggle}
+        onCopy={onHistoryCopy}
+        onClear={onHistoryClear}
+      />
+    </>
+  );
+}
+
 export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
   const [channelKey, setChannelKey] = useState<string | null>(null);
   // Fail closed: spinning is owner-only, so an unresolved or failed access
@@ -683,7 +843,12 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       JSON.stringify(draftOptions) !== JSON.stringify(active.options) ||
       draftAllowDuplicates !== Boolean(active.allowDuplicates)
     : false;
-  const history = active?.history ?? [];
+  // Stable empty array so `history` identity does not change every render
+  // when no wheel is selected (which would recreate dependent callbacks).
+  const history = useMemo(
+    () => active?.history ?? [],
+    [active?.history],
+  );
 
   // Mirrored into refs so the sync interval does not restart on every edit.
   const activeRef = useRef<WheelPublicView | null>(active);
@@ -1017,24 +1182,24 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
       .map((l) => l.trim().slice(0, MAX_WHEEL_OPTION_LENGTH))
       .filter(Boolean);
     if (lines.length === 0) return;
-    setDraftOptions((prev) => {
-      const seen = draftAllowDuplicates
-        ? null
-        : new Set(prev.map((o) => o.toLowerCase()));
-      const next = [...prev];
-      for (const line of lines) {
-        if (seen) {
-          const key = line.toLowerCase();
-          if (seen.has(key)) continue;
-          seen.add(key);
-        }
-        next.push(line);
-        if (next.length >= MAX_WHEEL_OPTIONS) break;
+    // Build the next array outside the setter so the updater stays pure
+    // (React may invoke updaters more than once under Strict Mode).
+    const seen = draftAllowDuplicates
+      ? null
+      : new Set(draftOptions.map((o) => o.toLowerCase()));
+    const next = [...draftOptions];
+    for (const line of lines) {
+      if (seen) {
+        const key = line.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
       }
-      return next;
-    });
+      next.push(line);
+      if (next.length >= MAX_WHEEL_OPTIONS) break;
+    }
+    setDraftOptions(next);
     setBulkText("");
-  }, [bulkText, draftAllowDuplicates]);
+  }, [bulkText, draftAllowDuplicates, draftOptions]);
 
   const handleWinner = useCallback(
     (option: string) => {
@@ -1119,28 +1284,11 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         {channelKey && <span className="wheel-header-channel">{channelKey}</span>}
       </header>
 
-      {isModerator && !error && (
-        <div className="wheel-banner wheel-banner--warn" role="status">
-          <span>
-            You are viewing as a moderator: only the streamer can spin the
-            wheel. Editing the options is still available.
-          </span>
-        </div>
-      )}
-
-      {error && (
-        <div className="wheel-banner wheel-banner--error" role="alert">
-          <span>{error}</span>
-          <button
-            type="button"
-            className="wheel-icon-btn"
-            onClick={() => setError(null)}
-            aria-label="Dismiss error"
-          >
-            <FaTimes size={12} />
-          </button>
-        </div>
-      )}
+      <WheelBanners
+        isModerator={isModerator}
+        error={error}
+        onDismissError={() => setError(null)}
+      />
 
       <div className={`wheel-layout${canManage ? "" : " wheel-layout--solo"}`}>
         {canManage && (
@@ -1158,61 +1306,40 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
         )}
 
         <main className="wheel-main">
-          {booting || loadingWheel ? (
-            <div className="wheel-loading">
-              <FaSpinner className="wheel-spinner" size={20} />
-              <span>Loading…</span>
-            </div>
-          ) : !active ? (
-            <WheelEmpty canManage={canManage} />
-          ) : (
-            <>
-              <WheelMainHeader
-                editable={editable}
-                activeName={active.name}
-                draftName={draftName}
-                onDraftNameChange={setDraftName}
-                spinning={spinning}
-                dirty={dirty}
-                saving={saving}
-                onSave={handleSave}
-              />
-
-              <WheelStage
-                options={draftOptions}
-                disabled={spinDisabled}
-                onWinner={handleWinner}
-                onSpinStateChange={setSpinning}
-              />
-
-              <WheelOptionsPanel
-                editable={editable}
-                options={draftOptions}
-                spinning={spinning}
-                newOption={newOption}
-                onNewOptionChange={setNewOption}
-                onAddOption={addOption}
-                onRemoveOption={removeOption}
-                copiedOptions={copiedOptions}
-                onCopyAllOptions={copyAllOptions}
-                bulkText={bulkText}
-                onBulkTextChange={setBulkText}
-                onAddBulk={addBulk}
-                onRemoveAllOptions={removeAllOptions}
-                allowDuplicates={draftAllowDuplicates}
-                onAllowDuplicatesChange={handleAllowDuplicates}
-              />
-
-              <WheelHistoryPanel
-                history={history}
-                historyOpen={historyOpen}
-                spinning={spinning}
-                onToggle={() => setHistoryOpen((o) => !o)}
-                onCopy={copyHistory}
-                onClear={handleClearHistory}
-              />
-            </>
-          )}
+          <WheelMainContent
+            booting={booting}
+            loadingWheel={loadingWheel}
+            canManage={canManage}
+            active={active}
+            editable={editable}
+            draftName={draftName}
+            spinning={spinning}
+            dirty={dirty}
+            saving={saving}
+            spinDisabled={spinDisabled}
+            draftOptions={draftOptions}
+            newOption={newOption}
+            bulkText={bulkText}
+            copiedOptions={copiedOptions}
+            allowDuplicates={draftAllowDuplicates}
+            history={history}
+            historyOpen={historyOpen}
+            onSave={handleSave}
+            onWinner={handleWinner}
+            onSpinStateChange={setSpinning}
+            onDraftNameChange={setDraftName}
+            onNewOptionChange={setNewOption}
+            onAddOption={addOption}
+            onRemoveOption={removeOption}
+            onCopyAllOptions={copyAllOptions}
+            onBulkTextChange={setBulkText}
+            onAddBulk={addBulk}
+            onRemoveAllOptions={removeAllOptions}
+            onAllowDuplicatesChange={handleAllowDuplicates}
+            onHistoryToggle={() => setHistoryOpen((o) => !o)}
+            onHistoryCopy={copyHistory}
+            onHistoryClear={handleClearHistory}
+          />
         </main>
       </div>
 

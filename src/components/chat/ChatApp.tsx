@@ -121,6 +121,287 @@ async function handlePredictionChatCommand(
   return true;
 }
 
+interface StreamToolsVisibilityInput {
+  isOnOwnChannel: boolean;
+  streamerToolsEnabled: boolean;
+  isModerator: boolean;
+  userId: string | undefined;
+  settings: {
+    enabled: boolean;
+    allowMods: boolean;
+    modAccess: "all" | "selected";
+    allowedMods: Array<{ id: string }>;
+  };
+}
+
+/** Pure decision for whether Stream tools UI is available to this viewer. */
+function computeShowStreamTools({
+  isOnOwnChannel,
+  streamerToolsEnabled,
+  isModerator,
+  userId,
+  settings,
+}: StreamToolsVisibilityInput): boolean {
+  if (IS_DESKTOP) return streamerToolsEnabled && isOnOwnChannel;
+  if (isOnOwnChannel) return streamerToolsEnabled;
+  if (!isModerator) return false;
+  if (!settings.enabled || !settings.allowMods) return false;
+  if (settings.modAccess !== "selected") return true;
+  return settings.allowedMods.some((mod) => mod.id === userId);
+}
+
+/**
+ * Feed the giveaway's own buffer one message at a time. The chat window is
+ * capped and rotates, so entries can't be derived from it. Track ids to avoid
+ * replaying messages across re-renders. Reset the ledger when the giveaway
+ * leaves the running phase so the next run starts fresh.
+ */
+function useGiveawayIngestion(
+  giveaway: ReturnType<typeof useGiveaway>,
+  messages: TwitchMessage[],
+  ytMessages: YTMessage[],
+) {
+  const ingestedIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of messages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "twitch", msg: m });
+    }
+  }, [messages, giveaway]);
+  useEffect(() => {
+    if (giveaway.phase !== "running") return;
+    for (const m of ytMessages) {
+      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
+      ingestedIdsRef.current.add(m.id);
+      giveaway.ingestMessage({ platform: "youtube", msg: m });
+    }
+  }, [ytMessages, giveaway]);
+  useEffect(() => {
+    if (giveaway.phase !== "running") {
+      ingestedIdsRef.current = new Set();
+    }
+  }, [giveaway.phase]);
+}
+
+function shouldShowPinnedBanner(
+  highlight: { messageId: string; pinnedAt: Date } | null | undefined,
+  dismissedMessageId: string | null | undefined,
+  dismissedPinnedAt: string | null | undefined,
+): boolean {
+  if (!highlight) return false;
+  return (
+    dismissedMessageId !== highlight.messageId ||
+    dismissedPinnedAt !== highlight.pinnedAt.toISOString()
+  );
+}
+
+function shouldShowMusicBar(
+  playlist: { items: unknown[] } | null | undefined,
+  miniBarHidden: boolean,
+): boolean {
+  if (!playlist || playlist.items.length === 0) return false;
+  return !miniBarHidden;
+}
+
+interface SongAndMusicToolsInput {
+  selectedTwitchChannel: string | undefined;
+  selectedTwitchChannelName: string | undefined;
+  twitchSession: { userId?: string } | undefined;
+  youtubeSession: { userId?: string } | undefined;
+  youtubeVideoId: string | null;
+  showStreamTools: boolean;
+  streamToolsChannelKey: string | null;
+  isOnOwnChannel: boolean;
+  messages: TwitchMessage[];
+  ytMessages: YTMessage[];
+  handleSendMessage: (
+    message: string,
+    platforms: Platform[],
+    replyToId?: string,
+  ) => Promise<void>;
+  showNotification: (
+    message: string,
+    type: "success" | "error" | "info",
+  ) => void;
+}
+
+/**
+ * Song queue + music player wiring: channel key, send/announce callbacks,
+ * chat ingestion while the queue is open, and the mini-bar visibility flag.
+ */
+function useSongAndMusicTools({
+  selectedTwitchChannel,
+  selectedTwitchChannelName,
+  twitchSession,
+  youtubeSession,
+  youtubeVideoId,
+  showStreamTools,
+  streamToolsChannelKey,
+  isOnOwnChannel,
+  messages,
+  ytMessages,
+  handleSendMessage,
+  showNotification,
+}: SongAndMusicToolsInput) {
+  // Song Queue dedupes by message id internally, so ingesting every render
+  // is safe.
+  const onSongError = useCallback(
+    (msg: string) => showNotification(msg, "error"),
+    [showNotification],
+  );
+
+  // Use `sendHelixMessage` directly (not `handleSendMessage`) for automated
+  // replies: the wrapper relies on `replyingTo` state and triggers reply
+  // reset, scroll-into-view, and loading side effects we don't want.
+  const onSongSendChat = useCallback(
+    async (
+      platform: "twitch" | "youtube",
+      message: string,
+      replyToMessageId: string,
+    ) => {
+      try {
+        if (platform === "twitch") {
+          if (!selectedTwitchChannel || !twitchSession?.userId) {
+            console.warn(
+              "[song-queue] cannot notify: twitch channel or session missing",
+              { selectedTwitchChannel, hasSession: !!twitchSession },
+            );
+            return;
+          }
+          const serverMessageId = await sendHelixMessage(
+            selectedTwitchChannel,
+            twitchSession.userId,
+            message,
+            replyToMessageId || undefined,
+          );
+          if (!serverMessageId) {
+            console.warn("[song-queue] Twitch send returned no message id");
+          }
+        } else if (platform === "youtube") {
+          if (!youtubeVideoId) {
+            console.warn(
+              "[song-queue] cannot notify: youtube video id missing",
+            );
+            return;
+          }
+          try {
+            await sendYouTubeChatMessage(youtubeVideoId, message);
+          } catch (err) {
+            showNotification(
+              err instanceof Error
+                ? err.message
+                : "Failed to send song-queue message to YouTube",
+              "error",
+            );
+          }
+        }
+      } catch (err) {
+        // Best-effort. The rejection is still visible in the streamer UI.
+        console.warn("[song-queue] chat-send failed", err);
+        showNotification(
+          err instanceof Error
+            ? `Song queue reply failed: ${err.message}`
+            : "Song queue reply failed",
+          "error",
+        );
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      selectedTwitchChannel,
+      twitchSession?.userId,
+      youtubeVideoId,
+      showNotification,
+    ],
+  );
+
+  // Announce a new song to every platform the streamer is live on (fans out
+  // to both when restreaming).
+  const onSongAnnounce = useCallback(
+    async (item: SongQueueItem) => {
+      const videoUrl = `https://youtu.be/${item.videoId}`;
+      const channelTitle = item.channelTitle
+        ? ` by ${item.channelTitle}`
+        : "";
+      const submitter = item.submitter?.author
+        ? ` (added by @${item.submitter.author})`
+        : "";
+      const message = `🎵 Now playing: ${item.title}${channelTitle}${submitter} - ${videoUrl}`;
+      const platforms: Platform[] = [];
+      if (selectedTwitchChannel && twitchSession) platforms.push("twitch");
+      if (youtubeVideoId && youtubeSession) platforms.push("youtube");
+      if (platforms.length === 0) return;
+      try {
+        await handleSendMessage(message, platforms);
+      } catch (err) {
+        console.warn("[song-queue] announce send failed", err);
+        showNotification(
+          err instanceof Error
+            ? `Now-playing announce failed: ${err.message}`
+            : "Now-playing announce failed",
+          "error",
+        );
+      }
+    },
+    [
+      selectedTwitchChannel,
+      twitchSession,
+      youtubeVideoId,
+      youtubeSession,
+      handleSendMessage,
+      showNotification,
+    ],
+  );
+
+  const songChannelKey = useMemo(() => {
+    if (selectedTwitchChannelName) {
+      return `twitch:${selectedTwitchChannelName.toLowerCase()}`;
+    }
+    if (youtubeSession?.userId) return `youtube:${youtubeSession.userId}`;
+    return null;
+  }, [selectedTwitchChannelName, youtubeSession?.userId]);
+
+  const songQueue = useSongQueue({
+    channelKey: songChannelKey ?? "twitch:unknown",
+    owner: {
+      twitchBroadcasterId: selectedTwitchChannel,
+      youtubeChannelId: youtubeSession?.userId,
+    },
+    enabled: !IS_DESKTOP && showStreamTools && Boolean(songChannelKey),
+    onError: onSongError,
+    onSendChat: onSongSendChat,
+    onAnnounceNowPlaying: onSongAnnounce,
+  });
+  const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
+
+  // Client-side (IndexedDB) hook always runs. Visual components render only
+  // when Stream tools are available for this viewer.
+  const musicPlayer = useMusicPlayer({
+    channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
+    isHost: isOnOwnChannel,
+  });
+  const showMusicBar = shouldShowMusicBar(
+    musicPlayer.activePlaylist,
+    musicPlayer.miniBarHidden,
+  );
+
+  useEffect(() => {
+    if (songPhase !== "open") return;
+    for (const m of messages) {
+      if (!m?.id) continue;
+      ingestSong({ platform: "twitch", msg: m });
+    }
+    for (const m of ytMessages) {
+      if (!m?.id) continue;
+      ingestSong({ platform: "youtube", msg: m });
+    }
+  }, [messages, ytMessages, ingestSong, songPhase]);
+
+  return { songQueue, musicPlayer, showMusicBar, songChannelKey };
+}
+
 export default function ChatApp(props: ChatAppStateProps) {
   const currentModModeTarget: ModModeTarget =
     props.modModeTargets?.[props.selectedTwitchChannel ?? ""] ?? "off";
@@ -253,22 +534,13 @@ export default function ChatApp(props: ChatAppStateProps) {
     ? `twitch:${selectedTwitchChannelName.toLowerCase()}`
     : null;
   const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
-  const isTwitchModerator = !!chatState.isModerator && !isOnOwnChannel;
-  // In "selected" mode only the mods granted by the broadcaster get the tools.
-  const isAllowedSelectedMod =
-    streamToolsSettings.settings.modAccess === "selected" &&
-    streamToolsSettings.settings.allowedMods.some(
-      (mod) => mod.id === twitchSession?.userId,
-    );
-  const showStreamTools = IS_DESKTOP
-    ? streamerToolsEnabled && isOnOwnChannel
-    : isOnOwnChannel
-      ? streamerToolsEnabled
-      : isTwitchModerator &&
-        streamToolsSettings.settings.enabled &&
-        streamToolsSettings.settings.allowMods &&
-        (streamToolsSettings.settings.modAccess !== "selected" ||
-          isAllowedSelectedMod);
+  const showStreamTools = computeShowStreamTools({
+    isOnOwnChannel,
+    streamerToolsEnabled,
+    isModerator: !!chatState.isModerator,
+    userId: twitchSession?.userId,
+    settings: streamToolsSettings.settings,
+  });
   const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
     ? "owner"
     : "moderator";
@@ -311,17 +583,19 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   // Keep the server-side master switch in sync with the streamer's local
   // preference so moderators see the same enabled/disabled state.
+  const syncStreamToolsEnabled = streamToolsSettings.update;
   useEffect(() => {
     if (!isOnOwnChannel || !streamToolsSettings.loaded) return;
     if (streamToolsSettings.settings.enabled === streamerToolsEnabled) return;
-    void streamToolsSettings
-      .update({ enabled: streamerToolsEnabled })
-      .catch(() => {});
+    void syncStreamToolsEnabled({ enabled: streamerToolsEnabled }).catch(
+      () => {},
+    );
   }, [
     isOnOwnChannel,
     streamToolsSettings.loaded,
     streamToolsSettings.settings.enabled,
     streamerToolsEnabled,
+    syncStreamToolsEnabled,
   ]);
 
   useEffect(() => {
@@ -424,11 +698,11 @@ export default function ChatApp(props: ChatAppStateProps) {
   // channel. Pinned chat is a property of the selected Twitch stream, not
   // the chat layout, so we always poll when a Twitch channel is selected.
   const pinned = usePinnedChatHighlight(selectedTwitchChannelName ?? null);
-  const pinnedHighlight = pinned.highlight;
-  const showPinnedBanner =
-    !!pinnedHighlight &&
-    (pinned.dismissedMessageId !== pinnedHighlight.messageId ||
-      pinned.dismissedPinnedAt !== pinnedHighlight.pinnedAt.toISOString());
+  const showPinnedBanner = shouldShowPinnedBanner(
+    pinned.highlight,
+    pinned.dismissedMessageId,
+    pinned.dismissedPinnedAt,
+  );
 
   const giveaway = useGiveaway({
     owner: {
@@ -439,171 +713,23 @@ export default function ChatApp(props: ChatAppStateProps) {
     channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
   });
 
-  // Feed the giveaway's own buffer one message at a time. The chat window
-  // is capped and rotates, so entries can't be derived from it. Track ids
-  // to avoid replaying messages across re-renders.
-  const ingestedIdsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (giveaway.phase !== "running") return;
-    for (const m of messages) {
-      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
-      ingestedIdsRef.current.add(m.id);
-      giveaway.ingestMessage({ platform: "twitch", msg: m as TwitchMessage });
-    }
-  }, [messages, giveaway]);
-  useEffect(() => {
-    if (giveaway.phase !== "running") return;
-    for (const m of ytMessages) {
-      if (!m?.id || ingestedIdsRef.current.has(m.id)) continue;
-      ingestedIdsRef.current.add(m.id);
-      giveaway.ingestMessage({ platform: "youtube", msg: m as YTMessage });
-    }
-  }, [ytMessages, giveaway]);
-  // Reset the ingestion ledger when the giveaway leaves the running phase so
-  // the next run starts fresh.
-  useEffect(() => {
-    if (giveaway.phase !== "running") {
-      ingestedIdsRef.current = new Set();
-    }
-  }, [giveaway.phase]);
+  useGiveawayIngestion(giveaway, messages, ytMessages);
 
-  // Song Queue dedupes by message id internally, so ingesting every render
-  // is safe.
-  const onSongError = useCallback(
-    (msg: string) => setNotification({ message: msg, type: "error" }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-
-  // Use `sendHelixMessage` directly (not `handleSendMessage`) for automated
-  // replies: the wrapper relies on `replyingTo` state and triggers reply
-  // reset, scroll-into-view, and loading side effects we don't want.
-  const onSongSendChat = useCallback(
-    async (platform: "twitch" | "youtube", message: string, replyToMessageId: string) => {
-      try {
-        if (platform === "twitch") {
-          if (!selectedTwitchChannel || !twitchSession?.userId) {
-            console.warn(
-              "[song-queue] cannot notify: twitch channel or session missing",
-              { selectedTwitchChannel, hasSession: !!twitchSession },
-            );
-            return;
-          }
-          const serverMessageId = await sendHelixMessage(
-            selectedTwitchChannel,
-            twitchSession.userId,
-            message,
-            replyToMessageId || undefined,
-          );
-          if (!serverMessageId) {
-            console.warn("[song-queue] Twitch send returned no message id");
-          }
-        } else if (platform === "youtube") {
-          if (!youtubeVideoId) {
-            console.warn(
-              "[song-queue] cannot notify: youtube video id missing",
-            );
-            return;
-          }
-          try {
-            await sendYouTubeChatMessage(youtubeVideoId, message);
-          } catch (err) {
-            showNotification(
-              err instanceof Error ? err.message : "Failed to send song-queue message to YouTube",
-              "error",
-            );
-          }
-        }
-      } catch (err) {
-        // Best-effort. The rejection is still visible in the streamer UI.
-        console.warn("[song-queue] chat-send failed", err);
-        showNotification(
-          err instanceof Error
-            ? `Song queue reply failed: ${err.message}`
-            : "Song queue reply failed",
-          "error",
-        );
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedTwitchChannel, twitchSession?.userId, youtubeVideoId, showNotification],
-  );
-
-  // Announce a new song to every platform the streamer is live on (fans out
-  // to both when restreaming).
-  const onSongAnnounce = useCallback(
-    async (item: SongQueueItem) => {
-      const videoUrl = `https://youtu.be/${item.videoId}`;
-      const channelTitle = item.channelTitle ? ` by ${item.channelTitle}` : "";
-      const submitter = item.submitter?.author
-        ? ` (added by @${item.submitter.author})`
-        : "";
-      const message = `🎵 Now playing: ${item.title}${channelTitle}${submitter} - ${videoUrl}`;
-      const platforms: Platform[] = [];
-      if (selectedTwitchChannel && twitchSession) platforms.push("twitch");
-      if (youtubeVideoId && youtubeSession) platforms.push("youtube");
-      if (platforms.length === 0) return;
-      try {
-        await handleSendMessage(message, platforms);
-      } catch (err) {
-        console.warn("[song-queue] announce send failed", err);
-        showNotification(
-          err instanceof Error
-            ? `Now-playing announce failed: ${err.message}`
-            : "Now-playing announce failed",
-          "error",
-        );
-      }
-    },
-    [
+  const { songQueue, musicPlayer, showMusicBar, songChannelKey } =
+    useSongAndMusicTools({
       selectedTwitchChannel,
+      selectedTwitchChannelName,
       twitchSession,
-      youtubeVideoId,
       youtubeSession,
+      youtubeVideoId,
+      showStreamTools,
+      streamToolsChannelKey,
+      isOnOwnChannel,
+      messages,
+      ytMessages,
       handleSendMessage,
       showNotification,
-    ],
-  );
-
-  const songChannelKey = useMemo(() => {
-    if (selectedTwitchChannelName) return `twitch:${selectedTwitchChannelName.toLowerCase()}`;
-    if (youtubeSession?.userId) return `youtube:${youtubeSession.userId}`;
-    return null;
-  }, [selectedTwitchChannelName, youtubeSession?.userId]);
-  const songQueue = useSongQueue({
-    channelKey: songChannelKey ?? "twitch:unknown",
-    owner: {
-      twitchBroadcasterId: selectedTwitchChannel,
-      youtubeChannelId: youtubeSession?.userId,
-    },
-    enabled: !IS_DESKTOP && showStreamTools && Boolean(songChannelKey),
-    onError: onSongError,
-    onSendChat: onSongSendChat,
-    onAnnounceNowPlaying: onSongAnnounce,
-  });
-  const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
-
-  // Client-side (IndexedDB) hook always runs. Visual components render only
-  // when Stream tools are available for this viewer.
-  const musicPlayer = useMusicPlayer({
-    channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
-    isHost: isOnOwnChannel,
-  });
-  const musicHasItems =
-    !!musicPlayer.activePlaylist &&
-    musicPlayer.activePlaylist.items.length > 0;
-  const showMusicBar = musicHasItems && !musicPlayer.miniBarHidden;
-  useEffect(() => {
-    if (songPhase !== "open") return;
-    for (const m of messages) {
-      if (!m?.id) continue;
-      ingestSong({ platform: "twitch", msg: m as TwitchMessage });
-    }
-    for (const m of ytMessages) {
-      if (!m?.id) continue;
-      ingestSong({ platform: "youtube", msg: m as YTMessage });
-    }
-  }, [messages, ytMessages, ingestSong, songPhase]);
+    });
 
   const moderationValue = useMemo(
     () => ({

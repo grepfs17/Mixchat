@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
 import {
@@ -161,6 +161,40 @@ const REFRESH_OPTIONS = {
   maxRetries: 3,
 } as const;
 
+/**
+ * Session-restore flag shared via useSyncExternalStore.
+ *
+ * The restore itself is a synchronous localStorage read in a mount effect
+ * (required for SSR hydration: the server cannot see localStorage, so the
+ * first client render must match the server's "still restoring" snapshot).
+ * Flipping a useState from true to false in that effect costs an extra
+ * render; an external store lets the effect mark completion and notifies
+ * only subscribers. getServerSnapshot stays true so hydration matches.
+ */
+const restoreListeners = new Set<() => void>();
+let restoreCompleted = false;
+
+function markRestoreCompleted(): void {
+  if (restoreCompleted) return;
+  restoreCompleted = true;
+  for (const listener of restoreListeners) listener();
+}
+
+function subscribeRestore(onStoreChange: () => void): () => void {
+  restoreListeners.add(onStoreChange);
+  return () => {
+    restoreListeners.delete(onStoreChange);
+  };
+}
+
+function getRestoreSnapshot(): boolean {
+  return !restoreCompleted;
+}
+
+function getRestoreServerSnapshot(): boolean {
+  return true;
+}
+
 export type UseAuthSessionsResult = {
   sessions: AuthSessions;
   isLoggingIn: boolean;
@@ -182,7 +216,11 @@ export function useAuthSessions(): UseAuthSessionsResult {
   const [sessions, setSessions] = useState<AuthSessions>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const isRestoringSession = useSyncExternalStore(
+    subscribeRestore,
+    getRestoreSnapshot,
+    getRestoreServerSnapshot,
+  );
   const [twitchDevice, setTwitchDevice] = useState<TwitchDeviceState | null>(
     null,
   );
@@ -396,7 +434,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     } else {
       setIsLoading(false);
     }
-    setIsRestoringSession(false);
+    markRestoreCompleted();
   }, []);
 
   /**

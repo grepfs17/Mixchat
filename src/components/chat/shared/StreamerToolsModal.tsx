@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   FaArrowLeft,
   FaCopy,
@@ -753,6 +760,24 @@ function PastPlaylistsSection({
   );
 }
 
+/** Whether the active tool has something worth keeping running when minimized. */
+function computeCanMinimize({
+  activeTool,
+  giveawayPhase,
+  songQueuePhase,
+  musicItemCount,
+}: {
+  activeTool: ToolId | null;
+  giveawayPhase: string;
+  songQueuePhase: string;
+  musicItemCount: number;
+}): boolean {
+  if (activeTool === "giveaway") return giveawayPhase !== "config";
+  if (activeTool === "song-queue") return songQueuePhase === "open";
+  if (activeTool === "music-player") return musicItemCount > 0;
+  return false;
+}
+
 export default function StreamerToolsModal({
   giveaway,
   poll,
@@ -846,10 +871,6 @@ export default function StreamerToolsModal({
     return rows;
   }, [mods, settings?.allowedMods]);
 
-  const allowedModIds = new Set(
-    (settings?.allowedMods ?? []).map((mod) => mod.id),
-  );
-
   const toggleAllowedMod = useCallback(
     async (mod: { id: string; login: string }, checked: boolean) => {
       if (!settings) return;
@@ -876,32 +897,36 @@ export default function StreamerToolsModal({
     }
   }, [initialTool]);
 
+  // Escape handling: onClose is a parent callback that may change identity
+  // every render; wrap it so the listener is not torn down and re-added.
+  // The event always sees the latest onClose and accessInfoOpen.
+  const closeViaEscape = useEffectEvent(() => {
+    if (accessInfoOpen) {
+      setAccessInfoOpen(false);
+      return;
+    }
+    onClose();
+  });
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      // Unwind the innermost layer first.
-      if (accessInfoOpen) {
-        setAccessInfoOpen(false);
-        return;
-      }
-      onClose();
+      closeViaEscape();
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, accessInfoOpen]);
+  }, []);
 
   // Minimize is allowed whenever the active tool has something to keep
   // running. The giveaway is minimizable while running or revealed. The
   // song queue is minimizable while open. The music player is minimizable
   // as soon as it has at least one track loaded so the mini bar keeps
   // playing while the streamer chats/edit elsewhere.
-  const musicHasItems =
-    !!musicPlayer.activePlaylist &&
-    musicPlayer.activePlaylist.items.length > 0;
-  const canMinimize =
-    (activeTool === "giveaway" && giveaway.phase !== "config") ||
-    (activeTool === "song-queue" && songQueue.phase === "open") ||
-    (activeTool === "music-player" && musicHasItems);
+  const canMinimize = computeCanMinimize({
+    activeTool,
+    giveawayPhase: giveaway.phase,
+    songQueuePhase: songQueue.phase,
+    musicItemCount: musicPlayer.activePlaylist?.items.length ?? 0,
+  });
   const minimizeTitle = canMinimize
     ? "Minimize (the tool keeps running in the corner)"
     : "Nothing to minimize in this state";
@@ -921,13 +946,18 @@ export default function StreamerToolsModal({
     window.open(`${origin}/wheel${query}`, "_blank", "noopener,noreferrer");
   }, [channelKey, publicOrigin]);
 
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === overlayRef.current) onClose();
+    },
+    [onClose],
+  );
+
   return (
     <div
       role="presentation"
       className="embed-config-overlay"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
+      onClick={handleOverlayClick}
       ref={overlayRef}
     >
       <div
@@ -964,367 +994,620 @@ export default function StreamerToolsModal({
 
         <div className="streamer-tools-body">
           {!tool ? (
-            <>
-              {role === "moderator" && (
-                <div className="stream-tools-access-banner">
-                  You are controlling Stream tools as a moderator.
-                </div>
-              )}
-              {role === "owner" && settings && onUpdateSettings && !IS_DESKTOP && (
-                <div className="stream-tools-access">
-                  <div className="stream-tools-access-row">
-                    <label className="stream-tools-access-toggle">
-                      <input
-                        type="checkbox"
-                        checked={settings.allowMods}
-                        disabled={savingAccess}
-                        onChange={(e) =>
-                          void saveAccessSettings({
-                            allowMods: e.target.checked,
-                          })
-                        }
-                      />
-                      <span>Allow moderators to use Stream tools</span>
-                    </label>
-                    <button
-                      type="button"
-                      className="stream-tools-access-info"
-                      onClick={() => setAccessInfoOpen(true)}
-                      title="What can moderators do?"
-                      aria-label="What can moderators do?"
-                    >
-                      <FaInfoCircle size={13} />
-                    </button>
-                  </div>
-
-                  {accessError && (
-                    <div className="stream-tools-access-error" role="alert">
-                      {accessError}
-                    </div>
-                  )}
-
-                  {settings.allowMods && (
-                    <fieldset
-                      className="stream-tools-access-scope"
-                      disabled={savingAccess}
-                    >
-                      <legend className="stream-tools-access-scope-label">
-                        Give access to
-                      </legend>
-                      <label className="stream-tools-access-scope-option">
-                        <input
-                          type="radio"
-                          name="stream-tools-mod-access"
-                          checked={settings.modAccess === "all"}
-                          onChange={() => void setModAccess("all")}
-                        />
-                        <span>All moderators</span>
-                      </label>
-                      <label className="stream-tools-access-scope-option">
-                        <input
-                          type="radio"
-                          name="stream-tools-mod-access"
-                          checked={settings.modAccess === "selected"}
-                          onChange={() => void setModAccess("selected")}
-                        />
-                        <span>Only selected moderators</span>
-                      </label>
-
-                      {settings.modAccess === "selected" && (
-                        <div
-                          className="stream-tools-access-mods"
-                          role="group"
-                          aria-label="Select moderators"
-                        >
-                          {modsLoading && (
-                            <span className="stream-tools-access-mods-status">
-                              Loading moderators...
-                            </span>
-                          )}
-                          {modsNeedsReauth && (
-                            <span className="stream-tools-access-mods-status">
-                              Reconnect your Twitch account to load the
-                              moderator list.
-                            </span>
-                          )}
-                          {modsError && (
-                            <span className="stream-tools-access-mods-error">
-                              {modsError}{" "}
-                              <button
-                                type="button"
-                                className="stream-tools-access-mods-retry"
-                                onClick={reloadMods}
-                              >
-                                Retry
-                              </button>
-                            </span>
-                          )}
-                          {modsSettled &&
-                            !modsError &&
-                            !modsNeedsReauth &&
-                            modRows.length === 0 && (
-                              <span className="stream-tools-access-mods-status">
-                                No moderators found.
-                              </span>
-                            )}
-                          {modsSettled &&
-                            modRows.map((row) => (
-                              <label
-                                key={row.key}
-                                className="stream-tools-access-mod"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={allowedModIds.has(row.id)}
-                                  onChange={(e) =>
-                                    void toggleAllowedMod(
-                                      { id: row.id, login: row.login },
-                                      e.target.checked,
-                                    )
-                                  }
-                                />
-                                <span>{row.label}</span>
-                                {row.stale && (
-                                  <span className="stream-tools-access-mod-note">
-                                    not a moderator
-                                  </span>
-                                )}
-                              </label>
-                            ))}
-                          {modsSettled &&
-                            !modsError &&
-                            modRows.length > 0 &&
-                            settings.allowedMods.length === 0 && (
-                              <span className="stream-tools-access-mods-status">
-                                No one is selected, so no moderator gets
-                                access.
-                              </span>
-                            )}
-                        </div>
-                      )}
-                    </fieldset>
-                  )}
-                </div>
-              )}
-
-              {accessInfoOpen && (
-                <div
-                  className="stream-tools-access-modal"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="stream-tools-access-title"
-                  onClick={() => setAccessInfoOpen(false)}
-                >
-                  <div
-                    className="stream-tools-access-modal-box"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="stream-tools-access-modal-head">
-                      <h3 id="stream-tools-access-title">
-                        <FaInfoCircle size={15} />
-                        What moderators can do
-                      </h3>
-                      <button
-                        type="button"
-                        className="stream-tools-access-modal-close"
-                        onClick={() => setAccessInfoOpen(false)}
-                        title="Close"
-                        aria-label="Close"
-                      >
-                        <FaTimes size={14} />
-                      </button>
-                    </div>
-
-                    <p className="stream-tools-access-modal-intro">
-                      When this is on, Twitch moderators of your channel get
-                      the same Stream tools you have. You can allow every
-                      moderator or only the ones you select.
-                    </p>
-
-                    <div className="stream-tools-access-modal-cols">
-                      <div className="stream-tools-access-modal-col">
-                        <h4>They can</h4>
-                        <ul>
-                          <li>Run a giveaway: start, cancel, reveal, announce</li>
-                          <li>Use the music player: playlists, tracks, play/pause</li>
-                          <li>Manage the song queue: start, end, add, skip, remove</li>
-                          <li>Create and edit wheels: rename, options, delete</li>
-                          <li>Request Twitch polls, run by the streamer</li>
-                        </ul>
-                      </div>
-                      <div className="stream-tools-access-modal-col">
-                        <h4>They can&apos;t</h4>
-                        <ul>
-                          <li>Spin the wheel</li>
-                          <li>Create or manage Twitch predictions</li>
-                          <li>Change this setting</li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <p className="stream-tools-access-modal-note">
-                      Only Twitch moderators are included, and only those you
-                      allow.
-                    </p>
-
-                    <div className="stream-tools-access-modal-actions">
-                      <button
-                        type="button"
-                        className="stream-tools-access-modal-ok"
-                        onClick={() => setAccessInfoOpen(false)}
-                      >
-                        Got it
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <ul className="streamer-tools-list">
-                {AVAILABLE_TOOLS.map((t) => (
-                  <li key={t.id} className="streamer-tools-list-item">
-                    <div className="streamer-tools-list-meta">
-                      <span className="streamer-tools-list-label">
-                        {t.label}
-                      </span>
-                      <span className="streamer-tools-list-desc">
-                        {t.description}
-                      </span>
-                    </div>
-                    <button type="button"
-                      className="streamer-tools-list-open"
-                      onClick={() => {
-                        if (t.id === "wheel") {
-                          openWheelTool();
-                          return;
-                        }
-                        setActiveTool(t.id);
-                      }}
-                    >
-                      Open
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              <HistorySection
-                history={giveaway.history}
-                onClear={giveaway.clearHistory}
-              />
-              {!IS_DESKTOP && (
-                <PastPlaylistsSection
-                  channelKey={channelKey}
-                  publicOrigin={publicOrigin}
-                />
-              )}
-            </>
+            <StreamToolsHome
+              role={role}
+              settings={settings}
+              onUpdateSettings={onUpdateSettings}
+              savingAccess={savingAccess}
+              accessError={accessError}
+              mods={modRows}
+              modsLoading={modsLoading}
+              modsSettled={modsSettled}
+              modsError={modsError}
+              modsNeedsReauth={modsNeedsReauth}
+              reloadMods={reloadMods}
+              accessInfoOpen={accessInfoOpen}
+              onOpenInfo={() => setAccessInfoOpen(true)}
+              onCloseInfo={() => setAccessInfoOpen(false)}
+              onSave={saveAccessSettings}
+              onToggleAllowedMod={toggleAllowedMod}
+              onSetModAccess={setModAccess}
+              onOpenTool={(id) => {
+                if (id === "wheel") {
+                  openWheelTool();
+                  return;
+                }
+                setActiveTool(id);
+              }}
+              giveaway={giveaway}
+              channelKey={channelKey}
+              publicOrigin={publicOrigin}
+            />
           ) : (
-            <div className="streamer-tools-active">
-              <button type="button"
-                className="streamer-tools-back"
-                onClick={() => setActiveTool(null)}
-                title="Back to tools"
-              >
-                <FaArrowLeft size={12} />
-                <span>Back to tools</span>
-              </button>
-              {tool.id === "giveaway" && (
-                <GiveawayPanel
-                  giveaway={giveaway}
-                  youtubeConnected={youtubeConnected}
-                  onAnnounce={async (winner, text) => {
-                    if (announcing) return;
-                    // Shared giveaways: exactly one client may post the
-                    // winner message. Claim it first and bail if another
-                    // client already did.
-                    if (!IS_DESKTOP && channelKey) {
-                      try {
-                        const res = await giveawayAction(
-                          channelKey,
-                          "claimAnnounce",
-                        );
-                        if (!res.claimedWinner) return;
-                      } catch {
-                        return;
-                      }
-                    }
-                    setAnnouncing(true);
-                    try {
-                      await onAnnounce(winner, text);
-                    } finally {
-                      setAnnouncing(false);
-                    }
-                  }}
-                  announcing={announcing}
-                />
-              )}
-              {tool.id === "poll" && (
-                <PollPanel
-                  poll={poll}
-                  livePoll={livePoll}
-                  role={role}
-                  affiliateEligible={affiliateEligible}
-                />
-              )}
-              {tool.id === "prediction" && (
-                <PredictionPanel
-                  prediction={prediction}
-                  livePrediction={livePrediction}
-                  role={role}
-                  affiliateEligible={affiliateEligible}
-                />
-              )}
-              {tool.id === "music-player" && (
-                <MusicPlayerPanel
-                  player={musicPlayer}
-                  streamGameId={streamGameId}
-                  streamGameName={streamGameName}
-                  onSearchCategories={onSearchCategories}
-                />
-              )}
-              {tool.id === "song-queue" && (
-                <SongQueuePanel
-                  publicOrigin={publicOrigin}
-                  phase={songQueue.phase}
-                  config={songQueue.config}
-                  setConfig={songQueue.setConfig}
-                  currentItem={songQueue.currentItem}
-                  pending={songQueue.pending}
-                  history={songQueue.history}
-                  items={songQueue.items}
-                  loading={songQueue.loading}
-                  error={songQueue.error}
-                  publicUrl={
-                    songQueue.bootstrap
-                      ? `${publicOrigin}${songQueue.bootstrap.publicUrl}`
-                      : null
-                  }
-                  start={async () => {
-                    await songQueue.start();
-                  }}
-                  end={async () => {
-                    await songQueue.end();
-                  }}
-                  remove={async (id) => {
-                    await songQueue.remove(id);
-                  }}
-                  skip={async (id) => {
-                    await songQueue.skip(id);
-                  }}
-                  playNow={async (id) => {
-                    await songQueue.playNow(id);
-                  }}
-                  next={async () => {
-                    await songQueue.next();
-                  }}
-                  previous={async () => {
-                    await songQueue.previous();
-                  }}
-                  reportDuration={async (id, dur) => {
-                    await songQueue.reportDuration(id, dur);
-                  }}
-                />
-              )}
-            </div>
+            <ActiveToolPanel
+              tool={tool}
+              giveaway={giveaway}
+              youtubeConnected={youtubeConnected}
+              announcing={announcing}
+              channelKey={channelKey}
+              onAnnounce={onAnnounce}
+              onAnnouncingChange={setAnnouncing}
+              onBack={() => setActiveTool(null)}
+              poll={poll}
+              livePoll={livePoll}
+              prediction={prediction}
+              livePrediction={livePrediction}
+              role={role}
+              affiliateEligible={affiliateEligible}
+              musicPlayer={musicPlayer}
+              streamGameId={streamGameId}
+              streamGameName={streamGameName}
+              onSearchCategories={onSearchCategories}
+              songQueue={songQueue}
+              publicOrigin={publicOrigin}
+            />
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ActiveToolPanelProps {
+  tool: ToolDescriptor;
+  giveaway: UseGiveawayResult;
+  youtubeConnected: boolean;
+  announcing: boolean;
+  channelKey: string | null;
+  onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
+  onAnnouncingChange: (value: boolean) => void;
+  onBack: () => void;
+  poll: UsePollCreatorResult;
+  livePoll: PollState | null;
+  prediction: UsePredictionCreatorResult;
+  livePrediction: PredictionState | null;
+  role: "owner" | "moderator";
+  affiliateEligible: boolean;
+  musicPlayer: UseMusicPlayerResult;
+  streamGameId: string;
+  streamGameName: string;
+  onSearchCategories?: (
+    query: string,
+  ) => Promise<Array<{ id: string; name: string }>>;
+  songQueue: UseSongQueueResult;
+  publicOrigin: string;
+}
+
+function ActiveToolPanel({
+  tool,
+  giveaway,
+  youtubeConnected,
+  announcing,
+  channelKey,
+  onAnnounce,
+  onAnnouncingChange,
+  onBack,
+  poll,
+  livePoll,
+  prediction,
+  livePrediction,
+  role,
+  affiliateEligible,
+  musicPlayer,
+  streamGameId,
+  streamGameName,
+  onSearchCategories,
+  songQueue,
+  publicOrigin,
+}: ActiveToolPanelProps) {
+  const handleAnnounce = async (winner: GiveawayEntry, text: string) => {
+    if (announcing) return;
+    // Shared giveaways: exactly one client may post the winner message.
+    // Claim it first and bail if another client already did.
+    if (!IS_DESKTOP && channelKey) {
+      try {
+        const res = await giveawayAction(channelKey, "claimAnnounce");
+        if (!res.claimedWinner) return;
+      } catch {
+        return;
+      }
+    }
+    onAnnouncingChange(true);
+    try {
+      await onAnnounce(winner, text);
+    } finally {
+      onAnnouncingChange(false);
+    }
+  };
+
+  return (
+    <div className="streamer-tools-active">
+      <button
+        type="button"
+        className="streamer-tools-back"
+        onClick={onBack}
+        title="Back to tools"
+      >
+        <FaArrowLeft size={12} />
+        <span>Back to tools</span>
+      </button>
+      {tool.id === "giveaway" && (
+        <GiveawayPanel
+          giveaway={giveaway}
+          youtubeConnected={youtubeConnected}
+          onAnnounce={handleAnnounce}
+          announcing={announcing}
+        />
+      )}
+      {tool.id === "poll" && (
+        <PollPanel
+          poll={poll}
+          livePoll={livePoll}
+          role={role}
+          affiliateEligible={affiliateEligible}
+        />
+      )}
+      {tool.id === "prediction" && (
+        <PredictionPanel
+          prediction={prediction}
+          livePrediction={livePrediction}
+          role={role}
+          affiliateEligible={affiliateEligible}
+        />
+      )}
+      {tool.id === "music-player" && (
+        <MusicPlayerPanel
+          player={musicPlayer}
+          streamGameId={streamGameId}
+          streamGameName={streamGameName}
+          onSearchCategories={onSearchCategories}
+        />
+      )}
+      {tool.id === "song-queue" && (
+        <SongQueuePanel
+          publicOrigin={publicOrigin}
+          phase={songQueue.phase}
+          config={songQueue.config}
+          setConfig={songQueue.setConfig}
+          currentItem={songQueue.currentItem}
+          pending={songQueue.pending}
+          history={songQueue.history}
+          items={songQueue.items}
+          loading={songQueue.loading}
+          error={songQueue.error}
+          publicUrl={
+            songQueue.bootstrap
+              ? `${publicOrigin}${songQueue.bootstrap.publicUrl}`
+              : null
+          }
+          start={async () => {
+            await songQueue.start();
+          }}
+          end={async () => {
+            await songQueue.end();
+          }}
+          remove={async (id) => {
+            await songQueue.remove(id);
+          }}
+          skip={async (id) => {
+            await songQueue.skip(id);
+          }}
+          playNow={async (id) => {
+            await songQueue.playNow(id);
+          }}
+          next={async () => {
+            await songQueue.next();
+          }}
+          previous={async () => {
+            await songQueue.previous();
+          }}
+          reportDuration={async (id, dur) => {
+            await songQueue.reportDuration(id, dur);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ToolList({ onOpenTool }: { onOpenTool: (id: ToolId) => void }) {
+  return (
+    <ul className="streamer-tools-list">
+      {AVAILABLE_TOOLS.map((t) => (
+        <li key={t.id} className="streamer-tools-list-item">
+          <div className="streamer-tools-list-meta">
+            <span className="streamer-tools-list-label">{t.label}</span>
+            <span className="streamer-tools-list-desc">{t.description}</span>
+          </div>
+          <button
+            type="button"
+            className="streamer-tools-list-open"
+            onClick={() => onOpenTool(t.id)}
+          >
+            Open
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface StreamToolsHomeProps {
+  role: "owner" | "moderator";
+  settings?: StreamToolsSettings;
+  onUpdateSettings?: (
+    patch: Partial<StreamToolsSettings>,
+  ) => Promise<void>;
+  savingAccess: boolean;
+  accessError: string | null;
+  mods: ModRow[];
+  modsLoading: boolean;
+  modsSettled: boolean;
+  modsError: string | null;
+  modsNeedsReauth: boolean;
+  reloadMods: () => void;
+  accessInfoOpen: boolean;
+  onOpenInfo: () => void;
+  onCloseInfo: () => void;
+  onSave: (patch: Partial<StreamToolsSettings>) => Promise<void>;
+  onToggleAllowedMod: (
+    mod: { id: string; login: string },
+    checked: boolean,
+  ) => Promise<void>;
+  onSetModAccess: (modAccess: StreamToolsModAccess) => Promise<void> | void;
+  onOpenTool: (id: ToolId) => void;
+  giveaway: UseGiveawayResult;
+  channelKey: string | null;
+  publicOrigin: string;
+}
+
+function StreamToolsHome({
+  role,
+  settings,
+  onUpdateSettings,
+  savingAccess,
+  accessError,
+  mods,
+  modsLoading,
+  modsSettled,
+  modsError,
+  modsNeedsReauth,
+  reloadMods,
+  accessInfoOpen,
+  onOpenInfo,
+  onCloseInfo,
+  onSave,
+  onToggleAllowedMod,
+  onSetModAccess,
+  onOpenTool,
+  giveaway,
+  channelKey,
+  publicOrigin,
+}: StreamToolsHomeProps) {
+  const showAccess =
+    role === "owner" && Boolean(settings) && Boolean(onUpdateSettings) && !IS_DESKTOP;
+
+  return (
+    <>
+      {role === "moderator" && (
+        <div className="stream-tools-access-banner">
+          You are controlling Stream tools as a moderator.
+        </div>
+      )}
+      {showAccess && settings && (
+        <StreamToolsAccessSettings
+          settings={settings}
+          savingAccess={savingAccess}
+          accessError={accessError}
+          mods={mods}
+          modsLoading={modsLoading}
+          modsSettled={modsSettled}
+          modsError={modsError}
+          modsNeedsReauth={modsNeedsReauth}
+          reloadMods={reloadMods}
+          onOpenInfo={onOpenInfo}
+          onSave={onSave}
+          onToggleAllowedMod={onToggleAllowedMod}
+          onSetModAccess={onSetModAccess}
+        />
+      )}
+      {accessInfoOpen && <StreamToolsAccessInfoModal onClose={onCloseInfo} />}
+      <ToolList onOpenTool={onOpenTool} />
+      <HistorySection
+        history={giveaway.history}
+        onClear={giveaway.clearHistory}
+      />
+      {!IS_DESKTOP && (
+        <PastPlaylistsSection
+          channelKey={channelKey}
+          publicOrigin={publicOrigin}
+        />
+      )}
+    </>
+  );
+}
+
+interface ModRow {
+  key: string;
+  id: string;
+  login: string;
+  label: string;
+  stale: boolean;
+}
+
+interface StreamToolsAccessSettingsProps {
+  settings: StreamToolsSettings;
+  savingAccess: boolean;
+  accessError: string | null;
+  mods: ModRow[];
+  modsLoading: boolean;
+  modsSettled: boolean;
+  modsError: string | null;
+  modsNeedsReauth: boolean;
+  reloadMods: () => void;
+  onOpenInfo: () => void;
+  onSave: (patch: Partial<StreamToolsSettings>) => Promise<void>;
+  onToggleAllowedMod: (
+    mod: { id: string; login: string },
+    checked: boolean,
+  ) => Promise<void>;
+  onSetModAccess: (modAccess: StreamToolsModAccess) => Promise<void> | void;
+}
+
+function StreamToolsAccessSettings({
+  settings,
+  savingAccess,
+  accessError,
+  mods,
+  modsLoading,
+  modsSettled,
+  modsError,
+  modsNeedsReauth,
+  reloadMods,
+  onOpenInfo,
+  onSave,
+  onToggleAllowedMod,
+  onSetModAccess,
+}: StreamToolsAccessSettingsProps) {
+  const allowedModIds = new Set(settings.allowedMods.map((mod) => mod.id));
+
+  return (
+    <div className="stream-tools-access">
+      <div className="stream-tools-access-row">
+        <label className="stream-tools-access-toggle">
+          <input
+            type="checkbox"
+            checked={settings.allowMods}
+            disabled={savingAccess}
+            onChange={(e) => void onSave({ allowMods: e.target.checked })}
+          />
+          <span>Allow moderators to use Stream tools</span>
+        </label>
+        <button
+          type="button"
+          className="stream-tools-access-info"
+          onClick={onOpenInfo}
+          title="What can moderators do?"
+          aria-label="What can moderators do?"
+        >
+          <FaInfoCircle size={13} />
+        </button>
+      </div>
+
+      {accessError && (
+        <div className="stream-tools-access-error" role="alert">
+          {accessError}
+        </div>
+      )}
+
+      {settings.allowMods && (
+        <fieldset
+          className="stream-tools-access-scope"
+          disabled={savingAccess}
+        >
+          <legend className="stream-tools-access-scope-label">
+            Give access to
+          </legend>
+          <label className="stream-tools-access-scope-option">
+            <input
+              type="radio"
+              name="stream-tools-mod-access"
+              checked={settings.modAccess === "all"}
+              onChange={() => void onSetModAccess("all")}
+            />
+            <span>All moderators</span>
+          </label>
+          <label className="stream-tools-access-scope-option">
+            <input
+              type="radio"
+              name="stream-tools-mod-access"
+              checked={settings.modAccess === "selected"}
+              onChange={() => void onSetModAccess("selected")}
+            />
+            <span>Only selected moderators</span>
+          </label>
+
+          {settings.modAccess === "selected" && (
+            <ModAccessPicker
+              mods={mods}
+              allowedModIds={allowedModIds}
+              modsLoading={modsLoading}
+              modsSettled={modsSettled}
+              modsError={modsError}
+              modsNeedsReauth={modsNeedsReauth}
+              reloadMods={reloadMods}
+              allowedModsCount={settings.allowedMods.length}
+              onToggleAllowedMod={onToggleAllowedMod}
+            />
+          )}
+        </fieldset>
+      )}
+    </div>
+  );
+}
+
+interface ModAccessPickerProps {
+  mods: ModRow[];
+  allowedModIds: Set<string>;
+  modsLoading: boolean;
+  modsSettled: boolean;
+  modsError: string | null;
+  modsNeedsReauth: boolean;
+  reloadMods: () => void;
+  allowedModsCount: number;
+  onToggleAllowedMod: (
+    mod: { id: string; login: string },
+    checked: boolean,
+  ) => Promise<void>;
+}
+
+function ModAccessPicker({
+  mods,
+  allowedModIds,
+  modsLoading,
+  modsSettled,
+  modsError,
+  modsNeedsReauth,
+  reloadMods,
+  allowedModsCount,
+  onToggleAllowedMod,
+}: ModAccessPickerProps) {
+  const showEmptyList =
+    modsSettled && !modsError && !modsNeedsReauth && mods.length === 0;
+  const showNoneSelected =
+    modsSettled && !modsError && mods.length > 0 && allowedModsCount === 0;
+
+  return (
+    <div
+      className="stream-tools-access-mods"
+      role="group"
+      aria-label="Select moderators"
+    >
+      {modsLoading && (
+        <span className="stream-tools-access-mods-status">
+          Loading moderators...
+        </span>
+      )}
+      {modsNeedsReauth && (
+        <span className="stream-tools-access-mods-status">
+          Reconnect your Twitch account to load the moderator list.
+        </span>
+      )}
+      {modsError && (
+        <span className="stream-tools-access-mods-error">
+          {modsError}{" "}
+          <button
+            type="button"
+            className="stream-tools-access-mods-retry"
+            onClick={reloadMods}
+          >
+            Retry
+          </button>
+        </span>
+      )}
+      {showEmptyList && (
+        <span className="stream-tools-access-mods-status">
+          No moderators found.
+        </span>
+      )}
+      {modsSettled &&
+        mods.map((row) => (
+          <label key={row.key} className="stream-tools-access-mod">
+            <input
+              type="checkbox"
+              checked={allowedModIds.has(row.id)}
+              onChange={(e) =>
+                void onToggleAllowedMod(
+                  { id: row.id, login: row.login },
+                  e.target.checked,
+                )
+              }
+            />
+            <span>{row.label}</span>
+            {row.stale && (
+              <span className="stream-tools-access-mod-note">
+                not a moderator
+              </span>
+            )}
+          </label>
+        ))}
+      {showNoneSelected && (
+        <span className="stream-tools-access-mods-status">
+          No one is selected, so no moderator gets access.
+        </span>
+      )}
+    </div>
+  );
+}
+
+function StreamToolsAccessInfoModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="stream-tools-access-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stream-tools-access-title"
+      onClick={onClose}
+    >
+      <div
+        className="stream-tools-access-modal-box"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="stream-tools-access-modal-head">
+          <h3 id="stream-tools-access-title">
+            <FaInfoCircle size={15} />
+            What moderators can do
+          </h3>
+          <button
+            type="button"
+            className="stream-tools-access-modal-close"
+            onClick={onClose}
+            title="Close"
+            aria-label="Close"
+          >
+            <FaTimes size={14} />
+          </button>
+        </div>
+
+        <p className="stream-tools-access-modal-intro">
+          When this is on, Twitch moderators of your channel get the same
+          Stream tools you have. You can allow every moderator or only the
+          ones you select.
+        </p>
+
+        <div className="stream-tools-access-modal-cols">
+          <div className="stream-tools-access-modal-col">
+            <h4>They can</h4>
+            <ul>
+              <li>Run a giveaway: start, cancel, reveal, announce</li>
+              <li>Use the music player: playlists, tracks, play/pause</li>
+              <li>Manage the song queue: start, end, add, skip, remove</li>
+              <li>Create and edit wheels: rename, options, delete</li>
+              <li>Request Twitch polls, run by the streamer</li>
+            </ul>
+          </div>
+          <div className="stream-tools-access-modal-col">
+            <h4>They can&apos;t</h4>
+            <ul>
+              <li>Spin the wheel</li>
+              <li>Create or manage Twitch predictions</li>
+              <li>Change this setting</li>
+            </ul>
+          </div>
+        </div>
+
+        <p className="stream-tools-access-modal-note">
+          Only Twitch moderators are included, and only those you allow.
+        </p>
+
+        <div className="stream-tools-access-modal-actions">
+          <button
+            type="button"
+            className="stream-tools-access-modal-ok"
+            onClick={onClose}
+          >
+            Got it
+          </button>
         </div>
       </div>
     </div>
