@@ -168,4 +168,75 @@ describe("SongQueueMinimizedBar", () => {
     const url = write.mock.calls[0]?.[0] as string;
     expect(url).toMatch(/\/s\/session-1$/);
   });
+
+  it("mounts the YouTube player only on the audio host", () => {
+    const { container, unmount } = render(
+      <SongQueueMinimizedBar
+        queue={makeQueue()}
+        isHost
+        onOpen={vi.fn()}
+        onEnd={vi.fn()}
+      />,
+    );
+    expect(
+      container.querySelector(".song-queue-bar-player .song-queue-player-iframe"),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(
+      <SongQueueMinimizedBar
+        queue={makeQueue()}
+        isHost={false}
+        onOpen={vi.fn()}
+        onEnd={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("Playing on the broadcaster's device"),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".song-queue-player-iframe")).toBeNull();
+  });
+
+  it("disables local play/pause for non-hosts while keeping server controls", () => {
+    const queue = makeQueue();
+    render(
+      <SongQueueMinimizedBar
+        queue={queue}
+        isHost={false}
+        onOpen={vi.fn()}
+        onEnd={vi.fn()}
+      />,
+    );
+    const play = screen.getByTestId("song-queue-bar-play");
+    expect(play).toBeDisabled();
+    expect(play).toHaveAttribute(
+      "title",
+      "Playing on the broadcaster's device",
+    );
+    // Volume is host-only (local iframe control).
+    expect(screen.queryByLabelText("Volume")).toBeNull();
+    // Server-side index changes stay available to moderators.
+    fireEvent.click(screen.getByTitle("Next"));
+    expect(queue.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a non-host start the queue when nothing has played yet", () => {
+    const queue = makeQueue({
+      currentItem: undefined,
+      items: [makeItem({ id: "i1" })],
+      pending: [makeItem({ id: "i1" })],
+    });
+    render(
+      <SongQueueMinimizedBar
+        queue={queue}
+        isHost={false}
+        onOpen={vi.fn()}
+        onEnd={vi.fn()}
+      />,
+    );
+    const play = screen.getByTestId("song-queue-bar-play");
+    expect(play).toBeEnabled();
+    fireEvent.click(play);
+    expect(queue.playNow).toHaveBeenCalledWith("i1");
+  });
 });

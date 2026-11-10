@@ -141,6 +141,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
       {!IS_DESKTOP && showStreamTools && songQueue.phase === "open" && (
         <SongQueueMinimizedBar
           queue={songQueue}
+          isHost={streamToolsRole === "owner"}
           hidden={streamerToolsOpen}
           onOpen={() => onOpenStreamerTools("song-queue")}
           onEnd={async () => {

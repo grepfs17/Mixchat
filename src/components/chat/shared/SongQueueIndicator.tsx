@@ -161,19 +161,27 @@ function SongQueueBarBody({
   playerRef,
   queue,
   onStateChange,
+  isHost,
 }: {
   playerRef: React.RefObject<SongQueuePlayerHandle | null>;
   queue: UseSongQueueResult;
   onStateChange: (state: SongQueuePlayerState) => void;
+  isHost: boolean;
 }) {
   return (
     <div className="song-queue-bar-body">
       <div className="song-queue-bar-player-wrap">
-        <SongQueueBarPlayer
-          playerRef={playerRef}
-          queue={queue}
-          onStateChange={onStateChange}
-        />
+        {isHost ? (
+          <SongQueueBarPlayer
+            playerRef={playerRef}
+            queue={queue}
+            onStateChange={onStateChange}
+          />
+        ) : (
+          <div className="song-queue-bar-player song-queue-bar-remote">
+            Playing on the broadcaster&apos;s device
+          </div>
+        )}
       </div>
       <SongQueueBarList
         current={queue.currentItem}
@@ -315,6 +323,30 @@ function SongQueueBarCopyButton({
   );
 }
 
+function playPauseTitle({
+  isHost,
+  isPlaying,
+  canResume,
+  canStartFresh,
+  hasCurrent,
+}: {
+  isHost: boolean;
+  isPlaying: boolean;
+  canResume: boolean;
+  canStartFresh: boolean;
+  hasCurrent: boolean;
+}): string {
+  if (canStartFresh) return "Start playing the queue";
+  if (!isHost) {
+    return hasCurrent
+      ? "Playing on the broadcaster's device"
+      : "Nothing to play yet";
+  }
+  if (isPlaying) return "Pause";
+  if (canResume) return "Resume";
+  return "Nothing to play yet";
+}
+
 function SongQueueBarPlayPauseButton({
   isPlaying,
   canResume,
@@ -322,6 +354,8 @@ function SongQueueBarPlayPauseButton({
   firstPendingId,
   playerRef,
   onPlayNow,
+  isHost,
+  hasCurrent,
 }: {
   isPlaying: boolean;
   canResume: boolean;
@@ -329,6 +363,8 @@ function SongQueueBarPlayPauseButton({
   firstPendingId: string | undefined;
   playerRef: React.RefObject<SongQueuePlayerHandle | null>;
   onPlayNow: (id: string) => void;
+  isHost: boolean;
+  hasCurrent: boolean;
 }) {
   const onPlayPause = () => {
     if (isPlaying) {
@@ -341,21 +377,22 @@ function SongQueueBarPlayPauseButton({
       }
     }
   };
+  // Only the audio host can start/resume local playback. Non-hosts may
+  // still kick off the first song (a server write the host follows).
+  const canStart = isHost ? canResume || canStartFresh : canStartFresh;
   return (
     <button
       type="button"
       className="song-queue-bar-btn song-queue-bar-btn--primary"
       onClick={onPlayPause}
-      disabled={!canResume && !canStartFresh}
-      title={
-        isPlaying
-          ? "Pause"
-          : canResume
-            ? "Resume"
-            : canStartFresh
-              ? "Start playing the queue"
-              : "Nothing to play yet"
-      }
+      disabled={!canStart}
+      title={playPauseTitle({
+        isHost,
+        isPlaying,
+        canResume,
+        canStartFresh,
+        hasCurrent,
+      })}
       aria-label={isPlaying ? "Pause" : "Play"}
       data-testid="song-queue-bar-play"
     >
@@ -378,6 +415,7 @@ function SongQueueBarControls({
   linkCopied,
   setLinkCopied,
   onEnd,
+  isHost,
 }: {
   isPlaying: boolean;
   canResume: boolean;
@@ -392,6 +430,7 @@ function SongQueueBarControls({
   linkCopied: LinkCopiedState;
   setLinkCopied: (state: LinkCopiedState) => void;
   onEnd: () => Promise<void> | void;
+  isHost: boolean;
 }) {
   return (
     <div className="song-queue-bar-controls">
@@ -402,6 +441,8 @@ function SongQueueBarControls({
         firstPendingId={queue.pending[0]?.id}
         playerRef={playerRef}
         onPlayNow={(id) => void queue.playNow(id)}
+        isHost={isHost}
+        hasCurrent={Boolean(current)}
       />
       <button
         type="button"
@@ -423,12 +464,14 @@ function SongQueueBarControls({
       >
         <FaStepForward size={11} />
       </button>
-      <SongQueueBarVolume
-        volume={volume}
-        setVolume={setVolume}
-        playerRef={playerRef}
-        onVolumeChange={onVolumeChange}
-      />
+      {isHost && (
+        <SongQueueBarVolume
+          volume={volume}
+          setVolume={setVolume}
+          playerRef={playerRef}
+          onVolumeChange={onVolumeChange}
+        />
+      )}
       {publicUrl && (
         <SongQueueBarCopyButton
           publicUrl={publicUrl}
@@ -469,6 +512,7 @@ function SongQueueBarHeader({
   linkCopied,
   setLinkCopied,
   onEnd,
+  isHost,
 }: {
   expanded: boolean;
   setExpanded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -488,6 +532,7 @@ function SongQueueBarHeader({
   linkCopied: LinkCopiedState;
   setLinkCopied: (state: LinkCopiedState) => void;
   onEnd: () => Promise<void> | void;
+  isHost: boolean;
 }) {
   return (
     <div className="song-queue-bar-header">
@@ -522,6 +567,7 @@ function SongQueueBarHeader({
         linkCopied={linkCopied}
         setLinkCopied={setLinkCopied}
         onEnd={onEnd}
+        isHost={isHost}
       />
     </div>
   );
@@ -532,11 +578,18 @@ export default function SongQueueMinimizedBar({
   hidden,
   onOpen,
   onEnd,
+  isHost = true,
 }: {
   queue: UseSongQueueResult;
   hidden?: boolean;
   onOpen: () => void;
   onEnd: () => Promise<void> | void;
+  /**
+   * The broadcaster's client is the audio host. Moderator browsers see the
+   * queue and can drive server-side index changes, but never mount the
+   * local YouTube player (mirrors the music player's isAudioHost gate).
+   */
+  isHost?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [linkCopied, setLinkCopied] = useState<LinkCopiedState>("idle");
@@ -557,8 +610,8 @@ export default function SongQueueMinimizedBar({
   );
 
   const hasItems = queue.items.length > 0;
-  const isPlaying = playerState === "playing";
-  const canResume = hasItems && (current !== undefined);
+  const isPlaying = isHost && playerState === "playing";
+  const canResume = isHost && hasItems && current !== undefined;
   const canStartFresh =
     !current && queue.pending.length > 0 && playerState !== "playing";
 
@@ -586,11 +639,13 @@ export default function SongQueueMinimizedBar({
         linkCopied={linkCopied}
         setLinkCopied={setLinkCopied}
         onEnd={onEnd}
+        isHost={isHost}
       />
       <SongQueueBarBody
         playerRef={playerRef}
         queue={queue}
         onStateChange={setPlayerState}
+        isHost={isHost}
       />
     </div>
   );
