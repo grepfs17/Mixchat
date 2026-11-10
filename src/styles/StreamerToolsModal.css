@@ -125,10 +125,29 @@
     min-width: 0;
 }
 
+.streamer-tools-list-label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 .streamer-tools-list-label {
     font-weight: 600;
     font-size: 14px;
     color: var(--color-text-primary);
+}
+
+.streamer-tools-list-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-pill);
+    padding: 1px 7px;
+    background: var(--color-bg-secondary);
 }
 
 .streamer-tools-list-desc {

@@ -97,6 +97,8 @@ interface ToolDescriptor {
   id: ToolId;
   label: string;
   description: string;
+  /** Optional status badge shown next to the label (e.g. "NOT TESTED"). */
+  badge?: string;
 }
 
 const WEB_ONLY_TOOLS = new Set<ToolId>(["song-queue", "wheel"]);
@@ -118,16 +120,6 @@ const TOOLS: ToolDescriptor[] = [
     description: "Pick a winner from viewers who type a keyword in chat.",
   },
   {
-    id: "poll",
-    label: "Poll",
-    description: "Ask chat to vote with a Twitch poll.",
-  },
-  {
-    id: "prediction",
-    label: "Prediction",
-    description: "Let viewers bet Channel Points on an outcome.",
-  },
-  {
     id: "song-queue",
     label: "Song Queue",
     description: "Let viewers queue YouTube songs in chat.",
@@ -137,6 +129,18 @@ const TOOLS: ToolDescriptor[] = [
     label: "Wheel Spin",
     description:
       "Spin a wheel to pick a winner. Opens in a new tab. Save and share wheels.",
+  },
+  {
+    id: "poll",
+    label: "Poll",
+    description: "Ask chat to vote with a Twitch poll.",
+    badge: "NOT TESTED",
+  },
+  {
+    id: "prediction",
+    label: "Prediction",
+    description: "Let viewers bet Channel Points on an outcome.",
+    badge: "NOT TESTED",
   },
 ];
 
@@ -1216,7 +1220,12 @@ function ToolList({ onOpenTool }: { onOpenTool: (id: ToolId) => void }) {
       {AVAILABLE_TOOLS.map((t) => (
         <li key={t.id} className="streamer-tools-list-item">
           <div className="streamer-tools-list-meta">
-            <span className="streamer-tools-list-label">{t.label}</span>
+            <span className="streamer-tools-list-label-row">
+              <span className="streamer-tools-list-label">{t.label}</span>
+              {t.badge && (
+                <span className="streamer-tools-list-badge">{t.badge}</span>
+              )}
+            </span>
             <span className="streamer-tools-list-desc">{t.description}</span>
           </div>
           <button
