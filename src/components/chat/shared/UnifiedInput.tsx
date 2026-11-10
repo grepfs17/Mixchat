@@ -424,6 +424,25 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
     [core],
   );
 
+  const handleInsertPresetText = useCallback(
+    (text: string) => {
+      const el = inputRef.current;
+      const cursor = el?.selectionStart ?? core.message.length;
+      const before = core.message.substring(0, cursor);
+      const after = core.message.substring(cursor);
+      const needsSpace = before.length > 0 && !/\s$/.test(before);
+      const insert = needsSpace ? ` ${text}` : text;
+      const newValue = before + insert + after;
+      core.setMessage(newValue);
+      const pos = (before + insert).length;
+      setTimeout(() => {
+        el?.setSelectionRange(pos, pos);
+        el?.focus();
+      }, 0);
+    },
+    [core.message, core.setMessage, inputRef],
+  );
+
   const borderColor = getBorderColor(sendTarget);
   const placeholder = getPlaceholder(sendTarget);
 
@@ -433,13 +452,8 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
 
       <div className="unified-input-row" style={{ borderColor }}>
         <PresetMessages
-          onSendMessage={onSendMessage}
+          onInsertText={handleInsertPresetText}
           isLoading={isLoading}
-          selectedPlatforms={
-            sendTarget === "both" ? ["twitch", "youtube"] : [sendTarget]
-          }
-          replyingTo={replyingTo}
-          onCancelReply={onCancelReply}
           emoteAutocompleteMode={emoteAutocompleteMode}
         />
 

@@ -1,4 +1,4 @@
-import { useReducer, useRef, useEffect, memo } from "react";
+import { useReducer, useRef, useEffect, useMemo, memo } from "react";
 import { createPortal } from "react-dom";
 import {
   FaBookmark,
@@ -8,7 +8,11 @@ import {
   FaPen,
   FaPlus,
 } from "react-icons/fa";
-import { searchEmotes } from "../../../lib/emotes";
+import {
+  parseMessageWithEmotes,
+  searchEmotes,
+  useEmoteMapVersion,
+} from "../../../lib/emotes";
 import { isMobileDevice } from "../../../lib/device";
 import type { EmoteAutocompleteMode } from "../../../lib/types";
 
@@ -143,24 +147,15 @@ export function reducer(state: State, action: Action): State {
 }
 
 interface PresetMessagesProps {
-  onSendMessage: (
-    message: string,
-    platforms: any[],
-    replyToId?: string,
-  ) => Promise<void>;
+  /** Inserts preset text into the chat input without sending it. */
+  onInsertText: (text: string) => void;
   isLoading: boolean;
-  selectedPlatforms: any[];
-  replyingTo?: any;
-  onCancelReply?: () => void;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
 }
 
 function PresetMessages({
-  onSendMessage,
+  onInsertText,
   isLoading,
-  selectedPlatforms,
-  replyingTo,
-  onCancelReply,
   emoteAutocompleteMode = "default",
 }: PresetMessagesProps) {
   const [state, dispatch] = useReducer(reducer, {
@@ -181,6 +176,15 @@ function PresetMessages({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emoteMenuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const emoteVersion = useEmoteMapVersion();
+  const presetPreviews = useMemo(
+    () =>
+      Object.fromEntries(
+        state.presets.map((p) => [p.id, parseMessageWithEmotes(p.content)]),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.presets, emoteVersion],
+  );
 
   useEffect(() => {
     if (state.showDropdown && buttonRef.current) {
@@ -400,14 +404,13 @@ function PresetMessages({
     savePresetMessages(updated);
   };
 
-  const handleSendPreset = async (preset: PresetMessage) => {
-    if (isLoading || selectedPlatforms.length === 0) return;
+  const handleInsertPreset = (preset: PresetMessage) => {
+    if (isLoading) return;
     dispatch({ type: "SET_DROPDOWN", payload: false });
-    await onSendMessage(preset.content, selectedPlatforms, replyingTo?.id);
-    if (onCancelReply) onCancelReply();
+    onInsertText(preset.content);
   };
 
-  const isDisabled = selectedPlatforms.length === 0 || isLoading;
+  const isDisabled = isLoading;
   const textareaRect = textareaRef.current?.getBoundingClientRect();
 
   return (
@@ -427,7 +430,7 @@ function PresetMessages({
             dispatch({ type: "SET_DROPDOWN", payload: !state.showDropdown })
           }
           disabled={isDisabled}
-          title="Send preset message"
+          title="Insert preset message"
         >
           <FaCaretDown size={10} />
         </button>
@@ -467,18 +470,19 @@ function PresetMessages({
                       role="button"
                       tabIndex={0}
                       className="preset-dropdown-item"
-                      onClick={() => handleSendPreset(preset)}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSendPreset(preset); } }}
+                      onClick={() => handleInsertPreset(preset)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleInsertPreset(preset); } }}
                 >
                   <div className="preset-dropdown-item-info">
                     <span className="preset-dropdown-item-name">
                       {preset.name}
                     </span>
-                    <span className="preset-dropdown-item-preview">
-                      {preset.content.length > 60
-                        ? preset.content.slice(0, 60) + "..."
-                        : preset.content}
-                    </span>
+                    <span
+                      className="preset-dropdown-item-preview"
+                      dangerouslySetInnerHTML={{
+                        __html: presetPreviews[preset.id] ?? "",
+                      }}
+                    />
                   </div>
                 </div>
               ))

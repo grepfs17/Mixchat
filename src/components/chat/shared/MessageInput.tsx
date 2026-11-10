@@ -203,6 +203,25 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
     [core.insertMention],
   );
 
+  const handleInsertPresetText = useCallback(
+    (text: string) => {
+      const el = textareaRef.current;
+      const cursor = el?.selectionStart ?? core.message.length;
+      const before = core.message.substring(0, cursor);
+      const after = core.message.substring(cursor);
+      const needsSpace = before.length > 0 && !/\s$/.test(before);
+      const insert = needsSpace ? ` ${text}` : text;
+      const newValue = before + insert + after;
+      core.setMessage(newValue);
+      const pos = (before + insert).length;
+      setTimeout(() => {
+        el?.setSelectionRange(pos, pos);
+        el?.focus();
+      }, 0);
+    },
+    [core.message, core.setMessage, textareaRef],
+  );
+
   const isDisabled = SELECTED_PLATFORMS.length === 0 || isLoading;
 
   return (
@@ -210,11 +229,8 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
       <ReplyIndicator replyingTo={replyingTo} onCancelReply={onCancelReply} />
       <div className="input-group twitch" style={{ position: "relative" }}>
         <PresetMessages
-          onSendMessage={onSendMessage}
+          onInsertText={handleInsertPresetText}
           isLoading={isLoading}
-          selectedPlatforms={SELECTED_PLATFORMS}
-          replyingTo={replyingTo}
-          onCancelReply={onCancelReply}
           emoteAutocompleteMode={emoteAutocompleteMode}
         />
         <button type="button"

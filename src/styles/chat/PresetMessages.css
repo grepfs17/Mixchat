@@ -156,10 +156,26 @@
 
 .preset-dropdown-item-preview {
     color: var(--color-text-secondary);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Match chat emote scale (parser emits height:2em). Preview font is smaller
+   than chat text, so pin a fixed size that stays readable in the row. */
+.preset-dropdown-item-preview .chat-emote {
+    height: 22px !important;
+    width: auto;
+    max-width: none;
+    vertical-align: -0.3em;
+    margin: 0 2px;
+}
+
+.preset-dropdown-item-preview img.emoji {
+    height: 1.25em !important;
+    width: 1.25em !important;
 }
 
 .preset-modal-overlay {
