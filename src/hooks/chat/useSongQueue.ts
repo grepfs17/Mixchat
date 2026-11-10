@@ -280,6 +280,40 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     };
   }, [channelKey, enabled, adoptActive]);
 
+  // While this client has no open session, keep looking for a queue another
+  // browser (e.g. a moderator) opened after this page mounted. Without this
+  // the streamer stays idle forever and never mounts the player.
+  // Only adopt when a session exists so an ended queue keeps its banner.
+  useEffect(() => {
+    if (!enabled) return;
+    if (bootstrap && phase === "open") return;
+    let cancelled = false;
+    let running = false;
+    const tick = async () => {
+      if (running || (typeof document !== "undefined" && document.hidden)) {
+        return;
+      }
+      running = true;
+      try {
+        const active = await getActiveSongQueue(channelKey);
+        if (cancelled || !active) return;
+        applyActiveSession(active);
+      } catch {
+        // Network blip. Keep the current phase; the next tick retries.
+      } finally {
+        running = false;
+      }
+    };
+    const timer = window.setInterval(() => {
+      if (cancelled) return;
+      void tick();
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [enabled, bootstrap, phase, channelKey, applyActiveSession]);
+
   // ---- Network reconciliation: pull the server record and merge ----
   const refresh = useCallback(async () => {
     if (!bootstrap) return;
