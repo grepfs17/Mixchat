@@ -11,6 +11,10 @@ interface PlayBody {
   currentIndex: number;
   durationSec?: number;
   status?: "playing" | "played" | "skipped";
+  /** Shared play/pause intent for the audio host to follow. */
+  isPlaying?: boolean;
+  /** Shared volume 0-100 for the audio host's iframe. */
+  volume?: number;
 }
 
 function isPlayBody(value: unknown): value is PlayBody {
@@ -23,6 +27,15 @@ function isPlayBody(value: unknown): value is PlayBody {
     return false;
   }
   if (v.status !== undefined && v.status !== "playing" && v.status !== "played" && v.status !== "skipped") {
+    return false;
+  }
+  if (v.isPlaying !== undefined && typeof v.isPlaying !== "boolean") {
+    return false;
+  }
+  if (
+    v.volume !== undefined &&
+    (typeof v.volume !== "number" || v.volume < 0 || v.volume > 100)
+  ) {
     return false;
   }
   return true;
@@ -78,8 +91,15 @@ export const POST: APIRoute = async ({ request, params, cookies }) => {
           return next;
         });
       }
+      const next: typeof s = {
+        ...s,
+        currentIndex: idx,
+        items,
+      };
+      if (body.isPlaying !== undefined) next.isPlaying = body.isPlaying;
+      if (body.volume !== undefined) next.volume = body.volume;
       return {
-        session: { ...s, currentIndex: idx, items },
+        session: next,
         result: { currentIndex: idx, item: items[idx] },
       };
     },

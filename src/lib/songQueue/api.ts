@@ -179,6 +179,8 @@ export async function setSongQueueIndex(
   extra: {
     durationSec?: number;
     status?: "playing" | "played" | "skipped";
+    isPlaying?: boolean;
+    volume?: number;
   } = {},
 ): Promise<void> {
   const res = await fetch(

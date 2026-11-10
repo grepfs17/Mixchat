@@ -92,6 +92,15 @@ export interface UseSongQueueResult {
   previous: () => Promise<void>;
   reportDuration: (itemId: string, durationSec: number) => Promise<void>;
   /**
+   * Shared play/pause intent. Non-host clients toggle this; the audio
+   * host follows it with the local iframe (mirrors the music player).
+   */
+  isPlaying: boolean;
+  setPlaying: (playing: boolean) => Promise<void>;
+  /** Shared volume 0-100 applied on the audio host's iframe. */
+  volume: number;
+  setVolume: (volume: number) => Promise<void>;
+  /**
    * Reply in chat to the submitter of `item` telling them the song was
    * too long. Used by the play-time fallback when the upfront probe
    * couldn't determine the duration. No-op if no chat-send callback was
@@ -115,6 +124,8 @@ function buildInitialSession(
     lastSeenAt: created.createdAt,
     isPublic: created.isPublic,
     currentIndex: 0,
+    isPlaying: false,
+    volume: 100,
     announcedItemId: null,
     version: 0,
     ended: false,
@@ -381,13 +392,15 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   }, [bootstrap?.sessionId, phase]);
 
   // Shared-state polling: streamer and moderators must see each other's
-  // changes. Silent so it never flashes the loading state.
+  // changes (index, play/pause, volume, ended). Silent so it never flashes
+  // the loading state. Runs even when the tab is hidden so a mod ending the
+  // queue still stops the streamer's player in the background.
   useEffect(() => {
     if (!bootstrap || phase !== "open") return;
     let cancelled = false;
     let running = false;
     const tick = async () => {
-      if (running || (typeof document !== "undefined" && document.hidden)) return;
+      if (running) return;
       running = true;
       try {
         const server = await getSongQueue(
@@ -1010,6 +1023,55 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     [bootstrap, onError, session?.currentIndex],
   );
 
+  // Shared playback controls. Writes go through /play so every open client
+  // (and the public page's version poll) sees the change. The audio host
+  // follows isPlaying/volume with its local iframe.
+  const patchPlayback = useCallback(
+    async (patch: { isPlaying?: boolean; volume?: number }) => {
+      if (!bootstrap || !session) return;
+      const previous = session;
+      setSession((prev) => (prev ? { ...prev, ...patch } : prev));
+      try {
+        await setSongQueueIndex(
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          session.currentIndex,
+          patch,
+        );
+        await saveSongQueueSession(
+          channelKey,
+          bootstrap.sessionId,
+          bootstrap.ownerToken,
+          { ...previous, ...patch },
+        );
+      } catch (err) {
+        setSession(previous);
+        const msg =
+          err instanceof Error ? err.message : "Failed to update playback";
+        setError(msg);
+        onError?.(msg);
+      }
+    },
+    [bootstrap, channelKey, onError, session],
+  );
+
+  const setPlaying = useCallback(
+    async (playing: boolean) => {
+      if ((session?.isPlaying ?? false) === playing) return;
+      await patchPlayback({ isPlaying: playing });
+    },
+    [patchPlayback, session?.isPlaying],
+  );
+
+  const setVolume = useCallback(
+    async (nextVolume: number) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(nextVolume)));
+      if ((session?.volume ?? 100) === clamped) return;
+      await patchPlayback({ volume: clamped });
+    },
+    [patchPlayback, session?.volume],
+  );
+
   const items = useMemo(() => session?.items ?? [], [session]);
   const currentItem = useMemo(
     () => items[session?.currentIndex ?? 0],
@@ -1045,6 +1107,10 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
     next,
     previous,
     reportDuration,
+    isPlaying: session?.isPlaying ?? false,
+    setPlaying,
+    volume: session?.volume ?? 100,
+    setVolume,
     notifyTooLong: notifyTooLongForItem,
   };
 }

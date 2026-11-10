@@ -397,6 +397,35 @@ describe("POST /api/song-queue/:sessionId/play", () => {
     const body = await res.json();
     expect(body.currentIndex).toBe(0);
   });
+
+  it("stores shared isPlaying and volume for remote pause/volume", async () => {
+    const { sessionId, ownerToken } = await createTestSession();
+    const res = await playItem(
+      makeContext(
+        authedRequest(
+          `http://localhost/api/song-queue/${sessionId}/play`,
+          { currentIndex: 0, isPlaying: false, volume: 40 },
+          ownerToken,
+        ),
+        { sessionId },
+      ),
+    );
+    expect(res.status).toBe(200);
+
+    const getRes = await ownerGet(
+      makeContext(
+        ownerGetRequest(
+          `http://localhost/api/song-queue/${sessionId}`,
+          ownerToken,
+        ),
+        { sessionId },
+      ),
+    );
+    expect(getRes.status).toBe(200);
+    const body = await getRes.json();
+    expect(body.isPlaying).toBe(false);
+    expect(body.volume).toBe(40);
+  });
 });
 
 describe("DELETE /api/song-queue/:sessionId (close)", () => {

@@ -73,6 +73,17 @@ export interface SongQueueSession {
   config?: SongQueueConfig;
   currentIndex: number;
   /**
+   * Shared play/pause intent. The audio host (streamer browser) follows
+   * this flag with its local iframe; moderators toggle it to pause or
+   * resume playback on the broadcaster's device. Absent = not paused.
+   */
+  isPlaying?: boolean;
+  /**
+   * Shared volume 0-100 for the audio host's iframe. Moderators may
+   * change it; the host applies it locally. Absent = 100.
+   */
+  volume?: number;
+  /**
    * Id of the item most recently claimed for the "now playing" chat
    * announcement. Server-side so only one open client posts it.
    */

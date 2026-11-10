@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import {
   FaChevronUp,
   FaChevronDown,
@@ -324,26 +324,19 @@ function SongQueueBarCopyButton({
 }
 
 function playPauseTitle({
-  isHost,
   isPlaying,
   canResume,
   canStartFresh,
   hasCurrent,
 }: {
-  isHost: boolean;
   isPlaying: boolean;
   canResume: boolean;
   canStartFresh: boolean;
   hasCurrent: boolean;
 }): string {
   if (canStartFresh) return "Start playing the queue";
-  if (!isHost) {
-    return hasCurrent
-      ? "Playing on the broadcaster's device"
-      : "Nothing to play yet";
-  }
   if (isPlaying) return "Pause";
-  if (canResume) return "Resume";
+  if (canResume || hasCurrent) return "Resume";
   return "Nothing to play yet";
 }
 
@@ -354,6 +347,7 @@ function SongQueueBarPlayPauseButton({
   firstPendingId,
   playerRef,
   onPlayNow,
+  onTogglePlaying,
   isHost,
   hasCurrent,
 }: {
@@ -363,23 +357,31 @@ function SongQueueBarPlayPauseButton({
   firstPendingId: string | undefined;
   playerRef: React.RefObject<SongQueuePlayerHandle | null>;
   onPlayNow: (id: string) => void;
+  onTogglePlaying: (playing: boolean) => void;
   isHost: boolean;
   hasCurrent: boolean;
 }) {
   const onPlayPause = () => {
-    if (isPlaying) {
-      playerRef.current?.pause();
-    } else {
-      if (canResume) {
-        playerRef.current?.play();
+    if (!isHost) {
+      // Moderators flip the shared flag; the audio host follows it.
+      if (hasCurrent) {
+        onTogglePlaying(!isPlaying);
       } else if (firstPendingId) {
         void onPlayNow(firstPendingId);
       }
+      return;
+    }
+    if (isPlaying) {
+      playerRef.current?.pause();
+    } else if (canResume) {
+      playerRef.current?.play();
+    } else if (firstPendingId) {
+      void onPlayNow(firstPendingId);
     }
   };
-  // Only the audio host can start/resume local playback. Non-hosts may
-  // still kick off the first song (a server write the host follows).
-  const canStart = isHost ? canResume || canStartFresh : canStartFresh;
+  const canStart = isHost
+    ? canResume || canStartFresh
+    : canStartFresh || hasCurrent;
   return (
     <button
       type="button"
@@ -387,7 +389,6 @@ function SongQueueBarPlayPauseButton({
       onClick={onPlayPause}
       disabled={!canStart}
       title={playPauseTitle({
-        isHost,
         isPlaying,
         canResume,
         canStartFresh,
@@ -441,6 +442,7 @@ function SongQueueBarControls({
         firstPendingId={queue.pending[0]?.id}
         playerRef={playerRef}
         onPlayNow={(id) => void queue.playNow(id)}
+        onTogglePlaying={(playing) => void queue.setPlaying(playing)}
         isHost={isHost}
         hasCurrent={Boolean(current)}
       />
@@ -464,14 +466,12 @@ function SongQueueBarControls({
       >
         <FaStepForward size={11} />
       </button>
-      {isHost && (
-        <SongQueueBarVolume
-          volume={volume}
-          setVolume={setVolume}
-          playerRef={playerRef}
-          onVolumeChange={onVolumeChange}
-        />
-      )}
+      <SongQueueBarVolume
+        volume={volume}
+        setVolume={setVolume}
+        playerRef={playerRef}
+        onVolumeChange={onVolumeChange}
+      />
       {publicUrl && (
         <SongQueueBarCopyButton
           publicUrl={publicUrl}
@@ -595,30 +595,72 @@ export default function SongQueueMinimizedBar({
   const [linkCopied, setLinkCopied] = useState<LinkCopiedState>("idle");
   const [playerState, setPlayerState] =
     useState<SongQueuePlayerState>("unstarted");
-  const [volume, setVolume] = useState(100);
   const publicUrl = queue.bootstrap?.publicUrl ?? null;
   const current = queue.currentItem;
   const playerRef = useRef<SongQueuePlayerHandle | null>(null);
+  const volume = queue.volume;
+  const sharedIsPlaying = queue.isPlaying;
 
   const onVolumeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const val = Number(e.target.value);
-      setVolume(val);
       playerRef.current?.setVolume(val);
+      void queue.setVolume(val);
     },
-    [],
+    [queue],
   );
 
+  // Host follows shared play/pause made by moderators (music-player pattern).
+  useEffect(() => {
+    if (!isHost || !playerRef.current) return;
+    if (sharedIsPlaying && playerState !== "playing") {
+      playerRef.current.play();
+    } else if (!sharedIsPlaying && playerState === "playing") {
+      playerRef.current.pause();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharedIsPlaying, isHost]);
+
+  // Host follows shared volume.
+  useEffect(() => {
+    if (!isHost) return;
+    playerRef.current?.setVolume(volume);
+  }, [volume, isHost]);
+
+  // An ended queue must tear down local playback even if the bar is only
+  // visually hidden behind the Stream tools modal.
+  useEffect(() => {
+    if (queue.phase === "open") return;
+    playerRef.current?.pause();
+  }, [queue.phase]);
+
   const hasItems = queue.items.length > 0;
-  const isPlaying = isHost && playerState === "playing";
-  const canResume = isHost && hasItems && current !== undefined;
+  const isPlaying = isHost ? playerState === "playing" : sharedIsPlaying;
+  const canResume = hasItems && current !== undefined;
   const canStartFresh =
     !current && queue.pending.length > 0 && playerState !== "playing";
+
+  const onStateChange = useCallback(
+    (state: SongQueuePlayerState) => {
+      setPlayerState(state);
+      // Host reports local iframe state into the shared flag so moderators
+      // see the real playing/paused status.
+      if (!isHost) return;
+      if (state === "playing" || state === "paused") {
+        const playing = state === "playing";
+        if (playing !== queue.isPlaying) {
+          void queue.setPlaying(playing);
+        }
+      }
+    },
+    [isHost, queue],
+  );
 
   return (
     <div
       className={`song-queue-bar${hidden ? " song-queue-bar--hidden" : ""}${expanded ? "" : " song-queue-bar--collapsed"}`}
       data-testid="song-queue-bar"
+      data-phase={queue.phase}
     >
       <SongQueueBarHeader
         expanded={expanded}
@@ -633,7 +675,7 @@ export default function SongQueueMinimizedBar({
         canStartFresh={canStartFresh}
         playerRef={playerRef}
         volume={volume}
-        setVolume={setVolume}
+        setVolume={(v) => void queue.setVolume(v)}
         onVolumeChange={onVolumeChange}
         publicUrl={publicUrl}
         linkCopied={linkCopied}
@@ -644,7 +686,7 @@ export default function SongQueueMinimizedBar({
       <SongQueueBarBody
         playerRef={playerRef}
         queue={queue}
-        onStateChange={setPlayerState}
+        onStateChange={onStateChange}
         isHost={isHost}
       />
     </div>

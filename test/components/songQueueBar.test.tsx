@@ -64,6 +64,10 @@ function makeQueue(overrides: Partial<UseSongQueueResult> = {}): UseSongQueueRes
     next: vi.fn().mockResolvedValue(undefined),
     previous: vi.fn().mockResolvedValue(undefined),
     reportDuration: vi.fn().mockResolvedValue(undefined),
+    isPlaying: false,
+    setPlaying: vi.fn().mockResolvedValue(undefined),
+    volume: 100,
+    setVolume: vi.fn().mockResolvedValue(undefined),
     notifyTooLong: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -197,8 +201,8 @@ describe("SongQueueMinimizedBar", () => {
     expect(document.querySelector(".song-queue-player-iframe")).toBeNull();
   });
 
-  it("disables local play/pause for non-hosts while keeping server controls", () => {
-    const queue = makeQueue();
+  it("lets a non-host pause and resume through shared state", () => {
+    const queue = makeQueue({ isPlaying: true });
     render(
       <SongQueueMinimizedBar
         queue={queue}
@@ -208,16 +212,16 @@ describe("SongQueueMinimizedBar", () => {
       />,
     );
     const play = screen.getByTestId("song-queue-bar-play");
-    expect(play).toBeDisabled();
-    expect(play).toHaveAttribute(
-      "title",
-      "Playing on the broadcaster's device",
-    );
-    // Volume is host-only (local iframe control).
-    expect(screen.queryByLabelText("Volume")).toBeNull();
-    // Server-side index changes stay available to moderators.
+    expect(play).toBeEnabled();
+    expect(play).toHaveAttribute("title", "Pause");
+    fireEvent.click(play);
+    expect(queue.setPlaying).toHaveBeenCalledWith(false);
+
+    // Server controls and shared volume stay available to moderators.
     fireEvent.click(screen.getByTitle("Next"));
     expect(queue.next).toHaveBeenCalledTimes(1);
+    fireEvent.change(screen.getByLabelText("Volume"), { target: { value: "40" } });
+    expect(queue.setVolume).toHaveBeenCalledWith(40);
   });
 
   it("lets a non-host start the queue when nothing has played yet", () => {
@@ -238,5 +242,25 @@ describe("SongQueueMinimizedBar", () => {
     expect(play).toBeEnabled();
     fireEvent.click(play);
     expect(queue.playNow).toHaveBeenCalledWith("i1");
+  });
+
+  it("pauses the local player when the queue phase leaves open", () => {
+    const queue = makeQueue();
+    const { rerender } = render(
+      <SongQueueMinimizedBar queue={queue} onOpen={vi.fn()} onEnd={vi.fn()} />,
+    );
+    // Simulate a mod ending the queue: phase flips to ended on the streamer.
+    rerender(
+      <SongQueueMinimizedBar
+        queue={makeQueue({ phase: "ended" })}
+        onOpen={vi.fn()}
+        onEnd={vi.fn()}
+      />,
+    );
+    // Bar unmounts at the chrome layer for ended; when still mounted with a
+    // non-open phase it must not keep driving playback.
+    expect(
+      document.querySelector('[data-testid="song-queue-bar"]')?.getAttribute("data-phase"),
+    ).toBe("ended");
   });
 });
