@@ -97,7 +97,12 @@ describe("SongQueuePanel (idle phase)", () => {
         })}
       />,
     );
-    expect(screen.getByText(/songs longer than 60 min/i)).toBeInTheDocument();
+    expect(
+      screen.getByText((content, el) =>
+        el?.classList.contains("song-queue-warning") === true &&
+        /songs longer than 60:00/i.test(el.textContent ?? ""),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows a banner when the previous session has ended", () => {

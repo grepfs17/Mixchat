@@ -152,4 +152,62 @@ describe("useSongQueue idle adoption", () => {
     // Mount adopt + three idle ticks.
     expect(active.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("ends the queue on 410 so a mod close stops the streamer client", async () => {
+    let queueEnded = false;
+    let adoptCount = 0;
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/song-queue/active")) {
+        adoptCount += 1;
+        // Mount finds nothing; first idle tick adopts the mod's queue.
+        if (adoptCount === 1) return jsonResponse({ session: null });
+        if (queueEnded) return jsonResponse({ session: null });
+        return jsonResponse({ session: makeSession() });
+      }
+      if (url.includes("/api/song-queue/sess-1")) {
+        if (queueEnded) {
+          return jsonResponse({ error: "Session ended" }, 410);
+        }
+        return jsonResponse(makeSession());
+      }
+      return jsonResponse({ error: "unexpected" }, 404);
+    }) as typeof fetch;
+
+    const { result } = renderHook(() =>
+      useSongQueue({
+        channelKey: "twitch:alice",
+        owner: { twitchBroadcasterId: "1" },
+        enabled: true,
+      }),
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.phase).toBe("idle");
+
+    // Idle poll adopts the open queue.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.phase).toBe("open");
+    expect(result.current.bootstrap?.sessionId).toBe("sess-1");
+
+    // Mod ends the queue; next poll receives 410.
+    queueEnded = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3100);
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.phase).not.toBe("open");
+    expect(result.current.bootstrap).toBeNull();
+  });
 });

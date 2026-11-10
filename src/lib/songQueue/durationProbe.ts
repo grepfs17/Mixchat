@@ -163,7 +163,7 @@ export async function probeVideoDuration(videoId: string): Promise<number | null
           onReady: (e) => {
             const dur = e.target.getDuration?.();
             if (typeof dur === "number" && dur > 0) {
-              finish(dur);
+              finish(Math.round(dur));
             }
             // If dur is 0 / NaN, we keep waiting. Sometimes the video
             // metadata isn't ready the moment onReady fires. CUED will
@@ -172,7 +172,7 @@ export async function probeVideoDuration(videoId: string): Promise<number | null
           onStateChange: (e) => {
             const dur = e.target.getDuration?.();
             if (typeof dur === "number" && dur > 0) {
-              finish(dur);
+              finish(Math.round(dur));
             }
           },
           onError: () => {
@@ -187,19 +187,17 @@ export async function probeVideoDuration(videoId: string): Promise<number | null
 }
 
 /**
- * Format a max-duration cap (in seconds) as a chat-friendly string.
- * Examples: 600 → "10 minutes", 3600 → "1 hour", 90 → "1 minute 30 seconds".
+ * Format a max-duration cap (in seconds) as min:sec.
+ * Examples: 600 → "10:00", 3600 → "1:00:00", 90 → "1:30".
  */
 export function formatMaxDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return "0 seconds";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  const parts: string[] = [];
-  if (h > 0) parts.push(`${h} hour${h === 1 ? "" : "s"}`);
-  if (m > 0) parts.push(`${m} minute${m === 1 ? "" : "s"}`);
-  if (h === 0 && m === 0 && s > 0) {
-    parts.push(`${s} second${s === 1 ? "" : "s"}`);
+  if (!seconds || seconds <= 0) return "0:00";
+  const total = Math.round(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
-  return parts.join(" ") || "0 seconds";
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }

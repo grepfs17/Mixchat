@@ -49,8 +49,9 @@ function labelEligibility(e: SongQueueConfig["eligibility"]): string {
 
 function formatDuration(sec: number): string {
   if (!sec) return "-";
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
+  const total = Math.round(sec);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
@@ -451,13 +452,13 @@ function SongQueueConfigForm({
         />
         {overDurationCeiling && (
           <span className="song-queue-warning">
-            Songs longer than {Math.round(MAX_SONG_DURATION_CEILING_SEC / 60)}{" "}
-            min are not supported.
+            Songs longer than {formatDuration(MAX_SONG_DURATION_CEILING_SEC)}{" "}
+            are not supported.
           </span>
         )}
         <span className="song-queue-field-hint">
-          Songs over this duration will be skipped when they start. Current cap:{" "}
-          {maxDurMin} min.
+          Songs over this duration will be skipped when they start. Current
+          cap: {formatDuration(config.maxSongDurationSec)}.
         </span>
       </label>
 

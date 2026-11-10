@@ -424,7 +424,19 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           }));
         }
         if (server.ended) setPhase("ended");
-      } catch {
+      } catch (err) {
+        if (cancelled) return;
+        // Ended sessions respond 410 (not a body with ended: true). A mod
+        // closing the queue must stop the streamer's player on the next tick.
+        if (err instanceof SongQueueApiError && err.status === 410) {
+          if (!bootstrap.ownerToken) {
+            await clearSongQueueSession(channelKey);
+            if (!cancelled) await adoptActive();
+            return;
+          }
+          setPhase("ended");
+          return;
+        }
         // Keep the last known state. The next tick or explicit action retries.
       } finally {
         running = false;
@@ -989,6 +1001,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
   const reportDuration = useCallback(
     async (itemId: string, durationSec: number) => {
       if (!bootstrap) return;
+      const rounded = Math.max(0, Math.round(durationSec));
       setSession((prev) =>
         prev
           ? {
@@ -997,7 +1010,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
                 it.id === itemId
                   ? {
                       ...it,
-                      durationSec: Math.max(it.durationSec, durationSec),
+                      durationSec: Math.max(it.durationSec, rounded),
                     }
                   : it,
               ),
@@ -1010,7 +1023,7 @@ export function useSongQueue(options: UseSongQueueOptions): UseSongQueueResult {
           bootstrap.ownerToken,
           session?.currentIndex ?? 0,
           {
-            durationSec,
+            durationSec: rounded,
           },
         );
       } catch (err) {
