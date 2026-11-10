@@ -3,16 +3,25 @@ import { parseChannelKey } from "../../../lib/wheel/api";
 import { checkRateLimit } from "../../../lib/rateLimit";
 import { authorizeChannel } from "../../../server/wheelAuth";
 import { clientAddress, json } from "../../../server/wheelApi";
+import { readJsonBody } from "../../../server/jsonBody";
 import { getStreamToolsStoreOptions } from "../../../server/streamToolsConfig";
 import {
   getStreamToolsSettings,
+  isAllowedModEntry,
+  MAX_ALLOWED_MODS,
   updateStreamToolsSettings,
+  type AllowedMod,
 } from "../../../server/streamToolsSettings";
+
+/** Settings are a handful of booleans plus the moderator selection. */
+const MAX_SETTINGS_BODY_BYTES = 16 * 1024;
 
 interface SettingsBody {
   channelKey?: string;
   enabled?: boolean;
   allowMods?: boolean;
+  modAccess?: "all" | "selected";
+  allowedMods?: AllowedMod[];
 }
 
 function parseBody(value: unknown): SettingsBody | null {
@@ -24,6 +33,17 @@ function parseBody(value: unknown): SettingsBody | null {
     return null;
   if (body.allowMods !== undefined && typeof body.allowMods !== "boolean")
     return null;
+  if (
+    body.modAccess !== undefined &&
+    body.modAccess !== "all" &&
+    body.modAccess !== "selected"
+  )
+    return null;
+  if (body.allowedMods !== undefined) {
+    if (!Array.isArray(body.allowedMods)) return null;
+    if (body.allowedMods.length > MAX_ALLOWED_MODS) return null;
+    if (!body.allowedMods.every(isAllowedModEntry)) return null;
+  }
   return body as SettingsBody;
 }
 
@@ -57,19 +77,20 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
   ) {
     return json({ error: "Too many requests" }, 429, { "Retry-After": "60" });
   }
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return json({ error: "Invalid JSON" }, 400);
-  }
-  const body = parseBody(raw);
+  const parsed = await readJsonBody(request, MAX_SETTINGS_BODY_BYTES);
+  if (!parsed.ok) return json({ error: parsed.error }, parsed.status);
+  const body = parseBody(parsed.value);
   if (!body) return json({ error: "Invalid body" }, 400);
   const channelKey =
     body.channelKey ?? new URL(request.url).searchParams.get("channelKey");
   const channel = parseChannelKey(channelKey);
   if (!channel) return json({ error: "Missing channel" }, 400);
-  if (body.enabled === undefined && body.allowMods === undefined) {
+  if (
+    body.enabled === undefined &&
+    body.allowMods === undefined &&
+    body.modAccess === undefined &&
+    body.allowedMods === undefined
+  ) {
     return json({ error: "Nothing to update" }, 400);
   }
 
@@ -81,7 +102,12 @@ export const PUT: APIRoute = async ({ request, cookies }) => {
   const settings = await updateStreamToolsSettings(
     getStreamToolsStoreOptions(),
     `${channel.channelPlatform}:${channel.channelName.toLowerCase()}`,
-    { enabled: body.enabled, allowMods: body.allowMods },
+    {
+      enabled: body.enabled,
+      allowMods: body.allowMods,
+      modAccess: body.modAccess,
+      allowedMods: body.allowedMods,
+    },
   );
   return json(settings);
 };

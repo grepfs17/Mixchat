@@ -1,14 +1,63 @@
 import { useCallback, useEffect, useState } from "react";
 
+export type StreamToolsModAccess = "all" | "selected";
+
+/**
+ * One moderator grant. Mirrors `AllowedMod` in `src/server/streamToolsSettings.ts`
+ * (the client cannot import server modules). The id is what access checks
+ * match on; the login is only for display.
+ */
+export interface AllowedMod {
+  id: string;
+  login: string;
+}
+
 export interface StreamToolsSettings {
   enabled: boolean;
   allowMods: boolean;
+  modAccess: StreamToolsModAccess;
+  /** Grants, only used when `modAccess` is `selected`. */
+  allowedMods: AllowedMod[];
 }
 
 const DEFAULT_SETTINGS: StreamToolsSettings = {
   enabled: true,
   allowMods: false,
+  modAccess: "all",
+  allowedMods: [],
 };
+
+function normalizeAllowedMods(value: unknown): AllowedMod[] {
+  if (!Array.isArray(value)) return [];
+  const mods: AllowedMod[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const raw = entry as Record<string, unknown>;
+    const id = typeof raw.id === "string" ? raw.id.trim() : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    mods.push({
+      id,
+      login: typeof raw.login === "string" ? raw.login.trim().toLowerCase() : "",
+    });
+  }
+  return mods;
+}
+
+function normalizeSettings(next: {
+  enabled?: unknown;
+  allowMods?: unknown;
+  modAccess?: unknown;
+  allowedMods?: unknown;
+}): StreamToolsSettings {
+  return {
+    enabled: Boolean(next.enabled),
+    allowMods: Boolean(next.allowMods),
+    modAccess: next.modAccess === "selected" ? "selected" : "all",
+    allowedMods: normalizeAllowedMods(next.allowedMods),
+  };
+}
 
 async function parseError(res: Response, fallback: string): Promise<string> {
   try {
@@ -47,10 +96,7 @@ export function useStreamToolsSettings(channelKey: string | null) {
         );
       }
       const next = (await res.json()) as StreamToolsSettings;
-      setSettings({
-        enabled: Boolean(next.enabled),
-        allowMods: Boolean(next.allowMods),
-      });
+      setSettings(normalizeSettings(next));
       setError(null);
     } catch (err) {
       setError(
@@ -87,10 +133,7 @@ export function useStreamToolsSettings(channelKey: string | null) {
         );
       }
       const next = (await res.json()) as StreamToolsSettings;
-      setSettings({
-        enabled: Boolean(next.enabled),
-        allowMods: Boolean(next.allowMods),
-      });
+      setSettings(normalizeSettings(next));
       setError(null);
     },
     [channelKey],

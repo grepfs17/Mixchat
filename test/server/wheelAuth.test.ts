@@ -8,7 +8,12 @@ vi.mock("../../src/lib/twitch", () => ({
 }));
 
 const { streamSettings } = vi.hoisted(() => ({
-  streamSettings: { enabled: true, allowMods: false },
+  streamSettings: {
+    enabled: true,
+    allowMods: false,
+    modAccess: "all" as "all" | "selected",
+    allowedMods: [] as Array<{ id: string; login: string }>,
+  },
 }));
 
 vi.mock("../../src/server/streamToolsSettings", () => ({
@@ -56,6 +61,8 @@ function asCookies(cookies: FakeCookies): AstroCookies {
 beforeEach(() => {
   streamSettings.enabled = true;
   streamSettings.allowMods = false;
+  streamSettings.modAccess = "all";
+  streamSettings.allowedMods = [];
   vi.stubEnv("PUBLIC_TWITCH_CLIENT_ID", "client-id");
   vi.stubEnv("TWITCH_CLIENT_SECRET", "client-secret");
   vi.stubEnv("PUBLIC_YOUTUBE_CLIENT_ID", "yt-client-id");
@@ -218,6 +225,68 @@ describe("authorizeChannel", () => {
         "client-id",
         "alice",
       );
+    });
+
+    it("grants a moderator listed in the selection", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      streamSettings.modAccess = "selected";
+      streamSettings.allowedMods = [{ id: "u-mod", login: "mallory" }];
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+      mockTwitchByLogin.mockResolvedValue({
+        userId: "u-alice",
+        login: "alice",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ broadcaster_id: "u-alice" }] }),
+      }) as any;
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-selected" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("ok");
+    });
+
+    it("keeps the grant when the moderator renames their login", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      streamSettings.modAccess = "selected";
+      streamSettings.allowedMods = [{ id: "u-mod", login: "oldname" }];
+      mockTwitch.mockResolvedValue({ login: "newname", userId: "u-mod" });
+      mockTwitchByLogin.mockResolvedValue({
+        userId: "u-alice",
+        login: "alice",
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: [{ broadcaster_id: "u-alice" }] }),
+      }) as any;
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-renamed" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("ok");
+    });
+
+    it("rejects a moderator missing from the selection", async () => {
+      streamSettings.enabled = true;
+      streamSettings.allowMods = true;
+      streamSettings.modAccess = "selected";
+      streamSettings.allowedMods = [{ id: "u-carol", login: "carol" }];
+      mockTwitch.mockResolvedValue({ login: "mallory", userId: "u-mod" });
+
+      const res = await authorizeChannel(
+        asCookies(makeCookies({ twitch_token: "tok-mod-unselected" })),
+        { channelName: "alice", channelPlatform: "twitch" },
+        { allowModerators: true },
+      );
+      expect(res).toBe("forbidden");
+      expect(mockTwitchByLogin).not.toHaveBeenCalled();
     });
 
     it("rejects a Twitch user who is not a moderator of the channel", async () => {

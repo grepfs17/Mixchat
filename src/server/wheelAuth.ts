@@ -248,6 +248,12 @@ export async function authorizeChannel(
       `twitch:${name}`,
     );
     if (!settings.enabled || !settings.allowMods) return "forbidden";
+    if (
+      settings.modAccess === "selected" &&
+      !settings.allowedMods.some((mod) => mod.id === identity.id)
+    ) {
+      return "forbidden";
+    }
 
     const broadcaster = await getTwitchUserByLogin(token, clientId, name);
     if (!broadcaster) return "forbidden";

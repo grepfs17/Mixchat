@@ -2880,6 +2880,110 @@
     border-color: var(--color-border-light);
 }
 
+.stream-tools-access-scope {
+    min-width: 0;
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-tertiary);
+}
+
+.stream-tools-access-scope:disabled {
+    opacity: 0.7;
+}
+
+.stream-tools-access-scope-label {
+    padding: 0;
+    margin-bottom: 6px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.stream-tools-access-scope-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.stream-tools-access-scope-option input {
+    margin: 0;
+    accent-color: var(--color-indigo);
+}
+
+.stream-tools-access-mods {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 170px;
+    overflow-y: auto;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--color-border-medium);
+}
+
+.stream-tools-access-mod {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.stream-tools-access-mod input {
+    margin: 0;
+    accent-color: var(--color-indigo);
+}
+
+.stream-tools-access-mod-note {
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.stream-tools-access-mods-status {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.stream-tools-access-mods-error {
+    color: var(--color-notification-error);
+    font-size: 12px;
+}
+
+.stream-tools-access-mods-retry {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.stream-tools-access-error {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border: 1px solid
+        color-mix(in srgb, var(--color-notification-error) 30%, transparent);
+    border-radius: var(--radius-sm);
+    background: color-mix(
+        in srgb,
+        var(--color-notification-error) 8%,
+        transparent
+    );
+    color: var(--color-notification-error);
+    font-size: 12px;
+}
+
 /* Nested dialog, so it sits above the Stream tools overlay (z-index 1000). */
 .stream-tools-access-modal {
     position: fixed;

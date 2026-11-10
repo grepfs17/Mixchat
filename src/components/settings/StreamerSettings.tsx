@@ -68,7 +68,7 @@ function StreamerToolsSetting({
           <>
             {" "}
             From the Stream tools modal you can let Twitch moderators use the
-            same tools.
+            same tools, either all of them or only the ones you pick.
           </>
         )}
       </p>

@@ -254,13 +254,21 @@ export default function ChatApp(props: ChatAppStateProps) {
     : null;
   const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
   const isTwitchModerator = !!chatState.isModerator && !isOnOwnChannel;
+  // In "selected" mode only the mods granted by the broadcaster get the tools.
+  const isAllowedSelectedMod =
+    streamToolsSettings.settings.modAccess === "selected" &&
+    streamToolsSettings.settings.allowedMods.some(
+      (mod) => mod.id === twitchSession?.userId,
+    );
   const showStreamTools = IS_DESKTOP
     ? streamerToolsEnabled && isOnOwnChannel
     : isOnOwnChannel
       ? streamerToolsEnabled
       : isTwitchModerator &&
         streamToolsSettings.settings.enabled &&
-        streamToolsSettings.settings.allowMods;
+        streamToolsSettings.settings.allowMods &&
+        (streamToolsSettings.settings.modAccess !== "selected" ||
+          isAllowedSelectedMod);
   const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
     ? "owner"
     : "moderator";

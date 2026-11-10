@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 
 vi.mock("../../src/hooks/chat/usePastPlaylists", () => ({
@@ -79,7 +79,12 @@ function makeModalProps(overrides: Record<string, unknown> = {}) {
     onClose: vi.fn(),
     channelKey: "twitch:alice",
     role: "owner" as const,
-    settings: { enabled: true, allowMods: false },
+    settings: {
+      enabled: true,
+      allowMods: false,
+      modAccess: "all" as const,
+      allowedMods: [] as Array<{ id: string; login: string }>,
+    },
     onUpdateSettings: vi.fn(async () => {}),
     ...overrides,
   };
@@ -183,5 +188,125 @@ describe("Stream tools moderator access", () => {
       screen.queryByRole("button", { name: "What can moderators do?" }),
     ).toBeNull();
     expect(screen.getByText(/controlling stream tools as a moderator/i)).toBeTruthy();
+  });
+});
+
+describe("Stream tools moderator selection", () => {
+  const MODERATORS = [
+    { user_id: "1", user_login: "mallory", user_name: "Mallory" },
+    { user_id: "2", user_login: "carol", user_name: "Carol" },
+  ];
+
+  function mockTwitchProxyFetch() {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = decodeURIComponent(String(input));
+      if (url.includes("/helix/users")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: [{ id: "42" }] }),
+        } as Response;
+      }
+      if (url.includes("/helix/moderation/moderators")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ data: MODERATORS, pagination: {} }),
+        } as Response;
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("hides the selector while moderator access is off", () => {
+    renderModal({
+      settings: {
+        enabled: true,
+        allowMods: false,
+        modAccess: "all",
+        allowedMods: [],
+      },
+    });
+
+    expect(screen.queryByRole("radio", { name: "All moderators" })).toBeNull();
+  });
+
+  it("offers all moderators or a selection", () => {
+    renderModal({
+      settings: {
+        enabled: true,
+        allowMods: true,
+        modAccess: "all",
+        allowedMods: [],
+      },
+    });
+
+    expect(screen.getByRole("radio", { name: "All moderators" })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: "Only selected moderators" }),
+    ).not.toBeChecked();
+    expect(screen.queryByRole("group", { name: "Select moderators" })).toBeNull();
+  });
+
+  it("lists moderators and saves the ones the streamer picks", async () => {
+    mockTwitchProxyFetch();
+    const props = makeModalProps({
+      settings: {
+        enabled: true,
+        allowMods: true,
+        modAccess: "selected",
+        allowedMods: [],
+      },
+    });
+    render(<StreamerToolsModal {...props} />);
+
+    expect(await screen.findByText("Mallory")).toBeTruthy();
+    expect(screen.getByText("Carol")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Mallory" }));
+
+    expect(props.onUpdateSettings).toHaveBeenCalledWith({
+      allowedMods: [{ id: "1", login: "mallory" }],
+    });
+  });
+
+  it("keeps granted moderators that Twitch no longer lists", async () => {
+    mockTwitchProxyFetch();
+    renderModal({
+      settings: {
+        enabled: true,
+        allowMods: true,
+        modAccess: "selected",
+        allowedMods: [{ id: "99", login: "ghost" }],
+      },
+    });
+
+    expect(await screen.findByText("ghost")).toBeTruthy();
+    expect(screen.getByText("not a moderator")).toBeTruthy();
+  });
+
+  it("does not show grants as stale while the list is loading", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderModal({
+      settings: {
+        enabled: true,
+        allowMods: true,
+        modAccess: "selected",
+        allowedMods: [{ id: "99", login: "ghost" }],
+      },
+    });
+
+    expect(screen.getByText(/loading moderators/i)).toBeTruthy();
+    expect(screen.queryByText("ghost")).toBeNull();
+    expect(screen.queryByText(/no moderators found/i)).toBeNull();
   });
 });

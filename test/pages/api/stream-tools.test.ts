@@ -4,6 +4,11 @@ import path from "path";
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 
+import {
+  MAX_ALLOWED_MODS,
+  MAX_MOD_FIELD_LENGTH,
+} from "../../../src/server/streamToolsSettings";
+
 let baseDir: string;
 
 vi.mock("../../../src/lib/rateLimit", () => ({
@@ -61,6 +66,13 @@ afterEach(async () => {
 });
 
 describe("GET/PUT /api/stream-tools/settings", () => {
+  const DEFAULTS = {
+    enabled: true,
+    allowMods: false,
+    modAccess: "all",
+    allowedMods: [],
+  };
+
   it("returns defaults before any write", async () => {
     const res = await settingsGet(
       makeContext(
@@ -70,7 +82,7 @@ describe("GET/PUT /api/stream-tools/settings", () => {
       ),
     );
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ enabled: true, allowMods: false });
+    expect(await res.json()).toEqual(DEFAULTS);
   });
 
   it("stores and returns updates", async () => {
@@ -84,7 +96,7 @@ describe("GET/PUT /api/stream-tools/settings", () => {
       ),
     );
     expect(put.status).toBe(200);
-    expect(await put.json()).toEqual({ enabled: true, allowMods: true });
+    expect(await put.json()).toEqual({ ...DEFAULTS, allowMods: true });
 
     const get = await settingsGet(
       makeContext(
@@ -93,7 +105,107 @@ describe("GET/PUT /api/stream-tools/settings", () => {
         ),
       ),
     );
-    expect(await get.json()).toEqual({ enabled: true, allowMods: true });
+    expect(await get.json()).toEqual({ ...DEFAULTS, allowMods: true });
+  });
+
+  it("stores a moderator selection", async () => {
+    const put = await settingsPut(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/settings",
+          {
+            channelKey: "twitch:alice",
+            allowMods: true,
+            modAccess: "selected",
+            allowedMods: [
+              { id: "1", login: " Mallory " },
+              { id: "2", login: "carol" },
+            ],
+          },
+          "PUT",
+        ),
+      ),
+    );
+    expect(put.status).toBe(200);
+    expect(await put.json()).toEqual({
+      ...DEFAULTS,
+      allowMods: true,
+      modAccess: "selected",
+      allowedMods: [
+        { id: "1", login: "mallory" },
+        { id: "2", login: "carol" },
+      ],
+    });
+  });
+
+  it("rejects an unknown access mode", async () => {
+    const put = await settingsPut(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/settings",
+          { channelKey: "twitch:alice", modAccess: "some" },
+          "PUT",
+        ),
+      ),
+    );
+    expect(put.status).toBe(400);
+  });
+
+  it("rejects a malformed moderator list", async () => {
+    const cases: unknown[][] = [
+      [42],
+      ["mallory"],
+      [{ login: "mallory" }],
+      [{ id: "", login: "mallory" }],
+      [{ id: 42, login: "mallory" }],
+      [{ id: "1", login: 42 }],
+      [{ id: "1", login: "x".repeat(MAX_MOD_FIELD_LENGTH + 1) }],
+    ];
+    for (const allowedMods of cases) {
+      const put = await settingsPut(
+        makeContext(
+          jsonResponse(
+            "http://localhost/api/stream-tools/settings",
+            { channelKey: "twitch:alice", allowedMods },
+            "PUT",
+          ),
+        ),
+      );
+      expect(put.status, JSON.stringify(allowedMods)).toBe(400);
+    }
+  });
+
+  it("rejects an oversized moderator list", async () => {
+    const allowedMods = Array.from({ length: MAX_ALLOWED_MODS + 1 }, (_, i) => ({
+      id: String(i),
+      login: `mod${i}`,
+    }));
+    const put = await settingsPut(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/settings",
+          { channelKey: "twitch:alice", modAccess: "selected", allowedMods },
+          "PUT",
+        ),
+      ),
+    );
+    expect(put.status).toBe(400);
+  });
+
+  it("rejects an oversized request body", async () => {
+    const put = await settingsPut(
+      makeContext(
+        jsonResponse(
+          "http://localhost/api/stream-tools/settings",
+          {
+            channelKey: "twitch:alice",
+            allowedMods: [{ id: "1".repeat(20_000), login: "mallory" }],
+          },
+          "PUT",
+        ),
+      ),
+    );
+    expect(put.status).toBe(413);
   });
 
   it("rejects writes from non-owners", async () => {

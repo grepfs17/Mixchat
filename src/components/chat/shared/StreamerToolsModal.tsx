@@ -33,7 +33,11 @@ import {
 import type { PastPlaylistEntry } from "../../../lib/streamerTools/pastPlaylists";
 import type { SongQueuePublicView } from "../../../lib/songQueue/types";
 import { IS_DESKTOP } from "../../../lib/constants";
-import type { StreamToolsSettings } from "../../../hooks/chat/useStreamToolsSettings";
+import { useChannelModerators } from "../../../hooks/chat/useChannelModerators";
+import type {
+  StreamToolsModAccess,
+  StreamToolsSettings,
+} from "../../../hooks/chat/useStreamToolsSettings";
 import { giveawayAction } from "../../../lib/streamTools/api";
 
 interface StreamerToolsModalProps {
@@ -67,7 +71,7 @@ interface StreamerToolsModalProps {
   role?: "owner" | "moderator";
   /** Whether the broadcaster can run native polls and predictions. */
   affiliateEligible?: boolean;
-  /** Server-backed access settings. The owner can edit `allowMods`. */
+  /** Server-backed access settings. The owner can edit `allowMods`, `modAccess` and `allowedMods`. */
   settings?: StreamToolsSettings;
   onUpdateSettings?: (
     patch: Partial<StreamToolsSettings>,
@@ -779,8 +783,90 @@ export default function StreamerToolsModal({
   );
   const [announcing, setAnnouncing] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [accessInfoOpen, setAccessInfoOpen] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const canManageAccess =
+    role === "owner" && Boolean(settings) && Boolean(onUpdateSettings) && !IS_DESKTOP;
+  const showModPicker = canManageAccess && Boolean(settings?.allowMods);
+  const {
+    mods,
+    loading: modsLoading,
+    settled: modsSettled,
+    error: modsError,
+    needsReauth: modsNeedsReauth,
+    reload: reloadMods,
+  } = useChannelModerators(
+    channelKey,
+    showModPicker && settings?.modAccess === "selected",
+  );
+
+  const saveAccessSettings = useCallback(
+    async (patch: Partial<StreamToolsSettings>) => {
+      if (!onUpdateSettings) return;
+      setSavingAccess(true);
+      setAccessError(null);
+      try {
+        await onUpdateSettings(patch);
+      } catch (err) {
+        setAccessError(
+          err instanceof Error
+            ? err.message
+            : "Failed to save moderator access",
+        );
+      } finally {
+        setSavingAccess(false);
+      }
+    },
+    [onUpdateSettings],
+  );
+
+  const modRows = useMemo(() => {
+    const rows = mods.map((mod) => ({
+      key: mod.userId,
+      id: mod.userId,
+      login: mod.login,
+      label: mod.displayName,
+      stale: false,
+    }));
+    // Keep grants that Twitch no longer lists visible, so stale entries can
+    // still be removed.
+    const listed = new Set(rows.map((row) => row.id));
+    for (const grant of settings?.allowedMods ?? []) {
+      if (listed.has(grant.id)) continue;
+      rows.push({
+        key: `stale:${grant.id}`,
+        id: grant.id,
+        login: grant.login,
+        label: grant.login || grant.id,
+        stale: true,
+      });
+    }
+    return rows;
+  }, [mods, settings?.allowedMods]);
+
+  const allowedModIds = new Set(
+    (settings?.allowedMods ?? []).map((mod) => mod.id),
+  );
+
+  const toggleAllowedMod = useCallback(
+    async (mod: { id: string; login: string }, checked: boolean) => {
+      if (!settings) return;
+      const current = settings.allowedMods.filter(
+        (entry) => entry.id !== mod.id,
+      );
+      await saveAccessSettings({
+        allowedMods: checked ? [...current, mod] : current,
+      });
+    },
+    [settings, saveAccessSettings],
+  );
+
+  const setModAccess = useCallback(
+    (modAccess: StreamToolsModAccess) => saveAccessSettings({ modAccess }),
+    [saveAccessSettings],
+  );
 
   // Switch panels when a caller requests a tool while the modal is already
   // open (for example `/createpoll`).
@@ -892,16 +978,11 @@ export default function StreamerToolsModal({
                         type="checkbox"
                         checked={settings.allowMods}
                         disabled={savingAccess}
-                        onChange={async (e) => {
-                          setSavingAccess(true);
-                          try {
-                            await onUpdateSettings({
-                              allowMods: e.target.checked,
-                            });
-                          } finally {
-                            setSavingAccess(false);
-                          }
-                        }}
+                        onChange={(e) =>
+                          void saveAccessSettings({
+                            allowMods: e.target.checked,
+                          })
+                        }
                       />
                       <span>Allow moderators to use Stream tools</span>
                     </label>
@@ -915,6 +996,114 @@ export default function StreamerToolsModal({
                       <FaInfoCircle size={13} />
                     </button>
                   </div>
+
+                  {accessError && (
+                    <div className="stream-tools-access-error" role="alert">
+                      {accessError}
+                    </div>
+                  )}
+
+                  {settings.allowMods && (
+                    <fieldset
+                      className="stream-tools-access-scope"
+                      disabled={savingAccess}
+                    >
+                      <legend className="stream-tools-access-scope-label">
+                        Give access to
+                      </legend>
+                      <label className="stream-tools-access-scope-option">
+                        <input
+                          type="radio"
+                          name="stream-tools-mod-access"
+                          checked={settings.modAccess === "all"}
+                          onChange={() => void setModAccess("all")}
+                        />
+                        <span>All moderators</span>
+                      </label>
+                      <label className="stream-tools-access-scope-option">
+                        <input
+                          type="radio"
+                          name="stream-tools-mod-access"
+                          checked={settings.modAccess === "selected"}
+                          onChange={() => void setModAccess("selected")}
+                        />
+                        <span>Only selected moderators</span>
+                      </label>
+
+                      {settings.modAccess === "selected" && (
+                        <div
+                          className="stream-tools-access-mods"
+                          role="group"
+                          aria-label="Select moderators"
+                        >
+                          {modsLoading && (
+                            <span className="stream-tools-access-mods-status">
+                              Loading moderators...
+                            </span>
+                          )}
+                          {modsNeedsReauth && (
+                            <span className="stream-tools-access-mods-status">
+                              Reconnect your Twitch account to load the
+                              moderator list.
+                            </span>
+                          )}
+                          {modsError && (
+                            <span className="stream-tools-access-mods-error">
+                              {modsError}{" "}
+                              <button
+                                type="button"
+                                className="stream-tools-access-mods-retry"
+                                onClick={reloadMods}
+                              >
+                                Retry
+                              </button>
+                            </span>
+                          )}
+                          {modsSettled &&
+                            !modsError &&
+                            !modsNeedsReauth &&
+                            modRows.length === 0 && (
+                              <span className="stream-tools-access-mods-status">
+                                No moderators found.
+                              </span>
+                            )}
+                          {modsSettled &&
+                            modRows.map((row) => (
+                              <label
+                                key={row.key}
+                                className="stream-tools-access-mod"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={allowedModIds.has(row.id)}
+                                  onChange={(e) =>
+                                    void toggleAllowedMod(
+                                      { id: row.id, login: row.login },
+                                      e.target.checked,
+                                    )
+                                  }
+                                />
+                                <span>{row.label}</span>
+                                {row.stale && (
+                                  <span className="stream-tools-access-mod-note">
+                                    not a moderator
+                                  </span>
+                                )}
+                              </label>
+                            ))}
+                          {modsSettled &&
+                            !modsError &&
+                            modRows.length > 0 &&
+                            settings.allowedMods.length === 0 && (
+                              <span className="stream-tools-access-mods-status">
+                                No one is selected, so no moderator gets
+                                access.
+                              </span>
+                            )}
+                        </div>
+                      )}
+                    </fieldset>
+                  )}
                 </div>
               )}
 
@@ -948,7 +1137,8 @@ export default function StreamerToolsModal({
 
                     <p className="stream-tools-access-modal-intro">
                       When this is on, Twitch moderators of your channel get
-                      the same Stream tools you have.
+                      the same Stream tools you have. You can allow every
+                      moderator or only the ones you select.
                     </p>
 
                     <div className="stream-tools-access-modal-cols">
@@ -973,7 +1163,8 @@ export default function StreamerToolsModal({
                     </div>
 
                     <p className="stream-tools-access-modal-note">
-                      Only Twitch moderators are included.
+                      Only Twitch moderators are included, and only those you
+                      allow.
                     </p>
 
                     <div className="stream-tools-access-modal-actions">
