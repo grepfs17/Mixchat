@@ -16,7 +16,7 @@
   "dependencies": {
     "@twurple/auth": "^8.2.0",
     "@twurple/chat": "^8.2.0",
-    "astro": "^7.4.0",
+    "astro": "^7.4.9",
     "bgutils-js": "^3.2.0",
     "dompurify": "^3.4.17",
     "hls.js": "^1.7.3",
