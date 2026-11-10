@@ -278,37 +278,37 @@ export default function YTMessageParts({
     [renderThirdPartyEmotes, variant, disabledEmotes, emoteVersion],
   );
 
-  const rendered = useMemo(
-    () =>
-      parts.map((part, i) => {
-        if (part.type === "twitch-link") {
-          const url = part.twitchUrl || part.text || "";
-          const parsed = parseTwitchUrl(url);
-          if (!parsed) {
-            // Defensive fallback: parts only become 'twitch-link' after a
-            // successful parseTwitchUrl, so this branch shouldn't occur.
-            return (
-              <a
-                key={`tw-${i}`}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="twitch-link-fallback"
-              >
-                {url}
-              </a>
-            );
-          }
-          return (
-            <TwitchLinkPreview
-              key={`tw-${i}-${parsed.href}`}
-              url={url}
-              parts={parsed}
-            />
+  const rendered = useMemo(() => {
+    const content: React.ReactNode[] = [];
+    const previews: React.ReactNode[] = [];
+    parts.forEach((part, i) => {
+      if (part.type === "twitch-link") {
+        const url = part.twitchUrl || part.text || "";
+        const parsed = parseTwitchUrl(url);
+        if (!parsed) {
+          // Defensive fallback: parts only become 'twitch-link' after a
+          // successful parseTwitchUrl, so this branch shouldn't occur.
+          previews.push(
+            <a
+              key={`tw-${i}`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="twitch-link-fallback"
+            >
+              {url}
+            </a>,
           );
+          return;
         }
-        if (part.type === "emoji") {
-          return variant === "unified" ? (
+        previews.push(
+          <TwitchLinkPreview key={`tw-${i}-${parsed.href}`} url={url} parts={parsed} />,
+        );
+        return;
+      }
+      if (part.type === "emoji") {
+        content.push(
+          variant === "unified" ? (
             <img
               key={`e-${i}`}
               src={part.url}
@@ -336,14 +336,18 @@ export default function YTMessageParts({
               className={`yt-emoji ${part.isCustomEmoji ? "custom" : "standard"}`}
               loading="lazy"
             />
-          );
-        }
-        // Parts never reorder within a message, so a namespaced index is a
-        // stable key.
-        return renderText(part.text ?? "", `t-${i}`);
-      }),
-    [parts, variant, renderText],
-  );
+          ),
+        );
+        return;
+      }
+      // Keys use the original part index, so partitioning keeps them unique
+      // and stable across re-renders.
+      content.push(renderText(part.text ?? "", `t-${i}`));
+    });
+    // Twitch-link previews render after all other parts so they always sit
+    // at the bottom of the message, never mid-text where the URL appeared.
+    return [...content, ...previews];
+  }, [parts, variant, renderText]);
 
   return <span>{rendered}</span>;
 }

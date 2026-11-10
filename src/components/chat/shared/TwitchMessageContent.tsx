@@ -670,6 +670,8 @@ export const TwitchMessageContent = memo(
  * Renders a Twitch message body with preview cards for `twitch.tv/...`
  * URLs. Surrounding text keeps the normal emote/link pipeline. Emote
  * ranges use absolute offsets in `content`, so each segment re-bases them.
+ * Preview cards render after all text segments so they always sit at the
+ * bottom of the message, never mid-text where the URL appeared.
  * Memoised on content/emote identity.
  */
 function TwitchMessageTextBase({
@@ -744,15 +746,28 @@ function TwitchMessageTextBase({
 
   return (
     <span className="message-text">
-      {segments.map((seg, i) => (
-        <TwitchMessageTextSegment
-          key={`tw-seg-${i}-${seg.type}`}
-          segment={seg}
-          emotes={emotes}
-          gigantified={gigantified}
-          mentionColors={mentionColors}
-        />
-      ))}
+      {segments.map((seg, i) =>
+        seg.type === "twitch-link" ? null : (
+          <TwitchMessageTextSegment
+            key={`tw-seg-${i}-${seg.type}`}
+            segment={seg}
+            emotes={emotes}
+            gigantified={gigantified}
+            mentionColors={mentionColors}
+          />
+        ),
+      )}
+      {segments.map((seg, i) =>
+        seg.type === "twitch-link" ? (
+          <TwitchMessageTextSegment
+            key={`tw-seg-${i}-${seg.type}`}
+            segment={seg}
+            emotes={emotes}
+            gigantified={gigantified}
+            mentionColors={mentionColors}
+          />
+        ) : null,
+      )}
     </span>
   );
 }

@@ -1,34 +1,35 @@
-/* Inline Twitch preview card. Rendered in the chat message-text flow
- * wherever a twitch.tv URL would normally show as a tiny link. */
+/* Twitch preview card. Rendered in the chat message-text flow after all
+ * message text, so it always sits at the bottom of the message. */
 @import "../vars.css";
 
 .twitch-link-preview {
-    display: inline-flex;
+    display: flex;
     align-items: stretch;
     gap: 10px;
     margin: 4px 0;
     padding: 8px 10px 8px 8px;
-    background: rgba(99, 102, 241, 0.08);
-    border: 1px solid rgba(145, 70, 255, 0.35);
-    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-medium);
+    border-left: 3px solid var(--color-twitch);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     text-decoration: none;
     color: inherit;
     max-width: 460px;
     min-width: 280px;
     width: max-content;
-    flex-basis: 320px;
     cursor: pointer;
     transition:
         background-color 0.15s ease,
         border-color 0.15s ease,
         transform 0.15s ease;
-    vertical-align: top;
     overflow: hidden;
 }
 
 .twitch-link-preview:hover {
-    background: rgba(99, 102, 241, 0.18);
-    border-color: rgba(145, 70, 255, 0.65);
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-light);
+    border-left-color: var(--color-twitch);
     transform: translateY(-1px);
 }
 
@@ -42,9 +43,9 @@
     width: 96px;
     min-width: 96px;
     height: 54px;
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
-    background: #1a1625;
+    background: var(--color-bg-tertiary);
     flex-shrink: 0;
 }
 
@@ -66,23 +67,27 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(145, 70, 255, 0.7);
-    background: linear-gradient(135deg, #1a1625 0%, #2d1f4d 100%);
+    color: color-mix(in srgb, var(--color-twitch) 60%, white);
+    background: linear-gradient(
+        135deg,
+        var(--color-bg-tertiary),
+        var(--color-bg-hover)
+    );
 }
 
 .twitch-link-preview__thumb--skeleton {
     background: linear-gradient(
         90deg,
-        rgba(145, 70, 255, 0.08) 0%,
-        rgba(145, 70, 255, 0.22) 50%,
-        rgba(145, 70, 255, 0.08) 100%
+        color-mix(in srgb, var(--color-twitch) 8%, transparent) 0%,
+        color-mix(in srgb, var(--color-twitch) 20%, transparent) 50%,
+        color-mix(in srgb, var(--color-twitch) 8%, transparent) 100%
     );
     background-size: 200% 100%;
     animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(145, 70, 255, 0.55);
+    color: color-mix(in srgb, var(--color-twitch) 55%, white);
 }
 
 @keyframes twitchLinkPreviewShimmer {
@@ -102,33 +107,33 @@
     align-items: center;
     gap: 3px;
     padding: 1px 6px;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.72);
-    color: #ffffff;
-    font-size: 9px;
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+    color: var(--color-text-white);
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
     font-family: inherit;
 }
 
 .twitch-link-preview--video .twitch-link-preview__kind-badge {
-    background: rgba(33, 150, 243, 0.92);
+    background: var(--color-notification-info);
 }
 
 .twitch-link-preview--live .twitch-link-preview__kind-badge {
-    background: rgba(239, 68, 68, 0.92);
+    background: var(--color-live);
 }
 
 .twitch-link-preview__duration {
     position: absolute;
     bottom: 4px;
     right: 4px;
-    background: rgba(0, 0, 0, 0.78);
-    color: #ffffff;
-    font-size: 9px;
+    background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+    color: var(--color-text-white);
+    font-size: 10px;
     font-weight: 600;
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     font-family: inherit;
 }
 
@@ -139,12 +144,12 @@
     transform: translate(-50%, -50%);
     width: 26px;
     height: 26px;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-primary) 65%, transparent);
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: var(--color-text-white);
     pointer-events: none;
 }
 
@@ -152,12 +157,12 @@
     position: absolute;
     bottom: 4px;
     left: 4px;
-    background: rgba(0, 0, 0, 0.72);
-    color: #ffffff;
-    font-size: 9px;
+    background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+    color: var(--color-text-white);
+    font-size: 10px;
     font-weight: 700;
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -169,9 +174,10 @@
     display: inline-block;
     width: 6px;
     height: 6px;
-    border-radius: 50%;
-    background: #ef4444;
-    box-shadow: 0 0 5px rgba(239, 68, 68, 0.6);
+    border-radius: var(--radius-full);
+    background: var(--color-notification-error);
+    box-shadow: 0 0 5px
+        color-mix(in srgb, var(--color-notification-error) 60%, transparent);
     margin-right: 2px;
 }
 
@@ -185,17 +191,17 @@
 }
 
 .twitch-link-preview__game {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: #c4b5fd;
+    color: color-mix(in srgb, var(--color-twitch) 55%, white);
     text-transform: uppercase;
     line-height: 1.2;
     margin-bottom: 1px;
 }
 
 .twitch-link-preview__title {
-    font-size: 0.85em;
+    font-size: 0.95em;
     font-weight: 600;
     line-height: 1.2;
     color: var(--color-text-primary);
@@ -207,16 +213,15 @@
 }
 
 .twitch-link-preview__title--skeleton {
-    background: rgba(255, 255, 255, 0.06);
-    height: 12px;
-    border-radius: 3px;
+    height: 14px;
+    border-radius: var(--radius-sm);
     width: 80%;
     animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.04) 0%,
-        rgba(255, 255, 255, 0.12) 50%,
-        rgba(255, 255, 255, 0.04) 100%
+        color-mix(in srgb, var(--color-text-primary) 5%, transparent) 0%,
+        color-mix(in srgb, var(--color-text-primary) 12%, transparent) 50%,
+        color-mix(in srgb, var(--color-text-primary) 5%, transparent) 100%
     );
     background-size: 200% 100%;
     color: transparent;
@@ -226,23 +231,22 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    font-size: 0.72em;
+    font-size: 0.82em;
     color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
     margin-top: 1px;
     min-width: 0;
 }
 
 .twitch-link-preview__meta--skeleton {
-    background: rgba(255, 255, 255, 0.05);
-    height: 10px;
-    border-radius: 3px;
+    height: 11px;
+    border-radius: var(--radius-sm);
     width: 60%;
     animation: twitchLinkPreviewShimmer 1.2s ease-in-out infinite;
     background: linear-gradient(
         90deg,
-        rgba(255, 255, 255, 0.03) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0.03) 100%
+        color-mix(in srgb, var(--color-text-primary) 4%, transparent) 0%,
+        color-mix(in srgb, var(--color-text-primary) 10%, transparent) 50%,
+        color-mix(in srgb, var(--color-text-primary) 4%, transparent) 100%
     );
     background-size: 200% 100%;
     color: transparent;
@@ -251,13 +255,13 @@
 .twitch-link-preview__avatar {
     width: 14px;
     height: 14px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     object-fit: cover;
     flex-shrink: 0;
 }
 
 .twitch-link-preview__avatar--skeleton {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
     display: inline-block;
 }
 
@@ -281,23 +285,23 @@
 
 /* Fallback (loading or fetch failed): plain styled link with Twitch icon */
 .twitch-link-fallback {
-    color: #c4b5fd;
+    color: color-mix(in srgb, var(--color-twitch) 55%, white);
     text-decoration: underline;
-    text-decoration-color: rgba(145, 70, 255, 0.5);
+    text-decoration-color: color-mix(in srgb, var(--color-twitch) 50%, transparent);
     word-break: break-all;
 }
 
 .twitch-link-fallback:hover {
-    color: #ddd6fe;
-    text-decoration-color: rgba(145, 70, 255, 0.9);
+    color: color-mix(in srgb, var(--color-twitch) 70%, white);
+    text-decoration-color: color-mix(in srgb, var(--color-twitch) 85%, transparent);
 }
 
-/* Compact width inside the message-text flex row so the card doesn't push
- * the rest of the message awkwardly. Using block-flex lets us appear on a
- * new line below the message text content where there isn't room. */
-.message-single-line > .twitch-link-preview {
-    flex-basis: 100%;
-    max-width: 100%;
+/* Block-level (display: flex) keeps the card on its own line below the
+ * message text instead of inline where the URL appeared. Cap the width to
+ * the message column so narrow panes don't overflow. */
+.message-text .twitch-link-preview {
+    max-width: min(460px, 100%);
+    min-width: min(280px, 100%);
 }
 
 /* Keep the preview card easy to read when text is large (font-size: 18+) */
