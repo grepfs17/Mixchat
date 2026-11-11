@@ -21,6 +21,7 @@ interface YouTubeMessageItemProps {
   ) => void;
   showDeletedMessages?: boolean;
   renderThirdPartyEmotes?: boolean;
+  showFirstMessage?: boolean;
 }
 
 export function YouTubeMessageItem({
@@ -34,6 +35,7 @@ export function YouTubeMessageItem({
   onUsernameClick,
   showDeletedMessages = false,
   renderThirdPartyEmotes = false,
+  showFirstMessage = false,
 }: YouTubeMessageItemProps) {
   const msg = entry.msg as YTMessage;
 
@@ -67,6 +69,7 @@ export function YouTubeMessageItem({
       onUsernameClick={onUsernameClick}
       showDeletedMessages={showDeletedMessages}
       renderThirdPartyEmotes={renderThirdPartyEmotes}
+      showFirstMessage={showFirstMessage}
     />
   );
 }

@@ -52,6 +52,8 @@ export type UseChatSettingsResult = {
   setMentionSoundType: React.Dispatch<React.SetStateAction<MentionSoundType>>;
   showDeletedMessages: boolean;
   setShowDeletedMessages: React.Dispatch<React.SetStateAction<boolean>>;
+  markFirstMessages: boolean;
+  setMarkFirstMessages: React.Dispatch<React.SetStateAction<boolean>>;
   maxDisplayedMessages: number;
   setMaxDisplayedMessages: React.Dispatch<React.SetStateAction<number>>;
   compactActions: boolean;
@@ -145,6 +147,8 @@ export function useChatSettings(): UseChatSettingsResult {
     );
   const [showDeletedMessages, setShowDeletedMessages] =
     useLocalStorageState<boolean>("mixchat_show_deleted_messages", true);
+  const [markFirstMessages, setMarkFirstMessages] =
+    useLocalStorageState<boolean>("mixchat_mark_first_messages_per_stream", false);
   const [maxDisplayedMessages, setMaxDisplayedMessages] =
     useLocalStorageState<number>(
       MAX_DISPLAYED_MESSAGES_STORAGE_KEY,
@@ -291,6 +295,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setMentionSoundType,
     showDeletedMessages,
     setShowDeletedMessages,
+    markFirstMessages,
+    setMarkFirstMessages,
     maxDisplayedMessages,
     setMaxDisplayedMessages,
     compactActions,
@@ -351,6 +357,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setMentionSoundType,
       showDeletedMessages,
       setShowDeletedMessages,
+      markFirstMessages,
+      setMarkFirstMessages,
       maxDisplayedMessages,
       setMaxDisplayedMessages,
       compactActions,

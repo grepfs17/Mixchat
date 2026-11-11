@@ -10,6 +10,7 @@ interface TwitchMessageItemProps {
   entries: UnifiedEntry[];
   currentUserDisplayName?: string;
   mentionColors?: Map<string, string>;
+  showFirstMessage?: boolean;
   onReply?: (msg: TwitchMessage) => void;
   onCopyMessage?: () => void;
   onUsernameClick?: (
@@ -36,6 +37,7 @@ function UnifiedTwitchMessageItemBase({
   entries,
   currentUserDisplayName,
   mentionColors,
+  showFirstMessage,
   onReply,
   onCopyMessage,
   onUsernameClick,
@@ -57,6 +59,7 @@ function UnifiedTwitchMessageItemBase({
       previousMsg={previousMsg}
       currentUserDisplayName={currentUserDisplayName}
       mentionColors={mentionColors}
+      showFirstMessage={showFirstMessage}
       onReply={onReply}
       onCopy={() => {
         if (navigator.clipboard) {
@@ -89,6 +92,7 @@ export const UnifiedTwitchMessageItem = memo(UnifiedTwitchMessageItemBase, (prev
     prev.entry.msg.id === next.entry.msg.id &&
     prev.index === next.index &&
     prev.currentUserDisplayName === next.currentUserDisplayName &&
-    prev.mentionColors === next.mentionColors
+    prev.mentionColors === next.mentionColors &&
+    prev.showFirstMessage === next.showFirstMessage
   );
 });

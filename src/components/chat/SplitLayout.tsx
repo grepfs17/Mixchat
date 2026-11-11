@@ -39,6 +39,8 @@ interface SplitChatProps {
   ) => void;
   channelName?: string;
   renderThirdPartyEmotesOnYoutube?: boolean;
+  markFirstMessages?: boolean;
+  streamStartedAt?: Date | null;
 }
 
 export default function SplitChat({
@@ -69,6 +71,8 @@ export default function SplitChat({
   onUsernameClick,
   channelName,
   renderThirdPartyEmotesOnYoutube,
+  markFirstMessages = false,
+  streamStartedAt = null,
 }: SplitChatProps) {
   return (
     <>
@@ -97,6 +101,8 @@ export default function SplitChat({
           onConnectionChange={onYtConnectionChange}
           onUsernameClick={onUsernameClick}
           renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
+          markFirstMessages={markFirstMessages}
+          streamStartedAt={streamStartedAt}
         />
       )}
 

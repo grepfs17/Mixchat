@@ -22,6 +22,7 @@ export const SETTINGS_KEYS = [
   "mixchat_mention_volume",
   "mixchat_mention_sound_type",
   "mixchat_show_deleted_messages",
+  "mixchat_mark_first_messages_per_stream",
   "mixchat_compact_actions",
   "mixchat_keep_mod_actions_visible",
   "mixchat_mod_actions_first",

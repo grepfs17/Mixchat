@@ -63,6 +63,23 @@ describe("TwitchEventIcon", () => {
     const label = screen.getByText("Gigantified Emote");
     expect(label.className).toContain("gigantified-emote-label");
   });
+
+  it("renders First on stream label for isFirstMessageOnStream", () => {
+    render(<TwitchEventIcon isFirstMessageOnStream />);
+    expect(screen.getByText("First on stream")).toBeInTheDocument();
+  });
+
+  it("keeps First Message priority over First on stream", () => {
+    render(<TwitchEventIcon isFirstMessage isFirstMessageOnStream />);
+    expect(screen.getByText("First Message")).toBeInTheDocument();
+    expect(screen.queryByText("First on stream")).not.toBeInTheDocument();
+  });
+
+  it("prioritizes event messageType over First on stream", () => {
+    render(<TwitchEventIcon messageType="cheer" isFirstMessageOnStream />);
+    expect(screen.getByText("Cheer")).toBeInTheDocument();
+    expect(screen.queryByText("First on stream")).not.toBeInTheDocument();
+  });
 });
 
 describe("EVENT_CONFIG", () => {
@@ -85,5 +102,14 @@ describe("EVENT_CONFIG", () => {
     expect(cfg).toBeDefined();
     expect(cfg.title).toBe("Gigantified Emote");
     expect(cfg.color).toBe("#00d4aa");
+  });
+
+  it("has first-message and first-message-on-stream configs", () => {
+    const first = EVENT_CONFIG["first-message"];
+    expect(first.title).toBe("First Message");
+    expect(first.color).toBe("#2dd4bf");
+    const onStream = EVENT_CONFIG["first-message-on-stream"];
+    expect(onStream.title).toBe("First on stream");
+    expect(onStream.color).not.toBe(first.color);
   });
 });

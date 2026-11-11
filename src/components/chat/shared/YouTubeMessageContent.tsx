@@ -16,6 +16,7 @@ import {
   denyYouTubeMessage,
 } from "../../../lib/youtubeModeration";
 import type { MessagePart } from "../unified/types";
+import { EVENT_CONFIG } from "../../TwitchEventIcon";
 
 export interface YouTubeMessageContentProps {
   msg: YTMessage;
@@ -39,9 +40,53 @@ export interface YouTubeMessageContentProps {
    * images. Uses the same emote set as Twitch chat.
    */
   renderThirdPartyEmotes?: boolean;
+  /**
+   * When true, the message is marked as the author's first in the current
+   * stream (indigo "First on stream" badge). Only applied to plain
+   * messages; event messages keep their own label.
+   */
+  showFirstMessage?: boolean;
 }
 
 type YTEventConfig = { label: string; color: string; bg: string };
+
+/**
+ * Per-stream first-message badge, shared with Twitch's
+ * `first-message-on-stream` event style (indigo, distinct from the teal
+ * channel-level "First Message" badge).
+ */
+const STREAM_FIRST = EVENT_CONFIG["first-message-on-stream"];
+
+/** Class/style applied to a plain message marked as the author's first this stream. */
+function firstMessageMarkProps(show: boolean): {
+  className: string;
+  style?: React.CSSProperties;
+} {
+  if (!show) return { className: "" };
+  return {
+    className: " first-message",
+    style: {
+      "--event-color": STREAM_FIRST.color,
+      "--event-bg": STREAM_FIRST.bg,
+    } as React.CSSProperties,
+  };
+}
+
+function YouTubeFirstMessageLabel({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <div
+      className="yt-event-label"
+      style={{
+        color: STREAM_FIRST.color,
+        background: STREAM_FIRST.bg,
+        borderColor: STREAM_FIRST.color,
+      }}
+    >
+      {STREAM_FIRST.title}
+    </div>
+  );
+}
 
 const YT_EVENT_CONFIG: Record<
   string,
@@ -590,6 +635,7 @@ export function YouTubeMessageContent({
   onUsernameClick,
   showDeletedMessages = false,
   renderThirdPartyEmotes = false,
+  showFirstMessage = false,
 }: YouTubeMessageContentProps) {
   const {
     isYouTubeModerator,
@@ -655,14 +701,17 @@ export function YouTubeMessageContent({
     );
   }
 
+  const firstMark = firstMessageMarkProps(showFirstMessage);
   return (
     <div
-      className={`message${msg.optimistic ? " yt-optimistic" : ""}${msg.isDeleted ? " deleted" : ""} ${parityClass}`}
+      className={`message${msg.optimistic ? " yt-optimistic" : ""}${msg.isDeleted ? " deleted" : ""}${firstMark.className} ${parityClass}`}
+      style={firstMark.style}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       onTouchMove={onTouchMove}
       onContextMenu={onContextMenu}
     >
+      <YouTubeFirstMessageLabel show={showFirstMessage} />
       <div className="message-single-line">
         <YouTubeMessageHead
           msg={msg}

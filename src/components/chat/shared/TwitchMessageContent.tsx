@@ -22,6 +22,8 @@ interface TwitchMessageContentProps {
   currentUserDisplayName?: string;
   authorColorById?: Map<string, string>;
   mentionColors?: Map<string, string>;
+  /** Adds the per-stream first-message badge on top of any `msg.isFirstMessage` tag. */
+  showFirstMessage?: boolean;
   onReply?: (msg: TwitchMessage) => void;
   onCopy: (msg: TwitchMessage) => void;
   onUsernameClick?: (
@@ -45,6 +47,7 @@ interface TwitchMessageContentProps {
 
 function computeEventStyle(
   msg: TwitchMessage,
+  showFirstMessage: boolean,
 ): React.CSSProperties | undefined {
   const cfg = msg.messageType ? EVENT_CONFIG[msg.messageType] : undefined;
   const powerUpCfg = msg.powerUpType
@@ -53,9 +56,12 @@ function computeEventStyle(
   const gigantifiedCfg = msg.isGigantifiedEmote
     ? EVENT_CONFIG["gigantified-emote"]
     : undefined;
-  const firstMessageCfg = msg.isFirstMessage
-    ? EVENT_CONFIG["first-message"]
-    : undefined;
+  let firstMessageCfg;
+  if (msg.isFirstMessage) {
+    firstMessageCfg = EVENT_CONFIG["first-message"];
+  } else if (showFirstMessage) {
+    firstMessageCfg = EVENT_CONFIG["first-message-on-stream"];
+  }
   const activeCfg = cfg || powerUpCfg || gigantifiedCfg || firstMessageCfg;
   return activeCfg
     ? ({
@@ -69,6 +75,7 @@ function computeMessageClasses(
   msg: TwitchMessage,
   parityClass: string,
   isMentioned: boolean,
+  firstMessageMark: boolean,
 ): string {
   const powerUpClass =
     msg.powerUpType === "message_effect"
@@ -86,7 +93,7 @@ function computeMessageClasses(
     msg.isDeleted ? "deleted" : "",
     msg.isBot ? "bot" : "",
     (msg.mentionsUser || isMentioned) && !msg.isBot ? "mention" : "",
-    msg.isFirstMessage ? "first-message" : "",
+    firstMessageMark ? "first-message" : "",
     parityClass,
   ]
     .filter(Boolean)
@@ -97,7 +104,8 @@ function computeIdentity(
   msg: TwitchMessage,
   index: number,
   previousMsg: TwitchMessage | null,
-  currentUserDisplayName?: string,
+  currentUserDisplayName: string | undefined,
+  firstMessageMark: boolean,
 ): {
   isFirstLive: boolean;
   messageClasses: string;
@@ -110,7 +118,12 @@ function computeIdentity(
     !msg.isPreloaded && previousMsg !== null && previousMsg.isPreloaded,
   );
   const parityClass = index % 2 === 0 ? "even" : "odd";
-  const messageClasses = computeMessageClasses(msg, parityClass, isMentioned);
+  const messageClasses = computeMessageClasses(
+    msg,
+    parityClass,
+    isMentioned,
+    firstMessageMark,
+  );
   const isBroadcaster = Boolean(msg.badges && msg.badges["broadcaster"]);
   const isModeratorMsg = Boolean(msg.badges && msg.badges["moderator"]);
   const isUnmoderatable = Boolean(
@@ -508,6 +521,7 @@ function TwitchMessageContentBase({
   currentUserDisplayName,
   authorColorById,
   mentionColors,
+  showFirstMessage = false,
   onReply,
   onCopy,
   onUsernameClick,
@@ -533,13 +547,15 @@ function TwitchMessageContentBase({
     onWarnUser,
   } = useModerationContext();
   const [deletedRevealed, setDeletedRevealed] = useState(false);
+  const firstMessageMark = Boolean(showFirstMessage || msg.isFirstMessage);
   const { isFirstLive, messageClasses, isUnmoderatable } = computeIdentity(
     msg,
     index,
     previousMsg,
     currentUserDisplayName,
+    firstMessageMark,
   );
-  const eventStyle = computeEventStyle(msg);
+  const eventStyle = computeEventStyle(msg, showFirstMessage);
 
   const handleCtx = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -617,6 +633,7 @@ function TwitchMessageContentBase({
           powerUpType={msg.powerUpType}
           isGigantifiedEmote={msg.isGigantifiedEmote}
           isFirstMessage={msg.isFirstMessage}
+          isFirstMessageOnStream={showFirstMessage}
         />
 
         <TwitchMessageLine
@@ -661,7 +678,8 @@ export const TwitchMessageContent = memo(
       prev.index === next.index &&
       prev.previousMsg === next.previousMsg &&
       prev.currentUserDisplayName === next.currentUserDisplayName &&
-      prev.mentionColors === next.mentionColors
+      prev.mentionColors === next.mentionColors &&
+      prev.showFirstMessage === next.showFirstMessage
     );
   },
 );

@@ -69,6 +69,7 @@ function UnifiedChatContent({
     showStreamEmbed = true,
     onToggleStreamEmbed,
     renderThirdPartyEmotesOnYoutube = false,
+    markFirstMessages = false,
   } = appProps;
   const {
     messages,
@@ -171,6 +172,7 @@ function UnifiedChatContent({
           redemptionPubSubStatus={state.redemptionPubSubStatus}
           isOnOwnChannel={appProps.isOnOwnChannel ?? false}
           maxDisplayedMessages={maxDisplayedMessages}
+          markFirstMessages={markFirstMessages}
           unifiedChatSlot={
             <UnifiedChat
               ref={unifiedChatRef}
@@ -211,6 +213,8 @@ function UnifiedChatContent({
               showDeletedMessages={showDeletedMessages}
               maxDisplayedMessages={maxDisplayedMessages}
               renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+              markFirstMessages={markFirstMessages}
+              streamStartedAt={streamStartedAt}
             />
           }
         />
@@ -269,6 +273,7 @@ function SplitChatContent({
     showStreamEmbed = true,
     onToggleStreamEmbed,
     renderThirdPartyEmotesOnYoutube = false,
+    markFirstMessages = false,
   } = appProps;
   const {
     messages,
@@ -363,6 +368,7 @@ function SplitChatContent({
               redemptionPubSubStatus={state.redemptionPubSubStatus}
               isOnOwnChannel={appProps.isOnOwnChannel ?? false}
               maxDisplayedMessages={maxDisplayedMessages}
+              markFirstMessages={markFirstMessages}
             />
           </div>
           <MessageInput
@@ -408,6 +414,8 @@ function SplitChatContent({
       onYtConnectionChange={onYtConnectionChange}
       channelName={selectedTwitchChannelName}
       renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+      markFirstMessages={markFirstMessages}
+      streamStartedAt={streamStartedAt}
     />
   );
 }

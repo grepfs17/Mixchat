@@ -15,6 +15,7 @@ import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
 import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
+import { useFirstMessageIds } from "../../../hooks/chat/useFirstMessageIds";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import {
   accumulateChatStats,
@@ -80,6 +81,7 @@ interface ChatDisplayProps {
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
   maxDisplayedMessages?: number;
+  markFirstMessages?: boolean;
 }
 
 export interface ChatDisplayHandle {
@@ -247,6 +249,7 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
       redemptionPubSubStatus,
       isOnOwnChannel = false,
       maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
+      markFirstMessages = false,
     }: ChatDisplayProps,
     ref: React.ForwardedRef<ChatDisplayHandle>,
   ) {
@@ -517,6 +520,22 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
         : [...older, ...filteredMessages];
     }, [olderMessages, filteredMessages, ignoredUsers]);
 
+    const firstScanItems = useMemo(
+      () =>
+        renderedMessages.map((msg) => ({
+          key: `twitch:${msg.id}`,
+          authorKey: `twitch:${msg.author.toLowerCase()}`,
+          timeMs: msg.timestamp.getTime(),
+          isPreloaded: msg.isPreloaded,
+        })),
+      [renderedMessages],
+    );
+    const firstMessageIds = useFirstMessageIds(
+      firstScanItems,
+      statsScope,
+      streamStartMs,
+    );
+
     const ignoredCount = useMemo(() => {
       const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
       return messages.filter((msg) => ignoredSet.has(msg.author.toLowerCase()))
@@ -723,6 +742,9 @@ const ChatDisplay = forwardRef<ChatDisplayHandle, ChatDisplayProps>(
                   authorColorById={authorColorById}
                   mentionColors={mentionColors}
                   currentUserDisplayName={currentUserDisplayName}
+                  showFirstMessage={
+                    markFirstMessages && firstMessageIds.has(`twitch:${msg.id}`)
+                  }
                   onReply={onReply}
                   onCopy={handleCopy}
                   onUsernameClick={(e, author) =>

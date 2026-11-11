@@ -14,6 +14,7 @@ import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
 import { useChatAutoScroll } from "../../../hooks/chat/useChatAutoScroll";
 import { useMentionColorMap } from "../../../hooks/chat/useMentionColorMap";
 import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
+import { useFirstMessageIds } from "../../../hooks/chat/useFirstMessageIds";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import { UnifiedTwitchMessageItem } from "./UnifiedTwitchMessageItem";
 import { YouTubeMessageItem } from "./YouTubeMessageItem";
@@ -51,6 +52,8 @@ interface UnifiedChatProps {
   showDeletedMessages?: boolean;
   maxDisplayedMessages?: number;
   renderThirdPartyEmotesOnYoutube?: boolean;
+  markFirstMessages?: boolean;
+  streamStartedAt?: Date | null;
 }
 
 export interface UnifiedChatHandle {
@@ -58,6 +61,17 @@ export interface UnifiedChatHandle {
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
+
+function getStreamStartMs(streamStartedAt?: Date | null): number | undefined {
+  return streamStartedAt ? streamStartedAt.getTime() : undefined;
+}
+
+function firstScanScopeKey(
+  channelName: string,
+  streamStartMs: number | undefined,
+): string {
+  return `${channelName}:${streamStartMs ?? "session"}`;
+}
 
 const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
   function UnifiedChat(
@@ -80,6 +94,8 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       showDeletedMessages = false,
       maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
       renderThirdPartyEmotesOnYoutube = false,
+      markFirstMessages = false,
+      streamStartedAt = null,
     }: UnifiedChatProps,
     ref: React.ForwardedRef<UnifiedChatHandle>,
   ) {
@@ -234,6 +250,25 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
       if (older.length === 0) return entries;
       return [...older, ...entries].sort((a, b) => getTime(a) - getTime(b));
     }, [olderEntries, entries, ignoredSet]);
+
+    const streamStartMs = getStreamStartMs(streamStartedAt);
+    const firstScanScope = firstScanScopeKey(channelName, streamStartMs);
+    const firstScanItems = useMemo(
+      () =>
+        renderedEntries.map((entry) => ({
+          key: getKey(entry),
+          authorKey: `${entry.source}:${entry.msg.author.toLowerCase()}`,
+          timeMs: getTime(entry),
+          isPreloaded:
+            entry.source === "twitch" ? entry.msg.isPreloaded : undefined,
+        })),
+      [renderedEntries],
+    );
+    const firstMessageIds = useFirstMessageIds(
+      firstScanItems,
+      firstScanScope,
+      streamStartMs,
+    );
 
     const mentionColors = useMentionColorMap(twitchMessages);
 
@@ -413,6 +448,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                   entries={renderedEntries}
                   currentUserDisplayName={currentUserDisplayName}
                   mentionColors={mentionColors}
+                  showFirstMessage={
+                    markFirstMessages && firstMessageIds.has(getKey(entry))
+                  }
                   onReply={onReply}
                   onCopyMessage={onCopyMessage}
                   onTimeoutMenu={(x, y, userId, username) =>
@@ -436,6 +474,9 @@ const UnifiedChat = forwardRef<UnifiedChatHandle, UnifiedChatProps>(
                 key={getKey(entry)}
                 entry={entry}
                 index={index}
+                showFirstMessage={
+                  markFirstMessages && firstMessageIds.has(getKey(entry))
+                }
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
                 onTouchMove={handleTouchMove}

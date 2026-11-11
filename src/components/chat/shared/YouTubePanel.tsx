@@ -40,6 +40,8 @@ interface YouTubePanelProps {
   ) => void;
   style?: CSSProperties;
   renderThirdPartyEmotes?: boolean;
+  markFirstMessages?: boolean;
+  streamStartedAt?: Date | null;
 }
 
 function extractVideoId(val: string): string {
@@ -82,6 +84,8 @@ export default function YouTubePanel({
   onUsernameClick,
   style,
   renderThirdPartyEmotes,
+  markFirstMessages = false,
+  streamStartedAt = null,
 }: YouTubePanelProps) {
   const messageInputRef = useRef<YouTubeMessageInputHandle>(null);
 
@@ -131,6 +135,8 @@ export default function YouTubePanel({
                 onConnectionChange={onConnectionChange}
                 onUsernameClick={handleUsernameClick}
                 renderThirdPartyEmotes={renderThirdPartyEmotes}
+                markFirstMessages={markFirstMessages}
+                streamStartedAt={streamStartedAt}
               />
             )}
             <div

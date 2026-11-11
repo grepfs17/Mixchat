@@ -4,6 +4,7 @@ import type { ChatFont } from "../../../lib/types";
 import { FONT_FAMILY_MAP, getMaxDisplayedMessages } from "../../../lib/types";
 import { useScrollToBottomOnKeyboard } from "../../../hooks/chat/useScrollToBottomOnKeyboard";
 import { useLazyChatHistory } from "../../../hooks/chat/useLazyChatHistory";
+import { useFirstMessageIds } from "../../../hooks/chat/useFirstMessageIds";
 import { saveMessage } from "../../../lib/chatHistoryStorage";
 import { YouTubeMessageContent } from "./YouTubeMessageContent";
 import type { MessagePart, YTMessage as UnifiedYTMessage } from "../unified/types";
@@ -56,6 +57,10 @@ interface YouTubeChatProps {
    * unified chat, where UnifiedChat owns history loading.
    */
   enableLazyHistory?: boolean;
+  /** Marks each author's first message in the current stream. */
+  markFirstMessages?: boolean;
+  /** Twitch stream start; scopes first-message tracking to the stream. */
+  streamStartedAt?: Date | null;
 }
 
 interface SSEMessageEvent {
@@ -84,6 +89,8 @@ interface SSENoticeEvent {
 function getTextContent(m: ChatMessage) {
   return m.parts.map((p) => p.text || p.emojiText || p.alt || "").join("");
 }
+
+const EMPTY_KEY_SET: ReadonlySet<string> = new Set();
 
 type ReconnectStatus = "idle" | "reconnecting" | "reconnected";
 
@@ -186,6 +193,7 @@ function YouTubeChatMessageList({
   onUsernameClick,
   showDeletedMessages,
   renderThirdPartyEmotes,
+  firstMessageKeys,
 }: {
   containerRef: React.RefObject<HTMLDivElement | null>;
   splitChatEnabled?: boolean;
@@ -200,6 +208,7 @@ function YouTubeChatMessageList({
   ) => void;
   showDeletedMessages: boolean;
   renderThirdPartyEmotes: boolean;
+  firstMessageKeys: ReadonlySet<string>;
 }) {
   return (
     <div
@@ -229,6 +238,7 @@ function YouTubeChatMessageList({
           onUsernameClick={onUsernameClick}
           showDeletedMessages={showDeletedMessages}
           renderThirdPartyEmotes={renderThirdPartyEmotes}
+          showFirstMessage={firstMessageKeys.has(`youtube:${msg.id}`)}
         />
       ))}
     </div>
@@ -250,6 +260,8 @@ export default function YouTubeChat({
   onMessageDeleted,
   renderThirdPartyEmotes = false,
   enableLazyHistory = true,
+  markFirstMessages = false,
+  streamStartedAt = null,
 }: YouTubeChatProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -345,6 +357,25 @@ export default function YouTubeChat({
     const older = olderMessages.filter((m) => !liveIds.has(m.id));
     return older.length === 0 ? mergedMessages : [...older, ...mergedMessages];
   }, [olderMessages, mergedMessages]);
+
+  const streamStartMs = streamStartedAt
+    ? streamStartedAt.getTime()
+    : undefined;
+  const firstScanScope = `${channel ?? ""}:${streamStartMs ?? "session"}`;
+  const firstScanItems = useMemo(
+    () =>
+      renderedMessages.map((msg) => ({
+        key: `youtube:${msg.id}`,
+        authorKey: `youtube:${msg.author.toLowerCase()}`,
+        timeMs: msg.timestamp.getTime(),
+      })),
+    [renderedMessages],
+  );
+  const firstMessageIds = useFirstMessageIds(
+    firstScanItems,
+    firstScanScope,
+    streamStartMs,
+  );
 
   const prevVideoIdRef = useRef<string | null>(null);
   const prevAuthUserIdRef = useRef<string | undefined>(undefined);
@@ -774,6 +805,7 @@ export default function YouTubeChat({
         onUsernameClick={onUsernameClick}
         showDeletedMessages={showDeletedMessages}
         renderThirdPartyEmotes={renderThirdPartyEmotes}
+        firstMessageKeys={markFirstMessages ? firstMessageIds : EMPTY_KEY_SET}
       />
     </div>
   );

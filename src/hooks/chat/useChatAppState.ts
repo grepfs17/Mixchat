@@ -59,6 +59,7 @@ export interface ChatAppStateProps {
   mentionVolume?: number;
   mentionSoundType?: MentionSoundType;
   showDeletedMessages?: boolean;
+  markFirstMessages?: boolean;
   maxDisplayedMessages?: number;
   splitChatEnabled?: boolean;
   chatTheme?: ChatTheme;

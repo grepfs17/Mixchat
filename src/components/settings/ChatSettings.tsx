@@ -10,6 +10,8 @@ export interface ChatSettingsProps {
   onUseYoutubeEmbedChange: (v: boolean) => void;
   showDeletedMessages: boolean;
   onShowDeletedMessagesChange: (v: boolean) => void;
+  markFirstMessages: boolean;
+  onMarkFirstMessagesChange: (v: boolean) => void;
   maxDisplayedMessages: number;
   onMaxDisplayedMessagesChange: (v: number) => void;
   emoteAutocompleteMode: EmoteAutocompleteMode;
@@ -91,6 +93,31 @@ function ShowDeletedSetting({
       <p className="embed-config-description embed-config-description--indented">
         When enabled, deleted messages are hidden behind a click-to-reveal
         link. When disabled, they are removed from chat entirely.
+      </p>
+    </div>
+  );
+}
+
+function MarkFirstMessagesSetting({
+  markFirstMessages,
+  onMarkFirstMessagesChange,
+}: Pick<
+  ChatSettingsProps,
+  "markFirstMessages" | "onMarkFirstMessagesChange"
+>) {
+  return (
+    <div className="embed-config-section">
+      <label className="embed-config-checkbox-label">
+        <input
+          type="checkbox"
+          checked={markFirstMessages}
+          onChange={(e) => onMarkFirstMessagesChange(e.target.checked)}
+        />
+        <span>Mark first messages per stream</span>
+      </label>
+      <p className="embed-config-description embed-config-description--indented">
+        When enabled, the first message each user sends in the current stream
+        gets a distinct indigo "First on stream" badge on Twitch and YouTube.
       </p>
     </div>
   );
@@ -350,6 +377,19 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
         <ShowDeletedSetting
           showDeletedMessages={props.showDeletedMessages}
           onShowDeletedMessagesChange={props.onShowDeletedMessagesChange}
+        />
+      ),
+    },
+    {
+      id: "mark-first-messages",
+      group: "chat",
+      label: "Mark first messages per stream",
+      description:
+        "Highlight each user's first message in the current stream on Twitch and YouTube",
+      render: () => (
+        <MarkFirstMessagesSetting
+          markFirstMessages={props.markFirstMessages}
+          onMarkFirstMessagesChange={props.onMarkFirstMessagesChange}
         />
       ),
     },

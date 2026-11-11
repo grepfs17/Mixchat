@@ -84,6 +84,11 @@ export const EVENT_CONFIG: Record<
     color: "#2dd4bf",
     bg: "rgba(45, 212, 191, 0.12)",
   },
+  "first-message-on-stream": {
+    title: "First on stream",
+    color: "#818cf8",
+    bg: "rgba(129, 140, 248, 0.12)",
+  },
 };
 
 interface TwitchEventLabelProps {
@@ -91,6 +96,7 @@ interface TwitchEventLabelProps {
   powerUpType?: "message_effect" | "celebration";
   isGigantifiedEmote?: boolean;
   isFirstMessage?: boolean;
+  isFirstMessageOnStream?: boolean;
 }
 
 /**
@@ -103,6 +109,7 @@ export default function TwitchEventIcon({
   powerUpType,
   isGigantifiedEmote,
   isFirstMessage,
+  isFirstMessageOnStream,
 }: TwitchEventLabelProps) {
   if (isFirstMessage) {
     const cfg = EVENT_CONFIG["first-message"];
@@ -142,22 +149,39 @@ export default function TwitchEventIcon({
     );
   }
 
-  if (!messageType) return null;
-  const cfg = EVENT_CONFIG[messageType];
-  if (!cfg) return null;
+  if (messageType) {
+    const cfg = EVENT_CONFIG[messageType];
+    if (cfg) {
+      return (
+        <div
+          className="twitch-event-label"
+          style={{
+            color: cfg.color,
+            background: cfg.bg,
+            borderColor: cfg.color,
+          }}
+        >
+          {cfg.title}
+        </div>
+      );
+    }
+  }
 
-  const label = cfg.title;
+  if (isFirstMessageOnStream) {
+    const cfg = EVENT_CONFIG["first-message-on-stream"];
+    return (
+      <div
+        className="twitch-event-label"
+        style={{
+          color: cfg.color,
+          background: cfg.bg,
+          borderColor: cfg.color,
+        }}
+      >
+        {cfg.title}
+      </div>
+    );
+  }
 
-  return (
-    <div
-      className="twitch-event-label"
-      style={{
-        color: cfg.color,
-        background: cfg.bg,
-        borderColor: cfg.color,
-      }}
-    >
-      {label}
-    </div>
-  );
+  return null;
 }

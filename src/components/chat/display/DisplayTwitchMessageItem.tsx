@@ -19,6 +19,7 @@ interface TwitchMessageItemProps {
   authorColorById: Map<string, string>;
   mentionColors?: Map<string, string>;
   currentUserDisplayName?: string;
+  showFirstMessage?: boolean;
   onReply?: (msg: TwitchMessage) => void;
   onCopy: (msg: TwitchMessage) => void;
   onUsernameClick?: (
@@ -101,6 +102,7 @@ function DisplayTwitchMessageItemBase({
   authorColorById,
   mentionColors,
   currentUserDisplayName,
+  showFirstMessage,
   onReply,
   onCopy,
   onUsernameClick,
@@ -121,6 +123,7 @@ function DisplayTwitchMessageItemBase({
       currentUserDisplayName={currentUserDisplayName}
       authorColorById={authorColorById}
       mentionColors={mentionColors}
+      showFirstMessage={showFirstMessage}
       onReply={onReply}
       onCopy={onCopy}
       onUsernameClick={onUsernameClick}
@@ -149,6 +152,7 @@ export const DisplayTwitchMessageItem = memo(DisplayTwitchMessageItemBase, (prev
     prev.msg === next.msg &&
     prev.index === next.index &&
     prev.currentUserDisplayName === next.currentUserDisplayName &&
-    prev.mentionColors === next.mentionColors
+    prev.mentionColors === next.mentionColors &&
+    prev.showFirstMessage === next.showFirstMessage
   );
 });
