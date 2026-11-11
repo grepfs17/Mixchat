@@ -40,6 +40,8 @@ function makeSettings(): UseChatSettingsResult {
     setShowDeletedMessages: noop,
     markFirstMessages: false,
     setMarkFirstMessages: noop,
+    markFirstMessageChannels: [],
+    setMarkFirstMessageChannels: noop,
     maxDisplayedMessages: 300,
     setMaxDisplayedMessages: noop,
     compactActions: false,

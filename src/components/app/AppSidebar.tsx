@@ -10,6 +10,7 @@ interface AppSidebarProps {
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   sessions: AuthSessions;
   sortedChannels: TwitchChannel[];
+  allTwitchChannels: TwitchChannel[];
   selectedTwitchChannel: string;
   favoriteChannels: string[];
   linkedYoutubeChannelIds: string[];
@@ -30,6 +31,7 @@ export default function AppSidebar({
   setLeftColumnVisible,
   sessions,
   sortedChannels,
+  allTwitchChannels,
   selectedTwitchChannel,
   favoriteChannels,
   linkedYoutubeChannelIds,
@@ -95,6 +97,7 @@ export default function AppSidebar({
         twitchUserName={sessions.twitch?.username}
         twitchUserId={sessions.twitch?.userId}
         twitchChannels={sortedChannels}
+        allTwitchChannels={allTwitchChannels}
         selectedTwitchChannel={selectedTwitchChannel}
         favoriteChannels={favoriteChannels}
         onToggleFavorite={onToggleFavorite}

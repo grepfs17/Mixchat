@@ -42,7 +42,7 @@ export interface YouTubeMessageContentProps {
   renderThirdPartyEmotes?: boolean;
   /**
    * When true, the message is marked as the author's first in the current
-   * stream (indigo "First on stream" badge). Only applied to plain
+   * stream (indigo "First message on stream" badge). Only applied to plain
    * messages; event messages keep their own label.
    */
   showFirstMessage?: boolean;

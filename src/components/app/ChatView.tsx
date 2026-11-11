@@ -85,6 +85,7 @@ export default function ChatView({
     mentionSoundType,
     showDeletedMessages,
     markFirstMessages,
+    markFirstMessageChannels,
     maxDisplayedMessages,
     compactActions,
     keepModActionsVisible,
@@ -189,6 +190,7 @@ export default function ChatView({
           mentionSoundType={mentionSoundType}
           showDeletedMessages={showDeletedMessages}
           markFirstMessages={markFirstMessages}
+          markFirstMessageChannels={markFirstMessageChannels}
           maxDisplayedMessages={maxDisplayedMessages}
           compactActions={compactActions}
           keepModActionsVisible={keepModActionsVisible}

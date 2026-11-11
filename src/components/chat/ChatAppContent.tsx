@@ -16,6 +16,20 @@ export interface YtConnectionState {
   reconnecting: boolean;
 }
 
+/**
+ * First-message marks are global; when the user picked channels in the
+ * setting they only apply on those channels. An empty selection applies
+ * everywhere.
+ */
+export function isFirstMessageChannelInScope(
+  channelName: string | undefined,
+  selectedChannels: string[],
+): boolean {
+  if (selectedChannels.length === 0) return true;
+  const normalized = (channelName ?? "").trim().toLowerCase();
+  return selectedChannels.some((c) => c.toLowerCase() === normalized);
+}
+
 interface ChatAppContentProps {
   state: ChatAppState;
   appProps: ChatAppStateProps;
@@ -70,6 +84,7 @@ function UnifiedChatContent({
     onToggleStreamEmbed,
     renderThirdPartyEmotesOnYoutube = false,
     markFirstMessages = false,
+    markFirstMessageChannels = [],
   } = appProps;
   const {
     messages,
@@ -105,6 +120,13 @@ function UnifiedChatContent({
     followerModeMinutes,
     isFollowingChannelState,
   } = state;
+
+  const markFirstMessagesActive =
+    markFirstMessages &&
+    isFirstMessageChannelInScope(
+      selectedTwitchChannelName,
+      markFirstMessageChannels,
+    );
 
   return (
     <>
@@ -172,7 +194,7 @@ function UnifiedChatContent({
           redemptionPubSubStatus={state.redemptionPubSubStatus}
           isOnOwnChannel={appProps.isOnOwnChannel ?? false}
           maxDisplayedMessages={maxDisplayedMessages}
-          markFirstMessages={markFirstMessages}
+          markFirstMessages={markFirstMessagesActive}
           unifiedChatSlot={
             <UnifiedChat
               ref={unifiedChatRef}
@@ -213,7 +235,7 @@ function UnifiedChatContent({
               showDeletedMessages={showDeletedMessages}
               maxDisplayedMessages={maxDisplayedMessages}
               renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-              markFirstMessages={markFirstMessages}
+              markFirstMessages={markFirstMessagesActive}
               streamStartedAt={streamStartedAt}
             />
           }
@@ -274,6 +296,7 @@ function SplitChatContent({
     onToggleStreamEmbed,
     renderThirdPartyEmotesOnYoutube = false,
     markFirstMessages = false,
+    markFirstMessageChannels = [],
   } = appProps;
   const {
     messages,
@@ -310,6 +333,13 @@ function SplitChatContent({
     followerModeMinutes,
     isFollowingChannelState,
   } = state;
+
+  const markFirstMessagesActive =
+    markFirstMessages &&
+    isFirstMessageChannelInScope(
+      selectedTwitchChannelName,
+      markFirstMessageChannels,
+    );
 
   return (
     <SplitLayout
@@ -368,7 +398,7 @@ function SplitChatContent({
               redemptionPubSubStatus={state.redemptionPubSubStatus}
               isOnOwnChannel={appProps.isOnOwnChannel ?? false}
               maxDisplayedMessages={maxDisplayedMessages}
-              markFirstMessages={markFirstMessages}
+              markFirstMessages={markFirstMessagesActive}
             />
           </div>
           <MessageInput
@@ -414,7 +444,7 @@ function SplitChatContent({
       onYtConnectionChange={onYtConnectionChange}
       channelName={selectedTwitchChannelName}
       renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
-      markFirstMessages={markFirstMessages}
+      markFirstMessages={markFirstMessagesActive}
       streamStartedAt={streamStartedAt}
     />
   );

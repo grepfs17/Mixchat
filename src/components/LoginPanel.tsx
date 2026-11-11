@@ -23,6 +23,7 @@ interface TwitchChannel {
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
+const EMPTY_CHANNELS: TwitchChannel[] = [];
 
 interface LoginPanelProps {
   twitchConnected: boolean;
@@ -31,6 +32,8 @@ interface LoginPanelProps {
   twitchUserName?: string;
   twitchUserId?: string;
   twitchChannels?: TwitchChannel[];
+  /** Full following list (online + offline), used by the settings channel picker. */
+  allTwitchChannels?: TwitchChannel[];
   selectedTwitchChannel?: string;
   favoriteChannels?: string[];
   onChannelChange?: (channelId: string) => void;
@@ -257,7 +260,8 @@ function LoginPanel({
   twitchProfileImage,
   twitchUserName,
   twitchUserId,
-  twitchChannels = EMPTY_STRING_ARRAY as unknown as TwitchChannel[],
+  twitchChannels = EMPTY_CHANNELS,
+  allTwitchChannels = EMPTY_CHANNELS,
   selectedTwitchChannel = "",
   favoriteChannels = EMPTY_STRING_ARRAY,
   onChannelChange,
@@ -444,6 +448,7 @@ function LoginPanel({
           hasDriveScope={hasDriveScope}
           onReauthYoutube={onReauthYoutube}
           onYoutubeDriveLogin={onYoutubeDriveLogin}
+          allTwitchChannels={allTwitchChannels}
         />
       )}
     </div>

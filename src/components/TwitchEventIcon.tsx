@@ -85,7 +85,7 @@ export const EVENT_CONFIG: Record<
     bg: "rgba(45, 212, 191, 0.12)",
   },
   "first-message-on-stream": {
-    title: "First on stream",
+    title: "First message on stream",
     color: "#818cf8",
     bg: "rgba(129, 140, 248, 0.12)",
   },

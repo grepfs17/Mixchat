@@ -12,13 +12,16 @@ import type { ModModeTarget } from "../../contexts/ModerationContext";
 function useLocalStorageState<T>(
   key: string,
   defaultValue: T,
+  isValid?: (value: unknown) => value is T,
 ): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
     if (typeof localStorage === "undefined") return defaultValue;
     const saved = localStorage.getItem(key);
     if (saved === null) return defaultValue;
     try {
-      return JSON.parse(saved) as T;
+      const parsed = JSON.parse(saved);
+      if (isValid && !isValid(parsed)) return defaultValue;
+      return parsed as T;
     } catch {
       return defaultValue;
     }
@@ -29,6 +32,10 @@ function useLocalStorageState<T>(
   }, [key, value]);
 
   return [value, setValue];
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 export type UseChatSettingsResult = {
@@ -54,6 +61,8 @@ export type UseChatSettingsResult = {
   setShowDeletedMessages: React.Dispatch<React.SetStateAction<boolean>>;
   markFirstMessages: boolean;
   setMarkFirstMessages: React.Dispatch<React.SetStateAction<boolean>>;
+  markFirstMessageChannels: string[];
+  setMarkFirstMessageChannels: React.Dispatch<React.SetStateAction<string[]>>;
   maxDisplayedMessages: number;
   setMaxDisplayedMessages: React.Dispatch<React.SetStateAction<number>>;
   compactActions: boolean;
@@ -149,6 +158,12 @@ export function useChatSettings(): UseChatSettingsResult {
     useLocalStorageState<boolean>("mixchat_show_deleted_messages", true);
   const [markFirstMessages, setMarkFirstMessages] =
     useLocalStorageState<boolean>("mixchat_mark_first_messages_per_stream", false);
+  const [markFirstMessageChannels, setMarkFirstMessageChannels] =
+    useLocalStorageState<string[]>(
+      "mixchat_mark_first_messages_channels",
+      [],
+      isStringArray,
+    );
   const [maxDisplayedMessages, setMaxDisplayedMessages] =
     useLocalStorageState<number>(
       MAX_DISPLAYED_MESSAGES_STORAGE_KEY,
@@ -297,6 +312,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setShowDeletedMessages,
     markFirstMessages,
     setMarkFirstMessages,
+    markFirstMessageChannels,
+    setMarkFirstMessageChannels,
     maxDisplayedMessages,
     setMaxDisplayedMessages,
     compactActions,
@@ -359,6 +376,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setShowDeletedMessages,
       markFirstMessages,
       setMarkFirstMessages,
+      markFirstMessageChannels,
+      setMarkFirstMessageChannels,
       maxDisplayedMessages,
       setMaxDisplayedMessages,
       compactActions,

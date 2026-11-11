@@ -3,6 +3,15 @@ import type { SettingsItemDef } from "./types";
 import type { EmoteAutocompleteMode } from "../../lib/types";
 import { EMOTE_AUTOCOMPLETE_OPTIONS } from "../../lib/types";
 
+/**
+ * Minimal projection of a followed channel (structurally satisfied by the
+ * app's `TwitchChannel`), so the settings UI does not depend on AppContainer.
+ */
+export interface FollowingChannelOption {
+  name: string;
+  displayName: string;
+}
+
 export interface ChatSettingsProps {
   unifyChatEnabled: boolean;
   onUnifyChatEnabledChange: (v: boolean) => void;
@@ -12,6 +21,10 @@ export interface ChatSettingsProps {
   onShowDeletedMessagesChange: (v: boolean) => void;
   markFirstMessages: boolean;
   onMarkFirstMessagesChange: (v: boolean) => void;
+  markFirstMessageChannels: string[];
+  onMarkFirstMessageChannelsChange: (v: string[]) => void;
+  /** The user's Twitch following list, for the per-channel scope picker. */
+  followingChannels: FollowingChannelOption[];
   maxDisplayedMessages: number;
   onMaxDisplayedMessagesChange: (v: number) => void;
   emoteAutocompleteMode: EmoteAutocompleteMode;
@@ -98,12 +111,124 @@ function ShowDeletedSetting({
   );
 }
 
+function MarkFirstChannelsPicker({
+  followingChannels,
+  selected,
+  onSelectedChange,
+}: {
+  followingChannels: FollowingChannelOption[];
+  selected: string[];
+  onSelectedChange: (v: string[]) => void;
+}) {
+  const [query, setQuery] = React.useState("");
+  const selectedSet = React.useMemo(
+    () => new Set(selected.map((c) => c.toLowerCase())),
+    [selected],
+  );
+  const listedSet = React.useMemo(
+    () => new Set(followingChannels.map((c) => c.name.toLowerCase())),
+    [followingChannels],
+  );
+
+  const trimmedQuery = query.trim().toLowerCase();
+  const filtered = trimmedQuery
+    ? followingChannels.filter(
+        (c) =>
+          c.name.toLowerCase().includes(trimmedQuery) ||
+          c.displayName.toLowerCase().includes(trimmedQuery),
+      )
+    : followingChannels;
+  // Selected channels that are no longer followed. They are rendered even
+  // when the following list is empty (logged out / expired token) so saved
+  // selections can always be cleared, and filtered by the search like every
+  // other row.
+  const stale = selected.filter((c) => !listedSet.has(c.toLowerCase()));
+  const visibleStale = trimmedQuery
+    ? stale.filter((c) => c.toLowerCase().includes(trimmedQuery))
+    : stale;
+
+  const toggle = (name: string, checked: boolean) => {
+    const lower = name.toLowerCase();
+    if (checked) {
+      if (selectedSet.has(lower)) return;
+      onSelectedChange([...selected, lower]);
+    } else {
+      onSelectedChange(selected.filter((c) => c.toLowerCase() !== lower));
+    }
+  };
+
+  const renderRow = (name: string, label: string, staleRow = false) => (
+    <label
+      key={name}
+      className={`embed-config-channel-option${staleRow ? " embed-config-channel-option--stale" : ""}`}
+    >
+      <input
+        type="checkbox"
+        checked={selectedSet.has(name.toLowerCase())}
+        onChange={(e) => toggle(name, e.target.checked)}
+      />
+      <span>{label}</span>
+      {staleRow && <span className="embed-config-channel-stale-note">not followed</span>}
+    </label>
+  );
+
+  const hasRows = filtered.length > 0 || visibleStale.length > 0;
+
+  return (
+    <div className="embed-config-channel-picker">
+      <p className="embed-config-description embed-config-description--indented">
+        Optionally limit the badge to channels from your Twitch following list.
+        Leave all unchecked to apply on every channel.
+      </p>
+      {followingChannels.length === 0 && (
+        <p className="embed-config-description embed-config-description--indented">
+          No followed channels found. Log in with Twitch to load your following
+          list.
+        </p>
+      )}
+      {followingChannels.length > 0 && (
+        <input
+          type="search"
+          className="embed-config-select embed-config-channel-picker-search"
+          placeholder="Search followed channels..."
+          aria-label="Search followed channels"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
+      {hasRows ? (
+        <div
+          className="embed-config-channel-list"
+          role="group"
+          aria-label="Allowed channels for first-message marks"
+        >
+          {visibleStale.map((name) => renderRow(name, name, true))}
+          {filtered.map((c) => renderRow(c.name, c.displayName))}
+        </div>
+      ) : (
+        followingChannels.length > 0 && (
+          <p className="embed-config-description embed-config-description--indented">
+            No channels match your search.
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
 function MarkFirstMessagesSetting({
   markFirstMessages,
   onMarkFirstMessagesChange,
+  markFirstMessageChannels,
+  onMarkFirstMessageChannelsChange,
+  followingChannels,
 }: Pick<
   ChatSettingsProps,
-  "markFirstMessages" | "onMarkFirstMessagesChange"
+  | "markFirstMessages"
+  | "onMarkFirstMessagesChange"
+  | "markFirstMessageChannels"
+  | "onMarkFirstMessageChannelsChange"
+  | "followingChannels"
 >) {
   return (
     <div className="embed-config-section">
@@ -117,8 +242,16 @@ function MarkFirstMessagesSetting({
       </label>
       <p className="embed-config-description embed-config-description--indented">
         When enabled, the first message each user sends in the current stream
-        gets a distinct indigo "First on stream" badge on Twitch and YouTube.
+        gets a distinct indigo "First message on stream" badge on Twitch and YouTube.
+        The existing teal Twitch "First Message" badge is unaffected.
       </p>
+      {markFirstMessages && (
+        <MarkFirstChannelsPicker
+          followingChannels={followingChannels}
+          selected={markFirstMessageChannels}
+          onSelectedChange={onMarkFirstMessageChannelsChange}
+        />
+      )}
     </div>
   );
 }
@@ -390,6 +523,11 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
         <MarkFirstMessagesSetting
           markFirstMessages={props.markFirstMessages}
           onMarkFirstMessagesChange={props.onMarkFirstMessagesChange}
+          markFirstMessageChannels={props.markFirstMessageChannels}
+          onMarkFirstMessageChannelsChange={
+            props.onMarkFirstMessageChannelsChange
+          }
+          followingChannels={props.followingChannels}
         />
       ),
     },

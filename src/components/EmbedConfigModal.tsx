@@ -22,6 +22,10 @@ import { getStreamerSettings } from "./settings/StreamerSettings";
 import { getNotificationSettings } from "./settings/NotificationSettings";
 import { getBackupSettings } from "./settings/BackupSettings";
 import { getHelpSettings } from "./settings/HelpSettings";
+import type { FollowingChannelOption } from "./settings/ChatSettings";
+
+/** Stable default so memoized parents never see a new empty array identity. */
+const EMPTY_FOLLOWING_CHANNELS: FollowingChannelOption[] = [];
 
 interface EmbedConfigModalProps {
   onClose: () => void;
@@ -29,6 +33,8 @@ interface EmbedConfigModalProps {
   hasDriveScope: boolean;
   onReauthYoutube: () => void;
   onYoutubeDriveLogin: () => void;
+  /** The user's Twitch following list, for the per-channel scope picker. */
+  allTwitchChannels?: FollowingChannelOption[];
 }
 
 export default function EmbedConfigModal({
@@ -37,6 +43,7 @@ export default function EmbedConfigModal({
   hasDriveScope,
   onReauthYoutube,
   onYoutubeDriveLogin,
+  allTwitchChannels = EMPTY_FOLLOWING_CHANNELS,
 }: EmbedConfigModalProps) {
   const s = useSettingsContext();
 
@@ -145,6 +152,9 @@ export default function EmbedConfigModal({
         onShowDeletedMessagesChange: s.setShowDeletedMessages,
         markFirstMessages: s.markFirstMessages,
         onMarkFirstMessagesChange: s.setMarkFirstMessages,
+        markFirstMessageChannels: s.markFirstMessageChannels,
+        onMarkFirstMessageChannelsChange: s.setMarkFirstMessageChannels,
+        followingChannels: allTwitchChannels,
         maxDisplayedMessages: s.maxDisplayedMessages,
         onMaxDisplayedMessagesChange: s.setMaxDisplayedMessages,
         renderThirdPartyEmotesOnYoutube: s.renderThirdPartyEmotesOnYoutube,
@@ -228,6 +238,9 @@ export default function EmbedConfigModal({
       s.setShowDeletedMessages,
       s.markFirstMessages,
       s.setMarkFirstMessages,
+      s.markFirstMessageChannels,
+      s.setMarkFirstMessageChannels,
+      allTwitchChannels,
       s.maxDisplayedMessages,
       s.setMaxDisplayedMessages,
       s.renderThirdPartyEmotesOnYoutube,

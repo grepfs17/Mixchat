@@ -236,6 +236,7 @@ export default function AppContainer() {
           setLeftColumnVisible={setLeftColumnVisible}
           sessions={sessions}
           sortedChannels={sortedChannels}
+          allTwitchChannels={allTwitchChannels}
           selectedTwitchChannel={selectedTwitchChannel}
           favoriteChannels={favoriteChannels}
           linkedYoutubeChannelIds={linkedYoutubeChannelIds}
