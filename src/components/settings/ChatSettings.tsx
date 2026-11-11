@@ -243,7 +243,6 @@ function MarkFirstMessagesSetting({
       <p className="embed-config-description embed-config-description--indented">
         When enabled, the first message each user sends in the current stream
         gets a distinct indigo "First message on stream" badge on Twitch and YouTube.
-        The existing teal Twitch "First Message" badge is unaffected.
       </p>
       {markFirstMessages && (
         <MarkFirstChannelsPicker
