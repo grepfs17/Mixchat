@@ -24,6 +24,33 @@ body {
     color: var(--color-text-primary);
 }
 
+/* Skip link: hidden until keyboard focus, then pinned to the top-left. */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 16px;
+    z-index: 10000;
+    padding: 10px 16px;
+    background: var(--color-accent, #6c5ce7);
+    color: var(--color-text-white, #fff);
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 6px 6px;
+    transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--color-text-white, #fff);
+    outline-offset: 2px;
+}
+
+/* Main landmarks receive focus from the skip link without showing a ring
+   during normal mouse interaction. */
+main:focus {
+    outline: none;
+}
+
 /* On mobile, lock html/body against scroll so the browser can't scroll the
    embed off-screen when the virtual keyboard opens. */
 @media (max-width: 768px) {

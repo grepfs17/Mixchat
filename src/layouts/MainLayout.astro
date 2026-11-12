@@ -323,9 +323,10 @@ const canonical = canonicalUrl ?? resolvedOgUrl;
     </head>
 
     <body>
-        <div id="app">
+        <a class="skip-link" href="#app">Skip to content</a>
+        <main id="app" tabindex="-1">
             <AppContainer client:load />
-        </div>
+        </main>
         <footer class="app-footer">
             <div class="app-footer__inner">
                 <span class="app-footer__brand">

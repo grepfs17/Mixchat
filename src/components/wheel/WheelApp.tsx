@@ -1305,7 +1305,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
           />
         )}
 
-        <main className="wheel-main">
+        <div className="wheel-main">
           <WheelMainContent
             booting={booting}
             loadingWheel={loadingWheel}
@@ -1340,7 +1340,7 @@ export default function WheelApp({ initialWheelId = null }: WheelAppProps) {
             onHistoryCopy={copyHistory}
             onHistoryClear={handleClearHistory}
           />
-        </main>
+        </div>
       </div>
 
       {winner !== null && (

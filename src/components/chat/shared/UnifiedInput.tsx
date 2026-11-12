@@ -471,6 +471,7 @@ const UnifiedInput = ({
           onKeyDown={core.handleKeyDown}
           onFocus={onInputFocus}
           placeholder={placeholder}
+          aria-label="Send chat message"
           disabled={isLoading}
           className="unified-textarea"
           autoComplete="off"
