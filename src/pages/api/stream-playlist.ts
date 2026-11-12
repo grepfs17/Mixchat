@@ -189,20 +189,17 @@ async function checkSubscription(
   if (!clientId) return false;
 
   try {
-    const selfRes = await fetch("https://api.twitch.tv/helix/users", {
-      headers: { "Client-Id": clientId, Authorization: `Bearer ${twitchToken}` },
-    });
-    if (!selfRes.ok) return false;
-    const selfData = await selfRes.json();
+    const headers = { "Client-Id": clientId, Authorization: `Bearer ${twitchToken}` };
+    const [selfRes, chanRes] = await Promise.all([
+      fetch("https://api.twitch.tv/helix/users", { headers }),
+      fetch(`https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`, {
+        headers,
+      }),
+    ]);
+    if (!selfRes.ok || !chanRes.ok) return false;
+    const [selfData, chanData] = await Promise.all([selfRes.json(), chanRes.json()]);
     const userId = selfData?.data?.[0]?.id;
     if (!userId) return false;
-
-    const chanRes = await fetch(
-      `https://api.twitch.tv/helix/users?login=${encodeURIComponent(channel)}`,
-      { headers: { "Client-Id": clientId, Authorization: `Bearer ${twitchToken}` } },
-    );
-    if (!chanRes.ok) return false;
-    const chanData = await chanRes.json();
     const broadcasterId = chanData?.data?.[0]?.id;
     if (!broadcasterId) return false;
 
@@ -250,6 +247,12 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       return jsonError("Channel parameter required", 400);
     }
 
+    // Subscription check only needs the token + channel, so start it alongside
+    // the playlist chain instead of after it.
+    const subscriptionPromise = twitchToken
+      ? checkSubscription(twitchToken, channel)
+      : Promise.resolve(false);
+
     const token = await fetchPlaybackToken(channel);
     const masterText = await fetchMasterPlaylist(channel, token, twitchToken);
     const qualities = parseMasterPlaylist(masterText);
@@ -258,9 +261,7 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       return jsonError("Could not parse master playlist", 500);
     }
 
-    const authenticated = twitchToken
-      ? await checkSubscription(twitchToken, channel)
-      : false;
+    const authenticated = await subscriptionPromise;
 
     return new Response(JSON.stringify({ qualities, authenticated }), {
       status: 200,
