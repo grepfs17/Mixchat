@@ -3,7 +3,6 @@ import React, {
   useRef,
   useEffect,
   useCallback,
-  forwardRef,
   useImperativeHandle,
 } from "react";
 import { createPortal } from "react-dom";
@@ -59,6 +58,7 @@ interface UnifiedInputProps {
   onOptimisticYoutubeFailed?: (id: string) => void;
   youtubeAvailable?: boolean;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
+  ref?: React.Ref<UnifiedInputHandle>;
 }
 
 const EMPTY_YT_MSG_ARRAY: YTMessage[] = [];
@@ -289,28 +289,26 @@ function YoutubeEmojiPicker({
   );
 }
 
-const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
-  function UnifiedInput({
-    onSendMessage,
-    isLoading,
-    replyingTo,
-    onCancelReply,
-    chatMessages = EMPTY_YT_MSG_ARRAY as any,
-    currentUsername = "",
-    onInputFocus,
-    slowModeWaitTime = null,
-    followerModeMinutes = null,
-    isFollowing = null,
-    channelName = "",
-    youtubeVideoId = null,
-    ytChatMessages = EMPTY_YT_MSG_ARRAY,
-    onOptimisticYoutube,
-    onOptimisticYoutubeFailed,
-    youtubeAvailable = false,
-    emoteAutocompleteMode = "default",
-  }: UnifiedInputProps,
-  ref: React.ForwardedRef<UnifiedInputHandle>,
-) {
+const UnifiedInput = ({
+  onSendMessage,
+  isLoading,
+  replyingTo,
+  onCancelReply,
+  chatMessages = EMPTY_YT_MSG_ARRAY as any,
+  currentUsername = "",
+  onInputFocus,
+  slowModeWaitTime = null,
+  followerModeMinutes = null,
+  isFollowing = null,
+  channelName = "",
+  youtubeVideoId = null,
+  ytChatMessages = EMPTY_YT_MSG_ARRAY,
+  onOptimisticYoutube,
+  onOptimisticYoutubeFailed,
+  youtubeAvailable = false,
+  emoteAutocompleteMode = "default",
+  ref,
+}: UnifiedInputProps) => {
   const { isModerator } = useModerationContext();
   const [sendTarget, setSendTarget] = useState<SendTarget>("twitch");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -620,7 +618,6 @@ const UnifiedInput = forwardRef<UnifiedInputHandle, UnifiedInputProps>(
       />
     </div>
   );
-  },
-);
+};
 
 export default UnifiedInput;

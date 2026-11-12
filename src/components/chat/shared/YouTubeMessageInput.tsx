@@ -4,7 +4,6 @@ import React, {
   useRef,
   useState,
   useMemo,
-  forwardRef,
   useImperativeHandle,
 } from "react";
 import { createPortal } from "react-dom";
@@ -37,6 +36,7 @@ interface YouTubeMessageInputProps {
   onError?: (message: string) => void;
   onOptimisticMessage?: (id: string, text: string) => void;
   onOptimisticFailed?: (id: string) => void;
+  ref?: React.Ref<YouTubeMessageInputHandle>;
 }
 
 const EMPTY_YT_MESSAGES: YTMessage[] = [];
@@ -45,19 +45,14 @@ export interface YouTubeMessageInputHandle {
   insertMention: (username: string) => void;
 }
 
-const YouTubeMessageInput = forwardRef<
-  YouTubeMessageInputHandle,
-  YouTubeMessageInputProps
->(function YouTubeMessageInput(
-  {
-    youtubeVideoId,
-    chatMessages = [] as YTMessage[],
-    onError,
-    onOptimisticMessage,
-    onOptimisticFailed,
-  }: YouTubeMessageInputProps,
-  ref: React.ForwardedRef<YouTubeMessageInputHandle>,
-) {
+const YouTubeMessageInput = ({
+  youtubeVideoId,
+  chatMessages = [] as YTMessage[],
+  onError,
+  onOptimisticMessage,
+  onOptimisticFailed,
+  ref,
+}: YouTubeMessageInputProps) => {
   const [ytMessage, setYtMessage] = useState("");
   const [ytSending, setYtSending] = useState(false);
   const colonPosRef = useRef(-1);
@@ -390,6 +385,6 @@ const YouTubeMessageInput = forwardRef<
       </div>
     </div>
   );
-});
+};
 
 export default YouTubeMessageInput;

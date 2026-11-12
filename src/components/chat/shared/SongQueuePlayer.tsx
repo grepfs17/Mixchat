@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -97,6 +96,7 @@ interface SongQueuePlayerProps {
   onStateChange?: (state: SongQueuePlayerState) => void;
   /** Optional className for the wrapper element. */
   className?: string;
+  ref?: React.Ref<SongQueuePlayerHandle>;
 }
 
 /**
@@ -181,18 +181,16 @@ function mapPlayerState(data: number): SongQueuePlayerState {
   }
 }
 
-const SongQueuePlayerInner = (
-  {
-    items,
-    currentIndex,
-    onReady,
-    onAdvance,
-    onDurationKnown,
-    onStateChange,
-    className,
-  }: SongQueuePlayerProps,
-  ref: React.Ref<SongQueuePlayerHandle>,
-) => {
+const SongQueuePlayerInner = ({
+  items,
+  currentIndex,
+  onReady,
+  onAdvance,
+  onDurationKnown,
+  onStateChange,
+  className,
+  ref,
+}: SongQueuePlayerProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
@@ -419,8 +417,4 @@ const SongQueuePlayerInner = (
   );
 };
 
-const SongQueuePlayer = forwardRef<SongQueuePlayerHandle, SongQueuePlayerProps>(
-  SongQueuePlayerInner,
-);
-
-export default SongQueuePlayer;
+export default SongQueuePlayerInner;

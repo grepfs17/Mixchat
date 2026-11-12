@@ -3,7 +3,6 @@ import React, {
   useRef,
   memo,
   useCallback,
-  forwardRef,
   useImperativeHandle,
 } from "react";
 import { FaTimes, FaSmile } from "react-icons/fa";
@@ -35,6 +34,7 @@ interface MessageInputProps {
   isFollowing?: boolean | null;
   channelName?: string;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
+  ref?: React.Ref<MessageInputHandle>;
 }
 
 export interface MessageInputHandle {
@@ -152,24 +152,22 @@ function FollowerModeWarning({
   );
 }
 
-const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
-  function MessageInput({
-    onSendMessage,
-    isLoading,
-    isConnected: _isConnected,
-    replyingTo,
-    onCancelReply,
-    chatMessages = [],
-    currentUsername = "",
-    onInputFocus,
-    slowModeWaitTime = null,
-    followerModeMinutes = null,
-    isFollowing = null,
-    channelName = "",
-    emoteAutocompleteMode = "default",
-  }: MessageInputProps,
-  ref: React.ForwardedRef<MessageInputHandle>,
-) {
+const MessageInput = ({
+  onSendMessage,
+  isLoading,
+  isConnected: _isConnected,
+  replyingTo,
+  onCancelReply,
+  chatMessages = [],
+  currentUsername = "",
+  onInputFocus,
+  slowModeWaitTime = null,
+  followerModeMinutes = null,
+  isFollowing = null,
+  channelName = "",
+  emoteAutocompleteMode = "default",
+  ref,
+}: MessageInputProps) => {
   const { isModerator } = useModerationContext();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showEmotePicker, setShowEmotePicker] = useState(false);
@@ -343,7 +341,6 @@ const MessageInput = forwardRef<MessageInputHandle, MessageInputProps>(
       )}
     </div>
   );
-  },
-);
+};
 
 export default memo(MessageInput);
