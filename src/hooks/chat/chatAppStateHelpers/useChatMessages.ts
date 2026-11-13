@@ -51,6 +51,7 @@ export interface UseChatMessagesReturn {
   recentRedemptionsRef: React.RefObject<Map<string, number>>;
   handleTwitchMessage: (message: TwitchMessage) => void;
   handleMessageDeleted: (messageId: string) => void;
+  handleUserMessagesDeleted: (userId: string, userName?: string) => void;
 }
 
 export function useChatMessages({
@@ -286,6 +287,22 @@ export function useChatMessages({
     [showDeletedMessagesRef, showDeletedMessages],
   );
 
+  const handleUserMessagesDeleted = useCallback(
+    (userId: string, userName?: string) => {
+      const normalizedName = userName?.toLowerCase();
+      const matchesTarget = (m: TwitchMessage) =>
+        userId !== ""
+          ? m.userId === userId
+          : normalizedName !== undefined &&
+            m.author.toLowerCase() === normalizedName;
+
+      setMessages((prev) =>
+        prev.map((m) => (matchesTarget(m) ? { ...m, isDeleted: true } : m)),
+      );
+    },
+    [],
+  );
+
   return {
     messages,
     showPreloadedMessages,
@@ -295,5 +312,6 @@ export function useChatMessages({
     recentRedemptionsRef,
     handleTwitchMessage,
     handleMessageDeleted,
+    handleUserMessagesDeleted,
   };
 }

@@ -680,6 +680,7 @@ export default function ChatPreview() {
   const moderationValue: ModerationContextValue = useMemo(
     () => ({
       isModerator: modMode,
+      isBroadcaster: modMode,
       modModeActive: modMode,
       compactActions: false,
       keepModActionsVisible: false,

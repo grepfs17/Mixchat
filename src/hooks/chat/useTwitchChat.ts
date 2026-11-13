@@ -35,6 +35,7 @@ export function useTwitchChat(
   onMessageDeleted?: (messageId: string) => void,
   userId: string = "",
   broadcasterId: string = "",
+  onUserMessagesDeleted?: (userId: string, userName?: string) => void,
 ) {
   // Refs for stale-closure-safe access inside IRC handlers
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);
@@ -43,6 +44,7 @@ export function useTwitchChat(
   const eventSoundsRef = useRef(eventSounds);
   const eventSoundVolumeRef = useRef(eventSoundVolume);
   const onMessageDeletedRef = useRef(onMessageDeleted);
+  const onUserMessagesDeletedRef = useRef(onUserMessagesDeleted);
   const accessTokenRef = useRef(accessToken);
   const usernameRef = useRef(username);
   const onMessageRef = useRef(onMessage);
@@ -66,6 +68,9 @@ export function useTwitchChat(
   useEffect(() => {
     onMessageDeletedRef.current = onMessageDeleted;
   }, [onMessageDeleted]);
+  useEffect(() => {
+    onUserMessagesDeletedRef.current = onUserMessagesDeleted;
+  }, [onUserMessagesDeleted]);
   useEffect(() => {
     accessTokenRef.current = accessToken;
   }, [accessToken]);
@@ -114,6 +119,7 @@ export function useTwitchChat(
     enabled,
     onMessageRef,
     onMessageDeletedRef,
+    onUserMessagesDeletedRef,
     usernameRef,
     accessTokenRef,
     eventSoundsRef,

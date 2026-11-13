@@ -348,6 +348,31 @@ describe("Moderator Mode", () => {
       expect(screen.queryByTitle("Warn user")).not.toBeInTheDocument();
     });
 
+    it("shows mod actions for moderator messages when the viewer is the broadcaster", () => {
+      render(
+        withModeration(
+          <ChatDisplay
+            messages={[moderatorMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            isBroadcaster: true,
+            modModeActive: true,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+      expect(screen.getByTitle("Delete message")).toBeInTheDocument();
+      expect(screen.getByTitle("Timeout")).toBeInTheDocument();
+      expect(screen.getByTitle("Ban user")).toBeInTheDocument();
+      expect(screen.getByTitle("Warn user")).toBeInTheDocument();
+    });
+
     it("shows delete but not timeout/ban/warn for current user messages", () => {
       render(
         withModeration(
@@ -595,6 +620,38 @@ describe("Moderator Mode", () => {
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
       expect(screen.queryByText("Timeout...")).not.toBeInTheDocument();
       expect(screen.queryByText("Ban")).not.toBeInTheDocument();
+    });
+
+    it("shows mod actions for moderator messages when the viewer is the broadcaster", () => {
+      const { container } = render(
+        withModeration(
+          <ChatDisplay
+            messages={[moderatorMessage]}
+            isLoading={false}
+            selectedPlatforms={["twitch"]}
+          />,
+          {
+            isModerator: true,
+            isBroadcaster: true,
+            modModeActive: true,
+            compactActions: true,
+            keepModActionsVisible: false,
+            onDeleteMessage: vi.fn(),
+            onTimeoutUser: vi.fn(),
+            onBanUser: vi.fn(),
+            onWarnUser: vi.fn(),
+          },
+        ),
+      );
+
+      const messageEl = container.querySelector('[data-message-id="msg-mod"]');
+      expect(messageEl).toBeTruthy();
+      fireEvent.contextMenu(messageEl!);
+
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByText("Timeout...")).toBeInTheDocument();
+      expect(screen.getByText("Ban")).toBeInTheDocument();
+      expect(screen.getByText("Warn")).toBeInTheDocument();
     });
 
     it("calls onDeleteMessage from context menu", () => {

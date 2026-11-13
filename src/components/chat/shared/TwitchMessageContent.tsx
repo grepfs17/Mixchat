@@ -106,6 +106,7 @@ function computeIdentity(
   previousMsg: TwitchMessage | null,
   currentUserDisplayName: string | undefined,
   firstMessageMark: boolean,
+  isBroadcasterViewer: boolean,
 ): {
   isFirstLive: boolean;
   messageClasses: string;
@@ -127,7 +128,9 @@ function computeIdentity(
   const isBroadcaster = Boolean(msg.badges && msg.badges["broadcaster"]);
   const isModeratorMsg = Boolean(msg.badges && msg.badges["moderator"]);
   const isUnmoderatable = Boolean(
-    isBroadcaster || isModeratorMsg || msg.isCurrentUser,
+    msg.isCurrentUser ||
+      isBroadcaster ||
+      (isModeratorMsg && !isBroadcasterViewer),
   );
   return { isFirstLive, messageClasses, isUnmoderatable };
 }
@@ -535,6 +538,7 @@ function TwitchMessageContentBase({
 }: TwitchMessageContentProps) {
   const {
     isModerator,
+    isBroadcaster,
     modModeActive,
     compactActions,
     keepModActionsVisible,
@@ -554,6 +558,7 @@ function TwitchMessageContentBase({
     previousMsg,
     currentUserDisplayName,
     firstMessageMark,
+    Boolean(isBroadcaster),
   );
   const eventStyle = computeEventStyle(msg, showFirstMessage);
 

@@ -76,6 +76,9 @@ interface UseTwitchChatEventHandlersOptions {
   onMessageDeletedRef: React.RefObject<
     ((messageId: string) => void) | undefined
   >;
+  onUserMessagesDeletedRef: React.RefObject<
+    ((userId: string, userName?: string) => void) | undefined
+  >;
   usernameRef: React.RefObject<string>;
   accessTokenRef: React.RefObject<string>;
   eventSoundsRef: React.RefObject<Record<string, string>>;
@@ -98,6 +101,7 @@ export function useTwitchChatEventHandlers({
   enabled,
   onMessageRef,
   onMessageDeletedRef,
+  onUserMessagesDeletedRef,
   usernameRef,
   accessTokenRef,
   eventSoundsRef,
@@ -508,8 +512,9 @@ export function useTwitchChatEventHandlers({
       }
     });
 
-    client.onTimeout((_channel, user, duration) => {
+    client.onTimeout((_channel, user, duration, msg) => {
       if (!active) return;
+      onUserMessagesDeletedRef.current?.(msg.targetUserId || "", user);
       onMessageRef.current(
         createSystemMessage(
           `${user} was timed out for ${duration} seconds.`,
@@ -519,8 +524,9 @@ export function useTwitchChatEventHandlers({
       );
     });
 
-    client.onBan((_channel, user) => {
+    client.onBan((_channel, user, msg) => {
       if (!active) return;
+      onUserMessagesDeletedRef.current?.(msg.targetUserId || "", user);
       onMessageRef.current(
         createSystemMessage(`${user} was permanently banned.`, "ban", {
           targetUsername: user,

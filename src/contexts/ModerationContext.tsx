@@ -4,6 +4,8 @@ export type ModModeTarget = "off" | "twitch" | "youtube" | "both";
 
 export interface ModerationContextValue {
   isModerator: boolean;
+  /** True when the signed-in viewer owns the selected Twitch channel. */
+  isBroadcaster?: boolean;
   modModeActive: boolean;
   compactActions: boolean;
   keepModActionsVisible?: boolean;
@@ -36,6 +38,7 @@ export interface ModerationContextValue {
 
 export const ModerationContext = createContext<ModerationContextValue>({
   isModerator: false,
+  isBroadcaster: false,
   modModeActive: false,
   compactActions: false,
   keepModActionsVisible: false,

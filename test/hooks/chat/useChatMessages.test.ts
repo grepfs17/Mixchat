@@ -29,15 +29,27 @@ function makeRedemption(overrides: {
   } as TwitchMessage;
 }
 
-function renderMessages() {
+function renderMessages(showDeletedMessages = true) {
   return renderHook(() =>
     useChatMessages({
       selectedTwitchChannelName: "",
       twitchSession: undefined,
-      showDeletedMessages: true,
+      showDeletedMessages,
       badgesReady: false,
     }),
   );
+}
+
+function makeChatMessage(id: string, userId: string, author = "User1"): TwitchMessage {
+  return {
+    id,
+    platform: "twitch",
+    author,
+    content: "hello",
+    timestamp: new Date(),
+    userId,
+    messageType: "chat",
+  } as TwitchMessage;
 }
 
 beforeEach(() => {
@@ -188,5 +200,71 @@ describe("useChatMessages: redemption dedup", () => {
     });
 
     expect(result.current.messages).toHaveLength(2);
+  });
+});
+
+describe("useChatMessages: user message purge", () => {
+  it("marks every message from the target user as deleted", () => {
+    const { result } = renderMessages(true);
+
+    act(() => {
+      result.current.handleTwitchMessage(makeChatMessage("m1", "u-1"));
+      result.current.handleTwitchMessage(makeChatMessage("m2", "u-1"));
+      result.current.handleTwitchMessage(makeChatMessage("m3", "u-2", "User2"));
+    });
+
+    act(() => {
+      result.current.handleUserMessagesDeleted("u-1");
+    });
+
+    expect(
+      result.current.messages.filter((m) => m.userId === "u-1").every(
+        (m) => m.isDeleted,
+      ),
+    ).toBe(true);
+    expect(result.current.messages.find((m) => m.id === "m3")?.isDeleted).toBe(
+      undefined,
+    );
+  });
+
+  it("marks messages as deleted even when deleted messages are hidden", () => {
+    const { result } = renderMessages(false);
+
+    act(() => {
+      result.current.handleTwitchMessage(makeChatMessage("m1", "u-1"));
+      result.current.handleTwitchMessage(makeChatMessage("m3", "u-2", "User2"));
+    });
+
+    act(() => {
+      result.current.handleUserMessagesDeleted("u-1");
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages.find((m) => m.id === "m1")?.isDeleted).toBe(
+      true,
+    );
+    expect(result.current.messages.find((m) => m.id === "m3")?.isDeleted).toBe(
+      undefined,
+    );
+  });
+
+  it("falls back to the author name when the user id is unavailable", () => {
+    const { result } = renderMessages(true);
+
+    act(() => {
+      result.current.handleTwitchMessage(makeChatMessage("m1", "", "Someone"));
+      result.current.handleTwitchMessage(makeChatMessage("m2", "", "Other"));
+    });
+
+    act(() => {
+      result.current.handleUserMessagesDeleted("", "someone");
+    });
+
+    expect(result.current.messages.find((m) => m.id === "m1")?.isDeleted).toBe(
+      true,
+    );
+    expect(result.current.messages.find((m) => m.id === "m2")?.isDeleted).toBe(
+      undefined,
+    );
   });
 });

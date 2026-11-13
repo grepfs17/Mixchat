@@ -56,6 +56,7 @@ function makeSubInfo(overrides: Record<string, unknown> = {}) {
 
 function renderHandlers() {
   const onMessageRef = { current: vi.fn() };
+  const onUserMessagesDeleted = vi.fn();
   const client = new Proxy(
     {},
     {
@@ -74,6 +75,7 @@ function renderHandlers() {
       enabled: true,
       onMessageRef: onMessageRef as never,
       onMessageDeletedRef: { current: vi.fn() } as never,
+      onUserMessagesDeletedRef: { current: onUserMessagesDeleted },
       usernameRef: { current: "viewer" },
       accessTokenRef: { current: "token" },
       eventSoundsRef: { current: {} },
@@ -90,12 +92,32 @@ function renderHandlers() {
     const calls = onMessageRef.current.mock.calls;
     return calls[calls.length - 1]?.[0];
   };
-  return { lastMessage };
+  return { lastMessage, onUserMessagesDeleted };
 }
 
 beforeEach(() => {
   for (const key of Object.keys(handlers)) delete handlers[key];
   vi.clearAllMocks();
+});
+
+describe("useTwitchChatEventHandlers: moderation message purge", () => {
+  it("purges all messages from a banned user", () => {
+    const { onUserMessagesDeleted, lastMessage } = renderHandlers();
+
+    handlers.onBan("chan", "someone", { targetUserId: "u-1" });
+
+    expect(onUserMessagesDeleted).toHaveBeenCalledWith("u-1", "someone");
+    expect(lastMessage().messageType).toBe("ban");
+  });
+
+  it("purges all messages from a timed out user", () => {
+    const { onUserMessagesDeleted, lastMessage } = renderHandlers();
+
+    handlers.onTimeout("chan", "someone", 600, { targetUserId: "u-1" });
+
+    expect(onUserMessagesDeleted).toHaveBeenCalledWith("u-1", "someone");
+    expect(lastMessage().messageType).toBe("timeout");
+  });
 });
 
 describe("useTwitchChatEventHandlers: subscription duration", () => {

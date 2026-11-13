@@ -734,6 +734,7 @@ export default function ChatApp(props: ChatAppStateProps) {
   const moderationValue = useMemo(
     () => ({
       isModerator,
+      isBroadcaster: isOnOwnChannel,
       modModeActive,
       compactActions,
       keepModActionsVisible,
@@ -757,6 +758,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     }),
     [
       isModerator,
+      isOnOwnChannel,
       modModeActive,
       compactActions,
       keepModActionsVisible,

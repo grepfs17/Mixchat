@@ -195,6 +195,7 @@ export function useChatAppState({
     recentRedemptionsRef,
     handleTwitchMessage,
     handleMessageDeleted,
+    handleUserMessagesDeleted,
   } = useChatMessages({
     selectedTwitchChannelName,
     twitchSession,
@@ -442,6 +443,7 @@ export function useChatAppState({
     handleMessageDeleted,
     twitchSession?.userId || "",
     selectedTwitchChannel,
+    handleUserMessagesDeleted,
   );
 
   const handleSendMessage = useCallback(

@@ -156,21 +156,20 @@ function buildTwitchModerationItems(
     onWarnUser,
   } = moderation;
   const items: MenuEntry[] = [];
-  const inlineActionsVisible =
+  const canModerate = Boolean(
     isTwitch &&
-    !isSystemMessage &&
-    isModerator &&
-    modModeActive &&
-    chatMsg &&
-    !chatMsg.badges?.["broadcaster"] &&
-    !chatMsg.badges?.["moderator"] &&
-    !chatMsg.isCurrentUser &&
-    (isMobile || !compactActions || keepModActionsVisible);
+      !isSystemMessage &&
+      isModerator &&
+      modModeActive &&
+      chatMsg &&
+      !chatMsg.badges?.["broadcaster"] &&
+      !chatMsg.isCurrentUser &&
+      (moderation.isBroadcaster || !chatMsg.badges?.["moderator"]),
+  );
+  const inlineActionsVisible =
+    canModerate && (isMobile || !compactActions || keepModActionsVisible);
 
   if (isTwitch && !isSystemMessage && isModerator && modModeActive && chatMsg) {
-    const isBroadcaster = Boolean(chatMsg.badges?.["broadcaster"]);
-    const isModeratorMsg = Boolean(chatMsg.badges?.["moderator"]);
-    const canModerate = !isBroadcaster && !isModeratorMsg && !chatMsg.isCurrentUser;
     if (canModerate && !inlineActionsVisible) {
       items.push({ key: "mod-divider-twitch", divider: true });
       items.push({
