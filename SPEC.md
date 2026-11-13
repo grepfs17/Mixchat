@@ -73,7 +73,8 @@ mixchat/
 │   │   ├── constants.ts     # App constants (mod commands, YT user agent)
 │   │   ├── version.ts       # Display version + the git branch baked in at build time
 │   │   ├── oauthSession.ts  # OAuth popup + postMessage listener
-│   │   ├── desktopShell.ts  # Runtime shell detection + system-browser opener
+│   │   ├── desktopShell.ts  # Runtime shell detection + system-browser opener + Twitch help window bridge
+│   │   ├── secureRequest.ts  # Request-scheme check that gates the Secure flag on auth cookies
 │   │   ├── google.ts        # Google API fetch wrapper (rate limiting, quota tracking)
 │   │   ├── googleDrive.ts   # Google Drive backup/restore for settings
 │   │   └── ...              # Badges, chat history, chat colors, potoken, emojiShortcodes, etc.
@@ -101,6 +102,7 @@ mixchat/
 │   │   ├── dev/chat-preview.astro # Dev-only chat styling gallery (blocked in prod by middleware)
 │   │   ├── auth/            # OAuth callback pages (twitch, youtube)
 │   │   ├── desktop/         # Desktop-only pages (twitch-activate redirect)
+│   │   ├── help/twitch-login.astro # Desktop Twitch login guide (auto-opens during device login)
 │   │   └── api/             # API endpoints (song-queue, wheel, stream-tools, youtube-proxy, moderation, etc.)
 │   │       ├── auth/google/desktop/  # Tauri Google OAuth handoff start + poll
 │   │       └── desktop/open.ts       # Desktop-only system-browser opener
@@ -291,7 +293,7 @@ mixchat/
   - **Legacy popup**: `/api/auth/google/pkce` issues the challenge and stores the verifier cookie, and the popup callback posts the session through `window.opener`.
 - Handoff records live for 10 minutes, are capped at 20, and are single use. Drive-only grants use the same flow with `flow: "drive"`.
 - `astro.config.mjs` sets `ssr.noExternal: true` and keeps `jsdom` external in desktop builds. `jsdom` reads a stylesheet relative to `__dirname`, which breaks when bundled into ESM, so the Tauri prepare step installs only `jsdom` next to the server bundle. Everything else is bundled and needs no `node_modules`.
-- The embedded Twitch player authenticates with Twitch's own web session, not the API access token. The app opens `/desktop/twitch-activate?url=...` (`src/pages/desktop/twitch-activate.ts`) instead of `twitch.tv` directly, so the shell can promote it to a child webview (`twitch-activate`) that shares the WebView2 profile, and that one login also stores Twitch cookies for the player. The handler only redirects to `https://*.twitch.tv` URLs, so when the shell does not intercept it the flow still works. The device poll then creates the API session. **Account > Log in to Twitch player** remains as a fallback that opens `https://www.twitch.tv/login` and reloads the main window on close.
+- The embedded Twitch player authenticates with Twitch's own web session, not the API access token. The app opens `/desktop/twitch-activate?url=...` (`src/pages/desktop/twitch-activate.ts`) instead of `twitch.tv` directly, so the shell can promote it to a child webview (`twitch-activate`) that shares the WebView2 profile, and that one login also stores Twitch cookies for the player. The handler only redirects to `https://*.twitch.tv` URLs, so when the shell does not intercept it the flow still works. The device poll then creates the API session. When the device login starts, the shell also opens the login guide (`/help/twitch-login`) in a `twitch-help` child webview, and when the login succeeds or is cancelled it closes both child windows through the `/desktop/twitch-close` route. **Account > Log in to Twitch player** remains as a fallback that opens `https://www.twitch.tv/login` and reloads the main window on close.
 - Twitch token refresh (`/api/refresh-token`, `src/server/providerTokens.ts`) omits the client secret for desktop builds (Public app). Google refresh (`refresh-token`, `providerTokens`, `gdrive.ts`) still sends its desktop client secret.
 - Desktop builds resolve `/api/parent-domain` from the loopback request host instead of the baked `site`, so the Twitch embed's `parent` matches the app origin.
 - Desktop builds bind the server to `127.0.0.1` (`astro.config.mjs` `server.host`), because `@astrojs/node` standalone otherwise resolves the default `host: true` to `0.0.0.0` and would expose `/api/desktop/open` and the OAuth handoff endpoints to the LAN. A runtime `HOST` env var still overrides this.

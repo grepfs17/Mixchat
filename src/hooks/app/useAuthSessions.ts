@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import type { PlatformSession } from "../../lib/types";
 import { listenForOAuthSession } from "../../lib/oauthSession";
 import {
+  closeTwitchLoginWindows,
   isTauriShell,
   openExternalUrl,
   openTwitchActivation,
+  openTwitchHelp,
 } from "../../lib/desktopShell";
 import { useTokenRefresh } from "./useTokenRefresh";
 import {
@@ -295,6 +297,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
     deviceAbortRef.current = true;
     setTwitchDevice(null);
     setIsLoggingIn(false);
+    closeTwitchLoginWindows();
   }, []);
 
   const startTwitchDeviceLogin = useCallback(() => {
@@ -314,6 +317,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
           verificationUri: data.verificationUri,
           status: "waiting",
         });
+        openTwitchHelp();
         openTwitchActivation(data.verificationUri);
       } catch {
         if (!deviceAbortRef.current) {
@@ -339,6 +343,7 @@ export function useAuthSessions(): UseAuthSessionsResult {
               setSessions((prev) => ({ ...prev, twitch: data.session }));
               setTwitchDevice(null);
               setIsLoggingIn(false);
+              closeTwitchLoginWindows();
               return;
             }
             if (data.status === "pending") continue;

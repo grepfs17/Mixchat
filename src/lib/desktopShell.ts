@@ -94,3 +94,22 @@ export function openTwitchActivation(activationUrl: string): void {
   }
   window.open(activationUrl, "_blank", "noopener,noreferrer");
 }
+
+/**
+ * Opens the Twitch login guide in a shell child window. The shell opens it
+ * alongside the device-code modal and closes it when the login ends.
+ */
+export function openTwitchHelp(): void {
+  if (!isTauriShell()) return;
+  window.open("/desktop/twitch-help", "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Closes the Twitch login child windows (guide and activation page) when the
+ * device login succeeds or is cancelled. Uses the same window.open
+ * interception as the other shell actions.
+ */
+export function closeTwitchLoginWindows(): void {
+  if (!isTauriShell()) return;
+  window.open("/desktop/twitch-close", "_blank", "noopener,noreferrer");
+}

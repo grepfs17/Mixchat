@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { refreshTwitchAccessToken } from "../../lib/twitch";
 import { refreshYoutubeToken } from "../../lib/youtube";
 import { checkRateLimit } from "../../lib/rateLimit";
+import { isSecureRequest } from "../../lib/secureRequest";
 import {
   IS_DESKTOP,
   IS_TWITCH_ONLY,
@@ -25,8 +26,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   try {
-    const isDev = import.meta.env.MODE === "development";
-    const isSecure = !isDev;
+    const isSecure = isSecureRequest(request);
 
     const body = await request.json().catch(() => ({}));
     const { platform } = body as { platform?: string };

@@ -5,6 +5,7 @@ import {
   TWITCH_SCOPES,
 } from "../../../../../lib/constants";
 import { checkRateLimit } from "../../../../../lib/rateLimit";
+import { isSecureRequest } from "../../../../../lib/secureRequest";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -36,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   try {
     const auth = await startTwitchDeviceAuth(clientId, TWITCH_SCOPES);
-    const isSecure = import.meta.env.MODE !== "development";
+    const isSecure = isSecureRequest(request);
     cookies.set("twitch_device_code", auth.deviceCode, {
       httpOnly: true,
       secure: isSecure,

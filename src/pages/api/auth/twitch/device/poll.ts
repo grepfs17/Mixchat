@@ -4,6 +4,7 @@ import {
   IS_DESKTOP,
   TWITCH_SCOPES,
 } from "../../../../../lib/constants";
+import { isSecureRequest } from "../../../../../lib/secureRequest";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -15,7 +16,7 @@ const json = (body: unknown, status = 200) =>
   });
 
 /** Poll the Twitch Device Code Grant flow (desktop/public-client only). */
-export const GET: APIRoute = async ({ cookies }) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
   if (!IS_DESKTOP) return json({ error: "Not found" }, 404);
 
   const clientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
@@ -33,7 +34,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   if (result.status === "success") {
     try {
       const user = await getTwitchUser(result.accessToken, clientId);
-      const isSecure = import.meta.env.MODE !== "development";
+      const isSecure = isSecureRequest(request);
       cookies.delete("twitch_device_code", { path: "/" });
       cookies.set("twitch_token", result.accessToken, {
         httpOnly: true,
