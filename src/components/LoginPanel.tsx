@@ -8,6 +8,7 @@ import {
   FaYoutube,
   FaCog,
   FaTwitch,
+  FaSignOutAlt,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
 import { IS_TWITCH_ONLY } from "../lib/constants";
@@ -242,11 +243,7 @@ function ManualJoinSection({
         <button
           type="submit"
           disabled={!manualChannel.trim()}
-          className="logout-btn"
-          style={{
-            backgroundColor: manualChannel.trim() ? "#555555" : "#333333",
-            cursor: manualChannel.trim() ? "pointer" : "not-allowed",
-          }}
+          className="join-btn"
         >
           Join
         </button>
@@ -270,31 +267,54 @@ function YoutubeLoginSection({
 }: YoutubeLoginSectionProps) {
   if (IS_TWITCH_ONLY) return null;
   return (
-    <div className="youtube-section">
-      {youtubeConnected ? (
-        <div className="youtube-info-row">
-          <div className="youtube-user-info">
-            <FaYoutube
-              style={{ color: "#FF0000", fontSize: "18px", flexShrink: 0 }}
-            />
-            <span className="youtube-user-name">
-              {youtubeUser || "YouTube"}
-            </span>
+    <section className="platform-card youtube">
+      <div className="platform-card-header">
+        <span className="platform-brand">
+          <FaYoutube
+            size={15}
+            className="platform-brand-icon youtube"
+            aria-hidden="true"
+          />
+          <span className="platform-name">YouTube</span>
+        </span>
+      </div>
+      <div className="platform-card-body">
+        {youtubeConnected ? (
+          <div className="account-row">
+            <div className="youtube-user-info">
+              <span
+                className="account-avatar account-avatar--youtube"
+                aria-hidden="true"
+              >
+                <FaYoutube size={16} />
+              </span>
+              <span className="youtube-user-name">
+                {youtubeUser || "YouTube"}
+              </span>
+            </div>
+            <div className="account-actions">
+              <button
+                type="button"
+                onClick={onYoutubeLogout}
+                className="icon-button account-logout"
+                title="Log out of YouTube"
+                aria-label="Log out of YouTube"
+              >
+                <FaSignOutAlt size={13} />
+              </button>
+            </div>
           </div>
-          <button type="button" onClick={onYoutubeLogout} className="logout-btn small">
-            Logout
+        ) : onYoutubeLogin ? (
+          <button
+            type="button"
+            onClick={onYoutubeLogin}
+            className="login-btn youtube-btn"
+          >
+            Login with YouTube
           </button>
-        </div>
-      ) : onYoutubeLogin ? (
-        <button type="button"
-          onClick={onYoutubeLogin}
-          className="login-btn youtube-btn"
-          style={{ width: "100%" }}
-        >
-          Login with YouTube
-        </button>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -386,123 +406,163 @@ function LoginPanel({
         </button>
       </div>
 
-      <div className="platform-login twitch">
-        <div className="platform-header"></div>
-
-        {twitchConnected && twitchUser ? (
-          <div className="connected-info">
-            <div className="user-profile-container">
-        <div  role="button"
-          tabIndex={0}
-          className="user-profile-link"
-          onClick={() => {
-          if (twitchUserId || twitchUserName) {
-            onChannelChange?.(twitchUserId || twitchUserName!);
-            onRequestClose?.();
-          }
-        }}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (twitchUserId || twitchUserName) { onChannelChange?.(twitchUserId || twitchUserName!); onRequestClose?.(); } } } }
-        title={`Switch to ${twitchUser}'s channel`}
-              >
-                {twitchProfileImage && (
-                  <img
-                    src={twitchProfileImage}
-                    alt={twitchUser}
-                    className="profile-image"
-                    loading="eager"
-                  />
-                )}
-                <div className="user-details">
-                  <p className="user-name">{twitchUser}</p>
-                </div>
-              </div>
-
-              <div className="user-actions">
+      <div className="login-panel-body">
+        <section className="platform-card twitch">
+          <div className="platform-card-header">
+            <span className="platform-brand">
+              <FaTwitch
+                size={15}
+                className="platform-brand-icon twitch"
+                aria-hidden="true"
+              />
+              <span className="platform-name">Twitch</span>
+            </span>
+            {twitchConnected && twitchUser && (
+              <div className="platform-actions">
                 {onManageWatchlist && (
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => {
                       onManageWatchlist();
                       onRequestClose?.();
                     }}
                     className="icon-button"
                     title="Manage Notification Streams"
+                    aria-label="Manage Notification Streams"
                   >
-                    <FaEye />
+                    <FaEye size={14} />
                   </button>
                 )}
                 {!IS_TWITCH_ONLY && onManageYoutubeLinks && (
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => {
                       onManageYoutubeLinks();
                       onRequestClose?.();
                     }}
                     className="icon-button youtube-icon-btn"
                     title="Link YouTube channels"
+                    aria-label="Link YouTube channels"
                   >
-                    <FaYoutube />
+                    <FaYoutube size={14} />
                   </button>
                 )}
-              </div>
-            </div>
-            <button type="button" onClick={onTwitchLogout} className="logout-btn">
-              Logout
-            </button>
-
-            {twitchChannels && twitchChannels.length > 0 && (
-              <div className="channels-section">
-                <label className="section-label" htmlFor="login-channel-search">
-                  Channels ({filteredChannels.length})
-                </label>
-                <input
-                  id="login-channel-search"
-                  type="text"
-                  placeholder="Search channels..."
-                  aria-label="Search channels"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="channel-search-input"
-                />
-                <ChannelList
-                  channels={filteredChannels}
-                  selectedTwitchChannel={selectedTwitchChannel}
-                  linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-                  favoriteChannels={favoriteChannels}
-                  onChannelChange={onChannelChange}
-                  onToggleFavorite={onToggleFavorite}
-                  onRequestClose={onRequestClose}
-                />
-
-                <ManualJoinSection
-                  manualChannel={manualChannel}
-                  onManualChannelChange={setManualChannel}
-                  onSubmit={handleManualJoin}
-                />
-              </div>
-            )}
-
-            {visibleModeratedChannels.length > 0 && (
-              <div className="moderated-section">
-                <span className="section-label">
-                  Moderated Channels ({visibleModeratedChannels.length})
-                </span>
-                <ChannelList
-                  channels={visibleModeratedChannels}
-                  selectedTwitchChannel={selectedTwitchChannel}
-                  linkedYoutubeChannelIds={linkedYoutubeChannelIds}
-                  favoriteChannels={favoriteChannels}
-                  showStatus
-                  onChannelChange={onChannelChange}
-                  onToggleFavorite={onToggleFavorite}
-                  onRequestClose={onRequestClose}
-                />
+                <button
+                  type="button"
+                  onClick={onTwitchLogout}
+                  className="icon-button account-logout"
+                  title="Log out of Twitch"
+                  aria-label="Log out of Twitch"
+                >
+                  <FaSignOutAlt size={13} />
+                </button>
               </div>
             )}
           </div>
-        ) : (
-          <button type="button" onClick={onTwitchLogin} className="login-btn twitch-btn">
-            Login with Twitch
-          </button>
-        )}
+
+          <div className="platform-card-body">
+            {twitchConnected && twitchUser ? (
+              <>
+                <div className="account-row">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="user-profile-link"
+                    onClick={() => {
+                      if (twitchUserId || twitchUserName) {
+                        onChannelChange?.(twitchUserId || twitchUserName!);
+                        onRequestClose?.();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (twitchUserId || twitchUserName) {
+                          onChannelChange?.(twitchUserId || twitchUserName!);
+                          onRequestClose?.();
+                        }
+                      }
+                    }}
+                    title={`Switch to ${twitchUser}'s channel`}
+                  >
+                    {twitchProfileImage && (
+                      <img
+                        src={twitchProfileImage}
+                        alt={twitchUser}
+                        className="profile-image"
+                        loading="eager"
+                      />
+                    )}
+                    <div className="user-details">
+                      <p className="user-name">{twitchUser}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {twitchChannels && twitchChannels.length > 0 && (
+                  <div className="channels-section">
+                    <label
+                      className="section-label"
+                      htmlFor="login-channel-search"
+                    >
+                      Channels ({filteredChannels.length})
+                    </label>
+                    <input
+                      id="login-channel-search"
+                      type="text"
+                      placeholder="Search channels..."
+                      aria-label="Search channels"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="channel-search-input"
+                    />
+                    <ChannelList
+                      channels={filteredChannels}
+                      selectedTwitchChannel={selectedTwitchChannel}
+                      linkedYoutubeChannelIds={linkedYoutubeChannelIds}
+                      favoriteChannels={favoriteChannels}
+                      onChannelChange={onChannelChange}
+                      onToggleFavorite={onToggleFavorite}
+                      onRequestClose={onRequestClose}
+                    />
+
+                    <ManualJoinSection
+                      manualChannel={manualChannel}
+                      onManualChannelChange={setManualChannel}
+                      onSubmit={handleManualJoin}
+                    />
+                  </div>
+                )}
+
+                {visibleModeratedChannels.length > 0 && (
+                  <div className="moderated-section">
+                    <span className="section-label">
+                      Moderated Channels ({visibleModeratedChannels.length})
+                    </span>
+                    <ChannelList
+                      channels={visibleModeratedChannels}
+                      selectedTwitchChannel={selectedTwitchChannel}
+                      linkedYoutubeChannelIds={linkedYoutubeChannelIds}
+                      favoriteChannels={favoriteChannels}
+                      showStatus
+                      onChannelChange={onChannelChange}
+                      onToggleFavorite={onToggleFavorite}
+                      onRequestClose={onRequestClose}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={onTwitchLogin}
+                className="login-btn twitch-btn"
+              >
+                Login with Twitch
+              </button>
+            )}
+          </div>
+        </section>
 
         <YoutubeLoginSection
           youtubeConnected={youtubeConnected}

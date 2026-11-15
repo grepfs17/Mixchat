@@ -61,8 +61,8 @@ describe("LoginPanel: YouTube UI gated by IS_TWITCH_ONLY", () => {
         onYoutubeLogout: noop,
       });
 
-      // The YouTube section contains a "Logout" button and the user name
-      const youtubeSection = document.querySelector(".youtube-section");
+      // The YouTube section contains a logout button and the user name
+      const youtubeSection = document.querySelector(".platform-card.youtube");
       if (IS_TWITCH_ONLY) {
         expect(youtubeSection).not.toBeInTheDocument();
       } else {
