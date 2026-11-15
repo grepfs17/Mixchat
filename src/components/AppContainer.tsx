@@ -32,6 +32,7 @@ export interface TwitchChannel {
   viewerCount?: number;
   gameName?: string;
   thumbnailUrl?: string;
+  isLive?: boolean;
 }
 
 export default function AppContainer() {
@@ -55,6 +56,7 @@ export default function AppContainer() {
   const {
     twitchChannels,
     allTwitchChannels,
+    moderatedChannels,
     sortedChannels,
     selectedTwitchChannel,
     selectedTwitchChannelName,
@@ -237,6 +239,7 @@ export default function AppContainer() {
           sessions={sessions}
           sortedChannels={sortedChannels}
           allTwitchChannels={allTwitchChannels}
+          moderatedChannels={moderatedChannels}
           selectedTwitchChannel={selectedTwitchChannel}
           favoriteChannels={favoriteChannels}
           linkedYoutubeChannelIds={linkedYoutubeChannelIds}

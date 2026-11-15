@@ -855,6 +855,100 @@ export const getTwitchUserById = async (
   }
 };
 
+/**
+ * Enrich channels with profile images and live status (batched, parallelized).
+ * Returns the same channels sorted online-first, then alphabetically.
+ */
+const enrichChannelsWithStatus = async (
+  accessToken: string,
+  clientId: string,
+  channels: any[],
+) => {
+  const streamDataMap = new Map<string, any>();
+
+  await Promise.all(
+    Array.from(
+      { length: Math.ceil(channels.length / BATCH_SIZE) },
+      (_, idx) => {
+        const batch = channels.slice(
+          idx * BATCH_SIZE,
+          (idx + 1) * BATCH_SIZE,
+        );
+
+        const profilePromise = fetch(
+          `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Client-ID": clientId,
+            },
+          },
+        ).then(async (res) => {
+          if (res.ok) {
+            const usersData = await res.json();
+            const userProfiles = new Map(
+              (usersData.data || []).map((user: any) => [
+                user.id,
+                user.profile_image_url,
+              ]),
+            );
+            batch.forEach((ch: any) => {
+              ch.profileImageUrl = userProfiles.get(ch.id);
+            });
+          }
+        });
+
+        const streamPromise = fetch(
+          `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Client-ID": clientId,
+            },
+          },
+        ).then(async (res) => {
+          if (res.ok) {
+            const streamsData = await res.json();
+            (streamsData.data || []).forEach((s: any) => {
+              streamDataMap.set(s.user_id, s);
+            });
+          }
+        });
+
+        return Promise.all([profilePromise, streamPromise]);
+      },
+    ),
+  );
+
+  channels.forEach((ch: any) => {
+    if (streamDataMap.has(ch.id)) {
+      const s = streamDataMap.get(ch.id);
+      ch.viewerCount = s.viewer_count;
+      ch.gameName = s.game_name || "";
+      ch.thumbnailUrl = s.thumbnail_url || "";
+      ch.isLive = true;
+    } else {
+      ch.viewerCount = 0;
+      ch.gameName = "";
+      ch.thumbnailUrl = "";
+      ch.isLive = false;
+    }
+  });
+
+  return channels.sort((a, b) => {
+    const aIsOnline = streamDataMap.has(a.id) ? 1 : 0;
+    const bIsOnline = streamDataMap.has(b.id) ? 1 : 0;
+
+    if (aIsOnline !== bIsOnline) {
+      return bIsOnline - aIsOnline;
+    }
+
+    const nameA = (a?.displayName || a?.name || "").toLowerCase();
+    const nameB = (b?.displayName || b?.name || "").toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+};
+
 export const getAllFollowedChannels = async (
   accessToken: string,
   clientId: string,
@@ -909,93 +1003,84 @@ export const getAllFollowedChannels = async (
       }
     }
 
-    // Enrich with profile images and fetch stream data (batched, parallelized)
-    const streamDataMap = new Map<string, any>();
-
-    await Promise.all(
-      Array.from(
-        { length: Math.ceil(followedChannels.length / BATCH_SIZE) },
-        (_, idx) => {
-          const batch = followedChannels.slice(
-            idx * BATCH_SIZE,
-            (idx + 1) * BATCH_SIZE,
-          );
-
-          const profilePromise = fetch(
-            `${TWITCH_API_BASE}/users?${batch.map((ch: any) => `id=${ch.id}`).join("&")}`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Client-ID": clientId,
-              },
-            },
-          ).then(async (res) => {
-            if (res.ok) {
-              const usersData = await res.json();
-              const userProfiles = new Map(
-                (usersData.data || []).map((user: any) => [
-                  user.id,
-                  user.profile_image_url,
-                ]),
-              );
-              batch.forEach((ch: any) => {
-                ch.profileImageUrl = userProfiles.get(ch.id);
-              });
-            }
-          });
-
-          const streamPromise = fetch(
-            `${TWITCH_API_BASE}/streams?${batch.map((ch: any) => `user_id=${ch.id}`).join("&")}&first=100`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Client-ID": clientId,
-              },
-            },
-          ).then(async (res) => {
-            if (res.ok) {
-              const streamsData = await res.json();
-              (streamsData.data || []).forEach((s: any) => {
-                streamDataMap.set(s.user_id, s);
-              });
-            }
-          });
-
-          return Promise.all([profilePromise, streamPromise]);
-        },
-      ),
+    return await enrichChannelsWithStatus(
+      accessToken,
+      clientId,
+      followedChannels,
     );
-
-    followedChannels.forEach((ch: any) => {
-      if (streamDataMap.has(ch.id)) {
-        const s = streamDataMap.get(ch.id);
-        ch.viewerCount = s.viewer_count;
-        ch.gameName = s.game_name || "";
-        ch.thumbnailUrl = s.thumbnail_url || "";
-      } else {
-        ch.viewerCount = 0;
-        ch.gameName = "";
-        ch.thumbnailUrl = "";
-      }
-    });
-
-    // Return all followed channels, sorted with online first
-    const sorted = followedChannels.sort((a, b) => {
-      const aIsOnline = streamDataMap.has(a.id) ? 1 : 0;
-      const bIsOnline = streamDataMap.has(b.id) ? 1 : 0;
-
-      if (aIsOnline !== bIsOnline) {
-        return bIsOnline - aIsOnline;
-      }
-
-      const nameA = (a?.displayName || a?.name || "").toLowerCase();
-      const nameB = (b?.displayName || b?.name || "").toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    return sorted;
   } catch (error) {
     console.error("Failed to get all followed channels:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch every channel where the user is a moderator (online and offline).
+ * Requires the `user:read:moderated_channels` scope.
+ */
+export const getModeratedChannels = async (
+  accessToken: string,
+  clientId: string,
+  userId: string,
+) => {
+  try {
+    let moderatedChannels: any[] = [];
+    let cursor: string | undefined = undefined;
+
+    while (true) {
+      const url = new URL(`${TWITCH_API_BASE}/moderation/channels`);
+      url.searchParams.set("user_id", userId);
+      url.searchParams.set("first", "100");
+      if (cursor) {
+        url.searchParams.set("after", cursor);
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Client-ID": clientId,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error(
+            `Twitch API error: 401 - Unauthorized. Token may be expired or invalid.`,
+          );
+        }
+        // Older sessions may predate the moderated-channels scope. Treat it
+        // as an empty list instead of failing the whole channel fetch.
+        if (response.status === 403) {
+          return [];
+        }
+        throw new Error(`Twitch API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const pageChannels = (data.data || []).map((channel: any) => ({
+        id: channel.broadcaster_id,
+        name: channel.broadcaster_login,
+        displayName:
+          channel.broadcaster_name || channel.broadcaster_login,
+        title: "",
+      }));
+
+      moderatedChannels.push(...pageChannels);
+
+      if (data.pagination?.cursor) {
+        cursor = data.pagination.cursor;
+      } else {
+        break;
+      }
+    }
+
+    return await enrichChannelsWithStatus(
+      accessToken,
+      clientId,
+      moderatedChannels,
+    );
+  } catch (error) {
+    console.error("Failed to get moderated channels:", error);
     throw error;
   }
 };

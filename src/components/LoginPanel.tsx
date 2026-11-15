@@ -20,6 +20,7 @@ interface TwitchChannel {
   profileImageUrl?: string;
   viewerCount?: number;
   gameName?: string;
+  isLive?: boolean;
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
@@ -34,6 +35,8 @@ interface LoginPanelProps {
   twitchChannels?: TwitchChannel[];
   /** Full following list (online + offline), used by the settings channel picker. */
   allTwitchChannels?: TwitchChannel[];
+  /** Channels where the logged-in user is a moderator, online and offline. */
+  moderatedChannels?: TwitchChannel[];
   selectedTwitchChannel?: string;
   favoriteChannels?: string[];
   onChannelChange?: (channelId: string) => void;
@@ -60,9 +63,43 @@ interface ChannelListItemProps {
   isSelected: boolean;
   isYoutubeLinked: boolean;
   isFavorite: boolean;
+  /** Shows a live/offline indicator, including offline channels. */
+  showStatus?: boolean;
   onChannelChange?: (channelId: string) => void;
   onToggleFavorite?: (channelId: string) => void;
   onRequestClose?: () => void;
+}
+
+function ChannelStatusDot({ isLive }: { isLive: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`channel-status-dot ${isLive ? "is-live" : "is-offline"}`}
+      title={isLive ? "Live" : "Offline"}
+    />
+  );
+}
+
+function ChannelStatusLabel({
+  channel,
+  isLive,
+  showStatus,
+}: {
+  channel: TwitchChannel;
+  isLive: boolean;
+  showStatus: boolean;
+}) {
+  if (showStatus && !isLive) {
+    return <span className="channel-status-offline">Offline</span>;
+  }
+  if (channel.viewerCount === undefined || channel.viewerCount === null) {
+    return null;
+  }
+  return (
+    <span className="viewer-count">
+      <FaUsers size={12} /> {channel.viewerCount.toLocaleString()}
+    </span>
+  );
 }
 
 function ChannelListItem({
@@ -70,10 +107,12 @@ function ChannelListItem({
   isSelected,
   isYoutubeLinked,
   isFavorite,
+  showStatus = false,
   onChannelChange,
   onToggleFavorite,
   onRequestClose,
 }: ChannelListItemProps) {
+  const isLive = channel.isLive ?? (channel.viewerCount ?? 0) > 0;
   return (
     <div className={`channel-item ${isSelected ? "selected" : ""}`}>
       <button type="button"
@@ -91,6 +130,7 @@ function ChannelListItem({
               alt={channel.displayName}
               className="channel-item-image"
             />
+            {showStatus && <ChannelStatusDot isLive={isLive} />}
             {isYoutubeLinked && (
               <FaYoutube
                 size={13}
@@ -102,6 +142,7 @@ function ChannelListItem({
         ) : isYoutubeLinked ? (
           <span className="channel-item-avatar-wrap">
             <span className="channel-item-image channel-item-image--placeholder" />
+            {showStatus && <ChannelStatusDot isLive={isLive} />}
             <FaYoutube
               size={13}
               className="channel-item-yt-badge"
@@ -116,11 +157,11 @@ function ChannelListItem({
           )}
         </div>
       </button>
-      {channel.viewerCount !== undefined && channel.viewerCount !== null && (
-        <span className="viewer-count">
-          <FaUsers size={12} /> {channel.viewerCount.toLocaleString()}
-        </span>
-      )}
+      <ChannelStatusLabel
+        channel={channel}
+        isLive={isLive}
+        showStatus={showStatus}
+      />
       <button type="button"
         onClick={() => onToggleFavorite?.(channel.id)}
         className={`favorite-button ${isFavorite ? "active" : ""}`}
@@ -137,6 +178,7 @@ interface ChannelListProps {
   selectedTwitchChannel: string;
   linkedYoutubeChannelIds: string[];
   favoriteChannels: string[];
+  showStatus?: boolean;
   onChannelChange?: (channelId: string) => void;
   onToggleFavorite?: (channelId: string) => void;
   onRequestClose?: () => void;
@@ -147,6 +189,7 @@ function ChannelList({
   selectedTwitchChannel,
   linkedYoutubeChannelIds,
   favoriteChannels,
+  showStatus,
   onChannelChange,
   onToggleFavorite,
   onRequestClose,
@@ -160,6 +203,7 @@ function ChannelList({
           isSelected={selectedTwitchChannel === channel.id}
           isYoutubeLinked={new Set(linkedYoutubeChannelIds).has(channel.id)}
           isFavorite={new Set(favoriteChannels).has(channel.id)}
+          showStatus={showStatus}
           onChannelChange={onChannelChange}
           onToggleFavorite={onToggleFavorite}
           onRequestClose={onRequestClose}
@@ -262,6 +306,7 @@ function LoginPanel({
   twitchUserId,
   twitchChannels = EMPTY_CHANNELS,
   allTwitchChannels = EMPTY_CHANNELS,
+  moderatedChannels = EMPTY_CHANNELS,
   selectedTwitchChannel = "",
   favoriteChannels = EMPTY_STRING_ARRAY,
   onChannelChange,
@@ -295,6 +340,14 @@ function LoginPanel({
         channel.name.toLowerCase().includes(query),
     );
   }, [searchQuery, twitchChannels]);
+
+  // A channel that is both followed and online already appears in the
+  // Channels list above, so skip it here. Offline moderated channels always
+  // show because they are never part of the online Channels list.
+  const visibleModeratedChannels = React.useMemo(() => {
+    const shownIds = new Set(twitchChannels.map((channel) => channel.id));
+    return moderatedChannels.filter((channel) => !shownIds.has(channel.id));
+  }, [moderatedChannels, twitchChannels]);
 
   const handleManualJoin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,6 +476,24 @@ function LoginPanel({
                   manualChannel={manualChannel}
                   onManualChannelChange={setManualChannel}
                   onSubmit={handleManualJoin}
+                />
+              </div>
+            )}
+
+            {visibleModeratedChannels.length > 0 && (
+              <div className="moderated-section">
+                <span className="section-label">
+                  Moderated Channels ({visibleModeratedChannels.length})
+                </span>
+                <ChannelList
+                  channels={visibleModeratedChannels}
+                  selectedTwitchChannel={selectedTwitchChannel}
+                  linkedYoutubeChannelIds={linkedYoutubeChannelIds}
+                  favoriteChannels={favoriteChannels}
+                  showStatus
+                  onChannelChange={onChannelChange}
+                  onToggleFavorite={onToggleFavorite}
+                  onRequestClose={onRequestClose}
                 />
               </div>
             )}

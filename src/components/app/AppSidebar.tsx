@@ -11,6 +11,7 @@ interface AppSidebarProps {
   sessions: AuthSessions;
   sortedChannels: TwitchChannel[];
   allTwitchChannels: TwitchChannel[];
+  moderatedChannels: TwitchChannel[];
   selectedTwitchChannel: string;
   favoriteChannels: string[];
   linkedYoutubeChannelIds: string[];
@@ -32,6 +33,7 @@ export default function AppSidebar({
   sessions,
   sortedChannels,
   allTwitchChannels,
+  moderatedChannels,
   selectedTwitchChannel,
   favoriteChannels,
   linkedYoutubeChannelIds,
@@ -98,6 +100,7 @@ export default function AppSidebar({
         twitchUserId={sessions.twitch?.userId}
         twitchChannels={sortedChannels}
         allTwitchChannels={allTwitchChannels}
+        moderatedChannels={moderatedChannels}
         selectedTwitchChannel={selectedTwitchChannel}
         favoriteChannels={favoriteChannels}
         onToggleFavorite={onToggleFavorite}

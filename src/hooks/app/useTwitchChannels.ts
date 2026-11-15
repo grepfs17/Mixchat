@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlatformSession } from "../../lib/types";
-import { getAllFollowedChannels } from "../../lib/twitch";
+import { getAllFollowedChannels, getModeratedChannels } from "../../lib/twitch";
 import type { TwitchChannel } from "../../components/AppContainer";
 import type { StreamTransitionInfo } from "../../components/StreamGrid";
 
@@ -20,6 +20,8 @@ export type UseTwitchChannelsOptions = {
 export type UseTwitchChannelsResult = {
   twitchChannels: TwitchChannel[];
   allTwitchChannels: TwitchChannel[];
+  /** Channels where the user is a moderator, online and offline. */
+  moderatedChannels: TwitchChannel[];
   sortedChannels: TwitchChannel[];
   selectedTwitchChannel: string;
   selectedTwitchChannelName: string;
@@ -53,6 +55,9 @@ export function useTwitchChannels(
 
   const [twitchChannels, setTwitchChannels] = useState<TwitchChannel[]>([]);
   const [allTwitchChannels, setAllTwitchChannels] = useState<TwitchChannel[]>(
+    [],
+  );
+  const [moderatedChannels, setModeratedChannels] = useState<TwitchChannel[]>(
     [],
   );
   const [selectedTwitchChannel, setSelectedTwitchChannel] =
@@ -101,9 +106,39 @@ export function useTwitchChannels(
     if (isNewAccount) {
       setChannelsLoading(true);
       setChannelsReady(false);
+      setModeratedChannels([]);
     }
 
     const fetchChannels = async () => {
+      let sessionInvalidHandled = false;
+      const handleError = (label: string, error: unknown) => {
+        console.error(`Failed to fetch ${label}:`, error);
+        if (
+          !sessionInvalidHandled &&
+          error instanceof Error &&
+          error.message.includes("401")
+        ) {
+          sessionInvalidHandled = true;
+          console.log("Received 401 error, clearing session...");
+          onSessionInvalid();
+        }
+      };
+
+      // Run the moderated fetch independently so a slow or hanging request
+      // cannot keep the app on the loading screen. Errors are handled here,
+      // not awaited below.
+      void getModeratedChannels(
+        session.accessToken,
+        import.meta.env.PUBLIC_TWITCH_CLIENT_ID,
+        session.userId,
+      )
+        .then((channels) => {
+          if (!cancelled) setModeratedChannels(channels);
+        })
+        .catch((error) => {
+          if (!cancelled) handleError("moderated channels", error);
+        });
+
       try {
         const allChannels = await getAllFollowedChannels(
           session.accessToken,
@@ -116,11 +151,7 @@ export function useTwitchChannels(
         setHasLoadedChannel(false);
         loadedForUserRef.current = userId;
       } catch (error) {
-        console.error("Failed to fetch Twitch channels:", error);
-        if (error instanceof Error && error.message.includes("401")) {
-          console.log("Received 401 error, clearing session...");
-          onSessionInvalid();
-        }
+        handleError("Twitch channels", error);
       } finally {
         if (!cancelled) {
           setChannelsLoading(false);
@@ -146,8 +177,10 @@ export function useTwitchChannels(
       const channel =
         twitchChannels.find((ch) => ch.id === channelId) ||
         allTwitchChannels.find((ch) => ch.id === channelId) ||
+        moderatedChannels.find((ch) => ch.id === channelId) ||
         twitchChannels.find((ch) => ch.name === channelId) ||
-        allTwitchChannels.find((ch) => ch.name === channelId);
+        allTwitchChannels.find((ch) => ch.name === channelId) ||
+        moderatedChannels.find((ch) => ch.name === channelId);
 
       // Use the resolved numeric ID so 7TV/BTTV/Twitch APIs receive the
       // correct value.
@@ -185,7 +218,7 @@ export function useTwitchChannels(
 
       window.history.pushState({}, "", `/channel/${channelName}`);
     },
-    [twitchChannels, allTwitchChannels, session, onStreamTransition],
+    [twitchChannels, allTwitchChannels, moderatedChannels, session, onStreamTransition],
   );
 
   // Restore the channel from the /channel/<name> URL path. Waits for the
@@ -200,7 +233,8 @@ export function useTwitchChannels(
     if (channelParam && !hasLoadedChannel) {
       const foundChannel =
         twitchChannels.find((ch) => ch.name === channelParam) ||
-        allTwitchChannels.find((ch) => ch.name === channelParam);
+        allTwitchChannels.find((ch) => ch.name === channelParam) ||
+        moderatedChannels.find((ch) => ch.name === channelParam);
 
       if (foundChannel) {
         setChannelData(foundChannel.id);
@@ -215,6 +249,7 @@ export function useTwitchChannels(
   }, [
     twitchChannels,
     allTwitchChannels,
+    moderatedChannels,
     hasLoadedChannel,
     isInitialAuthLoading,
     setChannelData,
@@ -238,6 +273,7 @@ export function useTwitchChannels(
   const reset = useCallback(() => {
     setTwitchChannels([]);
     setAllTwitchChannels([]);
+    setModeratedChannels([]);
     setSelectedTwitchChannel("");
     setSelectedTwitchChannelName("");
     setSelectedTwitchChannelDisplayName("");
@@ -263,6 +299,7 @@ export function useTwitchChannels(
   return {
     twitchChannels,
     allTwitchChannels,
+    moderatedChannels,
     sortedChannels,
     selectedTwitchChannel,
     selectedTwitchChannelName,
