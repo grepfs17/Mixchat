@@ -9,6 +9,7 @@ import {
   FaCog,
   FaTwitch,
   FaSignOutAlt,
+  FaTimes,
 } from "react-icons/fa";
 import EmbedConfigModal from "./EmbedConfigModal";
 import { IS_TWITCH_ONLY } from "../lib/constants";
@@ -507,15 +508,28 @@ function LoginPanel({
                     >
                       Channels ({filteredChannels.length})
                     </label>
-                    <input
-                      id="login-channel-search"
-                      type="text"
-                      placeholder="Search channels..."
-                      aria-label="Search channels"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="channel-search-input"
-                    />
+                    <div className="channel-search-wrapper">
+                      <input
+                        id="login-channel-search"
+                        type="text"
+                        placeholder="Search channels..."
+                        aria-label="Search channels"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="channel-search-input"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          className="channel-search-clear"
+                          onClick={() => setSearchQuery("")}
+                          title="Clear search"
+                          aria-label="Clear search"
+                        >
+                          <FaTimes size={12} />
+                        </button>
+                      )}
+                    </div>
                     <ChannelList
                       channels={filteredChannels}
                       selectedTwitchChannel={selectedTwitchChannel}
