@@ -90,6 +90,8 @@ export interface TwitchMessage {
   optimistic?: boolean; // True if this message is a local optimistic placeholder
   isPreloaded?: boolean; // True if message is from historical data (not live chat)
   isDeleted?: boolean; // True if this message was deleted by a moderator
+  /** Display name of the moderator behind a delete, ban, or timeout action. */
+  moderatorName?: string;
   messageType?: MessageType; // Type of message (chat, cheer, subscription, etc.)
   rewardId?: string; // ID of the redeemed reward
   rewardTitle?: string; // Title/name of the redeemed reward

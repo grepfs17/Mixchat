@@ -17,6 +17,7 @@ import {
 } from "../../../lib/twitchChatMessages";
 import { playEventSound } from "../../../lib/eventSounds";
 import type { MentionSoundType } from "../../../lib/twitchChatAudio";
+import { recentModerationActor } from "../../../lib/twitchModerationActions";
 
 function formatSubTier(plan: string): string {
   if (plan === "Prime") return "Prime";
@@ -77,7 +78,7 @@ interface UseTwitchChatEventHandlersOptions {
     ((messageId: string) => void) | undefined
   >;
   onUserMessagesDeletedRef: React.RefObject<
-    ((userId: string, userName?: string) => void) | undefined
+    ((userId: string, userName?: string, moderatorName?: string) => void) | undefined
   >;
   usernameRef: React.RefObject<string>;
   accessTokenRef: React.RefObject<string>;
@@ -514,22 +515,36 @@ export function useTwitchChatEventHandlers({
 
     client.onTimeout((_channel, user, duration, msg) => {
       if (!active) return;
-      onUserMessagesDeletedRef.current?.(msg.targetUserId || "", user);
+      const moderatorName = recentModerationActor("timeout", user);
+      onUserMessagesDeletedRef.current?.(
+        msg.targetUserId || "",
+        user,
+        moderatorName,
+      );
       onMessageRef.current(
         createSystemMessage(
           `${user} was timed out for ${duration} seconds.`,
           "timeout",
-          { targetUsername: user },
+          {
+            targetUsername: user,
+            moderatorName,
+          },
         ),
       );
     });
 
     client.onBan((_channel, user, msg) => {
       if (!active) return;
-      onUserMessagesDeletedRef.current?.(msg.targetUserId || "", user);
+      const moderatorName = recentModerationActor("ban", user);
+      onUserMessagesDeletedRef.current?.(
+        msg.targetUserId || "",
+        user,
+        moderatorName,
+      );
       onMessageRef.current(
         createSystemMessage(`${user} was permanently banned.`, "ban", {
           targetUsername: user,
+          moderatorName,
         }),
       );
     });

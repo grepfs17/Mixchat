@@ -35,7 +35,11 @@ export function useTwitchChat(
   onMessageDeleted?: (messageId: string) => void,
   userId: string = "",
   broadcasterId: string = "",
-  onUserMessagesDeleted?: (userId: string, userName?: string) => void,
+  onUserMessagesDeleted?: (
+    userId: string,
+    userName?: string,
+    moderatorName?: string,
+  ) => void,
 ) {
   // Refs for stale-closure-safe access inside IRC handlers
   const mentionSoundEnabledRef = useRef(mentionSoundEnabled);

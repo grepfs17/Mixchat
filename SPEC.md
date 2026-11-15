@@ -184,7 +184,7 @@ mixchat/
 ### 10. EventSub (Twitch)
 
 - `src/hooks/chat/useEventSub.ts`: manages EventSub subscription lifecycle.
-- Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, bits, automod.
+- Individual consumer hooks in `eventSubHelpers/`: hype train, polls, predictions, raids, bits, automod, and chat moderation. `useChatModerateEventSub` subscribes to `channel.moderate` (requires the moderator read scopes plus a broadcaster or moderator session) so delete, ban, and timeout messages can show the acting moderator's name. IRC `CLEARCHAT` / `CLEARMSG` do not carry that name, so `src/lib/twitchModerationActions.ts` bridges the EventSub and IRC events by target login with a short TTL.
 - Uses Twitch Helix EventSub API with subscription deduplication.
 - Channel point redemptions are **not** EventSub-based (the old broadcaster-only `channel.channel_points_custom_reward_redemption.add` subscription was removed). `eventSubHelpers/useChannelPointRedemptionsPubSub.ts` is the redemption feed: it listens on Twitch PubSub topic `community-points-channel-v1.<broadcasterId>` and works for any authenticated user on any channel. Duplicate redemptions across IRC / PubSub are collapsed by a shared `rewardId+userId` window in `useChatMessages` / `useLiveEvents`. Its connection state is surfaced in the chat header status dropdown. Requires the PubSub websocket origin in the CSP (`wss://pubsub-edge.twitch.tv`).
 

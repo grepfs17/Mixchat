@@ -302,6 +302,7 @@ export function useChatAppState({
     setPendingRaid,
     setIsRaidInitiator,
     setMessages,
+    onMessageDeleted: handleMessageDeleted,
     setNotification,
     notificationIdRef,
     recentRedemptionsRef,

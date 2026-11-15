@@ -391,13 +391,22 @@ function TwitchMessageBody({
     );
   }
   return (
-    <TwitchMessageText
-      content={msg.content}
-      emotes={msg.emotes}
-      gigantified={msg.isGigantifiedEmote}
-      gifs={msg.gifs}
-      mentionColors={mentionColors}
-    />
+    <>
+      <TwitchMessageText
+        content={msg.content}
+        emotes={msg.emotes}
+        gigantified={msg.isGigantifiedEmote}
+        gifs={msg.gifs}
+        mentionColors={mentionColors}
+      />
+      {msg.moderatorName &&
+      (msg.messageType === "ban" || msg.messageType === "timeout") ? (
+        <span className="message-moderator-name">
+          {" "}
+          (by {msg.moderatorName})
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -667,7 +676,11 @@ function TwitchMessageContentBase({
           {children}
         </TwitchMessageLine>
         {msg.isDeleted && (
-          <div className="deleted-notice">Deleted by a moderator</div>
+          <div className="deleted-notice">
+            {msg.moderatorName
+              ? `Deleted by ${msg.moderatorName}`
+              : "Deleted by a moderator"}
+          </div>
         )}
       </div>
     </React.Fragment>

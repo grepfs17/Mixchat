@@ -50,8 +50,12 @@ export interface UseChatMessagesReturn {
   preloadedMessagesRef: React.RefObject<Set<string>>;
   recentRedemptionsRef: React.RefObject<Map<string, number>>;
   handleTwitchMessage: (message: TwitchMessage) => void;
-  handleMessageDeleted: (messageId: string) => void;
-  handleUserMessagesDeleted: (userId: string, userName?: string) => void;
+  handleMessageDeleted: (messageId: string, moderatorName?: string) => void;
+  handleUserMessagesDeleted: (
+    userId: string,
+    userName?: string,
+    moderatorName?: string,
+  ) => void;
 }
 
 export function useChatMessages({
@@ -273,11 +277,17 @@ export function useChatMessages({
   );
 
   const handleMessageDeleted = useCallback(
-    (messageId: string) => {
+    (messageId: string, moderatorName?: string) => {
       setMessages((prev) => {
         if (showDeletedMessagesRef?.current ?? showDeletedMessages) {
           return prev.map((m) =>
-            m.id === messageId ? { ...m, isDeleted: true } : m,
+            m.id === messageId
+              ? {
+                  ...m,
+                  isDeleted: true,
+                  ...(moderatorName ? { moderatorName } : {}),
+                }
+              : m,
           );
         } else {
           return prev.filter((m) => m.id !== messageId);
@@ -288,7 +298,7 @@ export function useChatMessages({
   );
 
   const handleUserMessagesDeleted = useCallback(
-    (userId: string, userName?: string) => {
+    (userId: string, userName?: string, moderatorName?: string) => {
       const normalizedName = userName?.toLowerCase();
       const matchesTarget = (m: TwitchMessage) =>
         userId !== ""
@@ -297,7 +307,15 @@ export function useChatMessages({
             m.author.toLowerCase() === normalizedName;
 
       setMessages((prev) =>
-        prev.map((m) => (matchesTarget(m) ? { ...m, isDeleted: true } : m)),
+        prev.map((m) =>
+          matchesTarget(m)
+            ? {
+                ...m,
+                isDeleted: true,
+                ...(moderatorName ? { moderatorName } : {}),
+              }
+            : m,
+        ),
       );
     },
     [],

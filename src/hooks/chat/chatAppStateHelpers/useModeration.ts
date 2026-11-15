@@ -397,7 +397,6 @@ export function useModeration({
           twitchSession.userId,
           userId,
           undefined,
-          "Banned via Mixchat",
         );
         notificationIdRef.current += 1;
         setNotification({
@@ -427,7 +426,6 @@ export function useModeration({
           twitchSession.userId,
           userId,
           seconds,
-          `Timeout via Mixchat ${seconds}s`,
         );
         notificationIdRef.current += 1;
         setNotification({

@@ -100,6 +100,7 @@ function makeOptions(overrides?: {
     setPendingRaid: overrides?.setPendingRaid ?? vi.fn(),
     setIsRaidInitiator: overrides?.setIsRaidInitiator ?? vi.fn(),
     setMessages: overrides?.setMessages ?? vi.fn(),
+    onMessageDeleted: vi.fn(),
     setNotification: vi.fn(),
     notificationIdRef: { current: 0 },
     recentRedemptionsRef: { current: new Map() },

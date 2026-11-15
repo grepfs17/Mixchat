@@ -9,6 +9,8 @@ import type {
   HeldMessage,
   ResolvedMessage,
 } from "../eventSubHelpers/useAutomodQueue";
+import { useChatModerateEventSub } from "../eventSubHelpers/useChatModerateEventSub";
+import type { ChatModerateEvent } from "../eventSubHelpers/useChatModerateEventSub";
 import { usePollEventSub } from "../eventSubHelpers/usePollEventSub";
 import type { PollEvent } from "../eventSubHelpers/usePollEventSub";
 import type { PollState } from "../../../components/chat/shared/PollBanner";
@@ -42,6 +44,7 @@ interface UseLiveEventsOptions {
   setPendingRaid: React.Dispatch<React.SetStateAction<RaidOutEvent | null>>;
   setIsRaidInitiator: React.Dispatch<React.SetStateAction<boolean>>;
   setMessages: React.Dispatch<React.SetStateAction<TwitchMessage[]>>;
+  onMessageDeleted: (messageId: string, moderatorName?: string) => void;
   setNotification: React.Dispatch<
     React.SetStateAction<{
       message: string;
@@ -76,6 +79,7 @@ export function useLiveEvents({
   setPendingRaid,
   setIsRaidInitiator,
   setMessages,
+  onMessageDeleted,
   setNotification,
   notificationIdRef,
   recentRedemptionsRef,
@@ -133,6 +137,56 @@ export function useLiveEvents({
         "[useLiveEvents] Automod EventSub subscription rejected: this is expected when not a moderator or missing moderator:manage:automod scope.",
       );
     }, []),
+  });
+
+  // --- Moderator actions (delete / ban / timeout names) ---
+  const onModerateScopeError = useCallback(() => {
+    console.info(
+      "[useLiveEvents] channel.moderate subscription rejected: reconnect Twitch to grant the moderator read scopes.",
+    );
+  }, []);
+
+  const handleModerateEvent = useCallback(
+    (event: ChatModerateEvent) => {
+      if (event.action === "delete") {
+        if (event.messageId) {
+          onMessageDeleted(event.messageId, event.moderatorName);
+        }
+        return;
+      }
+
+      const target = event.targetLogin.toLowerCase();
+      const targetUserId = event.targetUserId ?? "";
+      setMessages((prev) => {
+        let next: TwitchMessage[] | null = null;
+        for (let i = 0; i < prev.length; i++) {
+          const message = prev[i];
+          const isSystemMessage =
+            message.messageType === event.action &&
+            (message.targetUsername ?? "").toLowerCase() === target &&
+            Math.abs(Date.now() - message.timestamp.getTime()) <= 30_000;
+          const isTargetMessage =
+            Boolean(targetUserId) && message.userId === targetUserId;
+          if (!isSystemMessage && !(message.isDeleted && isTargetMessage)) {
+            continue;
+          }
+          if (message.moderatorName === event.moderatorName) continue;
+          if (!next) next = [...prev];
+          next[i] = { ...message, moderatorName: event.moderatorName };
+        }
+        return next ?? prev;
+      });
+    },
+    [onMessageDeleted, setMessages],
+  );
+
+  useChatModerateEventSub({
+    subscribe,
+    channelId,
+    moderatorId: userId || "",
+    enabled: allTruthy(accessToken, userId, channelId, badgesReady, isModerator),
+    onModerate: handleModerateEvent,
+    onScopeError: onModerateScopeError,
   });
 
   // --- Raids ---
