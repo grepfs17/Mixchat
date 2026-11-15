@@ -69,7 +69,6 @@ function UnifiedChatContent({
     linkedYoutubeUrl,
     selectedTwitchChannelName,
     selectedTwitchChannelDisplayName,
-    twitchConnected,
     youtubeSession,
     fontSize = 14,
     chatFont = "inter" as ChatFont,
@@ -89,6 +88,7 @@ function UnifiedChatContent({
   const {
     messages,
     isLoading,
+    isTwitchChatConnected,
     selectedPlatforms,
     setReplyingTo,
     streamTitle,
@@ -223,7 +223,7 @@ function UnifiedChatContent({
               ytConnectionState={linkedYoutubeUrl ? ytConnectionState : undefined}
               ytLoading={ytLoading}
               ytError={ytError}
-              twitchConnected={twitchConnected}
+              twitchConnected={isTwitchChatConnected}
               onReply={setReplyingTo}
               onMentionUser={onMentionUser}
               onCopyMessage={() => onNotification("Message copied!", "success")}
@@ -301,6 +301,7 @@ function SplitChatContent({
   const {
     messages,
     isLoading,
+    isTwitchChatConnected,
     selectedPlatforms,
     setReplyingTo,
     replyingTo,
@@ -364,6 +365,7 @@ function SplitChatContent({
               ref={state.chatDisplayRef}
               messages={messages}
               isLoading={isLoading}
+              twitchConnected={isTwitchChatConnected}
               selectedPlatforms={selectedPlatforms}
               onReply={(message) => setReplyingTo(message)}
               onMentionUser={onMentionUser}

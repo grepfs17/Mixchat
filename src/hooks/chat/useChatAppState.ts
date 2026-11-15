@@ -426,6 +426,7 @@ export function useChatAppState({
   }, [selectedTwitchChannelName, selectedTwitchChannel, twitchSession?.userId]);
 
   const {
+    isConnected: isTwitchChatConnected,
     sendMessage: sendTwitchMessage,
     slowModeWaitTime,
     followerModeMinutes,
@@ -724,6 +725,7 @@ export function useChatAppState({
   return {
     messages,
     isLoading,
+    isTwitchChatConnected,
     pendingRaid,
     isRaidInitiator,
     isRefreshingEmotes,

@@ -377,11 +377,43 @@
 
 .no-messages {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 10px;
     height: 100%;
+    padding: 24px;
     color: var(--color-text-muted);
     font-style: italic;
+    text-align: center;
+}
+
+.no-messages--status {
+    font-style: normal;
+}
+
+.no-messages p {
+    margin: 0;
+}
+
+.no-messages-spinner {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border-light);
+    border-top-color: var(--color-accent, #6c5ce7);
+    animation: chat-empty-spin 0.8s linear infinite;
+}
+
+.no-messages-detail {
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+@keyframes chat-empty-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .message {

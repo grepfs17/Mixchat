@@ -24,6 +24,7 @@ import YouTubeTimeoutDialog from "../shared/YouTubeTimeoutDialog";
 import EmoteTooltip from "../shared/EmoteTooltip";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
+import ChatEmptyState from "../shared/ChatEmptyState";
 import type { UnifiedEntry, MessagePart, YTMessage } from "./types";
 import { getKey, getTime } from "./types";
 
@@ -61,6 +62,60 @@ export interface UnifiedChatHandle {
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
+
+interface ChatEmptyStateInfo {
+  title: string;
+  detail?: string;
+  busy: boolean;
+}
+
+function getChatEmptyStateInfo({
+  channelName,
+  twitchConnected,
+  ytState,
+  ytLoading,
+}: {
+  channelName: string;
+  twitchConnected?: boolean;
+  ytState: UnifiedChatProps["ytConnectionState"];
+  ytLoading?: boolean;
+}): ChatEmptyStateInfo {
+  const isTwitchConnecting =
+    Boolean(channelName) && twitchConnected === false;
+  const isYtConnecting =
+    !!ytState &&
+    !ytState.connected &&
+    !ytState.error &&
+    (ytState.loading || ytState.reconnecting);
+  const isYtSearching = !!ytLoading && !ytState?.connected;
+  const isChatConnected = twitchConnected === true || !!ytState?.connected;
+  const hasConnectionInfo =
+    twitchConnected !== undefined || ytState !== undefined;
+  const busy = hasConnectionInfo && !isChatConnected;
+
+  if (isTwitchConnecting) {
+    return {
+      title: "Connecting to Twitch chat\u2026",
+      detail: "Hang tight, messages will appear here in a moment.",
+      busy: true,
+    };
+  }
+  if (isYtConnecting || isYtSearching) {
+    return {
+      title: "Connecting to YouTube chat\u2026",
+      detail: "Hang tight, messages will appear here in a moment.",
+      busy: true,
+    };
+  }
+  if (busy) {
+    return {
+      title: "Waiting for chat to connect\u2026",
+      detail: "Messages will appear here once a platform is connected.",
+      busy: true,
+    };
+  }
+  return { title: "No messages yet. Start chatting!", busy: false };
+}
 
 function getStreamStartMs(streamStartedAt?: Date | null): number | undefined {
   return streamStartedAt ? streamStartedAt.getTime() : undefined;
@@ -366,6 +421,12 @@ const UnifiedChat = ({
   const ytState = ytConnectionState;
   const showStatusBar =
     ytState !== undefined || twitchConnected !== undefined;
+  const emptyState = getChatEmptyStateInfo({
+    channelName,
+    twitchConnected,
+    ytState,
+    ytLoading,
+  });
 
   return (
     <div className="unified-chat-wrapper">
@@ -431,9 +492,7 @@ const UnifiedChat = ({
         }
       >
         {renderedEntries.length === 0 && (
-          <div className="no-messages">
-            <p>No messages yet. Start chatting!</p>
-          </div>
+          <ChatEmptyState {...emptyState} />
         )}
         {renderedEntries.map((entry, index) => {
           if (entry.source === "twitch") {

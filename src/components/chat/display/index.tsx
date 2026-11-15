@@ -35,6 +35,7 @@ import MessageMenu from "../shared/MessageMenu";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
 import ChatStatsOverlay from "../shared/ChatStatsOverlay";
+import ChatEmptyState from "../shared/ChatEmptyState";
 import type {
   EmoteTooltipState,
   MessageMenuState,
@@ -44,6 +45,7 @@ interface ChatDisplayProps {
   messages: TwitchMessage[];
   ytMessages?: Array<{ author: string; authorAvatar?: string }>;
   isLoading: boolean;
+  twitchConnected?: boolean;
   selectedPlatforms: Platform[];
   onReply?: (message: TwitchMessage) => void;
   onMentionUser?: (username: string) => void;
@@ -89,6 +91,27 @@ export interface ChatDisplayHandle {
 }
 
 const EMPTY_STRING_ARRAY: string[] = [];
+
+interface ChatEmptyStateInfo {
+  title: string;
+  detail?: string;
+  busy: boolean;
+}
+
+function getChatEmptyStateInfo(
+  channelName: string | undefined,
+  twitchConnected: boolean | undefined,
+): ChatEmptyStateInfo {
+  const isTwitchConnecting = Boolean(channelName) && twitchConnected === false;
+  if (isTwitchConnecting) {
+    return {
+      title: "Connecting to Twitch chat\u2026",
+      detail: "Hang tight, messages will appear here in a moment.",
+      busy: true,
+    };
+  }
+  return { title: "No messages yet. Start chatting!", busy: false };
+}
 
 interface ChatDisplayOverlaysProps {
   emoteTooltip: EmoteTooltipState | null;
@@ -213,6 +236,7 @@ const ChatDisplay = ({
   messages,
   ytMessages,
   isLoading,
+  twitchConnected,
   selectedPlatforms,
   onReply,
   onMentionUser,
@@ -675,6 +699,8 @@ const ChatDisplay = ({
     setTimeout(() => el.classList.remove("message-highlight"), 2000);
   }, []);
 
+  const emptyState = getChatEmptyStateInfo(channelName, twitchConnected);
+
   return (
     <div className="chat-display">
       <ChatHeader
@@ -726,9 +752,7 @@ const ChatDisplay = ({
           }
         >
           {renderedMessages.length === 0 ? (
-            <div className="no-messages">
-              <p>No messages yet. Start chatting!</p>
-            </div>
+            <ChatEmptyState {...emptyState} />
           ) : (
             renderedMessages.map((msg, index) => (
               <DisplayTwitchMessageItem

@@ -30,7 +30,7 @@ mixchat/
 ├── src/
 │   ├── components/          # React components
 │   │   ├── chat/            # Chat UI (largest subsystem)
-│   │   │   ├── shared/      # Shared chat components (input, banners, panels, modals)
+│   │   │   ├── shared/      # Shared chat components (input, banners, panels, modals, empty states)
 │   │   │   ├── unified/     # Unified chat (merged Twitch+YouTube)
 │   │   │   ├── display/     # Display-mode chat components
 │   │   │   ├── ChatApp.tsx  # Central chat orchestrator component
