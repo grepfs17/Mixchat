@@ -118,7 +118,9 @@
     padding: 6px 12px;
     background: var(--color-bg-primary);
     border-bottom: 1px solid var(--color-border-dark);
-    overflow: hidden;
+    /* Visible so the platform action dropdowns are not clipped. Children
+       truncate their own content (title ellipsis) where needed. */
+    overflow: visible;
 }
 
 .stream-info-title {
@@ -218,6 +220,59 @@
 .stream-info-action-btn:hover {
     background: var(--color-bg-hover);
     color: var(--color-text-primary);
+}
+
+.stream-info-action-group {
+    position: relative;
+    display: inline-flex;
+}
+
+.stream-info-action-btn--active,
+.stream-info-action-btn--active:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.stream-info-action-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1000;
+    min-width: 220px;
+    padding: 4px;
+    background: var(--color-bg-secondary, #1a1a2e);
+    border: 1px solid var(--color-border-medium, #333);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.stream-info-action-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-sm, 6px);
+    color: var(--color-text-secondary, #aaa);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.stream-info-action-item:hover {
+    background: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
+    color: var(--color-text-primary, #e0e0e0);
+}
+
+.stream-info-action-item svg {
+    flex-shrink: 0;
 }
 
 .stream-info-edit-group {

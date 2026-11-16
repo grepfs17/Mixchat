@@ -18,6 +18,8 @@ import {
   MdBuild,
   MdTv,
   MdBarChart,
+  MdEditNote,
+  MdOpenInNew,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -91,6 +93,7 @@ interface ChatHeaderProps {
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
   onOpenChatStats?: () => void;
+  onOpenStreamNotes?: () => void;
 }
 
 const FRIENDLY_NAMES: Record<string, string> = {
@@ -504,57 +507,137 @@ function StreamInfoActions({
   showTwitchModButton,
   channelName,
   onOpenChatStats,
+  onOpenStreamNotes,
 }: {
   youtubeVideoId?: string | null;
   showTwitchModButton?: boolean;
   channelName?: string;
   onOpenChatStats?: () => void;
+  onOpenStreamNotes?: () => void;
 }) {
+  const [openMenu, setOpenMenu] = useState<"twitch" | "youtube" | null>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside(actionsRef, () => setOpenMenu(null), openMenu !== null);
+
+  useEffect(() => {
+    if (!openMenu) return;
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenu(null);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [openMenu]);
+
+  const toggleMenu = (menu: "twitch" | "youtube") => {
+    setOpenMenu((current) => (current === menu ? null : menu));
+  };
+
+  const showTwitchActions = Boolean(showTwitchModButton && channelName);
+  const showYoutubeActions = Boolean(youtubeVideoId);
+
   return (
-    <div className="stream-info-actions">
-      {youtubeVideoId && (
-        <button
-          type="button"
-          className="stream-info-action-btn"
-          title="Open YouTube chat popout"
-          onClick={() => {
-            window.open(
-              `https://www.youtube.com/live_chat?is_popout=1&dark_theme=1&v=${encodeURIComponent(youtubeVideoId)}`,
-              "yt-chat-popout",
-              "width=400,height=600,noopener,noreferrer",
-            );
-          }}
-        >
-          <FaYoutube size={14} />
-        </button>
-      )}
-      {showTwitchModButton && channelName && (
-        <>
+    <div className="stream-info-actions" ref={actionsRef}>
+      {showTwitchActions && (
+        <div className="stream-info-action-group">
           <button
             type="button"
-            className="stream-info-action-btn"
-            title="Open Twitch stream popout"
-            onClick={() => {
-              window.open(
-                `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName)}/player?id=1`,
-                "twitch-stream-popout",
-                "width=1280,height=720,noopener,noreferrer",
-              );
-            }}
-          >
-            <MdTv size={14} />
-          </button>
-          <a
-            href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="stream-info-action-btn"
-            title="Open Twitch moderator page"
+            className={`stream-info-action-btn${openMenu === "twitch" ? " stream-info-action-btn--active" : ""}`}
+            title="Twitch actions"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === "twitch"}
+            onClick={() => toggleMenu("twitch")}
           >
             <FaTwitch size={14} />
-          </a>
-        </>
+          </button>
+          {openMenu === "twitch" && (
+            <div
+              className="stream-info-action-menu"
+              role="menu"
+              aria-label="Twitch actions"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="stream-info-action-item"
+                onClick={() => {
+                  window.open(
+                    `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName!)}/player?id=1`,
+                    "twitch-stream-popout",
+                    "width=1280,height=720,noopener,noreferrer",
+                  );
+                  setOpenMenu(null);
+                }}
+              >
+                <MdTv size={14} />
+                <span>Open Twitch stream popout</span>
+              </button>
+              <a
+                role="menuitem"
+                className="stream-info-action-item"
+                href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName!)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpenMenu(null)}
+              >
+                <FaTwitch size={14} />
+                <span>Open Twitch moderator page</span>
+              </a>
+            </div>
+          )}
+        </div>
       )}
+
+      {showYoutubeActions && (
+        <div className="stream-info-action-group">
+          <button
+            type="button"
+            className={`stream-info-action-btn${openMenu === "youtube" ? " stream-info-action-btn--active" : ""}`}
+            title="YouTube actions"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === "youtube"}
+            onClick={() => toggleMenu("youtube")}
+          >
+            <FaYoutube size={14} />
+          </button>
+          {openMenu === "youtube" && (
+            <div
+              className="stream-info-action-menu"
+              role="menu"
+              aria-label="YouTube actions"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="stream-info-action-item"
+                onClick={() => {
+                  window.open(
+                    `https://www.youtube.com/live_chat?is_popout=1&dark_theme=1&v=${encodeURIComponent(youtubeVideoId!)}`,
+                    "yt-chat-popout",
+                    "width=400,height=600,noopener,noreferrer",
+                  );
+                  setOpenMenu(null);
+                }}
+              >
+                <FaYoutube size={14} />
+                <span>Open YouTube chat popout</span>
+              </button>
+              <a
+                role="menuitem"
+                className="stream-info-action-item"
+                href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeVideoId!)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpenMenu(null)}
+              >
+                <MdOpenInNew size={14} />
+                <span>Open YouTube stream</span>
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
       {onOpenChatStats && (
         <button
           type="button"
@@ -564,6 +647,17 @@ function StreamInfoActions({
           onClick={onOpenChatStats}
         >
           <MdBarChart size={14} />
+        </button>
+      )}
+      {onOpenStreamNotes && (
+        <button
+          type="button"
+          className="stream-info-action-btn"
+          title="Stream notes"
+          data-stream-notes-trigger
+          onClick={onOpenStreamNotes}
+        >
+          <MdEditNote size={16} />
         </button>
       )}
     </div>
@@ -578,6 +672,7 @@ function StreamInfoBar({
   channelName,
   showTwitchModButton,
   onOpenChatStats,
+  onOpenStreamNotes,
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
@@ -589,6 +684,7 @@ function StreamInfoBar({
   channelName?: string;
   showTwitchModButton?: boolean;
   onOpenChatStats?: () => void;
+  onOpenStreamNotes?: () => void;
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
@@ -731,6 +827,7 @@ function StreamInfoBar({
           showTwitchModButton={showTwitchModButton}
           channelName={channelName}
           onOpenChatStats={onOpenChatStats}
+          onOpenStreamNotes={onOpenStreamNotes}
         />
       </div>
 
@@ -1323,6 +1420,7 @@ export default function ChatHeader({
   redemptionPubSubStatus,
   isOnOwnChannel = false,
   onOpenChatStats,
+  onOpenStreamNotes,
 }: ChatHeaderProps) {
   const {
     isModerator,
@@ -1435,6 +1533,7 @@ export default function ChatHeader({
         channelName={channelName}
         showTwitchModButton={isModerator || isOnOwnChannel}
         onOpenChatStats={onOpenChatStats}
+        onOpenStreamNotes={onOpenStreamNotes}
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}

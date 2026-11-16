@@ -376,10 +376,12 @@ function useSongAndMusicTools({
   });
   const { ingestMessage: ingestSong, phase: songPhase } = songQueue;
 
-  // Client-side (IndexedDB) hook always runs. Visual components render only
-  // when Stream tools are available for this viewer.
+  // Client-side (IndexedDB) hook always runs. Shared state (server polling and
+  // pushes) is only used when Stream tools are available to this viewer, so a
+  // regular viewer never requests the owner/moderator-only music route.
   const musicPlayer = useMusicPlayer({
-    channelKey: IS_DESKTOP ? null : streamToolsChannelKey,
+    channelKey:
+      IS_DESKTOP || !showStreamTools ? null : streamToolsChannelKey,
     isHost: isOnOwnChannel,
   });
   const showMusicBar = shouldShowMusicBar(

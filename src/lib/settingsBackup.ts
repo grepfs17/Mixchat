@@ -4,6 +4,7 @@
  */
 
 import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
+import { importNotes, loadAllNotes } from "./notes/idb";
 
 const BACKUP_VERSION = 1;
 
@@ -106,14 +107,18 @@ function writeSettings(settings: Record<string, string>): number {
 }
 
 /**
- * Exports all user settings to a downloadable JSON file. Event sounds are read
- * from IndexedDB and included in the backup.
+ * Exports all user settings to a downloadable JSON file. Event sounds and
+ * stream notes are read from IndexedDB and included in the backup.
  */
 export async function exportSettings(): Promise<void> {
   const settings = readSettings();
   const eventSounds = await loadEventSounds();
   if (eventSounds && Object.keys(eventSounds).length > 0) {
     settings["mixchat_event_sounds"] = JSON.stringify(eventSounds);
+  }
+  const streamNotes = await loadAllNotes();
+  if (streamNotes.length > 0) {
+    settings["mixchat_stream_notes"] = JSON.stringify(streamNotes);
   }
 
   const backup: SettingsBackup = {
@@ -171,6 +176,18 @@ export function importSettings(file: File): Promise<number> {
             count++;
           } catch {
             // ignore malformed event sounds
+          }
+        }
+
+        // Stream notes are stored in IndexedDB, not plain localStorage.
+        const streamNotesRaw = parsed.settings["mixchat_stream_notes"];
+        if (streamNotesRaw) {
+          try {
+            const notes = JSON.parse(streamNotesRaw);
+            const imported = await importNotes(notes);
+            if (imported > 0) count++;
+          } catch {
+            // ignore malformed stream notes
           }
         }
 

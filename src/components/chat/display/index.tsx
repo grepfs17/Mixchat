@@ -35,6 +35,7 @@ import MessageMenu from "../shared/MessageMenu";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
 import ChatStatsOverlay from "../shared/ChatStatsOverlay";
+import StreamNotesOverlay from "../shared/StreamNotesOverlay";
 import ChatEmptyState from "../shared/ChatEmptyState";
 import type {
   EmoteTooltipState,
@@ -144,6 +145,8 @@ interface ChatDisplayOverlaysProps {
   onCloseChatStats: () => void;
   onResetChatStatEntry: (key: string) => void;
   onResetChatStatEntries: () => void;
+  streamNotesOpen: boolean;
+  onCloseStreamNotes: () => void;
 }
 
 function ChatDisplayOverlays({
@@ -169,6 +172,8 @@ function ChatDisplayOverlays({
   onCloseChatStats,
   onResetChatStatEntry,
   onResetChatStatEntries,
+  streamNotesOpen,
+  onCloseStreamNotes,
 }: ChatDisplayOverlaysProps) {
   return (
     <>
@@ -226,6 +231,14 @@ function ChatDisplayOverlays({
           onClose={onCloseChatStats}
           onResetEntry={onResetChatStatEntry}
           onResetEntries={onResetChatStatEntries}
+        />
+      )}
+
+      {streamNotesOpen && channelName && (
+        <StreamNotesOverlay
+          channel={channelName}
+          streamStartedAt={streamStartedAt ?? null}
+          onClose={onCloseStreamNotes}
         />
       )}
     </>
@@ -301,6 +314,7 @@ const ChatDisplay = ({
     authorAvatar?: string;
   } | null>(null);
   const [chatStatsOpen, setChatStatsOpen] = useState(false);
+  const [streamNotesOpen, setStreamNotesOpen] = useState(false);
   const [chatStats, setChatStats] = useState<ChatStatsResult | null>(null);
   const [chatStatsLoading, setChatStatsLoading] = useState(false);
   const [chatStatsWindow, setChatStatsWindow] =
@@ -341,8 +355,16 @@ const ChatDisplay = ({
     );
   }, [streamStartMs]);
 
-  const openChatStats = useCallback(() => setChatStatsOpen(true), []);
+  const openChatStats = useCallback(() => {
+    setStreamNotesOpen(false);
+    setChatStatsOpen(true);
+  }, []);
   const closeChatStats = useCallback(() => setChatStatsOpen(false), []);
+  const openStreamNotes = useCallback(() => {
+    setChatStatsOpen(false);
+    setStreamNotesOpen(true);
+  }, []);
+  const closeStreamNotes = useCallback(() => setStreamNotesOpen(false), []);
   const handleResetChatStatEntry = useCallback(
     (key: string) => {
       resetChatStatEntry(chatStatsStore.current!, key);
@@ -736,6 +758,7 @@ const ChatDisplay = ({
         redemptionPubSubStatus={redemptionPubSubStatus}
         isOnOwnChannel={isOnOwnChannel}
         onOpenChatStats={openChatStats}
+        onOpenStreamNotes={channelName ? openStreamNotes : undefined}
       />
 
       {unifiedChatSlot ? (
@@ -829,6 +852,8 @@ const ChatDisplay = ({
         onCloseChatStats={closeChatStats}
         onResetChatStatEntry={handleResetChatStatEntry}
         onResetChatStatEntries={handleResetChatStatEntries}
+        streamNotesOpen={streamNotesOpen}
+        onCloseStreamNotes={closeStreamNotes}
       />
     </div>
   );

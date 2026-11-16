@@ -1,4 +1,5 @@
 import { loadEventSounds, saveEventSounds } from "./eventSoundStorage";
+import { importNotes, loadAllNotes } from "./notes/idb";
 import { loadSettingsFromDrive, saveSettingsToDrive } from "./googleDrive";
 import { SETTINGS_KEYS, resolveBackupKey } from "./settingsBackup";
 
@@ -42,6 +43,11 @@ export async function backupSettingsToDrive(): Promise<BackupResult> {
       settings["mixchat_event_sounds"] = JSON.stringify(eventSoundsData);
     }
 
+    const streamNotes = await loadAllNotes();
+    if (streamNotes.length > 0) {
+      settings["mixchat_stream_notes"] = JSON.stringify(streamNotes);
+    }
+
     const backup = {
       _version: 1,
       _app: "mixchat",
@@ -65,6 +71,7 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
     let count = 0;
     // Collect async saveEventSounds calls for parallel execution
     const soundPromises: Promise<void>[] = [];
+    const notePromises: Promise<void>[] = [];
     for (const [rawKey, value] of Object.entries(result.settings)) {
       const key = resolveBackupKey(rawKey);
       if (
@@ -79,12 +86,23 @@ export async function restoreSettingsFromDrive(): Promise<RestoreResult> {
         } catch {
           /* ignore */
         }
+      } else if (key === "mixchat_stream_notes") {
+        try {
+          const notes = JSON.parse(value);
+          notePromises.push(
+            importNotes(notes).then((imported) => {
+              if (imported > 0) count++;
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
       } else {
         localStorage.setItem(key, value);
         count++;
       }
     }
-    await Promise.all(soundPromises);
+    await Promise.all([...soundPromises, ...notePromises]);
     return { ok: true, count };
   } catch (err) {
     return {
