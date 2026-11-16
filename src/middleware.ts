@@ -55,6 +55,8 @@ function buildCSP(nonce?: string): string {
     "img-src 'self' data: blob:" +
       " https://static-cdn.jtvnw.net" + // Twitch emotes & badges
       " https://*.jtvnw.net" + // Twitch profile pictures & clip thumbs (clips-media, vod-secure etc.)
+      " https://clips-media-assets.twitch.tv" + // legacy clip thumbnails
+      " https://clips-media-assets2.twitch.tv" + // current clip thumbnails
       " https://twitch-static.net" + // channel offline-image placeholders / stream thumbnails
       " https://cdn.7tv.app" + // 7TV emotes
       " https://cdn.betterttv.net" + // BTTV emotes
@@ -87,7 +89,7 @@ function buildCSP(nonce?: string): string {
       " wss://pubsub-edge.twitch.tv" + // Twitch PubSub (channel points redemptions)
       " wss://irc-ws.chat.twitch.tv", // Twitch chat IRC WebSocket
     // Twitch and YouTube embedded players
-    "frame-src https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
+    "frame-src https://player.twitch.tv https://embed.twitch.tv https://clips.twitch.tv https://www.twitch.tv https://www.youtube.com https://www.youtube-nocookie.com",
     // Web workers (HLS.js may use one)
     "worker-src 'self' blob:",
     // Media (video/audio blobs from HLS.js)

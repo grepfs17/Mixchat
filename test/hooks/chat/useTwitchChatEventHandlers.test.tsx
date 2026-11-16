@@ -106,7 +106,11 @@ describe("useTwitchChatEventHandlers: moderation message purge", () => {
 
     handlers.onBan("chan", "someone", { targetUserId: "u-1" });
 
-    expect(onUserMessagesDeleted).toHaveBeenCalledWith("u-1", "someone");
+    expect(onUserMessagesDeleted).toHaveBeenCalledWith(
+      "u-1",
+      "someone",
+      undefined,
+    );
     expect(lastMessage().messageType).toBe("ban");
   });
 
@@ -115,7 +119,11 @@ describe("useTwitchChatEventHandlers: moderation message purge", () => {
 
     handlers.onTimeout("chan", "someone", 600, { targetUserId: "u-1" });
 
-    expect(onUserMessagesDeleted).toHaveBeenCalledWith("u-1", "someone");
+    expect(onUserMessagesDeleted).toHaveBeenCalledWith(
+      "u-1",
+      "someone",
+      undefined,
+    );
     expect(lastMessage().messageType).toBe("timeout");
   });
 });

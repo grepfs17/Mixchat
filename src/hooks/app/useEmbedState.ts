@@ -46,6 +46,8 @@ export type UseEmbedStateResult = {
   showHlsQualityMenu: boolean;
   setShowHlsQualityMenu: React.Dispatch<React.SetStateAction<boolean>>;
   viewerCount: number | null;
+  /** Whether the selected Twitch channel is live. `null` while unknown. */
+  channelIsLive: boolean | null;
 };
 
 export function useEmbedState(
@@ -80,6 +82,7 @@ export function useEmbedState(
   const [selectedHlsQualityIdx, setSelectedHlsQualityIdx] = useState(0);
   const [showHlsQualityMenu, setShowHlsQualityMenu] = useState(false);
   const [viewerCount, setViewerCount] = useState<number | null>(null);
+  const [channelIsLive, setChannelIsLive] = useState<boolean | null>(null);
 
   const embedRef = useRef<HTMLDivElement | null>(null);
 
@@ -137,11 +140,20 @@ export function useEmbedState(
   }, [linkedYoutubeUrl, playerType]);
   /* eslint-enable no-adjust-state-on-prop-change */
 
+  // Reset the live state immediately on channel switch so the previous
+  // channel's status cannot drive the offline VOD list. Intentional state
+  // adjustment on prop change.
+  // eslint-disable-next-line no-adjust-state-on-prop-change
+  useEffect(() => {
+    setChannelIsLive(null);
+  }, [selectedTwitchChannel]);
+
   // Fetch live viewer count for the selected channel every 30s. 30s (vs the
   // previous 15s) cuts Helix query volume in half while still feeling live.
   useEffect(() => {
     if (!selectedTwitchChannel || !twitchAccessToken) {
       setViewerCount(null);
+      setChannelIsLive(null);
       return;
     }
 
@@ -157,6 +169,7 @@ export function useEmbedState(
         if (cancelled) return;
         if (status) {
           setViewerCount(status.viewerCount || 0);
+          setChannelIsLive(status.isLive);
         }
       } catch (error) {
         if (cancelled) return;
@@ -219,5 +232,6 @@ export function useEmbedState(
     showHlsQualityMenu,
     setShowHlsQualityMenu,
     viewerCount,
+    channelIsLive,
   };
 }

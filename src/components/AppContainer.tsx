@@ -100,6 +100,7 @@ export default function AppContainer() {
     showHlsQualityMenu,
     setShowHlsQualityMenu,
     viewerCount,
+    channelIsLive,
   } = useEmbedState({
     selectedTwitchChannel,
     selectedTwitchChannelName,
@@ -298,6 +299,7 @@ export default function AppContainer() {
               showStreamEmbed={showStreamEmbed}
               setShowStreamEmbed={chatSettings.setShowStreamEmbed}
               viewerCount={viewerCount}
+              channelIsLive={channelIsLive}
               leftColumnVisible={leftColumnVisible}
               setLeftColumnVisible={setLeftColumnVisible}
               linkedYoutubeUrl={linkedYoutubeUrl}

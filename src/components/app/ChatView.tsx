@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import {
   FaTimes,
@@ -6,9 +7,15 @@ import {
   FaTwitch,
   FaYoutube,
   FaPlayCircle,
+  FaExternalLinkAlt,
+  FaFilm,
 } from "react-icons/fa";
 import ChatApp from "../chat/ChatApp";
 import StreamEmbed from "../StreamEmbed";
+import TwitchVods, {
+  clipExplorerUrl,
+  type ActiveMedia,
+} from "../TwitchVods";
 import type { StreamTransitionInfo } from "../StreamGrid";
 import type { PlatformSession } from "../../lib/types";
 import type { UseChatSettingsResult } from "../../hooks/app/useChatSettings";
@@ -23,6 +30,7 @@ interface ChatViewProps {
   showStreamEmbed: boolean;
   setShowStreamEmbed: Dispatch<SetStateAction<boolean>>;
   viewerCount: number | null;
+  channelIsLive: boolean | null;
   leftColumnVisible: boolean | undefined;
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   linkedYoutubeUrl: string | null;
@@ -54,6 +62,7 @@ export default function ChatView({
   showStreamEmbed,
   setShowStreamEmbed,
   viewerCount,
+  channelIsLive,
   leftColumnVisible,
   setLeftColumnVisible,
   linkedYoutubeUrl,
@@ -132,6 +141,7 @@ export default function ChatView({
           embedRef={embedRef}
           youtubeStreamVideoId={youtubeStreamVideoId}
           selectedTwitchChannelName={selectedTwitchChannelName}
+          channelIsLive={channelIsLive}
           twitchSession={twitchSession}
           onTwitchLogin={onTwitchLogin}
           setHlsQualities={setHlsQualities}
@@ -230,6 +240,7 @@ interface StreamEmbedPanelProps {
   embedRef: RefObject<HTMLDivElement | null>;
   youtubeStreamVideoId: string | null;
   selectedTwitchChannelName: string;
+  channelIsLive: boolean | null;
   twitchSession?: PlatformSession;
   onTwitchLogin: () => void;
   setHlsQualities: Dispatch<SetStateAction<HlsQuality[]>>;
@@ -252,12 +263,55 @@ function StreamEmbedPanel({
   embedRef,
   youtubeStreamVideoId,
   selectedTwitchChannelName,
+  channelIsLive,
   twitchSession,
   onTwitchLogin,
   setHlsQualities,
   streamTransition,
   setStreamTransition,
 }: StreamEmbedPanelProps) {
+  const [activeMedia, setActiveMedia] = useState<{
+    channel: string;
+    media: ActiveMedia;
+  } | null>(null);
+  const [archiveChannel, setArchiveChannel] = useState<string | null>(null);
+
+  // Browsing VODs/clips is available automatically when offline, or manually
+  // while live through the archive toggle in the embed header.
+  const showArchive = archiveChannel === selectedTwitchChannelName;
+  const archiveAvailable = channelIsLive === false || showArchive;
+
+  // Only keep the selection while the archive is available for this channel.
+  const currentMedia =
+    activeMedia &&
+    activeMedia.channel === selectedTwitchChannelName &&
+    archiveAvailable
+      ? activeMedia.media
+      : null;
+
+  const selectMedia = (media: ActiveMedia | null) => {
+    setActiveMedia(
+      media ? { channel: selectedTwitchChannelName, media } : null,
+    );
+  };
+
+  const closeArchive = () => {
+    setActiveMedia(null);
+    setArchiveChannel(null);
+  };
+
+  const toggleArchive = () => {
+    setActiveMedia(null);
+    setArchiveChannel(
+      showArchive ? null : selectedTwitchChannelName,
+    );
+  };
+
+  const selectPlayerType = (type: PlayerType) => {
+    closeArchive();
+    setPlayerType(type);
+  };
+
   return (
     <div
       style={{
@@ -272,7 +326,10 @@ function StreamEmbedPanel({
         leftColumnVisible={leftColumnVisible}
         setLeftColumnVisible={setLeftColumnVisible}
         playerType={playerType}
-        setPlayerType={setPlayerType}
+        onSelectPlayerType={selectPlayerType}
+        channelIsLive={channelIsLive}
+        showArchive={showArchive}
+        onToggleArchive={toggleArchive}
         linkedYoutubeUrl={linkedYoutubeUrl}
         hlsQualities={hlsQualities}
         selectedHlsQualityIdx={selectedHlsQualityIdx}
@@ -280,11 +337,18 @@ function StreamEmbedPanel({
         showHlsQualityMenu={showHlsQualityMenu}
         setShowHlsQualityMenu={setShowHlsQualityMenu}
         setShowStreamEmbed={setShowStreamEmbed}
+        activeMedia={currentMedia}
+        onBackToLists={() => setActiveMedia(null)}
+        onBackToLive={closeArchive}
       />
       <EmbedPlayer
         playerType={playerType}
         youtubeStreamVideoId={youtubeStreamVideoId}
         selectedTwitchChannelName={selectedTwitchChannelName}
+        channelIsLive={channelIsLive}
+        showArchive={showArchive}
+        activeMedia={currentMedia}
+        onSelectMedia={selectMedia}
         twitchSession={twitchSession}
         onTwitchLogin={onTwitchLogin}
         setHlsQualities={setHlsQualities}
@@ -301,7 +365,10 @@ interface EmbedHeaderProps {
   leftColumnVisible: boolean | undefined;
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   playerType: PlayerType;
-  setPlayerType: Dispatch<SetStateAction<PlayerType>>;
+  onSelectPlayerType: (type: PlayerType) => void;
+  channelIsLive: boolean | null;
+  showArchive: boolean;
+  onToggleArchive: () => void;
   linkedYoutubeUrl: string | null;
   hlsQualities: HlsQuality[];
   selectedHlsQualityIdx: number;
@@ -309,13 +376,19 @@ interface EmbedHeaderProps {
   showHlsQualityMenu: boolean;
   setShowHlsQualityMenu: Dispatch<SetStateAction<boolean>>;
   setShowStreamEmbed: Dispatch<SetStateAction<boolean>>;
+  activeMedia: ActiveMedia | null;
+  onBackToLists: () => void;
+  onBackToLive: () => void;
 }
 
 function EmbedHeader({
   leftColumnVisible,
   setLeftColumnVisible,
   playerType,
-  setPlayerType,
+  onSelectPlayerType,
+  channelIsLive,
+  showArchive,
+  onToggleArchive,
   linkedYoutubeUrl,
   hlsQualities,
   selectedHlsQualityIdx,
@@ -323,6 +396,9 @@ function EmbedHeader({
   showHlsQualityMenu,
   setShowHlsQualityMenu,
   setShowStreamEmbed,
+  activeMedia,
+  onBackToLists,
+  onBackToLive,
 }: EmbedHeaderProps) {
   return (
     <div className="stream-embed-header">
@@ -334,42 +410,20 @@ function EmbedHeader({
       >
         {leftColumnVisible ? <FaChevronLeft /> : <FaChevronRight />}
       </button>
-      <span className="stream-embed-title">
-        {playerType === "youtube" ? "YouTube" : "Twitch"}
-      </span>
-      <div className="player-type-center">
-        <div className="player-type-buttons">
-          <button
-            type="button"
-            onClick={() => setPlayerType("embed")}
-            className={`player-type-btn${playerType === "embed" ? " active-twitch" : ""}`}
-            title="Twitch embed player"
-            aria-label="Twitch embed player"
-          >
-            <FaTwitch size={13} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlayerType("m3u8")}
-            className={`player-type-btn${playerType === "m3u8" ? " active-m3u8" : ""}`}
-            title="M3U8 HLS player"
-            aria-label="M3U8 HLS player"
-          >
-            <FaPlayCircle size={13} />
-          </button>
-          {linkedYoutubeUrl && (
-            <button
-              type="button"
-              onClick={() => setPlayerType("youtube")}
-              className={`player-type-btn${playerType === "youtube" ? " active-youtube" : ""}`}
-              title="YouTube live stream"
-              aria-label="YouTube live stream"
-            >
-              <FaYoutube size={13} />
-            </button>
-          )}
-        </div>
-      </div>
+      <EmbedTitleOrBack
+        activeMedia={activeMedia}
+        showArchive={showArchive}
+        playerType={playerType}
+        onBackToLists={onBackToLists}
+        onBackToLive={onBackToLive}
+      />
+      <PlayerTypeSwitch
+        playerType={playerType}
+        onSelectPlayerType={onSelectPlayerType}
+        channelIsLive={channelIsLive}
+        showArchive={showArchive}
+        linkedYoutubeUrl={linkedYoutubeUrl}
+      />
       <div
         style={{
           display: "flex",
@@ -387,6 +441,13 @@ function EmbedHeader({
             setShowHlsQualityMenu={setShowHlsQualityMenu}
           />
         )}
+        <ArchiveButton
+          channelIsLive={channelIsLive}
+          showArchive={showArchive}
+          playerType={playerType}
+          onToggleArchive={onToggleArchive}
+        />
+        <EmbedClipExplorerLink activeMedia={activeMedia} />
         <button
           type="button"
           onClick={() => setShowStreamEmbed(false)}
@@ -397,6 +458,153 @@ function EmbedHeader({
         </button>
       </div>
     </div>
+  );
+}
+
+function EmbedTitleOrBack({
+  activeMedia,
+  showArchive,
+  playerType,
+  onBackToLists,
+  onBackToLive,
+}: {
+  activeMedia: ActiveMedia | null;
+  showArchive: boolean;
+  playerType: PlayerType;
+  onBackToLists: () => void;
+  onBackToLive: () => void;
+}) {
+  if (activeMedia) {
+    const isClip = activeMedia.type === "clip";
+    return (
+      <button
+        type="button"
+        className="stream-embed-back"
+        onClick={onBackToLists}
+        title={isClip ? "Back to featured clips" : "Back to latest VODs"}
+      >
+        <FaChevronLeft size={11} />
+        {isClip ? "Featured Clips" : "Latest VODs"}
+      </button>
+    );
+  }
+  if (showArchive) {
+    return (
+      <button
+        type="button"
+        className="stream-embed-back"
+        onClick={onBackToLive}
+        title="Back to live"
+      >
+        <FaChevronLeft size={11} />
+        Live
+      </button>
+    );
+  }
+  return (
+    <span className="stream-embed-title">
+      {playerType === "youtube" ? "YouTube" : "Twitch"}
+    </span>
+  );
+}
+
+function PlayerTypeSwitch({
+  playerType,
+  onSelectPlayerType,
+  channelIsLive,
+  showArchive,
+  linkedYoutubeUrl,
+}: {
+  playerType: PlayerType;
+  onSelectPlayerType: (type: PlayerType) => void;
+  channelIsLive: boolean | null;
+  showArchive: boolean;
+  linkedYoutubeUrl: string | null;
+}) {
+  if (showArchive || (channelIsLive === false && playerType !== "youtube")) {
+    return null;
+  }
+  return (
+    <div className="player-type-center">
+      <div className="player-type-buttons">
+        <button
+          type="button"
+          onClick={() => onSelectPlayerType("embed")}
+          className={`player-type-btn${playerType === "embed" ? " active-twitch" : ""}`}
+          title="Twitch embed player"
+          aria-label="Twitch embed player"
+        >
+          <FaTwitch size={13} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onSelectPlayerType("m3u8")}
+          className={`player-type-btn${playerType === "m3u8" ? " active-m3u8" : ""}`}
+          title="M3U8 HLS player"
+          aria-label="M3U8 HLS player"
+        >
+          <FaPlayCircle size={13} />
+        </button>
+        {linkedYoutubeUrl && (
+          <button
+            type="button"
+            onClick={() => onSelectPlayerType("youtube")}
+            className={`player-type-btn${playerType === "youtube" ? " active-youtube" : ""}`}
+            title="YouTube live stream"
+            aria-label="YouTube live stream"
+          >
+            <FaYoutube size={13} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ArchiveButton({
+  channelIsLive,
+  showArchive,
+  playerType,
+  onToggleArchive,
+}: {
+  channelIsLive: boolean | null;
+  showArchive: boolean;
+  playerType: PlayerType;
+  onToggleArchive: () => void;
+}) {
+  if (showArchive || (channelIsLive === false && playerType !== "youtube")) {
+    return null;
+  }
+  return (
+    <button
+      type="button"
+      className="stream-embed-icon-action"
+      onClick={onToggleArchive}
+      title="Watch VODs and clips"
+      aria-label="Watch VODs and clips"
+    >
+      <FaFilm size={12} />
+    </button>
+  );
+}
+
+function EmbedClipExplorerLink({
+  activeMedia,
+}: {
+  activeMedia: ActiveMedia | null;
+}) {
+  if (activeMedia?.type !== "clip" || !activeMedia.url) return null;
+  return (
+    <a
+      className="stream-embed-icon-action"
+      href={clipExplorerUrl(activeMedia.url)}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Open in Clip Explorer"
+      aria-label="Open in Clip Explorer"
+    >
+      <FaExternalLinkAlt size={12} />
+    </a>
   );
 }
 
@@ -463,6 +671,10 @@ interface EmbedPlayerProps {
   playerType: PlayerType;
   youtubeStreamVideoId: string | null;
   selectedTwitchChannelName: string;
+  channelIsLive: boolean | null;
+  showArchive: boolean;
+  activeMedia: ActiveMedia | null;
+  onSelectMedia: (media: ActiveMedia | null) => void;
   twitchSession?: PlatformSession;
   onTwitchLogin: () => void;
   setHlsQualities: Dispatch<SetStateAction<HlsQuality[]>>;
@@ -476,6 +688,10 @@ function EmbedPlayer({
   playerType,
   youtubeStreamVideoId,
   selectedTwitchChannelName,
+  channelIsLive,
+  showArchive,
+  activeMedia,
+  onSelectMedia,
   twitchSession,
   onTwitchLogin,
   setHlsQualities,
@@ -484,6 +700,9 @@ function EmbedPlayer({
   setStreamTransition,
   embedRef,
 }: EmbedPlayerProps) {
+  const showArchivePanel =
+    showArchive || (channelIsLive === false && playerType !== "youtube");
+
   return (
     <div
       ref={embedRef}
@@ -494,7 +713,7 @@ function EmbedPlayer({
         position: "relative",
       }}
     >
-      {playerType === "youtube" ? (
+      {playerType === "youtube" && !showArchive ? (
         youtubeStreamVideoId ? (
           <iframe
             width="100%"
@@ -521,6 +740,15 @@ function EmbedPlayer({
             No YouTube live stream found for this channel
           </div>
         )
+      ) : showArchivePanel && selectedTwitchChannelName ? (
+        <TwitchVods
+          key={selectedTwitchChannelName}
+          channelName={selectedTwitchChannelName}
+          channelIsLive={channelIsLive}
+          twitchAccessToken={twitchSession?.accessToken}
+          activeMedia={activeMedia}
+          onSelectMedia={onSelectMedia}
+        />
       ) : (
         <StreamEmbed
           channelName={selectedTwitchChannelName}

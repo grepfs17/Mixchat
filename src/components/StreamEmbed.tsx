@@ -26,7 +26,8 @@ declare global {
           options: {
             width: string | number;
             height: string | number;
-            channel: string;
+            channel?: string;
+            video?: string;
             parent: string[];
             autoplay?: boolean;
             layout?: "video-with-chat" | "video";
@@ -84,12 +85,14 @@ interface StreamEmbedProps {
 
 // Renders a Twitch stream using the Twitch Player JS API
 
-function TwitchJSEmbed({
+export function TwitchJSEmbed({
   channelName,
+  videoId,
   parentDomain,
   oauthToken,
 }: {
-  channelName: string;
+  channelName?: string;
+  videoId?: string;
   parentDomain: string;
   oauthToken?: string;
 }) {
@@ -124,7 +127,7 @@ function TwitchJSEmbed({
         embedInstance = new window.Twitch.Embed(playerId, {
           width: "100%",
           height: "100%",
-          channel: channelRef.current,
+          ...(videoId ? { video: videoId } : { channel: channelRef.current }),
           parent: [parentDomain],
           autoplay: true,
           layout: "video",
@@ -176,7 +179,7 @@ function TwitchJSEmbed({
 
   // Channel switch: call setChannel() instead of remounting → session preserved
   useEffect(() => {
-    if (playerRef.current) {
+    if (channelName && playerRef.current) {
       playerRef.current.setChannel(channelName);
     }    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [channelName]);
