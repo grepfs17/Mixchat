@@ -84,7 +84,11 @@ export default function YouTubeTimeoutMenu({
             aria-label="Timeout duration"
             onChange={(e) => setCustomValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleCustomSubmit();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                handleCustomSubmit();
+              }
               if (e.key === "Escape") onClose();
             }}
             autoFocus

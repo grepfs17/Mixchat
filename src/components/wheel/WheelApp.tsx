@@ -135,7 +135,11 @@ function WheelSidebar({
           disabled={spinning}
           onChange={(e) => onNewWheelNameChange(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") void onCreate();
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+              void onCreate();
+            }
           }}
         />
         <button
@@ -338,7 +342,11 @@ function WheelOptionsPanel({
             disabled={spinning || atOptionLimit(options.length)}
             onChange={(e) => onNewOptionChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onAddOption();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+                onAddOption();
+              }
             }}
           />
           <button

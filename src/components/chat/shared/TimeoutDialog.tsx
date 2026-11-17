@@ -173,6 +173,7 @@ export default function TimeoutDialog({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
+                    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                     handleCustomSubmit();
                   }
                   if (e.key === "Escape") {

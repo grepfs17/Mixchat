@@ -127,23 +127,27 @@
     overflow-y: auto;
     padding: 0 24px;
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-.favorites-list-container::-webkit-scrollbar {
-    width: 6px;
-}
+@supports not (scrollbar-color: auto) {
+    .favorites-list-container::-webkit-scrollbar {
+        width: 6px;
+    }
 
-.favorites-list-container::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .favorites-list-container::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-.favorites-list-container::-webkit-scrollbar-thumb {
-    background: var(--color-border-medium);
-    border-radius: var(--radius-pill);
-}
+    .favorites-list-container::-webkit-scrollbar-thumb {
+        background: var(--color-border-medium);
+        border-radius: var(--radius-pill);
+    }
 
-.favorites-list-container::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent);
+    .favorites-list-container::-webkit-scrollbar-thumb:hover {
+        background: var(--color-accent);
+    }
 }
 
 .favorites-section {

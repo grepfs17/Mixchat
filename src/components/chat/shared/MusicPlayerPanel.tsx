@@ -349,6 +349,8 @@ function PlaylistHeader({
           onBlur={onCommitRename}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
+              e.preventDefault();
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
               onCommitRename();
             } else if (e.key === "Escape") {
               onCancelRename();
@@ -501,6 +503,7 @@ function AddTrackForm({
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
             onSubmit();
           }
         }}

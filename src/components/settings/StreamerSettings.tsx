@@ -134,6 +134,8 @@ function IgnoredUsersSetting({
           onChange={(e) => setIgnoredUserInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && ignoredUserInput.trim()) {
+              e.preventDefault();
+              if (e.nativeEvent.isComposing || e.keyCode === 229) return;
               addIgnoredUser();
             }
           }}

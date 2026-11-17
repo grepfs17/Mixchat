@@ -282,6 +282,8 @@ export default function YouTubePanel({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                       onSetManualVideoId(extractVideoId(e.currentTarget.value));
                     }
                   }}

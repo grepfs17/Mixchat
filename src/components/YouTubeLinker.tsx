@@ -370,7 +370,11 @@ export default function YouTubeLinker({
       dispatch({ type: "SET_EDIT_URL", payload: e.target.value });
     }}
     onKeyDown={(e) => {
-      if (e.key === "Enter") handleEditSave();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+        handleEditSave();
+      }
       if (e.key === "Escape") handleEditCancel();
     }}
     className="ytlinker-edit-input"

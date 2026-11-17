@@ -136,6 +136,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
 }
 
 /* ── Tab panels ── */
@@ -162,17 +164,21 @@
     gap: 4px;
     padding: 8px 6px;
     background: var(--color-bg-secondary);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-.emote-channel-sidebar::-webkit-scrollbar {
-    width: 4px;
-}
-.emote-channel-sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.emote-channel-sidebar::-webkit-scrollbar-thumb {
-    background: var(--color-border-medium);
-    border-radius: var(--radius-pill);
+@supports not (scrollbar-color: auto) {
+    .emote-channel-sidebar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .emote-channel-sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .emote-channel-sidebar::-webkit-scrollbar-thumb {
+        background: var(--color-border-medium);
+        border-radius: var(--radius-pill);
+    }
 }
 
 .emote-channel-avatar-btn {
@@ -246,20 +252,24 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-.emote-channel-content::-webkit-scrollbar {
-    width: 6px;
-}
-.emote-channel-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-.emote-channel-content::-webkit-scrollbar-thumb {
-    background: var(--color-border-medium);
-    border-radius: var(--radius-pill);
-}
-.emote-channel-content::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent);
+@supports not (scrollbar-color: auto) {
+    .emote-channel-content::-webkit-scrollbar {
+        width: 6px;
+    }
+    .emote-channel-content::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .emote-channel-content::-webkit-scrollbar-thumb {
+        background: var(--color-border-medium);
+        border-radius: var(--radius-pill);
+    }
+    .emote-channel-content::-webkit-scrollbar-thumb:hover {
+        background: var(--color-accent);
+    }
 }
 
 .emote-channel-panel-header {
@@ -536,21 +546,23 @@
 }
 
 /* Scrollbar styling */
-.emote-menu-content::-webkit-scrollbar {
-    width: 8px;
-}
+@supports not (scrollbar-color: auto) {
+    .emote-menu-content::-webkit-scrollbar {
+        width: 8px;
+    }
 
-.emote-menu-content::-webkit-scrollbar-track {
-    background: transparent;
-}
+    .emote-menu-content::-webkit-scrollbar-track {
+        background: transparent;
+    }
 
-.emote-menu-content::-webkit-scrollbar-thumb {
-    background: var(--color-border-medium);
-    border-radius: var(--radius-md);
-}
+    .emote-menu-content::-webkit-scrollbar-thumb {
+        background: var(--color-border-medium);
+        border-radius: var(--radius-md);
+    }
 
-.emote-menu-content::-webkit-scrollbar-thumb:hover {
-    background: var(--color-accent);
+    .emote-menu-content::-webkit-scrollbar-thumb:hover {
+        background: var(--color-accent);
+    }
 }
 
 /* Mobile responsive */
