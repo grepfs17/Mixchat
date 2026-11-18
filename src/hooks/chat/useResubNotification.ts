@@ -125,10 +125,10 @@ export function useResubNotification(
             includeStreak,
           }),
         });
-        const data = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
         if (!res.ok) {
+          const data = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
           if (res.status === 401) setNotification(null);
           setError(data.error || "Could not share your resub message.");
           return false;

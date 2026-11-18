@@ -20,6 +20,7 @@ export const authors7tv: Record<string, string> = {};
 
 const RECONNECT_7TV_MIN = 5000;
 const RECONNECT_7TV_MAX = 300_000;
+const GLOBAL_EMOTES_TIMEOUT_MS = 45_000;
 
 export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
   const cacheKey = "emotes_7tv_global_v2";
@@ -38,6 +39,7 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
     console.log("Fetching 7TV global emotes from 7tv.io");
     const response = await fetchWithTimeout(
       "https://7tv.io/v3/emote-sets/global",
+      GLOBAL_EMOTES_TIMEOUT_MS,
     );
     const data = await response.json();
 
