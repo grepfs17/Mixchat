@@ -35,9 +35,8 @@ export async function getEmoteCache<T = EmoteCache>(
     try {
       const raw = localStorage.getItem(cacheKey);
       if (!raw) return null;
-      return (
-        JSON.parse(raw).emotes ?? JSON.parse(raw).groups ?? JSON.parse(raw)
-      );
+      const parsed = JSON.parse(raw);
+      return parsed as T | null;
     } catch {
       return null;
     }

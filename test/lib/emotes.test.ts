@@ -18,6 +18,7 @@ import {
 import { renderUnicodeEmojis } from "../../src/lib/emotes/utils";
 import { setEmotesTwitchByChannel } from "../../src/lib/emotes/state";
 import { fetchFFZGlobalEmotes } from "../../src/lib/emotes/ffz";
+import { fetch7TVGlobalEmotes } from "../../src/lib/emotes/7tv";
 
 describe("emotes lib", () => {
   beforeEach(() => {
@@ -86,6 +87,25 @@ describe("emotes lib", () => {
     const result = parseMessageWithEmotes(text);
     expect(result).toContain("cdn.7tv.app/emote/123");
     expect(result).toContain('alt="7TVEmote"');
+  });
+
+  it("keeps stale 7TV global emotes when the refresh fails", async () => {
+    const staleTimestamp = Date.now() - 8 * 24 * 60 * 60 * 1000;
+    localStorage.setItem(
+      "emotes_7tv_global_v2",
+      JSON.stringify({
+        emotes: { CachedEmote: "https://cdn.7tv.app/emote/cached/2x.webp" },
+        timestamp: staleTimestamp,
+        authors: { CachedEmote: "owner" },
+      }),
+    );
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("Failed to fetch"));
+
+    const emotes = await fetch7TVGlobalEmotes();
+
+    expect(emotes.CachedEmote).toBe(
+      "https://cdn.7tv.app/emote/cached/2x.webp",
+    );
   });
 
   it("handles zero-width emotes from 7TV", async () => {

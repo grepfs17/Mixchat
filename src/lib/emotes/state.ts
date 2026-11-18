@@ -109,13 +109,14 @@ export function setReconnect7tvDelay(delay: number): void {
  */
 export async function getCachedEmotes(
   cacheKey: string,
+  allowExpired = false,
 ): Promise<EmoteMap | null> {
   try {
     const cacheData = await getEmoteCache<EmoteCache>(cacheKey);
     if (!cacheData) return null;
 
     const isExpired = Date.now() - cacheData.timestamp > CACHE_DURATION;
-    if (isExpired) {
+    if (isExpired && !allowExpired) {
       // expired, will be cleaned up on next write. No need to await delete
       return null;
     }
@@ -165,11 +166,14 @@ export async function setCachedEmotes(
  */
 export async function getCachedAuthors(
   cacheKey: string,
+  allowExpired = false,
 ): Promise<Record<string, string> | null> {
   try {
     const cacheData = await getEmoteCache<EmoteCache>(cacheKey);
     if (!cacheData) return null;
-    if (Date.now() - cacheData.timestamp > CACHE_DURATION) return null;
+    if (!allowExpired && Date.now() - cacheData.timestamp > CACHE_DURATION) {
+      return null;
+    }
     return cacheData.authors ?? null;
   } catch {
     return null;

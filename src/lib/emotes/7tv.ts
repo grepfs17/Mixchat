@@ -61,7 +61,16 @@ export async function fetch7TVGlobalEmotes(): Promise<EmoteMap> {
     return emotes;
   } catch (error) {
     console.warn("7TV global emotes not loaded", error);
-    return {};
+    const stale = await getCachedEmotes(cacheKey, true);
+    if (stale) {
+      const staleAuthors = await getCachedAuthors(cacheKey, true);
+      if (staleAuthors) Object.assign(authors7tv, staleAuthors);
+      console.log(
+        "Using stale cached 7TV global emotes after fetch failure, count:",
+        Object.keys(stale).length,
+      );
+    }
+    return stale ?? {};
   }
 }
 
@@ -154,7 +163,12 @@ export async function fetch7TVEmotes(channelId: string): Promise<EmoteMap> {
     return emotes;
   } catch (error) {
     console.warn("7TV emotes not loaded", error);
-    return {};
+    const stale = await getCachedEmotes(cacheKey, true);
+    if (stale) {
+      const staleAuthors = await getCachedAuthors(cacheKey, true);
+      if (staleAuthors) Object.assign(authors7tv, staleAuthors);
+    }
+    return stale ?? {};
   }
 }
 
