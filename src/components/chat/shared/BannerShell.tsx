@@ -6,7 +6,8 @@ type BannerTone =
   | "hype-train"
   | "poll"
   | "prediction"
-  | "pinned";
+  | "pinned"
+  | "resub";
 
 interface BannerShellProps {
   tone: BannerTone;

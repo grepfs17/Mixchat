@@ -2,6 +2,7 @@ import MobileTouchHintModal from "./shared/MobileTouchHintModal";
 import type { UnifiedInputHandle } from "./shared/UnifiedInput";
 import type { MessageInputHandle } from "./shared/MessageInput";
 import { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
+import { useResubNotification } from "../../hooks/chat/useResubNotification";
 import ChatAppChrome from "./ChatAppChrome";
 import ChatAppContent, { type YtConnectionState } from "./ChatAppContent";
 import ThemeMascots from "./ThemeMascots";
@@ -706,6 +707,11 @@ export default function ChatApp(props: ChatAppStateProps) {
     pinned.dismissedPinnedAt,
   );
 
+  const resub = useResubNotification(
+    selectedTwitchChannelName ?? null,
+    Boolean(twitchSession?.userId),
+  );
+
   const giveaway = useGiveaway({
     owner: {
       twitchBroadcasterId: selectedTwitchChannel,
@@ -813,6 +819,7 @@ export default function ChatApp(props: ChatAppStateProps) {
           streamerToolsInitialTool={streamerToolsInitialTool}
           pinned={pinned}
           showPinnedBanner={showPinnedBanner}
+          resub={resub}
           onOpenStreamerTools={openStreamerTools}
           onCloseStreamerTools={closeStreamerTools}
           onAnnounceWinner={handleAnnounceWinner}

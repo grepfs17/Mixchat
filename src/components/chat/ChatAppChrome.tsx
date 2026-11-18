@@ -5,6 +5,7 @@ import PollBanner from "./shared/PollBanner";
 import PredictionBanner from "./shared/PredictionBanner";
 import CelebrationBanner from "./shared/CelebrationBanner";
 import PinnedChatBanner from "./shared/PinnedChatBanner";
+import ResubBanner from "./shared/ResubBanner";
 import StreamerToolsModal from "./shared/StreamerToolsModal";
 import GiveawayIndicator from "./shared/GiveawayIndicator";
 import SongQueueMinimizedBar from "./shared/SongQueueIndicator";
@@ -16,6 +17,7 @@ import type { UsePredictionCreatorResult } from "../../hooks/chat/usePredictionC
 import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
+import type { useResubNotification } from "../../hooks/chat/useResubNotification";
 import type { StreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
 import { IS_DESKTOP } from "../../lib/constants";
 
@@ -50,6 +52,7 @@ interface ChatAppChromeProps {
   streamerToolsInitialTool: StreamerToolId;
   pinned: ReturnType<typeof usePinnedChatHighlight>;
   showPinnedBanner: boolean;
+  resub: ReturnType<typeof useResubNotification>;
   onOpenStreamerTools: (initialTool?: StreamerToolId) => void;
   onCloseStreamerTools: () => void;
   onAnnounceWinner: AnnounceWinnerHandler;
@@ -188,11 +191,26 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
 
 function EventBanners({
   state,
+  appProps,
   pinned,
   showPinnedBanner,
-}: Pick<ChatAppChromeProps, "state" | "pinned" | "showPinnedBanner">) {
+  resub,
+}: Pick<
+  ChatAppChromeProps,
+  "state" | "appProps" | "pinned" | "showPinnedBanner" | "resub"
+>) {
   return (
     <>
+      {resub.notification && (
+        <ResubBanner
+          notification={resub.notification}
+          channel={appProps.selectedTwitchChannelName ?? "this channel"}
+          sharing={resub.sharing}
+          error={resub.error}
+          onShare={resub.share}
+          onDismiss={resub.dismiss}
+        />
+      )}
       {state.hypeTrain && (
         <HypeTrainBanner
           hypeTrain={state.hypeTrain}

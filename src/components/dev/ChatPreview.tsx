@@ -10,6 +10,7 @@ import HypeTrainBanner from "../chat/shared/HypeTrainBanner";
 import PollBanner from "../chat/shared/PollBanner";
 import PredictionBanner from "../chat/shared/PredictionBanner";
 import CelebrationBanner from "../chat/shared/CelebrationBanner";
+import ResubBanner from "../chat/shared/ResubBanner";
 import { applyTheme } from "../../lib/themes";
 import {
   FONT_FAMILY_MAP,
@@ -25,6 +26,7 @@ import type {
   PollState,
   PredictionState,
 } from "../chat/shared/bannerTypes";
+import type { TwitchResubNotification } from "../../lib/twitchResub";
 import "../../styles/DevChatPreview.css";
 
 /* ------------------------------------------------------------------ */
@@ -576,6 +578,13 @@ const CELEBRATION: CelebrationState = {
   endsAt: new Date(Date.now() + 2 * 60 * 1000),
 };
 
+const RESUB_NOTIFICATION: TwitchResubNotification = {
+  id: "resub-1",
+  months: 1,
+  cumulativeTenureMonths: 14,
+  streakTenureMonths: 9,
+};
+
 /* ------------------------------------------------------------------ */
 /* Rows                                                                */
 /* ------------------------------------------------------------------ */
@@ -903,6 +912,23 @@ export default function ChatPreview() {
             <div className="dev-preview-stack">
               <CelebrationBanner celebration={CELEBRATION} onDismiss={noop} />
             </div>
+          </SectionCard>
+
+          <SectionCard title="Overlay stack · resub">
+            <div className="dev-preview-stack">
+              <ResubBanner
+                notification={RESUB_NOTIFICATION}
+                channel="mixchat"
+                sharing={false}
+                error={null}
+                onShare={noop}
+                onDismiss={noop}
+              />
+            </div>
+            <p className="dev-preview-note">
+              Shown to a viewer whose subscription renewal is waiting for a
+              custom message. The Share button is wired to a no-op here.
+            </p>
           </SectionCard>
         </div>
       </div>
