@@ -51,11 +51,12 @@ main:focus {
     outline: none;
 }
 
-/* On mobile, lock html/body against scroll so the browser can't scroll the
-   embed off-screen when the virtual keyboard opens. */
+/* On mobile, lock the app shell against scroll so the browser can't scroll the
+   embed off-screen when the virtual keyboard opens. Content pages (help, legal)
+   do not render #app and must keep scrolling. */
 @media (max-width: 768px) {
-    html,
-    body {
+    html:has(#app),
+    body:has(#app) {
         overflow: hidden;
         height: 100%;
     }
