@@ -143,6 +143,29 @@
     color: var(--color-text-muted);
 }
 
+.dev-preview-button {
+    background: var(--color-accent);
+    color: var(--color-text-white);
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 9px 18px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        filter 0.15s ease,
+        transform 0.05s ease;
+}
+
+.dev-preview-button:hover {
+    filter: brightness(1.08);
+}
+
+.dev-preview-button:active {
+    transform: scale(0.98);
+}
+
 .dev-preview-statusbar {
     display: flex;
     align-items: center;

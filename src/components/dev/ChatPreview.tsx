@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ModerationContext,
   type ModerationContextValue,
@@ -11,6 +11,7 @@ import PollBanner from "../chat/shared/PollBanner";
 import PredictionBanner from "../chat/shared/PredictionBanner";
 import CelebrationBanner from "../chat/shared/CelebrationBanner";
 import ResubBanner from "../chat/shared/ResubBanner";
+import YouTubeBanDialog from "../chat/shared/YouTubeBanDialog";
 import { applyTheme } from "../../lib/themes";
 import {
   FONT_FAMILY_MAP,
@@ -372,6 +373,7 @@ const CHAT_YOUTUBE: Array<{ label: string; msg: YTMessage }> = [
     label: "Normal",
     msg: yt({
       author: "yt_viewer",
+      authorChannelId: "UCytViewer",
       authorAvatar: avatarUri("Y", "#ff0000"),
       parts: [{ type: "text", text: "Hello from YouTube! 👋" }],
     }),
@@ -587,6 +589,12 @@ const RESUB_NOTIFICATION: TwitchResubNotification = {
   streakTenureMonths: 9,
 };
 
+const DEV_YOUTUBE_VIDEO_ID = "dQw4w9WgXcQ";
+const DEV_YT_BAN_TARGET = {
+  channelId: "UCdevbanuser",
+  username: "yt_troll",
+};
+
 /* ------------------------------------------------------------------ */
 /* Rows                                                                */
 /* ------------------------------------------------------------------ */
@@ -683,6 +691,24 @@ export default function ChatPreview() {
   const [theme, setTheme] = useState<ChatTheme>("default");
   const [fontSize, setFontSize] = useState(14);
   const [modMode, setModMode] = useState(false);
+  const [ytBanTarget, setYtBanTarget] = useState<{
+    channelId: string;
+    username: string;
+  } | null>(null);
+
+  const openYtBanDialog = useCallback(
+    (channelId: string, displayName?: string) => {
+      setYtBanTarget({ channelId, username: displayName || channelId });
+    },
+    [],
+  );
+  const closeYtBanDialog = useCallback(() => setYtBanTarget(null), []);
+  const confirmYtBan = useCallback(
+    (_channelId: string, _username: string) => {
+      setYtBanTarget(null);
+    },
+    [],
+  );
 
   useEffect(() => {
     applyTheme(theme);
@@ -699,7 +725,7 @@ export default function ChatPreview() {
       doubleClickConfirmModActions: false,
       isYouTubeModerator: modMode,
       youtubeModModeActive: modMode,
-      youtubeVideoId: "dQw4w9WgXcQ",
+      youtubeVideoId: DEV_YOUTUBE_VIDEO_ID,
       youtubeOwnChannelId: null,
       onDeleteMessage: noop,
       onBanUser: noop,
@@ -708,11 +734,11 @@ export default function ChatPreview() {
       onWarnUser: noop,
       onPinMessage: noop,
       onDeleteYouTubeMessage: noop,
-      onBanYouTubeUser: noop,
+      onBanYouTubeUser: openYtBanDialog,
       onTimeoutYouTubeUser: noop,
       onSetModMode: noop,
     }),
-    [modMode],
+    [modMode, openYtBanDialog],
   );
 
   const sharedChatMarker = (
@@ -857,6 +883,21 @@ export default function ChatPreview() {
             </div>
           </SectionCard>
 
+          <SectionCard title="YouTube · ban dialog">
+            <button
+              type="button"
+              className="dev-preview-button"
+              onClick={() => setYtBanTarget(DEV_YT_BAN_TARGET)}
+            >
+              Open YouTube ban dialog
+            </button>
+            <p className="dev-preview-note">
+              Shows the per-stream ban limitation and the popout action for
+              channel-wide hiding. Confirm only closes the dialog here. With
+              Mod tools enabled, the message ban icon opens the same dialog.
+            </p>
+          </SectionCard>
+
           <SectionCard title="Chat status bar">
             <div className="dev-preview-statusbar">
               <span className="platform-status platform-status--connected">
@@ -934,6 +975,15 @@ export default function ChatPreview() {
           </SectionCard>
         </div>
       </div>
+      {ytBanTarget && (
+        <YouTubeBanDialog
+          channelId={ytBanTarget.channelId}
+          username={ytBanTarget.username}
+          videoId={DEV_YOUTUBE_VIDEO_ID}
+          onConfirm={confirmYtBan}
+          onClose={closeYtBanDialog}
+        />
+      )}
     </ModerationContext.Provider>
   );
 }
