@@ -592,6 +592,16 @@ button.stream-info-category {
     flex: 1;
 }
 
+.message-moderator-name {
+    flex-basis: 100%;
+    font-size: 0.68rem;
+    color: #e57373;
+    font-style: italic;
+    margin-top: 2px;
+    padding-left: 2px;
+    letter-spacing: 0.01em;
+}
+
 .message-actions {
     display: flex;
     gap: 4px;

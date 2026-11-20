@@ -399,13 +399,6 @@ function TwitchMessageBody({
         gifs={msg.gifs}
         mentionColors={mentionColors}
       />
-      {msg.moderatorName &&
-      (msg.messageType === "ban" || msg.messageType === "timeout") ? (
-        <span className="message-moderator-name">
-          {" "}
-          (by {msg.moderatorName})
-        </span>
-      ) : null}
     </>
   );
 }
@@ -682,6 +675,14 @@ function TwitchMessageContentBase({
               : "Deleted by a moderator"}
           </div>
         )}
+        {msg.moderatorName &&
+          (msg.messageType === "ban" || msg.messageType === "timeout") && (
+            <div className="message-moderator-name">
+              {msg.messageType === "ban"
+                ? `Banned by ${msg.moderatorName}`
+                : `Timed out by ${msg.moderatorName}`}
+            </div>
+          )}
       </div>
     </React.Fragment>
   );
