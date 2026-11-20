@@ -161,7 +161,7 @@ mixchat/
 ### 6. Moderation
 
 - **Twitch**: Uses Twitch Helix API (ban, timeout, unban, delete, clear, warn, announce, shoutout, automod, create/end poll, create/manage prediction) via `src/lib/twitch.ts` → proxied through `/api/twitch-proxy`. The proxy forwards `PATCH` so polls can be ended and predictions can be locked, resolved, or canceled.
-- **YouTube**: Uses YouTube Data API v3 (delete, timeout, ban) with quota tracking (50 units per ban, 10K daily default). AutoMod approve/deny is executed through the viewer-specific authenticated InnerTube session that received the hold (`LiveChatAutoModMessage` endpoints are kept server-side only).
+- **YouTube**: Uses YouTube Data API v3 (delete, timeout, ban) with quota tracking (50 units per ban, 10K daily default). AutoMod approve/deny is executed through the viewer-specific authenticated InnerTube session that received the hold (`LiveChatAutoModMessage` endpoints are kept server-side only). The Data API only supports per-broadcast bans, so every ban entry point opens `src/components/chat/shared/YouTubeBanDialog.tsx` before calling the API. The dialog explains that the user is banned from the current live stream only and offers an "Open YouTube chat popout" action so the user can choose "Hide user" from the official chat menu to hide them channel-wide.
 - Moderation state (`ModerationContext`) shared across message rendering components.
 
 ### 7. YouTube Proxy System

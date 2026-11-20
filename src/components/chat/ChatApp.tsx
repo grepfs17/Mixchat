@@ -1,4 +1,5 @@
 import MobileTouchHintModal from "./shared/MobileTouchHintModal";
+import YouTubeBanDialog from "./shared/YouTubeBanDialog";
 import type { UnifiedInputHandle } from "./shared/UnifiedInput";
 import type { MessageInputHandle } from "./shared/MessageInput";
 import { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
@@ -579,6 +580,25 @@ export default function ChatApp(props: ChatAppStateProps) {
     [props.setModModeTargetForChannel, selectedTwitchChannel],
   );
 
+  const [ytBanDialog, setYtBanDialog] = useState<{
+    channelId: string;
+    username: string;
+  } | null>(null);
+  const openYtBanDialog = useCallback(
+    (channelId: string, displayName?: string) => {
+      setYtBanDialog({ channelId, username: displayName || channelId });
+    },
+    [],
+  );
+  const confirmYtBan = useCallback(
+    (channelId: string, username: string) => {
+      setYtBanDialog(null);
+      void handleYtBan(channelId, username);
+    },
+    [handleYtBan],
+  );
+  const closeYtBanDialog = useCallback(() => setYtBanDialog(null), []);
+
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
     "giveaway" | "poll" | "prediction" | "song-queue" | "music-player" | null
@@ -760,7 +780,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       onShoutoutUser: handleShoutout,
       onPinMessage: handlePinMessage,
       onDeleteYouTubeMessage: handleYtDelete,
-      onBanYouTubeUser: handleYtBan,
+      onBanYouTubeUser: openYtBanDialog,
       onTimeoutYouTubeUser: handleYtTimeout,
       onSetModMode: handleSetModMode,
     }),
@@ -784,7 +804,7 @@ export default function ChatApp(props: ChatAppStateProps) {
       handleShoutout,
       handlePinMessage,
       handleYtDelete,
-      handleYtBan,
+      openYtBanDialog,
       handleYtTimeout,
       handleSetModMode,
     ],
@@ -844,6 +864,15 @@ export default function ChatApp(props: ChatAppStateProps) {
         />
 
         <MobileTouchHintModal twitchConnected={props.twitchConnected} />
+        {ytBanDialog && (
+          <YouTubeBanDialog
+            channelId={ytBanDialog.channelId}
+            username={ytBanDialog.username}
+            videoId={youtubeVideoId}
+            onConfirm={confirmYtBan}
+            onClose={closeYtBanDialog}
+          />
+        )}
         <ThemeMascots chatTheme={chatTheme} />
       </div>
     </ModerationContext.Provider>

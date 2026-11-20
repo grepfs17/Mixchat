@@ -393,6 +393,30 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     margin-top: -8px;
 }
 
+.yt-ban-dialog-note {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+
+.yt-ban-dialog-popout {
+    align-self: flex-start;
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-pill);
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.yt-ban-dialog-popout:hover {
+    background: var(--color-bg-hover);
+}
+
 .yt-timeout-presets {
     display: flex;
     flex-wrap: wrap;
