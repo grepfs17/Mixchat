@@ -749,6 +749,25 @@ export function parseAutoModMessage(
   };
 }
 
+/**
+ * The watch page's default chat continuation is "Top chat", which filters out
+ * potential-spam messages, including AutoMod holds. Switch to "Live chat"
+ * (all messages) before the next poll. No-op when the selector is absent or
+ * "Live chat" is already active.
+ */
+export function applyLiveChatFilter(
+  chat: any,
+  initialData?: any,
+): boolean {
+  const items = (initialData ?? chat?.initial_info)?.header?.view_selector
+    ?.sub_menu_items;
+  if (!Array.isArray(items) || items.length < 2) return false;
+  const liveItem = items[1];
+  if (!liveItem || liveItem.selected || !liveItem.continuation) return false;
+  chat.applyFilter?.("LIVE_CHAT");
+  return true;
+}
+
 function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
   const contents = banner.contents;
   if (!contents?.is?.(YTNodes.LiveChatBannerRedirect)) return null;
@@ -1182,6 +1201,10 @@ async function ensureChatSession(
     console.log(
       `[YouTube Chat] Live chat started for video ${videoId}, viewer: ${initialData?.viewer_name || "Guest"}`,
     );
+    // AutoMod holds are moderator-only, and the default Top chat filter hides
+    // potential-spam messages. Switch authenticated sessions to the
+    // all-messages feed before the next poll so holds are not filtered out.
+    if (sessionRef.authenticated) applyLiveChatFilter(chat, initialData);
     // AutoMod holds are only delivered when the live chat itself is authenticated.
     // A viewer-token session that starts as Guest cannot see them.
     if (sessionRef.authenticated && !initialData?.viewer_name) {

@@ -1,5 +1,5 @@
 /**
- * Test-only bridge to the AutoMod parser. Importing the SSE handler directly
- * would pull in Innertube and the live-chat machinery.
+ * Test-only bridge to the YouTube chat helpers. Importing the SSE handler
+ * directly would pull in Innertube and the live-chat machinery.
  */
-export { parseAutoModMessage } from "./youtube-stream-chat";
+export { applyLiveChatFilter, parseAutoModMessage } from "./youtube-stream-chat";

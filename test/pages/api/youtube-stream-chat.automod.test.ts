@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
-import { parseAutoModMessage } from "../../../src/pages/api/youtube-stream-chat.automod-bridge";
+import { describe, it, expect, vi } from "vitest";
+import {
+  applyLiveChatFilter,
+  parseAutoModMessage,
+} from "../../../src/pages/api/youtube-stream-chat.automod-bridge";
 
 function makeHeldItem() {
   return {
@@ -64,5 +67,44 @@ describe("parseAutoModMessage", () => {
     const msg = parseAutoModMessage(item, new Map());
 
     expect(msg!.parts).toEqual([{ type: "text", text: "Held for review" }]);
+  });
+});
+
+describe("applyLiveChatFilter", () => {
+  function makeChat(selected: boolean) {
+    return {
+      applyFilter: vi.fn(),
+      initial_info: {
+        header: {
+          view_selector: {
+            sub_menu_items: [
+              { title: "Top chat", selected: !selected, continuation: "top" },
+              { title: "Live chat", selected, continuation: "live" },
+            ],
+          },
+        },
+      },
+    };
+  }
+
+  it("switches from Top chat to Live chat so held messages are visible", () => {
+    const chat = makeChat(false);
+
+    expect(applyLiveChatFilter(chat)).toBe(true);
+    expect(chat.applyFilter).toHaveBeenCalledWith("LIVE_CHAT");
+  });
+
+  it("does not re-apply when Live chat is already selected", () => {
+    const chat = makeChat(true);
+
+    expect(applyLiveChatFilter(chat)).toBe(false);
+    expect(chat.applyFilter).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the chat has no filter selector", () => {
+    const chat = { applyFilter: vi.fn(), initial_info: {} };
+
+    expect(applyLiveChatFilter(chat)).toBe(false);
+    expect(chat.applyFilter).not.toHaveBeenCalled();
   });
 });
