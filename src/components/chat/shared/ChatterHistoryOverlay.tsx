@@ -245,10 +245,12 @@ export default function ChatterHistoryOverlay({
           ) : (
             <MdHistory size={20} color="#9146ff" />
           )}
-          <div>
+          <div className="history-header-text">
             <h2 className="history-header-title">
-              <MessageBadges {...mostRecentBadges} />@
-              {author.replace(/^@+/, "")}
+              <MessageBadges {...mostRecentBadges} />
+              <span className="history-header-username">
+                @{author.replace(/^@+/, "")}
+              </span>
               {platform === "youtube" && (
                 <FaYoutube
                   size={14}

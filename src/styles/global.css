@@ -270,6 +270,10 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     flex-direction: column;
     gap: 4px;
     animation: tooltipFade 0.15s ease-out;
+    /* Short windows would otherwise clip the last actions, such as
+       View History, with no way to reach them. */
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
 }
 
 .context-menu-header {
