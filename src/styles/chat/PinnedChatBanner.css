@@ -31,14 +31,9 @@
     white-space: pre-wrap;
 }
 
-/* `linkifyUrl` (`src/lib/emotes/utils.ts`) embeds an inline `color: #6366f1`
- * on every anchor. Pin the accent colour with !important so the link stays
- * legible against the themed banner surface while keeping the underline. */
-.pinned-banner-message a {
-    color: var(--color-indigo) !important;
-    text-decoration: underline;
-    cursor: pointer;
-}
+/* Links inside the pinned message come from `linkifyUrl`, which sets
+ * `color: var(--color-indigo)` inline (theme-aware, no underline), so no
+ * banner-specific override is needed. */
 
 /* BannerShell applies `pinned-banner-header` to the banner wrapper via a
  * className template literal, NOT orphan. Compactness override:

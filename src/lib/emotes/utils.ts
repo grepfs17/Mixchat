@@ -66,7 +66,7 @@ export function linkifyUrl(word: string): string {
   const href = parseUrlWord(word);
   if (!href) return "";
 
-  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" style="color: #6366f1; text-decoration: underline; cursor: pointer;">${escapeHtml(word)}</a>`;
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" style="color: var(--color-indigo); cursor: pointer;">${escapeHtml(word)}</a>`;
 }
 
 /**

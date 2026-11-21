@@ -17,13 +17,13 @@
     padding: 10px 12px;
     background: var(--color-bg-primary);
     color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-border-dark);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     gap: 8px;
 }
 
 .header-button {
     background: var(--color-bg-tertiary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     color: var(--color-text-secondary);
     padding: 6px 12px;
     border-radius: var(--radius-md);
@@ -77,19 +77,23 @@
     padding: 4px 8px;
     /* Opaque tints mixed over the header background (the header sits on
        --color-bg-primary) so the chip never shows the backdrop through it. */
-    background: color-mix(in srgb, #6366f1 12%, var(--color-bg-primary));
-    border: 1px solid color-mix(in srgb, #6366f1 25%, var(--color-bg-primary));
+    background: color-mix(
+        in srgb,
+        var(--color-indigo) 12%,
+        var(--color-bg-primary)
+    );
     border-radius: var(--radius-sm, 3px);
-    color: #818cf8;
+    color: color-mix(in srgb, var(--color-indigo) 70%, white);
     cursor: pointer;
-    transition:
-        background 0.15s ease,
-        border-color 0.15s ease;
+    transition: background 0.15s ease;
 }
 
 .ignored-messages-badge:hover {
-    background: color-mix(in srgb, #6366f1 20%, var(--color-bg-primary));
-    border-color: color-mix(in srgb, #6366f1 40%, var(--color-bg-primary));
+    background: color-mix(
+        in srgb,
+        var(--color-indigo) 20%,
+        var(--color-bg-primary)
+    );
 }
 
 .ignored-badge-icon {
@@ -106,7 +110,7 @@
     font-size: 0.7rem;
     font-weight: 600;
     line-height: 1;
-    background: rgba(99, 102, 241, 0.2);
+    background: color-mix(in srgb, var(--color-indigo) 20%, transparent);
     padding: 1px 5px;
     border-radius: var(--radius-pill, 999px);
 }
@@ -117,7 +121,7 @@
     gap: 8px;
     padding: 6px 12px;
     background: var(--color-bg-primary);
-    border-bottom: 1px solid var(--color-border-dark);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     /* Visible so the platform action dropdowns are not clipped. Children
        truncate their own content (title ellipsis) where needed. */
     overflow: visible;
@@ -167,12 +171,15 @@
 .stream-info-category {
     font-size: 0.72rem;
     color: var(--color-indigo);
-    background: rgba(99, 102, 241, 0.12);
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
     padding: 2px 8px;
+    /* Explicit border so the <button> variant never falls back to the UA
+       default button border; also keeps span/button states visually equal. */
+    border: 1px solid
+        color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-pill, 999px);
     white-space: nowrap;
     flex-shrink: 0;
-    border: 1px solid rgba(99, 102, 241, 0.25);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -181,7 +188,7 @@
 }
 
 .stream-info-category:hover {
-    background: rgba(99, 102, 241, 0.22);
+    background: color-mix(in srgb, var(--color-indigo) 22%, transparent);
 }
 
 .stream-info-category--readonly {
@@ -189,7 +196,7 @@
 }
 
 .stream-info-category--readonly:hover {
-    background: rgba(99, 102, 241, 0.12);
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
 }
 
 .stream-info-actions {
@@ -214,7 +221,9 @@
     cursor: pointer;
     padding: 0;
     font: inherit;
-    transition: all 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
 }
 
 .stream-info-action-btn:hover {
@@ -241,9 +250,9 @@
     min-width: 220px;
     padding: 4px;
     background: var(--color-bg-secondary, #1a1a2e);
-    border: 1px solid var(--color-border-medium, #333);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-md, 8px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
 }
 
 .stream-info-action-item {
@@ -290,7 +299,7 @@
     padding: 3px 8px;
     font-size: 0.78rem;
     background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-sm, 3px);
     color: var(--color-text-primary);
     outline: none;
@@ -311,9 +320,9 @@
     max-height: 200px;
     overflow-y: auto;
     background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-sm, 3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
 }
 
 .stream-info-category-option {
@@ -330,12 +339,12 @@
 }
 
 .stream-info-category-option:hover {
-    background: rgba(99, 102, 241, 0.2);
+    background: color-mix(in srgb, var(--color-indigo) 20%, transparent);
 }
 
 .stream-info-edit-btn {
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-sm, 3px);
     color: var(--color-text-secondary);
     cursor: pointer;
@@ -343,7 +352,9 @@
     align-items: center;
     justify-content: center;
     padding: 2px;
-    transition: all 0.12s ease;
+    transition:
+        background-color 0.12s ease,
+        color 0.12s ease;
 }
 
 .stream-info-edit-btn:hover {
@@ -423,7 +434,7 @@
 
 .messages-container::-webkit-scrollbar-thumb {
     background: var(--color-border-light);
-    border-radius: 3px;
+    border-radius: 0;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
@@ -456,7 +467,7 @@
     height: 18px;
     border-radius: 50%;
     border: 2px solid var(--color-border-light);
-    border-top-color: var(--color-accent, #6c5ce7);
+    border-top-color: var(--color-accent);
     animation: chat-empty-spin 0.8s linear infinite;
 }
 
@@ -479,7 +490,6 @@
         background-color 0.12s ease,
         border-left-color 0.12s ease;
     cursor: pointer;
-    border-radius: var(--radius-md);
 }
 
 /* On touch devices a long-press is reserved for the app's chat context
@@ -522,6 +532,7 @@
 .author {
     font-weight: 600;
     flex-shrink: 0;
+    color: var(--author-color, inherit);
 }
 
 /* Reset default button styles for elements converted from <span> to <button>
@@ -534,7 +545,7 @@ button.reply-info-clickable {
     padding: 0;
     margin: 0;
     font: inherit;
-    color: inherit;
+    color: var(--author-color, inherit);
     cursor: inherit;
     line-height: inherit;
     text-align: inherit;
@@ -566,8 +577,7 @@ button.stream-info-title {
 }
 
 button.stream-info-category {
-    background: rgba(99, 102, 241, 0.12);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: color-mix(in srgb, var(--color-indigo) 12%, transparent);
     padding: 2px 8px;
     margin: 0;
     font: inherit;
@@ -594,7 +604,7 @@ button.stream-info-category {
 
 .message-moderator-name {
     flex-basis: 100%;
-    font-size: 0.68rem;
+    font-size: 11px;
     color: #e57373;
     font-style: italic;
     margin-top: 2px;
@@ -620,7 +630,7 @@ button.stream-info-category {
 
 .action-button {
     background: var(--color-bg-tertiary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     color: var(--color-text-secondary);
     cursor: pointer;
     padding: 4px 10px;
@@ -657,7 +667,7 @@ button.stream-info-category {
 }
 
 .timestamp {
-    font-size: 0.68rem;
+    font-size: 11px;
     color: var(--color-text-timestamp);
     opacity: 0.85;
     font-variant-numeric: tabular-nums;
@@ -676,7 +686,7 @@ button.stream-info-category {
     align-items: center;
     gap: 6px;
     background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     color: var(--color-text-primary);
     padding: 7px 14px;
     border-radius: var(--radius-pill, 999px);
@@ -1061,7 +1071,7 @@ img.emoji {
 .chat-emote-tooltip {
     position: fixed;
     background: rgba(0, 0, 0, 0.95);
-    border: 1px solid var(--color-border-light);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-xl);
     padding: 8px;
     z-index: 10000;
@@ -1115,7 +1125,10 @@ img.emoji {
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
 }
 
 .sidebar-toggle-button:hover {
@@ -1160,9 +1173,9 @@ img.emoji {
     margin-top: 4px;
     min-width: 140px;
     background: var(--color-bg-secondary, #1a1a2e);
-    border: 1px solid var(--color-border, #333);
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    border-radius: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
     z-index: 1000;
     overflow: hidden;
 }
@@ -1192,8 +1205,8 @@ img.emoji {
     background: rgba(34, 197, 94, 0.08);
 }
 .mod-mode-item.active.twitch {
-    color: var(--color-twitch, #9146ff);
-    background: rgba(145, 70, 255, 0.1);
+    color: var(--color-twitch);
+    background: color-mix(in srgb, var(--color-twitch) 10%, transparent);
 }
 .mod-mode-item.active.youtube {
     color: var(--color-youtube, #ff2222);
@@ -1229,7 +1242,10 @@ img.emoji {
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
-    transition: all 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1248,9 +1264,9 @@ img.emoji {
     margin-top: 4px;
     min-width: 180px;
     background: var(--color-bg-secondary, #1a1a2e);
-    border: 1px solid var(--color-border, #333);
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    border-radius: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
     z-index: 1000;
     overflow: hidden;
 }
@@ -1326,7 +1342,7 @@ img.emoji {
     }
 
     .stream-info-category {
-        font-size: 0.68rem;
+        font-size: 11px;
         padding: 1px 6px;
     }
 
@@ -1346,24 +1362,24 @@ img.emoji {
 
 .show-stream-button {
     padding: 4px 10px;
-    background: linear-gradient(
-        135deg,
-        var(--color-indigo) 0%,
-        var(--color-indigo-hover) 100%
-    );
+    background: var(--color-indigo);
     color: #fff;
     border: none;
     border-radius: var(--radius-md);
     cursor: pointer;
     font-size: 11px;
     font-weight: 600;
-    transition: all 0.15s ease;
-    box-shadow: 0 1px 6px rgba(99, 102, 241, 0.28);
+    transition:
+        filter 0.14s ease,
+        transform 0.08s ease;
 }
 
 .show-stream-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.42);
+    filter: brightness(1.08);
+}
+
+.show-stream-button:active {
+    transform: scale(0.97);
 }
 
 .status-badge-live {
@@ -1444,7 +1460,7 @@ img.emoji {
 }
 
 .status-badge-button:focus-visible {
-    outline: 2px solid var(--color-twitch, #9146ff);
+    outline: 2px solid var(--color-twitch);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
 }
@@ -1456,9 +1472,9 @@ img.emoji {
     z-index: 100;
     min-width: 220px;
     background-color: var(--color-bg-secondary, #1a1a2e);
-    border: 1px solid var(--color-border, #2a2a3e);
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+    border-radius: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
     padding: 6px 0;
     font-size: 0.8em;
     max-height: 400px;
@@ -1477,7 +1493,7 @@ img.emoji {
 
 .eventsub-status-dropdown::-webkit-scrollbar-thumb {
     background-color: var(--color-border, #2a2a3e);
-    border-radius: 3px;
+    border-radius: 0;
 }
 
 .eventsub-status-dropdown::-webkit-scrollbar-thumb:hover {
@@ -1665,7 +1681,6 @@ button.deleted-clickable {
     margin-left: 4px;
     cursor: pointer;
     color: #94a3b8;
-    text-decoration: underline;
     font: inherit;
 }
 
@@ -1675,7 +1690,7 @@ button.deleted-clickable {
 
 .deleted-notice {
     flex-basis: 100%;
-    font-size: 0.68rem;
+    font-size: 11px;
     color: #e57373;
     font-style: italic;
     margin-top: 2px;
@@ -1694,9 +1709,6 @@ button.deleted-clickable {
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border: 1px solid;
-    border-radius: var(--radius-pill, 999px);
-    padding: 2px 8px;
     margin-bottom: 5px;
     opacity: 1;
     max-width: 100%;
@@ -1706,22 +1718,16 @@ button.deleted-clickable {
 }
 
 .twitch-event-label.message-effect-label {
-    border-color: #00d4aa;
-    background: rgba(0, 212, 170, 0.12);
     color: #00d4aa;
     animation: messageEffectLabelPulse 2s ease-in-out infinite alternate;
 }
 
 .twitch-event-label.celebration-label {
-    border-color: #ff6b9d;
-    background: rgba(255, 107, 157, 0.12);
     color: #ff6b9d;
     animation: celebrationLabelPulse 2s ease-in-out infinite alternate;
 }
 
 .twitch-event-label.gigantified-emote-label {
-    border-color: #00d4aa;
-    background: rgba(0, 212, 170, 0.12);
     color: #00d4aa;
     animation: gigantifiedLabelPulse 2s ease-in-out infinite alternate;
 }
@@ -1729,50 +1735,37 @@ button.deleted-clickable {
 @keyframes messageEffectLabelPulse {
     0% {
         color: #00d4aa;
-        border-color: #00d4aa;
-        background: rgba(0, 212, 170, 0.12);
     }
     100% {
-        color: #9146ff;
-        border-color: #9146ff;
-        background: rgba(145, 70, 255, 0.18);
+        color: var(--color-twitch);
     }
 }
 
 @keyframes celebrationLabelPulse {
     0% {
         color: #ff6b9d;
-        border-color: #ff6b9d;
-        background: rgba(255, 107, 157, 0.12);
     }
     100% {
         color: #ff9f43;
-        border-color: #ff9f43;
-        background: rgba(255, 159, 67, 0.18);
     }
 }
 
 @keyframes gigantifiedLabelPulse {
     0% {
         color: #00d4aa;
-        border-color: #00d4aa;
-        background: rgba(0, 212, 170, 0.12);
     }
     100% {
         color: #00b4d8;
-        border-color: #00b4d8;
-        background: rgba(0, 180, 216, 0.15);
     }
 }
 
 .reward-title-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 0.68rem;
+    font-size: 11px;
     font-weight: 600;
-    color: #c9a2ff;
-    background: rgba(145, 71, 255, 0.18);
-    border: 1px solid rgba(145, 71, 255, 0.35);
+    color: color-mix(in srgb, var(--color-twitch) 60%, white);
+    background: color-mix(in srgb, var(--color-twitch) 18%, transparent);
     border-radius: var(--radius-pill, 999px);
     padding: 1px 7px;
     flex-shrink: 0;
@@ -1803,79 +1796,36 @@ button.deleted-clickable {
 .message.gigantified-emote {
     background-color: var(--event-bg);
     border-left: 3px solid var(--event-color);
-    border-radius: var(--radius-md);
 }
 
-.message.gigantified-emote {
-    border-left: 3px solid #00d4aa;
-    animation: gigantifiedEmoteGlow 2s ease-in-out infinite alternate;
-}
-
-@keyframes gigantifiedEmoteGlow {
-    0% {
-        border-left-color: #00d4aa;
-        box-shadow:
-            inset 3px 0 6px -3px rgba(0, 212, 170, 0.25),
-            0 0 4px rgba(0, 212, 170, 0.15);
-    }
-    100% {
-        border-left-color: #00b4d8;
-        box-shadow:
-            inset 3px 0 10px -3px rgba(0, 180, 216, 0.35),
-            0 0 10px rgba(0, 180, 216, 0.25);
-    }
-}
-
-.message.message-effect {
-    border-left: 3px solid #00d4aa;
-    animation: powerUpMessageEffectGlow 2s ease-in-out infinite alternate;
-}
-
+.message.gigantified-emote,
+.message.message-effect,
 .message.celebration {
-    border-left: 3px solid #ff6b9d;
-    animation: powerUpCelebrationGlow 2s ease-in-out infinite alternate;
+    animation: eventTintPulse 2s ease-in-out infinite alternate;
 }
 
-@keyframes powerUpMessageEffectGlow {
-    0% {
-        border-left-color: #00d4aa;
-        box-shadow:
-            inset 3px 0 8px -3px rgba(0, 212, 170, 0.4),
-            0 0 6px rgba(0, 212, 170, 0.2);
-    }
+@keyframes eventTintPulse {
+    0%,
     100% {
-        border-left-color: #9146ff;
-        box-shadow:
-            inset 3px 0 12px -3px rgba(145, 70, 255, 0.5),
-            0 0 14px rgba(145, 70, 255, 0.35);
+        background-color: var(--event-bg);
     }
-}
-
-@keyframes powerUpCelebrationGlow {
-    0% {
-        border-left-color: #ff6b9d;
-        box-shadow:
-            inset 3px 0 8px -3px rgba(255, 107, 157, 0.4),
-            0 0 6px rgba(255, 107, 157, 0.2);
-    }
-    100% {
-        border-left-color: #ff9f43;
-        box-shadow:
-            inset 3px 0 12px -3px rgba(255, 159, 67, 0.5),
-            0 0 14px rgba(255, 159, 67, 0.35);
+    50% {
+        background-color: color-mix(
+            in srgb,
+            var(--event-color) 25%,
+            transparent
+        );
     }
 }
 
 .message.mention {
     background-color: var(--color-bg-mention);
     border-left: 3px solid var(--color-border-mention);
-    border-radius: var(--radius-md);
 }
 
 .message.first-message {
     background: var(--event-bg);
     border-left: 3px solid var(--event-color);
-    border-radius: var(--radius-md);
 }
 
 .message.notice .message-text {
@@ -1893,6 +1843,10 @@ button.deleted-clickable {
     align-items: center;
     gap: 4px;
     line-height: 1.4;
+}
+
+.reply-author {
+    color: var(--author-color, inherit);
 }
 
 .reply-info-label {
@@ -1972,7 +1926,7 @@ button.reply-info {
 }
 
 .author-link:hover {
-    text-decoration: underline;
+    filter: brightness(1.15);
 }
 
 /* Responsive design for lower resolutions */
@@ -2099,7 +2053,7 @@ button.reply-info {
 
     .action-button {
         padding: 2px 4px;
-        font-size: 10px;
+        font-size: 11px;
     }
 }
 

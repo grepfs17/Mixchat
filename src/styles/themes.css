@@ -21,7 +21,7 @@ html[data-theme="one-dark"] {
     --color-autocomplete-hover: #4b5263;
     --color-bg-mention: rgba(97, 175, 239, 0.2);
     --color-border-mention: #61afef;
-    --color-bg-twitch-event: rgba(198, 120, 221, 0.3);
+    --color-bg-twitch-event: color-mix(in srgb, var(--color-border-twitch-event) 30%, transparent);
     --color-border-twitch-event: #c678dd;
     --color-bg-cheer-event: rgba(229, 192, 123, 0.3);
     --color-border-cheer-event: #e5c07b;
@@ -103,7 +103,7 @@ html[data-theme="night-owl"] {
     --color-autocomplete-hover: #1d3b53;
     --color-bg-mention: rgba(130, 170, 255, 0.2);
     --color-border-mention: #82aaff;
-    --color-bg-twitch-event: rgba(199, 146, 234, 0.3);
+    --color-bg-twitch-event: color-mix(in srgb, var(--color-border-twitch-event) 30%, transparent);
     --color-border-twitch-event: #c792ea;
     --color-bg-cheer-event: rgba(255, 203, 107, 0.3);
     --color-border-cheer-event: #ffcb6b;
@@ -186,7 +186,7 @@ html[data-theme="monokai"] {
     --color-autocomplete-hover: #49483e;
     --color-bg-mention: rgba(102, 217, 239, 0.2);
     --color-border-mention: #66d9ef;
-    --color-bg-twitch-event: rgba(174, 129, 255, 0.3);
+    --color-bg-twitch-event: color-mix(in srgb, var(--color-border-twitch-event) 30%, transparent);
     --color-border-twitch-event: #ae81ff;
     --color-bg-cheer-event: rgba(230, 219, 116, 0.3);
     --color-border-cheer-event: #e6db74;

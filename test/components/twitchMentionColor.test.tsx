@@ -82,7 +82,9 @@ describe("TwitchMessageContent mention colours", () => {
     ) as HTMLElement | null;
     expect(strong).not.toBeNull();
     expect(strong!.textContent).toBe("@friend");
-    expect(strong!.style.color).toBe("rgb(255, 0, 0)");
+    // The colour flows through a custom property (like --event-color) and
+    // CSS resolves it, so assert the token rather than the computed color.
+    expect(strong!.style.getPropertyValue("--author-color")).toBe("#ff0000");
   });
 
   it("leaves the mention uncoloured when the user is unknown", () => {
@@ -107,7 +109,9 @@ describe("TwitchMessageContent reply preview", () => {
   it("colours the reply header with the target user's chat colour", () => {
     renderMsg(replyMessage, new Map([["friend", "#ff0000"]]));
     const header = screen.getByText("@friend:") as HTMLElement;
-    expect(header.style.color).toBe("rgb(255, 0, 0)");
+    // The colour flows through a custom property (like --event-color) and
+    // CSS resolves it, so assert the token rather than the computed color.
+    expect(header.style.getPropertyValue("--author-color")).toBe("#ff0000");
   });
 
   it("strips a repeated @name from the quoted reply content", () => {

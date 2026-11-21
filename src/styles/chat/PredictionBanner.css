@@ -12,7 +12,6 @@
 
 .prediction-banner-outcome {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
 }
 
@@ -23,16 +22,15 @@
 .prediction-banner-outcome-bar-bg {
     background: var(--color-bg-tertiary);
     height: 28px;
-    border-radius: var(--radius-md);
     overflow: hidden;
     position: relative;
 }
 
 .prediction-banner-outcome-bar-fill {
     height: 100%;
-    border-radius: var(--radius-md);
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    min-width: 4px;
+    width: 100%;
+    transform-origin: left center;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .prediction-banner-outcome-content {
@@ -74,9 +72,7 @@
     right: 6px;
     background: var(--color-bg-primary);
     color: var(--color-green);
-    border: 1px solid var(--color-green);
-    border-top: none;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     padding: 1px 5px;
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);

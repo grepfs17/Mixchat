@@ -79,8 +79,6 @@ function YouTubeFirstMessageLabel({ show }: { show: boolean }) {
       className="yt-event-label"
       style={{
         color: STREAM_FIRST.color,
-        background: STREAM_FIRST.bg,
-        borderColor: STREAM_FIRST.color,
       }}
     >
       {STREAM_FIRST.title}
@@ -99,7 +97,7 @@ const YT_EVENT_CONFIG: Record<
   },
   "gift-purchase": {
     label: "GIFT",
-    color: "#9c27b0",
+    color: "var(--color-gift)",
     bg: "rgba(156, 39, 176, 0.15)",
   },
   "gift-redemption": {
@@ -231,7 +229,7 @@ function YouTubeMessageHead({
       <button
         type="button"
         className="author"
-        style={{ color: authorColor }}
+        style={{ "--author-color": authorColor } as React.CSSProperties}
         onClick={(e) => {
           e.stopPropagation();
           onUsernameClick?.(e, msg.author, msg.authorAvatar);
@@ -414,7 +412,7 @@ function YouTubeAutomodButtons({
               alignItems: "center",
               gap: "4px",
               border: "1px solid",
-              borderRadius: "4px",
+              borderRadius: "0px",
               padding: "2px 8px",
               fontSize: "11px",
               cursor: "pointer",
@@ -561,8 +559,6 @@ function YouTubeEventMessage({
         className="yt-event-label"
         style={{
           color: config.color,
-          background: config.bg,
-          borderColor: config.color,
         }}
       >
         {config.label}

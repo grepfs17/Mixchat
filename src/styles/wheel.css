@@ -723,6 +723,23 @@
     scrollbar-color: var(--color-border-medium) transparent;
 }
 
+/* Chrome ignores scrollbar-color once ::-webkit-* rules exist, so mirror
+   the standard properties here: same thumb colour, same 6px width as the
+   rest of the app's lists, square thumb. Firefox keeps the standard
+   properties above. */
+.wheel-history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.wheel-history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.wheel-history-list::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: 0;
+}
+
 .wheel-history-list li {
     display: flex;
     align-items: center;
@@ -832,7 +849,7 @@
 .wheel-confetti__piece {
     position: absolute;
     top: -20px;
-    border-radius: 2px;
+    border-radius: 0;
     opacity: 0;
     will-change: transform, opacity;
     animation-name: wheel-confetti-fall;

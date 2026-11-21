@@ -96,7 +96,7 @@ export function MenuItem({
         ...(isMobile
           ? {
               flexShrink: 0,
-              borderRadius: 6,
+              borderRadius: 0,
               border: isSelected
                 ? "1px solid var(--color-accent)"
                 : "1px solid transparent",

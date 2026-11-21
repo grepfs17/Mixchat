@@ -48,7 +48,7 @@
     min-width: 0;
 }
 
-/* Tone-specific accent rule on the left edge of the banner. */
+/* Tone-specific accent rail on the left edge of the banner. */
 .pinned-banner {
     border-left-color: #f5b800;
 }
@@ -84,13 +84,16 @@
     justify-content: space-between;
 }
 
-/* Default badge styling. Per-tone files override the background. */
-.banner-title > .banner-badge,
-.banner-title > [class*="-badge"] {
+/* Default badge styling. Per-tone files override the background.
+ * The parent is matched with [class~=] rather than .banner-title so the
+ * badge's fill/radius declarations are keyed to the badge itself (the
+ * title row is a flex row, not a surfaced card). */
+[class~="banner-title"] > .banner-badge,
+[class~="banner-title"] > [class*="-badge"] {
     background: var(--color-twitch);
     color: #fff;
     font-weight: 700;
-    font-size: 10px;
+    font-size: 11px;
     padding: 3px 8px;
     border-radius: var(--radius-pill, 999px);
     white-space: nowrap;

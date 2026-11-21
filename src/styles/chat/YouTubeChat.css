@@ -85,7 +85,7 @@
     justify-content: space-between;
     padding: 6px 12px;
     background-color: rgba(255, 60, 60, 0.15);
-    border-bottom: 1px solid rgba(255, 60, 60, 0.3);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     color: var(--color-text-muted);
     font-size: 12px;
     flex-shrink: 0;
@@ -105,7 +105,7 @@
     gap: 6px;
     padding: 6px 12px;
     background-color: rgba(249, 115, 22, 0.15);
-    border-bottom: 1px solid rgba(249, 115, 22, 0.35);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     color: var(--color-text-muted);
     font-size: 12px;
     flex-shrink: 0;
@@ -159,7 +159,7 @@
 .yt-status-refreshing {
     padding: 6px 12px;
     background-color: var(--color-bg-bot);
-    border-top: 1px solid var(--color-border-medium);
+    border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     font-size: 11px;
     color: var(--color-text-muted);
     text-align: center;
@@ -168,7 +168,7 @@
 .yt-status-login-required {
     padding: 6px 12px;
     background-color: var(--color-bg-bot);
-    border-top: 1px solid var(--color-border-medium);
+    border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     font-size: 11px;
     color: var(--color-text-muted);
     text-align: center;
@@ -178,7 +178,6 @@
 .message.yt-event {
     background-color: var(--event-bg);
     border-left: 3px solid var(--event-color);
-    border-radius: var(--radius-md);
 }
 
 .yt-event-label {
@@ -187,9 +186,6 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border: 1px solid;
-    border-radius: var(--radius-pill, 999px);
-    padding: 2px 8px;
     margin-bottom: 5px;
     opacity: 1;
     max-width: 100%;
@@ -243,7 +239,6 @@
     margin-left: 4px;
     cursor: pointer;
     color: #94a3b8;
-    text-decoration: underline;
     font: inherit;
 }
 
@@ -252,15 +247,14 @@
 }
 
 /* Clickable links inside YouTube message text (styled to match the Twitch
-   chat's linkifyUrl look: indigo, underline) */
+   chat's linkifyUrl look: brand rose, no underline) */
 .yt-message-link {
-    color: #6366f1;
-    text-decoration: underline;
+    color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
     cursor: pointer;
 }
 
 .yt-message-link:hover {
-    text-decoration: none;
+    color: color-mix(in srgb, var(--color-accent) 40%, var(--color-text-primary));
 }
 
 /* Clickable author names */
@@ -270,7 +264,6 @@
 }
 
 .yt-chat-container .message .author:hover {
-    text-decoration: underline;
     opacity: 0.85;
 }
 

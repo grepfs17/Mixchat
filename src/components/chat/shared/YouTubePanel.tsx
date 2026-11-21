@@ -156,7 +156,7 @@ export default function YouTubePanel({
                   background: "rgba(0,0,0,0.6)",
                   color: "#fff",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: "0px",
                   padding: "2px 6px",
                   fontSize: "10px",
                   cursor: "pointer",
@@ -170,7 +170,7 @@ export default function YouTubePanel({
                   background: "rgba(0,0,0,0.6)",
                   color: "#fff",
                   border: "none",
-                  borderRadius: "4px",
+                  borderRadius: "0px",
                   padding: "2px 6px",
                   fontSize: "10px",
                   cursor: "pointer",
@@ -278,7 +278,7 @@ export default function YouTubePanel({
                     backgroundColor: "#222",
                     border: "1px solid #444",
                     color: "#fff",
-                    borderRadius: "4px",
+                    borderRadius: "0px",
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -298,7 +298,7 @@ export default function YouTubePanel({
                     background: "#FF0000",
                     color: "#fff",
                     border: "none",
-                    borderRadius: "4px",
+                    borderRadius: "0px",
                     padding: "6px 12px",
                     cursor: "pointer",
                   }}
@@ -311,7 +311,7 @@ export default function YouTubePanel({
                     background: "#333",
                     color: "#fff",
                     border: "none",
-                    borderRadius: "4px",
+                    borderRadius: "0px",
                     padding: "6px 12px",
                     cursor: "pointer",
                     fontSize: "13px",

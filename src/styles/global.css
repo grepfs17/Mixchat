@@ -31,11 +31,11 @@ body {
     left: 16px;
     z-index: 10000;
     padding: 10px 16px;
-    background: var(--color-accent, #6c5ce7);
+    background: var(--color-accent);
     color: var(--color-text-white, #fff);
     font-weight: 600;
     text-decoration: none;
-    border-radius: 0 0 6px 6px;
+    border-radius: 0;
     transform: translateY(-120%);
     transition: transform 0.15s ease;
 }
@@ -210,7 +210,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 /* Moderator Context Menu (Timeout Options) */
 .mod-context-menu {
     background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     padding: 6px;
@@ -261,7 +261,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 /* Generic context menu styles used across components */
 .context-menu {
     background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     padding: 8px;
@@ -366,7 +366,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     animation: tooltipFade 0.12s ease-out;
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
     padding: 24px 24px 20px;
@@ -427,7 +427,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-timeout-preset {
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-pill);
     padding: 8px 16px;
     font-size: 13px;
@@ -482,7 +482,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-timeout-input {
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
@@ -497,7 +497,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 .yt-timeout-unit {
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border-medium);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     border-radius: var(--radius-sm);
     padding: 8px 10px;
     font-size: 13px;
@@ -551,4 +551,23 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
     background: var(--color-bg-tertiary);
     color: var(--color-text-muted);
     cursor: not-allowed;
+}
+
+/* Rectangular scrollbars: square every part of the bar (box, track, thumb)
+   globally, including containers that ship no ::-webkit-scrollbar rules of
+   their own (landing, help pages, dev preview). Lists with their own rules
+   set the thumb radius through --radius-* tokens, which are already 0, and
+   inherit the square track/bar from here. Unspecified width/height/colors
+   keep each scrollbar's native metrics and colours; only the rounding goes.
+   Firefox draws square bars natively and ignores ::-webkit-* anyway. */
+::-webkit-scrollbar {
+    border-radius: 0;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 0;
 }

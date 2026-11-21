@@ -895,7 +895,7 @@ describe("emotes lib", () => {
       const result = parseMessageWithEmotes("hi @friend", undefined, {
         mentionColors,
       });
-      expect(result).toBe('hi <strong style="color:#ff0000">@friend</strong>');
+      expect(result).toBe('hi <strong style="--author-color:#ff0000;color:var(--author-color)">@friend</strong>');
     });
 
     it("matches case-insensitively and tolerates trailing punctuation", () => {
@@ -904,7 +904,7 @@ describe("emotes lib", () => {
         mentionColors,
       });
       expect(result).toContain(
-        '<strong style="color:#00ff00">@Friend,</strong>',
+        '<strong style="--author-color:#00ff00;color:var(--author-color)">@Friend,</strong>',
       );
     });
 
@@ -933,14 +933,14 @@ describe("emotes lib", () => {
       const mentionColors = new Map([["friend", "#abcdef"]]);
       expect(
         parseMessageWithEmotes("ping @friend", undefined, { mentionColors }),
-      ).toContain('style="color:#abcdef"');
+      ).toContain('style="--author-color:#abcdef;color:var(--author-color)"');
     });
 
     it("applies colours to already-parsed HTML", () => {
       const mentionColors = new Map([["friend", "#abcdef"]]);
       expect(
         applyMentionColors("<strong>@friend</strong>", mentionColors),
-      ).toBe('<strong style="color:#abcdef">@friend</strong>');
+      ).toBe('<strong style="--author-color:#abcdef;color:var(--author-color)">@friend</strong>');
     });
   });
 });

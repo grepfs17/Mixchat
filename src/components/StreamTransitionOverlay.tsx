@@ -68,7 +68,7 @@ export default function StreamTransitionOverlay({
         pointerEvents: "none",
         /* will-change managed by browser for transform animations */
         transformOrigin: "top left",
-        borderRadius: "16px",
+        borderRadius: "0px",
       }}
     >
       <img

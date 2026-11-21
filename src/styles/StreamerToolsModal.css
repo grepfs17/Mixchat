@@ -2255,7 +2255,7 @@
     -webkit-appearance: none;
     appearance: none;
     background: var(--color-border-medium);
-    border-radius: 2px;
+    border-radius: 0;
     outline: none;
     cursor: pointer;
 }
@@ -2291,7 +2291,7 @@
 
 .song-queue-bar-volume-slider::-moz-range-track {
     background: var(--color-border-medium);
-    border-radius: 2px;
+    border-radius: 0;
     height: 4px;
 }
 

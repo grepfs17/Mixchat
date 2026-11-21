@@ -46,7 +46,7 @@ describe("PredictionBanner", () => {
       <PredictionBanner prediction={basePrediction} onDismiss={vi.fn()} />,
     );
 
-    expect(screen.getAllByText(/15,000 pts/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/15K pts/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/5,000 pts/).length).toBeGreaterThanOrEqual(1);
   });
 
@@ -56,7 +56,7 @@ describe("PredictionBanner", () => {
     );
 
     expect(
-      screen.getByText("15 predictors · 20,000 points"),
+      screen.getByText("15 predictors · 20K points"),
     ).toBeInTheDocument();
   });
 
@@ -174,7 +174,7 @@ describe("PredictionBanner", () => {
       <PredictionBanner prediction={basePrediction} onDismiss={vi.fn()} />,
     );
 
-    expect(screen.getByText(/15,000 pts · 75%/)).toBeInTheDocument();
+    expect(screen.getByText(/15K pts · 75%/)).toBeInTheDocument();
     expect(screen.getByText(/5,000 pts · 25%/)).toBeInTheDocument();
   });
 });

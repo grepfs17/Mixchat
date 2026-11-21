@@ -56,19 +56,18 @@
 }
 
 /* Clickable links inside YouTube message text rendered in the unified chat
-   (styled to match the Twitch chat's linkifyUrl look: indigo, underline) */
+   (styled to match the Twitch chat's linkifyUrl look: brand rose, no underline) */
 .yt-message-link {
-    color: #6366f1;
-    text-decoration: underline;
+    color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
     cursor: pointer;
 }
 
 .yt-message-link:hover {
-    text-decoration: none;
+    color: color-mix(in srgb, var(--color-accent) 40%, var(--color-text-primary));
 }
 
 .author.twitch-author:hover {
-    text-decoration: underline;
+    filter: brightness(1.15);
 }
 
 /* Chat status bar in unified chat - holds both Twitch and YouTube indicators */
@@ -80,7 +79,7 @@
     font-size: 0.7rem;
     font-weight: 500;
     flex-shrink: 0;
-    border-bottom: 1px solid var(--color-border-dark);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     background: var(--color-bg-primary);
 }
 

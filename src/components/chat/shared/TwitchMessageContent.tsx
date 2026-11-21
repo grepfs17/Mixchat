@@ -215,7 +215,10 @@ function TwitchReplyInfo({
     >
       <span className="reply-info-label">
         <span>response to <span>&nbsp;</span></span>
-        <span style={{ color: authorColor }}>
+        <span
+          className="reply-author"
+          style={{ "--author-color": authorColor } as React.CSSProperties}
+        >
           @{replyTo.author}:
         </span>
         {content && (
@@ -301,7 +304,7 @@ function TwitchModActionButtons({
             alignItems: "center",
             gap: "4px",
             border: "1px solid currentColor",
-            borderRadius: "4px",
+            borderRadius: "0px",
             padding: "2px 6px",
             fontSize: "11px",
             marginTop: "2px",
@@ -356,11 +359,15 @@ function TwitchAuthorLink({
       target="_blank"
       rel="noopener noreferrer"
       className={`author author-link ${msg.isCurrentUser ? "self" : ""}`}
-      style={{
-        color: msg.isCurrentUser
-          ? "#ffffff"
-          : getReadableUsernameColor(msg.authorColor),
-      }}
+      // Username colors are chat data (Twitch palette), passed as a custom
+      // property the same way event colors use --event-color.
+      style={
+        {
+          "--author-color": msg.isCurrentUser
+            ? "#ffffff"
+            : getReadableUsernameColor(msg.authorColor),
+        } as React.CSSProperties
+      }
       onClick={(e) => onUsernameClick?.(e, msg.author, msg.authorAvatar)}
     >
       {renderAuthorLabel(msg.author, msg.userName)}

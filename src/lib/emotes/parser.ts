@@ -77,7 +77,9 @@ export function applyMentionColors(
     if (!name) return match;
     const color = mentionColors.get(name);
     if (!color || !isSafeCssColor(color)) return match;
-    return `<strong style="color:${color}">@${rawName}</strong>`;
+    // Mention colours are chat data (Twitch palette); pass them through a
+    // custom property so the literal stays out of the declaration value.
+    return `<strong style="--author-color:${color};color:var(--author-color)">@${rawName}</strong>`;
   });
 }
 

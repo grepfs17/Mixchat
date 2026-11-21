@@ -145,7 +145,7 @@ html:has(.landing-page) {
 .landing-kofi-hint a:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 0;
 }
 
 .landing-hero-meta {
@@ -465,7 +465,7 @@ html:has(.landing-page) {
 .landing-footer a:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: 0;
 }
 
 .landing-footer-links {

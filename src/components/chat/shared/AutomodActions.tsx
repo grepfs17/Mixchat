@@ -21,7 +21,7 @@ const btnBase: React.CSSProperties = {
   alignItems: "center",
   gap: "4px",
   border: "none",
-  borderRadius: "4px",
+  borderRadius: "0px",
   padding: "2px 6px",
   fontSize: "11px",
   cursor: "pointer",

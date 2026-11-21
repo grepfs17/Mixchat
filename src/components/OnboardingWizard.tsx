@@ -300,7 +300,7 @@ function ThemeStep() {
               <button
                 type="button"
                 className="author author-link"
-                style={{ color: "#c084fc" }}
+                style={{ "--author-color": "#c084fc" } as React.CSSProperties}
               >
                 notmasterofpupis
               </button>
@@ -332,7 +332,7 @@ function ThemeStep() {
               <button
                 type="button"
                 className="author author-link"
-                style={{ color: "#34d399" }}
+                style={{ "--author-color": "#34d399" } as React.CSSProperties}
               >
                 nothelder
               </button>
@@ -364,7 +364,7 @@ function ThemeStep() {
               <button
                 type="button"
                 className="author author-link"
-                style={{ color: "#fbbf24" }}
+                style={{ "--author-color": "#fbbf24" } as React.CSSProperties}
               >
                 shokastion
               </button>
@@ -393,7 +393,7 @@ function ThemeStep() {
               <span className="platform-tag youtube" title="YouTube">
                 <FaYoutube size={14} />
               </span>
-              <span className="author" style={{ color: "#f87171" }}>
+              <span className="author" style={{ "--author-color": "#f87171" } as React.CSSProperties}>
                 youtube_avg_chatter
               </span>
               <span className="message-separator">:</span>

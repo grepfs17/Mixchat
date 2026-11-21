@@ -108,6 +108,10 @@
     width: 40px;
     height: 40px;
     border-radius: var(--radius-full);
+    /* Explicit border: this is a <button>, so without one the UA default
+       button border shows through. */
+    border: 1px solid
+        color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);

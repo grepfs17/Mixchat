@@ -7,22 +7,22 @@ export const EVENT_CONFIG: Record<
   cheer: { title: "Cheer", color: "#FFB700", bg: "rgba(255, 183, 0, 0.12)" },
   subscription: {
     title: "New Subscription",
-    color: "#bf94ff",
+    color: "color-mix(in srgb, var(--color-twitch) 60%, white)",
     bg: "rgba(145, 71, 255, 0.15)",
   },
   resub: {
     title: "Resubscription",
-    color: "#bf94ff",
+    color: "color-mix(in srgb, var(--color-twitch) 60%, white)",
     bg: "rgba(145, 71, 255, 0.15)",
   },
   subgift: {
     title: "Gift Subscription",
-    color: "#bf94ff",
+    color: "color-mix(in srgb, var(--color-twitch) 60%, white)",
     bg: "rgba(145, 71, 255, 0.15)",
   },
   redemption: {
     title: "Channel Points Redemption",
-    color: "#c9a2ff",
+    color: "color-mix(in srgb, var(--color-twitch) 50%, white)",
     bg: "rgba(145, 71, 255, 0.15)",
   },
   highlight: {
@@ -56,7 +56,7 @@ export const EVENT_CONFIG: Record<
   },
   "reward-gift": {
     title: "Reward Gift",
-    color: "#c9a2ff",
+    color: "color-mix(in srgb, var(--color-twitch) 50%, white)",
     bg: "rgba(145, 71, 255, 0.15)",
   },
   "message-effect": {
@@ -86,7 +86,7 @@ export const EVENT_CONFIG: Record<
   },
   "first-message-on-stream": {
     title: "First message on stream",
-    color: "#818cf8",
+    color: "color-mix(in srgb, var(--color-indigo) 80%, white)",
     bg: "rgba(129, 140, 248, 0.12)",
   },
 };
@@ -118,8 +118,6 @@ export default function TwitchEventIcon({
         className="twitch-event-label"
         style={{
           color: cfg.color,
-          background: cfg.bg,
-          borderColor: cfg.color,
         }}
       >
         {cfg.title}
@@ -155,10 +153,9 @@ export default function TwitchEventIcon({
       return (
         <div
           className="twitch-event-label"
+          // Event colors are platform/brand tokens from EVENT_CONFIG
           style={{
             color: cfg.color,
-            background: cfg.bg,
-            borderColor: cfg.color,
           }}
         >
           {cfg.title}
@@ -174,8 +171,6 @@ export default function TwitchEventIcon({
         className="twitch-event-label"
         style={{
           color: cfg.color,
-          background: cfg.bg,
-          borderColor: cfg.color,
         }}
       >
         {cfg.title}

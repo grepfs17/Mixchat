@@ -7,8 +7,10 @@
 .hype-train-progress {
     height: 3px;
     background: var(--color-border-twitch-event);
-    border-radius: 2px;
-    transition: width 0.5s ease-out;
+    border-radius: 0;
+    width: 100%;
+    transform-origin: left center;
+    transition: transform 0.5s ease-out;
     margin-bottom: 8px;
     opacity: 0.5;
 }
@@ -17,16 +19,16 @@
     position: relative;
     height: 8px;
     background: var(--color-bg-tertiary);
-    border-radius: 4px;
     overflow: hidden;
     margin-bottom: 6px;
 }
 
 .hype-train-progress-fill {
     height: 100%;
+    width: 100%;
     background: var(--color-twitch);
-    border-radius: 4px;
-    transition: width 0.5s ease-out;
+    transform-origin: left center;
+    transition: transform 0.5s ease-out;
 }
 
 .hype-train-progress-text {
@@ -35,7 +37,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     color: var(--color-text-primary);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }

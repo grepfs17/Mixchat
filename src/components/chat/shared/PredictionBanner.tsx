@@ -27,6 +27,12 @@ const getStatusLabel = (status: PredictionState["status"]): string => {
   return "Prediction";
 };
 
+/** Channel points read as compact figures once they pass 10k. */
+const formatPoints = (n: number): string =>
+  n >= 10000
+    ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`
+    : n.toLocaleString();
+
 function PredictionOutcomeRow({
   outcome,
   totalPoints,
@@ -52,7 +58,7 @@ function PredictionOutcomeRow({
         <div
           className="prediction-banner-outcome-bar-fill"
           style={{
-            width: `${barWidth}%`,
+            transform: `scaleX(${barWidth / 100})`,
             background: outcomeBarColor(outcome.color, isWinner),
           }}
         />
@@ -60,7 +66,7 @@ function PredictionOutcomeRow({
       <div className="prediction-banner-outcome-content">
         <span className="prediction-banner-outcome-title">{outcome.title}</span>
         <span className="prediction-banner-outcome-meta">
-          {outcome.channelPoints.toLocaleString()} pts · {pct}%
+          {formatPoints(outcome.channelPoints)} pts · {pct}%
           {outcome.users > 0 && ` · ${outcome.users}`}
         </span>
       </div>
@@ -90,9 +96,9 @@ function PredictionFooter({
     <>
       <span className="prediction-banner-total">
         {totalUsers.toLocaleString()} predictors ·{" "}
-        {prediction.outcomes
-          .reduce((s, o) => s + o.channelPoints, 0)
-          .toLocaleString()}{" "}
+        {formatPoints(
+          prediction.outcomes.reduce((s, o) => s + o.channelPoints, 0),
+        )}{" "}
         points
       </span>
       {isActive && prediction.endsAt && (

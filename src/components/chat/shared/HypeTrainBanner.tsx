@@ -12,6 +12,12 @@ interface HypeTrainBannerProps {
   onDismiss: () => void;
 }
 
+/** Points read as compact figures once they pass 10k. */
+const formatPoints = (n: number): string =>
+  n >= 10000
+    ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K`
+    : n.toLocaleString();
+
 /**
  * Display-mode Hype Train banner with progress bar and top contributors.
  * Self-dismisses on timer expiry or double-click.
@@ -37,7 +43,7 @@ export default function HypeTrainBanner({
       beforeChildren={
         <div
           className="hype-train-progress"
-          style={{ width: `${progressPct}%` }}
+          style={{ transform: `scaleX(${progressPct / 100})` }}
           aria-hidden="true"
         />
       }
@@ -47,7 +53,7 @@ export default function HypeTrainBanner({
         <>
           <span className="hype-train-level">Level {hypeTrain.level}</span>
           <span className="hype-train-points">
-            {hypeTrain.totalPoints.toLocaleString()} points
+            {formatPoints(hypeTrain.totalPoints)} points
           </span>
         </>
       }
@@ -60,7 +66,7 @@ export default function HypeTrainBanner({
         <div className="hype-train-progress-bar">
           <div
             className="hype-train-progress-fill"
-            style={{ width: `${progressPct}%` }}
+            style={{ transform: `scaleX(${progressPct / 100})` }}
           />
           <span className="hype-train-progress-text">
             {hypeTrain.progress} / {hypeTrain.goal}

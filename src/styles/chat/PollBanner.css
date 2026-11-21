@@ -13,7 +13,6 @@
 
 .poll-banner-choice {
     position: relative;
-    border-radius: var(--radius-md);
     overflow: hidden;
 }
 
@@ -24,17 +23,16 @@
 .poll-banner-choice-bar-bg {
     background: var(--color-bg-tertiary);
     height: 28px;
-    border-radius: var(--radius-md);
     overflow: hidden;
     position: relative;
 }
 
 .poll-banner-choice-bar-fill {
     height: 100%;
+    width: 100%;
     background: var(--color-twitch);
-    border-radius: var(--radius-md);
-    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    min-width: 4px;
+    transform-origin: left center;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .poll-banner-choice--winner .poll-banner-choice-bar-fill {

@@ -111,7 +111,7 @@ export default function PollBanner({ poll, onDismiss }: PollBannerProps) {
               <div className="poll-banner-choice-bar-bg">
                 <div
                   className="poll-banner-choice-bar-fill"
-                  style={{ width: `${barWidth}%` }}
+                  style={{ transform: `scaleX(${barWidth / 100})` }}
                 />
               </div>
               <div className="poll-banner-choice-content">
