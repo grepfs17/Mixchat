@@ -24,9 +24,11 @@
 }
 
 /* Scrollbar style for Embed Config Modal (match chat messages scrollbar) */
-.embed-config-panel {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+@supports not selector(::-webkit-scrollbar) {
+    .embed-config-panel {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+    }
 }
 .embed-config-panel::-webkit-scrollbar {
     width: 8px;
@@ -36,7 +38,7 @@
 }
 .embed-config-panel::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-md);
+    border-radius: 0;
 }
 .embed-config-panel::-webkit-scrollbar-thumb:hover {
     background: var(--color-border-lighter);

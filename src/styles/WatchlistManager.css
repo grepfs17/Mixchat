@@ -266,27 +266,30 @@
     overflow-y: auto;
     margin-bottom: 16px;
     padding-right: 8px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-@supports not (scrollbar-color: auto) {
-    .watchlist-items::-webkit-scrollbar {
-        width: 6px;
+@supports not selector(::-webkit-scrollbar) {
+    .watchlist-items {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
     }
+}
 
-    .watchlist-items::-webkit-scrollbar-track {
-        background: transparent;
-    }
+.watchlist-items::-webkit-scrollbar {
+    width: 6px;
+}
 
-    .watchlist-items::-webkit-scrollbar-thumb {
-        background: var(--color-border-medium);
-        border-radius: var(--radius-pill);
-    }
+.watchlist-items::-webkit-scrollbar-track {
+    background: transparent;
+}
 
-    .watchlist-items::-webkit-scrollbar-thumb:hover {
-        background: var(--color-accent);
-    }
+.watchlist-items::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: 0;
+}
+
+.watchlist-items::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent);
 }
 
 .empty-message {

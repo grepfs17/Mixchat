@@ -127,8 +127,13 @@
     flex: 1;
     overflow-y: auto;
     padding: 24px 28px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .onboarding-body {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+    }
 }
 
 .onboarding-body::-webkit-scrollbar {
@@ -141,7 +146,7 @@
 
 .onboarding-body::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-md);
+    border-radius: 0;
 }
 
 .onboarding-body::-webkit-scrollbar-thumb:hover {

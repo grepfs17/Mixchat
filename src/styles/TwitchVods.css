@@ -139,8 +139,13 @@
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .twitch-vods__scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
+    }
 }
 
 .twitch-vods__scroll::-webkit-scrollbar {
@@ -149,7 +154,7 @@
 
 .twitch-vods__scroll::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-pill);
+    border-radius: 0;
 }
 
 .twitch-vods__grid {

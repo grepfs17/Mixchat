@@ -646,9 +646,11 @@
 }
 
 /* Channel list scrollbar styling */
-.channel-list {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+@supports not selector(::-webkit-scrollbar) {
+    .channel-list {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+    }
 }
 
 .channel-list::-webkit-scrollbar {
@@ -661,7 +663,7 @@
 
 .channel-list::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-md);
+    border-radius: 0;
 }
 
 .channel-list::-webkit-scrollbar-thumb:hover {

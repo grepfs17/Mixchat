@@ -354,8 +354,13 @@
     gap: 4px;
     max-height: min(50vh, 280px);
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .music-player-track-list {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
+    }
 }
 
 .music-player-track-list::-webkit-scrollbar {
@@ -368,7 +373,7 @@
 
 .music-player-track-list::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-md);
+    border-radius: 0;
 }
 
 .music-player-track {

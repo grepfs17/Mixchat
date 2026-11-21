@@ -67,10 +67,15 @@
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-light) transparent;
     z-index: 99999;
     animation: presetFadeIn 0.12s ease-out;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .preset-dropdown {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-light) transparent;
+    }
 }
 
 @keyframes presetFadeIn {
@@ -92,7 +97,7 @@
 }
 .preset-dropdown::-webkit-scrollbar-thumb {
     background: var(--color-border-light);
-    border-radius: var(--radius-sm);
+    border-radius: 0;
 }
 
 .preset-dropdown-empty {
@@ -361,8 +366,13 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-light) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .preset-modal-list {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-light) transparent;
+    }
 }
 
 .preset-modal-list::-webkit-scrollbar {
@@ -373,7 +383,7 @@
 }
 .preset-modal-list::-webkit-scrollbar-thumb {
     background: var(--color-border-light);
-    border-radius: var(--radius-sm);
+    border-radius: 0;
 }
 
 .preset-modal-empty {
@@ -461,10 +471,15 @@
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-light) transparent;
     z-index: 10000;
     animation: presetFadeIn 0.12s ease-out;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .preset-emote-autocomplete {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-light) transparent;
+    }
 }
 
 .preset-emote-autocomplete::-webkit-scrollbar {
@@ -475,7 +490,7 @@
 }
 .preset-emote-autocomplete::-webkit-scrollbar-thumb {
     background: var(--color-border-light);
-    border-radius: var(--radius-sm);
+    border-radius: 0;
 }
 
 .preset-emote-item {

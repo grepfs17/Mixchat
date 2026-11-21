@@ -218,27 +218,30 @@
     overflow-y: auto;
     margin-bottom: 16px;
     padding-right: 8px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-@supports not (scrollbar-color: auto) {
-    .ytlinker-items::-webkit-scrollbar {
-        width: 6px;
+@supports not selector(::-webkit-scrollbar) {
+    .ytlinker-items {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
     }
+}
 
-    .ytlinker-items::-webkit-scrollbar-track {
-        background: transparent;
-    }
+.ytlinker-items::-webkit-scrollbar {
+    width: 6px;
+}
 
-    .ytlinker-items::-webkit-scrollbar-thumb {
-        background: var(--color-border-medium);
-        border-radius: var(--radius-pill);
-    }
+.ytlinker-items::-webkit-scrollbar-track {
+    background: transparent;
+}
 
-    .ytlinker-items::-webkit-scrollbar-thumb:hover {
-        background: var(--color-accent);
-    }
+.ytlinker-items::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: 0;
+}
+
+.ytlinker-items::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent);
 }
 
 .ytlinker-empty {

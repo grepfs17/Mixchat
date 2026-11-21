@@ -419,9 +419,11 @@
 }
 
 /* Custom scrollbar styling - modern thin design */
-.messages-container {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-light) var(--color-bg-primary);
+@supports not selector(::-webkit-scrollbar) {
+    .messages-container {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-light) var(--color-bg-primary);
+    }
 }
 
 .messages-container::-webkit-scrollbar {
@@ -1510,8 +1512,13 @@ img.emoji {
     font-size: 0.8em;
     max-height: 400px;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border, #2a2a3e) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .eventsub-status-dropdown {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border, #2a2a3e) transparent;
+    }
 }
 
 .eventsub-status-dropdown::-webkit-scrollbar {

@@ -559,9 +559,11 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 
 /* Rectangular scrollbars: square every part of the bar (box, track, thumb)
    globally, including containers that ship no ::-webkit-scrollbar rules of
-   their own (landing, help pages, dev preview). Lists with their own rules
-   set the thumb radius through --radius-* tokens, which are already 0, and
-   inherit the square track/bar from here. Unspecified width/height/colors
+   their own (landing, help pages, dev preview). Rules with their own thumb
+   styles also set border-radius: 0. Chrome 121+ lets scrollbar-width and
+   scrollbar-color override ::-webkit-scrollbar-*, so those standard
+   properties are gated behind @supports not selector(::-webkit-scrollbar)
+   to keep the custom square bar in Chromium. Unspecified width/height/colors
    keep each scrollbar's native metrics and colours; only the rounding goes.
    Firefox draws square bars natively and ignores ::-webkit-* anyway. */
 ::-webkit-scrollbar {

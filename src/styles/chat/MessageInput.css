@@ -243,21 +243,24 @@
     max-height: 240px;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-@supports not (scrollbar-color: auto) {
-    .yt-emoji-picker-grid::-webkit-scrollbar {
-        width: 4px;
+@supports not selector(::-webkit-scrollbar) {
+    .yt-emoji-picker-grid {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
     }
-    .yt-emoji-picker-grid::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    .yt-emoji-picker-grid::-webkit-scrollbar-thumb {
-        background: var(--color-border-medium);
-        border-radius: 0;
-    }
+}
+
+.yt-emoji-picker-grid::-webkit-scrollbar {
+    width: 4px;
+}
+.yt-emoji-picker-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+.yt-emoji-picker-grid::-webkit-scrollbar-thumb {
+    background: var(--color-border-medium);
+    border-radius: 0;
 }
 
 .yt-emoji-picker-item {

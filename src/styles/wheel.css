@@ -719,14 +719,18 @@
     gap: 6px;
     max-height: 320px;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
 }
 
-/* Chrome ignores scrollbar-color once ::-webkit-* rules exist, so mirror
-   the standard properties here: same thumb colour, same 6px width as the
-   rest of the app's lists, square thumb. Firefox keeps the standard
-   properties above. */
+@supports not selector(::-webkit-scrollbar) {
+    .wheel-history-list {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
+    }
+}
+
+/* Standard properties are gated so Chrome keeps the custom webkit bar:
+   same thumb colour, same 6px width as the rest of the app's lists, square
+   thumb. Firefox gets the standard bar. */
 .wheel-history-list::-webkit-scrollbar {
     width: 6px;
 }

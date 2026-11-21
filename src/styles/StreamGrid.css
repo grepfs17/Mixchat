@@ -167,8 +167,13 @@ StreamGrid stream cards list
     flex: 1;
     overflow-y: auto;
     padding: 20px 24px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .stream-grid-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) transparent;
+    }
 }
 
 .stream-grid-scroll::-webkit-scrollbar {
@@ -177,7 +182,7 @@ StreamGrid stream cards list
 
 .stream-grid-scroll::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-pill);
+    border-radius: 0;
 }
 
 .stream-grid {

@@ -19,8 +19,13 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+    .yt-chat-container {
+        scrollbar-width: thin;
+        scrollbar-color: var(--color-border-medium) var(--color-bg-primary);
+    }
 }
 
 /* Custom scrollbar styling - matching Twitch chat */
@@ -34,7 +39,7 @@
 
 .yt-chat-container::-webkit-scrollbar-thumb {
     background: var(--color-border-medium);
-    border-radius: var(--radius-md);
+    border-radius: 0;
 }
 
 .yt-chat-container::-webkit-scrollbar-thumb:hover {
