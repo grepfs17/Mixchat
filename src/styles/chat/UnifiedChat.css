@@ -28,12 +28,24 @@
     flex-shrink: 0;
 }
 
+.platform-tag svg {
+    display: block;
+    shape-rendering: geometricPrecision;
+}
+
 .platform-tag.twitch {
     color: var(--color-twitch);
 }
 
 .platform-tag.youtube {
     color: var(--color-youtube);
+}
+
+/* FaYoutube's viewBox is 576x512, so a forced square box letterboxes it to
+   ~12px tall and mushes the play cutout. Keep the wider aspect at full height. */
+.platform-tag.youtube svg {
+    width: 16px;
+    height: 14px;
 }
 
 /* Reusing some classes from ChatDisplay via global scope or if added here */

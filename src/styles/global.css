@@ -27,7 +27,7 @@ body {
 /* Skip link: hidden until keyboard focus, then pinned to the top-left. */
 .skip-link {
     position: absolute;
-    top: -100px;
+    top: 0;
     left: 16px;
     z-index: 10000;
     padding: 10px 16px;
@@ -36,11 +36,12 @@ body {
     font-weight: 600;
     text-decoration: none;
     border-radius: 0 0 6px 6px;
-    transition: top 0.15s ease;
+    transform: translateY(-120%);
+    transition: transform 0.15s ease;
 }
 
 .skip-link:focus {
-    top: 0;
+    transform: translateY(0);
     outline: 2px solid var(--color-text-white, #fff);
     outline-offset: 2px;
 }
@@ -468,7 +469,7 @@ we put it here cuz of the scope we need it on Unified and YouTubeChat */
 }
 
 .yt-timeout-link:hover {
-    text-decoration: underline;
+    color: var(--color-accent-hover);
 }
 
 .yt-timeout-custom-row {

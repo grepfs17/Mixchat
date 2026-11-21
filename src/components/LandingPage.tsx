@@ -289,16 +289,16 @@ export default function LandingPage({ onTwitchLogin, twitchOnly }: LandingPagePr
           {FEATURES.map((feature) => (
             <section key={feature.title} className="landing-feature landing-reveal">
               <div className="landing-feature-text">
+                <span className="landing-feature-badge">{feature.badge}</span>
                 <h2 className="landing-feature-title">{feature.title}</h2>
                 <p className="landing-feature-description">
                   {feature.description}
                 </p>
               </div>
               {feature.useCarousel ? (
-                <div className="landing-feature-image-container landing-feature-image-container--single">
+                <div className="landing-feature-carousel">
                   <ThemeCarousel
                     slides={feature.images as CarouselSlide[]}
-                    badge={feature.badge}
                   />
                 </div>
               ) : (
@@ -309,7 +309,6 @@ export default function LandingPage({ onTwitchLogin, twitchOnly }: LandingPagePr
                       : ""
                   }`}
                 >
-                  <span className="landing-feature-badge">{feature.badge}</span>
                   {feature.images.map((img, j) => (
                     <img
                       key={j}
@@ -510,16 +509,18 @@ export default function LandingPage({ onTwitchLogin, twitchOnly }: LandingPagePr
             rel="noopener noreferrer"
           >
             grepfs17
-          </a>{" "}
-          &mdash; Licensed under{" "}
+          </a>
+          {". "}
+          Licensed under{" "}
           <a
             href="https://www.gnu.org/licenses/agpl-3.0.html"
             target="_blank"
             rel="noopener noreferrer"
           >
             AGPL-3.0
-          </a>{" "}
-          &mdash; {DISPLAY_VERSION}
+          </a>
+          {". "}
+          {DISPLAY_VERSION}
         </span>
         <div className="landing-footer-links">
           <a href="/privacy">Privacy</a>

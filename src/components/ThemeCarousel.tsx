@@ -14,13 +14,11 @@ export interface CarouselSlide {
 
 interface ThemeCarouselProps {
   slides: CarouselSlide[];
-  badge?: string;
   autoplayMs?: number;
 }
 
 export default function ThemeCarousel({
   slides,
-  badge,
   autoplayMs = 5500,
 }: ThemeCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -93,8 +91,6 @@ export default function ThemeCarousel({
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      {badge && <span className="theme-carousel-badge">{badge}</span>}
-
       <div
         className="theme-carousel-viewport"
         ref={trackRef}
@@ -140,15 +136,6 @@ export default function ThemeCarousel({
               objectPosition: slide.objectPosition ?? "top center",
             }}
           />
-          {slide.caption && (
-            <div className="theme-carousel-caption">
-              <span className="theme-carousel-caption-dot" aria-hidden="true" />
-              <div className="theme-carousel-caption-text">
-                <strong>{slide.caption}</strong>
-                {slide.captionSub && <em>{slide.captionSub}</em>}
-              </div>
-            </div>
-          )}
         </div>
 
         <button
@@ -174,6 +161,12 @@ export default function ThemeCarousel({
       </div>
 
       <div className="theme-carousel-foot">
+        {slide.caption && (
+          <div className="theme-carousel-caption-text">
+            <strong>{slide.caption}</strong>
+            {slide.captionSub && <em>{slide.captionSub}</em>}
+          </div>
+        )}
         <div className="theme-carousel-dots" role="tablist">
           {slides.map((s, i) => (
             <button
@@ -193,11 +186,11 @@ export default function ThemeCarousel({
         </div>
         <div className="theme-carousel-count">
           <span className="theme-carousel-count-current">
-            {String(index + 1).padStart(2, "0")}
+            {index + 1}
           </span>
           <span className="theme-carousel-count-sep" />
           <span className="theme-carousel-count-total">
-            {String(slides.length).padStart(2, "0")}
+            {slides.length}
           </span>
         </div>
       </div>
