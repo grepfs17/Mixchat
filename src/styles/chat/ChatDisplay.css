@@ -514,11 +514,41 @@
 
 .message-single-line {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    align-items: flex-start;
+    --message-gap: 6px;
+    gap: var(--message-gap);
     font-size: var(--chat-font-size, 0.85rem);
     line-height: 1.55;
     flex-wrap: wrap;
+    /* Height of one line of .message-text, keeps the timestamp lined up with
+       the first line of the message. */
+    --message-line-height: calc(var(--chat-font-size, 0.9rem) * 1.55);
+}
+
+/* Badges, name and message share one block, so wrapped lines start next to
+   the timestamp instead of under the username, the way Twitch does it. */
+.message-flow {
+    flex: 1;
+    min-width: 0;
+}
+
+/* The flow is inline content, so it repeats the row's gap by hand. The extra
+   class keeps this ahead of the `margin: 0` button resets. */
+.message-single-line .message-flow > * + * {
+    margin-left: var(--message-gap);
+}
+
+/* A readable word space after the colon, the row gap drops to 1px on phones. */
+.message-single-line .message-flow > .message-separator + * {
+    margin-left: 0.35em;
+}
+
+.message-single-line > .timestamp {
+    line-height: var(--message-line-height);
+}
+
+.message-single-line > .message-actions-divider {
+    margin-top: max(0px, calc((var(--message-line-height) - 14px) / 2));
 }
 
 .avatar {
@@ -527,6 +557,7 @@
     object-fit: cover;
     border-radius: var(--radius-full);
     flex-shrink: 0;
+    vertical-align: middle;
 }
 
 .author {
@@ -1967,7 +1998,7 @@ button.reply-info {
     }
 
     .message-single-line {
-        gap: 2px;
+        --message-gap: 2px;
     }
 
     .message {
@@ -2013,7 +2044,7 @@ button.reply-info {
 
 @media (max-width: 480px) {
     .message-single-line {
-        gap: 1px;
+        --message-gap: 1px;
     }
 
     .message {

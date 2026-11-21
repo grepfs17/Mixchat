@@ -294,112 +294,120 @@ function ThemeStep() {
           <div className="message chat">
             <div className="message-single-line">
               <span className="timestamp">14:03:52</span>
-              <span className="platform-tag twitch" title="Twitch">
-                <FaTwitch size={14} />
-              </span>
-              <button
-                type="button"
-                className="author author-link"
-                style={{ "--author-color": "#c084fc" } as React.CSSProperties}
-              >
-                notmasterofpupis
-              </button>
-              <span className="message-separator">:</span>
-              <span className="message-text">
-                Where Am I?{" "}
-                <img
-                  className="chat-emote"
-                  src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
-                  alt="Clap"
-                  title="Clap"
-                  loading="lazy"
-                  style={{
-                    height: "2em",
-                    verticalAlign: "middle",
-                    margin: "0 2px",
-                    cursor: "pointer",
-                  }}
-                />
-              </span>
+              <div className="message-flow">
+                <span className="platform-tag twitch" title="Twitch">
+                  <FaTwitch size={14} />
+                </span>
+                <button
+                  type="button"
+                  className="author author-link"
+                  style={{ "--author-color": "#c084fc" } as React.CSSProperties}
+                >
+                  notmasterofpupis
+                </button>
+                <span className="message-separator">:</span>
+                <span className="message-text">
+                  Where Am I?{" "}
+                  <img
+                    className="chat-emote"
+                    src="https://cdn.7tv.app/emote/01KRE17CM55VBYZGP9YYQBT827/2x.avif"
+                    alt="Clap"
+                    title="Clap"
+                    loading="lazy"
+                    style={{
+                      height: "2em",
+                      verticalAlign: "middle",
+                      margin: "0 2px",
+                      cursor: "pointer",
+                    }}
+                  />
+                </span>
+              </div>
             </div>
           </div>
           <div className="message chat mention">
             <div className="message-single-line">
               <span className="timestamp">14:03:53</span>
-              <span className="platform-tag twitch" title="Twitch">
-                <FaTwitch size={14} />
-              </span>
-              <button
-                type="button"
-                className="author author-link"
-                style={{ "--author-color": "#34d399" } as React.CSSProperties}
-              >
-                nothelder
-              </button>
-              <span className="message-separator">:</span>
-              <span className="message-text">
-                I just realized that my cousin drunk my beverage{" "}
-                <img
-                  className="chat-emote"
-                  src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
-                  alt="Pog"
-                  title="Pog"
-                  loading="lazy"
-                  style={{
-                    height: "2em",
-                    verticalAlign: "middle",
-                    margin: "0 2px",
-                    cursor: "pointer",
-                  }}
-                />
-              </span>
+              <div className="message-flow">
+                <span className="platform-tag twitch" title="Twitch">
+                  <FaTwitch size={14} />
+                </span>
+                <button
+                  type="button"
+                  className="author author-link"
+                  style={{ "--author-color": "#34d399" } as React.CSSProperties}
+                >
+                  nothelder
+                </button>
+                <span className="message-separator">:</span>
+                <span className="message-text">
+                  I just realized that my cousin drunk my beverage{" "}
+                  <img
+                    className="chat-emote"
+                    src="https://cdn.7tv.app/emote/01KM1SMMWW98AYC11B0FRFDPZ4/2x.avif"
+                    alt="Pog"
+                    title="Pog"
+                    loading="lazy"
+                    style={{
+                      height: "2em",
+                      verticalAlign: "middle",
+                      margin: "0 2px",
+                      cursor: "pointer",
+                    }}
+                  />
+                </span>
+              </div>
             </div>
           </div>
           <div className="message chat">
             <div className="message-single-line">
               <span className="timestamp">14:04:11</span>
-              <span className="platform-tag twitch" title="Twitch">
-                <FaTwitch size={14} />
-              </span>
-              <button
-                type="button"
-                className="author author-link"
-                style={{ "--author-color": "#fbbf24" } as React.CSSProperties}
-              >
-                shokastion
-              </button>
-              <span className="message-separator">:</span>
-              <span className="message-text">
-                In your head, in your head{" "}
-                <img
-                  className="chat-emote"
-                  src="https://cdn.7tv.app/emote/01H1V70JZR000CVRT9DGWR9563/2x.avif"
-                  alt="emote"
-                  title="emote"
-                  loading="lazy"
-                  style={{
-                    height: "2em",
-                    verticalAlign: "middle",
-                    margin: "0 2px",
-                    cursor: "pointer",
-                  }}
-                />
-              </span>
+              <div className="message-flow">
+                <span className="platform-tag twitch" title="Twitch">
+                  <FaTwitch size={14} />
+                </span>
+                <button
+                  type="button"
+                  className="author author-link"
+                  style={{ "--author-color": "#fbbf24" } as React.CSSProperties}
+                >
+                  shokastion
+                </button>
+                <span className="message-separator">:</span>
+                <span className="message-text">
+                  In your head, in your head{" "}
+                  <img
+                    className="chat-emote"
+                    src="https://cdn.7tv.app/emote/01H1V70JZR000CVRT9DGWR9563/2x.avif"
+                    alt="emote"
+                    title="emote"
+                    loading="lazy"
+                    style={{
+                      height: "2em",
+                      verticalAlign: "middle",
+                      margin: "0 2px",
+                      cursor: "pointer",
+                    }}
+                  />
+                </span>
+              </div>
             </div>
           </div>
           <div className="message chat yt-event">
             <div className="message-single-line">
               <span className="timestamp">14:05:27</span>
-              <span className="platform-tag youtube" title="YouTube">
-                <FaYoutube size={14} />
-              </span>
-              <span className="author" style={{ "--author-color": "#f87171" } as React.CSSProperties}>
-                youtube_avg_chatter
-              </span>
-              <span className="message-separator">:</span>
-              <span className="message-text">
-                I love your Irish accent
-              </span>
+              <div className="message-flow">
+                <span className="platform-tag youtube" title="YouTube">
+                  <FaYoutube size={14} />
+                </span>
+                <span className="author" style={{ "--author-color": "#f87171" } as React.CSSProperties}>
+                  youtube_avg_chatter
+                </span>
+                <span className="message-separator">:</span>
+                <span className="message-text">
+                  I love your Irish accent
+                </span>
+              </div>
             </div>
           </div>
         </div>

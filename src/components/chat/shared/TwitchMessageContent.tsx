@@ -476,17 +476,19 @@ function TwitchMessageLine({
       <span className="timestamp">
         {msg.timestamp.toLocaleTimeString()}
       </span>
-      {children}
-      <TwitchRedemptionBadge msg={msg} />
-      <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
-      <TwitchAuthorLink msg={msg} onUsernameClick={onUsernameClick} />
-      <span className="message-separator">:</span>
-      <TwitchMessageBody
-        msg={msg}
-        deletedRevealed={deletedRevealed}
-        onReveal={onReveal}
-        mentionColors={mentionColors}
-      />
+      <div className="message-flow">
+        {children}
+        <TwitchRedemptionBadge msg={msg} />
+        <MessageBadges badgeDetails={msg.badgeDetails} badges={msg.badges} />
+        <TwitchAuthorLink msg={msg} onUsernameClick={onUsernameClick} />
+        <span className="message-separator">:</span>
+        <TwitchMessageBody
+          msg={msg}
+          deletedRevealed={deletedRevealed}
+          onReveal={onReveal}
+          mentionColors={mentionColors}
+        />
+      </div>
       {msg.messageType === "automod" && isModerator && (
         <AutomodActions
           heldMsgId={msg.targetUsername || ""}

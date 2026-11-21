@@ -29,7 +29,7 @@ export default function MessageBadges({
   lazy = false,
 }: MessageBadgesProps) {
   const baseStyle: React.CSSProperties = {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "2px",
     ...style,

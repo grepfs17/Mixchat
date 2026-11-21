@@ -205,22 +205,16 @@ function YouTubeMessageHead({
   showPlatformTag,
   isMod,
   authorColor,
-  modActionsFirst,
-  modActions,
   onUsernameClick,
 }: {
   msg: YTMessage;
   showPlatformTag: boolean;
   isMod: boolean;
   authorColor: string;
-  modActionsFirst: boolean | undefined;
-  modActions: React.ReactNode;
   onUsernameClick?: YouTubeMessageContentProps["onUsernameClick"];
 }) {
   return (
     <>
-      {modActionsFirst && modActions}
-      <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
       {showPlatformTag && <PlatformTag source="youtube" />}
       {msg.authorAvatar && (
         <img src={msg.authorAvatar} alt={msg.author} className="avatar" />
@@ -541,6 +535,19 @@ function YouTubeEventMessage({
   onTouchMove?: (e: React.TouchEvent) => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }) {
+  const modActionsNode = (
+    <YouTubeModActions
+      msg={msg}
+      showModActions={showModActions}
+      isMobile={isMobile}
+      youtubeModModeActive={youtubeModModeActive}
+      isUnmoderatable={isUnmoderatable}
+      doubleClickConfirmModActions={doubleClickConfirmModActions}
+      onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+      onTimeoutMenu={onTimeoutMenu}
+      onBanYouTubeUser={onBanYouTubeUser}
+    />
+  );
   return (
     <div
       className={`message yt-event ${parityClass}`}
@@ -564,48 +571,26 @@ function YouTubeEventMessage({
         {config.label}
       </div>
       <div className="message-single-line">
-        <YouTubeMessageHead
-          msg={msg}
-          showPlatformTag={showPlatformTag}
-          isMod={isMod}
-          authorColor={config.color}
-          modActionsFirst={modActionsFirst}
-          modActions={
-            <YouTubeModActions
+        {modActionsFirst && modActionsNode}
+        <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
+        <div className="message-flow">
+          <YouTubeMessageHead
+            msg={msg}
+            showPlatformTag={showPlatformTag}
+            isMod={isMod}
+            authorColor={config.color}
+            onUsernameClick={onUsernameClick}
+          />
+          <span className="message-text">
+            <YouTubeEventBody
               msg={msg}
-              showModActions={showModActions}
-              isMobile={isMobile}
-              youtubeModModeActive={youtubeModModeActive}
-              isUnmoderatable={isUnmoderatable}
-              doubleClickConfirmModActions={doubleClickConfirmModActions}
-              onDeleteYouTubeMessage={onDeleteYouTubeMessage}
-              onTimeoutMenu={onTimeoutMenu}
-              onBanYouTubeUser={onBanYouTubeUser}
+              expandedParts={expandedParts}
+              variant={variant}
+              renderThirdPartyEmotes={renderThirdPartyEmotes}
             />
-          }
-          onUsernameClick={onUsernameClick}
-        />
-        <span className="message-text">
-          <YouTubeEventBody
-            msg={msg}
-            expandedParts={expandedParts}
-            variant={variant}
-            renderThirdPartyEmotes={renderThirdPartyEmotes}
-          />
-        </span>
-        {!modActionsFirst && (
-          <YouTubeModActions
-            msg={msg}
-            showModActions={showModActions}
-            isMobile={isMobile}
-            youtubeModModeActive={youtubeModModeActive}
-            isUnmoderatable={isUnmoderatable}
-            doubleClickConfirmModActions={doubleClickConfirmModActions}
-            onDeleteYouTubeMessage={onDeleteYouTubeMessage}
-            onTimeoutMenu={onTimeoutMenu}
-            onBanYouTubeUser={onBanYouTubeUser}
-          />
-        )}
+          </span>
+        </div>
+        {!modActionsFirst && modActionsNode}
       </div>
       <YouTubeAutomodButtons
         msg={msg}
@@ -698,6 +683,19 @@ export function YouTubeMessageContent({
   }
 
   const firstMark = firstMessageMarkProps(showFirstMessage);
+  const modActionsNode = (
+    <YouTubeModActions
+      msg={msg}
+      showModActions={showModActions}
+      isMobile={isMobile}
+      youtubeModModeActive={youtubeModModeActive}
+      isUnmoderatable={isUnmoderatable}
+      doubleClickConfirmModActions={doubleClickConfirmModActions}
+      onDeleteYouTubeMessage={onDeleteYouTubeMessage}
+      onTimeoutMenu={onTimeoutMenu}
+      onBanYouTubeUser={onBanYouTubeUser}
+    />
+  );
   return (
     <div
       className={`message${msg.optimistic ? " yt-optimistic" : ""}${msg.isDeleted ? " deleted" : ""}${firstMark.className} ${parityClass}`}
@@ -709,49 +707,27 @@ export function YouTubeMessageContent({
     >
       <YouTubeFirstMessageLabel show={showFirstMessage} />
       <div className="message-single-line">
-        <YouTubeMessageHead
-          msg={msg}
-          showPlatformTag={showPlatformTag}
-          isMod={isMod}
-          authorColor={getReadableUsernameColor(getColorFromName(msg.author))}
-          modActionsFirst={modActionsFirst}
-          modActions={
-            <YouTubeModActions
-              msg={msg}
-              showModActions={showModActions}
-              isMobile={isMobile}
-              youtubeModModeActive={youtubeModModeActive}
-              isUnmoderatable={isUnmoderatable}
-              doubleClickConfirmModActions={doubleClickConfirmModActions}
-              onDeleteYouTubeMessage={onDeleteYouTubeMessage}
-              onTimeoutMenu={onTimeoutMenu}
-              onBanYouTubeUser={onBanYouTubeUser}
-            />
-          }
-          onUsernameClick={onUsernameClick}
-        />
-        <YouTubeMessageBody
-          msg={msg}
-          expandedParts={expandedParts}
-          variant={variant}
-          renderThirdPartyEmotes={renderThirdPartyEmotes}
-          deletedRevealed={deletedRevealed}
-          onReveal={() => setDeletedRevealed(true)}
-          showDeletedMessages={showDeletedMessages}
-        />
-        {!modActionsFirst && (
-          <YouTubeModActions
+        {modActionsFirst && modActionsNode}
+        <span className="timestamp">{formatTimestamp(msg.timestamp)}</span>
+        <div className="message-flow">
+          <YouTubeMessageHead
             msg={msg}
-            showModActions={showModActions}
-            isMobile={isMobile}
-            youtubeModModeActive={youtubeModModeActive}
-            isUnmoderatable={isUnmoderatable}
-            doubleClickConfirmModActions={doubleClickConfirmModActions}
-            onDeleteYouTubeMessage={onDeleteYouTubeMessage}
-            onTimeoutMenu={onTimeoutMenu}
-            onBanYouTubeUser={onBanYouTubeUser}
+            showPlatformTag={showPlatformTag}
+            isMod={isMod}
+            authorColor={getReadableUsernameColor(getColorFromName(msg.author))}
+            onUsernameClick={onUsernameClick}
           />
-        )}
+          <YouTubeMessageBody
+            msg={msg}
+            expandedParts={expandedParts}
+            variant={variant}
+            renderThirdPartyEmotes={renderThirdPartyEmotes}
+            deletedRevealed={deletedRevealed}
+            onReveal={() => setDeletedRevealed(true)}
+            showDeletedMessages={showDeletedMessages}
+          />
+        </div>
+        {!modActionsFirst && modActionsNode}
       </div>
     </div>
   );

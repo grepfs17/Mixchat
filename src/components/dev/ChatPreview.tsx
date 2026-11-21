@@ -752,7 +752,7 @@ export default function ChatPreview() {
         border: "2px solid #4ade80",
         marginRight: 4,
         flexShrink: 0,
-        alignSelf: "center",
+        verticalAlign: "middle",
       }}
     />
   );
