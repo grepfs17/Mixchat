@@ -47,32 +47,9 @@ html:has(.landing-page) {
     padding: 60px 24px 80px;
     text-align: center;
     transition:
-        opacity 0.6s ease,
-        transform 0.6s ease;
+        opacity 0.4s ease-out,
+        transform 0.4s ease-out;
     position: relative;
-}
-
-.landing-hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(
-            ellipse at 50% 0%,
-            color-mix(in srgb, var(--color-accent) 12%, transparent) 0%,
-            transparent 60%
-        ),
-        radial-gradient(
-            ellipse at 20% 80%,
-            color-mix(in srgb, var(--color-twitch) 6%, transparent) 0%,
-            transparent 50%
-        ),
-        radial-gradient(
-            ellipse at 80% 80%,
-            color-mix(in srgb, var(--color-youtube) 4%, transparent) 0%,
-            transparent 50%
-        );
-    pointer-events: none;
 }
 
 .landing-hero-logo {
@@ -109,36 +86,43 @@ html:has(.landing-page) {
     color: var(--color-text-white);
     border: none;
     border-radius: var(--radius-xl);
-    padding: 13px 32px;
+    padding: 12px 32px;
     font-size: 15px;
     font-weight: 600;
     font-family: var(--font-ui);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: var(--shadow-glow-twitch);
+    gap: 8px;
+    min-height: 44px;
     transition:
-        opacity 0.15s ease,
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
+        filter 140ms ease-out,
+        transform 80ms ease-out;
     position: relative;
     z-index: 1;
 }
 
 .landing-cta-button:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-glow-twitch);
+    filter: brightness(1.08);
 }
 
 .landing-cta-button:active {
-    transform: translateY(0);
+    transform: scale(0.97);
+}
+
+.landing-cta-button:focus-visible {
+    outline: 2px solid var(--color-text-white);
+    outline-offset: 2px;
+}
+
+.landing-cta-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .landing-cta-button--large {
     padding: 16px 40px;
-    font-size: 17px;
+    font-size: 16px;
 }
 
 .landing-kofi-hint {
@@ -156,6 +140,12 @@ html:has(.landing-page) {
 
 .landing-kofi-hint a:hover {
     opacity: 0.7;
+}
+
+.landing-kofi-hint a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
 }
 
 .landing-hero-meta {
@@ -207,8 +197,8 @@ html:has(.landing-page) {
     opacity: 0;
     transform: translateY(30px);
     transition:
-        opacity 0.6s ease,
-        transform 0.6s ease;
+        opacity 0.4s ease-out,
+        transform 0.4s ease-out;
 }
 
 .landing-reveal--visible {
@@ -223,7 +213,7 @@ html:has(.landing-page) {
     border-radius: var(--radius-2xl);
     overflow: hidden;
     background: var(--color-bg-secondary);
-    box-shadow: var(--shadow-lg);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
 }
 
 .landing-feature-image-container--dual {
@@ -241,15 +231,15 @@ html:has(.landing-page) {
 .landing-feature-badge {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    margin-bottom: 14px;
+    gap: 8px;
+    margin-bottom: 12px;
     padding: 4px 12px;
     border-radius: var(--radius-pill);
     background: var(--color-bg-tertiary);
     color: var(--color-text-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
 }
 
 .landing-feature-badge::before {
@@ -290,7 +280,7 @@ html:has(.landing-page) {
     font-size: clamp(22px, 3vw, 30px);
     font-weight: 700;
     margin: 0 0 12px;
-    color: var(--color-text-white);
+    color: var(--color-text-primary);
 }
 
 .landing-feature-description {
@@ -308,21 +298,6 @@ html:has(.landing-page) {
     position: relative;
 }
 
-.landing-privacy::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 1px;
-    height: 40px;
-    background: linear-gradient(
-        to bottom,
-        transparent,
-        var(--color-border-light)
-    );
-}
-
 .landing-privacy-icon {
     display: inline-flex;
     align-items: center;
@@ -330,12 +305,8 @@ html:has(.landing-page) {
     width: 64px;
     height: 64px;
     border-radius: var(--radius-full);
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--color-accent) 15%, transparent),
-        color-mix(in srgb, var(--color-twitch) 10%, transparent)
-    );
-    border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+    background: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     margin-bottom: 24px;
     color: var(--color-accent);
 }
@@ -344,7 +315,7 @@ html:has(.landing-page) {
     font-size: clamp(24px, 3.5vw, 32px);
     font-weight: 700;
     margin: 0 0 16px;
-    color: var(--color-text-white);
+    color: var(--color-text-primary);
 }
 
 .landing-privacy-description {
@@ -362,7 +333,7 @@ html:has(.landing-page) {
 .landing-privacy-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 0 32px;
     text-align: left;
 }
 
@@ -370,14 +341,8 @@ html:has(.landing-page) {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    background: var(--color-bg-secondary);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    transition: background-color 0.2s ease;
-}
-
-.landing-privacy-card:hover {
-    background: var(--color-bg-tertiary);
+    padding: 16px 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
 }
 
 .landing-privacy-card svg {
@@ -412,23 +377,11 @@ html:has(.landing-page) {
     position: relative;
 }
 
-.landing-cta::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-        ellipse at 50% 100%,
-        color-mix(in srgb, var(--color-twitch) 8%, transparent) 0%,
-        transparent 60%
-    );
-    pointer-events: none;
-}
-
 .landing-cta-title {
     font-size: clamp(24px, 3.5vw, 36px);
     font-weight: 700;
     margin: 0 0 8px;
-    color: var(--color-text-white);
+    color: var(--color-text-primary);
     position: relative;
     z-index: 1;
 }
@@ -467,9 +420,7 @@ html:has(.landing-page) {
     font-size: clamp(18px, 2.5vw, 24px);
     font-weight: 700;
     margin: 0 0 8px;
-    color: var(--color-text-white);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    color: var(--color-text-primary);
 }
 
 .landing-beta-description {
@@ -511,9 +462,27 @@ html:has(.landing-page) {
     color: var(--color-text-primary);
 }
 
+.landing-footer a:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
 .landing-footer-links {
     display: flex;
     gap: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .landing-hero,
+    .landing-reveal,
+    .landing-cta-button {
+        transition: none;
+    }
+
+    .landing-cta-button:active {
+        transform: none;
+    }
 }
 
 /* ===== Responsive ===== */

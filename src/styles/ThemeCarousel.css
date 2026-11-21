@@ -7,35 +7,15 @@
     border-radius: var(--radius-2xl);
     overflow: hidden;
     background: var(--color-bg-secondary);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
     display: flex;
     flex-direction: column;
     isolation: isolate;
-    transition:
-        border-color 0.4s ease,
-        box-shadow 0.4s ease;
-}
-
-.theme-carousel::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-        ellipse 80% 50% at 50% 0%,
-        color-mix(in srgb, var(--carousel-accent) 14%, transparent),
-        transparent 70%
-    );
-    opacity: 0.7;
-    transition: background-color 0.5s ease;
-    pointer-events: none;
-    z-index: 0;
+    transition: border-color 150ms ease-out;
 }
 
 .theme-carousel:hover {
-    border-color: color-mix(in srgb, var(--carousel-accent) 30%, transparent);
-    box-shadow:
-        var(--shadow-lg),
-        0 0 0 1px color-mix(in srgb, var(--carousel-accent) 18%, transparent);
+    border-color: color-mix(in srgb, var(--color-text-primary) 16%, transparent);
 }
 
 .theme-carousel-viewport {
@@ -45,7 +25,6 @@
     overflow: hidden;
     background: var(--color-bg-tertiary);
     z-index: 1;
-    transition: aspect-ratio 0.4s ease;
 }
 
 .theme-carousel-slide {
@@ -54,7 +33,7 @@
     display: flex;
     align-items: stretch;
     justify-content: stretch;
-    animation: themeCarouselEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: themeCarouselEnter 0.35s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .theme-carousel-slide--enter-next {
@@ -116,7 +95,7 @@
 
 .theme-carousel-caption-text em {
     font-style: normal;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--color-text-secondary);
     letter-spacing: 0.02em;
 }
@@ -139,10 +118,9 @@
     cursor: pointer;
     opacity: 0;
     transition:
-        opacity 0.25s ease,
-        transform 0.25s ease,
-        background-color 0.2s ease,
-        border-color 0.2s ease;
+        opacity 140ms ease-out,
+        transform 140ms ease-out,
+        background-color 140ms ease-out;
     font: inherit;
     padding: 0;
 }
@@ -154,8 +132,11 @@
 
 .theme-carousel-arrow:hover {
     background: color-mix(in srgb, var(--carousel-accent) 65%, black 35%);
-    border-color: var(--carousel-accent);
     transform: translateY(-50%) scale(1.06);
+}
+
+.theme-carousel-arrow:active {
+    transform: translateY(-50%) scale(0.96);
 }
 
 .theme-carousel-arrow:focus-visible {
@@ -181,8 +162,8 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px 16px;
-    padding: 14px 18px;
-    background: color-mix(in srgb, var(--color-bg-secondary) 90%, black 10%);
+    padding: 12px 16px;
+    background: var(--color-bg-tertiary);
     position: relative;
     z-index: 2;
 }
@@ -195,8 +176,8 @@
 
 .theme-carousel-dot {
     --carousel-accent: var(--color-accent);
-    width: 24px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border: none;
     background: transparent;
     padding: 0;
@@ -206,15 +187,21 @@
     justify-content: center;
     font: inherit;
     color: inherit;
+    border-radius: var(--radius-sm);
+}
+
+.theme-carousel-dot:focus-visible {
+    outline: 2px solid var(--carousel-accent);
+    outline-offset: 2px;
 }
 
 .theme-carousel-dot > span {
     display: block;
-    width: 100%;
+    width: 24px;
     height: 2px;
     border-radius: var(--radius-pill);
     background: var(--color-border-light);
-    transition: background-color 0.25s ease;
+    transition: background-color 140ms ease-out;
 }
 
 .theme-carousel-dot:hover > span {
@@ -258,8 +245,8 @@
 /* Mobile / small screens */
 @media (max-width: 600px) {
     .theme-carousel-arrow {
-        width: 34px;
-        height: 34px;
+        width: 44px;
+        height: 44px;
         opacity: 0.85;
     }
 
@@ -272,8 +259,13 @@
     }
 
     .theme-carousel-foot {
-        padding: 10px 14px;
+        padding: 8px 12px;
         flex-wrap: wrap;
+    }
+
+    .theme-carousel-dot {
+        width: 44px;
+        height: 44px;
     }
 
     .theme-carousel-caption-text strong {
@@ -281,7 +273,7 @@
     }
 
     .theme-carousel-caption-text em {
-        font-size: 11px;
+        font-size: 12px;
     }
 }
 
