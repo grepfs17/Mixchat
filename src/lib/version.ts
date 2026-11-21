@@ -1,7 +1,7 @@
 import pkg from "../../package.json" with { type: "json" };
 
 const APP_VERSION = pkg.version;
-export const DISPLAY_VERSION = `Beta ${pkg.version.replace(/-beta$/, "")}`;
+export const DISPLAY_VERSION = pkg.version.replace(/-beta$/, "");
 
 // Injected by `astro.config.mjs` at build time. Declared so TypeScript knows
 // the identifier; the `typeof` guard keeps it safe where no define ran (tests).

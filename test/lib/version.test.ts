@@ -3,7 +3,7 @@ import { DISPLAY_VERSION, GIT_BRANCH } from "../../src/lib/version";
 
 describe("version", () => {
   it("exposes a display version", () => {
-    expect(DISPLAY_VERSION).toMatch(/^Beta \d/);
+    expect(DISPLAY_VERSION).toMatch(/^\d/);
     // The prerelease suffix is stripped for display.
     expect(DISPLAY_VERSION).not.toContain("-beta");
   });
