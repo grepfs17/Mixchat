@@ -1906,6 +1906,9 @@ button.deleted-clickable {
     min-width: 0;
     flex: 1 1 auto;
     overflow: hidden;
+    /* Room for the italic glyph overhang so the clip edge does not shear it */
+    padding-right: 0.2em;
+    margin-right: -0.2em;
 }
 
 .reply-info-clickable {
@@ -1955,6 +1958,8 @@ button.reply-info {
     display: inline-block;
     vertical-align: bottom;
     padding-left: 5px;
+    /* Room for the italic glyph overhang so the ellipsis is not clipped */
+    padding-right: 0.25em;
     overflow: hidden;
 }
 
