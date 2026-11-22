@@ -414,6 +414,7 @@ export default function ChatApp(props: ChatAppStateProps) {
   const {
     messages,
     isLoading,
+    isVodPlayback,
     pendingRaid,
     setPendingRaid,
     isRaidInitiator,
@@ -538,13 +539,15 @@ export default function ChatApp(props: ChatAppStateProps) {
     ? `twitch:${selectedTwitchChannelName.toLowerCase()}`
     : null;
   const streamToolsSettings = useStreamToolsSettings(streamToolsChannelKey);
-  const showStreamTools = computeShowStreamTools({
-    isOnOwnChannel,
-    streamerToolsEnabled,
-    isModerator: !!chatState.isModerator,
-    userId: twitchSession?.userId,
-    settings: streamToolsSettings.settings,
-  });
+  const showStreamTools =
+    !isVodPlayback &&
+    computeShowStreamTools({
+      isOnOwnChannel,
+      streamerToolsEnabled,
+      isModerator: !!chatState.isModerator,
+      userId: twitchSession?.userId,
+      settings: streamToolsSettings.settings,
+    });
   const streamToolsRole: "owner" | "moderator" = isOnOwnChannel
     ? "owner"
     : "moderator";
@@ -720,7 +723,9 @@ export default function ChatApp(props: ChatAppStateProps) {
   // Poll the Twitch GQL pinnedChatHighlight for the currently-viewed Twitch
   // channel. Pinned chat is a property of the selected Twitch stream, not
   // the chat layout, so we always poll when a Twitch channel is selected.
-  const pinned = usePinnedChatHighlight(selectedTwitchChannelName ?? null);
+  const pinned = usePinnedChatHighlight(
+    isVodPlayback ? null : (selectedTwitchChannelName ?? null),
+  );
   const showPinnedBanner = shouldShowPinnedBanner(
     pinned.highlight,
     pinned.dismissedMessageId,
@@ -728,8 +733,8 @@ export default function ChatApp(props: ChatAppStateProps) {
   );
 
   const resub = useResubNotification(
-    selectedTwitchChannelName ?? null,
-    Boolean(twitchSession?.userId),
+    isVodPlayback ? null : (selectedTwitchChannelName ?? null),
+    Boolean(twitchSession?.userId) && !isVodPlayback,
   );
 
   const giveaway = useGiveaway({
@@ -761,9 +766,9 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const moderationValue = useMemo(
     () => ({
-      isModerator,
-      isBroadcaster: isOnOwnChannel,
-      modModeActive,
+      isModerator: isModerator && !isVodPlayback,
+      isBroadcaster: isOnOwnChannel && !isVodPlayback,
+      modModeActive: modModeActive && !isVodPlayback,
       compactActions,
       keepModActionsVisible,
       modActionsFirst,
@@ -786,6 +791,7 @@ export default function ChatApp(props: ChatAppStateProps) {
     }),
     [
       isModerator,
+      isVodPlayback,
       isOnOwnChannel,
       modModeActive,
       compactActions,

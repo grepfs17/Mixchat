@@ -44,12 +44,13 @@ declare global {
   }
 }
 
-interface TwitchPlayer {
+export interface TwitchPlayer {
   setChannel(channel: string): void;
   destroy(): void;
   play(): void;
   pause(): void;
   getPaused(): boolean;
+  getCurrentTime(): number;
   setMuted(muted: boolean): void;
   getMuted(): boolean;
   setVolume(volume: number): void;
@@ -90,21 +91,25 @@ export function TwitchJSEmbed({
   videoId,
   parentDomain,
   oauthToken,
+  onPlayerReady,
 }: {
   channelName?: string;
   videoId?: string;
   parentDomain: string;
   oauthToken?: string;
+  onPlayerReady?: (player: TwitchPlayer | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<TwitchPlayer | null>(null);
   // Keep a ref so the script-load callback always sees the latest channel
   const channelRef = useRef(channelName);
   const oauthTokenRef = useRef(oauthToken);
+  const onPlayerReadyRef = useRef(onPlayerReady);
   useEffect(() => {
     channelRef.current = channelName;
     oauthTokenRef.current = oauthToken;
-  }, [channelName, oauthToken]);
+    onPlayerReadyRef.current = onPlayerReady;
+  }, [channelName, oauthToken, onPlayerReady]);
 
   // Coerce to boolean so we only recreate when token *presence* changes
   // (absent → present), not on every token value change (e.g. periodic refresh).
@@ -138,6 +143,7 @@ export function TwitchJSEmbed({
         });
 
         playerRef.current = embedInstance.getPlayer();
+        onPlayerReadyRef.current?.(playerRef.current);
       });
     };
 
@@ -173,6 +179,7 @@ export function TwitchJSEmbed({
         embedInstance = null;
       }
       playerRef.current = null;
+      onPlayerReadyRef.current?.(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]);

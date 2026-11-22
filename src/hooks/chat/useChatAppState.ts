@@ -1,6 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { RefObject } from "react";
 import { useTwitchChat } from "./useTwitchChat";
 import type { MentionSoundType } from "./useTwitchChat";
+import { useVodChat } from "./useVodChat";
+import type { VodChatPlayerLike } from "./useVodChat";
 import { useEventSub } from "./useEventSub";
 import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
 import {
@@ -84,6 +87,8 @@ export interface ChatAppStateProps {
   isOnOwnChannel?: boolean;
   renderThirdPartyEmotesOnYoutube?: boolean;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
+  activeVodId?: string | null;
+  vodPlayerRef?: RefObject<VodChatPlayerLike | null>;
 }
 
 export function useChatAppState({
@@ -103,6 +108,8 @@ export function useChatAppState({
   eventSoundVolume = 1,
   ignoredUsers = [],
   isOnOwnChannel = false,
+  activeVodId = null,
+  vodPlayerRef,
 }: ChatAppStateProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
@@ -204,6 +211,13 @@ export function useChatAppState({
     currentUserBadgesRef,
     badgesReady,
   });
+
+  const vodChat = useVodChat({
+    videoId: activeVodId,
+    playerRef: vodPlayerRef,
+    currentUserId: twitchSession?.userId,
+  });
+  const isVodPlayback = Boolean(activeVodId);
 
   const {
     isModerator,
@@ -435,7 +449,7 @@ export function useChatAppState({
     twitchSession?.accessToken || "",
     twitchSession?.username || twitchSession?.displayName || "",
     handleTwitchMessage,
-    badgesReady,
+    badgesReady && !activeVodId,
     mentionSoundEnabled,
     mentionVolume,
     mentionSoundType,
@@ -726,6 +740,10 @@ export function useChatAppState({
     messages,
     isLoading,
     isTwitchChatConnected,
+    isVodPlayback,
+    vodMessages: vodChat.messages,
+    vodChatLoading: vodChat.loading,
+    vodChatError: vodChat.error,
     pendingRaid,
     isRaidInitiator,
     isRefreshingEmotes,

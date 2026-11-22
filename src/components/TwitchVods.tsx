@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { FaExternalLinkAlt, FaPlay } from "react-icons/fa";
 import { TwitchJSEmbed } from "./StreamEmbed";
+import type { TwitchPlayer } from "./StreamEmbed";
 
 interface TwitchVideo {
   id: string;
@@ -37,6 +38,7 @@ interface TwitchVodsProps {
   twitchAccessToken?: string;
   activeMedia: ActiveMedia | null;
   onSelectMedia: (media: ActiveMedia | null) => void;
+  onPlayerReady?: (player: TwitchPlayer | null) => void;
 }
 
 type OfflineTab = "vods" | "clips";
@@ -602,6 +604,7 @@ export default function TwitchVods({
   twitchAccessToken,
   activeMedia,
   onSelectMedia,
+  onPlayerReady,
 }: TwitchVodsProps) {
   const [tab, setTab] = useState<OfflineTab>("vods");
   const [clipPeriod, setClipPeriod] = useState<ClipPeriod>("month");
@@ -650,6 +653,7 @@ export default function TwitchVods({
                 videoId={activeMedia.id}
                 parentDomain={parentDomain}
                 oauthToken={twitchAccessToken}
+                onPlayerReady={onPlayerReady}
               />
             )
           ) : (
