@@ -160,23 +160,48 @@ http://d2example.cloudfront.net/0.ts
     });
   });
 
-  it("does not retry anonymously when the token is rejected", async () => {
-    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
-      const url = String(input);
-      if (url === "https://gql.twitch.tv/gql") {
-        return Promise.resolve(textResponse("unauthorized", 401));
-      }
-      return Promise.resolve(textResponse("not found", 404));
-    });
+  it("retries the playback token anonymously when Twitch rejects it", async () => {
+    const master = `${MASTER_HEADER}#EXT-X-STREAM-INF:BANDWIDTH=8000000,VIDEO="chunked"
+https://d2example.cloudfront.net/high.m3u8
+`;
+    const playlist = `#EXTM3U
+#EXTINF:10.0,
+0.ts
+`;
+    let gqlCalls = 0;
+    const fetchMock = vi.fn(
+      (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url === "https://gql.twitch.tv/gql") {
+          gqlCalls += 1;
+          return Promise.resolve(
+            gqlCalls === 1
+              ? textResponse("rejected", 401)
+              : tokenResponse(),
+          );
+        }
+        if (url.startsWith("https://usher.ttvnw.net/vod/123.m3u8")) {
+          return Promise.resolve(textResponse(master));
+        }
+        if (url === "https://d2example.cloudfront.net/high.m3u8") {
+          return Promise.resolve(textResponse(playlist));
+        }
+        return Promise.resolve(textResponse("not found", 404));
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(getVodMedia("123", "expired")).rejects.toMatchObject({
-      name: "VodMediaError",
-      status: 401,
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const media = await getVodMedia("123", "valid-token");
+
+    expect(media.segmentUrls).toEqual([
+      "https://d2example.cloudfront.net/0.ts",
+    ]);
+    expect(gqlCalls).toBe(2);
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
-      headers: expect.objectContaining({ Authorization: "OAuth expired" }),
+      headers: expect.objectContaining({ Authorization: "OAuth valid-token" }),
+    });
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      headers: expect.not.objectContaining({ Authorization: expect.anything() }),
     });
   });
 });

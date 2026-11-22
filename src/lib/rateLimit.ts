@@ -43,6 +43,17 @@ export function checkRateLimit(
   return true;
 }
 
+/**
+ * Returns `true` when a request would be allowed, without consuming a slot.
+ * Used by lightweight preflight checks so a probe does not halve the budget.
+ */
+export function peekRateLimit(key: string, limit: number): boolean {
+  const now = Date.now();
+  const entry = store.get(key);
+  if (!entry || now > entry.resetAt) return true;
+  return entry.count < limit;
+}
+
 /** Purge expired entries every 60 s to prevent unbounded memory growth. */
 setInterval(() => {
   const now = Date.now();

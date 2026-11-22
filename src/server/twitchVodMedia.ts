@@ -71,15 +71,15 @@ async function fetchVodPlaybackToken(
       }),
     });
 
-  const res = await requestToken(oauthToken);
+  let res = await requestToken(oauthToken);
+  if (oauthToken && (res.status === 401 || res.status === 403)) {
+    // Twitch can reject a viewer token for this persisted query even when the
+    // token itself is valid. The media is public, and the download route
+    // already verified the session, so retry anonymously.
+    res = await requestToken();
+  }
 
   if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      throw new VodMediaError(
-        "Twitch authentication expired. Please re-login.",
-        401,
-      );
-    }
     throw new VodMediaError(
       `Twitch playback token request failed (${res.status})`,
       res.status === 429 ? 429 : 502,

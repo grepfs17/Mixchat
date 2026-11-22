@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET } from "../../../src/pages/api/twitch-vod-download";
+import { GET, HEAD } from "../../../src/pages/api/twitch-vod-download";
 
 function context(url: string, ip = "127.0.0.1"): Parameters<typeof GET>[0] {
   return {
@@ -148,6 +148,36 @@ describe("GET /api/twitch-vod-download", () => {
     );
 
     expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("preflights without consuming the download limit", async () => {
+    stubFetch();
+    const url = "http://localhost/api/twitch-vod-download?video_id=123";
+    const ip = "127.0.0.9";
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const res = await HEAD(context(url, ip));
+      expect(res.status).toBe(204);
+    }
+
+    const res = await GET(context(url, ip));
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects an unauthenticated preflight", async () => {
+    const fetchMock = stubFetch();
+    const url = "http://localhost/api/twitch-vod-download?video_id=123";
+
+    const res = await HEAD({
+      url: new URL(url),
+      request: new Request(url, {
+        headers: { "x-forwarded-for": "127.0.0.10" },
+      }),
+      cookies: { get: () => undefined },
+    } as unknown as Parameters<typeof HEAD>[0]);
+
+    expect(res.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

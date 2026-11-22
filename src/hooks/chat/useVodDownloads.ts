@@ -10,7 +10,7 @@ export interface UseVodDownloadsOptions {
 }
 
 export interface UseVodDownloadsResult {
-  downloadVod: () => void;
+  downloadVod: () => Promise<void>;
   downloadVodChat: (format: VodChatDownloadFormat) => void;
 }
 
@@ -24,9 +24,20 @@ function triggerDownload(href: string) {
   anchor.remove();
 }
 
+function downloadErrorMessage(status: number): string {
+  if (status === 401) {
+    return "Twitch session expired. Re-login to download this VOD.";
+  }
+  if (status === 429) {
+    return "Too many downloads. Try again in a few minutes.";
+  }
+  return "VOD download is unavailable right now.";
+}
+
 /**
- * Starts browser downloads for the VOD media file and its chat export. Both
- * endpoints stream the file, so this only has to navigate a temporary anchor.
+ * Starts browser downloads for the VOD media file and its chat export. The
+ * media route is preflighted with HEAD: an anchor download saves whatever body
+ * comes back, so a 401 or 429 would otherwise land as a JSON file.
  */
 export function useVodDownloads({
   videoId,
@@ -40,10 +51,23 @@ export function useVodDownloads({
     onNotifyRef.current = onNotify;
   }, [onNotify]);
 
-  const downloadVod = useCallback(() => {
+  const downloadVod = useCallback(async () => {
     if (!videoId) return;
     const params = new URLSearchParams({ video_id: videoId });
-    triggerDownload(`/api/twitch-vod-download?${params.toString()}`);
+    const href = `/api/twitch-vod-download?${params.toString()}`;
+
+    try {
+      const res = await fetch(href, { method: "HEAD" });
+      if (!res.ok) {
+        onNotifyRef.current?.(downloadErrorMessage(res.status), "error");
+        return;
+      }
+    } catch {
+      onNotifyRef.current?.("Could not reach the download service.", "error");
+      return;
+    }
+
+    triggerDownload(href);
     onNotifyRef.current?.("VOD download started", "info");
   }, [videoId]);
 

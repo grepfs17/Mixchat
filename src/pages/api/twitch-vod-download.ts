@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { clientAddress } from "../../lib/clientAddress";
-import { checkRateLimit } from "../../lib/rateLimit";
+import { checkRateLimit, peekRateLimit } from "../../lib/rateLimit";
 import {
   getVodMedia,
   VodMediaError,
@@ -8,6 +8,8 @@ import {
 } from "../../server/twitchVodMedia";
 
 const TWITCH_VALIDATE_URL = "https://id.twitch.tv/oauth2/validate";
+const RATE_LIMIT = 3;
+const RATE_WINDOW_MS = 10 * 60_000;
 
 function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -23,26 +25,52 @@ function safeQuality(value: string): string {
   return value.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "") || "vod";
 }
 
+type SessionCheck = "valid" | "invalid" | "unavailable";
+
 /** Twitch OAuth validation, so an expired cookie cannot download anonymously. */
-async function hasValidTwitchSession(token: string): Promise<boolean> {
+async function checkTwitchSession(token: string): Promise<SessionCheck> {
   try {
     const res = await fetch(TWITCH_VALIDATE_URL, {
       headers: { Authorization: `OAuth ${token}` },
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return "valid";
+    if (res.status === 401 || res.status === 403) return "invalid";
+    console.warn(
+      "[twitch-vod-download] token validation failed:",
+      res.status,
+    );
+    return "unavailable";
+  } catch (error) {
+    console.warn("[twitch-vod-download] token validation unavailable:", error);
+    return "unavailable";
   }
 }
 
-export const GET: APIRoute = async ({ url, request, cookies }) => {
-  if (
-    !checkRateLimit(
-      `${clientAddress(request)}:twitch-vod-download`,
-      3,
-      10 * 60_000,
-    )
-  ) {
+interface Gate {
+  videoId: string;
+  twitchToken: string;
+}
+
+type GateContext = {
+  url: URL;
+  request: Request;
+  cookies: { get(name: string): { value: string } | undefined };
+};
+
+/**
+ * Shared checks for GET and HEAD. `consume` reserves a rate-limit slot for the
+ * real download, while HEAD only peeks so a preflight does not halve the
+ * allowed downloads.
+ */
+async function gateRequest(
+  { url, request, cookies }: GateContext,
+  consume: boolean,
+): Promise<Gate | Response> {
+  const rateKey = `${clientAddress(request)}:twitch-vod-download`;
+  const allowed = consume
+    ? checkRateLimit(rateKey, RATE_LIMIT, RATE_WINDOW_MS)
+    : peekRateLimit(rateKey, RATE_LIMIT);
+  if (!allowed) {
     return json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -55,12 +83,38 @@ export const GET: APIRoute = async ({ url, request, cookies }) => {
   if (!twitchToken) {
     return json({ error: "Twitch authentication required" }, { status: 401 });
   }
-  if (!(await hasValidTwitchSession(twitchToken))) {
+
+  const session = await checkTwitchSession(twitchToken);
+  if (session === "invalid") {
     return json(
       { error: "Twitch authentication expired. Please re-login." },
       { status: 401 },
     );
   }
+  if (session === "unavailable") {
+    return json(
+      { error: "Could not verify your Twitch session. Try again." },
+      { status: 502 },
+    );
+  }
+
+  return { videoId, twitchToken };
+}
+
+/** Preflight used by the download action so errors are not saved as files. */
+export const HEAD: APIRoute = async (context) => {
+  const gate = await gateRequest(context, false);
+  if (gate instanceof Response) return gate;
+  return new Response(null, {
+    status: 204,
+    headers: { "Cache-Control": "no-store" },
+  });
+};
+
+export const GET: APIRoute = async (context) => {
+  const gate = await gateRequest(context, true);
+  if (gate instanceof Response) return gate;
+  const { videoId, twitchToken } = gate;
 
   let media;
   try {

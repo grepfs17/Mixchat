@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useVodDownloads } from "../../src/hooks/chat/useVodDownloads";
 
 let clickedHref = "";
@@ -9,24 +9,59 @@ const clickSpy = vi
     clickedHref = this.getAttribute("href") ?? "";
   });
 
-afterEach(() => {
+function stubPreflight(status = 204) {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValue(new Response(null, { status }));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+beforeEach(() => {
   clickedHref = "";
-  vi.clearAllMocks();
+  clickSpy.mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("useVodDownloads", () => {
-  it("starts the media download for the active video", () => {
+  it("preflights and starts the media download for the active video", async () => {
+    const fetchMock = stubPreflight();
     const onNotify = vi.fn();
     const { result } = renderHook(() =>
       useVodDownloads({ videoId: "123", onNotify }),
     );
 
-    act(() => {
-      result.current.downloadVod();
+    await act(async () => {
+      await result.current.downloadVod();
     });
 
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/twitch-vod-download?video_id=123",
+      { method: "HEAD" },
+    );
     expect(clickedHref).toBe("/api/twitch-vod-download?video_id=123");
     expect(onNotify).toHaveBeenCalledWith("VOD download started", "info");
+  });
+
+  it("shows an error instead of saving the error response", async () => {
+    stubPreflight(401);
+    const onNotify = vi.fn();
+    const { result } = renderHook(() =>
+      useVodDownloads({ videoId: "123", onNotify }),
+    );
+
+    await act(async () => {
+      await result.current.downloadVod();
+    });
+
+    expect(clickedHref).toBe("");
+    expect(onNotify).toHaveBeenCalledWith(
+      "Twitch session expired. Re-login to download this VOD.",
+      "error",
+    );
   });
 
   it("passes encoded chat export metadata", () => {
@@ -50,17 +85,19 @@ describe("useVodDownloads", () => {
     expect(onNotify).toHaveBeenCalledWith("Chat download started", "info");
   });
 
-  it("does nothing without a video id", () => {
+  it("does nothing without a video id", async () => {
+    const fetchMock = stubPreflight();
     const onNotify = vi.fn();
     const { result } = renderHook(() =>
       useVodDownloads({ videoId: null, onNotify }),
     );
 
-    act(() => {
-      result.current.downloadVod();
+    await act(async () => {
+      await result.current.downloadVod();
       result.current.downloadVodChat("json");
     });
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(clickedHref).toBe("");
     expect(onNotify).not.toHaveBeenCalled();
   });
