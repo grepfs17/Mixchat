@@ -255,14 +255,6 @@ mixchat/
 - **Storage**: IndexedDB `mixchat_notes` v1 (`src/lib/notes/idb.ts`), store `notes` keyed by `id` with a `channel` index, newest-first reads. Each channel keeps its newest `MAX_NOTES_PER_CHANNEL` (500) notes, older ones are pruned on write. Storage failures are swallowed, matching the other IDB wrappers.
 - **Backup**: notes are serialized into the file and Google Drive backups under the synthetic `mixchat_stream_notes` key (`exportSettings`/`importSettings`, `backupSettingsToDrive`/`restoreSettingsFromDrive`), the same special-case pattern as event sounds. Restore writes them back by id and drops malformed rows.
 
-### 17. Twitch resub message sharing
-
-- **Flow**: mirrors Twitch's first-party chat callout. When the logged-in viewer has a pending resub notification for the selected channel, `useResubNotification` polls `GET /api/twitch-resub?channel=<login>` and `ChatAppChrome` renders `ResubBanner` at the top of chat. The banner shows total tenure, an optional streak checkbox, a 255-character message box, and a Share action.
-- **Transport**: `src/lib/twitchResub.ts` calls Twitch's internal GQL endpoint. The query reads `user.self.resubNotification`, while sharing redeems it with the `useChatNotificationToken` mutation. The viewer's OAuth token comes from the `twitch_token` httpOnly cookie, sent as `Bearer` with an `OAuth` retry for Twitch's website-token scheme. Gifted renewals are filtered out because Twitch does not offer the share callout for them.
-- **Endpoint**: `src/pages/api/twitch-resub.ts` is the only client-facing surface. `GET` returns the notification's public fields (never its one-time token) or null. `POST` validates the channel, message length, and streak flag, re-reads the pending notification server-side, then shares it. Both routes are rate-limited and return 401 when the Twitch cookie is missing or expired.
-- **Polling**: every 5 minutes while the tab is visible, plus immediately on focus/visibility change. Polling resets on channel change. A shared or dismissed notification is suppressed until its id changes, so a stale read cannot resurrect the banner.
-- **Caveat**: Twitch does not publish these GQL operations, so this integration can break if Twitch changes its private API.
-
 ## Project Conventions
 
 ### Naming
