@@ -12,10 +12,13 @@ import { IS_TWITCH_ONLY } from "../../lib/constants";
 </p>
 <p>
     A few opt-in streamer tools write small JSON files under the local app
-    data directory (Song Queue, Wheel Spin, and Stream tools
-    settings/state). None of these store chat transcripts or login
-    credentials. YouTube live chat is also relayed through the local server
-    process in memory while you watch. See sections 2.2, 3.1, and 4 below.
+    data directory (Stream tools settings/state, such as giveaway history and
+    music playlists). In the desktop app those tools run against the local
+    process bound to <code>127.0.0.1</code>, so the files never leave your
+    device and are not sent to a Mixchat-operated server. None of these store
+    chat transcripts or login credentials. YouTube live chat is also relayed
+    through the local server process in memory while you watch. See sections
+    2.2, 3.1, and 4 below.
 </p>
 
 <h2>2. Data Collection</h2>
@@ -105,7 +108,6 @@ import { IS_TWITCH_ONLY } from "../../lib/constants";
             backup, a JSON file of your settings can be saved to and restored
             from your own Google Drive. This is user-initiated and separate
             from chat. The backup can include stream-tool history keys such as
-            past playlists (which may hold Song Queue owner tokens) and
             giveaway winner history.
         </li>
     )}
@@ -134,7 +136,8 @@ import { IS_TWITCH_ONLY } from "../../lib/constants";
         <strong>Settings and local tool data:</strong> installed builds use
         the OS app data directory; portable builds use the{" "}
         <code>app-data</code> folder next to the executable (cookies still
-        live in the profile path above).
+        live in the profile path above). Stream tools data (giveaway history
+        and music playlists) lives here.
     </li>
     <li>
         <strong>Logs:</strong> sidecar output is written locally with secrets
@@ -156,11 +159,12 @@ import { IS_TWITCH_ONLY } from "../../lib/constants";
     messages, accounts, or emote data.
 </p>
 <p>
-    The local desktop server only holds short-lived state such as the Google
-    sign-in handoff described in section 2.1, plus opt-in local tool files
-    under the app data directory (Song Queue, Wheel, Stream tools). Ephemeral
-    in-memory state also exists while open (for example YouTube chat fan-out
-    and poll command relay).
+    The local desktop server, bound only to <code>127.0.0.1</code>, holds
+    short-lived state such as the Google sign-in handoff described in section
+    2.1, plus opt-in local Stream tools files under the app data directory
+    (giveaway history and music playlists). These files stay on your machine
+    and are not uploaded to Mixchat. Ephemeral in-memory state also exists
+    while open (for example YouTube chat fan-out and poll command relay).
 </p>
 
 <h2>5. Data Retention and Deletion</h2>

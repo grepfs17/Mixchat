@@ -12,12 +12,13 @@ import { IS_TWITCH_ONLY } from "../../lib/constants";
 </p>
 <p>
     A few opt-in streamer tools do write small JSON files on the server that
-    runs Mixchat (the hosted website, or the local process in the desktop app):
-    Song Queue, Wheel Spin, and Stream tools settings/state (giveaway
-    entrants, music playlists, channel access). None of these store chat
-    transcripts or login credentials. YouTube live chat is also relayed
-    through that server in memory while you watch. See sections 2.2, 3.1, and
-    4 below.
+    runs Mixchat: Song Queue, Wheel Spin, and Stream tools settings/state
+    (giveaway entrants, music playlists, channel access). On the hosted
+    website that server is operated for Mixchat. The desktop app runs a local
+    server instead, exposes only the tools that work locally, and keeps their
+    files on your device. None of these store chat transcripts or login
+    credentials. YouTube live chat is also relayed through that server in
+    memory while you watch. See sections 2.2, 3.1, and 4 below.
 </p>
 
 <h2>2. Data Collection</h2>
