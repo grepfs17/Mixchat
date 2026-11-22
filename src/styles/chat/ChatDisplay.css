@@ -1441,10 +1441,23 @@ img.emoji {
     margin-right: 8px;
 }
 
+.status-badge-vod {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--color-twitch, #9146ff);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
 @media (max-width: 640px) {
     /* On small screens show only the status dot without background or text */
     .status-badge-live,
-    .status-badge-offline {
+    .status-badge-offline,
+    .status-badge-vod {
         background: transparent !important;
         padding: 0 !important;
         border-radius: 0 !important;

@@ -93,6 +93,8 @@ function UnifiedChatContent({
     vodMessages,
     vodChatLoading,
     vodChatError,
+    vodTitle,
+    vodGameName,
     selectedPlatforms,
     setReplyingTo,
     streamTitle,
@@ -134,6 +136,10 @@ function UnifiedChatContent({
 
   const displayMessages = isVodPlayback ? vodMessages : messages;
   const displayLoading = isVodPlayback ? vodChatLoading : isLoading;
+  const displayStreamTitle = isVodPlayback ? vodTitle : streamTitle;
+  const displayStreamGameName = isVodPlayback ? vodGameName : streamGameName;
+  const displayStreamIsLive = isVodPlayback ? false : streamIsLive;
+  const displayViewerCount = isVodPlayback ? null : viewerCount;
   const displayYtMessages = isVodPlayback
     ? []
     : [
@@ -204,12 +210,12 @@ function UnifiedChatContent({
           onMentionUser={isVodPlayback ? undefined : onMentionUser}
           channelName={selectedTwitchChannelName}
           channelDisplayName={selectedTwitchChannelDisplayName}
-          streamTitle={streamTitle}
-          streamGameName={streamGameName}
-          isStreamLive={streamIsLive}
-          streamUptime={streamUptime}
+          streamTitle={displayStreamTitle}
+          streamGameName={displayStreamGameName}
+          isStreamLive={displayStreamIsLive}
+          streamUptime={isVodPlayback ? undefined : streamUptime}
           streamStartedAt={streamStartedAt}
-          viewerCount={viewerCount}
+          viewerCount={displayViewerCount}
           hideViewerCount={hideViewerCount}
           onRefreshEmotes={handleRefreshEmotes}
           isRefreshingEmotes={isRefreshingEmotes}
@@ -334,6 +340,8 @@ function SplitChatContent({
     vodMessages,
     vodChatLoading,
     vodChatError,
+    vodTitle,
+    vodGameName,
     selectedPlatforms,
     setReplyingTo,
     replyingTo,
@@ -376,6 +384,10 @@ function SplitChatContent({
 
   const displayMessages = isVodPlayback ? vodMessages : messages;
   const displayLoading = isVodPlayback ? vodChatLoading : isLoading;
+  const displayStreamTitle = isVodPlayback ? vodTitle : streamTitle;
+  const displayStreamGameName = isVodPlayback ? vodGameName : streamGameName;
+  const displayStreamIsLive = isVodPlayback ? false : streamIsLive;
+  const displayViewerCount = isVodPlayback ? null : viewerCount;
 
   return (
     <SplitLayout
@@ -412,12 +424,12 @@ function SplitChatContent({
               onMentionUser={isVodPlayback ? undefined : onMentionUser}
               channelName={selectedTwitchChannelName}
               channelDisplayName={selectedTwitchChannelDisplayName}
-              streamTitle={streamTitle}
-              streamGameName={streamGameName}
-              isStreamLive={streamIsLive}
-              streamUptime={streamUptime}
+              streamTitle={displayStreamTitle}
+              streamGameName={displayStreamGameName}
+              isStreamLive={displayStreamIsLive}
+              streamUptime={isVodPlayback ? undefined : streamUptime}
               streamStartedAt={streamStartedAt}
-              viewerCount={viewerCount}
+              viewerCount={displayViewerCount}
               hideViewerCount={hideViewerCount}
               onRefreshEmotes={handleRefreshEmotes}
               isRefreshingEmotes={isRefreshingEmotes}

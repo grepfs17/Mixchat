@@ -58,6 +58,7 @@ interface ChatHeaderProps {
   channelName?: string;
   channelDisplayName?: string;
   isStreamLive?: boolean;
+  vodMode?: boolean;
   streamUptime?: string;
   streamTitle?: string;
   streamGameName?: string;
@@ -1017,6 +1018,7 @@ function MobileModModeSection({
 
 function StreamStatusBadge({
   isStreamLive,
+  vodMode,
   isOpen,
   onToggle,
   containerRef,
@@ -1024,12 +1026,22 @@ function StreamStatusBadge({
   redemptionPubSubStatus,
 }: {
   isStreamLive?: boolean;
+  vodMode?: boolean;
   isOpen: boolean;
   onToggle: () => void;
   containerRef: RefObject<HTMLDivElement | null>;
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
 }) {
+  if (vodMode) {
+    return (
+      <span className="status-badge-container" ref={containerRef}>
+        <span className="status-badge-vod">
+          <span className="status-badge-vod-text">VOD</span>
+        </span>
+      </span>
+    );
+  }
   return (
     <span className="status-badge-container" ref={containerRef}>
       <button
@@ -1397,6 +1409,7 @@ export default function ChatHeader({
   channelName,
   channelDisplayName,
   isStreamLive,
+  vodMode = false,
   streamUptime,
   streamTitle,
   streamGameName,
@@ -1467,6 +1480,7 @@ export default function ChatHeader({
           <h2>
             <StreamStatusBadge
               isStreamLive={isStreamLive}
+              vodMode={vodMode}
               isOpen={statusDropdownOpen}
               onToggle={() => setStatusDropdownOpen((v) => !v)}
               containerRef={statusDropdownRef}
@@ -1528,7 +1542,7 @@ export default function ChatHeader({
       <StreamInfoBar
         streamTitle={streamTitle}
         streamGameName={streamGameName}
-        canEdit={isOnOwnChannel}
+        canEdit={isOnOwnChannel && !vodMode}
         youtubeVideoId={youtubeVideoId}
         channelName={channelName}
         showTwitchModButton={isModerator || isOnOwnChannel}

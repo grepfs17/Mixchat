@@ -761,6 +761,7 @@ const ChatDisplay = ({
         channelName={channelName}
         channelDisplayName={channelDisplayName}
         isStreamLive={isStreamLive}
+        vodMode={vodMode}
         streamUptime={streamUptime}
         streamTitle={streamTitle}
         streamGameName={streamGameName}
