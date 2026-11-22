@@ -48,6 +48,7 @@ interface ChatDisplayProps {
   isLoading: boolean;
   vodMode?: boolean;
   vodError?: string | null;
+  onDownloadVod?: () => void;
   onDownloadVodChat?: (format: "json" | "html") => void;
   twitchConnected?: boolean;
   selectedPlatforms: Platform[];
@@ -275,6 +276,7 @@ const ChatDisplay = ({
   isLoading,
   vodMode = false,
   vodError,
+  onDownloadVod,
   onDownloadVodChat,
   twitchConnected,
   selectedPlatforms,
@@ -764,6 +766,7 @@ const ChatDisplay = ({
         channelDisplayName={channelDisplayName}
         isStreamLive={isStreamLive}
         vodMode={vodMode}
+        onDownloadVod={onDownloadVod}
         onDownloadVodChat={onDownloadVodChat}
         streamUptime={streamUptime}
         streamTitle={streamTitle}

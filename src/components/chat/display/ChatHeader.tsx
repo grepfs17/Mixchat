@@ -21,6 +21,7 @@ import {
   MdEditNote,
   MdOpenInNew,
   MdDownload,
+  MdChat,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -94,6 +95,7 @@ interface ChatHeaderProps {
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
+  onDownloadVod?: () => void;
   onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
@@ -510,6 +512,7 @@ function StreamInfoActions({
   showTwitchModButton,
   channelName,
   vodMode,
+  onDownloadVod,
   onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
@@ -518,6 +521,7 @@ function StreamInfoActions({
   showTwitchModButton?: boolean;
   channelName?: string;
   vodMode?: boolean;
+  onDownloadVod?: () => void;
   onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
@@ -547,6 +551,17 @@ function StreamInfoActions({
 
   return (
     <div className="stream-info-actions" ref={actionsRef}>
+      {vodMode && onDownloadVod && (
+        <button
+          type="button"
+          className="stream-info-action-btn"
+          title="Download VOD"
+          onClick={onDownloadVod}
+        >
+          <MdDownload size={15} />
+        </button>
+      )}
+
       {vodMode && onDownloadVodChat && (
         <div className="stream-info-action-group">
           <button
@@ -557,7 +572,7 @@ function StreamInfoActions({
             aria-expanded={openMenu === "download"}
             onClick={() => toggleMenu("download")}
           >
-            <MdDownload size={15} />
+            <MdChat size={15} />
           </button>
           {openMenu === "download" && (
             <div
@@ -728,6 +743,7 @@ function StreamInfoBar({
   channelName,
   showTwitchModButton,
   vodMode,
+  onDownloadVod,
   onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
@@ -742,6 +758,7 @@ function StreamInfoBar({
   channelName?: string;
   showTwitchModButton?: boolean;
   vodMode?: boolean;
+  onDownloadVod?: () => void;
   onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
@@ -887,6 +904,7 @@ function StreamInfoBar({
           showTwitchModButton={showTwitchModButton}
           channelName={channelName}
           vodMode={vodMode}
+          onDownloadVod={onDownloadVod}
           onDownloadVodChat={onDownloadVodChat}
           onOpenChatStats={onOpenChatStats}
           onOpenStreamNotes={onOpenStreamNotes}
@@ -1493,6 +1511,7 @@ export default function ChatHeader({
   subscriptionStatuses,
   redemptionPubSubStatus,
   isOnOwnChannel = false,
+  onDownloadVod,
   onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
@@ -1609,6 +1628,7 @@ export default function ChatHeader({
         channelName={channelName}
         showTwitchModButton={isModerator || isOnOwnChannel}
         vodMode={vodMode}
+        onDownloadVod={onDownloadVod}
         onDownloadVodChat={onDownloadVodChat}
         onOpenChatStats={onOpenChatStats}
         onOpenStreamNotes={onOpenStreamNotes}

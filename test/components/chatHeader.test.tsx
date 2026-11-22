@@ -219,16 +219,21 @@ describe("ChatHeader: VOD mode", () => {
     expect(screen.queryByTitle("Stream notes")).not.toBeInTheDocument();
   });
 
-  it("offers JSON and HTML chat downloads", () => {
+  it("downloads the VOD and offers JSON and HTML chat downloads", () => {
+    const onDownloadVod = vi.fn();
     const onDownloadVodChat = vi.fn();
 
     render(
       <ChatHeader
         subscriptionStatuses={new Map()}
         vodMode
+        onDownloadVod={onDownloadVod}
         onDownloadVodChat={onDownloadVodChat}
       />,
     );
+
+    fireEvent.click(screen.getByTitle("Download VOD"));
+    expect(onDownloadVod).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTitle("Download VOD chat"));
     fireEvent.click(screen.getByText("Download chat as JSON"));
