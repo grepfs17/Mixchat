@@ -54,6 +54,38 @@ export default function ChatAppContent(props: ChatAppContentProps) {
   );
 }
 
+/**
+ * Chat, header, and status data shared by the unified and split layouts. VOD
+ * playback replaces live chat with the replay and hides live-only values.
+ */
+function deriveVodDisplay(
+  state: Pick<
+    ChatAppState,
+    | "isVodPlayback"
+    | "messages"
+    | "isLoading"
+    | "vodMessages"
+    | "vodChatLoading"
+    | "streamTitle"
+    | "streamGameName"
+    | "streamIsLive"
+    | "vodTitle"
+    | "vodGameName"
+  >,
+  viewerCount: number | null | undefined,
+) {
+  return {
+    messages: state.isVodPlayback ? state.vodMessages : state.messages,
+    loading: state.isVodPlayback ? state.vodChatLoading : state.isLoading,
+    streamTitle: state.isVodPlayback ? state.vodTitle : state.streamTitle,
+    streamGameName: state.isVodPlayback
+      ? state.vodGameName
+      : state.streamGameName,
+    streamIsLive: state.isVodPlayback ? false : state.streamIsLive,
+    viewerCount: state.isVodPlayback ? null : viewerCount,
+  };
+}
+
 function UnifiedChatContent({
   state,
   appProps,
@@ -90,18 +122,11 @@ function UnifiedChatContent({
     isLoading,
     isTwitchChatConnected,
     isVodPlayback,
-    vodMessages,
-    vodChatLoading,
     vodChatError,
-    vodTitle,
-    vodGameName,
     downloadVod,
     downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
-    streamTitle,
-    streamGameName,
-    streamIsLive,
     streamUptime,
     streamStartedAt,
     handleRefreshEmotes,
@@ -136,12 +161,13 @@ function UnifiedChatContent({
       markFirstMessageChannels,
     );
 
-  const displayMessages = isVodPlayback ? vodMessages : messages;
-  const displayLoading = isVodPlayback ? vodChatLoading : isLoading;
-  const displayStreamTitle = isVodPlayback ? vodTitle : streamTitle;
-  const displayStreamGameName = isVodPlayback ? vodGameName : streamGameName;
-  const displayStreamIsLive = isVodPlayback ? false : streamIsLive;
-  const displayViewerCount = isVodPlayback ? null : viewerCount;
+  const display = deriveVodDisplay(state, viewerCount);
+  const displayMessages = display.messages;
+  const displayLoading = display.loading;
+  const displayStreamTitle = display.streamTitle;
+  const displayStreamGameName = display.streamGameName;
+  const displayStreamIsLive = display.streamIsLive;
+  const displayViewerCount = display.viewerCount;
   const displayYtMessages = isVodPlayback
     ? []
     : [
@@ -341,19 +367,12 @@ function SplitChatContent({
     isLoading,
     isTwitchChatConnected,
     isVodPlayback,
-    vodMessages,
-    vodChatLoading,
     vodChatError,
-    vodTitle,
-    vodGameName,
     downloadVod,
     downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
     replyingTo,
-    streamTitle,
-    streamGameName,
-    streamIsLive,
     streamUptime,
     streamStartedAt,
     handleRefreshEmotes,
@@ -388,12 +407,13 @@ function SplitChatContent({
       markFirstMessageChannels,
     );
 
-  const displayMessages = isVodPlayback ? vodMessages : messages;
-  const displayLoading = isVodPlayback ? vodChatLoading : isLoading;
-  const displayStreamTitle = isVodPlayback ? vodTitle : streamTitle;
-  const displayStreamGameName = isVodPlayback ? vodGameName : streamGameName;
-  const displayStreamIsLive = isVodPlayback ? false : streamIsLive;
-  const displayViewerCount = isVodPlayback ? null : viewerCount;
+  const display = deriveVodDisplay(state, viewerCount);
+  const displayMessages = display.messages;
+  const displayLoading = display.loading;
+  const displayStreamTitle = display.streamTitle;
+  const displayStreamGameName = display.streamGameName;
+  const displayStreamIsLive = display.streamIsLive;
+  const displayViewerCount = display.viewerCount;
 
   return (
     <SplitLayout

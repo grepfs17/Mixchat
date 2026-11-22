@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { clientAddress } from "../../lib/clientAddress";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 const GQL_CLIENT_ID = "kd1unb4b3q4t58fwlpcbzcbnm76a8fp";
@@ -7,6 +8,7 @@ const GQL_URL = "https://gql.twitch.tv/gql";
 const CHAPTERS_HASH =
   "71835d5ef425e154bf282453a926d99b328cdc5e32f36d3a209d0f4778b41203";
 const CACHE_TTL_MS = 10 * 60_000;
+const MAX_CACHE_ENTRIES = 500;
 
 interface VodGameChange {
   offsetSeconds: number;
@@ -28,6 +30,20 @@ interface VodInfo {
 }
 
 const cache = new Map<string, CachedVodInfo>();
+
+/** Drop expired entries, then the oldest ones if the cache is still full. */
+function storeCachedInfo(videoId: string, info: VodInfo): void {
+  const now = Date.now();
+  for (const [id, entry] of cache) {
+    if (entry.expires <= now) cache.delete(id);
+  }
+  cache.set(videoId, { expires: now + CACHE_TTL_MS, info });
+  while (cache.size > MAX_CACHE_ENTRIES) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
 
 const VOD_INFO_QUERY = `query MixchatVodInfo($id: ID!) {
   video(id: $id) {
@@ -108,10 +124,9 @@ async function fetchGameChanges(videoId: string): Promise<VodGameChange[]> {
 }
 
 export const GET: APIRoute = async ({ url, request }) => {
-  const clientAddress =
-    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
-    "unknown";
-  if (!checkRateLimit(`${clientAddress}:twitch-vod-info`, 60, 60_000)) {
+  if (
+    !checkRateLimit(`${clientAddress(request)}:twitch-vod-info`, 60, 60_000)
+  ) {
     return json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -165,7 +180,7 @@ export const GET: APIRoute = async ({ url, request }) => {
       gameChanges,
     };
 
-    cache.set(videoId, { expires: Date.now() + CACHE_TTL_MS, info });
+    storeCachedInfo(videoId, info);
     return json(info);
   } catch (error) {
     console.error("[twitch-vod-info] failed:", error);

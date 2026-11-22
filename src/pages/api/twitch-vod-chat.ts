@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { clientAddress } from "../../lib/clientAddress";
 import { checkRateLimit } from "../../lib/rateLimit";
 import {
   fetchVodChatPage,
@@ -18,10 +19,9 @@ function json(data: unknown, init: ResponseInit = {}) {
 }
 
 export const GET: APIRoute = async ({ url, request }) => {
-  const clientAddress =
-    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
-    "unknown";
-  if (!checkRateLimit(`${clientAddress}:twitch-vod-chat`, 120, 60_000)) {
+  if (
+    !checkRateLimit(`${clientAddress(request)}:twitch-vod-chat`, 120, 60_000)
+  ) {
     return json({ error: "Too many requests" }, { status: 429 });
   }
 

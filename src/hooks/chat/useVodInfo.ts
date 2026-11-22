@@ -47,19 +47,20 @@ export function useVodInfo(
   playerRef?: RefObject<VodPlayerLike | null>,
 ): VodInfo {
   const [info, setInfo] = useState<VodInfo>(EMPTY_INFO);
-  const [gameName, setGameName] = useState("");
+  // Current category from the player clock. null means "use info.gameName".
+  const [gameName, setGameName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!videoId) {
       setInfo(EMPTY_INFO);
-      setGameName("");
+      setGameName(null);
       return;
     }
 
     let cancelled = false;
     const controller = new AbortController();
     setInfo(EMPTY_INFO);
-    setGameName("");
+    setGameName(null);
 
     fetch(
       `/api/twitch-vod-info?video_id=${encodeURIComponent(videoId)}`,
@@ -79,12 +80,11 @@ export function useVodInfo(
             : [],
         };
         setInfo(next);
-        setGameName(next.gameName);
       })
       .catch((err: Error) => {
         if (cancelled || err.name === "AbortError") return;
         setInfo(EMPTY_INFO);
-        setGameName("");
+        setGameName(null);
       });
 
     return () => {
@@ -97,7 +97,7 @@ export function useVodInfo(
   // category when the next GAME_CHANGE moment is reached.
   useEffect(() => {
     if (info.gameChanges.length === 0) {
-      setGameName(info.gameName);
+      setGameName(null);
       return;
     }
 
@@ -126,5 +126,9 @@ export function useVodInfo(
     return () => clearInterval(interval);
   }, [info, playerRef]);
 
-  return { title: info.title, gameName, gameChanges: info.gameChanges };
+  return {
+    title: info.title,
+    gameName: gameName ?? info.gameName,
+    gameChanges: info.gameChanges,
+  };
 }

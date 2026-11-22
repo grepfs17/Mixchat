@@ -49,6 +49,7 @@ const FETCH_AHEAD_SECONDS = 20;
 const SEEK_THRESHOLD_SECONDS = 4;
 const MAX_PAGES_PER_TICK = 8;
 const MAX_PENDING_MESSAGES = 5000;
+const MAX_SEEN_IDS = 20_000;
 const MAX_RETAINED_MESSAGES = 2000;
 const RETRY_DELAY_MS = 3000;
 
@@ -208,6 +209,7 @@ export function useVodChat({
           fetchGeneration === generation &&
           hasMore &&
           pages < MAX_PAGES_PER_TICK &&
+          pending.length < MAX_PENDING_MESSAGES &&
           bufferEnd < time + FETCH_AHEAD_SECONDS
         ) {
           const params = new URLSearchParams({ video_id: videoId });
@@ -236,14 +238,20 @@ export function useVodChat({
           for (const comment of comments) {
             if (seenIds.has(comment.id)) continue;
             seenIds.add(comment.id);
+            if (seenIds.size > MAX_SEEN_IDS) {
+              const oldest = seenIds.values().next().value;
+              if (oldest !== undefined) seenIds.delete(oldest);
+            }
             pending.push({
               offset: comment.offsetSeconds,
               message: toTwitchMessage(comment, currentUserIdRef.current),
             });
           }
 
+          // Keep the messages due soonest. Fetching stops once the buffer is
+          // full, so trimming only trims the far end of an unusually busy page.
           if (pending.length > MAX_PENDING_MESSAGES) {
-            pending = pending.slice(-MAX_PENDING_MESSAGES);
+            pending = pending.slice(0, MAX_PENDING_MESSAGES);
           }
 
           const lastOffset = comments[comments.length - 1].offsetSeconds;

@@ -71,14 +71,15 @@ async function fetchVodPlaybackToken(
       }),
     });
 
-  let res = await requestToken(oauthToken);
-  if (oauthToken && (res.status === 401 || res.status === 403)) {
-    // Expired or rejected viewer token: retry anonymously so public VODs
-    // still download.
-    res = await requestToken();
-  }
+  const res = await requestToken(oauthToken);
 
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new VodMediaError(
+        "Twitch authentication expired. Please re-login.",
+        401,
+      );
+    }
     throw new VodMediaError(
       `Twitch playback token request failed (${res.status})`,
       res.status === 429 ? 429 : 502,
@@ -206,7 +207,8 @@ export async function getVodMedia(
   }
 
   const variant = variants.sort((a, b) => b.bandwidth - a.bandwidth)[0];
-  const variantRes = await fetchTwitch(variant.url);
+  const variantUrl = assertAllowedCdn(variant.url).toString();
+  const variantRes = await fetchTwitch(variantUrl);
   if (!variantRes.ok) {
     throw new VodMediaError(
       `Unable to load VOD quality (${variantRes.status})`,
@@ -216,7 +218,7 @@ export async function getVodMedia(
 
   const { segments, isFmp4 } = parseSegments(
     await variantRes.text(),
-    variant.url,
+    variantUrl,
   );
   if (segments.length === 0) {
     throw new VodMediaError("This VOD has no downloadable segments", 404);

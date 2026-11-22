@@ -30,6 +30,14 @@ const VARIANT = `#EXTM3U
 function stubFetch() {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
+    if (url === "https://id.twitch.tv/oauth2/validate") {
+      return Promise.resolve(
+        new Response(JSON.stringify({ user_id: "1", login: "someuser" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
     if (url === "https://gql.twitch.tv/gql") {
       return Promise.resolve(
         new Response(
@@ -106,6 +114,28 @@ describe("GET /api/twitch-vod-download", () => {
 
     expect(res.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expired Twitch token without downloading", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("unauthorized", { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await GET(
+      context(
+        "http://localhost/api/twitch-vod-download?video_id=123",
+        "127.0.0.3",
+      ),
+    );
+
+    expect(res.status).toBe(401);
+    expect((await res.json()).error).toContain("expired");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://id.twitch.tv/oauth2/validate",
+      expect.anything(),
+    );
   });
 
   it("rejects an invalid video id without calling Twitch", async () => {

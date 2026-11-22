@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { clientAddress } from "../../lib/clientAddress";
 import { checkRateLimit } from "../../lib/rateLimit";
 import {
   fetchVodChatPage,
@@ -141,12 +142,9 @@ function buildJsonHeader(
 }
 
 export const GET: APIRoute = async ({ url, request }) => {
-  const clientAddress =
-    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
-    "unknown";
   if (
     !checkRateLimit(
-      `${clientAddress}:twitch-vod-chat-download`,
+      `${clientAddress(request)}:twitch-vod-chat-download`,
       10,
       10 * 60_000,
     )
@@ -185,13 +183,17 @@ export const GET: APIRoute = async ({ url, request }) => {
       ? "text/html; charset=utf-8"
       : "application/json; charset=utf-8";
 
+  let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const write = (chunk: string) => controller.enqueue(encoder.encode(chunk));
+      const write = (chunk: string) => {
+        if (!cancelled) controller.enqueue(encoder.encode(chunk));
+      };
       let firstComment = true;
 
       const writeComments = (comments: VodChatComment[]) => {
         for (const comment of comments) {
+          if (cancelled) return;
           if (format === "json") {
             write(`${firstComment ? "" : ","}${JSON.stringify(buildJsonComment(comment))}`);
           } else {
@@ -212,20 +214,28 @@ export const GET: APIRoute = async ({ url, request }) => {
         let cursor = firstPage.cursor;
         let hasNext = firstPage.hasNextPage;
 
-        while (hasNext && cursor) {
+        while (hasNext && cursor && !cancelled) {
           await new Promise((resolve) => setTimeout(resolve, PAGE_DELAY_MS));
+          if (cancelled) return;
           const page = await fetchVodChatPage(videoId, { cursor });
+          if (cancelled) return;
           writeComments(page.comments);
           cursor = page.cursor;
           hasNext = page.hasNextPage;
         }
 
+        if (cancelled) return;
         write(format === "json" ? "\n]}\n" : HTML_FOOTER);
         controller.close();
       } catch (error) {
+        if (cancelled) return;
         console.error("[twitch-vod-chat-download] stream failed:", error);
         controller.error(error);
       }
+    },
+    cancel() {
+      // Stop paging through chat history once the client disconnects.
+      cancelled = true;
     },
   });
 

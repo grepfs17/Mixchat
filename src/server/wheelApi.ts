@@ -36,12 +36,4 @@ export function channelFromRequest(request: Request): WheelChannel | null {
   return null;
 }
 
-export function clientAddress(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const ips = forwarded.split(",");
-    const last = ips[ips.length - 1]?.trim();
-    if (last) return last;
-  }
-  return request.headers.get("x-real-ip") || "unknown";
-}
+export { clientAddress } from "../lib/clientAddress";
