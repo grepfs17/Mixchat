@@ -200,3 +200,42 @@ describe("ChatHeader: platform action menus", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("ChatHeader: VOD mode", () => {
+  it("shows the VOD badge and hides stats and notes", () => {
+    render(
+      <ChatHeader
+        subscriptionStatuses={new Map()}
+        vodMode
+        isOnOwnChannel
+        channelName="streamer"
+        onOpenChatStats={vi.fn()}
+        onOpenStreamNotes={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("VOD")).toBeInTheDocument();
+    expect(screen.queryByTitle("Chat stats")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Stream notes")).not.toBeInTheDocument();
+  });
+
+  it("offers JSON and HTML chat downloads", () => {
+    const onDownloadVodChat = vi.fn();
+
+    render(
+      <ChatHeader
+        subscriptionStatuses={new Map()}
+        vodMode
+        onDownloadVodChat={onDownloadVodChat}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("Download VOD chat"));
+    fireEvent.click(screen.getByText("Download chat as JSON"));
+    expect(onDownloadVodChat).toHaveBeenCalledWith("json");
+
+    fireEvent.click(screen.getByTitle("Download VOD chat"));
+    fireEvent.click(screen.getByText("Download chat as HTML"));
+    expect(onDownloadVodChat).toHaveBeenCalledWith("html");
+  });
+});

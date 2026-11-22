@@ -20,6 +20,7 @@ import {
   MdBarChart,
   MdEditNote,
   MdOpenInNew,
+  MdDownload,
 } from "react-icons/md";
 import {
   FaUsers,
@@ -93,6 +94,7 @@ interface ChatHeaderProps {
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
   redemptionPubSubStatus?: SubscriptionStatus | "disconnected";
   isOnOwnChannel?: boolean;
+  onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
 }
@@ -507,16 +509,22 @@ function StreamInfoActions({
   youtubeVideoId,
   showTwitchModButton,
   channelName,
+  vodMode,
+  onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
 }: {
   youtubeVideoId?: string | null;
   showTwitchModButton?: boolean;
   channelName?: string;
+  vodMode?: boolean;
+  onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
 }) {
-  const [openMenu, setOpenMenu] = useState<"twitch" | "youtube" | null>(null);
+  const [openMenu, setOpenMenu] = useState<
+    "twitch" | "youtube" | "download" | null
+  >(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(actionsRef, () => setOpenMenu(null), openMenu !== null);
@@ -530,7 +538,7 @@ function StreamInfoActions({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [openMenu]);
 
-  const toggleMenu = (menu: "twitch" | "youtube") => {
+  const toggleMenu = (menu: "twitch" | "youtube" | "download") => {
     setOpenMenu((current) => (current === menu ? null : menu));
   };
 
@@ -539,6 +547,53 @@ function StreamInfoActions({
 
   return (
     <div className="stream-info-actions" ref={actionsRef}>
+      {vodMode && onDownloadVodChat && (
+        <div className="stream-info-action-group">
+          <button
+            type="button"
+            className={`stream-info-action-btn${openMenu === "download" ? " stream-info-action-btn--active" : ""}`}
+            title="Download VOD chat"
+            aria-haspopup="menu"
+            aria-expanded={openMenu === "download"}
+            onClick={() => toggleMenu("download")}
+          >
+            <MdDownload size={15} />
+          </button>
+          {openMenu === "download" && (
+            <div
+              className="stream-info-action-menu"
+              role="menu"
+              aria-label="Download VOD chat"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className="stream-info-action-item"
+                onClick={() => {
+                  onDownloadVodChat("json");
+                  setOpenMenu(null);
+                }}
+              >
+                <MdDownload size={14} />
+                <span>Download chat as JSON</span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="stream-info-action-item"
+                onClick={() => {
+                  onDownloadVodChat("html");
+                  setOpenMenu(null);
+                }}
+              >
+                <MdDownload size={14} />
+                <span>Download chat as HTML</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {showTwitchActions && (
         <div className="stream-info-action-group">
           <button
@@ -639,7 +694,7 @@ function StreamInfoActions({
         </div>
       )}
 
-      {onOpenChatStats && (
+      {!vodMode && onOpenChatStats && (
         <button
           type="button"
           className="stream-info-action-btn"
@@ -650,7 +705,7 @@ function StreamInfoActions({
           <MdBarChart size={14} />
         </button>
       )}
-      {onOpenStreamNotes && (
+      {!vodMode && onOpenStreamNotes && (
         <button
           type="button"
           className="stream-info-action-btn"
@@ -672,6 +727,8 @@ function StreamInfoBar({
   youtubeVideoId,
   channelName,
   showTwitchModButton,
+  vodMode,
+  onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
   onUpdateTitle,
@@ -684,6 +741,8 @@ function StreamInfoBar({
   youtubeVideoId?: string | null;
   channelName?: string;
   showTwitchModButton?: boolean;
+  vodMode?: boolean;
+  onDownloadVodChat?: (format: "json" | "html") => void;
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
   onUpdateTitle?: (title: string) => Promise<void>;
@@ -827,6 +886,8 @@ function StreamInfoBar({
           youtubeVideoId={youtubeVideoId}
           showTwitchModButton={showTwitchModButton}
           channelName={channelName}
+          vodMode={vodMode}
+          onDownloadVodChat={onDownloadVodChat}
           onOpenChatStats={onOpenChatStats}
           onOpenStreamNotes={onOpenStreamNotes}
         />
@@ -1432,6 +1493,7 @@ export default function ChatHeader({
   subscriptionStatuses,
   redemptionPubSubStatus,
   isOnOwnChannel = false,
+  onDownloadVodChat,
   onOpenChatStats,
   onOpenStreamNotes,
 }: ChatHeaderProps) {
@@ -1546,6 +1608,8 @@ export default function ChatHeader({
         youtubeVideoId={youtubeVideoId}
         channelName={channelName}
         showTwitchModButton={isModerator || isOnOwnChannel}
+        vodMode={vodMode}
+        onDownloadVodChat={onDownloadVodChat}
         onOpenChatStats={onOpenChatStats}
         onOpenStreamNotes={onOpenStreamNotes}
         onUpdateTitle={onUpdateTitle}

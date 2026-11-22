@@ -48,6 +48,7 @@ interface ChatDisplayProps {
   isLoading: boolean;
   vodMode?: boolean;
   vodError?: string | null;
+  onDownloadVodChat?: (format: "json" | "html") => void;
   twitchConnected?: boolean;
   selectedPlatforms: Platform[];
   onReply?: (message: TwitchMessage) => void;
@@ -274,6 +275,7 @@ const ChatDisplay = ({
   isLoading,
   vodMode = false,
   vodError,
+  onDownloadVodChat,
   twitchConnected,
   selectedPlatforms,
   onReply,
@@ -762,6 +764,7 @@ const ChatDisplay = ({
         channelDisplayName={channelDisplayName}
         isStreamLive={isStreamLive}
         vodMode={vodMode}
+        onDownloadVodChat={onDownloadVodChat}
         streamUptime={streamUptime}
         streamTitle={streamTitle}
         streamGameName={streamGameName}
@@ -790,8 +793,10 @@ const ChatDisplay = ({
         subscriptionStatuses={subscriptionStatuses}
         redemptionPubSubStatus={redemptionPubSubStatus}
         isOnOwnChannel={isOnOwnChannel}
-        onOpenChatStats={openChatStats}
-        onOpenStreamNotes={channelName ? openStreamNotes : undefined}
+        onOpenChatStats={vodMode ? undefined : openChatStats}
+        onOpenStreamNotes={
+          vodMode || !channelName ? undefined : openStreamNotes
+        }
       />
 
       {unifiedChatSlot ? (

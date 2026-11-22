@@ -95,6 +95,7 @@ function UnifiedChatContent({
     vodChatError,
     vodTitle,
     vodGameName,
+    downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
     streamTitle,
@@ -201,6 +202,7 @@ function UnifiedChatContent({
           isLoading={displayLoading}
           vodMode={isVodPlayback}
           vodError={vodChatError}
+          onDownloadVodChat={downloadVodChat}
           selectedPlatforms={selectedPlatforms}
           onReply={
             isVodPlayback
@@ -342,6 +344,7 @@ function SplitChatContent({
     vodChatError,
     vodTitle,
     vodGameName,
+    downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
     replyingTo,
@@ -414,6 +417,7 @@ function SplitChatContent({
               isLoading={displayLoading}
               vodMode={isVodPlayback}
               vodError={vodChatError}
+              onDownloadVodChat={downloadVodChat}
               twitchConnected={isVodPlayback || isTwitchChatConnected}
               selectedPlatforms={selectedPlatforms}
               onReply={

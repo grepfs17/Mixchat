@@ -5,6 +5,7 @@ import type { MentionSoundType } from "./useTwitchChat";
 import { useVodChat } from "./useVodChat";
 import type { VodChatPlayerLike } from "./useVodChat";
 import { useVodInfo } from "./useVodInfo";
+import { useVodChatDownload } from "./useVodChatDownload";
 import { useEventSub } from "./useEventSub";
 import type { RaidOutEvent } from "./eventSubHelpers/useRaidDetection";
 import {
@@ -219,6 +220,19 @@ export function useChatAppState({
     currentUserId: twitchSession?.userId,
   });
   const vodInfo = useVodInfo(activeVodId, vodPlayerRef);
+  const downloadVodChat = useVodChatDownload({
+    videoId: activeVodId,
+    title: vodInfo.title,
+    channelName: selectedTwitchChannelName,
+    onNotify: (message, type) => {
+      notificationIdRef.current += 1;
+      setNotification({
+        message,
+        type,
+        id: notificationIdRef.current,
+      });
+    },
+  });
   const isVodPlayback = Boolean(activeVodId);
 
   const {
@@ -748,6 +762,7 @@ export function useChatAppState({
     vodChatError: vodChat.error,
     vodTitle: vodInfo.title,
     vodGameName: vodInfo.gameName,
+    downloadVodChat,
     pendingRaid,
     isRaidInitiator,
     isRefreshingEmotes,
