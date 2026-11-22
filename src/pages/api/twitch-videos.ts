@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { clientAddress } from "../../lib/clientAddress";
 import { checkRateLimit } from "../../lib/rateLimit";
 
 const TWITCH_HELIX_BASE = "https://api.twitch.tv/helix";
@@ -68,10 +69,9 @@ async function helixGet(path: string, accessToken: string, clientId: string) {
 }
 
 export const GET: APIRoute = async ({ url, cookies, request }) => {
-  const clientAddress =
-    request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ||
-    "unknown";
-  if (!checkRateLimit(`${clientAddress}:twitch-videos`, 60, 60_000)) {
+  if (
+    !checkRateLimit(`${clientAddress(request)}:twitch-videos`, 60, 60_000)
+  ) {
     return json({ error: "Too many requests" }, { status: 429 });
   }
 

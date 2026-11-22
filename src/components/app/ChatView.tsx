@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import {
   FaTimes,
@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import ChatApp from "../chat/ChatApp";
 import StreamEmbed from "../StreamEmbed";
+import type { TwitchPlayer } from "../StreamEmbed";
 import TwitchVods, {
   clipExplorerUrl,
   type ActiveMedia,
@@ -20,6 +21,7 @@ import type { StreamTransitionInfo } from "../StreamGrid";
 import type { PlatformSession } from "../../lib/types";
 import type { UseChatSettingsResult } from "../../hooks/app/useChatSettings";
 import type { HlsQuality, PlayerType } from "../../hooks/app/useEmbedState";
+import type { VodChatPlayerLike } from "../../hooks/chat/useVodChat";
 
 interface ChatViewProps {
   twitchSession?: PlatformSession;
@@ -123,6 +125,65 @@ export default function ChatView({
   );
   const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
 
+  const [activeMediaState, setActiveMediaState] = useState<{
+    channel: string;
+    media: ActiveMedia;
+  } | null>(null);
+  const [archiveChannel, setArchiveChannel] = useState<string | null>(null);
+  const vodPlayerRef = useRef<VodChatPlayerLike | null>(null);
+
+  // Browsing VODs/clips is available automatically when offline, or manually
+  // while live through the archive toggle in the embed header.
+  const showArchive = archiveChannel === selectedTwitchChannelName;
+  const archiveAvailable = channelIsLive === false || showArchive;
+
+  // Only keep the selection while the archive is available for this channel.
+  const activeMedia =
+    activeMediaState &&
+    activeMediaState.channel === selectedTwitchChannelName &&
+    archiveAvailable
+      ? activeMediaState.media
+      : null;
+
+  const selectMedia = useCallback(
+    (media: ActiveMedia | null) => {
+      setActiveMediaState(
+        media ? { channel: selectedTwitchChannelName, media } : null,
+      );
+    },
+    [selectedTwitchChannelName],
+  );
+
+  const closeArchive = useCallback(() => {
+    setActiveMediaState(null);
+    setArchiveChannel(null);
+  }, []);
+
+  const toggleArchive = useCallback(() => {
+    setActiveMediaState(null);
+    setArchiveChannel((previous) =>
+      previous === selectedTwitchChannelName ? null : selectedTwitchChannelName,
+    );
+  }, [selectedTwitchChannelName]);
+
+  const selectPlayerType = useCallback(
+    (type: PlayerType) => {
+      closeArchive();
+      setPlayerType(type);
+    },
+    [closeArchive, setPlayerType],
+  );
+
+  const handleVodPlayerReady = useCallback(
+    (player: TwitchPlayer | null) => {
+      vodPlayerRef.current = player;
+    },
+    [],
+  );
+
+  const activeVodId =
+    showStreamEmbed && activeMedia?.type === "vod" ? activeMedia.id : null;
+
   return (
     <>
       {showStreamEmbed && (
@@ -130,7 +191,7 @@ export default function ChatView({
           leftColumnVisible={leftColumnVisible}
           setLeftColumnVisible={setLeftColumnVisible}
           playerType={playerType}
-          setPlayerType={setPlayerType}
+          onSelectPlayerType={selectPlayerType}
           linkedYoutubeUrl={linkedYoutubeUrl}
           hlsQualities={hlsQualities}
           selectedHlsQualityIdx={selectedHlsQualityIdx}
@@ -147,6 +208,12 @@ export default function ChatView({
           setHlsQualities={setHlsQualities}
           streamTransition={streamTransition}
           setStreamTransition={setStreamTransition}
+          showArchive={showArchive}
+          activeMedia={activeMedia}
+          onSelectMedia={selectMedia}
+          onToggleArchive={toggleArchive}
+          onCloseArchive={closeArchive}
+          onVodPlayerReady={handleVodPlayerReady}
         />
       )}
       {showStreamEmbed && (
@@ -188,6 +255,8 @@ export default function ChatView({
           sidebarVisible={leftColumnVisible}
           showStreamEmbed={showStreamEmbed}
           onToggleStreamEmbed={() => setShowStreamEmbed(!showStreamEmbed)}
+          activeVodId={activeVodId}
+          vodPlayerRef={vodPlayerRef}
           viewerCount={viewerCount}
           linkedYoutubeUrl={linkedYoutubeUrl || undefined}
           youtubeSession={youtubeSession}
@@ -229,7 +298,7 @@ interface StreamEmbedPanelProps {
   leftColumnVisible: boolean | undefined;
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   playerType: PlayerType;
-  setPlayerType: Dispatch<SetStateAction<PlayerType>>;
+  onSelectPlayerType: (type: PlayerType) => void;
   linkedYoutubeUrl: string | null;
   hlsQualities: HlsQuality[];
   selectedHlsQualityIdx: number;
@@ -246,13 +315,19 @@ interface StreamEmbedPanelProps {
   setHlsQualities: Dispatch<SetStateAction<HlsQuality[]>>;
   streamTransition: StreamTransitionInfo | null;
   setStreamTransition: Dispatch<SetStateAction<StreamTransitionInfo | null>>;
+  showArchive: boolean;
+  activeMedia: ActiveMedia | null;
+  onSelectMedia: (media: ActiveMedia | null) => void;
+  onToggleArchive: () => void;
+  onCloseArchive: () => void;
+  onVodPlayerReady: (player: TwitchPlayer | null) => void;
 }
 
 function StreamEmbedPanel({
   leftColumnVisible,
   setLeftColumnVisible,
   playerType,
-  setPlayerType,
+  onSelectPlayerType,
   linkedYoutubeUrl,
   hlsQualities,
   selectedHlsQualityIdx,
@@ -269,49 +344,13 @@ function StreamEmbedPanel({
   setHlsQualities,
   streamTransition,
   setStreamTransition,
+  showArchive,
+  activeMedia,
+  onSelectMedia,
+  onToggleArchive,
+  onCloseArchive,
+  onVodPlayerReady,
 }: StreamEmbedPanelProps) {
-  const [activeMedia, setActiveMedia] = useState<{
-    channel: string;
-    media: ActiveMedia;
-  } | null>(null);
-  const [archiveChannel, setArchiveChannel] = useState<string | null>(null);
-
-  // Browsing VODs/clips is available automatically when offline, or manually
-  // while live through the archive toggle in the embed header.
-  const showArchive = archiveChannel === selectedTwitchChannelName;
-  const archiveAvailable = channelIsLive === false || showArchive;
-
-  // Only keep the selection while the archive is available for this channel.
-  const currentMedia =
-    activeMedia &&
-    activeMedia.channel === selectedTwitchChannelName &&
-    archiveAvailable
-      ? activeMedia.media
-      : null;
-
-  const selectMedia = (media: ActiveMedia | null) => {
-    setActiveMedia(
-      media ? { channel: selectedTwitchChannelName, media } : null,
-    );
-  };
-
-  const closeArchive = () => {
-    setActiveMedia(null);
-    setArchiveChannel(null);
-  };
-
-  const toggleArchive = () => {
-    setActiveMedia(null);
-    setArchiveChannel(
-      showArchive ? null : selectedTwitchChannelName,
-    );
-  };
-
-  const selectPlayerType = (type: PlayerType) => {
-    closeArchive();
-    setPlayerType(type);
-  };
-
   return (
     <div
       style={{
@@ -326,10 +365,10 @@ function StreamEmbedPanel({
         leftColumnVisible={leftColumnVisible}
         setLeftColumnVisible={setLeftColumnVisible}
         playerType={playerType}
-        onSelectPlayerType={selectPlayerType}
+        onSelectPlayerType={onSelectPlayerType}
         channelIsLive={channelIsLive}
         showArchive={showArchive}
-        onToggleArchive={toggleArchive}
+        onToggleArchive={onToggleArchive}
         linkedYoutubeUrl={linkedYoutubeUrl}
         hlsQualities={hlsQualities}
         selectedHlsQualityIdx={selectedHlsQualityIdx}
@@ -337,9 +376,9 @@ function StreamEmbedPanel({
         showHlsQualityMenu={showHlsQualityMenu}
         setShowHlsQualityMenu={setShowHlsQualityMenu}
         setShowStreamEmbed={setShowStreamEmbed}
-        activeMedia={currentMedia}
-        onBackToLists={() => setActiveMedia(null)}
-        onBackToLive={closeArchive}
+        activeMedia={activeMedia}
+        onBackToLists={() => onSelectMedia(null)}
+        onBackToLive={onCloseArchive}
       />
       <EmbedPlayer
         playerType={playerType}
@@ -347,8 +386,9 @@ function StreamEmbedPanel({
         selectedTwitchChannelName={selectedTwitchChannelName}
         channelIsLive={channelIsLive}
         showArchive={showArchive}
-        activeMedia={currentMedia}
-        onSelectMedia={selectMedia}
+        activeMedia={activeMedia}
+        onSelectMedia={onSelectMedia}
+        onVodPlayerReady={onVodPlayerReady}
         twitchSession={twitchSession}
         onTwitchLogin={onTwitchLogin}
         setHlsQualities={setHlsQualities}
@@ -675,6 +715,7 @@ interface EmbedPlayerProps {
   showArchive: boolean;
   activeMedia: ActiveMedia | null;
   onSelectMedia: (media: ActiveMedia | null) => void;
+  onVodPlayerReady: (player: TwitchPlayer | null) => void;
   twitchSession?: PlatformSession;
   onTwitchLogin: () => void;
   setHlsQualities: Dispatch<SetStateAction<HlsQuality[]>>;
@@ -692,6 +733,7 @@ function EmbedPlayer({
   showArchive,
   activeMedia,
   onSelectMedia,
+  onVodPlayerReady,
   twitchSession,
   onTwitchLogin,
   setHlsQualities,
@@ -748,6 +790,7 @@ function EmbedPlayer({
           twitchAccessToken={twitchSession?.accessToken}
           activeMedia={activeMedia}
           onSelectMedia={onSelectMedia}
+          onPlayerReady={onVodPlayerReady}
         />
       ) : (
         <StreamEmbed

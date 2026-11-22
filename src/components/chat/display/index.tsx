@@ -46,6 +46,10 @@ interface ChatDisplayProps {
   messages: TwitchMessage[];
   ytMessages?: Array<{ author: string; authorAvatar?: string }>;
   isLoading: boolean;
+  vodMode?: boolean;
+  vodError?: string | null;
+  onDownloadVod?: () => void;
+  onDownloadVodChat?: (format: "json" | "html") => void;
   twitchConnected?: boolean;
   selectedPlatforms: Platform[];
   onReply?: (message: TwitchMessage) => void;
@@ -102,7 +106,28 @@ interface ChatEmptyStateInfo {
 function getChatEmptyStateInfo(
   channelName: string | undefined,
   twitchConnected: boolean | undefined,
+  vodMode: boolean,
+  vodLoading: boolean,
+  vodError: string | null | undefined,
 ): ChatEmptyStateInfo {
+  if (vodMode) {
+    if (vodLoading) {
+      return {
+        title: "Loading VOD chat\u2026",
+        detail: "Fetching the chat replay for this VOD.",
+        busy: true,
+      };
+    }
+    if (vodError) {
+      return { title: "VOD chat unavailable", detail: vodError, busy: false };
+    }
+    return {
+      title: "No chat messages yet",
+      detail: "Messages appear here in sync with the video.",
+      busy: false,
+    };
+  }
+
   const isTwitchConnecting = Boolean(channelName) && twitchConnected === false;
   if (isTwitchConnecting) {
     return {
@@ -249,6 +274,10 @@ const ChatDisplay = ({
   messages,
   ytMessages,
   isLoading,
+  vodMode = false,
+  vodError,
+  onDownloadVod,
+  onDownloadVodChat,
   twitchConnected,
   selectedPlatforms,
   onReply,
@@ -535,10 +564,11 @@ const ChatDisplay = ({
   }, [messages, selectedPlatforms, ignoredUsers, maxDisplayedMessages]);
 
   // Lazily-loaded older messages from IndexedDB. Disabled when this pane is
-  // only acting as the header for the unified chat (unifiedChatSlot).
+  // only acting as the header for the unified chat (unifiedChatSlot) or while
+  // replaying a VOD, whose messages must not mix with live history.
   const { history: olderMessages } = useLazyChatHistory<TwitchMessage>({
     channel: channelName,
-    enabled: !unifiedChatSlot,
+    enabled: !unifiedChatSlot && !vodMode,
     live: messages,
     platforms: ["twitch"],
     containerRef: messagesContainerRef,
@@ -721,7 +751,13 @@ const ChatDisplay = ({
     setTimeout(() => el.classList.remove("message-highlight"), 2000);
   }, []);
 
-  const emptyState = getChatEmptyStateInfo(channelName, twitchConnected);
+  const emptyState = getChatEmptyStateInfo(
+    channelName,
+    twitchConnected,
+    vodMode,
+    isLoading,
+    vodError,
+  );
 
   return (
     <div className="chat-display">
@@ -729,6 +765,9 @@ const ChatDisplay = ({
         channelName={channelName}
         channelDisplayName={channelDisplayName}
         isStreamLive={isStreamLive}
+        vodMode={vodMode}
+        onDownloadVod={onDownloadVod}
+        onDownloadVodChat={onDownloadVodChat}
         streamUptime={streamUptime}
         streamTitle={streamTitle}
         streamGameName={streamGameName}
@@ -757,8 +796,10 @@ const ChatDisplay = ({
         subscriptionStatuses={subscriptionStatuses}
         redemptionPubSubStatus={redemptionPubSubStatus}
         isOnOwnChannel={isOnOwnChannel}
-        onOpenChatStats={openChatStats}
-        onOpenStreamNotes={channelName ? openStreamNotes : undefined}
+        onOpenChatStats={vodMode ? undefined : openChatStats}
+        onOpenStreamNotes={
+          vodMode || !channelName ? undefined : openStreamNotes
+        }
       />
 
       {unifiedChatSlot ? (

@@ -54,6 +54,38 @@ export default function ChatAppContent(props: ChatAppContentProps) {
   );
 }
 
+/**
+ * Chat, header, and status data shared by the unified and split layouts. VOD
+ * playback replaces live chat with the replay and hides live-only values.
+ */
+function deriveVodDisplay(
+  state: Pick<
+    ChatAppState,
+    | "isVodPlayback"
+    | "messages"
+    | "isLoading"
+    | "vodMessages"
+    | "vodChatLoading"
+    | "streamTitle"
+    | "streamGameName"
+    | "streamIsLive"
+    | "vodTitle"
+    | "vodGameName"
+  >,
+  viewerCount: number | null | undefined,
+) {
+  return {
+    messages: state.isVodPlayback ? state.vodMessages : state.messages,
+    loading: state.isVodPlayback ? state.vodChatLoading : state.isLoading,
+    streamTitle: state.isVodPlayback ? state.vodTitle : state.streamTitle,
+    streamGameName: state.isVodPlayback
+      ? state.vodGameName
+      : state.streamGameName,
+    streamIsLive: state.isVodPlayback ? false : state.streamIsLive,
+    viewerCount: state.isVodPlayback ? null : viewerCount,
+  };
+}
+
 function UnifiedChatContent({
   state,
   appProps,
@@ -89,11 +121,12 @@ function UnifiedChatContent({
     messages,
     isLoading,
     isTwitchChatConnected,
+    isVodPlayback,
+    vodChatError,
+    downloadVod,
+    downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
-    streamTitle,
-    streamGameName,
-    streamIsLive,
     streamUptime,
     streamStartedAt,
     handleRefreshEmotes,
@@ -128,26 +161,60 @@ function UnifiedChatContent({
       markFirstMessageChannels,
     );
 
+  const display = deriveVodDisplay(state, viewerCount);
+  const displayMessages = display.messages;
+  const displayLoading = display.loading;
+  const displayStreamTitle = display.streamTitle;
+  const displayStreamGameName = display.streamGameName;
+  const displayStreamIsLive = display.streamIsLive;
+  const displayViewerCount = display.viewerCount;
+  const displayYtMessages = isVodPlayback
+    ? []
+    : [
+        ...ytMessages,
+        ...ytOptimisticMessages.filter((opt) => {
+          const norm = (s: string) => s.normalize("NFKC").trim().toLowerCase();
+          const optText = norm(getYtMessageText(opt));
+          const optAuthor = norm(opt.author);
+
+          return !ytMessages.some((message) => {
+            const messageText = norm(getYtMessageText(message));
+            if (opt.authorChannelId && message.authorChannelId) {
+              return (
+                message.authorChannelId === opt.authorChannelId &&
+                messageText === optText
+              );
+            }
+            return (
+              norm(message.author) === optAuthor && messageText === optText
+            );
+          });
+        }),
+      ];
+
   return (
     <>
-      {linkedYoutubeUrl && youtubeVideoId && showYoutubeSection && (
-        <div style={{ display: "none" }} aria-hidden="true">
-          <YouTubeChat
-            videoId={youtubeVideoId}
-            channel={selectedTwitchChannelName}
-            authUserId={youtubeSession?.userId}
-            onMessages={handleYtMessages}
-            onMessageDeleted={markYtMessageDeleted}
-            onConnectionChange={onYtConnectionChange}
-            fontSize={fontSize}
-            chatFont={chatFont}
-            splitChatEnabled={splitChatEnabled}
-            showDeletedMessages={true}
-            renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
-            enableLazyHistory={false}
-          />
-        </div>
-      )}
+      {!isVodPlayback &&
+        linkedYoutubeUrl &&
+        youtubeVideoId &&
+        showYoutubeSection && (
+          <div style={{ display: "none" }} aria-hidden="true">
+            <YouTubeChat
+              videoId={youtubeVideoId}
+              channel={selectedTwitchChannelName}
+              authUserId={youtubeSession?.userId}
+              onMessages={handleYtMessages}
+              onMessageDeleted={markYtMessageDeleted}
+              onConnectionChange={onYtConnectionChange}
+              fontSize={fontSize}
+              chatFont={chatFont}
+              splitChatEnabled={splitChatEnabled}
+              showDeletedMessages={true}
+              renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
+              enableLazyHistory={false}
+            />
+          </div>
+        )}
 
       <div
         style={{
@@ -158,19 +225,27 @@ function UnifiedChatContent({
         }}
       >
         <ChatDisplay
-          messages={messages}
-          isLoading={isLoading}
+          messages={displayMessages}
+          isLoading={displayLoading}
+          vodMode={isVodPlayback}
+          vodError={vodChatError}
+          onDownloadVod={downloadVod}
+          onDownloadVodChat={downloadVodChat}
           selectedPlatforms={selectedPlatforms}
-          onReply={(message) => setReplyingTo(message)}
-          onMentionUser={onMentionUser}
+          onReply={
+            isVodPlayback
+              ? undefined
+              : (message) => setReplyingTo(message)
+          }
+          onMentionUser={isVodPlayback ? undefined : onMentionUser}
           channelName={selectedTwitchChannelName}
           channelDisplayName={selectedTwitchChannelDisplayName}
-          streamTitle={streamTitle}
-          streamGameName={streamGameName}
-          isStreamLive={streamIsLive}
-          streamUptime={streamUptime}
+          streamTitle={displayStreamTitle}
+          streamGameName={displayStreamGameName}
+          isStreamLive={displayStreamIsLive}
+          streamUptime={isVodPlayback ? undefined : streamUptime}
           streamStartedAt={streamStartedAt}
-          viewerCount={viewerCount}
+          viewerCount={displayViewerCount}
           hideViewerCount={hideViewerCount}
           onRefreshEmotes={handleRefreshEmotes}
           isRefreshingEmotes={isRefreshingEmotes}
@@ -198,34 +273,19 @@ function UnifiedChatContent({
           unifiedChatSlot={
             <UnifiedChat
               ref={unifiedChatRef}
-              twitchMessages={messages}
+              twitchMessages={displayMessages}
               channelName={selectedTwitchChannelName || ""}
-              ytMessages={[
-                ...ytMessages,
-                ...ytOptimisticMessages.filter((opt) => {
-                  const norm = (s: string) =>
-                    s.normalize("NFKC").trim().toLowerCase();
-                  const optText = norm(getYtMessageText(opt));
-                  const optAuthor = norm(opt.author);
-
-                  return !ytMessages.some((message) => {
-                    const messageText = norm(getYtMessageText(message));
-                    if (opt.authorChannelId && message.authorChannelId) {
-                      return (
-                        message.authorChannelId === opt.authorChannelId &&
-                        messageText === optText
-                      );
-                    }
-                    return norm(message.author) === optAuthor && messageText === optText;
-                  });
-                }),
-              ]}
-              ytConnectionState={linkedYoutubeUrl ? ytConnectionState : undefined}
-              ytLoading={ytLoading}
-              ytError={ytError}
-              twitchConnected={isTwitchChatConnected}
-              onReply={setReplyingTo}
-              onMentionUser={onMentionUser}
+              ytMessages={displayYtMessages}
+              ytConnectionState={
+                !isVodPlayback && linkedYoutubeUrl
+                  ? ytConnectionState
+                  : undefined
+              }
+              ytLoading={!isVodPlayback && ytLoading}
+              ytError={isVodPlayback ? null : ytError}
+              twitchConnected={isVodPlayback || isTwitchChatConnected}
+              onReply={isVodPlayback ? undefined : setReplyingTo}
+              onMentionUser={isVodPlayback ? undefined : onMentionUser}
               onCopyMessage={() => onNotification("Message copied!", "success")}
               currentUserDisplayName={appProps.twitchSession?.displayName}
               fontSize={fontSize}
@@ -242,26 +302,30 @@ function UnifiedChatContent({
         />
       </div>
 
-      <UnifiedInput
-        ref={unifiedInputRef}
-        onSendMessage={handleSendMessage}
-        isLoading={isLoading}
-        replyingTo={replyingTo}
-        onCancelReply={() => setReplyingTo(undefined)}
-        chatMessages={messages}
-        currentUsername={appProps.twitchSession?.username || ""}
-        onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
-        slowModeWaitTime={slowModeWaitTime}
-        followerModeMinutes={followerModeMinutes}
-        isFollowing={isFollowingChannelState}
-        channelName={selectedTwitchChannelName}
-        youtubeVideoId={youtubeVideoId}
-        ytChatMessages={ytMessages}
-        onOptimisticYoutube={handleYtOptimisticMessage}
-        onOptimisticYoutubeFailed={handleYtOptimisticFailed}
-        youtubeAvailable={Boolean(linkedYoutubeUrl && youtubeVideoId && youtubeSession)}
-        emoteAutocompleteMode={appProps.emoteAutocompleteMode}
-      />
+      {!isVodPlayback && (
+        <UnifiedInput
+          ref={unifiedInputRef}
+          onSendMessage={handleSendMessage}
+          isLoading={isLoading}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(undefined)}
+          chatMessages={messages}
+          currentUsername={appProps.twitchSession?.username || ""}
+          onInputFocus={() => unifiedChatRef.current?.scrollToBottom()}
+          slowModeWaitTime={slowModeWaitTime}
+          followerModeMinutes={followerModeMinutes}
+          isFollowing={isFollowingChannelState}
+          channelName={selectedTwitchChannelName}
+          youtubeVideoId={youtubeVideoId}
+          ytChatMessages={ytMessages}
+          onOptimisticYoutube={handleYtOptimisticMessage}
+          onOptimisticYoutubeFailed={handleYtOptimisticFailed}
+          youtubeAvailable={Boolean(
+            linkedYoutubeUrl && youtubeVideoId && youtubeSession,
+          )}
+          emoteAutocompleteMode={appProps.emoteAutocompleteMode}
+        />
+      )}
     </>
   );
 }
@@ -302,12 +366,13 @@ function SplitChatContent({
     messages,
     isLoading,
     isTwitchChatConnected,
+    isVodPlayback,
+    vodChatError,
+    downloadVod,
+    downloadVodChat,
     selectedPlatforms,
     setReplyingTo,
     replyingTo,
-    streamTitle,
-    streamGameName,
-    streamIsLive,
     streamUptime,
     streamStartedAt,
     handleRefreshEmotes,
@@ -342,6 +407,14 @@ function SplitChatContent({
       markFirstMessageChannels,
     );
 
+  const display = deriveVodDisplay(state, viewerCount);
+  const displayMessages = display.messages;
+  const displayLoading = display.loading;
+  const displayStreamTitle = display.streamTitle;
+  const displayStreamGameName = display.streamGameName;
+  const displayStreamIsLive = display.streamIsLive;
+  const displayViewerCount = display.viewerCount;
+
   return (
     <SplitLayout
       chatSlot={
@@ -363,20 +436,28 @@ function SplitChatContent({
           >
             <ChatDisplay
               ref={state.chatDisplayRef}
-              messages={messages}
-              isLoading={isLoading}
-              twitchConnected={isTwitchChatConnected}
+              messages={displayMessages}
+              isLoading={displayLoading}
+              vodMode={isVodPlayback}
+              vodError={vodChatError}
+              onDownloadVod={downloadVod}
+              onDownloadVodChat={downloadVodChat}
+              twitchConnected={isVodPlayback || isTwitchChatConnected}
               selectedPlatforms={selectedPlatforms}
-              onReply={(message) => setReplyingTo(message)}
-              onMentionUser={onMentionUser}
+              onReply={
+                isVodPlayback
+                  ? undefined
+                  : (message) => setReplyingTo(message)
+              }
+              onMentionUser={isVodPlayback ? undefined : onMentionUser}
               channelName={selectedTwitchChannelName}
               channelDisplayName={selectedTwitchChannelDisplayName}
-              streamTitle={streamTitle}
-              streamGameName={streamGameName}
-              isStreamLive={streamIsLive}
-              streamUptime={streamUptime}
+              streamTitle={displayStreamTitle}
+              streamGameName={displayStreamGameName}
+              isStreamLive={displayStreamIsLive}
+              streamUptime={isVodPlayback ? undefined : streamUptime}
               streamStartedAt={streamStartedAt}
-              viewerCount={viewerCount}
+              viewerCount={displayViewerCount}
               hideViewerCount={hideViewerCount}
               onRefreshEmotes={handleRefreshEmotes}
               isRefreshingEmotes={isRefreshingEmotes}
@@ -403,26 +484,30 @@ function SplitChatContent({
               markFirstMessages={markFirstMessagesActive}
             />
           </div>
-          <MessageInput
-            ref={messageInputRef}
-            onSendMessage={handleSendMessage}
-            isLoading={isLoading}
-            isConnected={{ twitch: twitchConnected }}
-            replyingTo={replyingTo}
-            onCancelReply={() => setReplyingTo(undefined)}
-            chatMessages={messages}
-            currentUsername={appProps.twitchSession?.username || ""}
-            onInputFocus={() => state.chatDisplayRef.current?.scrollToBottom()}
-            slowModeWaitTime={slowModeWaitTime}
-            followerModeMinutes={followerModeMinutes}
-            isFollowing={isFollowingChannelState}
-            channelName={selectedTwitchChannelName}
-            emoteAutocompleteMode={appProps.emoteAutocompleteMode}
-          />
+          {!isVodPlayback && (
+            <MessageInput
+              ref={messageInputRef}
+              onSendMessage={handleSendMessage}
+              isLoading={isLoading}
+              isConnected={{ twitch: twitchConnected }}
+              replyingTo={replyingTo}
+              onCancelReply={() => setReplyingTo(undefined)}
+              chatMessages={messages}
+              currentUsername={appProps.twitchSession?.username || ""}
+              onInputFocus={() =>
+                state.chatDisplayRef.current?.scrollToBottom()
+              }
+              slowModeWaitTime={slowModeWaitTime}
+              followerModeMinutes={followerModeMinutes}
+              isFollowing={isFollowingChannelState}
+              channelName={selectedTwitchChannelName}
+              emoteAutocompleteMode={appProps.emoteAutocompleteMode}
+            />
+          )}
         </div>
       }
       linkedYoutubeUrl={linkedYoutubeUrl}
-      showYoutubeSection={state.showYoutubeSection}
+      showYoutubeSection={isVodPlayback ? false : state.showYoutubeSection}
       chatSplitRatio={chatSplitRatio}
       isDraggingChatSplit={isDraggingChatSplit}
       onSetIsDraggingChatSplit={setIsDraggingChatSplit}
