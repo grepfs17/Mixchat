@@ -44,6 +44,18 @@ function formatOffset(totalSeconds: number): string {
   return `${minutes}:${String(rest).padStart(2, "0")}`;
 }
 
+function formatTwitchTime(totalSeconds: number): string {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (hours > 0 || minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${rest}s`);
+  return parts.join("");
+}
+
 function buildJsonComment(comment: VodChatComment) {
   return {
     ...comment,
@@ -51,7 +63,10 @@ function buildJsonComment(comment: VodChatComment) {
   };
 }
 
-function buildHtmlMessage(comment: VodChatComment): string {
+function buildHtmlMessage(
+  comment: VodChatComment,
+  videoId: string,
+): string {
   const content = comment.fragments
     .map((fragment) => {
       if (!fragment.emote) return escapeHtml(fragment.text);
@@ -64,9 +79,13 @@ function buildHtmlMessage(comment: VodChatComment): string {
     })
     .join("");
 
-  return `<div class="msg"><time>${formatOffset(
+  const twitchUrl = `https://www.twitch.tv/videos/${videoId}?t=${formatTwitchTime(
     comment.offsetSeconds,
-  )}</time><span class="author" style="color:${safeColor(
+  )}`;
+
+  return `<div class="msg"><a class="time" href="${twitchUrl}" target="_blank" rel="noopener noreferrer" title="Open on Twitch at this time">${formatOffset(
+    comment.offsetSeconds,
+  )}</a><span class="author" style="color:${safeColor(
     comment.color,
   )}">${escapeHtml(comment.author)}</span><span class="text">${content}</span></div>\n`;
 }
@@ -89,7 +108,8 @@ h1 { margin: 0 0 4px; font-size: 18px; }
 main { padding: 8px 0 24px; }
 .msg { display: flex; gap: 8px; align-items: baseline; padding: 3px 20px; }
 .msg:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
-time { flex: 0 0 auto; color: #adadb8; font-variant-numeric: tabular-nums; font-size: 12px; }
+.msg .time { flex: 0 0 auto; color: #adadb8; font-variant-numeric: tabular-nums; font-size: 12px; text-decoration: none; }
+.msg .time:hover { color: #efeff1; text-decoration: underline; }
 .author { flex: 0 0 auto; font-weight: 600; }
 .text { min-width: 0; overflow-wrap: anywhere; }
 .emote { height: 28px; vertical-align: middle; }
@@ -175,7 +195,7 @@ export const GET: APIRoute = async ({ url, request }) => {
           if (format === "json") {
             write(`${firstComment ? "" : ","}${JSON.stringify(buildJsonComment(comment))}`);
           } else {
-            write(buildHtmlMessage(comment));
+            write(buildHtmlMessage(comment, videoId));
           }
           firstComment = false;
         }

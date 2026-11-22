@@ -117,6 +117,9 @@ describe("GET /api/twitch-vod-chat-download", () => {
     expect(html).toContain(
       "https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/1.0",
     );
+    expect(html).toContain(
+      'href="https://www.twitch.tv/videos/124?t=1m15s"',
+    );
   });
 
   it("rejects an invalid video id without calling Twitch", async () => {
