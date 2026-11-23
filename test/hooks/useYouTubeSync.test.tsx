@@ -223,3 +223,56 @@ describe("useYouTubeSync: markYtMessageDeleted first-writer-wins", () => {
     expect(patched.deletedByText).toBe("Message deleted by @ModName");
   });
 });
+
+describe("useYouTubeSync: broadcast switching", () => {
+  it("keeps the feed when the live lookup blips to null and recovers", () => {
+    const { result, rerender } = renderHook(
+      (props: Props) => useYouTubeSync(props),
+      { initialProps: baseProps() },
+    );
+
+    act(() => {
+      result.current.setYtMessages([msg({ id: "msg-1" })]);
+    });
+
+    // One poll returns no live stream (transient lookup miss).
+    rerender(baseProps({ youtubeVideoId: null }));
+    expect(result.current.ytMessages).toHaveLength(1);
+
+    // The same broadcast comes back: no switch, so the feed survives.
+    rerender(baseProps({ youtubeVideoId: "abc123def45" }));
+    expect(result.current.ytMessages).toHaveLength(1);
+  });
+
+  it("clears the feed when a different broadcast takes over after a blip", () => {
+    const { result, rerender } = renderHook(
+      (props: Props) => useYouTubeSync(props),
+      { initialProps: baseProps() },
+    );
+
+    act(() => {
+      result.current.setYtMessages([msg({ id: "msg-1" })]);
+    });
+
+    rerender(baseProps({ youtubeVideoId: null }));
+    rerender(baseProps({ youtubeVideoId: "zzz999yyy88" }));
+
+    expect(result.current.ytMessages).toHaveLength(0);
+    expect(result.current.ytOptimisticMessages).toHaveLength(0);
+  });
+
+  it("clears the feed when switching broadcasts directly", () => {
+    const { result, rerender } = renderHook(
+      (props: Props) => useYouTubeSync(props),
+      { initialProps: baseProps() },
+    );
+
+    act(() => {
+      result.current.setYtMessages([msg({ id: "msg-1" })]);
+    });
+
+    rerender(baseProps({ youtubeVideoId: "zzz999yyy88" }));
+
+    expect(result.current.ytMessages).toHaveLength(0);
+  });
+});

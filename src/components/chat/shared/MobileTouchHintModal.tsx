@@ -107,8 +107,8 @@ export default function MobileTouchHintModal({
           />
           <HintRow
             icon={<MdContentCopy size={18} color="var(--color-twitch)" />}
-            action="Double tap"
-            description="a message to copy it"
+            action="Copy"
+            description="a message from the context menu"
           />
         </div>
 

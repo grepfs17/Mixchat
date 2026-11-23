@@ -51,9 +51,13 @@ export function useYouTubeSync({
 
   // A different broadcast means a different server-side chat session. Drop
   // the old messages so the other stream's chat never flashes in between.
-  const [prevVideoId, setPrevVideoId] = useState<string | null>(youtubeVideoId);
-  if (prevVideoId !== youtubeVideoId) {
-    setPrevVideoId(youtubeVideoId);
+  // Compare against the last broadcast that actually rendered messages: the
+  // live lookup can blip to null for one poll (a transient "no live stream"
+  // response) and come back to the same broadcast, and that must not wipe the
+  // feed. A genuinely different broadcast still clears, including after a blip.
+  const [lastVideoId, setLastVideoId] = useState<string | null>(youtubeVideoId);
+  if (youtubeVideoId && lastVideoId !== youtubeVideoId) {
+    setLastVideoId(youtubeVideoId);
     setYtMessages([]);
     setYtOptimisticMessages([]);
     deletedRef.current = new Map();
