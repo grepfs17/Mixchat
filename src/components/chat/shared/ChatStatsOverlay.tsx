@@ -7,6 +7,7 @@ import {
   MdExpandMore,
   MdExpandLess,
   MdRefresh,
+  MdVisibilityOff,
 } from "react-icons/md";
 import { FaTwitch, FaYoutube } from "react-icons/fa";
 import type { Platform } from "../../../lib/types";
@@ -19,6 +20,13 @@ import {
 } from "../../../lib/chatStats";
 import "../../../styles/chat/ChatStatsOverlay.css";
 
+export interface IgnoredUserStats {
+  count: number;
+  displayName: string;
+  authorAvatar?: string;
+  platform: Platform;
+}
+
 interface ChatStatsOverlayProps {
   stats: ChatStatsResult;
   loading?: boolean;
@@ -28,6 +36,12 @@ interface ChatStatsOverlayProps {
   onClose: () => void;
   onResetEntry?: (key: string) => void;
   onResetEntries?: () => void;
+  ignoredUserCounts?: Map<string, IgnoredUserStats>;
+  onOpenIgnoredUser?: (
+    author: string,
+    authorAvatar?: string,
+    platform?: Platform,
+  ) => void;
 }
 
 function platformIcon(platform: Platform) {
@@ -204,6 +218,64 @@ function ChatStatsModsSection({
   );
 }
 
+function ChatStatsIgnoredSection({
+  ignoredUserCounts,
+  onOpenIgnoredUser,
+}: {
+  ignoredUserCounts: Map<string, IgnoredUserStats>;
+  onOpenIgnoredUser?: (
+    author: string,
+    authorAvatar?: string,
+    platform?: Platform,
+  ) => void;
+}) {
+  if (ignoredUserCounts.size === 0) return null;
+
+  const entries = Array.from(ignoredUserCounts.entries());
+  const hiddenTotal = entries.reduce((total, [, user]) => total + user.count, 0);
+
+  return (
+    <div className="chat-stats-ignored">
+      <div className="chat-stats-mods-header">
+        <span className="chat-stats-section-title">Ignored users</span>
+        <span className="chat-stats-section-count">{hiddenTotal}</span>
+      </div>
+      <div className="chat-stats-ignored-list">
+        {entries.map(([key, user]) => (
+          <button
+            key={key}
+            type="button"
+            className="chat-stats-ignored-row"
+            title={`${user.count} hidden message${user.count === 1 ? "" : "s"} from ${user.displayName}. View history`}
+            onClick={() =>
+              onOpenIgnoredUser?.(
+                user.displayName,
+                user.authorAvatar,
+                user.platform,
+              )
+            }
+          >
+            <MdVisibilityOff size={13} className="chat-stats-ignored-icon" />
+            {user.authorAvatar ? (
+              <img
+                src={user.authorAvatar}
+                alt=""
+                className="chat-stats-user-avatar"
+              />
+            ) : (
+              platformIcon(user.platform)
+            )}
+            <span className="chat-stats-user-name">
+              {user.displayName.replace(/^@+/, "")}
+            </span>
+            <span className="chat-stats-count">{user.count}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RepeatedSectionHeader({
   repeatedOpen,
   onToggle,
@@ -352,6 +424,8 @@ export default function ChatStatsOverlay({
   onClose,
   onResetEntry,
   onResetEntries,
+  ignoredUserCounts,
+  onOpenIgnoredUser,
 }: ChatStatsOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -461,6 +535,13 @@ export default function ChatStatsOverlay({
           copiedKey={copiedKey}
           onCopy={handleCopyUsers}
         />
+
+        {ignoredUserCounts && ignoredUserCounts.size > 0 ? (
+          <ChatStatsIgnoredSection
+            ignoredUserCounts={ignoredUserCounts}
+            onOpenIgnoredUser={onOpenIgnoredUser}
+          />
+        ) : null}
 
         <RepeatedSectionHeader
           repeatedOpen={repeatedOpen}

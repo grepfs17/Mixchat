@@ -203,6 +203,54 @@
     padding-left: 0;
 }
 
+.chat-stats-ignored {
+    padding: 12px 16px;
+    border-bottom: 1px solid #1f1f23;
+    background-color: #141416;
+}
+
+.chat-stats-ignored-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-stats-ignored-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 6px;
+    background: #1f1f23;
+    border: 1px solid #2a2a2e;
+    border-radius: 0;
+    color: #d3d3d8;
+    font-size: 11px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.chat-stats-ignored-row:hover {
+    color: #efeff1;
+    border-color: #9146ff;
+    background: rgba(145, 70, 255, 0.12);
+}
+
+.chat-stats-ignored-icon {
+    color: #adadb8;
+    flex-shrink: 0;
+}
+
+.chat-stats-ignored-row .chat-stats-user-name {
+    flex: 1;
+    min-width: 0;
+}
+
+.chat-stats-ignored-row .chat-stats-count {
+    margin-left: auto;
+}
+
 .chat-stats-empty {
     padding: 40px;
     text-align: center;

@@ -34,7 +34,9 @@ import TwitchTimeoutDialog from "../shared/TwitchTimeoutDialog";
 import MessageMenu from "../shared/MessageMenu";
 import ScrollToBottomButton from "../shared/ScrollToBottomButton";
 import ChatterHistoryOverlay from "../shared/ChatterHistoryOverlay";
-import ChatStatsOverlay from "../shared/ChatStatsOverlay";
+import ChatStatsOverlay, {
+  type IgnoredUserStats,
+} from "../shared/ChatStatsOverlay";
 import StreamNotesOverlay from "../shared/StreamNotesOverlay";
 import ChatEmptyState from "../shared/ChatEmptyState";
 import type {
@@ -170,6 +172,12 @@ interface ChatDisplayOverlaysProps {
   onCloseChatStats: () => void;
   onResetChatStatEntry: (key: string) => void;
   onResetChatStatEntries: () => void;
+  ignoredUserCounts: Map<string, IgnoredUserStats>;
+  onOpenIgnoredUser: (
+    author: string,
+    authorAvatar?: string,
+    platform?: Platform,
+  ) => void;
   streamNotesOpen: boolean;
   onCloseStreamNotes: () => void;
 }
@@ -197,6 +205,8 @@ function ChatDisplayOverlays({
   onCloseChatStats,
   onResetChatStatEntry,
   onResetChatStatEntries,
+  ignoredUserCounts,
+  onOpenIgnoredUser,
   streamNotesOpen,
   onCloseStreamNotes,
 }: ChatDisplayOverlaysProps) {
@@ -256,6 +266,8 @@ function ChatDisplayOverlays({
           onClose={onCloseChatStats}
           onResetEntry={onResetChatStatEntry}
           onResetEntries={onResetChatStatEntries}
+          ignoredUserCounts={ignoredUserCounts}
+          onOpenIgnoredUser={onOpenIgnoredUser}
         />
       )}
 
@@ -488,6 +500,14 @@ const ChatDisplay = ({
     [],
   );
 
+  const handleOpenIgnoredUser = useCallback(
+    (author: string, authorAvatar?: string, platform?: Platform) => {
+      setChatStatsOpen(false);
+      handleViewHistory(author, platform, authorAvatar);
+    },
+    [handleViewHistory],
+  );
+
   const handleUsernameClick = useCallback(
     (e: React.MouseEvent, author: string) => {
       e.preventDefault();
@@ -617,15 +637,7 @@ const ChatDisplay = ({
 
   const ignoredUserCounts = useMemo(() => {
     const ignoredSet = new Set(ignoredUsers.map((u) => u.toLowerCase()));
-    const counts = new Map<
-      string,
-      {
-        count: number;
-        displayName: string;
-        authorAvatar?: string;
-        platform: Platform;
-      }
-    >();
+    const counts = new Map<string, IgnoredUserStats>();
 
     const tally = (
       author: string,
@@ -783,14 +795,6 @@ const ChatDisplay = ({
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
-        ignoredUserCounts={ignoredUserCounts}
-        onOpenIgnoredUserOverlay={(author, authorAvatar, platform) =>
-          setChatterHistory({
-            author,
-            platform: platform || "twitch",
-            authorAvatar,
-          })
-        }
         showModTools={showModTools}
         onOpenModTools={onOpenModTools}
         subscriptionStatuses={subscriptionStatuses}
@@ -893,6 +897,8 @@ const ChatDisplay = ({
         onCloseChatStats={closeChatStats}
         onResetChatStatEntry={handleResetChatStatEntry}
         onResetChatStatEntries={handleResetChatStatEntries}
+        ignoredUserCounts={ignoredUserCounts}
+        onOpenIgnoredUser={handleOpenIgnoredUser}
         streamNotesOpen={streamNotesOpen}
         onCloseStreamNotes={closeStreamNotes}
       />

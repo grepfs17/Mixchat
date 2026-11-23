@@ -69,52 +69,6 @@
     gap: 8px;
 }
 
-.ignored-messages-badge {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    /* Opaque tints mixed over the header background (the header sits on
-       --color-bg-primary) so the chip never shows the backdrop through it. */
-    background: color-mix(
-        in srgb,
-        var(--color-indigo) 12%,
-        var(--color-bg-primary)
-    );
-    border-radius: var(--radius-sm, 3px);
-    color: color-mix(in srgb, var(--color-indigo) 70%, white);
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-
-.ignored-messages-badge:hover {
-    background: color-mix(
-        in srgb,
-        var(--color-indigo) 20%,
-        var(--color-bg-primary)
-    );
-}
-
-.ignored-badge-icon {
-    flex-shrink: 0;
-}
-
-.ignored-badge-user {
-    font-size: 0.75rem;
-    font-weight: 500;
-    line-height: 1;
-}
-
-.ignored-badge-count {
-    font-size: 0.7rem;
-    font-weight: 600;
-    line-height: 1;
-    background: color-mix(in srgb, var(--color-indigo) 20%, transparent);
-    padding: 1px 5px;
-    border-radius: var(--radius-pill, 999px);
-}
-
 .stream-info-bar {
     display: flex;
     align-items: center;

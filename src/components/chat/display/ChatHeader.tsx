@@ -13,7 +13,6 @@ import {
   MdEdit,
   MdCheck,
   MdClose,
-  MdVisibilityOff,
   MdMoreVert,
   MdBuild,
   MdTv,
@@ -34,7 +33,6 @@ import { GiCrossedSwords } from "react-icons/gi";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
-import type { Platform } from "../../../lib/types";
 import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 import type { ModModeTarget } from "../../../contexts/ModerationContext";
 
@@ -76,20 +74,6 @@ interface ChatHeaderProps {
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
-  ignoredUserCounts?: Map<
-    string,
-    {
-      count: number;
-      displayName: string;
-      authorAvatar?: string;
-      platform: Platform;
-    }
-  >;
-  onOpenIgnoredUserOverlay?: (
-    author: string,
-    authorAvatar?: string,
-    platform?: Platform,
-  ) => void;
   showModTools?: boolean;
   onOpenModTools?: () => void;
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
@@ -1321,8 +1305,6 @@ function ChannelTitleSummary({
 }
 
 function DesktopHeaderActions({
-  ignoredUserCounts,
-  onOpenIgnoredUserOverlay,
   onRefreshEmotes,
   isRefreshingEmotes,
   showModToggle,
@@ -1337,20 +1319,6 @@ function DesktopHeaderActions({
   showModTools,
   onOpenModTools,
 }: {
-  ignoredUserCounts: Map<
-    string,
-    {
-      count: number;
-      displayName: string;
-      authorAvatar?: string;
-      platform: Platform;
-    }
-  >;
-  onOpenIgnoredUserOverlay?: (
-    author: string,
-    authorAvatar?: string,
-    platform?: Platform,
-  ) => void;
   onRefreshEmotes?: () => void;
   isRefreshingEmotes?: boolean;
   showModToggle: boolean;
@@ -1367,26 +1335,6 @@ function DesktopHeaderActions({
 }) {
   return (
     <div className="desktop-header-items">
-      {Array.from(ignoredUserCounts.entries()).map(
-        ([key, { count, displayName, authorAvatar, platform }]) => (
-          <button type="button"
-            key={key}
-            className="header-button ignored-messages-badge"
-            title={`${count} hidden message(s) from ${displayName}`}
-            onClick={() =>
-              onOpenIgnoredUserOverlay?.(
-                displayName,
-                authorAvatar,
-                platform,
-              )
-            }
-          >
-            <MdVisibilityOff size={12} className="ignored-badge-icon" />
-            <span className="ignored-badge-user">{displayName}</span>
-            <span className="ignored-badge-count">{count}</span>
-          </button>
-        ),
-      )}
       {onRefreshEmotes && (
         <button type="button"
           onClick={onRefreshEmotes}
@@ -1441,8 +1389,6 @@ function MobileHeaderMenu({
   isOpen,
   onToggle,
   containerRef,
-  ignoredUserCounts,
-  onOpenIgnoredUserOverlay,
   onRefreshEmotes,
   isRefreshingEmotes,
   showModToggle,
@@ -1458,20 +1404,6 @@ function MobileHeaderMenu({
   isOpen: boolean;
   onToggle: () => void;
   containerRef: RefObject<HTMLDivElement | null>;
-  ignoredUserCounts: Map<
-    string,
-    {
-      count: number;
-      displayName: string;
-      authorAvatar?: string;
-      platform: Platform;
-    }
-  >;
-  onOpenIgnoredUserOverlay?: (
-    author: string,
-    authorAvatar?: string,
-    platform?: Platform,
-  ) => void;
   onRefreshEmotes?: () => void;
   isRefreshingEmotes?: boolean;
   showModToggle: boolean;
@@ -1488,7 +1420,6 @@ function MobileHeaderMenu({
     !(
       onRefreshEmotes ||
       showModToggle ||
-      ignoredUserCounts.size > 0 ||
       showModTools
     )
   ) {
@@ -1526,27 +1457,6 @@ function MobileHeaderMenu({
                 {isRefreshingEmotes ? "Reloading..." : "Reload Emotes"}
               </span>
             </button>
-          )}
-          {Array.from(ignoredUserCounts.entries()).map(
-            ([key, { count, displayName, authorAvatar, platform }]) => (
-              <button type="button"
-                key={key}
-                className="mobile-menu-item"
-                onClick={() => {
-                  onOpenIgnoredUserOverlay?.(
-                    displayName,
-                    authorAvatar,
-                    platform,
-                  );
-                  onClose();
-                }}
-              >
-                <MdVisibilityOff size={14} />
-                <span>
-                  {displayName} ({count})
-                </span>
-              </button>
-            ),
           )}
           {showModToggle && (
             <MobileModModeSection
@@ -1599,8 +1509,6 @@ export default function ChatHeader({
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
-  ignoredUserCounts = new Map(),
-  onOpenIgnoredUserOverlay,
   showModTools = false,
   onOpenModTools,
   subscriptionStatuses,
@@ -1675,8 +1583,6 @@ export default function ChatHeader({
         </div>
         <div className="chat-header-actions">
           <DesktopHeaderActions
-            ignoredUserCounts={ignoredUserCounts}
-            onOpenIgnoredUserOverlay={onOpenIgnoredUserOverlay}
             onRefreshEmotes={onRefreshEmotes}
             isRefreshingEmotes={isRefreshingEmotes}
             showModToggle={showModToggle}
@@ -1696,8 +1602,6 @@ export default function ChatHeader({
             isOpen={mobileMenuOpen}
             onToggle={() => setMobileMenuOpen((v) => !v)}
             containerRef={mobileMenuRef}
-            ignoredUserCounts={ignoredUserCounts}
-            onOpenIgnoredUserOverlay={onOpenIgnoredUserOverlay}
             onRefreshEmotes={onRefreshEmotes}
             isRefreshingEmotes={isRefreshingEmotes}
             showModToggle={showModToggle}
