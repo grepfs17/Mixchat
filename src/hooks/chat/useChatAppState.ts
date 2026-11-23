@@ -31,6 +31,7 @@ import type { PollState } from "../../components/chat/shared/PollBanner";
 import type { PredictionState } from "../../components/chat/shared/PredictionBanner";
 import type { CelebrationState } from "../../components/chat/shared/CelebrationBanner";
 import type { ModModeTarget } from "../../contexts/ModerationContext";
+import type { YoutubeStreamsState } from "../app/useYoutubeStreams";
 
 import {
   useChatLayout,
@@ -91,14 +92,19 @@ export interface ChatAppStateProps {
   emoteAutocompleteMode?: EmoteAutocompleteMode;
   activeVodId?: string | null;
   vodPlayerRef?: RefObject<VodChatPlayerLike | null>;
+  /** Live broadcast resolution shared with the embed player. */
+  youtubeStreams?: YoutubeStreamsState;
 }
+
+const EMPTY_YOUTUBE_VIDEOS: YoutubeStreamsState["videos"] = [];
+const noopSelectYoutubeVideo = () => {};
+const noopSetManualVideoId = () => {};
 
 export function useChatAppState({
   selectedTwitchChannel = "",
   selectedTwitchChannelName = "",
   selectedTwitchChannelDisplayName = "",
   twitchSession,
-  linkedYoutubeUrl,
   youtubeSession,
   unifyChatEnabled = false,
   mentionSoundEnabled = true,
@@ -112,6 +118,7 @@ export function useChatAppState({
   isOnOwnChannel = false,
   activeVodId = null,
   vodPlayerRef,
+  youtubeStreams,
 }: ChatAppStateProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingRaid, setPendingRaid] = useState<RaidOutEvent | null>(null);
@@ -168,18 +175,21 @@ export function useChatAppState({
     twitchUserId: twitchSession?.userId,
   });
 
+  const youtubeVideoId = youtubeStreams?.selectedVideoId ?? null;
+  const ytChannelId = youtubeStreams?.channelId ?? null;
+  const ytVideos = youtubeStreams?.videos ?? EMPTY_YOUTUBE_VIDEOS;
+  const ytLoading = youtubeStreams?.loading ?? false;
+  const ytError = youtubeStreams?.error ?? null;
+  const ytNotice = youtubeStreams?.notice ?? null;
+  const selectYoutubeVideo =
+    youtubeStreams?.selectVideo ?? noopSelectYoutubeVideo;
+  const setManualVideoId =
+    youtubeStreams?.setManualVideoId ?? noopSetManualVideoId;
+
   const {
-    youtubeVideoId,
-    manualVideoId,
-    autoVideoId,
-    ytLoading,
-    ytError,
     showYoutubeSection,
     ytMessages,
     ytOptimisticMessages,
-    ytChannelId,
-    setManualVideoId,
-    setAutoVideoId,
     setShowYoutubeSection,
     handleYtMessages,
     handleYtOptimisticMessage,
@@ -188,8 +198,7 @@ export function useChatAppState({
     markYtMessageDeleted,
     getYtMessageText,
   } = useYouTubeSync({
-    linkedYoutubeUrl,
-    showYoutubeSection: true,
+    youtubeVideoId,
     selectedTwitchChannelName,
     youtubeSession,
     unifyChatEnabled,
@@ -779,8 +788,8 @@ export function useChatAppState({
     notification,
     chatDisplayRef,
     unifiedChatRef,
-    manualVideoId,
-    autoVideoId,
+    ytVideos,
+    ytNotice,
     ytLoading,
     ytError,
     showYoutubeSection,
@@ -809,7 +818,7 @@ export function useChatAppState({
     setShowYoutubeSection,
     setIsDraggingChatSplit,
     setManualVideoId,
-    setAutoVideoId,
+    selectYoutubeVideo,
     setNotification,
     setPendingRaid,
     setIsRaidInitiator,

@@ -91,20 +91,4 @@ describe("useYoutubeLink: IS_TWITCH_ONLY gating", () => {
       );
     }
   });
-
-  it("returns null for youtubeStreamVideoId when no YouTube link is available", async () => {
-    const useYoutubeLink = await loadHook();
-
-    const { result } = renderHook(() =>
-      useYoutubeLink({
-        selectedTwitchChannel: "channel1",
-        twitchSession: undefined,
-        youtubeSession: undefined,
-      }),
-    );
-
-    // youtubeStreamVideoId derives from linkedYoutubeUrl, which is null
-    // when there's no stored link or when IS_TWITCH_ONLY gates it.
-    expect(result.current.youtubeStreamVideoId).toBeNull();
-  });
 });

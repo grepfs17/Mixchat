@@ -1,5 +1,9 @@
 import { getInnertube } from "./youtube";
 import { YT_USER_AGENT } from "./constants";
+import {
+  pickPrimaryLiveCandidate,
+  type YoutubeLiveCandidate,
+} from "./youtubeStreamSelection";
 
 const CHANNEL_ID_RE = /^UC[\w-]{22}$/;
 const HANDLE_RE = /^@[\w.]{1,100}$/;
@@ -7,11 +11,20 @@ const YT_URL_RE = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i;
 
 const DEFAULT_TTL = 30_000;
 
-type LookupResult = { videoId: string | null; channelId: string };
+type LookupResult = {
+  videoId: string | null;
+  channelId: string;
+  videos: YoutubeLiveCandidate[];
+};
 
 const channelLiveCache = new Map<
   string,
-  { videoId: string | null; channelId: string; expires: number }
+  {
+    videoId: string | null;
+    channelId: string;
+    videos: YoutubeLiveCandidate[];
+    expires: number;
+  }
 >();
 const inflightLiveLookup = new Map<string, Promise<LookupResult>>();
 
@@ -260,53 +273,162 @@ function isActuallyLive(video: any): boolean {
 }
 
 function extractVideoIdFromNode(video: any): string | null {
-  return video?.id ?? video?.videoId ?? video?.content_id ?? null;
+  return (
+    video?.id ??
+    video?.video_id ??
+    video?.videoId ??
+    video?.content_id ??
+    null
+  );
 }
 
-function findLiveInTree(node: any, depth = 0): string | null {
-  if (!node || typeof node !== "object" || depth > 8) return null;
+function getNodeText(node: any): string {
+  if (!node) return "";
+  if (typeof node === "string") return node;
+  try {
+    if (typeof node.toString === "function") {
+      const text = node.toString();
+      if (text) return text;
+    }
+  } catch {
+    // Fall through to the raw text fields.
+  }
+  return typeof node.text === "string" ? node.text : "";
+}
+
+function getThumbnailList(node: any): any[] {
+  const lists = [
+    node?.content_image?.image,
+    node?.content_image?.primary_thumbnail?.image,
+    node?.thumbnail?.thumbnails,
+    node?.thumbnail_view_model?.image,
+    node?.thumbnails,
+  ];
+  for (const list of lists) {
+    if (Array.isArray(list) && list.length > 0) return list;
+  }
+  return [];
+}
+
+function getThumbnailUrl(node: any): string | undefined {
+  let best: any = null;
+  for (const item of getThumbnailList(node)) {
+    if (!item?.url) continue;
+    if (!best || (item.width ?? 0) > (best.width ?? 0)) best = item;
+  }
+  return best?.url;
+}
+
+function isVerticalVideo(node: any, thumbnails: any[]): boolean {
+  const aspect = node?.styling?.content_image_aspect_ratio;
+  if (typeof aspect === "string") {
+    if (/PORTRAIT/i.test(aspect)) return true;
+    if (/LANDSCAPE/i.test(aspect)) return false;
+  }
+  if (
+    node?.content_type === "SHORT" ||
+    node?.content_type === "SHORTS" ||
+    node?.content_type === "LOCKUP_CONTENT_TYPE_SHORTS"
+  ) {
+    return true;
+  }
+  const first = thumbnails[0];
+  if (first?.width && first?.height) return first.height > first.width;
+  return false;
+}
+
+/**
+ * Convert an Innertube video node into a live candidate, or null when the
+ * node is not a currently live video.
+ */
+export function toYoutubeLiveCandidate(video: any): YoutubeLiveCandidate | null {
+  const videoId = extractVideoIdFromNode(video);
+  if (!videoId || !VIDEO_ID_RE.test(videoId)) return null;
+  if (!isActuallyLive(video)) return null;
+
+  const thumbnails = getThumbnailList(video);
+  const candidate: YoutubeLiveCandidate = { videoId };
+
+  const title =
+    getNodeText(video?.metadata?.title) || getNodeText(video?.title) || "";
+  if (title) candidate.title = title;
+
+  const thumbnailUrl = getThumbnailUrl(video);
+  if (thumbnailUrl) candidate.thumbnailUrl = thumbnailUrl;
+
+  if (isVerticalVideo(video, thumbnails)) candidate.isVertical = true;
+  return candidate;
+}
+
+export function collectLiveCandidates(videos: any[]): YoutubeLiveCandidate[] {
+  const candidates: YoutubeLiveCandidate[] = [];
+  const seen = new Set<string>();
+  for (const video of videos) {
+    const candidate = toYoutubeLiveCandidate(video);
+    if (!candidate || seen.has(candidate.videoId)) continue;
+    seen.add(candidate.videoId);
+    candidates.push(candidate);
+  }
+  return candidates;
+}
+
+const LIVE_LOCKUP_CONTENT_TYPES = new Set([
+  "VIDEO",
+  "MOVIE",
+  "SHORT",
+  "SHORTS",
+  "STATION",
+]);
+
+function collectLiveCandidatesFromTree(
+  node: any,
+  candidates: YoutubeLiveCandidate[],
+  seen: Set<string>,
+  depth = 0,
+): void {
+  if (!node || typeof node !== "object" || depth > 8) return;
   if (Array.isArray(node)) {
     for (const item of node) {
-      const found = findLiveInTree(item, depth + 1);
-      if (found) return found;
+      collectLiveCandidatesFromTree(item, candidates, seen, depth + 1);
     }
-    return null;
+    return;
   }
 
-  // Old videoRenderer format
-  const vr = node.videoRenderer;
-  if (vr) {
-    const vid = extractVideoIdFromNode(vr);
-    if (vid && isActuallyLive(vr)) return vid;
+  const directCandidates = [
+    node.videoRenderer,
+    node.type === "LockupView" && LIVE_LOCKUP_CONTENT_TYPES.has(node.content_type)
+      ? node
+      : null,
+  ];
+  for (const video of directCandidates) {
+    if (!video) continue;
+    const candidate = toYoutubeLiveCandidate(video);
+    if (!candidate || seen.has(candidate.videoId)) continue;
+    seen.add(candidate.videoId);
+    candidates.push(candidate);
   }
 
-  // New LockupView format (check type string for robustness)
-  if (
-    node.type === "LockupView" &&
-    (node.content_type === "VIDEO" || node.content_type === "MOVIE")
-  ) {
-    const vid = extractVideoIdFromNode(node);
-    if (vid && isActuallyLive(node)) return vid;
+  for (const value of Object.values(node)) {
+    collectLiveCandidatesFromTree(value, candidates, seen, depth + 1);
   }
-
-  for (const val of Object.values(node)) {
-    const found = findLiveInTree(val, depth + 1);
-    if (found) return found;
-  }
-  return null;
 }
 
-async function findLiveFromChannel(channel: any, debug: boolean): Promise<string | null> {
+async function findLiveFromChannel(
+  channel: any,
+  debug: boolean,
+): Promise<YoutubeLiveCandidate[]> {
   // Strategy 1: Live streams tab
   try {
     const liveStreams = await channel.getLiveStreams();
     const videos: any[] = liveStreams?.videos ?? [];
     if (debug) console.log(`[YouTube Lookup] getLiveStreams() → ${videos.length} videos`);
-    const liveVideo = videos.find((v: any) => isActuallyLive(v));
-    if (liveVideo) {
-      const id = extractVideoIdFromNode(liveVideo);
-      if (debug) console.log(`[YouTube Lookup] Found live video in liveStreams: ${id}`);
-      if (id) return id;
+    const candidates = collectLiveCandidates(videos);
+    if (candidates.length > 0) {
+      if (debug)
+        console.log(
+          `[YouTube Lookup] Found live videos in liveStreams: ${candidates.map((c) => c.videoId).join(", ")}`,
+        );
+      return candidates;
     }
   } catch (lsErr) {
     if (debug) console.warn("[YouTube Lookup] getLiveStreams failed:", lsErr);
@@ -315,9 +437,8 @@ async function findLiveFromChannel(channel: any, debug: boolean): Promise<string
   // Strategy 2: Videos tab
   try {
     const videosTab = await channel.getVideos();
-    const videos: any[] = videosTab?.videos ?? [];
-    const liveVideo = videos.find((v: any) => isActuallyLive(v));
-    if (liveVideo) return extractVideoIdFromNode(liveVideo);
+    const candidates = collectLiveCandidates(videosTab?.videos ?? []);
+    if (candidates.length > 0) return candidates;
   } catch (videosError) {
     if (debug) console.warn("[YouTube Lookup] getVideos failed:", videosError);
   }
@@ -326,15 +447,17 @@ async function findLiveFromChannel(channel: any, debug: boolean): Promise<string
   if (channel.hasHome) {
     try {
       const home = await channel.getHome();
-      const found = findLiveInTree(home?.contents);
-      if (found) return found;
+      const candidates: YoutubeLiveCandidate[] = [];
+      collectLiveCandidatesFromTree(home?.contents, candidates, new Set());
+      if (candidates.length > 0) return candidates;
     } catch (homeError) {
       if (debug) console.warn("[YouTube Lookup] Failed to check home feed:", homeError);
     }
   }
 
-  return null;
+  return [];
 }
+
 
 export async function resolveChannelId(
   channelParam: string,
@@ -400,7 +523,7 @@ export async function findLiveForChannel(
   options?: { yt?: any; ttl?: number; debug?: boolean },
 ): Promise<LookupResult> {
   const trimmedParam = (channelParam || "").trim();
-  if (!trimmedParam) return { videoId: null, channelId: "" };
+  if (!trimmedParam) return { videoId: null, channelId: "", videos: [] };
 
   const debug = options?.debug ?? process.env.YT_DEBUG === "1";
   const ttl = options?.ttl ?? DEFAULT_TTL;
@@ -409,7 +532,11 @@ export async function findLiveForChannel(
 
   const cached = channelLiveCache.get(paramKey);
   if (cached && cached.expires > now) {
-    return { videoId: cached.videoId, channelId: cached.channelId };
+    return {
+      videoId: cached.videoId,
+      channelId: cached.channelId,
+      videos: cached.videos,
+    };
   }
 
   if (inflightLiveLookup.has(paramKey))
@@ -441,11 +568,16 @@ export async function findLiveForChannel(
     if (idKey) {
       const cachedById = channelLiveCache.get(idKey);
       if (cachedById && cachedById.expires > Date.now())
-        return { videoId: cachedById.videoId, channelId: cachedById.channelId };
+        return {
+          videoId: cachedById.videoId,
+          channelId: cachedById.channelId,
+          videos: cachedById.videos,
+        };
       if (inflightLiveLookup.has(idKey)) return inflightLiveLookup.get(idKey)!;
     }
 
     let channel: any = null;
+    let videos: YoutubeLiveCandidate[] = [];
     let videoId: string | null = null;
     let finalChannelId = resolvedChannelId || "";
 
@@ -472,7 +604,8 @@ export async function findLiveForChannel(
     }
 
     if (channel) {
-      videoId = await findLiveFromChannel(channel, debug);
+      videos = await findLiveFromChannel(channel, debug);
+      videoId = pickPrimaryLiveCandidate(videos)?.videoId ?? null;
       finalChannelId =
         finalChannelId ||
         (channel as any).basic_info?.id ||
@@ -491,6 +624,7 @@ export async function findLiveForChannel(
         const redirectVid = await redirectFallbackLive(trimmedParam);
         if (redirectVid) {
           videoId = redirectVid;
+          videos = [{ videoId: redirectVid }];
           if (debug)
             console.log(`[YouTube Lookup] Redirect fallback found: ${videoId}`);
         } else {
@@ -510,7 +644,11 @@ export async function findLiveForChannel(
         `[YouTube Lookup] Final result for "${trimmedParam}": videoId=${videoId}, channelId=${finalChannelId || ""}`,
       );
 
-    const result: LookupResult = { videoId, channelId: finalChannelId || "" };
+    const result: LookupResult = {
+      videoId,
+      channelId: finalChannelId || "",
+      videos,
+    };
     try {
       // Only cache successful lookups. Null results (no live stream, transient
       // failures) should not be cached so the next poll can retry immediately.
@@ -518,12 +656,14 @@ export async function findLiveForChannel(
         channelLiveCache.set(paramKey, {
           videoId: result.videoId,
           channelId: result.channelId,
+          videos: result.videos,
           expires: Date.now() + ttl,
         });
         if (result.channelId)
           channelLiveCache.set(`id:${result.channelId}`, {
             videoId: result.videoId,
             channelId: result.channelId,
+            videos: result.videos,
             expires: Date.now() + ttl,
           });
       }

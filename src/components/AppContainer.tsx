@@ -5,6 +5,7 @@ import { useAuthSessions } from "../hooks/app/useAuthSessions";
 import { useTwitchChannels } from "../hooks/app/useTwitchChannels";
 import { useChatSettings } from "../hooks/app/useChatSettings";
 import { useYoutubeLink } from "../hooks/app/useYoutubeLink";
+import { useYoutubeStreams } from "../hooks/app/useYoutubeStreams";
 import { useEmbedState } from "../hooks/app/useEmbedState";
 import { useUiState } from "../hooks/app/useUiState";
 import { useMyChannelInfo } from "../hooks/app/useMyChannelInfo";
@@ -78,13 +79,16 @@ export default function AppContainer() {
   const { showStreamEmbed, hideChatTimestamps, autoFoldSidebar } = chatSettings;
   const {
     linkedYoutubeUrl,
-    youtubeStreamVideoId,
     linkedYoutubeChannelIds,
     notifyLinksChanged,
   } = useYoutubeLink({
     selectedTwitchChannel,
     twitchSession: sessions.twitch,
     youtubeSession: sessions.youtube,
+  });
+  const youtubeStreams = useYoutubeStreams({
+    linkedYoutubeUrl,
+    channelKey: selectedTwitchChannel || selectedTwitchChannelName,
   });
   const {
     videoRatio,
@@ -303,7 +307,7 @@ export default function AppContainer() {
               leftColumnVisible={leftColumnVisible}
               setLeftColumnVisible={setLeftColumnVisible}
               linkedYoutubeUrl={linkedYoutubeUrl}
-              youtubeStreamVideoId={youtubeStreamVideoId}
+              youtubeStreams={youtubeStreams}
               playerType={playerType}
               setPlayerType={setPlayerType}
               hlsQualities={hlsQualities}

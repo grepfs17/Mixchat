@@ -10,6 +10,7 @@ interface SplitChatProps {
   isDraggingChatSplit: boolean;
   onSetIsDraggingChatSplit: (dragging: boolean) => void;
   youtubeVideoId: string | null;
+  ytNotice: string | null;
   useYoutubeEmbed: boolean;
   ytMessages: YTMessage[];
   ytOptimisticMessages: YTMessage[];
@@ -51,6 +52,7 @@ export default function SplitChat({
   isDraggingChatSplit,
   onSetIsDraggingChatSplit,
   youtubeVideoId,
+  ytNotice,
   useYoutubeEmbed,
   ytMessages,
   ytOptimisticMessages,
@@ -81,6 +83,7 @@ export default function SplitChat({
           style={{ height: `${chatSplitRatio}%`, minHeight: 0 }}
           linkedYoutubeUrl={linkedYoutubeUrl}
           youtubeVideoId={youtubeVideoId ?? null}
+          ytNotice={ytNotice}
           channel={channelName}
           useYoutubeEmbed={useYoutubeEmbed}
           ytMessages={ytMessages}

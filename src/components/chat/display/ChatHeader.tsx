@@ -33,8 +33,10 @@ import { GiCrossedSwords } from "react-icons/gi";
 import { useModerationContext } from "../../../contexts/ModerationContext";
 import CategoryDropdown from "./CategoryDropdown";
 import type { CategoryResult } from "./types";
+import type { YoutubeLiveCandidate } from "../../../lib/youtubeStreamSelection";
 import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 import type { ModModeTarget } from "../../../contexts/ModerationContext";
+import YoutubeStreamSelect from "../shared/YoutubeStreamSelect";
 
 function useClickOutside(
   ref: RefObject<HTMLElement | null>,
@@ -74,6 +76,8 @@ interface ChatHeaderProps {
   onUpdateTitle?: (title: string) => Promise<void>;
   onUpdateCategory?: (gameId: string, gameName: string) => Promise<void>;
   onSearchCategories?: (query: string) => Promise<CategoryResult[]>;
+  youtubeVideos?: YoutubeLiveCandidate[];
+  onSelectYoutubeVideo?: (videoId: string) => void;
   showModTools?: boolean;
   onOpenModTools?: () => void;
   subscriptionStatuses?: Map<string, SubscriptionStatus>;
@@ -1509,6 +1513,8 @@ export default function ChatHeader({
   onUpdateTitle,
   onUpdateCategory,
   onSearchCategories,
+  youtubeVideos,
+  onSelectYoutubeVideo,
   showModTools = false,
   onOpenModTools,
   subscriptionStatuses,
@@ -1580,6 +1586,13 @@ export default function ChatHeader({
               isStreamLive={isStreamLive}
             />
           </h2>
+          {youtubeVideoId && onSelectYoutubeVideo && (
+            <YoutubeStreamSelect
+              videos={youtubeVideos ?? []}
+              selectedVideoId={youtubeVideoId}
+              onSelect={onSelectYoutubeVideo}
+            />
+          )}
         </div>
         <div className="chat-header-actions">
           <DesktopHeaderActions

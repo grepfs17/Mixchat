@@ -5,13 +5,19 @@ import {
   isValidYouTubeParam,
 } from "../../lib/youtube-lookup";
 import { IS_TWITCH_ONLY, twitchOnlyResponse } from "../../lib/constants";
+import type { YoutubeLiveCandidate } from "../../lib/youtubeStreamSelection";
 
 // Simple in-memory cache to save on Innertube calls
 const liveVideoCache = new Map<
   string,
-  { videoId: string | null; channelId?: string; expires: number }
+  {
+    videoId: string | null;
+    channelId?: string;
+    videos: YoutubeLiveCandidate[];
+    expires: number;
+  }
 >();
-const LIVE_CACHE_TTL = 1000 * 60 * 5;
+const LIVE_CACHE_TTL = 1000 * 60;
 
 setInterval(() => {
   const now = Date.now();
@@ -69,6 +75,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         JSON.stringify({
           videoId: cached.videoId,
           channelId: cached.channelId || "",
+          videos: cached.videos,
         }),
         { status: 200, headers: JSON_HEADERS },
       );
@@ -80,6 +87,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       liveVideoCache.set(channelUrl, {
         videoId: result.videoId,
         channelId: result.channelId || "",
+        videos: result.videos,
         expires: Date.now() + LIVE_CACHE_TTL,
       });
     }
@@ -88,6 +96,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       JSON.stringify({
         videoId: result.videoId,
         channelId: result.channelId || "",
+        videos: result.videos,
       }),
       { status: 200, headers: JSON_HEADERS },
     );

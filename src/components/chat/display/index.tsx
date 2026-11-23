@@ -8,6 +8,7 @@ import React, {
   useRef,
 } from "react";
 import type { TwitchMessage, Platform, ChatFont } from "../../../lib/types";
+import type { YoutubeLiveCandidate } from "../../../lib/youtubeStreamSelection";
 import type { SubscriptionStatus } from "../../../hooks/chat/useEventSub";
 import { FONT_FAMILY_MAP, MAX_DISPLAYED_MESSAGES } from "../../../lib/types";
 import { useChatTouchGestures } from "../../../hooks/chat/useChatTouchGestures";
@@ -90,6 +91,8 @@ interface ChatDisplayProps {
   isOnOwnChannel?: boolean;
   maxDisplayedMessages?: number;
   markFirstMessages?: boolean;
+  youtubeVideos?: YoutubeLiveCandidate[];
+  onSelectYoutubeVideo?: (videoId: string) => void;
   ref?: React.Ref<ChatDisplayHandle>;
 }
 
@@ -326,6 +329,8 @@ const ChatDisplay = ({
   isOnOwnChannel = false,
   maxDisplayedMessages = MAX_DISPLAYED_MESSAGES,
   markFirstMessages = false,
+  youtubeVideos,
+  onSelectYoutubeVideo,
   ref,
 }: ChatDisplayProps) => {
   const {
@@ -795,6 +800,8 @@ const ChatDisplay = ({
         onUpdateTitle={onUpdateTitle}
         onUpdateCategory={onUpdateCategory}
         onSearchCategories={onSearchCategories}
+        youtubeVideos={youtubeVideos}
+        onSelectYoutubeVideo={onSelectYoutubeVideo}
         showModTools={showModTools}
         onOpenModTools={onOpenModTools}
         subscriptionStatuses={subscriptionStatuses}

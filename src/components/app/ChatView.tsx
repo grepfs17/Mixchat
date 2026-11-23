@@ -11,6 +11,7 @@ import {
   FaFilm,
 } from "react-icons/fa";
 import ChatApp from "../chat/ChatApp";
+import YoutubeStreamSelect from "../chat/shared/YoutubeStreamSelect";
 import StreamEmbed from "../StreamEmbed";
 import type { TwitchPlayer } from "../StreamEmbed";
 import TwitchVods, {
@@ -20,6 +21,7 @@ import TwitchVods, {
 import type { StreamTransitionInfo } from "../StreamGrid";
 import type { PlatformSession } from "../../lib/types";
 import type { UseChatSettingsResult } from "../../hooks/app/useChatSettings";
+import type { YoutubeStreamsState } from "../../hooks/app/useYoutubeStreams";
 import type { HlsQuality, PlayerType } from "../../hooks/app/useEmbedState";
 import type { VodChatPlayerLike } from "../../hooks/chat/useVodChat";
 
@@ -36,7 +38,7 @@ interface ChatViewProps {
   leftColumnVisible: boolean | undefined;
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   linkedYoutubeUrl: string | null;
-  youtubeStreamVideoId: string | null;
+  youtubeStreams: YoutubeStreamsState;
   playerType: PlayerType;
   setPlayerType: Dispatch<SetStateAction<PlayerType>>;
   hlsQualities: HlsQuality[];
@@ -127,7 +129,7 @@ export default function ChatView({
   leftColumnVisible,
   setLeftColumnVisible,
   linkedYoutubeUrl,
-  youtubeStreamVideoId,
+  youtubeStreams,
   playerType,
   setPlayerType,
   hlsQualities,
@@ -241,6 +243,7 @@ export default function ChatView({
 
   const activeVodId = resolveActiveVodId(showStreamEmbed, activeMedia);
   const resizerClassName = resolveResizerClassName(isDragging);
+  const youtubeStreamVideoId = youtubeStreams.selectedVideoId;
 
   return (
     <>
@@ -260,6 +263,8 @@ export default function ChatView({
             setShowStreamEmbed={setShowStreamEmbed}
             embedRef={embedRef}
             youtubeStreamVideoId={youtubeStreamVideoId}
+            youtubeVideos={youtubeStreams.videos}
+            onSelectYoutubeVideo={youtubeStreams.selectVideo}
             selectedTwitchChannelName={selectedTwitchChannelName}
             channelIsLive={channelIsLive}
             twitchSession={twitchSession}
@@ -315,6 +320,7 @@ export default function ChatView({
           vodPlayerRef={vodPlayerRef}
           viewerCount={viewerCount}
           linkedYoutubeUrl={linkedYoutubeUrl || undefined}
+          youtubeStreams={youtubeStreams}
           youtubeSession={youtubeSession}
           unifyChatEnabled={unifyChatEnabled}
           useYoutubeEmbed={useYoutubeEmbed}
@@ -364,6 +370,8 @@ interface StreamEmbedPanelProps {
   setShowStreamEmbed: Dispatch<SetStateAction<boolean>>;
   embedRef: RefObject<HTMLDivElement | null>;
   youtubeStreamVideoId: string | null;
+  youtubeVideos: YoutubeStreamsState["videos"];
+  onSelectYoutubeVideo: (videoId: string) => void;
   selectedTwitchChannelName: string;
   channelIsLive: boolean | null;
   twitchSession?: PlatformSession;
@@ -393,6 +401,8 @@ function StreamEmbedPanel({
   setShowStreamEmbed,
   embedRef,
   youtubeStreamVideoId,
+  youtubeVideos,
+  onSelectYoutubeVideo,
   selectedTwitchChannelName,
   channelIsLive,
   twitchSession,
@@ -435,6 +445,9 @@ function StreamEmbedPanel({
         activeMedia={activeMedia}
         onBackToLists={() => onSelectMedia(null)}
         onBackToLive={onCloseArchive}
+        youtubeVideos={youtubeVideos}
+        youtubeSelectedVideoId={youtubeStreamVideoId}
+        onSelectYoutubeVideo={onSelectYoutubeVideo}
       />
       <EmbedPlayer
         playerType={playerType}
@@ -475,6 +488,9 @@ interface EmbedHeaderProps {
   activeMedia: ActiveMedia | null;
   onBackToLists: () => void;
   onBackToLive: () => void;
+  youtubeVideos: YoutubeStreamsState["videos"];
+  youtubeSelectedVideoId: string | null;
+  onSelectYoutubeVideo: (videoId: string) => void;
 }
 
 function EmbedHeader({
@@ -495,6 +511,9 @@ function EmbedHeader({
   activeMedia,
   onBackToLists,
   onBackToLive,
+  youtubeVideos,
+  youtubeSelectedVideoId,
+  onSelectYoutubeVideo,
 }: EmbedHeaderProps) {
   return (
     <div className="stream-embed-header">
@@ -528,6 +547,13 @@ function EmbedHeader({
           marginLeft: "auto",
         }}
       >
+        {playerType === "youtube" && !showArchive && (
+          <YoutubeStreamSelect
+            videos={youtubeVideos}
+            selectedVideoId={youtubeSelectedVideoId}
+            onSelect={onSelectYoutubeVideo}
+          />
+        )}
         {playerType === "m3u8" && hlsQualities.length > 1 && (
           <HlsQualitySelector
             hlsQualities={hlsQualities}
@@ -814,6 +840,7 @@ function EmbedPlayer({
       {playerType === "youtube" && !showArchive ? (
         youtubeStreamVideoId ? (
           <iframe
+            key={youtubeStreamVideoId}
             width="100%"
             height="100%"
             src={`https://www.youtube.com/embed/${youtubeStreamVideoId}?autoplay=1`}

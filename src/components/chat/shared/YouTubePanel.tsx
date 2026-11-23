@@ -1,15 +1,17 @@
 import type { CSSProperties } from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import YouTubeChat from "./YouTubeChat";
 import YouTubeMessageInput, {
   type YouTubeMessageInputHandle,
 } from "./YouTubeMessageInput";
 import type { PlatformSession, ChatFont } from "../../../lib/types";
 import type { YTMessage } from "../unified/types";
+import { parseDirectVideoId } from "../../../lib/youtubeStreamSelection";
 
 interface YouTubePanelProps {
   linkedYoutubeUrl: string;
   youtubeVideoId: string | null;
+  ytNotice: string | null;
   channel?: string;
   useYoutubeEmbed: boolean;
   ytMessages: YTMessage[];
@@ -44,25 +46,101 @@ interface YouTubePanelProps {
   streamStartedAt?: Date | null;
 }
 
-function extractVideoId(val: string): string {
-  let vid = val;
-  try {
-    if (val.includes("v=")) {
-      vid = new URLSearchParams(new URL(val).search).get("v") || val;
-    } else if (val.includes("youtu.be/")) {
-      vid = val.split("youtu.be/")[1].split("?")[0];
-    } else if (val.includes("/live/")) {
-      vid = val.split("/live/")[1].split("?")[0];
-    }
-  } catch {
-    // keep original value
-  }
-  return vid;
+function ManualVideoForm({
+  initialValue = "",
+  onSubmit,
+  onCancel,
+}: {
+  initialValue?: string;
+  onSubmit: (videoId: string) => void;
+  onCancel?: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+
+  const submit = () => {
+    const videoId = parseDirectVideoId(value);
+    if (!videoId) return;
+    onSubmit(videoId);
+    setValue("");
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "6px",
+        padding: "6px",
+        background: "#141414",
+        borderBottom: "1px solid #333",
+        flexShrink: 0,
+      }}
+    >
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Video ID or YouTube URL"
+        className="channel-search"
+        aria-label="YouTube video ID or URL"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          padding: "5px 8px",
+          fontSize: "12px",
+          backgroundColor: "#222",
+          border: "1px solid #444",
+          color: "#fff",
+          borderRadius: "0px",
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+            submit();
+          }
+        }}
+      />
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!parseDirectVideoId(value)}
+        style={{
+          background: "#FF0000",
+          color: "#fff",
+          border: "none",
+          borderRadius: "0px",
+          padding: "5px 10px",
+          cursor: "pointer",
+          fontSize: "12px",
+        }}
+      >
+        Load
+      </button>
+      {onCancel ? (
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            background: "#333",
+            color: "#fff",
+            border: "none",
+            borderRadius: "0px",
+            padding: "5px 10px",
+            cursor: "pointer",
+            fontSize: "12px",
+          }}
+        >
+          Cancel
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export default function YouTubePanel({
   linkedYoutubeUrl,
   youtubeVideoId,
+  ytNotice,
   channel,
   useYoutubeEmbed,
   ytMessages,
@@ -88,6 +166,7 @@ export default function YouTubePanel({
   streamStartedAt = null,
 }: YouTubePanelProps) {
   const messageInputRef = useRef<YouTubeMessageInputHandle>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleUsernameClick = (
     e: React.MouseEvent,
@@ -110,6 +189,32 @@ export default function YouTubePanel({
         ...style,
       }}
     >
+      {ytNotice ? (
+        <div
+          role="status"
+          style={{
+            padding: "4px 8px",
+            background: "#2a1f10",
+            color: "#fbbf24",
+            fontSize: "11px",
+            borderBottom: "1px solid #333",
+            flexShrink: 0,
+          }}
+        >
+          {ytNotice}
+        </div>
+      ) : null}
+
+      {pickerOpen && youtubeVideoId ? (
+        <ManualVideoForm
+          onSubmit={(videoId) => {
+            onSetManualVideoId(videoId);
+            setPickerOpen(false);
+          }}
+          onCancel={() => setPickerOpen(false)}
+        />
+      ) : null}
+
       {youtubeVideoId ? (
         <>
           <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
@@ -148,10 +253,9 @@ export default function YouTubePanel({
                 gap: "4px",
               }}
             >
-              <button type="button"
-                onClick={() => {
-                  onSetManualVideoId("");
-                }}
+              <button
+                type="button"
+                onClick={() => setPickerOpen((open) => !open)}
                 style={{
                   background: "rgba(0,0,0,0.6)",
                   color: "#fff",
@@ -164,7 +268,8 @@ export default function YouTubePanel({
               >
                 Change Video
               </button>
-              <button type="button"
+              <button
+                type="button"
                 onClick={() => onSetShowYoutubeSection(false)}
                 style={{
                   background: "rgba(0,0,0,0.6)",
@@ -201,7 +306,8 @@ export default function YouTubePanel({
                   backgroundColor: "#0f0f0f",
                 }}
               >
-                <button type="button"
+                <button
+                  type="button"
                   onClick={() =>
                     (
                       document.querySelector<HTMLElement>(
@@ -258,68 +364,22 @@ export default function YouTubePanel({
                   </span>
                 )}
               </p>
-              <div
+              <ManualVideoForm onSubmit={onSetManualVideoId} />
+              <button
+                type="button"
+                onClick={() => onSetShowYoutubeSection(false)}
                 style={{
-                  display: "flex",
-                  gap: "8px",
-                  flexWrap: "wrap",
-                  justifyContent: "center",
+                  background: "#333",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "0px",
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  fontSize: "13px",
                 }}
               >
-                <input
-                  type="text"
-                  placeholder="e.g. zFQFquAw74o"
-                  className="channel-search"
-                  aria-label="YouTube video ID or URL"
-                  style={{
-                    padding: "6px 10px",
-                    fontSize: "13px",
-                    width: "220px",
-                    backgroundColor: "#222",
-                    border: "1px solid #444",
-                    color: "#fff",
-                    borderRadius: "0px",
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
-                      onSetManualVideoId(extractVideoId(e.currentTarget.value));
-                    }
-                  }}
-                />
-                <button type="button"
-                  onClick={(e) => {
-                    const input = e.currentTarget
-                      .previousElementSibling as HTMLInputElement;
-                    onSetManualVideoId(extractVideoId(input.value));
-                  }}
-                  style={{
-                    background: "#FF0000",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0px",
-                    padding: "6px 12px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Load
-                </button>
-                <button type="button"
-                  onClick={() => onSetShowYoutubeSection(false)}
-                  style={{
-                    background: "#333",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0px",
-                    padding: "6px 12px",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
+                Remove
+              </button>
             </>
           )}
         </div>

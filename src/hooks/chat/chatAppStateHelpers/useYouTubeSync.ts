@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { YTMessage } from "../../../components/chat/unified/types";
 
 export interface UseYouTubeSyncOptions {
-  linkedYoutubeUrl?: string;
-  showYoutubeSection?: boolean;
+  /** Broadcast selected by `useYoutubeStreams`, shared with the embed. */
+  youtubeVideoId?: string | null;
   selectedTwitchChannelName?: string;
   youtubeSession?: {
     displayName?: string;
@@ -16,16 +16,9 @@ export interface UseYouTubeSyncOptions {
 
 export interface UseYouTubeSyncReturn {
   youtubeVideoId: string | null;
-  manualVideoId: string;
-  autoVideoId: string | null;
-  ytLoading: boolean;
-  ytError: string | null;
   showYoutubeSection: boolean;
   ytMessages: YTMessage[];
   ytOptimisticMessages: YTMessage[];
-  ytChannelId: string | null;
-  setManualVideoId: (v: string) => void;
-  setAutoVideoId: (v: string | null) => void;
   setShowYoutubeSection: (v: boolean) => void;
   setYtMessages: (v: YTMessage[]) => void;
   handleYtMessages: (msgs: YTMessage[]) => void;
@@ -37,23 +30,17 @@ export interface UseYouTubeSyncReturn {
 }
 
 export function useYouTubeSync({
-  linkedYoutubeUrl,
-  showYoutubeSection = true,
+  youtubeVideoId = null,
   selectedTwitchChannelName = "",
   youtubeSession,
   unifyChatEnabled = false,
   unifiedChatRef,
 }: UseYouTubeSyncOptions): UseYouTubeSyncReturn {
-  const [manualVideoId, setManualVideoId] = useState("");
-  const [autoVideoId, setAutoVideoId] = useState<string | null>(null);
-  const [autoChannelId, setAutoChannelId] = useState<string | null>(null);
-  const [ytLoading, setYtLoading] = useState(false);
-  const [ytError, setYtError] = useState<string | null>(null);
-  const [showYoutubeSectionState, setShowYoutubeSection] = useState(true);
   const [ytMessages, setYtMessages] = useState<YTMessage[]>([]);
   const [ytOptimisticMessages, setYtOptimisticMessages] = useState<YTMessage[]>(
     [],
   );
+  const [showYoutubeSection, setShowYoutubeSection] = useState(true);
   /**
    * Sticky map of message id → deletedByText. Survives the periodic full
    * replacement of `ytMessages` from the SSE `onMessages` callback, so a
@@ -62,92 +49,15 @@ export function useYouTubeSync({
    */
   const deletedRef = useRef<Map<string, string>>(new Map());
 
-  const youtubeVideoId = useMemo(() => {
-    if (manualVideoId) return manualVideoId;
-    if (autoVideoId) return autoVideoId;
-    if (!linkedYoutubeUrl) return null;
-    let videoId = null;
-    try {
-      if (linkedYoutubeUrl.includes("v=")) {
-        videoId = new URLSearchParams(new URL(linkedYoutubeUrl).search).get(
-          "v",
-        );
-      } else if (linkedYoutubeUrl.includes("youtu.be/")) {
-        videoId = linkedYoutubeUrl.split("youtu.be/")[1].split("?")[0];
-      } else if (linkedYoutubeUrl.includes("/live/")) {
-        videoId = linkedYoutubeUrl.split("/live/")[1].split("?")[0];
-      }
-    } catch (e) {
-      console.warn("Failed to parse YouTube URL:", e);
-    }
-    return videoId;
-  }, [linkedYoutubeUrl, manualVideoId, autoVideoId]);
-
-  useEffect(() => {
-    if (!linkedYoutubeUrl || !showYoutubeSection) {
-      setAutoVideoId(null);
-      setYtError(null);
-      return;
-    }
-    if (
-      linkedYoutubeUrl.includes("v=") ||
-      linkedYoutubeUrl.includes("youtu.be/") ||
-      linkedYoutubeUrl.includes("/live/")
-    ) {
-      return;
-    }
-
-    let cancelled = false;
-    const abortController = new AbortController();
-    const fetchLiveVideoId = async () => {
-      try {
-        setYtLoading(true);
-        setYtError(null);
-        const params = new URLSearchParams();
-        params.append("channelUrl", linkedYoutubeUrl);
-    const res = await fetch(`/api/youtube-live?${params.toString()}`, {
-      signal: abortController.signal,
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (cancelled) return;
-    if (data.videoId) {
-          setAutoVideoId((prev) =>
-            prev !== data.videoId ? data.videoId : prev,
-          );
-          if (data.channelId) {
-            setAutoChannelId((prev) =>
-              prev !== data.channelId ? data.channelId : prev,
-            );
-          } else {
-            setAutoChannelId(null);
-          }
-          setYtError(null);
-        } else {
-          setYtError("No live stream found");
-          setAutoVideoId(null);
-          setAutoChannelId(null);
-        }
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!cancelled) {
-          setYtError("Failed to check for live stream");
-          console.error("YouTube live fetch error:", err);
-        }
-      } finally {
-        if (!cancelled) setYtLoading(false);
-      }
-    };
-
-    fetchLiveVideoId();
-    const interval = setInterval(fetchLiveVideoId, 30_000);
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-      clearInterval(interval);
-    };
-  }, [linkedYoutubeUrl, showYoutubeSection]);
+  // A different broadcast means a different server-side chat session. Drop
+  // the old messages so the other stream's chat never flashes in between.
+  const [prevVideoId, setPrevVideoId] = useState<string | null>(youtubeVideoId);
+  if (prevVideoId !== youtubeVideoId) {
+    setPrevVideoId(youtubeVideoId);
+    setYtMessages([]);
+    setYtOptimisticMessages([]);
+    deletedRef.current = new Map();
+  }
 
   // Reset all YouTube state when the user switches Twitch channels. Using the
   // recommended "adjusting state during render" pattern from React docs so the
@@ -157,11 +67,8 @@ export function useYouTubeSync({
   const [prevChannel, setPrevChannel] = useState(selectedTwitchChannelName);
   if (prevChannel !== selectedTwitchChannelName) {
     setPrevChannel(selectedTwitchChannelName);
-    setManualVideoId("");
-    setAutoVideoId(null);
-    setAutoChannelId(null);
-    setYtError(null);
     setYtMessages([]);
+    setYtOptimisticMessages([]);
     deletedRef.current = new Map();
   }
 
@@ -285,16 +192,9 @@ export function useYouTubeSync({
 
   return {
     youtubeVideoId,
-    manualVideoId,
-    autoVideoId,
-    ytLoading,
-    ytError,
-    showYoutubeSection: showYoutubeSectionState,
+    showYoutubeSection,
     ytMessages,
     ytOptimisticMessages,
-    ytChannelId: autoChannelId,
-    setManualVideoId,
-    setAutoVideoId,
     setShowYoutubeSection,
     setYtMessages,
     handleYtMessages,

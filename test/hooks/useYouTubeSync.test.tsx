@@ -18,8 +18,7 @@ type Props = Parameters<typeof useYouTubeSync>[0];
 
 function baseProps(overrides: Partial<Props> = {}): Props {
   return {
-    linkedYoutubeUrl: "https://youtube.com/watch?v=abc123def45",
-    showYoutubeSection: true,
+    youtubeVideoId: "abc123def45",
     selectedTwitchChannelName: "testchannel",
     ...overrides,
   };

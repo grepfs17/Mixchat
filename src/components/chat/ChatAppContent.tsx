@@ -292,6 +292,8 @@ function UnifiedChatContent({
     ytMessages,
     ytOptimisticMessages,
     youtubeVideoId,
+    ytVideos,
+    selectYoutubeVideo,
     showYoutubeSection,
     handleYtMessages,
     markYtMessageDeleted,
@@ -423,6 +425,8 @@ function UnifiedChatContent({
           onUpdateTitle={handleUpdateTitle}
           onUpdateCategory={handleUpdateCategory}
           onSearchCategories={handleSearchCategories}
+          youtubeVideos={ytVideos}
+          onSelectYoutubeVideo={selectYoutubeVideo}
           ignoredUsers={ignoredUsers}
           ytMessages={ytMessages}
           showModTools={showModTools}
@@ -543,9 +547,12 @@ function SplitChatContent({
     isDraggingChatSplit,
     setIsDraggingChatSplit,
     youtubeVideoId,
+    ytVideos,
+    ytNotice,
     ytLoading,
     ytError,
     setManualVideoId,
+    selectYoutubeVideo,
     setShowYoutubeSection,
     handleYtMessages,
     handleYtOptimisticMessage,
@@ -629,6 +636,8 @@ function SplitChatContent({
               onUpdateTitle={handleUpdateTitle}
               onUpdateCategory={handleUpdateCategory}
               onSearchCategories={handleSearchCategories}
+              youtubeVideos={ytVideos}
+              onSelectYoutubeVideo={selectYoutubeVideo}
               ignoredUsers={ignoredUsers}
               ytMessages={ytMessages}
               showModTools={showModTools}
@@ -668,6 +677,7 @@ function SplitChatContent({
       isDraggingChatSplit={isDraggingChatSplit}
       onSetIsDraggingChatSplit={setIsDraggingChatSplit}
       youtubeVideoId={youtubeVideoId}
+      ytNotice={ytNotice}
       useYoutubeEmbed={useYoutubeEmbed}
       ytMessages={ytMessages}
       ytOptimisticMessages={ytOptimisticMessages}
