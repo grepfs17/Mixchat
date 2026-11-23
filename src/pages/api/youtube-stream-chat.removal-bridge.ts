@@ -6,7 +6,10 @@
  * system-message generators in isolation.
  */
 export {
+  bannerIdentity,
+  claimBannerEvent,
   createSystemRemovalMessage,
+  parseBannerRedirect,
   parseHostHandoffBanner,
   shouldEmitSystemNote,
 } from "./youtube-stream-chat";

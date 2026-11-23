@@ -66,6 +66,17 @@ const MAX_IDLE_MS = 10 * 60_000;
  */
 const MAX_SESSION_MESSAGES = 300;
 
+/**
+ * How long an emitted raid/redirect banner stays deduped across chat
+ * session rebuilds. YouTube replays the banner in the initial chat data,
+ * so without this a session that is reaped after the idle grace period
+ * would surface the same raid again.
+ */
+const BANNER_DEDUPE_TTL_MS = 6 * 60 * 60_000;
+
+/** sessionKey -> banner identity -> last emitted timestamp. */
+const emittedBanners = new Map<string, Map<string, number>>();
+
 /** Cooldown after a 403 block. */
 const CHAT_FAILURE_COOLDOWN_MS = parseInt(
   process.env.YT_CHAT_COOLDOWN_MS || "60000",
@@ -264,6 +275,7 @@ setInterval(() => {
 
 setInterval(() => {
   reapIdleSessions();
+  pruneEmittedBanners();
 }, 60_000);
 
 interface SSEClient {
@@ -768,7 +780,77 @@ export function applyLiveChatFilter(
   return true;
 }
 
-function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
+function hashBannerIdentity(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+/**
+ * Stable identity for a banner event. YouTube usually supplies an
+ * `action_id`, but redirect banners can omit it. Falling back to
+ * `Date.now()` made every re-poll look like a brand-new raid, so use the
+ * banner's own content instead. Volatile fields are avoided so the same
+ * banner keeps the same identity across replays.
+ */
+export function bannerIdentity(banner: any, headerText?: string): string {
+  if (typeof banner?.action_id === "string" && banner.action_id) {
+    return `action:${banner.action_id}`;
+  }
+
+  const contents = banner?.contents;
+  const button = contents?.inline_action_button;
+  const signature = [
+    banner?.banner_type ?? "",
+    banner?.target_id ?? "",
+    headerText ?? "",
+    contents?.banner_message?.toString?.() ?? "",
+    button?.url ?? "",
+    button?.text?.toString?.() ?? "",
+    button?.accessibility_text?.toString?.() ?? "",
+    Array.isArray(contents?.author_photo)
+      ? contents.author_photo[0]?.url ?? ""
+      : "",
+  ].join("\u0001");
+  return `content:${hashBannerIdentity(signature)}`;
+}
+
+/**
+ * Claim a banner event for a chat session. Returns true only the first
+ * time this identity is emitted, so the initial-chat replay after a
+ * session rebuild cannot re-add an old raid. Entries expire after the
+ * TTL so a genuinely new raid to the same target can still be announced.
+ */
+export function claimBannerEvent(sessionKey: string, identity: string): boolean {
+  const now = Date.now();
+  let sessionBanners = emittedBanners.get(sessionKey);
+  if (!sessionBanners) {
+    sessionBanners = new Map();
+    emittedBanners.set(sessionKey, sessionBanners);
+  }
+
+  const previous = sessionBanners.get(identity);
+  if (previous !== undefined && now - previous < BANNER_DEDUPE_TTL_MS) {
+    return false;
+  }
+  sessionBanners.set(identity, now);
+  return true;
+}
+
+/** Drop banner dedupe entries once their TTL has passed. */
+function pruneEmittedBanners(now = Date.now()): void {
+  for (const [key, banners] of emittedBanners) {
+    for (const [identity, at] of banners) {
+      if (now - at >= BANNER_DEDUPE_TTL_MS) banners.delete(identity);
+    }
+    if (banners.size === 0) emittedBanners.delete(key);
+  }
+}
+
+export function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | null {
   const contents = banner.contents;
   if (!contents?.is?.(YTNodes.LiveChatBannerRedirect)) return null;
 
@@ -789,7 +871,7 @@ function parseBannerRedirect(banner: any, headerText?: string): ChatMessage | nu
   );
 
   return {
-    id: banner.action_id || `redirect-${Date.now()}`,
+    id: banner.action_id || `redirect-${bannerIdentity(banner, headerText)}`,
     author: "System",
     authorAvatar,
     parts,
@@ -882,7 +964,7 @@ export function parseHostHandoffBanner(
   );
 
   return {
-    id: `system-raidHost-${banner.action_id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `system-raidHost-${bannerIdentity(banner, headerText)}`,
     author: "System",
     authorChannelId: undefined,
     authorAvatar,
@@ -1152,8 +1234,11 @@ async function ensureChatSession(
   const emitHostHandoffSystemMessage = (
     banner: any,
     systemMsg: ChatMessage,
+    headerText?: string,
   ): boolean => {
-    const dedupeKey = `${systemMsg.targetUsername || "host"}:${banner?.action_id || "no-id"}`;
+    const identity = bannerIdentity(banner, headerText);
+    const dedupeKey = `${systemMsg.targetUsername || "host"}:${identity}`;
+    if (!claimBannerEvent(sessionKey, `host:${identity}`)) return false;
     if (!shouldEmitSystemNote(recentHostHandoffs, dedupeKey)) return false;
 
     if (!seenIds.has(systemMsg.id)) {
@@ -1326,8 +1411,10 @@ async function ensureChatSession(
           const banner = action.banner;
           if (!banner) continue;
           const headerText = banner.header?.text?.toString();
+          const identity = bannerIdentity(banner, headerText);
           const msg = parseBannerRedirect(banner, headerText);
           if (!msg) continue;
+          if (!claimBannerEvent(sessionKey, `redirect:${identity}`)) continue;
           if (!seenIds.has(msg.id)) {
             seenIds.add(msg.id);
             messages.push(msg);
@@ -1489,21 +1576,24 @@ async function ensureChatSession(
         const banner = action.banner;
         if (!banner) return;
         const headerText = banner.header?.text?.toString();
+        const identity = bannerIdentity(banner, headerText);
         const msg = parseBannerRedirect(banner, headerText);
         if (!msg) return;
-        if (!seenIds.has(msg.id)) {
-          seenIds.add(msg.id);
-          messages.push(msg);
-          if (messages.length > MAX_SESSION_MESSAGES) {
-            const removed = messages.shift()!;
-            seenIds.delete(removed.id);
+        if (claimBannerEvent(sessionKey, `redirect:${identity}`)) {
+          if (!seenIds.has(msg.id)) {
+            seenIds.add(msg.id);
+            messages.push(msg);
+            if (messages.length > MAX_SESSION_MESSAGES) {
+              const removed = messages.shift()!;
+              seenIds.delete(removed.id);
+            }
+            broadcast(session!, "message", msg, msg.id);
           }
-          broadcast(session!, "message", msg, msg.id);
         }
         // Emit a dedicated "RAID HOST" note after the redirect banner line.
         const hostHandoff = parseHostHandoffBanner(banner, headerText);
         if (hostHandoff) {
-          emitHostHandoffSystemMessage(banner, hostHandoff);
+          emitHostHandoffSystemMessage(banner, hostHandoff, headerText);
         }
         return;
       }

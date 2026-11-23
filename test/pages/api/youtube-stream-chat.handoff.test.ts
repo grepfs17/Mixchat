@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { parseHostHandoffBanner } from "../../../src/pages/api/youtube-stream-chat.removal-bridge";
+import { describe, it, expect, vi } from "vitest";
+import {
+  claimBannerEvent,
+  parseBannerRedirect,
+  parseHostHandoffBanner,
+} from "../../../src/pages/api/youtube-stream-chat.removal-bridge";
 
 /**
  * Lightweight fake of youtubei.js's `LiveChatBannerRedirect` class. The
@@ -267,5 +271,74 @@ describe("parseHostHandoffBanner", () => {
       const msg = parseHostHandoffBanner(banner);
       expect(msg?.authorAvatar).toBe("https://i.ytimg.com/test.jpg");
     });
+
+    it("derives the same id for the same banner when action_id is missing", () => {
+      const first = buildBanner({ bannerMessage: "Hosted by Host" });
+      const second = buildBanner({ bannerMessage: "Hosted by Host" });
+      first.action_id = undefined;
+      second.action_id = undefined;
+      expect(parseHostHandoffBanner(first)?.id).toBe(
+        parseHostHandoffBanner(second)?.id,
+      );
+    });
+  });
+});
+
+describe("parseBannerRedirect", () => {
+  it("uses action_id as the message id when present", () => {
+    const msg = parseBannerRedirect(buildBanner({ actionId: "banner-7" }));
+    expect(msg?.id).toBe("banner-7");
+  });
+
+  it("derives a stable id for the same banner when action_id is missing", () => {
+    const first = buildBanner({
+      actionUrl: "https://youtube.com/@host/live",
+      bannerMessage: "Hosting Host",
+    });
+    const second = buildBanner({
+      actionUrl: "https://youtube.com/@host/live",
+      bannerMessage: "Hosting Host",
+    });
+    first.action_id = undefined;
+    second.action_id = undefined;
+
+    expect(parseBannerRedirect(first)?.id).toBe(parseBannerRedirect(second)?.id);
+    expect(parseBannerRedirect(first)?.id).toMatch(/^redirect-content:/);
+  });
+
+  it("separates different banner content", () => {
+    const first = buildBanner({ bannerMessage: "Hosting Host" });
+    const second = buildBanner({ bannerMessage: "Hosting Other" });
+    first.action_id = undefined;
+    second.action_id = undefined;
+    expect(parseBannerRedirect(first)?.id).not.toBe(
+      parseBannerRedirect(second)?.id,
+    );
+  });
+});
+
+describe("claimBannerEvent", () => {
+  it("claims an event only once per session and identity", () => {
+    const session = `claim-session-${Date.now()}`;
+    expect(claimBannerEvent(session, "redirect:content:abc")).toBe(true);
+    expect(claimBannerEvent(session, "redirect:content:abc")).toBe(false);
+  });
+
+  it("keeps sessions independent", () => {
+    const identity = "redirect:content:shared";
+    expect(claimBannerEvent(`claim-session-a-${Date.now()}`, identity)).toBe(true);
+    expect(claimBannerEvent(`claim-session-b-${Date.now()}`, identity)).toBe(true);
+  });
+
+  it("allows the same event again after the TTL", () => {
+    vi.useFakeTimers();
+    try {
+      const session = `claim-session-ttl-${Date.now()}`;
+      expect(claimBannerEvent(session, "redirect:content:ttl")).toBe(true);
+      vi.advanceTimersByTime(6 * 60 * 60_000 + 1);
+      expect(claimBannerEvent(session, "redirect:content:ttl")).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

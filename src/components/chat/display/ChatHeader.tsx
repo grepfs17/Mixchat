@@ -507,6 +507,14 @@ function StreamCategorySection({
   );
 }
 
+type StreamInfoMenu = "twitch" | "youtube" | "download";
+
+interface StreamInfoMenuProps {
+  openMenu: StreamInfoMenu | null;
+  onToggle: (menu: StreamInfoMenu) => void;
+  onClose: () => void;
+}
+
 function StreamInfoActions({
   youtubeVideoId,
   showTwitchModButton,
@@ -526,9 +534,7 @@ function StreamInfoActions({
   onOpenChatStats?: () => void;
   onOpenStreamNotes?: () => void;
 }) {
-  const [openMenu, setOpenMenu] = useState<
-    "twitch" | "youtube" | "download" | null
-  >(null);
+  const [openMenu, setOpenMenu] = useState<StreamInfoMenu | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(actionsRef, () => setOpenMenu(null), openMenu !== null);
@@ -542,196 +548,285 @@ function StreamInfoActions({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [openMenu]);
 
-  const toggleMenu = (menu: "twitch" | "youtube" | "download") => {
+  const toggleMenu = (menu: StreamInfoMenu) => {
     setOpenMenu((current) => (current === menu ? null : menu));
   };
-
-  const showTwitchActions = Boolean(showTwitchModButton && channelName);
-  const showYoutubeActions = Boolean(youtubeVideoId);
+  const closeMenu = () => setOpenMenu(null);
 
   return (
     <div className="stream-info-actions" ref={actionsRef}>
-      {vodMode && onDownloadVod && (
-        <button
-          type="button"
-          className="stream-info-action-btn"
-          title="Download VOD"
-          onClick={onDownloadVod}
-        >
-          <MdDownload size={15} />
-        </button>
-      )}
+      <DownloadVodButton vodMode={vodMode} onDownloadVod={onDownloadVod} />
+      <DownloadChatActions
+        vodMode={vodMode}
+        onDownloadVodChat={onDownloadVodChat}
+        openMenu={openMenu}
+        onToggle={toggleMenu}
+        onClose={closeMenu}
+      />
+      <TwitchActions
+        showTwitchModButton={showTwitchModButton}
+        channelName={channelName}
+        openMenu={openMenu}
+        onToggle={toggleMenu}
+        onClose={closeMenu}
+      />
+      <YoutubeActions
+        youtubeVideoId={youtubeVideoId}
+        openMenu={openMenu}
+        onToggle={toggleMenu}
+        onClose={closeMenu}
+      />
+      <ChatStatsButton vodMode={vodMode} onOpenChatStats={onOpenChatStats} />
+      <StreamNotesButton vodMode={vodMode} onOpenStreamNotes={onOpenStreamNotes} />
+    </div>
+  );
+}
 
-      {vodMode && onDownloadVodChat && (
-        <div className="stream-info-action-group">
+function DownloadVodButton({
+  vodMode,
+  onDownloadVod,
+}: {
+  vodMode?: boolean;
+  onDownloadVod?: () => void;
+}) {
+  if (!vodMode || !onDownloadVod) return null;
+  return (
+    <button
+      type="button"
+      className="stream-info-action-btn"
+      title="Download VOD"
+      onClick={onDownloadVod}
+    >
+      <MdDownload size={15} />
+    </button>
+  );
+}
+
+function DownloadChatActions({
+  vodMode,
+  onDownloadVodChat,
+  openMenu,
+  onToggle,
+  onClose,
+}: {
+  vodMode?: boolean;
+  onDownloadVodChat?: (format: "json" | "html") => void;
+} & StreamInfoMenuProps) {
+  if (!vodMode || !onDownloadVodChat) return null;
+  const isOpen = openMenu === "download";
+  return (
+    <div className="stream-info-action-group">
+      <button
+        type="button"
+        className={`stream-info-action-btn${isOpen ? " stream-info-action-btn--active" : ""}`}
+        title="Download VOD chat"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => onToggle("download")}
+      >
+        <MdChat size={15} />
+      </button>
+      {isOpen && (
+        <div
+          className="stream-info-action-menu"
+          role="menu"
+          aria-label="Download VOD chat"
+        >
           <button
             type="button"
-            className={`stream-info-action-btn${openMenu === "download" ? " stream-info-action-btn--active" : ""}`}
-            title="Download VOD chat"
-            aria-haspopup="menu"
-            aria-expanded={openMenu === "download"}
-            onClick={() => toggleMenu("download")}
+            role="menuitem"
+            className="stream-info-action-item"
+            onClick={() => {
+              onDownloadVodChat("json");
+              onClose();
+            }}
           >
-            <MdChat size={15} />
+            <MdDownload size={14} />
+            <span>Download chat as JSON</span>
           </button>
-          {openMenu === "download" && (
-            <div
-              className="stream-info-action-menu"
-              role="menu"
-              aria-label="Download VOD chat"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                className="stream-info-action-item"
-                onClick={() => {
-                  onDownloadVodChat("json");
-                  setOpenMenu(null);
-                }}
-              >
-                <MdDownload size={14} />
-                <span>Download chat as JSON</span>
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="stream-info-action-item"
-                onClick={() => {
-                  onDownloadVodChat("html");
-                  setOpenMenu(null);
-                }}
-              >
-                <MdDownload size={14} />
-                <span>Download chat as HTML</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {showTwitchActions && (
-        <div className="stream-info-action-group">
           <button
             type="button"
-            className={`stream-info-action-btn${openMenu === "twitch" ? " stream-info-action-btn--active" : ""}`}
-            title="Twitch actions"
-            aria-haspopup="menu"
-            aria-expanded={openMenu === "twitch"}
-            onClick={() => toggleMenu("twitch")}
+            role="menuitem"
+            className="stream-info-action-item"
+            onClick={() => {
+              onDownloadVodChat("html");
+              onClose();
+            }}
           >
-            <FaTwitch size={14} />
+            <MdDownload size={14} />
+            <span>Download chat as HTML</span>
           </button>
-          {openMenu === "twitch" && (
-            <div
-              className="stream-info-action-menu"
-              role="menu"
-              aria-label="Twitch actions"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                className="stream-info-action-item"
-                onClick={() => {
-                  window.open(
-                    `https://www.twitch.tv/popout/moderator/${encodeURIComponent(channelName!)}/player?id=1`,
-                    "twitch-stream-popout",
-                    "width=1280,height=720,noopener,noreferrer",
-                  );
-                  setOpenMenu(null);
-                }}
-              >
-                <MdTv size={14} />
-                <span>Open Twitch stream popout</span>
-              </button>
-              <a
-                role="menuitem"
-                className="stream-info-action-item"
-                href={`https://www.twitch.tv/moderator/${encodeURIComponent(channelName!)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpenMenu(null)}
-              >
-                <FaTwitch size={14} />
-                <span>Open Twitch moderator page</span>
-              </a>
-            </div>
-          )}
         </div>
-      )}
-
-      {showYoutubeActions && (
-        <div className="stream-info-action-group">
-          <button
-            type="button"
-            className={`stream-info-action-btn${openMenu === "youtube" ? " stream-info-action-btn--active" : ""}`}
-            title="YouTube actions"
-            aria-haspopup="menu"
-            aria-expanded={openMenu === "youtube"}
-            onClick={() => toggleMenu("youtube")}
-          >
-            <FaYoutube size={14} />
-          </button>
-          {openMenu === "youtube" && (
-            <div
-              className="stream-info-action-menu"
-              role="menu"
-              aria-label="YouTube actions"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                className="stream-info-action-item"
-                onClick={() => {
-                  window.open(
-                    `https://www.youtube.com/live_chat?is_popout=1&dark_theme=1&v=${encodeURIComponent(youtubeVideoId!)}`,
-                    "yt-chat-popout",
-                    "width=400,height=600,noopener,noreferrer",
-                  );
-                  setOpenMenu(null);
-                }}
-              >
-                <FaYoutube size={14} />
-                <span>Open YouTube chat popout</span>
-              </button>
-              <a
-                role="menuitem"
-                className="stream-info-action-item"
-                href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeVideoId!)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpenMenu(null)}
-              >
-                <MdOpenInNew size={14} />
-                <span>Open YouTube stream</span>
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!vodMode && onOpenChatStats && (
-        <button
-          type="button"
-          className="stream-info-action-btn"
-          title="Chat stats"
-          data-chat-stats-trigger
-          onClick={onOpenChatStats}
-        >
-          <MdBarChart size={14} />
-        </button>
-      )}
-      {!vodMode && onOpenStreamNotes && (
-        <button
-          type="button"
-          className="stream-info-action-btn"
-          title="Stream notes"
-          data-stream-notes-trigger
-          onClick={onOpenStreamNotes}
-        >
-          <MdEditNote size={16} />
-        </button>
       )}
     </div>
+  );
+}
+
+function TwitchActions({
+  showTwitchModButton,
+  channelName,
+  openMenu,
+  onToggle,
+  onClose,
+}: {
+  showTwitchModButton?: boolean;
+  channelName?: string;
+} & StreamInfoMenuProps) {
+  if (!showTwitchModButton || !channelName) return null;
+  const isOpen = openMenu === "twitch";
+  const encodedChannel = encodeURIComponent(channelName);
+  return (
+    <div className="stream-info-action-group">
+      <button
+        type="button"
+        className={`stream-info-action-btn${isOpen ? " stream-info-action-btn--active" : ""}`}
+        title="Twitch actions"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => onToggle("twitch")}
+      >
+        <FaTwitch size={14} />
+      </button>
+      {isOpen && (
+        <div
+          className="stream-info-action-menu"
+          role="menu"
+          aria-label="Twitch actions"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="stream-info-action-item"
+            onClick={() => {
+              window.open(
+                `https://www.twitch.tv/popout/moderator/${encodedChannel}/player?id=1`,
+                "twitch-stream-popout",
+                "width=1280,height=720,noopener,noreferrer",
+              );
+              onClose();
+            }}
+          >
+            <MdTv size={14} />
+            <span>Open Twitch stream popout</span>
+          </button>
+          <a
+            role="menuitem"
+            className="stream-info-action-item"
+            href={`https://www.twitch.tv/moderator/${encodedChannel}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+          >
+            <FaTwitch size={14} />
+            <span>Open Twitch moderator page</span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function YoutubeActions({
+  youtubeVideoId,
+  openMenu,
+  onToggle,
+  onClose,
+}: {
+  youtubeVideoId?: string | null;
+} & StreamInfoMenuProps) {
+  if (!youtubeVideoId) return null;
+  const isOpen = openMenu === "youtube";
+  const encodedVideoId = encodeURIComponent(youtubeVideoId);
+  return (
+    <div className="stream-info-action-group">
+      <button
+        type="button"
+        className={`stream-info-action-btn${isOpen ? " stream-info-action-btn--active" : ""}`}
+        title="YouTube actions"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={() => onToggle("youtube")}
+      >
+        <FaYoutube size={14} />
+      </button>
+      {isOpen && (
+        <div
+          className="stream-info-action-menu"
+          role="menu"
+          aria-label="YouTube actions"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            className="stream-info-action-item"
+            onClick={() => {
+              window.open(
+                `https://www.youtube.com/live_chat?is_popout=1&dark_theme=1&v=${encodedVideoId}`,
+                "yt-chat-popout",
+                "width=400,height=600,noopener,noreferrer",
+              );
+              onClose();
+            }}
+          >
+            <FaYoutube size={14} />
+            <span>Open YouTube chat popout</span>
+          </button>
+          <a
+            role="menuitem"
+            className="stream-info-action-item"
+            href={`https://www.youtube.com/watch?v=${encodedVideoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+          >
+            <MdOpenInNew size={14} />
+            <span>Open YouTube stream</span>
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChatStatsButton({
+  vodMode,
+  onOpenChatStats,
+}: {
+  vodMode?: boolean;
+  onOpenChatStats?: () => void;
+}) {
+  if (vodMode || !onOpenChatStats) return null;
+  return (
+    <button
+      type="button"
+      className="stream-info-action-btn"
+      title="Chat stats"
+      data-chat-stats-trigger
+      onClick={onOpenChatStats}
+    >
+      <MdBarChart size={14} />
+    </button>
+  );
+}
+
+function StreamNotesButton({
+  vodMode,
+  onOpenStreamNotes,
+}: {
+  vodMode?: boolean;
+  onOpenStreamNotes?: () => void;
+}) {
+  if (vodMode || !onOpenStreamNotes) return null;
+  return (
+    <button
+      type="button"
+      className="stream-info-action-btn"
+      title="Stream notes"
+      data-stream-notes-trigger
+      onClick={onOpenStreamNotes}
+    >
+      <MdEditNote size={16} />
+    </button>
   );
 }
 

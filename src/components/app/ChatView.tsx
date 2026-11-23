@@ -55,6 +55,65 @@ interface ChatViewProps {
   chatSettings: UseChatSettingsResult;
 }
 
+function resolveChannelOwnership(
+  twitchSession: PlatformSession | undefined,
+  selectedTwitchChannel: string,
+  selectedTwitchChannelName: string,
+  hideViewerCount: boolean,
+) {
+  const isOnOwnChannel = Boolean(
+    twitchSession &&
+      selectedTwitchChannel &&
+      (selectedTwitchChannel === twitchSession.userId ||
+        (twitchSession.username &&
+          selectedTwitchChannelName.toLowerCase() ===
+            twitchSession.username.toLowerCase())),
+  );
+  return {
+    isOnOwnChannel,
+    shouldHideViewerCount: hideViewerCount && isOnOwnChannel,
+  };
+}
+
+function resolveArchiveState(
+  archiveChannel: string | null,
+  selectedTwitchChannelName: string,
+  channelIsLive: boolean | null,
+) {
+  const showArchive = archiveChannel === selectedTwitchChannelName;
+  return {
+    showArchive,
+    archiveAvailable: channelIsLive === false || showArchive,
+  };
+}
+
+function resolveActiveMedia(
+  activeMediaState: { channel: string; media: ActiveMedia } | null,
+  selectedTwitchChannelName: string,
+  archiveAvailable: boolean,
+): ActiveMedia | null {
+  if (
+    !activeMediaState ||
+    activeMediaState.channel !== selectedTwitchChannelName ||
+    !archiveAvailable
+  ) {
+    return null;
+  }
+  return activeMediaState.media;
+}
+
+function resolveActiveVodId(
+  showStreamEmbed: boolean,
+  activeMedia: ActiveMedia | null,
+): string | null {
+  if (!showStreamEmbed || activeMedia?.type !== "vod") return null;
+  return activeMedia.id;
+}
+
+function resolveResizerClassName(isDragging: boolean): string {
+  return `panel-resizer${isDragging ? " panel-resizer--dragging" : ""}`;
+}
+
 export default function ChatView({
   twitchSession,
   youtubeSession,
@@ -115,15 +174,12 @@ export default function ChatView({
     emoteAutocompleteMode,
   } = chatSettings;
 
-  const isOnOwnChannel = !!(
-    twitchSession &&
-    selectedTwitchChannel &&
-    (selectedTwitchChannel === twitchSession.userId ||
-      (twitchSession.username &&
-        selectedTwitchChannelName.toLowerCase() ===
-          twitchSession.username.toLowerCase()))
+  const { isOnOwnChannel, shouldHideViewerCount } = resolveChannelOwnership(
+    twitchSession,
+    selectedTwitchChannel,
+    selectedTwitchChannelName,
+    hideViewerCount,
   );
-  const shouldHideViewerCount = hideViewerCount && isOnOwnChannel;
 
   const [activeMediaState, setActiveMediaState] = useState<{
     channel: string;
@@ -134,16 +190,18 @@ export default function ChatView({
 
   // Browsing VODs/clips is available automatically when offline, or manually
   // while live through the archive toggle in the embed header.
-  const showArchive = archiveChannel === selectedTwitchChannelName;
-  const archiveAvailable = channelIsLive === false || showArchive;
+  const { showArchive, archiveAvailable } = resolveArchiveState(
+    archiveChannel,
+    selectedTwitchChannelName,
+    channelIsLive,
+  );
 
   // Only keep the selection while the archive is available for this channel.
-  const activeMedia =
-    activeMediaState &&
-    activeMediaState.channel === selectedTwitchChannelName &&
-    archiveAvailable
-      ? activeMediaState.media
-      : null;
+  const activeMedia = resolveActiveMedia(
+    activeMediaState,
+    selectedTwitchChannelName,
+    archiveAvailable,
+  );
 
   const selectMedia = useCallback(
     (media: ActiveMedia | null) => {
@@ -181,59 +239,57 @@ export default function ChatView({
     [],
   );
 
-  const activeVodId =
-    showStreamEmbed && activeMedia?.type === "vod" ? activeMedia.id : null;
+  const activeVodId = resolveActiveVodId(showStreamEmbed, activeMedia);
+  const resizerClassName = resolveResizerClassName(isDragging);
 
   return (
     <>
       {showStreamEmbed && (
-        <StreamEmbedPanel
-          leftColumnVisible={leftColumnVisible}
-          setLeftColumnVisible={setLeftColumnVisible}
-          playerType={playerType}
-          onSelectPlayerType={selectPlayerType}
-          linkedYoutubeUrl={linkedYoutubeUrl}
-          hlsQualities={hlsQualities}
-          selectedHlsQualityIdx={selectedHlsQualityIdx}
-          setSelectedHlsQualityIdx={setSelectedHlsQualityIdx}
-          showHlsQualityMenu={showHlsQualityMenu}
-          setShowHlsQualityMenu={setShowHlsQualityMenu}
-          setShowStreamEmbed={setShowStreamEmbed}
-          embedRef={embedRef}
-          youtubeStreamVideoId={youtubeStreamVideoId}
-          selectedTwitchChannelName={selectedTwitchChannelName}
-          channelIsLive={channelIsLive}
-          twitchSession={twitchSession}
-          onTwitchLogin={onTwitchLogin}
-          setHlsQualities={setHlsQualities}
-          streamTransition={streamTransition}
-          setStreamTransition={setStreamTransition}
-          showArchive={showArchive}
-          activeMedia={activeMedia}
-          onSelectMedia={selectMedia}
-          onToggleArchive={toggleArchive}
-          onCloseArchive={closeArchive}
-          onVodPlayerReady={handleVodPlayerReady}
-        />
-      )}
-      {showStreamEmbed && (
-        <div
-          data-resizer
-          className={`panel-resizer${
-            isDragging ? " panel-resizer--dragging" : ""
-          }`}
-          style={{
-            width: "8px",
-            cursor: "col-resize",
-            userSelect: "none",
-          }}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Panel resizer"
-          tabIndex={0}
-          onMouseDown={() => setIsDragging(true)}
-          title="Drag to resize"
-        />
+        <>
+          <StreamEmbedPanel
+            leftColumnVisible={leftColumnVisible}
+            setLeftColumnVisible={setLeftColumnVisible}
+            playerType={playerType}
+            onSelectPlayerType={selectPlayerType}
+            linkedYoutubeUrl={linkedYoutubeUrl}
+            hlsQualities={hlsQualities}
+            selectedHlsQualityIdx={selectedHlsQualityIdx}
+            setSelectedHlsQualityIdx={setSelectedHlsQualityIdx}
+            showHlsQualityMenu={showHlsQualityMenu}
+            setShowHlsQualityMenu={setShowHlsQualityMenu}
+            setShowStreamEmbed={setShowStreamEmbed}
+            embedRef={embedRef}
+            youtubeStreamVideoId={youtubeStreamVideoId}
+            selectedTwitchChannelName={selectedTwitchChannelName}
+            channelIsLive={channelIsLive}
+            twitchSession={twitchSession}
+            onTwitchLogin={onTwitchLogin}
+            setHlsQualities={setHlsQualities}
+            streamTransition={streamTransition}
+            setStreamTransition={setStreamTransition}
+            showArchive={showArchive}
+            activeMedia={activeMedia}
+            onSelectMedia={selectMedia}
+            onToggleArchive={toggleArchive}
+            onCloseArchive={closeArchive}
+            onVodPlayerReady={handleVodPlayerReady}
+          />
+          <div
+            data-resizer
+            className={resizerClassName}
+            style={{
+              width: "8px",
+              cursor: "col-resize",
+              userSelect: "none",
+            }}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Panel resizer"
+            tabIndex={0}
+            onMouseDown={() => setIsDragging(true)}
+            title="Drag to resize"
+          />
+        </>
       )}
       <div
         data-chat-section
