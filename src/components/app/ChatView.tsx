@@ -254,7 +254,6 @@ export default function ChatView({
             setLeftColumnVisible={setLeftColumnVisible}
             playerType={playerType}
             onSelectPlayerType={selectPlayerType}
-            linkedYoutubeUrl={linkedYoutubeUrl}
             hlsQualities={hlsQualities}
             selectedHlsQualityIdx={selectedHlsQualityIdx}
             setSelectedHlsQualityIdx={setSelectedHlsQualityIdx}
@@ -361,7 +360,6 @@ interface StreamEmbedPanelProps {
   setLeftColumnVisible: Dispatch<SetStateAction<boolean | undefined>>;
   playerType: PlayerType;
   onSelectPlayerType: (type: PlayerType) => void;
-  linkedYoutubeUrl: string | null;
   hlsQualities: HlsQuality[];
   selectedHlsQualityIdx: number;
   setSelectedHlsQualityIdx: Dispatch<SetStateAction<number>>;
@@ -392,7 +390,6 @@ function StreamEmbedPanel({
   setLeftColumnVisible,
   playerType,
   onSelectPlayerType,
-  linkedYoutubeUrl,
   hlsQualities,
   selectedHlsQualityIdx,
   setSelectedHlsQualityIdx,
@@ -435,7 +432,6 @@ function StreamEmbedPanel({
         channelIsLive={channelIsLive}
         showArchive={showArchive}
         onToggleArchive={onToggleArchive}
-        linkedYoutubeUrl={linkedYoutubeUrl}
         hlsQualities={hlsQualities}
         selectedHlsQualityIdx={selectedHlsQualityIdx}
         setSelectedHlsQualityIdx={setSelectedHlsQualityIdx}
@@ -478,7 +474,6 @@ interface EmbedHeaderProps {
   channelIsLive: boolean | null;
   showArchive: boolean;
   onToggleArchive: () => void;
-  linkedYoutubeUrl: string | null;
   hlsQualities: HlsQuality[];
   selectedHlsQualityIdx: number;
   setSelectedHlsQualityIdx: Dispatch<SetStateAction<number>>;
@@ -501,7 +496,6 @@ function EmbedHeader({
   channelIsLive,
   showArchive,
   onToggleArchive,
-  linkedYoutubeUrl,
   hlsQualities,
   selectedHlsQualityIdx,
   setSelectedHlsQualityIdx,
@@ -537,7 +531,7 @@ function EmbedHeader({
         onSelectPlayerType={onSelectPlayerType}
         channelIsLive={channelIsLive}
         showArchive={showArchive}
-        linkedYoutubeUrl={linkedYoutubeUrl}
+        youtubeHasLive={youtubeVideos.length > 0}
       />
       <div
         style={{
@@ -635,17 +629,20 @@ function PlayerTypeSwitch({
   onSelectPlayerType,
   channelIsLive,
   showArchive,
-  linkedYoutubeUrl,
+  youtubeHasLive,
 }: {
   playerType: PlayerType;
   onSelectPlayerType: (type: PlayerType) => void;
   channelIsLive: boolean | null;
   showArchive: boolean;
-  linkedYoutubeUrl: string | null;
+  youtubeHasLive: boolean;
 }) {
   if (showArchive || (channelIsLive === false && playerType !== "youtube")) {
     return null;
   }
+  // Keep the YouTube button while it is the active player so an ended stream
+  // does not trap the viewer without a way back to Twitch.
+  const showYoutube = youtubeHasLive || playerType === "youtube";
   return (
     <div className="player-type-center">
       <div className="player-type-buttons">
@@ -667,7 +664,7 @@ function PlayerTypeSwitch({
         >
           <FaPlayCircle size={13} />
         </button>
-        {linkedYoutubeUrl && (
+        {showYoutube && (
           <button
             type="button"
             onClick={() => onSelectPlayerType("youtube")}

@@ -100,6 +100,19 @@ const EMPTY_YOUTUBE_VIDEOS: YoutubeStreamsState["videos"] = [];
 const noopSelectYoutubeVideo = () => {};
 const noopSetManualVideoId = () => {};
 
+function resolveYoutubeStreamValues(youtubeStreams?: YoutubeStreamsState) {
+  return {
+    youtubeVideoId: youtubeStreams?.selectedVideoId ?? null,
+    ytChannelId: youtubeStreams?.channelId ?? null,
+    ytVideos: youtubeStreams?.videos ?? EMPTY_YOUTUBE_VIDEOS,
+    ytLoading: youtubeStreams?.loading ?? false,
+    ytError: youtubeStreams?.error ?? null,
+    ytNotice: youtubeStreams?.notice ?? null,
+    selectYoutubeVideo: youtubeStreams?.selectVideo ?? noopSelectYoutubeVideo,
+    setManualVideoId: youtubeStreams?.setManualVideoId ?? noopSetManualVideoId,
+  };
+}
+
 export function useChatAppState({
   selectedTwitchChannel = "",
   selectedTwitchChannelName = "",
@@ -175,16 +188,16 @@ export function useChatAppState({
     twitchUserId: twitchSession?.userId,
   });
 
-  const youtubeVideoId = youtubeStreams?.selectedVideoId ?? null;
-  const ytChannelId = youtubeStreams?.channelId ?? null;
-  const ytVideos = youtubeStreams?.videos ?? EMPTY_YOUTUBE_VIDEOS;
-  const ytLoading = youtubeStreams?.loading ?? false;
-  const ytError = youtubeStreams?.error ?? null;
-  const ytNotice = youtubeStreams?.notice ?? null;
-  const selectYoutubeVideo =
-    youtubeStreams?.selectVideo ?? noopSelectYoutubeVideo;
-  const setManualVideoId =
-    youtubeStreams?.setManualVideoId ?? noopSetManualVideoId;
+  const {
+    youtubeVideoId,
+    ytChannelId,
+    ytVideos,
+    ytLoading,
+    ytError,
+    ytNotice,
+    selectYoutubeVideo,
+    setManualVideoId,
+  } = resolveYoutubeStreamValues(youtubeStreams);
 
   const {
     showYoutubeSection,
