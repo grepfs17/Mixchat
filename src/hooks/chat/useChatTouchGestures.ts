@@ -6,7 +6,7 @@ interface UseChatTouchGesturesOptions<T> {
   /** Custom long-press action (e.g. open actions menu). Takes precedence over
    *  `onReply`. */
   onLongPress?: (msg: T) => void;
-  /** Called after a successful double-tap copy. */
+  /** Called after a successful copy from the message menu. */
   onCopyMessage?: () => void;
   /** Extract the plain-text content to copy from a message. */
   getContent: (msg: T) => string;
@@ -18,8 +18,8 @@ interface UseChatTouchGesturesOptions<T> {
 }
 
 /**
- * Provides **double-tap** (copy) and **long-press** (reply) touch gesture
- * handlers that can be attached to any chat message element.
+ * Provides **long-press** (reply) touch handlers that can be attached to any
+ * chat message element.
  *
  * @example
  * const { handleTouchStart, handleTouchEnd, handleTouchMove } = useChatTouchGestures({ ... });
@@ -37,8 +37,6 @@ export function useChatTouchGestures<T>({
   canReply,
 }: UseChatTouchGesturesOptions<T>) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastTapTime = useRef<number>(0);
-  const touchStartTime = useRef<number>(0);
 
   const copyMsg = useCallback(
     (msg: T) => {
@@ -65,7 +63,6 @@ export function useChatTouchGestures<T>({
 
   const handleTouchStart = useCallback(
     (msg: T) => {
-      touchStartTime.current = Date.now();
       // Prefer an explicit long-press handler (e.g. open menu). Fall back
       // to `onReply` for backward compatibility.
       if (onLongPress) {
@@ -89,25 +86,12 @@ export function useChatTouchGestures<T>({
     [onReply, canReply],
   );
 
-  const handleTouchEnd = useCallback(
-    (msg: T) => {
-      const elapsed = Date.now() - touchStartTime.current;
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
-      }
-      if (elapsed < 250) {
-        const now = Date.now();
-        if (now - lastTapTime.current < 300) {
-          copyMsg(msg);
-          lastTapTime.current = 0;
-        } else {
-          lastTapTime.current = now;
-        }
-      }
-    },
-    [copyMsg],
-  );
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   const handleTouchMove = useCallback(() => {
     if (longPressTimer.current) {
