@@ -19,75 +19,128 @@ const BASE_GQL_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; mixchat/0.1)",
 };
 
-/** Fetch a Twitch GQL PlaybackAccessToken, retrying with integrity token if needed. */
+// 1440p (2K) is HEVC-only on Twitch, so the client must advertise the codecs
+// it can actually decode or usher never lists the higher variants.
+const PLAYBACK_CODECS = ["av1", "h265", "h264"] as const;
+const PLAYBACK_CODEC_SET = new Set<string>(PLAYBACK_CODECS);
+
+function resolvePlaybackCodecs(raw: string | null): string {
+  const requested = (raw ?? "")
+    .split(",")
+    .map((codec) => codec.trim().toLowerCase())
+    .filter((codec) => PLAYBACK_CODEC_SET.has(codec));
+  const unique = [...new Set(requested)];
+  return unique.length > 0 ? unique.join(",") : PLAYBACK_CODECS.join(",");
+}
+
+function playbackTokenBody(
+  channel: string,
+  playerType: string,
+  platform: string,
+): Record<string, unknown> {
+  // Plain query instead of a persisted hash: it works for anonymous and
+  // signed-in requests alike, and the account's token is what raises
+  // maximum_resolution from FULL_HD to QUAD_HD for 1440p streams.
+  return {
+    query: `query{streamPlaybackAccessToken(channelName:${JSON.stringify(channel)},params:{platform:${JSON.stringify(platform)},playerBackend:"mediaplayer",playerType:${JSON.stringify(playerType)}}){value signature}}`,
+  };
+}
+
+async function postPlaybackToken(
+  channel: string,
+  playerType: string,
+  platform: string,
+  oauthToken?: string,
+): Promise<Response> {
+  const headers: Record<string, string> = { ...BASE_GQL_HEADERS };
+  if (oauthToken) {
+    headers.Authorization = `OAuth ${oauthToken}`;
+    // Twitch ties the token to the client that issued it, so signed-in
+    // requests must use the desktop app's client id, not the web one.
+    const appClientId = import.meta.env.PUBLIC_TWITCH_CLIENT_ID;
+    if (appClientId) headers["Client-ID"] = appClientId;
+  }
+  return fetch("https://gql.twitch.tv/gql", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(playbackTokenBody(channel, playerType, platform)),
+  });
+}
+
+/** Retry an anonymous token request with Twitch's client-integrity headers. */
+async function retryPlaybackTokenWithIntegrity(
+  channel: string,
+): Promise<Response | null> {
+  try {
+    const integrityRes = await fetch("https://gql.twitch.tv/integrity", {
+      method: "POST",
+      headers: { "Client-ID": GQL_CLIENT_ID },
+    });
+    if (!integrityRes.ok) return null;
+
+    const integrityData = await integrityRes.json();
+    const clientIntegrity = integrityData?.token;
+    if (!clientIntegrity) return null;
+
+    const kpsdkCt = integrityRes.headers?.get?.("x-kpsdk-ct");
+    const setCookie = integrityRes.headers?.get?.("set-cookie");
+    const headers: Record<string, string> = {
+      ...BASE_GQL_HEADERS,
+      "Device-Id": Math.random().toString(36).slice(2, 34),
+      "Client-Integrity": clientIntegrity,
+    };
+    if (kpsdkCt) {
+      headers.Cookie = `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}`;
+    } else if (setCookie) {
+      headers.Cookie = setCookie.split(/\r?\n/).join("; ");
+    }
+
+    return fetch("https://gql.twitch.tv/gql", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(playbackTokenBody(channel, "embed", "site")),
+    });
+  } catch (err) {
+    console.error("Failed to acquire client-integrity token:", err);
+    return null;
+  }
+}
+
+/**
+ * Fetch a Twitch GQL PlaybackAccessToken.
+ *
+ * Signed-in viewers get the web-player request (site/web) with the OAuth token
+ * attached, which is what unlocks the authenticated 1440p/HEVC variants. The
+ * anonymous embed request stays as the fallback so an expired token cannot
+ * break playback, and Twitch's integrity token covers the anonymous 401/403.
+ */
 async function fetchPlaybackToken(
   channel: string,
-): Promise<{ value: string; signature: string }> {
-  const gqlBody = {
-    operationName: "PlaybackAccessToken",
-    extensions: {
-      persistedQuery: {
-        version: 1,
-        sha256Hash:
-          "ed230aa1e33e07eebb8928504583da78a5173989fadfb1ac94be06a04f3cdbe9",
-      },
-    },
-    variables: {
-      isLive: true,
-      login: channel,
-      isVod: false,
-      vodID: "",
-      playerType: "embed",
-      platform: "site",
-    },
-  };
+  oauthToken?: string,
+): Promise<{ value: string; signature: string; authenticated: boolean }> {
+  let authenticated = Boolean(oauthToken);
+  let gqlRes = oauthToken
+    ? await postPlaybackToken(channel, "site", "web", oauthToken)
+    : await postPlaybackToken(channel, "embed", "site");
 
-  let gqlRes = await fetch("https://gql.twitch.tv/gql", {
-    method: "POST",
-    headers: BASE_GQL_HEADERS,
-    body: JSON.stringify(gqlBody),
-  });
+  if (
+    oauthToken &&
+    !gqlRes.ok &&
+    (gqlRes.status === 401 || gqlRes.status === 403)
+  ) {
+    console.warn(
+      "[hls:server] Playback token rejected for the OAuth session, retrying anonymously (channel:",
+      channel,
+      ")",
+    );
+    authenticated = false;
+    gqlRes = await postPlaybackToken(channel, "embed", "site");
+  }
 
   // If Twitch requires a client-integrity token (401/403), try acquiring one
   // and retry with Device-Id + Client-Integrity headers.
   if (!gqlRes.ok && (gqlRes.status === 401 || gqlRes.status === 403)) {
-    try {
-      const integrityRes = await fetch("https://gql.twitch.tv/integrity", {
-        method: "POST",
-        headers: { "Client-ID": GQL_CLIENT_ID },
-      });
-      if (integrityRes.ok) {
-        const integrityData = await integrityRes.json();
-        const clientIntegrity = integrityData?.token;
-        const setCookie = integrityRes.headers?.get?.("set-cookie");
-        const kpsdkCt = integrityRes.headers?.get?.("x-kpsdk-ct");
-        let cookieHeader: Record<string, string> = {};
-        if (kpsdkCt) {
-          cookieHeader = {
-            Cookie: `KP_UIDz-ssn=${kpsdkCt}; KP_UIDz=${kpsdkCt}`,
-          };
-        } else if (setCookie) {
-          cookieHeader = { Cookie: setCookie.split(/\r?\n/).join("; ") };
-        }
-        if (clientIntegrity) {
-          const deviceId = Math.random().toString(36).slice(2, 34);
-          const retryHeaders: Record<string, string> = {
-            ...BASE_GQL_HEADERS,
-            "Device-Id": deviceId,
-            "Client-Integrity": clientIntegrity,
-            ...cookieHeader,
-          };
-          if (retryHeaders.Authorization) delete retryHeaders.Authorization;
-          gqlRes = await fetch("https://gql.twitch.tv/gql", {
-            method: "POST",
-            headers: retryHeaders,
-            body: JSON.stringify(gqlBody),
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Failed to acquire client-integrity token:", err);
-    }
+    gqlRes = (await retryPlaybackTokenWithIntegrity(channel)) ?? gqlRes;
   }
 
   if (!gqlRes.ok) throw new Error(`Twitch GQL error: ${gqlRes.status}`);
@@ -106,23 +159,55 @@ async function fetchPlaybackToken(
     throw new Error("STREAM_OFFLINE");
   }
 
-  return { value: tokenData.value, signature: tokenData.signature };
+  // The token payload states the highest rendition Twitch will serve. Log the
+  // cap so a missing 1440p can be told apart from a decode problem.
+  try {
+    const payload = JSON.parse(tokenData.value) as {
+      maximum_resolution?: string;
+      maximum_resolution_reasons?: Record<string, string[]>;
+      user_id?: string | null;
+    };
+    // Only treat the request as signed in when Twitch actually resolved a
+    // viewer, otherwise usher must not receive the OAuth token.
+    if (oauthToken) authenticated = Boolean(payload.user_id);
+    if (payload.maximum_resolution) {
+      const quadHd = payload.maximum_resolution_reasons?.QUAD_HD;
+      console.log(
+        "[hls:server] Playback token resolution cap:",
+        payload.maximum_resolution,
+        quadHd?.length ? `(1440p: ${quadHd.join(",")})` : "",
+        authenticated ? "authenticated" : "anonymous",
+      );
+    }
+  } catch {
+    // The value is normally a JSON string, but logging must not break playback.
+  }
+
+  return { value: tokenData.value, signature: tokenData.signature, authenticated };
 }
 
 /** Fetch the master HLS playlist from Twitch's usher CDN. */
 async function fetchMasterPlaylist(
   channel: string,
   token: { value: string; signature: string },
-  oauthToken?: string,
+  oauthToken: string | undefined,
+  codecs: string,
 ): Promise<string> {
   const usherParams = new URLSearchParams({
-    client_id: GQL_CLIENT_ID,
+    client_id: oauthToken
+      ? import.meta.env.PUBLIC_TWITCH_CLIENT_ID || GQL_CLIENT_ID
+      : GQL_CLIENT_ID,
     token: token.value,
     sig: token.signature,
     allow_source: "true",
     allow_audio_only: "true",
     allow_spectre: "false",
     fast_bread: "true",
+    // Match the web player: without supported_codecs usher only returns the
+    // H.264 ladder, which caps at 1080p and hides every 1440p HEVC rendition.
+    supported_codecs: codecs,
+    platform: "web",
+    player: "twitchweb",
     p: String(Math.floor(Math.random() * 999999)),
   });
 
@@ -148,7 +233,7 @@ async function fetchMasterPlaylist(
 /** Parse HLS master playlist m3u8 text into quality entries with proxied URLs. */
 function parseMasterPlaylist(
   masterText: string,
-): Array<{ label: string; url: string }> {
+): Array<{ label: string; url: string; codecs: string }> {
   const lines = masterText.split("\n");
 
   const nameMap = new Map<string, string>();
@@ -160,17 +245,18 @@ function parseMasterPlaylist(
     }
   }
 
-  const qualities: Array<{ label: string; url: string }> = [];
+  const qualities: Array<{ label: string; url: string; codecs: string }> = [];
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].startsWith("#EXT-X-STREAM-INF:")) {
       const videoGroup = lines[i].match(/VIDEO="([^"]+)"/)?.[1];
+      const codecs = lines[i].match(/CODECS="([^"]+)"/)?.[1] ?? "";
       const variantUrl = lines[i + 1]?.trim();
       if (variantUrl?.startsWith("http")) {
         const label =
           (videoGroup && nameMap.get(videoGroup)) ?? videoGroup ?? "unknown";
         // Route through server-side proxy. *.playlist.ttvnw.net URLs are IP-locked.
         const proxied = `/api/hls-proxy?url=${encodeURIComponent(variantUrl)}`;
-        qualities.push({ label, url: proxied });
+        qualities.push({ label, url: proxied, codecs });
       }
     }
   }
@@ -253,8 +339,14 @@ export const GET: APIRoute = async ({ request, url, cookies }) => {
       ? checkSubscription(twitchToken, channel)
       : Promise.resolve(false);
 
-    const token = await fetchPlaybackToken(channel);
-    const masterText = await fetchMasterPlaylist(channel, token, twitchToken);
+    const codecs = resolvePlaybackCodecs(url.searchParams.get("codecs"));
+    const token = await fetchPlaybackToken(channel, twitchToken);
+    const masterText = await fetchMasterPlaylist(
+      channel,
+      token,
+      token.authenticated ? twitchToken : undefined,
+      codecs,
+    );
     const qualities = parseMasterPlaylist(masterText);
 
     if (qualities.length === 0) {

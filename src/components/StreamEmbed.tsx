@@ -84,6 +84,52 @@ interface StreamEmbedProps {
   onPlaceholderFadeOut?: () => void;
 }
 
+/**
+ * Codecs this engine can decode. Twitch publishes 1440p (2K) only in HEVC,
+ * so advertising every codec would hand an undecodable variant to browsers
+ * without HEVC support.
+ */
+function detectPlayableCodecs(): string[] {
+  const supports = (type: string): boolean => {
+    if (
+      typeof MediaSource !== "undefined" &&
+      typeof MediaSource.isTypeSupported === "function" &&
+      MediaSource.isTypeSupported(type)
+    ) {
+      return true;
+    }
+    // Safari/WKWebView can play HEVC through native HLS without MSE reporting it.
+    if (typeof document === "undefined") return false;
+    return document.createElement("video").canPlayType(type) !== "";
+  };
+
+  const codecs = ["h264"];
+  if (
+    supports('video/mp4; codecs="hvc1.1.6.L153.B0"') ||
+    supports('video/mp4; codecs="hev1.1.6.L153.B0"')
+  ) {
+    codecs.unshift("h265");
+  }
+  if (supports('video/mp4; codecs="av01.0.08M.08"')) {
+    codecs.unshift("av1");
+  }
+  return codecs;
+}
+
+function isQualityPlayable(
+  codecs: string | undefined,
+  supported: string[],
+): boolean {
+  if (!codecs) return true;
+  const value = codecs.toLowerCase();
+  if (value.includes("av01")) return supported.includes("av1");
+  if (value.includes("hvc1") || value.includes("hev1")) {
+    return supported.includes("h265");
+  }
+  if (value.includes("avc1")) return supported.includes("h264");
+  return true;
+}
+
 // Renders a Twitch stream using the Twitch Player JS API
 
 export function TwitchJSEmbed({
@@ -438,8 +484,12 @@ export default function StreamEmbed({
         // It returns all available quality variants on *.ttvnw.net CDN,
         // which DO support CORS, HLS.js fetches segments directly from
         // the CDN with zero server bandwidth involved.
+        // Advertising the decodable codecs is what makes Twitch list the
+        // HEVC 1440p (2K) variants instead of stopping at 1080p H.264.
+        const supportedCodecs = detectPlayableCodecs();
+        console.log("[hls] Supported codecs:", supportedCodecs.join(","));
         const playlistRes = await fetch(
-          `/api/stream-playlist?channel=${encodeURIComponent(channelName)}`,
+          `/api/stream-playlist?channel=${encodeURIComponent(channelName)}&codecs=${encodeURIComponent(supportedCodecs.join(","))}`,
           { signal: abortController.signal },
         );
 
@@ -479,9 +529,18 @@ export default function StreamEmbed({
 
         if (cancelled) return;
 
-        const fetchedQualities: Array<{ label: string; url: string }> =
-          playlistData.qualities;
-          qualitiesRef.current = fetchedQualities;
+        const fetchedQualities: Array<{
+          label: string;
+          url: string;
+          codecs?: string;
+        }> = (playlistData.qualities ?? []).filter(
+          (quality: { codecs?: string }) =>
+            isQualityPlayable(quality.codecs, supportedCodecs),
+        );
+        if (fetchedQualities.length === 0) {
+          throw new Error("No playable stream quality found for this browser");
+        }
+        qualitiesRef.current = fetchedQualities;
         onQualitiesLoaded?.(fetchedQualities);
 
         // Use server-side subscription check result (more reliable: token has full scopes)
