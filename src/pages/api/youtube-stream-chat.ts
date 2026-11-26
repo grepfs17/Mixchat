@@ -2134,7 +2134,7 @@ function parseGiftRedemptionAnnouncement(msg: any): ChatMessage {
     recipientName,
     superchat: {
       amount: "Gift received",
-      color: "#4caf50",
+      color: "#9c27b0",
     },
   };
 }

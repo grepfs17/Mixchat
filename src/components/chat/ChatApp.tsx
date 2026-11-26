@@ -33,6 +33,7 @@ import type { SongQueueItem } from "../../lib/songQueue/types";
 import { sendHelixMessage } from "../../lib/twitch";
 import { sendYouTubeChatMessage } from "../../lib/youtubeChat";
 import { IS_DESKTOP } from "../../lib/constants";
+import type { ToolId } from "./shared/StreamerToolsModal";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 
 interface PollChatCommandDeps {
@@ -603,8 +604,11 @@ export default function ChatApp(props: ChatAppStateProps) {
 
   const [streamerToolsOpen, setStreamerToolsOpen] = useState(false);
   const [streamerToolsInitialTool, setStreamerToolsInitialTool] = useState<
-    "giveaway" | "poll" | "prediction" | "song-queue" | "music-player" | null
+    "giveaway" | "poll" | "prediction" | "song-queue" | "music-player" | "ads" | null
   >(null);
+  // The minimized Ads Manager pill stays up after the modal closes until
+  // the modal is closed without minimizing.
+  const [adsIndicatorVisible, setAdsIndicatorVisible] = useState(false);
 
   // Keep the server-side master switch in sync with the streamer's local
   // preference so moderators see the same enabled/disabled state.
@@ -635,6 +639,7 @@ export default function ChatApp(props: ChatAppStateProps) {
         | "prediction"
         | "song-queue"
         | "music-player"
+        | "ads"
         | null = null,
     ) => {
       setStreamerToolsInitialTool(initialTool);
@@ -645,7 +650,16 @@ export default function ChatApp(props: ChatAppStateProps) {
   const closeStreamerTools = useCallback(() => {
     setStreamerToolsOpen(false);
     setStreamerToolsInitialTool(null);
+    setAdsIndicatorVisible(false);
   }, []);
+  const minimizeStreamerTools = useCallback(
+    (activeTool: ToolId | null) => {
+      setStreamerToolsOpen(false);
+      setStreamerToolsInitialTool(null);
+      setAdsIndicatorVisible(activeTool === "ads");
+    },
+    [],
+  );
 
   const handleSendFromInput = useCallback(
     async (message: string, platforms: Platform[], replyToId?: string) => {
@@ -841,6 +855,8 @@ export default function ChatApp(props: ChatAppStateProps) {
           showPinnedBanner={showPinnedBanner}
           onOpenStreamerTools={openStreamerTools}
           onCloseStreamerTools={closeStreamerTools}
+          onMinimizeStreamerTools={minimizeStreamerTools}
+          adsIndicatorVisible={adsIndicatorVisible}
           onAnnounceWinner={handleAnnounceWinner}
           youtubeConnected={!!youtubeSession}
           publicOrigin={

@@ -1071,6 +1071,95 @@
     margin-top: 2px;
 }
 
+/* Minimized Ads Manager pill (giveaway indicator variant). */
+.ads-indicator {
+    padding: 4px 6px 4px 10px;
+    border-color: color-mix(in srgb, var(--color-twitch) 50%, transparent);
+}
+
+.ads-indicator:hover {
+    border-color: color-mix(in srgb, var(--color-twitch) 75%, transparent);
+}
+
+.ads-indicator .giveaway-indicator-icon {
+    color: var(--color-twitch);
+}
+
+.ads-indicator-main {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.ads-indicator-main:hover .giveaway-indicator-title {
+    text-decoration: underline;
+}
+
+.ads-indicator .giveaway-indicator-sub strong {
+    color: var(--color-twitch);
+}
+
+.ads-indicator-snooze {
+    background: var(--color-twitch);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ads-indicator-snooze:hover:not(:disabled) {
+    filter: brightness(1.15);
+}
+
+.ads-indicator-snooze:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ads-indicator-length select {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-pill);
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ads-indicator-run {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: 1px solid color-mix(in srgb, var(--color-twitch) 50%, transparent);
+    border-radius: var(--radius-pill);
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.ads-indicator-run:hover:not(:disabled) {
+    border-color: var(--color-twitch);
+    filter: brightness(1.1);
+}
+
+.ads-indicator-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Giveaway panel */
 .giveaway-panel {
     display: flex;

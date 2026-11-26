@@ -58,10 +58,16 @@ export async function subscribeEventSub(
 
 /** Resolve a broadcaster login name to a numeric ID when necessary.
  * If the input is already numeric, it is returned unchanged.
+ * Logins are cached so repeated calls (per-poll hooks) don't re-fetch.
  * Returns the resolved numeric ID or the original input if resolution fails.
  */
+const broadcasterIdCache = new Map<string, string>();
+
 export const resolveBroadcasterId = async (broadcasterIdOrLogin: string) => {
   if (/^\d+$/.test(broadcasterIdOrLogin)) return broadcasterIdOrLogin;
+
+  const cached = broadcasterIdCache.get(broadcasterIdOrLogin);
+  if (cached) return cached;
 
   try {
     const r = await fetch(
@@ -70,7 +76,11 @@ export const resolveBroadcasterId = async (broadcasterIdOrLogin: string) => {
     if (!r.ok) return broadcasterIdOrLogin;
     const d = await r.json();
     const id = d?.data?.[0]?.id;
-    return id || broadcasterIdOrLogin;
+    if (id) {
+      broadcasterIdCache.set(broadcasterIdOrLogin, id);
+      return id;
+    }
+    return broadcasterIdOrLogin;
   } catch (e) {
     return broadcasterIdOrLogin;
   }
@@ -1735,6 +1745,163 @@ export const updateTwitchPrediction = async (
     return prediction ? mapTwitchPrediction(prediction) : null;
   } catch (error) {
     console.error("updateTwitchPrediction failed:", error);
+    throw error;
+  }
+};
+
+/** Ad schedule info from GET /helix/channels/ads (broadcaster token required). */
+export interface TwitchAdSchedule {
+  /** Snoozes available in the current cycle; refreshes when the next ad runs. */
+  snoozeCount: number;
+  /** When the snooze allowance refreshes (ISO string). */
+  snoozeRefreshAt: string | null;
+  /** When the next automatic mid-roll is scheduled (ISO string). */
+  nextAdAt: string | null;
+  /** When the last ad break ran (ISO string). */
+  lastAdAt: string | null;
+  /** Seconds of pre-roll-free time remaining, if one is active. */
+  prerollFreeTimeSeconds: number;
+}
+
+interface TwitchAdScheduleResponse {
+  data: Array<{
+    snooze_count: number;
+    snooze_refresh_at: string | null;
+    next_ad_at: string | null;
+    last_ad_at?: string | null;
+    preroll_free_time?: number;
+  }>;
+}
+
+/**
+ * Map a schedule response. The snooze endpoint returns only the snooze
+ * and next-ad fields, so `previous` carries over fields it omits.
+ */
+function mapAdSchedule(
+  data: TwitchAdScheduleResponse["data"][number],
+  previous?: TwitchAdSchedule,
+): TwitchAdSchedule {
+  return {
+    snoozeCount: data.snooze_count ?? 0,
+    snoozeRefreshAt: data.snooze_refresh_at ?? previous?.snoozeRefreshAt ?? null,
+    nextAdAt: data.next_ad_at ?? null,
+    lastAdAt: data.last_ad_at ?? previous?.lastAdAt ?? null,
+    prerollFreeTimeSeconds:
+      data.preroll_free_time ?? previous?.prerollFreeTimeSeconds ?? 0,
+  };
+}
+
+/**
+ * Get the broadcaster's ad schedule: next ad time, snoozes left, and
+ * pre-roll-free status. Requires channel:read:ads and a broadcaster token.
+ */
+export const getTwitchAdSchedule = async (broadcasterId: string) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/channels/ads&broadcaster_id=${encodeURIComponent(resolvedBroadcasterId)}`,
+      { credentials: "same-origin" },
+    );
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant ad permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to get ad schedule: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as TwitchAdScheduleResponse;
+    const schedule = data?.data?.[0];
+    if (!schedule) throw new Error("Failed to get ad schedule: no schedule returned");
+    return mapAdSchedule(schedule);
+  } catch (error) {
+    console.error("getTwitchAdSchedule failed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Snooze the broadcaster's next scheduled mid-roll by 5 minutes.
+ * The response omits last-ad and pre-roll fields, so pass the current
+ * `previous` schedule to keep them populated in the result.
+ * Requires channel:manage:ads and a broadcaster token.
+ */
+export const snoozeTwitchNextAd = async (
+  broadcasterId: string,
+  previous?: TwitchAdSchedule,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+    const res = await fetch(
+      `/api/twitch-proxy?path=/helix/channels/ads/schedule/snooze&broadcaster_id=${encodeURIComponent(resolvedBroadcasterId)}`,
+      { method: "POST", credentials: "same-origin" },
+    );
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant ad permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to snooze ad: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as TwitchAdScheduleResponse;
+    const schedule = data?.data?.[0];
+    if (!schedule) throw new Error("Failed to snooze ad: no schedule returned");
+    return mapAdSchedule(schedule, previous);
+  } catch (error) {
+    console.error("snoozeTwitchNextAd failed:", error);
+    throw error;
+  }
+};
+
+/** Ad break lengths Twitch's Start Commercial endpoint accepts. */
+export type CommercialLength = 30 | 60 | 90 | 120 | 150 | 180;
+
+/**
+ * Start a commercial (30-180 seconds) on the broadcaster's channel.
+ * Requires channel:edit:commercial and a broadcaster token.
+ */
+export const startTwitchCommercial = async (
+  broadcasterId: string,
+  length: CommercialLength,
+) => {
+  try {
+    const resolvedBroadcasterId = await resolveBroadcasterId(broadcasterId);
+
+    const res = await fetch(`/api/twitch-proxy?path=/helix/channels/commercial`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        broadcaster_id: resolvedBroadcasterId,
+        length,
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(
+          "Twitch did not authorize this request. Reconnect Twitch to grant commercial permissions.",
+        );
+      }
+      const text = await res.text().catch(() => "(unreadable)");
+      throw new Error(`Failed to start commercial: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as {
+      data: Array<{ length: number; message: string; retry_after: number }>;
+    };
+    const commercial = data?.data?.[0];
+    if (!commercial) throw new Error("Failed to start commercial: no response returned");
+    return commercial;
+  } catch (error) {
+    console.error("startTwitchCommercial failed:", error);
     throw error;
   }
 };

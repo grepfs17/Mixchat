@@ -17,6 +17,11 @@ import { useSongQueue } from "../../hooks/chat/useSongQueue";
 import { useMusicPlayer } from "../../hooks/chat/useMusicPlayer";
 import type { usePinnedChatHighlight } from "../../hooks/chat/usePinnedChatHighlight";
 import type { StreamToolsSettings } from "../../hooks/chat/useStreamToolsSettings";
+import type { UseAdBreakNoticeResult } from "../../hooks/chat/useAdBreakNotice";
+import { useAdBreakNotice } from "../../hooks/chat/useAdBreakNotice";
+import AdBreakBanner from "./shared/AdBreakBanner";
+import AdsIndicator from "./shared/AdsIndicator";
+import type { ToolId } from "./shared/StreamerToolsModal";
 import { IS_DESKTOP } from "../../lib/constants";
 
 type StreamerToolId =
@@ -25,6 +30,7 @@ type StreamerToolId =
   | "prediction"
   | "song-queue"
   | "music-player"
+  | "ads"
   | null;
 type AnnounceWinnerHandler = NonNullable<
   Parameters<typeof StreamerToolsModal>[0]["onAnnounce"]
@@ -52,6 +58,8 @@ interface ChatAppChromeProps {
   showPinnedBanner: boolean;
   onOpenStreamerTools: (initialTool?: StreamerToolId) => void;
   onCloseStreamerTools: () => void;
+  onMinimizeStreamerTools: (activeTool: ToolId | null) => void;
+  adsIndicatorVisible: boolean;
   onAnnounceWinner: AnnounceWinnerHandler;
   youtubeConnected: boolean;
   publicOrigin: string;
@@ -59,11 +67,30 @@ interface ChatAppChromeProps {
 }
 
 export default function ChatAppChrome(props: ChatAppChromeProps) {
+  // Broadcaster ad-break warning above chat, 5 minutes before an automatic
+  // mid-roll (the schedule endpoint needs the broadcaster token).
+  const adBreakNotice = useAdBreakNotice({
+    broadcasterId: props.appProps.isOnOwnChannel
+      ? props.appProps.selectedTwitchChannel || ""
+      : "",
+    enabled: Boolean(props.appProps.isOnOwnChannel) && !props.state.isVodPlayback,
+  });
+
   return (
     <>
       <NotificationAndRaid state={props.state} appProps={props.appProps} />
       <StreamerToolsChrome {...props} />
-      <EventBanners {...props} />
+      {props.showStreamTools && !props.streamerToolsOpen && props.adsIndicatorVisible && adBreakNotice.schedule && (
+        <AdsIndicator
+          schedule={adBreakNotice.schedule}
+          snoozing={adBreakNotice.snoozing}
+          runningLength={adBreakNotice.runningLength}
+          onSnooze={() => void adBreakNotice.snooze()}
+          onRun={(length) => void adBreakNotice.runCommercial(length)}
+          onOpen={() => props.onOpenStreamerTools("ads")}
+        />
+      )}
+      <EventBanners {...props} adBreakNotice={adBreakNotice} />
     </>
   );
 }
@@ -122,6 +149,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
     streamerToolsInitialTool,
     onOpenStreamerTools,
     onCloseStreamerTools,
+    onMinimizeStreamerTools,
     onAnnounceWinner,
     youtubeConnected,
     publicOrigin,
@@ -167,7 +195,7 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
           songQueue={songQueue}
           musicPlayer={musicPlayer}
           onAnnounce={onAnnounceWinner}
-          onMinimize={onCloseStreamerTools}
+          onMinimize={onMinimizeStreamerTools}
           onClose={onCloseStreamerTools}
           initialTool={streamerToolsInitialTool}
           youtubeConnected={youtubeConnected}
@@ -178,6 +206,9 @@ function StreamerToolsChrome(props: ChatAppChromeProps) {
           onSearchCategories={props.state.handleSearchCategories}
           role={streamToolsRole}
           affiliateEligible={affiliateEligible}
+          broadcasterId={
+            appProps.isOnOwnChannel ? appProps.selectedTwitchChannel : ""
+          }
           settings={streamToolsSettings}
           onUpdateSettings={onUpdateStreamToolsSettings}
         />
@@ -190,9 +221,22 @@ function EventBanners({
   state,
   pinned,
   showPinnedBanner,
-}: Pick<ChatAppChromeProps, "state" | "pinned" | "showPinnedBanner">) {
+  adBreakNotice,
+}: Pick<
+  ChatAppChromeProps,
+  "state" | "pinned" | "showPinnedBanner"
+> & { adBreakNotice: UseAdBreakNoticeResult }) {
   return (
     <>
+      {adBreakNotice?.notice && (
+        <AdBreakBanner
+          key={adBreakNotice.notice.nextAdAt.toISOString()}
+          notice={adBreakNotice.notice}
+          snoozing={adBreakNotice.snoozing}
+          onSnooze={() => void adBreakNotice.snooze()}
+          onDismiss={adBreakNotice.dismiss}
+        />
+      )}
       {state.hypeTrain && (
         <HypeTrainBanner
           hypeTrain={state.hypeTrain}

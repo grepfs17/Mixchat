@@ -1,0 +1,59 @@
+/* Ad break notice banner (broadcaster only). Tone accent + badge +
+ * snooze button styles; the frame comes from BannerShell.css.
+ * Green accent matches Twitch's ad break notification. */
+
+.ads-banner {
+    border-left-color: var(--color-green);
+}
+
+.ads-banner .ads-banner-badge {
+    background: var(--color-green);
+    color: #052e16;
+}
+
+.ads-banner .ads-banner-icon {
+    color: var(--color-green);
+}
+
+.ads-banner .ads-banner-title {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.ads-banner .ads-banner-countdown {
+    font-variant-numeric: tabular-nums;
+}
+
+.ads-banner .ads-banner-hint {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.ads-banner .ads-banner-snoozes {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.ads-banner .ads-banner-snooze {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-green);
+    color: #052e16;
+    border: none;
+    border-radius: var(--radius-pill, 999px);
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ads-banner .ads-banner-snooze:hover:not(:disabled) {
+    filter: brightness(1.15);
+}
+
+.ads-banner .ads-banner-snooze:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

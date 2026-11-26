@@ -102,8 +102,8 @@ const YT_EVENT_CONFIG: Record<
   },
   "gift-redemption": {
     label: "GIFT RECEIVED",
-    color: "#4caf50",
-    bg: "rgba(76, 80, 0.15)",
+    color: "var(--color-gift)",
+    bg: "rgba(156, 39, 176, 0.15)",
   },
   redirect: {
     label: "RAID / REDIRECT",

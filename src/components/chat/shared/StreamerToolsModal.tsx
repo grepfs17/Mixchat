@@ -23,6 +23,7 @@ import SongQueuePanel from "./SongQueuePanel";
 import MusicPlayerPanel from "./MusicPlayerPanel";
 import PollPanel from "./PollPanel";
 import PredictionPanel from "./PredictionPanel";
+import AdPanel from "./AdPanel";
 import type { PollState, PredictionState } from "./bannerTypes";
 import type { GiveawayEntry } from "../../../lib/streamerTools/giveaway";
 import type { UseGiveawayResult } from "../../../hooks/chat/useGiveaway";
@@ -56,7 +57,8 @@ interface StreamerToolsModalProps {
   songQueue: UseSongQueueResult;
   musicPlayer: UseMusicPlayerResult;
   onAnnounce: (winner: GiveawayEntry, message: string) => Promise<void>;
-  onMinimize: () => void;
+  /** Called with the minimized tool when the user minimizes the modal. */
+  onMinimize: (activeTool: ToolId | null) => void;
   onClose: () => void;
   /** When provided, the modal opens directly into this tool. */
   initialTool?: ToolId | null;
@@ -78,6 +80,8 @@ interface StreamerToolsModalProps {
   role?: "owner" | "moderator";
   /** Whether the broadcaster can run native polls and predictions. */
   affiliateEligible?: boolean;
+  /** Broadcaster ID of the current Twitch channel, for the Ads Manager panel. */
+  broadcasterId?: string;
   /** Server-backed access settings. The owner can edit `allowMods`, `modAccess` and `allowedMods`. */
   settings?: StreamToolsSettings;
   onUpdateSettings?: (
@@ -85,13 +89,14 @@ interface StreamerToolsModalProps {
   ) => Promise<void>;
 }
 
-type ToolId =
+export type ToolId =
   | "music-player"
   | "giveaway"
   | "poll"
   | "prediction"
   | "song-queue"
-  | "wheel";
+  | "wheel"
+  | "ads";
 
 interface ToolDescriptor {
   id: ToolId;
@@ -141,6 +146,12 @@ const TOOLS: ToolDescriptor[] = [
     label: "Prediction",
     description: "Let viewers bet Channel Points on an outcome.",
     badge: "NOT TESTED",
+  },
+  {
+    id: "ads",
+    label: "Ads Manager",
+    description:
+      "See your next ad break, snooze it, or run an ad break now.",
   },
 ];
 
@@ -779,6 +790,8 @@ function computeCanMinimize({
   if (activeTool === "giveaway") return giveawayPhase !== "config";
   if (activeTool === "song-queue") return songQueuePhase === "open";
   if (activeTool === "music-player") return musicItemCount > 0;
+  // Ads Manager always has a live schedule worth keeping up.
+  if (activeTool === "ads") return true;
   return false;
 }
 
@@ -802,6 +815,7 @@ export default function StreamerToolsModal({
   onSearchCategories,
   role = "owner",
   affiliateEligible = true,
+  broadcasterId = "",
   settings,
   onUpdateSettings,
 }: StreamerToolsModalProps) {
@@ -978,7 +992,7 @@ export default function StreamerToolsModal({
           <div className="streamer-tools-header-actions">
             <button type="button"
               className="streamer-tools-header-btn"
-              onClick={onMinimize}
+              onClick={() => onMinimize(canMinimize ? activeTool : null)}
               disabled={!canMinimize}
               title={minimizeTitle}
               aria-label="Minimize"
@@ -1043,6 +1057,7 @@ export default function StreamerToolsModal({
               livePrediction={livePrediction}
               role={role}
               affiliateEligible={affiliateEligible}
+              broadcasterId={broadcasterId}
               musicPlayer={musicPlayer}
               streamGameId={streamGameId}
               streamGameName={streamGameName}
@@ -1072,6 +1087,7 @@ interface ActiveToolPanelProps {
   livePrediction: PredictionState | null;
   role: "owner" | "moderator";
   affiliateEligible: boolean;
+  broadcasterId: string;
   musicPlayer: UseMusicPlayerResult;
   streamGameId: string;
   streamGameName: string;
@@ -1097,6 +1113,7 @@ function ActiveToolPanel({
   livePrediction,
   role,
   affiliateEligible,
+  broadcasterId,
   musicPlayer,
   streamGameId,
   streamGameName,
@@ -1167,6 +1184,7 @@ function ActiveToolPanel({
           onSearchCategories={onSearchCategories}
         />
       )}
+      {tool.id === "ads" && <AdPanel broadcasterId={broadcasterId} />}
       {tool.id === "song-queue" && (
         <SongQueuePanel
           publicOrigin={publicOrigin}
@@ -1214,10 +1232,19 @@ function ActiveToolPanel({
   );
 }
 
-function ToolList({ onOpenTool }: { onOpenTool: (id: ToolId) => void }) {
+function ToolList({
+  onOpenTool,
+  role,
+}: {
+  onOpenTool: (id: ToolId) => void;
+  role: "owner" | "moderator";
+}) {
   return (
     <ul className="streamer-tools-list">
-      {AVAILABLE_TOOLS.map((t) => (
+      {AVAILABLE_TOOLS.map((t) => {
+        // Ad controls run on the broadcaster's token, so moderators can't use them.
+        if (t.id === "ads" && role !== "owner") return null;
+        return (
         <li key={t.id} className="streamer-tools-list-item">
           <div className="streamer-tools-list-meta">
             <span className="streamer-tools-list-label-row">
@@ -1236,7 +1263,8 @@ function ToolList({ onOpenTool }: { onOpenTool: (id: ToolId) => void }) {
             Open
           </button>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -1321,7 +1349,7 @@ function StreamToolsHome({
         />
       )}
       {accessInfoOpen && <StreamToolsAccessInfoModal onClose={onCloseInfo} />}
-      <ToolList onOpenTool={onOpenTool} />
+      <ToolList onOpenTool={onOpenTool} role={role} />
       <HistorySection
         history={giveaway.history}
         onClear={giveaway.clearHistory}

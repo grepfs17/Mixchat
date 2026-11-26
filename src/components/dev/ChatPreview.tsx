@@ -11,6 +11,9 @@ import PollBanner from "../chat/shared/PollBanner";
 import PredictionBanner from "../chat/shared/PredictionBanner";
 import CelebrationBanner from "../chat/shared/CelebrationBanner";
 import YouTubeBanDialog from "../chat/shared/YouTubeBanDialog";
+import AdPanel from "../chat/shared/AdPanel";
+import AdBreakBanner from "../chat/shared/AdBreakBanner";
+import AdsIndicator from "../chat/shared/AdsIndicator";
 import { applyTheme } from "../../lib/themes";
 import {
   FONT_FAMILY_MAP,
@@ -946,6 +949,49 @@ export default function ChatPreview() {
             <div className="dev-preview-stack">
               <CelebrationBanner celebration={CELEBRATION} onDismiss={noop} />
             </div>
+          </SectionCard>
+
+          <SectionCard title="Overlay stack · ad break notice">
+            <div className="dev-preview-stack">
+              <AdBreakBanner
+                notice={{
+                  nextAdAt: new Date(Date.now() + 4 * 60_000 + 17_000),
+                  snoozeCount: 3,
+                }}
+                snoozing={false}
+                onSnooze={noop}
+                onDismiss={noop}
+              />
+              <AdsIndicator
+                schedule={{
+                  snoozeCount: 2,
+                  snoozeRefreshAt: null,
+                  nextAdAt: new Date(Date.now() + 6 * 60_000 + 5_000).toISOString(),
+                  lastAdAt: null,
+                  prerollFreeTimeSeconds: 0,
+                }}
+                snoozing={false}
+                runningLength={null}
+                onSnooze={noop}
+                onRun={noop}
+                onOpen={noop}
+              />
+            </div>
+            <p className="dev-preview-note">
+              Broadcaster-only warning shown above chat 5 minutes before an
+              automatic ad break, plus the minimized Ads Manager pill (the
+              giveaway-indicator style). Rendered with static data here; the
+              real banner comes from useAdBreakNotice polling the ad schedule.
+            </p>
+          </SectionCard>
+
+          <SectionCard title="Streamer tools · Ads Manager">
+            <AdPanel broadcasterId="" preview />
+            <p className="dev-preview-note">
+              Broadcaster-only ad controls with Twitch Ads Manager wording.
+              Actions are simulated here; the real panel polls the schedule
+              from the Twitch API on own channel.
+            </p>
           </SectionCard>
         </div>
       </div>
