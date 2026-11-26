@@ -1,6 +1,10 @@
 import YouTubePanel from "./shared/YouTubePanel";
 import type { YTMessage } from "./unified/types";
-import type { ChatFont, PlatformSession } from "../../lib/types";
+import type {
+  ChatFont,
+  EmoteAutocompleteMode,
+  PlatformSession,
+} from "../../lib/types";
 
 interface SplitChatProps {
   chatSlot: React.ReactNode;
@@ -40,6 +44,8 @@ interface SplitChatProps {
   ) => void;
   channelName?: string;
   renderThirdPartyEmotesOnYoutube?: boolean;
+  showEmoteAutocompleteOnYoutube?: boolean;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
   markFirstMessages?: boolean;
   streamStartedAt?: Date | null;
 }
@@ -73,6 +79,8 @@ export default function SplitChat({
   onUsernameClick,
   channelName,
   renderThirdPartyEmotesOnYoutube,
+  showEmoteAutocompleteOnYoutube,
+  emoteAutocompleteMode,
   markFirstMessages = false,
   streamStartedAt = null,
 }: SplitChatProps) {
@@ -104,6 +112,8 @@ export default function SplitChat({
           onConnectionChange={onYtConnectionChange}
           onUsernameClick={onUsernameClick}
           renderThirdPartyEmotes={renderThirdPartyEmotesOnYoutube}
+          showEmoteAutocomplete={showEmoteAutocompleteOnYoutube}
+          emoteAutocompleteMode={emoteAutocompleteMode}
           markFirstMessages={markFirstMessages}
           streamStartedAt={streamStartedAt}
         />

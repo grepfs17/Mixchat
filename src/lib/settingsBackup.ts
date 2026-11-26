@@ -43,6 +43,7 @@ export const SETTINGS_KEYS = [
   "mixchat_render_thirdparty_on_youtube",
   "mixchat_auto_fold_sidebar",
   "mixchat_emote_autocomplete",
+  "mixchat_emote_autocomplete_on_youtube",
   "disabled_emotes_v1",
   "disabled_emote_channels:v1",
   "emote_aliases:v1",

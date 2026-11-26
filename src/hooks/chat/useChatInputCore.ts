@@ -38,8 +38,10 @@ export interface UseChatInputCoreOptions {
   isLoading?: boolean;
   /** Reply target id. Triggers the focus effect when set. */
   replyingToId?: string;
-  /** Enable Twitch-specific autocomplete (emotes, commands). */
+  /** Enable Twitch-specific autocomplete (commands). */
   enableTwitchFeatures?: boolean;
+  /** Enable the emote autocomplete menu. Defaults to `enableTwitchFeatures`. */
+  enableEmoteAutocomplete?: boolean;
   /** When to show the emote autocomplete menu while typing. */
   emoteAutocompleteMode?: EmoteAutocompleteMode;
   /** Enable YouTube emoji :shortcode: autocomplete. */
@@ -114,6 +116,7 @@ export function useChatInputCore(
     isLoading = false,
     replyingToId,
     enableTwitchFeatures = true,
+    enableEmoteAutocomplete = enableTwitchFeatures,
     enableYoutubeEmoji = false,
     emoteAutocompleteMode = "default",
     mentionSource,
@@ -169,7 +172,7 @@ export function useChatInputCore(
     try {
       if (!isMobileDevice()) shouldRefocusRef.current = true;
       await onSend(text);
-      if (enableTwitchFeatures) recordEmoteUsageFromText(text);
+      if (enableEmoteAutocomplete) recordEmoteUsageFromText(text);
       setMessage("");
       closeAllRef.current?.();
       if (slowModeWaitTime && slowModeWaitTime > 0) {
@@ -184,7 +187,7 @@ export function useChatInputCore(
     onSend,
     slowModeWaitTime,
     startCooldown,
-    enableTwitchFeatures,
+    enableEmoteAutocomplete,
   ]);
 
   // ---- Autocomplete instances ----
@@ -286,8 +289,8 @@ export function useChatInputCore(
         }
       }
 
-      // Twitch emotes
-      if (enableTwitchFeatures) {
+      // Emotes (Twitch, plus opt-in YouTube autocomplete)
+      if (enableEmoteAutocomplete) {
         let query = currentWord;
         if (emoteAutocompleteMode === "colon") {
           // "Require the : prefix": only show suggestions once the user
@@ -326,6 +329,7 @@ export function useChatInputCore(
     [
       enableYoutubeEmoji,
       enableTwitchFeatures,
+      enableEmoteAutocomplete,
       emoteAutocompleteMode,
       allAuthors,
       currentUsername,

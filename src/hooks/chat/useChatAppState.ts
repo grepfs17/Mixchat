@@ -89,6 +89,7 @@ export interface ChatAppStateProps {
   streamerToolsEnabled?: boolean;
   isOnOwnChannel?: boolean;
   renderThirdPartyEmotesOnYoutube?: boolean;
+  showEmoteAutocompleteOnYoutube?: boolean;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
   activeVodId?: string | null;
   vodPlayerRef?: RefObject<VodChatPlayerLike | null>;

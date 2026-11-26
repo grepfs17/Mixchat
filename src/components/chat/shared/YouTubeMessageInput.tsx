@@ -8,6 +8,8 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { FaRegSmile } from "react-icons/fa";
+import type { EmoteAutocompleteMode } from "../../../lib/types";
+import { searchEmotes, recordEmoteUsageFromText } from "../../../lib/emotes";
 import {
   searchEmojis,
   EMOJI_LIST,
@@ -36,8 +38,13 @@ interface YouTubeMessageInputProps {
   onError?: (message: string) => void;
   onOptimisticMessage?: (id: string, text: string) => void;
   onOptimisticFailed?: (id: string) => void;
+  /** Suggest third-party/Twitch emotes while typing. */
+  showEmoteAutocomplete?: boolean;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
   ref?: React.Ref<YouTubeMessageInputHandle>;
 }
+
+type EmoteACItem = { name: string; url: string; source: string };
 
 const EMPTY_YT_MESSAGES: YTMessage[] = [];
 
@@ -51,6 +58,8 @@ const YouTubeMessageInput = ({
   onError,
   onOptimisticMessage,
   onOptimisticFailed,
+  showEmoteAutocomplete = false,
+  emoteAutocompleteMode = "default",
   ref,
 }: YouTubeMessageInputProps) => {
   const [ytMessage, setYtMessage] = useState("");
@@ -74,11 +83,12 @@ const YouTubeMessageInput = ({
     return Array.from(authors);
   }, [chatMessages]);
 
-  const { insertAtPosition, insertMention } = useInsertAtCursor({
-    message: ytMessage,
-    setMessage: setYtMessage,
-    inputRef,
-  });
+  const { insertAtPosition, insertWithPrefix, insertMention } =
+    useInsertAtCursor({
+      message: ytMessage,
+      setMessage: setYtMessage,
+      inputRef,
+    });
 
   const handleSend = useCallback(async () => {
     const text = ytMessage.trim();
@@ -89,6 +99,7 @@ const YouTubeMessageInput = ({
     setYtSending(true);
     try {
       await sendYouTubeChatMessage(youtubeVideoId, text);
+      if (showEmoteAutocomplete) recordEmoteUsageFromText(text);
     } catch (err) {
       console.error("Failed to send YouTube message:", err);
       onOptimisticFailed?.(optimisticId);
@@ -104,6 +115,7 @@ const YouTubeMessageInput = ({
     onError,
     onOptimisticMessage,
     onOptimisticFailed,
+    showEmoteAutocomplete,
   ]);
 
   const insertEmoji = useCallback(
@@ -147,6 +159,11 @@ const YouTubeMessageInput = ({
     [insertMention],
   );
 
+  const emoteAC = useAutocomplete<EmoteACItem>({
+    onSelect: (emote) => insertWithPrefix(emote.name),
+    onSend: handleSend,
+  });
+
   const emojiAC = useAutocomplete<EmojiEntry>({
     onSelect: (entry) => insertEmoji(entry),
     onSend: handleSend,
@@ -159,7 +176,7 @@ const YouTubeMessageInput = ({
 
   const { menuRect, menuRef, closeAll } = useAutocompleteMenu({
     inputRef,
-    autocompleteInstances: [emojiAC, mentionAC],
+    autocompleteInstances: [emoteAC, emojiAC, mentionAC],
   });
 
   const handleChange = useCallback(
@@ -202,13 +219,57 @@ const YouTubeMessageInput = ({
         }
       }
 
+      if (showEmoteAutocomplete) {
+        const lastSpace = beforeCursor.lastIndexOf(" ");
+        const currentWord = beforeCursor.substring(lastSpace + 1);
+        let query = currentWord;
+        if (emoteAutocompleteMode === "colon") {
+          // Match Twitch: typing ":" alone surfaces the top emotes.
+          query = currentWord.startsWith(":")
+            ? currentWord.substring(1)
+            : "";
+        }
+        const shouldShow =
+          emoteAutocompleteMode === "colon"
+            ? currentWord.startsWith(":")
+            : query.length > 0;
+        if (
+          shouldShow &&
+          !currentWord.startsWith("@") &&
+          !currentWord.startsWith("/")
+        ) {
+          const results = searchEmotes(
+            query,
+            10,
+            emoteAutocompleteMode === "colon",
+          );
+          if (results.length > 0) {
+            closeAll();
+            emoteAC.show(results);
+            return;
+          }
+        }
+      }
+
       closeAll();
     },
-    [chatAuthors, emojiAC, mentionAC, closeAll],
+    [
+      chatAuthors,
+      emojiAC,
+      mentionAC,
+      emoteAC,
+      closeAll,
+      showEmoteAutocomplete,
+      emoteAutocompleteMode,
+    ],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (emoteAC.isOpen) {
+        emoteAC.handleKeyDown(e);
+        return;
+      }
       if (emojiAC.isOpen) {
         emojiAC.handleKeyDown(e);
         return;
@@ -223,7 +284,7 @@ const YouTubeMessageInput = ({
         handleSend();
       }
     },
-    [emojiAC, mentionAC, handleSend],
+    [emoteAC, emojiAC, mentionAC, handleSend],
   );
 
   useEffect(() => {
@@ -254,6 +315,35 @@ const YouTubeMessageInput = ({
   return (
     <div className="message-input">
       <div className="input-group youtube">
+        <AutocompleteMenu
+          isOpen={emoteAC.isOpen}
+          results={emoteAC.results}
+          selectedIndex={emoteAC.selectedIndex}
+          menuRect={menuRect}
+          menuRef={menuRef}
+          maxHeight="260px"
+          onSelect={(i) => emoteAC.select(i)}
+          renderItem={(emote, idx, isSelected) => (
+            <MenuItem
+              key={`${emote.source}-${emote.name}`}
+              index={idx}
+              isSelected={isSelected}
+              onSelect={(i) => emoteAC.select(i)}
+              title={emote.name}
+            >
+              <img
+                src={emote.url}
+                alt={emote.name}
+                style={{ width: 32, height: 32 }}
+              />
+              <div className="autocomplete-item-info">
+                <span className="autocomplete-item-name">{emote.name}</span>
+                <span className="autocomplete-item-type">{emote.source}</span>
+              </div>
+            </MenuItem>
+          )}
+        />
+
         <AutocompleteMenu
           isOpen={emojiAC.isOpen}
           results={emojiAC.results}

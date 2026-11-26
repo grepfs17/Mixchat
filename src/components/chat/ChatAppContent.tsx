@@ -44,6 +44,8 @@ function resolveChatAppSettings(appProps: ChatAppStateProps) {
     showStreamEmbed: appProps.showStreamEmbed ?? true,
     renderThirdPartyEmotesOnYoutube:
       appProps.renderThirdPartyEmotesOnYoutube ?? false,
+    showEmoteAutocompleteOnYoutube:
+      appProps.showEmoteAutocompleteOnYoutube ?? false,
     markFirstMessages: appProps.markFirstMessages ?? false,
     markFirstMessageChannels: appProps.markFirstMessageChannels ?? [],
     isOnOwnChannel: appProps.isOnOwnChannel ?? false,
@@ -267,6 +269,7 @@ function UnifiedChatContent({
     sidebarVisible,
     showStreamEmbed,
     renderThirdPartyEmotesOnYoutube,
+    showEmoteAutocompleteOnYoutube,
     markFirstMessages,
     markFirstMessageChannels,
     isOnOwnChannel,
@@ -484,6 +487,10 @@ function UnifiedChatContent({
           onOptimisticYoutubeFailed={handleYtOptimisticFailed}
           youtubeAvailable={youtubeInputAvailable}
           emoteAutocompleteMode={appProps.emoteAutocompleteMode}
+          showEmoteAutocompleteOnYoutube={
+            renderThirdPartyEmotesOnYoutube &&
+            showEmoteAutocompleteOnYoutube
+          }
         />
       )}
     </>
@@ -519,6 +526,7 @@ function SplitChatContent({
     showStreamEmbed = true,
     onToggleStreamEmbed,
     renderThirdPartyEmotesOnYoutube = false,
+    showEmoteAutocompleteOnYoutube = false,
     markFirstMessages = false,
     markFirstMessageChannels = [],
   } = appProps;
@@ -697,6 +705,10 @@ function SplitChatContent({
       onYtConnectionChange={onYtConnectionChange}
       channelName={selectedTwitchChannelName}
       renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+      showEmoteAutocompleteOnYoutube={
+        renderThirdPartyEmotesOnYoutube && showEmoteAutocompleteOnYoutube
+      }
+      emoteAutocompleteMode={appProps.emoteAutocompleteMode}
       markFirstMessages={markFirstMessagesActive}
       streamStartedAt={streamStartedAt}
     />

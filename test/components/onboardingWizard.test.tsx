@@ -71,6 +71,8 @@ function makeSettings(
     setDefaultHlsQuality: noop,
     renderThirdPartyEmotesOnYoutube: false,
     setRenderThirdPartyEmotesOnYoutube: noop,
+    showEmoteAutocompleteOnYoutube: false,
+    setShowEmoteAutocompleteOnYoutube: noop,
     autoFoldSidebar: false,
     setAutoFoldSidebar: noop,
     emoteAutocompleteMode: "default",
@@ -729,5 +731,56 @@ describe("OnboardingWizard component", () => {
     expect(
       setRenderThirdPartyEmotesOnYoutube,
     ).toHaveBeenCalledWith(false);
+  });
+
+  it("shows the YouTube emote autocomplete suboption only after third-party emotes are enabled", async () => {
+    render(<StatefulHarness />);
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a viewer"));
+
+    expect(
+      screen.queryByText("Show emote autocomplete on YouTube"),
+    ).not.toBeInTheDocument();
+
+    const parentSetting = screen
+      .getByText("Render 7TV / BTTV / FFZ emotes in YouTube chat")
+      .closest(".onboarding-setting");
+    const parentCheckbox = parentSetting!.querySelector<HTMLInputElement>(
+      '.onboarding-toggle input[type="checkbox"]',
+    );
+    expect(parentCheckbox).not.toBeNull();
+    await userEvent.click(parentCheckbox!);
+
+    const suboption = screen
+      .getByText("Show emote autocomplete on YouTube")
+      .closest(".onboarding-setting");
+    expect(suboption).not.toBeNull();
+    expect(suboption!.className).toContain("onboarding-setting--suboption");
+    expect(suboption!.querySelector(".onboarding-toggle")).toBeInTheDocument();
+  });
+
+  it("invokes the YouTube emote autocomplete setter when the suboption is clicked", async () => {
+    const setShowEmoteAutocompleteOnYoutube = vi.fn();
+    renderWizard(
+      makeSettings({
+        renderThirdPartyEmotesOnYoutube: true,
+        setShowEmoteAutocompleteOnYoutube,
+      }),
+    );
+    await userEvent.click(screen.getByText("Continue"));
+    await userEvent.click(screen.getByText("Next"));
+    await userEvent.click(screen.getByText("I'm a viewer"));
+
+    const setting = screen
+      .getByText("Show emote autocomplete on YouTube")
+      .closest(".onboarding-setting");
+    expect(setting).not.toBeNull();
+    const checkbox = setting!.querySelector<HTMLInputElement>(
+      '.onboarding-toggle input[type="checkbox"]',
+    );
+    expect(checkbox).not.toBeNull();
+    await userEvent.click(checkbox!);
+    expect(setShowEmoteAutocompleteOnYoutube).toHaveBeenLastCalledWith(true);
   });
 });

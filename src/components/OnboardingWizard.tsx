@@ -39,11 +39,14 @@ interface SettingDef {
     | "doubleClickConfirmModActions"
     | "embedDefaultOpen"
     | "hideChatTimestamps"
-    | "renderThirdPartyEmotesOnYoutube";
+    | "renderThirdPartyEmotesOnYoutube"
+    | "showEmoteAutocompleteOnYoutube";
   label: string;
   description: string;
   choosableFor: UserType[];
   icon: React.ReactNode;
+  /** Rendered only while this parent setting is enabled. */
+  dependsOn?: SettingDef["key"];
 }
 
 const STREAMER_MOD_DEFAULTS: Record<string, boolean> = {
@@ -58,6 +61,7 @@ const STREAMER_MOD_DEFAULTS: Record<string, boolean> = {
   embedDefaultOpen: false,
   hideChatTimestamps: true,
   renderThirdPartyEmotesOnYoutube: false,
+  showEmoteAutocompleteOnYoutube: false,
 };
 
 const VIEWER_DEFAULTS: Record<string, boolean> = {
@@ -72,6 +76,7 @@ const VIEWER_DEFAULTS: Record<string, boolean> = {
   embedDefaultOpen: true,
   hideChatTimestamps: false,
   renderThirdPartyEmotesOnYoutube: false,
+  showEmoteAutocompleteOnYoutube: false,
 };
 
 const USER_TYPES: {
@@ -188,6 +193,15 @@ const BASE_SETTINGS: SettingDef[] = [
     description:
       "Resolve third-party emote names inside YouTube live chat messages as images. Uses the same emote set as Twitch chat (global + channel-specific). Only Mixchat users will see the emotes: the message is still sent as plain text on YouTube and other viewers see the raw names.",
     choosableFor: ["streamer", "mod", "viewer"],
+    icon: <FaInfoCircle size={13} />,
+  },
+  {
+    key: "showEmoteAutocompleteOnYoutube",
+    label: "Show emote autocomplete on YouTube",
+    description:
+      "Suggests the same 7TV, BTTV, FFZ, and Twitch emotes while typing in YouTube chat. Works when sending only to YouTube and when sending to both platforms.",
+    choosableFor: ["streamer", "mod", "viewer"],
+    dependsOn: "renderThirdPartyEmotesOnYoutube",
     icon: <FaInfoCircle size={13} />,
   },
 ];
@@ -572,10 +586,18 @@ function RoleStep({
           </p>
           <div className="onboarding-settings-list">
             {BASE_SETTINGS.map((setting) => {
+              if (setting.dependsOn && !currentValues[setting.dependsOn]) {
+                return null;
+              }
               const value = currentValues[setting.key];
               const isChoosable = setting.choosableFor.includes(userType);
               return (
-                <div key={setting.key} className="onboarding-setting">
+                <div
+                  key={setting.key}
+                  className={`onboarding-setting${
+                    setting.dependsOn ? " onboarding-setting--suboption" : ""
+                  }`}
+                >
                   <div className="onboarding-setting-icon">{setting.icon}</div>
                   <div className="onboarding-setting-content">
                     <p className="onboarding-setting-label">{setting.label}</p>
@@ -733,6 +755,7 @@ export default function OnboardingWizard({
     embedDefaultOpen: s.embedDefaultOpen,
     hideChatTimestamps: s.hideChatTimestamps,
     renderThirdPartyEmotesOnYoutube: s.renderThirdPartyEmotesOnYoutube,
+    showEmoteAutocompleteOnYoutube: s.showEmoteAutocompleteOnYoutube,
   };
 
   const handleSettingToggle = useCallback(
@@ -773,6 +796,11 @@ export default function OnboardingWizard({
             !s.renderThirdPartyEmotesOnYoutube,
           );
           break;
+        case "showEmoteAutocompleteOnYoutube":
+          s.setShowEmoteAutocompleteOnYoutube(
+            !s.showEmoteAutocompleteOnYoutube,
+          );
+          break;
       }
     },
     [
@@ -787,6 +815,7 @@ export default function OnboardingWizard({
       s.embedDefaultOpen,
       s.hideChatTimestamps,
       s.renderThirdPartyEmotesOnYoutube,
+      s.showEmoteAutocompleteOnYoutube,
       s.setStreamerToolsEnabled,
       s.setHideViewerCount,
       s.setUnifyChatEnabled,
@@ -798,6 +827,7 @@ export default function OnboardingWizard({
       s.setEmbedDefaultOpen,
       s.setHideChatTimestamps,
       s.setRenderThirdPartyEmotesOnYoutube,
+      s.setShowEmoteAutocompleteOnYoutube,
     ],
   );
 
@@ -821,6 +851,9 @@ export default function OnboardingWizard({
       s.setRenderThirdPartyEmotesOnYoutube(
         defaults.renderThirdPartyEmotesOnYoutube,
       );
+      s.setShowEmoteAutocompleteOnYoutube(
+        defaults.showEmoteAutocompleteOnYoutube,
+      );
     },
     [
       s.setStreamerToolsEnabled,
@@ -834,6 +867,7 @@ export default function OnboardingWizard({
       s.setEmbedDefaultOpen,
       s.setHideChatTimestamps,
       s.setRenderThirdPartyEmotesOnYoutube,
+      s.setShowEmoteAutocompleteOnYoutube,
     ],
   );
 

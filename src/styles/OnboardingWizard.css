@@ -515,6 +515,11 @@
     border-radius: var(--radius-md);
 }
 
+.onboarding-setting--suboption {
+    margin-left: 40px;
+    background: var(--color-bg-secondary);
+}
+
 .onboarding-setting-icon {
     flex-shrink: 0;
     width: 28px;

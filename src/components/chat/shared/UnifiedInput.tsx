@@ -58,6 +58,8 @@ interface UnifiedInputProps {
   onOptimisticYoutubeFailed?: (id: string) => void;
   youtubeAvailable?: boolean;
   emoteAutocompleteMode?: EmoteAutocompleteMode;
+  /** Enable the Twitch emote autocomplete while sending to YouTube. */
+  showEmoteAutocompleteOnYoutube?: boolean;
   ref?: React.Ref<UnifiedInputHandle>;
 }
 
@@ -307,6 +309,7 @@ const UnifiedInput = ({
   onOptimisticYoutubeFailed,
   youtubeAvailable = false,
   emoteAutocompleteMode = "default",
+  showEmoteAutocompleteOnYoutube = false,
   ref,
 }: UnifiedInputProps) => {
   const { isModerator } = useModerationContext();
@@ -324,6 +327,9 @@ const UnifiedInput = ({
   const showTwitchFeatures = sendTarget === "twitch" || sendTarget === "both";
   const showYoutubeFeatures =
     (sendTarget === "youtube" || sendTarget === "both") && youtubeAvailable;
+  const enableEmoteAutocomplete =
+    showTwitchFeatures ||
+    (showYoutubeFeatures && showEmoteAutocompleteOnYoutube);
 
   const onSend = useCallback(
     async (text: string) => {
@@ -370,6 +376,7 @@ const UnifiedInput = ({
     isLoading,
     replyingToId: replyingTo?.id,
     enableTwitchFeatures: showTwitchFeatures,
+    enableEmoteAutocomplete,
     enableYoutubeEmoji: showYoutubeFeatures,
     emoteAutocompleteMode,
     mentionSource: sendTarget,

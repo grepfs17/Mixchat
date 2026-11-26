@@ -1,8 +1,18 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import React from "react";
 import UnifiedInput from "../../src/components/chat/shared/UnifiedInput";
 import { ModerationContext } from "../../src/contexts/ModerationContext";
+
+const { searchEmotesMock } = vi.hoisted(() => ({
+  searchEmotesMock: vi.fn(
+    (
+      _query: string,
+      _limit?: number,
+      _allowEmptyQuery?: boolean,
+    ): Array<{ name: string; url: string; source: string }> => [],
+  ),
+}));
 
 vi.mock("../../src/lib/emotes", async () => {
   const actual = await vi.importActual<typeof import("../../src/lib/emotes")>(
@@ -10,7 +20,7 @@ vi.mock("../../src/lib/emotes", async () => {
   );
   return {
     ...actual,
-    searchEmotes: () => [],
+    searchEmotes: searchEmotesMock,
     getAllEmotesOrganized: () => ({
       twitchGlobal: [],
       twitchChannels: [],
@@ -55,6 +65,11 @@ function renderInput(
 }
 
 describe("UnifiedInput", () => {
+  beforeEach(() => {
+    searchEmotesMock.mockReset();
+    searchEmotesMock.mockReturnValue([]);
+  });
+
   describe("platform toggle", () => {
     it("renders Twitch toggle by default", () => {
       renderInput();
@@ -85,6 +100,61 @@ describe("UnifiedInput", () => {
       const bothBtn = screen.getByTitle("Send to both");
       fireEvent.click(bothBtn);
       expect(bothBtn.className).toContain("active");
+    });
+  });
+
+  describe("emote autocomplete on YouTube", () => {
+    const KEKW = {
+      name: "KEKW",
+      url: "https://example.com/kekw.png",
+      source: "7TV",
+    };
+
+    it("suggests emotes when sending only to YouTube and the setting is on", () => {
+      searchEmotesMock.mockReturnValue([KEKW]);
+      renderInput({
+        youtubeAvailable: true,
+        showEmoteAutocompleteOnYoutube: true,
+      });
+
+      fireEvent.click(screen.getByTitle("Send to YouTube"));
+      fireEvent.change(screen.getByPlaceholderText("Send to YouTube..."), {
+        target: { value: "KE" },
+      });
+
+      expect(screen.getByText("KEKW")).toBeInTheDocument();
+      expect(searchEmotesMock).toHaveBeenCalledWith("KE", 10, false);
+    });
+
+    it("does not suggest emotes when sending only to YouTube and the setting is off", () => {
+      searchEmotesMock.mockReturnValue([KEKW]);
+      renderInput({
+        youtubeAvailable: true,
+        showEmoteAutocompleteOnYoutube: false,
+      });
+
+      fireEvent.click(screen.getByTitle("Send to YouTube"));
+      fireEvent.change(screen.getByPlaceholderText("Send to YouTube..."), {
+        target: { value: "KE" },
+      });
+
+      expect(screen.queryByText("KEKW")).not.toBeInTheDocument();
+      expect(searchEmotesMock).not.toHaveBeenCalled();
+    });
+
+    it("suggests emotes when sending to both platforms", () => {
+      searchEmotesMock.mockReturnValue([KEKW]);
+      renderInput({
+        youtubeAvailable: true,
+        showEmoteAutocompleteOnYoutube: false,
+      });
+
+      fireEvent.click(screen.getByTitle("Send to both"));
+      fireEvent.change(screen.getByPlaceholderText("Send to both..."), {
+        target: { value: "KE" },
+      });
+
+      expect(screen.getByText("KEKW")).toBeInTheDocument();
     });
   });
 

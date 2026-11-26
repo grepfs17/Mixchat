@@ -153,6 +153,7 @@ mixchat/
 - `modifiers.ts`: BTTV (`w!`, `h!`, `v!`, `z!`, …) and FFZ (`ffzX`, `ffzW`, `ffzCursed`, …) emote modifier vocabulary and CSS-effect mapping.
 - `search.ts`: global emote search across all providers.
 - `usage.ts`: local per-emote usage counts, used to rank autocomplete suggestions.
+- Autocomplete works in Twitch chat and, with **Show emote autocomplete on YouTube** (`showEmoteAutocompleteOnYoutube`, localStorage `mixchat_emote_autocomplete_on_youtube`, default off, suboption of rendering third-party emotes on YouTube), in the YouTube chat input too. It uses the same shared emote maps and colon/default modes, including when the unified input is set to send to both platforms.
 - `hooks.ts`: React hooks for fetching emotes per channel.
 - `state.ts`: global emote cache (Map-based, populated from provider APIs).
 - Supports BTTV prefix modifiers (attached/chained, e.g. `w!h!KEKW`) and FFZ

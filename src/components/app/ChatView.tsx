@@ -173,6 +173,7 @@ export default function ChatView({
     ignoredUsers,
     streamerToolsEnabled,
     renderThirdPartyEmotesOnYoutube,
+    showEmoteAutocompleteOnYoutube,
     emoteAutocompleteMode,
   } = chatSettings;
 
@@ -348,6 +349,7 @@ export default function ChatView({
           streamerToolsEnabled={streamerToolsEnabled}
           isOnOwnChannel={isOnOwnChannel}
           renderThirdPartyEmotesOnYoutube={renderThirdPartyEmotesOnYoutube}
+          showEmoteAutocompleteOnYoutube={showEmoteAutocompleteOnYoutube}
           emoteAutocompleteMode={emoteAutocompleteMode}
         />
       </div>

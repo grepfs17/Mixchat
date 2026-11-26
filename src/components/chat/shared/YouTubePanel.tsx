@@ -4,7 +4,11 @@ import YouTubeChat from "./YouTubeChat";
 import YouTubeMessageInput, {
   type YouTubeMessageInputHandle,
 } from "./YouTubeMessageInput";
-import type { PlatformSession, ChatFont } from "../../../lib/types";
+import type {
+  PlatformSession,
+  ChatFont,
+  EmoteAutocompleteMode,
+} from "../../../lib/types";
 import type { YTMessage } from "../unified/types";
 import { parseDirectVideoId } from "../../../lib/youtubeStreamSelection";
 
@@ -42,6 +46,8 @@ interface YouTubePanelProps {
   ) => void;
   style?: CSSProperties;
   renderThirdPartyEmotes?: boolean;
+  showEmoteAutocomplete?: boolean;
+  emoteAutocompleteMode?: EmoteAutocompleteMode;
   markFirstMessages?: boolean;
   streamStartedAt?: Date | null;
 }
@@ -162,6 +168,8 @@ export default function YouTubePanel({
   onUsernameClick,
   style,
   renderThirdPartyEmotes,
+  showEmoteAutocomplete = false,
+  emoteAutocompleteMode,
   markFirstMessages = false,
   streamStartedAt = null,
 }: YouTubePanelProps) {
@@ -295,6 +303,8 @@ export default function YouTubePanel({
                 onOptimisticMessage={onOptimisticMessage}
                 onOptimisticFailed={onOptimisticFailed}
                 onError={onError}
+                showEmoteAutocomplete={showEmoteAutocomplete}
+                emoteAutocompleteMode={emoteAutocompleteMode}
               />
             ) : (
               <div

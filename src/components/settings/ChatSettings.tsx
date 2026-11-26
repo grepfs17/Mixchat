@@ -31,6 +31,8 @@ export interface ChatSettingsProps {
   onEmoteAutocompleteModeChange: (v: EmoteAutocompleteMode) => void;
   renderThirdPartyEmotesOnYoutube: boolean;
   onRenderThirdPartyEmotesOnYoutubeChange: (v: boolean) => void;
+  showEmoteAutocompleteOnYoutube: boolean;
+  onShowEmoteAutocompleteOnYoutubeChange: (v: boolean) => void;
   compactActions: boolean;
   onCompactActionsChange: (v: boolean) => void;
   keepModActionsVisible: boolean;
@@ -297,10 +299,14 @@ function MaxDisplayedMessagesSetting({
 function ThirdPartyEmotesSetting({
   renderThirdPartyEmotesOnYoutube,
   onRenderThirdPartyEmotesOnYoutubeChange,
+  showEmoteAutocompleteOnYoutube,
+  onShowEmoteAutocompleteOnYoutubeChange,
 }: Pick<
   ChatSettingsProps,
   | "renderThirdPartyEmotesOnYoutube"
   | "onRenderThirdPartyEmotesOnYoutubeChange"
+  | "showEmoteAutocompleteOnYoutube"
+  | "onShowEmoteAutocompleteOnYoutubeChange"
 >) {
   return (
     <div className="embed-config-section">
@@ -322,6 +328,25 @@ function ThirdPartyEmotesSetting({
         the emotes. The message is still sent as plain text on YouTube and
         other viewers see the raw names.
       </p>
+      {renderThirdPartyEmotesOnYoutube && (
+        <>
+          <label className="embed-config-checkbox-label embed-config-checkbox-label--suboption">
+            <input
+              type="checkbox"
+              checked={showEmoteAutocompleteOnYoutube}
+              onChange={(e) =>
+                onShowEmoteAutocompleteOnYoutubeChange(e.target.checked)
+              }
+            />
+            <span>Show emote autocomplete on YouTube</span>
+          </label>
+          <p className="embed-config-description embed-config-description--indented">
+            When enabled, typing in the YouTube chat input suggests the same
+            7TV, BTTV, FFZ, and Twitch emotes as Twitch chat. Works when
+            sending only to YouTube and when sending to both platforms.
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -535,7 +560,7 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
       group: "chat",
       label: "Render 7TV / BTTV / FFZ emotes in YouTube chat",
       description:
-        "Resolve third-party emote names inside YouTube live chat messages as images",
+        "Resolve third-party emote names inside YouTube live chat messages as images, with optional emote autocomplete",
       render: () => (
         <ThirdPartyEmotesSetting
           renderThirdPartyEmotesOnYoutube={
@@ -543,6 +568,12 @@ export function getChatSettings(props: ChatSettingsProps): SettingsItemDef[] {
           }
           onRenderThirdPartyEmotesOnYoutubeChange={
             props.onRenderThirdPartyEmotesOnYoutubeChange
+          }
+          showEmoteAutocompleteOnYoutube={
+            props.showEmoteAutocompleteOnYoutube
+          }
+          onShowEmoteAutocompleteOnYoutubeChange={
+            props.onShowEmoteAutocompleteOnYoutubeChange
           }
         />
       ),

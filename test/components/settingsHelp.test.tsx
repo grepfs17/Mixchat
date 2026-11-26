@@ -76,6 +76,8 @@ function makeSettings(): UseChatSettingsResult {
     setDefaultHlsQuality: noop,
     renderThirdPartyEmotesOnYoutube: false,
     setRenderThirdPartyEmotesOnYoutube: noop,
+    showEmoteAutocompleteOnYoutube: false,
+    setShowEmoteAutocompleteOnYoutube: noop,
     autoFoldSidebar: false,
     setAutoFoldSidebar: noop,
     emoteAutocompleteMode: "default",

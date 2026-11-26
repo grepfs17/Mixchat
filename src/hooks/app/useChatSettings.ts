@@ -102,6 +102,10 @@ export type UseChatSettingsResult = {
   setRenderThirdPartyEmotesOnYoutube: React.Dispatch<
     React.SetStateAction<boolean>
   >;
+  showEmoteAutocompleteOnYoutube: boolean;
+  setShowEmoteAutocompleteOnYoutube: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
   autoFoldSidebar: boolean;
   setAutoFoldSidebar: React.Dispatch<React.SetStateAction<boolean>>;
   emoteAutocompleteMode: EmoteAutocompleteMode;
@@ -250,6 +254,13 @@ export function useChatSettings(): UseChatSettingsResult {
       "mixchat_render_thirdparty_on_youtube",
       false,
     );
+  const [
+    showEmoteAutocompleteOnYoutube,
+    setShowEmoteAutocompleteOnYoutube,
+  ] = useLocalStorageState<boolean>(
+    "mixchat_emote_autocomplete_on_youtube",
+    false,
+  );
   const [autoFoldSidebar, setAutoFoldSidebar] = useLocalStorageState<boolean>(
     "mixchat_auto_fold_sidebar",
     false,
@@ -263,6 +274,14 @@ export function useChatSettings(): UseChatSettingsResult {
   useEffect(() => {
     applyTheme(chatTheme);
   }, [chatTheme]);
+
+  // The YouTube autocomplete suboption only makes sense while third-party
+  // emote rendering on YouTube is enabled. Reset it when the parent turns off
+  // so re-enabling the parent does not silently reactivate autocomplete.
+  useEffect(() => {
+    if (renderThirdPartyEmotesOnYoutube) return;
+    setShowEmoteAutocompleteOnYoutube(false);
+  }, [renderThirdPartyEmotesOnYoutube, setShowEmoteAutocompleteOnYoutube]);
 
   const handleEventSoundChange = useCallback(
     (eventType: string, soundData: string | null) => {
@@ -348,6 +367,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setDefaultHlsQuality,
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
+    showEmoteAutocompleteOnYoutube,
+    setShowEmoteAutocompleteOnYoutube,
     autoFoldSidebar,
     setAutoFoldSidebar,
     emoteAutocompleteMode,
@@ -412,6 +433,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setDefaultHlsQuality,
       renderThirdPartyEmotesOnYoutube,
       setRenderThirdPartyEmotesOnYoutube,
+      showEmoteAutocompleteOnYoutube,
+      setShowEmoteAutocompleteOnYoutube,
       autoFoldSidebar,
       setAutoFoldSidebar,
       emoteAutocompleteMode,
