@@ -1,4 +1,5 @@
 import React from "react";
+import type { DefaultEmbedResolution } from "../../hooks/app/useChatSettings";
 import type { SettingsItemDef } from "./types";
 
 
@@ -7,8 +8,8 @@ export interface LayoutSettingsProps {
   onEmbedDefaultOpenChange: (v: boolean) => void;
   defaultPlayerType: "embed" | "m3u8";
   onDefaultPlayerTypeChange: (v: "embed" | "m3u8") => void;
-  defaultHlsQuality: string;
-  onDefaultHlsQualityChange: (v: string) => void;
+  defaultResolution: DefaultEmbedResolution;
+  onDefaultResolutionChange: (v: DefaultEmbedResolution) => void;
   onNeedsReload: () => void;
   autoFoldSidebar: boolean;
   onAutoFoldSidebarChange: (v: boolean) => void;
@@ -69,23 +70,27 @@ function DefaultPlayerSetting({
   );
 }
 
-function HlsQualitySetting({
-  defaultHlsQuality,
-  onDefaultHlsQualityChange,
-}: Pick<LayoutSettingsProps, "defaultHlsQuality" | "onDefaultHlsQualityChange">) {
+function DefaultResolutionSetting({
+  defaultResolution,
+  onDefaultResolutionChange,
+}: Pick<
+  LayoutSettingsProps,
+  "defaultResolution" | "onDefaultResolutionChange"
+>) {
   return (
     <div className="embed-config-section">
-      <label className="embed-config-label" htmlFor="embed-hls-quality">
-        Default HLS resolution
+      <label className="embed-config-label" htmlFor="embed-default-resolution">
+        Default resolution
       </label>
       <select
-        id="embed-hls-quality"
-        value={defaultHlsQuality}
-        onChange={(e) => onDefaultHlsQualityChange(e.target.value)}
+        id="embed-default-resolution"
+        value={defaultResolution}
+        onChange={(e) =>
+          onDefaultResolutionChange(e.target.value as DefaultEmbedResolution)
+        }
         className="embed-config-select"
       >
-        <option value="highest">Highest available</option>
-        <option value="1080p">1080p</option>
+        <option value="1080p">1080p (highest)</option>
         <option value="720p">720p</option>
         <option value="480p">480p</option>
         <option value="360p">360p</option>
@@ -93,8 +98,8 @@ function HlsQualitySetting({
         <option value="audio_only">Audio only</option>
       </select>
       <p className="embed-config-description">
-        Default resolution for the M3U8 player. Falls back to the closest
-        available quality if the exact resolution is not available.
+        Resolution used when a stream embed starts. Applies to the Twitch embed
+        and the M3U8 player. Falls back to the closest available quality.
       </p>
     </div>
   );
@@ -167,14 +172,14 @@ export function getLayoutSettings(
       ),
     },
     {
-      id: "default-hls-quality",
+      id: "default-resolution",
       group: "layout",
-      label: "Default HLS resolution",
-      description: "When using the M3U8 player, start with this resolution.",
+      label: "Default resolution",
+      description: "Start stream embeds at this resolution.",
       render: () => (
-        <HlsQualitySetting
-          defaultHlsQuality={props.defaultHlsQuality}
-          onDefaultHlsQualityChange={props.onDefaultHlsQualityChange}
+        <DefaultResolutionSetting
+          defaultResolution={props.defaultResolution}
+          onDefaultResolutionChange={props.onDefaultResolutionChange}
         />
       ),
     },

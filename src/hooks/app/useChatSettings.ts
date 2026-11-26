@@ -38,6 +38,41 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+// 1080p is intentionally the highest option for now: Twitch serves 1440p
+// through HEVC/AV1 renditions that are unreliable in the browser players.
+const DEFAULT_EMBED_RESOLUTIONS = [
+  "1080p",
+  "720p",
+  "480p",
+  "360p",
+  "160p",
+  "audio_only",
+] as const;
+
+export type DefaultEmbedResolution = (typeof DEFAULT_EMBED_RESOLUTIONS)[number];
+
+function isDefaultEmbedResolution(
+  value: unknown,
+): value is DefaultEmbedResolution {
+  return (
+    typeof value === "string" &&
+    (DEFAULT_EMBED_RESOLUTIONS as readonly string[]).includes(value)
+  );
+}
+
+/** Read the retired HLS-only quality key so a manual choice survives the rename. */
+function readLegacyDefaultResolution(): DefaultEmbedResolution {
+  if (typeof localStorage === "undefined") return "1080p";
+  try {
+    const saved = localStorage.getItem("mixchat_default_hls_quality");
+    if (saved === null) return "1080p";
+    const parsed = JSON.parse(saved) as unknown;
+    return isDefaultEmbedResolution(parsed) ? parsed : "1080p";
+  } catch {
+    return "1080p";
+  }
+}
+
 export type UseChatSettingsResult = {
   embedDefaultOpen: boolean;
   setEmbedDefaultOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -96,8 +131,10 @@ export type UseChatSettingsResult = {
   setStreamerToolsEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   defaultPlayerType: "embed" | "m3u8";
   setDefaultPlayerType: React.Dispatch<React.SetStateAction<"embed" | "m3u8">>;
-  defaultHlsQuality: string;
-  setDefaultHlsQuality: React.Dispatch<React.SetStateAction<string>>;
+  defaultResolution: DefaultEmbedResolution;
+  setDefaultResolution: React.Dispatch<
+    React.SetStateAction<DefaultEmbedResolution>
+  >;
   renderThirdPartyEmotesOnYoutube: boolean;
   setRenderThirdPartyEmotesOnYoutube: React.Dispatch<
     React.SetStateAction<boolean>
@@ -245,10 +282,20 @@ export function useChatSettings(): UseChatSettingsResult {
   const [defaultPlayerType, setDefaultPlayerType] = useLocalStorageState<
     "embed" | "m3u8"
   >("mixchat_default_player_type", "embed");
-  const [defaultHlsQuality, setDefaultHlsQuality] = useLocalStorageState<string>(
-    "mixchat_default_hls_quality",
-    "highest",
-  );
+  // Read the retired key once instead of on every render.
+  const [initialDefaultResolution] = useState(readLegacyDefaultResolution);
+  const [defaultResolution, setDefaultResolution] =
+    useLocalStorageState<DefaultEmbedResolution>(
+      "mixchat_default_resolution",
+      initialDefaultResolution,
+      isDefaultEmbedResolution,
+    );
+
+  useEffect(() => {
+    if (localStorage.getItem("mixchat_default_resolution") !== null) {
+      localStorage.removeItem("mixchat_default_hls_quality");
+    }
+  }, []);
   const [renderThirdPartyEmotesOnYoutube, setRenderThirdPartyEmotesOnYoutube] =
     useLocalStorageState<boolean>(
       "mixchat_render_thirdparty_on_youtube",
@@ -363,8 +410,8 @@ export function useChatSettings(): UseChatSettingsResult {
     setStreamerToolsEnabled,
     defaultPlayerType,
     setDefaultPlayerType,
-    defaultHlsQuality,
-    setDefaultHlsQuality,
+    defaultResolution,
+    setDefaultResolution,
     renderThirdPartyEmotesOnYoutube,
     setRenderThirdPartyEmotesOnYoutube,
     showEmoteAutocompleteOnYoutube,
@@ -429,8 +476,8 @@ export function useChatSettings(): UseChatSettingsResult {
       setStreamerToolsEnabled,
       defaultPlayerType,
       setDefaultPlayerType,
-      defaultHlsQuality,
-      setDefaultHlsQuality,
+      defaultResolution,
+      setDefaultResolution,
       renderThirdPartyEmotesOnYoutube,
       setRenderThirdPartyEmotesOnYoutube,
       showEmoteAutocompleteOnYoutube,

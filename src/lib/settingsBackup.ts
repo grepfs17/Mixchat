@@ -39,7 +39,7 @@ export const SETTINGS_KEYS = [
   "mixchat_ignored_users",
   "mixchat_mod_mode_targets",
   "mixchat_default_player_type",
-  "mixchat_default_hls_quality",
+  "mixchat_default_resolution",
   "mixchat_render_thirdparty_on_youtube",
   "mixchat_auto_fold_sidebar",
   "mixchat_emote_autocomplete",
@@ -85,6 +85,7 @@ const BACKUP_KEY_COMPAT_MAP: Record<string, string> = {
     "mixchat_song_queue_past_playlists:v1",
   mixchat_event_sounds: "mixchat_event_sounds:v1",
   mixchat_notified_streamers: "mixchat_notified_streamers:v1",
+  mixchat_default_hls_quality: "mixchat_default_resolution",
 };
 
 /**

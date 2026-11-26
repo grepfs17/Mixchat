@@ -261,6 +261,7 @@ export default function ChatView({
             showHlsQualityMenu={showHlsQualityMenu}
             setShowHlsQualityMenu={setShowHlsQualityMenu}
             setShowStreamEmbed={setShowStreamEmbed}
+            defaultResolution={chatSettings.defaultResolution}
             embedRef={embedRef}
             youtubeStreamVideoId={youtubeStreamVideoId}
             youtubeVideos={youtubeStreams.videos}
@@ -368,6 +369,7 @@ interface StreamEmbedPanelProps {
   showHlsQualityMenu: boolean;
   setShowHlsQualityMenu: Dispatch<SetStateAction<boolean>>;
   setShowStreamEmbed: Dispatch<SetStateAction<boolean>>;
+  defaultResolution: string;
   embedRef: RefObject<HTMLDivElement | null>;
   youtubeStreamVideoId: string | null;
   youtubeVideos: YoutubeStreamsState["videos"];
@@ -398,6 +400,7 @@ function StreamEmbedPanel({
   showHlsQualityMenu,
   setShowHlsQualityMenu,
   setShowStreamEmbed,
+  defaultResolution,
   embedRef,
   youtubeStreamVideoId,
   youtubeVideos,
@@ -460,6 +463,7 @@ function StreamEmbedPanel({
         onTwitchLogin={onTwitchLogin}
         setHlsQualities={setHlsQualities}
         selectedHlsQualityIdx={selectedHlsQualityIdx}
+        defaultResolution={defaultResolution}
         streamTransition={streamTransition}
         setStreamTransition={setStreamTransition}
         embedRef={embedRef}
@@ -801,6 +805,7 @@ interface EmbedPlayerProps {
   onTwitchLogin: () => void;
   setHlsQualities: Dispatch<SetStateAction<HlsQuality[]>>;
   selectedHlsQualityIdx: number;
+  defaultResolution: string;
   streamTransition: StreamTransitionInfo | null;
   setStreamTransition: Dispatch<SetStateAction<StreamTransitionInfo | null>>;
   embedRef: RefObject<HTMLDivElement | null>;
@@ -819,6 +824,7 @@ function EmbedPlayer({
   onTwitchLogin,
   setHlsQualities,
   selectedHlsQualityIdx,
+  defaultResolution,
   streamTransition,
   setStreamTransition,
   embedRef,
@@ -883,6 +889,7 @@ function EmbedPlayer({
           twitchAccessToken={twitchSession?.accessToken}
           onQualitiesLoaded={setHlsQualities}
           externalSelectedQualityIdx={selectedHlsQualityIdx}
+          defaultResolution={defaultResolution}
           placeholderThumbnailUrl={streamTransition?.thumbnailUrl}
           onPlaceholderFadeOut={() => setStreamTransition(null)}
         />

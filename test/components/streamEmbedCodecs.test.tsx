@@ -90,7 +90,7 @@ describe("StreamEmbed codec negotiation", () => {
     expect(qualities[0].label).toBe("1080p60");
   });
 
-  it("asks for HEVC and keeps the 1440p variant when HEVC can be decoded", async () => {
+  it("asks for HEVC but caps the embed at 1080p when HEVC can be decoded", async () => {
     vi.stubGlobal("MediaSource", {
       isTypeSupported: (type: string) => type.includes("hvc1"),
     });
@@ -116,7 +116,6 @@ describe("StreamEmbed codec negotiation", () => {
     const calls = onQualitiesLoaded.mock.calls;
     const qualities = calls[calls.length - 1][0];
     expect(qualities.map((quality: { label: string }) => quality.label)).toEqual([
-      "1440p60 (source)",
       "1080p60",
     ]);
   });

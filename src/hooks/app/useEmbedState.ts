@@ -9,15 +9,6 @@ const VIEWER_COUNT_REFRESH_MS = 30000;
 
 export type PlayerType = "embed" | "m3u8" | "youtube";
 
-type HlsQualityPreference =
-  | "highest"
-  | "1080p"
-  | "720p"
-  | "480p"
-  | "360p"
-  | "160p"
-  | "audio_only";
-
 export type HlsQuality = { label: string; url: string };
 
 export type UseEmbedStateOptions = {
@@ -28,7 +19,7 @@ export type UseEmbedStateOptions = {
    * goes away we have to fall back to the Twitch embed. */
   linkedYoutubeUrl: string | null;
   defaultPlayerType?: "embed" | "m3u8";
-  defaultHlsQuality?: string;
+  defaultResolution?: string;
 };
 
 export type UseEmbedStateResult = {
@@ -59,7 +50,7 @@ export function useEmbedState(
     twitchAccessToken,
     linkedYoutubeUrl,
     defaultPlayerType,
-    defaultHlsQuality,
+    defaultResolution,
   } = options;
 
   const [videoRatio, setVideoRatioRaw] = useState<number>(() => {
@@ -107,12 +98,12 @@ export function useEmbedState(
     if (prevQualitiesLenRef.current > 0) return;
     prevQualitiesLenRef.current = hlsQualities.length;
 
-    if (!defaultHlsQuality || defaultHlsQuality === "highest") {
+    if (!defaultResolution) {
       setSelectedHlsQualityIdx(0);
       return;
     }
 
-    const target = defaultHlsQuality;
+    const target = defaultResolution;
     let idx = 0;
 
     if (target === "audio_only") {
@@ -128,7 +119,7 @@ export function useEmbedState(
     }
 
     setSelectedHlsQualityIdx(idx);
-  }, [hlsQualities, defaultHlsQuality]);
+  }, [hlsQualities, defaultResolution]);
 
   // Fall back to the Twitch embed if the YouTube link disappears while in
   // YouTube mode (channel change, link deleted). Intentional state adjustment.

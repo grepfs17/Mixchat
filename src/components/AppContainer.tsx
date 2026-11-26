@@ -111,7 +111,7 @@ export default function AppContainer() {
     twitchAccessToken: sessions.twitch?.accessToken,
     linkedYoutubeUrl,
     defaultPlayerType: chatSettings.defaultPlayerType,
-    defaultHlsQuality: chatSettings.defaultHlsQuality,
+    defaultResolution: chatSettings.defaultResolution,
   });
   const {
     leftColumnVisible,

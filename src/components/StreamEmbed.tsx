@@ -32,6 +32,7 @@ declare global {
             autoplay?: boolean;
             layout?: "video-with-chat" | "video";
             muted?: boolean;
+            quality?: string;
             theme?: "light" | "dark";
           },
         ): TwitchEmbed;
@@ -44,6 +45,16 @@ declare global {
   }
 }
 
+export interface TwitchQualityInfo {
+  name?: string;
+  group?: string;
+  height?: number;
+  bitrate?: number;
+  bandwidth?: number;
+}
+
+export type TwitchQuality = string | TwitchQualityInfo;
+
 export interface TwitchPlayer {
   setChannel(channel: string): void;
   destroy(): void;
@@ -51,8 +62,11 @@ export interface TwitchPlayer {
   pause(): void;
   getPaused(): boolean;
   getCurrentTime(): number;
-  setMuted(muted: boolean): void;
   getMuted(): boolean;
+  getQuality?(): TwitchQuality | null;
+  getQualities(): TwitchQuality[];
+  setMuted(muted: boolean): void;
+  setQuality(quality: TwitchQuality): void;
   setVolume(volume: number): void;
   getVolume(): number;
   addEventListener(event: string, callback: () => void): void;
@@ -62,6 +76,9 @@ export interface TwitchPlayer {
 interface TwitchEmbed {
   getPlayer(): TwitchPlayer;
   destroy(): void;
+  getQuality?(): TwitchQuality | null;
+  getQualities?(): TwitchQuality[];
+  setQuality?(quality: TwitchQuality): void;
   addEventListener(event: string, callback: () => void): void;
   removeEventListener(event: string, callback: () => void): void;
 }
@@ -78,6 +95,8 @@ interface StreamEmbedProps {
     qualities: Array<{ label: string; url: string }>,
   ) => void;
   externalSelectedQualityIdx?: number;
+  /** Resolution the live embed should start at. Capped at 1080p for now. */
+  defaultResolution?: string;
   /** URL of the stream thumbnail to show as a placeholder while the stream loads. */
   placeholderThumbnailUrl?: string;
   /** Callback when the stream player has finished loading and the placeholder should fade out. */
@@ -130,6 +149,131 @@ function isQualityPlayable(
   return true;
 }
 
+// Twitch serves 1440p (2K) as HEVC/AV1 only, which has been unreliable in the
+// HLS player. Keep every embed at 1080p or lower until that path is stable.
+const EMBED_MAX_HEIGHT = 1080;
+
+function qualityHeight(label: string): number | null {
+  const match = label.match(/(\d{3,4})p/i);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+function capEmbedQualities<T extends { label: string }>(qualities: T[]): T[] {
+  return qualities.filter((quality) => {
+    const height = qualityHeight(quality.label);
+    return height === null || height <= EMBED_MAX_HEIGHT;
+  });
+}
+
+function qualityName(quality: TwitchQuality): string | null {
+  if (typeof quality === "string") return quality;
+  return typeof quality.name === "string" ? quality.name : null;
+}
+
+function qualityGroup(quality: TwitchQuality): string | null {
+  return typeof quality === "object" && typeof quality.group === "string"
+    ? quality.group
+    : null;
+}
+
+function qualityBitrate(quality: TwitchQuality): number {
+  if (typeof quality !== "object") return 0;
+  return quality.bitrate ?? quality.bandwidth ?? 0;
+}
+
+function qualityPixelHeight(quality: TwitchQuality): number | null {
+  if (typeof quality === "object" && typeof quality.height === "number") {
+    return quality.height;
+  }
+  const name = qualityName(quality);
+  return name ? qualityHeight(name) : null;
+}
+
+function pickQualityAtOrBelow(
+  qualities: TwitchQuality[],
+  maxHeight: number,
+): TwitchQuality | null {
+  let best: {
+    quality: TwitchQuality;
+    height: number;
+    bitrate: number;
+  } | null = null;
+  for (const quality of qualities) {
+    const name = qualityName(quality) ?? qualityGroup(quality);
+    const height = qualityPixelHeight(quality);
+    if (!name || height === null || height > maxHeight) continue;
+    const bitrate = qualityBitrate(quality);
+    if (
+      !best ||
+      height > best.height ||
+      (height === best.height && bitrate > best.bitrate)
+    ) {
+      best = { quality, height, bitrate };
+    }
+  }
+  return best?.quality ?? null;
+}
+
+function qualityMatches(a: TwitchQuality, b: TwitchQuality): boolean {
+  const aName = qualityName(a);
+  const bName = qualityName(b);
+  if (aName && bName && aName === bName) return true;
+  // getQuality() returns the group string while getQualities() returns
+  // objects, so compare a bare string against the other side's group too.
+  const aGroup = qualityGroup(a) ?? (typeof a === "string" ? a : null);
+  const bGroup = qualityGroup(b) ?? (typeof b === "string" ? b : null);
+  return !!aGroup && !!bGroup && aGroup === bGroup;
+}
+
+function readQualities(
+  embed: TwitchEmbed,
+  player: TwitchPlayer,
+): TwitchQuality[] {
+  for (const source of [player, embed]) {
+    try {
+      const qualities = source.getQualities?.();
+      if (Array.isArray(qualities) && qualities.length > 0) return qualities;
+    } catch {
+      // The embed can throw before the stream starts.
+    }
+  }
+  return [];
+}
+
+function readCurrentQuality(
+  embed: TwitchEmbed,
+  player: TwitchPlayer,
+): TwitchQuality | null {
+  for (const source of [player, embed]) {
+    try {
+      const quality = source.getQuality?.();
+      if (quality !== null && quality !== undefined) return quality;
+    } catch {
+      // Ignore and try the next API surface.
+    }
+  }
+  return null;
+}
+
+function applyQuality(
+  embed: TwitchEmbed,
+  player: TwitchPlayer,
+  target: TwitchQuality,
+): void {
+  // The embed forwards this call to the same player. Send exactly one command:
+  // each accepted setQuality reloads the stream at the new rendition.
+  const receiver =
+    typeof embed.setQuality === "function" ? embed : player;
+  if (typeof receiver.setQuality !== "function") return;
+  receiver.setQuality(target);
+}
+
+function resolutionHeight(resolution: string | undefined): number | null {
+  if (!resolution) return null;
+  const match = resolution.match(/^(\d{3,4})p$/i);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
 // Renders a Twitch stream using the Twitch Player JS API
 
 export function TwitchJSEmbed({
@@ -137,25 +281,34 @@ export function TwitchJSEmbed({
   videoId,
   parentDomain,
   oauthToken,
+  defaultResolution,
   onPlayerReady,
 }: {
   channelName?: string;
   videoId?: string;
   parentDomain: string;
   oauthToken?: string;
+  defaultResolution?: string;
   onPlayerReady?: (player: TwitchPlayer | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const embedRef = useRef<TwitchEmbed | null>(null);
   const playerRef = useRef<TwitchPlayer | null>(null);
+  // Bumped whenever a player is created or the channel changes so the quality
+  // effect can re-run against the new rendition list.
+  const [playerEpoch, setPlayerEpoch] = useState(0);
   // Keep a ref so the script-load callback always sees the latest channel
   const channelRef = useRef(channelName);
+  const previousChannelRef = useRef(channelName);
   const oauthTokenRef = useRef(oauthToken);
+  const resolutionRef = useRef(defaultResolution);
   const onPlayerReadyRef = useRef(onPlayerReady);
   useEffect(() => {
     channelRef.current = channelName;
     oauthTokenRef.current = oauthToken;
+    resolutionRef.current = defaultResolution;
     onPlayerReadyRef.current = onPlayerReady;
-  }, [channelName, oauthToken, onPlayerReady]);
+  }, [channelName, oauthToken, defaultResolution, onPlayerReady]);
 
   // Coerce to boolean so we only recreate when token *presence* changes
   // (absent → present), not on every token value change (e.g. periodic refresh).
@@ -175,22 +328,47 @@ export function TwitchJSEmbed({
       requestAnimationFrame(() => {
         if (cancelled || !window.Twitch?.Embed) return;
 
-        embedInstance = new window.Twitch.Embed(playerId, {
+        const initialQuality = resolutionHeight(resolutionRef.current)
+          ? resolutionRef.current
+          : undefined;
+        const embed = new window.Twitch.Embed(playerId, {
           width: "100%",
           height: "100%",
           ...(videoId ? { video: videoId } : { channel: channelRef.current }),
           parent: [parentDomain],
           autoplay: true,
           layout: "video",
+          // Undocumented player option, consumed by the embed iframe as the
+          // initial rendition so it never starts on Auto before our API call.
+          ...(initialQuality ? { quality: initialQuality } : {}),
           // @ts-ignore - The Embed API supports oauth_token despite some type definitions
           ...(oauthTokenRef.current
             ? { oauth_token: oauthTokenRef.current }
             : {}),
         });
+        embedInstance = embed;
 
-        playerRef.current = embedInstance.getPlayer();
-        onPlayerReadyRef.current?.(playerRef.current);
+        const player = embed.getPlayer();
+        embedRef.current = embed;
+        playerRef.current = player;
+        setPlayerEpoch((value) => value + 1);
+        onPlayerReadyRef.current?.(player);
       });
+    };
+
+    const cleanup = () => {
+      cancelled = true;
+      if (embedInstance) {
+        try {
+          embedInstance.destroy();
+        } catch {
+          /* ignore */
+        }
+        embedInstance = null;
+      }
+      embedRef.current = null;
+      playerRef.current = null;
+      onPlayerReadyRef.current?.(null);
     };
 
     const scriptId = "twitch-embed-script";
@@ -211,31 +389,109 @@ export function TwitchJSEmbed({
       }, 50);
       return () => {
         clearInterval(poll);
+        cleanup();
       };
     }
 
-    return () => {
-      cancelled = true;
-      if (embedInstance) {
-        try {
-          embedInstance.destroy();
-        } catch {
-          /* ignore */
-        }
-        embedInstance = null;
-      }
-      playerRef.current = null;
-      onPlayerReadyRef.current?.(null);
-    };
+    return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parentDomain, hasOauthToken]);
 
-  // Channel switch: call setChannel() instead of remounting → session preserved
+  // The embed starts at Auto and only populates its quality list after the
+  // stream starts. In some builds setQuality is also ignored until playback,
+  // so keep checking until the current rendition actually matches the target.
+  // Re-runs when the setting changes, a new player mounts, or the channel
+  // switches, but never fights the user once the target is active.
   useEffect(() => {
-    if (channelName && playerRef.current) {
-      playerRef.current.setChannel(channelName);
-    }    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [channelName]);
+    if (playerEpoch === 0) return;
+    const embed = embedRef.current;
+    const player = playerRef.current;
+    if (!embed || !player) return;
+
+    const maxHeight = resolutionHeight(defaultResolution);
+    if (maxHeight === null) return;
+
+    const MAX_APPLY_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 2000;
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let applyAttempts = 0;
+    let lastAppliedTarget: TwitchQuality | null = null;
+    let lastAppliedAt = 0;
+
+    const tryApply = (): boolean => {
+      const qualities = readQualities(embed, player);
+      if (qualities.length === 0) return false;
+      const target = pickQualityAtOrBelow(qualities, maxHeight);
+      if (!target) return false;
+      // Wait until the player reports a current quality. Calling setQuality
+      // before that point is ignored and just causes repeated reloads.
+      const current = readCurrentQuality(embed, player);
+      if (!current) return false;
+      if (qualityMatches(current, target)) return true;
+
+      // A channel switch can briefly expose the previous channel's list, so
+      // allow a few spaced retries instead of latching after one attempt.
+      const now = Date.now();
+      const targetChanged =
+        !lastAppliedTarget || !qualityMatches(lastAppliedTarget, target);
+      const canRetry =
+        applyAttempts < MAX_APPLY_ATTEMPTS &&
+        (targetChanged || now - lastAppliedAt >= RETRY_DELAY_MS);
+      if (!canRetry) return false;
+
+      applyAttempts += 1;
+      lastAppliedTarget = target;
+      lastAppliedAt = now;
+      applyQuality(embed, player, target);
+      return false;
+    };
+
+    tryApply();
+    let ticks = 0;
+    timer = setInterval(() => {
+      ticks += 1;
+      if (cancelled) {
+        if (timer !== null) clearInterval(timer);
+        timer = null;
+        return;
+      }
+      if (tryApply()) {
+        if (timer !== null) clearInterval(timer);
+        timer = null;
+        return;
+      }
+      if (ticks >= 60 && timer !== null) {
+        if (applyAttempts > 0) {
+          console.warn(
+            "[embed] Could not confirm default resolution:",
+            defaultResolution,
+            "current quality:",
+            readCurrentQuality(embed, player),
+          );
+        }
+        clearInterval(timer);
+        timer = null;
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      if (timer !== null) clearInterval(timer);
+    };
+  }, [defaultResolution, playerEpoch]);
+
+  // Channel switch: call setChannel() instead of remounting → session preserved.
+  // Skip the mount pass so the player created with this channel is not switched
+  // and its quality effect is not applied twice.
+  useEffect(() => {
+    const changed = previousChannelRef.current !== channelName;
+    previousChannelRef.current = channelName;
+    if (!changed || !channelName || !playerRef.current) return;
+    playerRef.current.setChannel(channelName);
+    setPlayerEpoch((value) => value + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelName]);
 
   return (
     <div
@@ -271,6 +527,7 @@ function TwitchEmbedView({
   parentDomain,
   twitchConnected,
   twitchAccessToken,
+  defaultResolution,
   tokenWaitExpired,
   showPlaceholder,
   placeholderThumbnailUrl,
@@ -280,6 +537,7 @@ function TwitchEmbedView({
   parentDomain: string | null;
   twitchConnected?: boolean;
   twitchAccessToken?: string;
+  defaultResolution?: string;
   tokenWaitExpired: boolean;
   showPlaceholder: boolean;
   placeholderThumbnailUrl?: string;
@@ -338,13 +596,19 @@ function TwitchEmbedView({
   }
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div style={{ position: "absolute", inset: 0 }}>
-        <TwitchJSEmbed
-          channelName={channelName}
-          parentDomain={parentDomain}
-          oauthToken={twitchAccessToken}
-        />
-      </div>
+      {/* Twitch's autoplay check treats an obscured player as hidden. Keep the
+          iframe unmounted while the thumbnail covers it, then start the player
+          once the placeholder is gone. */}
+      {!showPlaceholder && (
+        <div style={{ position: "absolute", inset: 0 }}>
+          <TwitchJSEmbed
+            channelName={channelName}
+            parentDomain={parentDomain}
+            oauthToken={twitchAccessToken}
+            defaultResolution={defaultResolution}
+          />
+        </div>
+      )}
       <PlaceholderOverlay
         show={showPlaceholder}
         thumbnailUrl={placeholderThumbnailUrl}
@@ -362,6 +626,7 @@ export default function StreamEmbed({
   twitchAccessToken,
   onQualitiesLoaded,
   externalSelectedQualityIdx,
+  defaultResolution = "1080p",
   placeholderThumbnailUrl,
   onPlaceholderFadeOut,
 }: StreamEmbedProps) {
@@ -533,9 +798,11 @@ export default function StreamEmbed({
           label: string;
           url: string;
           codecs?: string;
-        }> = (playlistData.qualities ?? []).filter(
-          (quality: { codecs?: string }) =>
-            isQualityPlayable(quality.codecs, supportedCodecs),
+        }> = capEmbedQualities(
+          (playlistData.qualities ?? []).filter(
+            (quality: { codecs?: string }) =>
+              isQualityPlayable(quality.codecs, supportedCodecs),
+          ),
         );
         if (fetchedQualities.length === 0) {
           throw new Error("No playable stream quality found for this browser");
@@ -710,6 +977,7 @@ export default function StreamEmbed({
         parentDomain={parentDomain}
         twitchConnected={twitchConnected}
         twitchAccessToken={twitchAccessToken}
+        defaultResolution={defaultResolution}
         tokenWaitExpired={tokenWaitExpired}
         showPlaceholder={showPlaceholder}
         placeholderThumbnailUrl={placeholderThumbnailUrl}
